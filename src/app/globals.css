@@ -1,26 +1,40 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Marca TopoField */
+  --color-primary-50: #e8f4fa;
+  --color-primary-100: #c5e4f3;
+  --color-primary-200: #9dd1eb;
+  --color-primary-500: #1a7fb5;
+  --color-primary-600: #0b3d5c;
+  --color-primary-700: #082d44;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-success-500: #27ae60;
+  --color-warning-500: #f39c12;
+  --color-danger-500: #e74c3c;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-neutral-50: #f8f9fa;
+  --color-neutral-100: #f2f3f4;
+  --color-neutral-200: #d5d8dc;
+  --color-neutral-500: #5d6d7e;
+  --color-neutral-800: #2c3e50;
+  --color-neutral-900: #1a252f;
+
+  /* Semáforo de asentamientos */
+  --color-semaphore-green: #27ae60;
+  --color-semaphore-yellow: #f1c40f;
+  --color-semaphore-orange: #e67e22;
+  --color-semaphore-red: #e74c3c;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-neutral-50 text-neutral-900 antialiased;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
 }
