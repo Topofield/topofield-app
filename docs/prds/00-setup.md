@@ -18,12 +18,12 @@ No se construye nada que sirva exclusivamente a fases posteriores.
 
 ### Dentro
 
-- Inicialización de Next.js 15 (App Router) + React 19 + TypeScript 5.6+ + Tailwind CSS 4.
+- Inicialización de Next.js 16 (App Router) + React 19.2 + TypeScript 5.6+ + Tailwind CSS 4.
 - Inicialización de Supabase local con Docker (`npx supabase start`), config de auth, variables de entorno.
 - Migración SQL inicial con las tablas `profiles`, `projects`, `reference_points`, su trigger `handle_new_user` y sus 9 políticas RLS.
 - Generación de tipos TypeScript desde Supabase (`src/types/database.ts`).
-- Tres clientes Supabase para Next.js App Router: browser, server, middleware (vía `@supabase/ssr` 0.5+).
-- Middleware raíz de protección de rutas con redirecciones según sesión.
+- Tres clientes Supabase para Next.js App Router: browser, server, helper de proxy/middleware (vía `@supabase/ssr` 0.5+).
+- `src/proxy.ts` (Next 16 — antes era `middleware.ts`) de protección de rutas con redirecciones según sesión.
 - Páginas `/sign-in`, `/sign-up`, `/dashboard` (placeholder) usando Server Actions para los forms.
 - Mensajes de error de auth traducidos a español.
 - Tokens de diseño TopoField en `src/app/globals.css` con `@theme` (sintaxis Tailwind 4).
@@ -49,7 +49,9 @@ No se construye nada que sirva exclusivamente a fases posteriores.
 | 2 | Schema mínimo: `profiles` + `projects` + `reference_points`. | Anti-patrón "cambios mínimos" del método. Las demás tablas se crean en su fase. |
 | 3 | Auth solo email + password. | Mínimo viable. Magic link/OAuth pueden entrar después. |
 | 4 | Tailwind 4 con tokens en `@theme`, no `tailwind.config.ts`. | Versión actual; riesgo de plugins ~0 al usar solo los oficiales. Implica actualizar PRD § 2.2. |
-| 5 | Next.js 15 + React 19 + TypeScript 5.6+ + Node 20+. | Lo que `create-next-app@latest` instala; dentro de "14+" del PRD. |
+| 5 | Next.js 16 + React 19.2 + TypeScript 5.6+ + Node 20.9+. | Lo que `create-next-app@latest` resolvió a 2026-04-29; dentro de "14+" del PRD. **Divergencia del plan inicial** que decía v15: la versión actual es v16 y trae breaking changes (ver decisiones #14 y #15). |
+| 14 | **`proxy.ts` en lugar de `middleware.ts`** (raíz `src/`). | Next 16 deprecó la convención `middleware`. La nueva se llama `proxy`, runtime nodejs (no edge). Helper interno `src/lib/supabase/middleware.ts` mantiene su nombre porque es solo un helper, no una convención de framework. |
+| 15 | **Turbopack como motor de dev y build** (default de Next 16). | El plan inicial proponía `--no-turbopack`; en Next 16 es estable y default. Mantener default reduce divergencia con la doc oficial. Si surge un bug de Turbopack se opta out con `next build --webpack`. |
 | 6 | Server Actions para los forms de auth (no client components). | Patrón canónico de `@supabase/ssr`; menos JS al cliente; cookies sin malabarismos. |
 | 7 | `@supabase/ssr` 0.5+, no `@supabase/auth-helpers-nextjs` (deprecated). | Único package soportado para App Router. |
 | 8 | Una sola migración inicial `<timestamp>_init.sql`. | Las 3 tablas son interdependientes; no hay nada que reordenar. |
