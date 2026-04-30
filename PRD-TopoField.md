@@ -117,29 +117,40 @@ Se construye un sistema de componentes reutilizables sobre Tailwind CSS, organiz
 | `Wizard` | `wizard.tsx` | Componente de pasos para formularios multi-step |
 | `Toast` | `toast.tsx` | Notificación temporal (auto-save, éxito, error) |
 
-**Tokens de diseño (definidos en `tailwind.config.ts`):**
+**Tokens de diseño (definidos en `src/app/globals.css` con `@theme` — sintaxis Tailwind 4):**
 
-```typescript
-// Colores de marca TopoField
-colors: {
-  primary: {
-    50: '#E8F4FA', 100: '#C5E4F3', 200: '#9DD1EB',
-    500: '#1A7FB5', 600: '#0B3D5C', 700: '#082D44',
-  },
-  success: { 500: '#27AE60' },
-  warning: { 500: '#F39C12' },
-  danger:  { 500: '#E74C3C' },
-  neutral: {
-    50: '#F8F9FA', 100: '#F2F3F4', 200: '#D5D8DC',
-    500: '#5D6D7E', 800: '#2C3E50', 900: '#1A252F',
-  },
-  // Semáforo de asentamientos
-  semaphore: {
-    green: '#27AE60', yellow: '#F1C40F',
-    orange: '#E67E22', red: '#E74C3C',
-  },
+```css
+@import "tailwindcss";
+
+@theme {
+  /* Colores de marca TopoField */
+  --color-primary-50:  #E8F4FA;
+  --color-primary-100: #C5E4F3;
+  --color-primary-200: #9DD1EB;
+  --color-primary-500: #1A7FB5;
+  --color-primary-600: #0B3D5C;
+  --color-primary-700: #082D44;
+
+  --color-success-500: #27AE60;
+  --color-warning-500: #F39C12;
+  --color-danger-500:  #E74C3C;
+
+  --color-neutral-50:  #F8F9FA;
+  --color-neutral-100: #F2F3F4;
+  --color-neutral-200: #D5D8DC;
+  --color-neutral-500: #5D6D7E;
+  --color-neutral-800: #2C3E50;
+  --color-neutral-900: #1A252F;
+
+  /* Semáforo de asentamientos */
+  --color-semaphore-green:  #27AE60;
+  --color-semaphore-yellow: #F1C40F;
+  --color-semaphore-orange: #E67E22;
+  --color-semaphore-red:    #E74C3C;
 }
 ```
+
+> **Nota sobre Tailwind 4:** desde la versión 4, Tailwind elimina `tailwind.config.ts` y los tokens viven directamente en CSS dentro del bloque `@theme`. Los nombres de las variables (`--color-primary-500`) generan automáticamente las clases utilitarias (`bg-primary-500`, `text-primary-500`, etc.).
 
 ---
 

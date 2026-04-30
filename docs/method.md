@@ -10,7 +10,7 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 
 | # | Fase | PRD de fase | Estado |
 |---|---|---|---|
-| 1 | Setup técnico | [`prds/00-setup.md`](./prds/00-setup.md) | pendiente |
+| 1 | Setup técnico | [`prds/00-setup.md`](./prds/00-setup.md) | en curso |
 | 2 | Dashboard y Proyectos | [`prds/01-dashboard-proyectos.md`](./prds/01-dashboard-proyectos.md) | pendiente |
 | 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | pendiente |
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | pendiente |

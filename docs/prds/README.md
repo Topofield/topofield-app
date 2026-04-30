@@ -6,7 +6,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 
 | # | Fase | Archivo | Estado |
 |---|---|---|---|
-| 1 | Setup técnico | `00-setup.md` | pendiente |
+| 1 | Setup técnico | `00-setup.md` | en curso |
 | 2 | Dashboard y Proyectos | `01-dashboard-proyectos.md` | pendiente |
 | 3 | Módulo Poligonal | `02-poligonal.md` | pendiente |
 | 4 | Módulo Nivelación | `03-nivelacion.md` | pendiente |
