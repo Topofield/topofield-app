@@ -1,7 +1,8 @@
 # PRD-de-fase 1 — Setup técnico
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-04-29
+**Fecha de cierre:** 2026-04-29
 
 ## Propósito
 
@@ -134,3 +135,17 @@ Durante esta fase NO se hace:
 - OAuth Google, magic link, recuperación de contraseña.
 
 Cualquier desvío encontrado durante la implementación se anota en la sección "Aprendizajes" de `docs/method.md` al cerrar, no se trata mid-fase.
+
+## Verificación de cierre (2026-04-29)
+
+Todos los criterios a-k pasaron. Resumen de los más relevantes:
+
+- `npm run typecheck`, `npm run lint`, `npm run build` — exit 0 (build genera 5 rutas + Proxy reconocido).
+- Sign-up vía Supabase REST con `data.full_name` → trigger `handle_new_user` crea `public.profiles` con el `full_name` correcto (verificado: `c85e519a-...` → `User A`).
+- Sign-in retorna access token JWT.
+- `/dashboard` sin sesión → 307 a `/sign-in`. `/sign-in` y `/sign-up` públicas → 200.
+- RLS aislamiento: User A inserta proyecto, lo ve. User B con su propio token: `SELECT * FROM projects` devuelve `[]`.
+
+Datos de prueba (`a@test.com`, `b@test.com`) borrados al cerrar.
+
+Las divergencias entre el plan original y lo entregado están documentadas en la sección "Aprendizajes" de [`docs/method.md`](../method.md).

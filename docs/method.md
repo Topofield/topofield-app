@@ -10,7 +10,7 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 
 | # | Fase | PRD de fase | Estado |
 |---|---|---|---|
-| 1 | Setup técnico | [`prds/00-setup.md`](./prds/00-setup.md) | en curso |
+| 1 | Setup técnico | [`prds/00-setup.md`](./prds/00-setup.md) | cerrada |
 | 2 | Dashboard y Proyectos | [`prds/01-dashboard-proyectos.md`](./prds/01-dashboard-proyectos.md) | pendiente |
 | 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | pendiente |
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | pendiente |
@@ -69,7 +69,23 @@ Sección viva. Cada cierre de fase añade una entrada con:
 - Qué supuesto del PRD-de-fase resultó incorrecto y cómo se corrigió
 - Qué patrón funcionó bien y conviene replicar
 
-(Vacía hasta cerrar la fase 1.)
+### Cierre Fase 1 — Setup técnico (2026-04-29)
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- Versión real instalada: **Next.js 16.2.4** (no 15 como decía el plan inicial). `create-next-app@latest` resolvió a 16. Implicaciones acomodadas dentro de la fase: `middleware.ts` deprecado → renombrado a `proxy.ts` (runtime nodejs); Turbopack es default; `cookies()`/`searchParams` obligatoriamente async.
+- **Tailwind 4** sin `tailwind.config.ts`: tokens viven en `src/app/globals.css` con `@theme`. Hubo que actualizar PRD-TopoField.md § 2.2.
+- Supabase CLI v2.95 emite **publishable key + secret key** (formato nuevo) en lugar del clásico `anon` + `service_role`. Variables de entorno: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY`.
+- `npm run lint` ya no es `next lint` (removido en Next 16); el script invoca `eslint` directo. CLAUDE.md `npm run lint` sigue siendo el entry point correcto.
+- En dev local, lo correcto es `npx supabase db reset` (no `db push` como dice CLAUDE.md). Anotado para revisar CLAUDE.md cuando se abra Fase 2 o se conecte cloud.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- `projects.user_id` referencia `auth.users(id)` **sin** `on delete cascade`. Si se borra un user, sus projects (y por cascade sus reference_points en Fase 1, y procesos en Fases 3-5) quedan huérfanos. Considerar añadir cascade en una migración correctiva. **Decisión actual:** dejarlo como está hasta que aparezca un caso real, ya que el PRD original lo definió así.
+- El proxy + el `redirect("/dashboard")` del root page generan una cadena de 2 redirects para usuarios no autenticados (`/` → `/dashboard` → `/sign-in`). Funciona pero gasta una request extra. Si en alguna fase importa, mover la lógica de root al proxy.
+- Server Actions con `redirect()` + `searchParams` para errores son un patrón muy limpio en Next 16 con `searchParams: Promise<...>`. Lo replicaremos en Fase 2 en el wizard de proyecto.
+- El `enable_confirmations = false` en `supabase/config.toml` es solo para dev; al activar cloud habrá que decidir si verificación de email entra y eso cambia el flujo de signup.
+- El comando `supabase gen types --local` imprime un log a stdout (`Connecting to db 5432`) que contamina el archivo si se usa `>`. Hay que usar `2>/dev/null > out.ts` o post-procesar.
 
 ## Anti-patrones a evitar
 
