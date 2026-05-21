@@ -185,7 +185,10 @@ User (Supabase Auth)
 ```sql
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  -- full_name es derivada: siempre sincronizada con first_name + last_name
+  full_name TEXT GENERATED ALWAYS AS (first_name || ' ' || last_name) STORED,
   company TEXT,
   position TEXT,
   professional_license TEXT,                -- matrícula profesional
@@ -198,8 +201,12 @@ CREATE TABLE profiles (
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name)
-  VALUES (new.id, new.raw_user_meta_data->>'full_name');
+  INSERT INTO public.profiles (id, first_name, last_name)
+  VALUES (
+    new.id,
+    new.raw_user_meta_data->>'first_name',
+    new.raw_user_meta_data->>'last_name'
+  );
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

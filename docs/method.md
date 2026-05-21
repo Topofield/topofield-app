@@ -87,6 +87,8 @@ Sección viva. Cada cierre de fase añade una entrada con:
 - El `enable_confirmations = false` en `supabase/config.toml` es solo para dev; al activar cloud habrá que decidir si verificación de email entra y eso cambia el flujo de signup.
 - El comando `supabase gen types --local` imprime un log a stdout (`Connecting to db 5432`) que contamina el archivo si se usa `>`. Hay que usar `2>/dev/null > out.ts` o post-procesar.
 
+**Ajuste post-cierre (2026-04-30):** tras el primer testeo de UI, el usuario pidió capturar nombre y apellido por separado. Se reabrió la fase (estado `en curso`), se editó la migración inicial en sitio (`full_name` → `first_name` + `last_name` + `full_name` como columna generada), se actualizó el trigger, el form de sign-up y el PRD § 3.2, y se re-cerró. Patrón válido por el método ("extender el alcance del PRD-de-fase explícitamente" antes que cerrar con deuda) y viable porque la migración nunca salió de local. A futuro, si una migración ya se desplegó a cloud, este tipo de cambio iría en una migración nueva con `ALTER TABLE`, no editando la inicial.
+
 ## Anti-patrones a evitar
 
 - **Saltar a código sin PRD-de-fase aprobado.** Aunque "esté claro", el ejercicio de redactar el PRD-de-fase fuerza decisiones que de otro modo emergen tarde.

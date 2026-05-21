@@ -15,7 +15,10 @@
 -- ----------------------------------------------------------------------------
 create table public.profiles (
   id                   uuid primary key references auth.users(id) on delete cascade,
-  full_name            text not null,
+  first_name           text not null,
+  last_name            text not null,
+  -- full_name es derivada: siempre sincronizada con first_name + last_name.
+  full_name            text generated always as (first_name || ' ' || last_name) stored,
   company              text,
   position             text,
   professional_license text,                                  -- matrícula profesional
@@ -26,8 +29,9 @@ create table public.profiles (
 
 
 -- Trigger: al registrarse un user en auth, crear automáticamente su profile.
--- COALESCE defensivo: si el cliente no manda full_name en raw_user_meta_data,
--- usamos el email para no romper el signup. Decisión #9 del PRD-de-fase.
+-- COALESCE defensivo: si el cliente no manda first_name/last_name en
+-- raw_user_meta_data, usamos el email / cadena vacía para no romper el signup.
+-- Decisión #9 del PRD-de-fase. full_name no se inserta: es columna generada.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -35,10 +39,11 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name)
+  insert into public.profiles (id, first_name, last_name)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', new.email)
+    coalesce(new.raw_user_meta_data->>'first_name', new.email),
+    coalesce(new.raw_user_meta_data->>'last_name', '')
   );
   return new;
 end;

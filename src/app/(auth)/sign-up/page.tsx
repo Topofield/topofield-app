@@ -14,10 +14,17 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       <form action={signUpAction} className="flex flex-col gap-4">
         {error && <Alert variant="error">{error}</Alert>}
         <Input
-          label="Nombre completo"
-          name="full_name"
+          label="Nombre"
+          name="first_name"
           type="text"
-          autoComplete="name"
+          autoComplete="given-name"
+          required
+        />
+        <Input
+          label="Apellido"
+          name="last_name"
+          type="text"
+          autoComplete="family-name"
           required
         />
         <Input

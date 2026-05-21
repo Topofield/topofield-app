@@ -2,7 +2,7 @@
 
 **Estado:** cerrada
 **Fecha de apertura:** 2026-04-29
-**Fecha de cierre:** 2026-04-29
+**Fecha de cierre:** 2026-04-29 (reabierta y re-cerrada 2026-04-30 — ajuste: nombre y apellido separados)
 
 ## Propósito
 
@@ -56,7 +56,8 @@ No se construye nada que sirva exclusivamente a fases posteriores.
 | 6 | Server Actions para los forms de auth (no client components). | Patrón canónico de `@supabase/ssr`; menos JS al cliente; cookies sin malabarismos. |
 | 7 | `@supabase/ssr` 0.5+, no `@supabase/auth-helpers-nextjs` (deprecated). | Único package soportado para App Router. |
 | 8 | Una sola migración inicial `<timestamp>_init.sql`. | Las 3 tablas son interdependientes; no hay nada que reordenar. |
-| 9 | Trigger defensivo: `COALESCE(raw_user_meta_data->>'full_name', new.email)`. | Si el cliente no manda `full_name`, el signup no se rompe. Divergencia mínima del SQL del PRD § 3.2. |
+| 9 | Trigger defensivo: `COALESCE` sobre `first_name`/`last_name` de `raw_user_meta_data`. | Si el cliente no manda los nombres, el signup no se rompe. Divergencia mínima del SQL del PRD § 3.2. |
+| 16 | **`profiles` usa `first_name` + `last_name`; `full_name` es columna generada** `GENERATED ALWAYS AS (first_name \|\| ' ' \|\| last_name) STORED`. | Ajuste de alcance pedido el 2026-04-30 tras el primer testeo de UI: el registro captura nombre y apellido por separado. `full_name` se conserva como derivada de solo lectura para comodidad de consultas. El PRD § 3.2 se actualizó en consecuencia. |
 | 10 | `tsconfig.json` con `strict + noUncheckedIndexedAccess + noImplicitOverride`. | Rigor que paga dividendos en los cálculos topográficos futuros. |
 | 11 | `clsx + tailwind-merge` (helper `cn()`), no `cva`. | Para 4 componentes no se justifica una dependencia adicional. Reevaluar al crecer el design system. |
 | 12 | `npx supabase db reset` en dev local, no `db push`. | `db reset` recrea volumen y reaplica todas las migraciones; correcto en dev sin datos productivos. CLAUDE.md menciona `db push`; se actualiza al cerrar la fase. |
@@ -76,7 +77,7 @@ Las 3 tablas se copian literales del PRD § 3.2 (líneas 175-184, 203-224, 229-2
 |---|---|---|
 | `/` | `src/app/page.tsx` | `redirect('/dashboard')`. El middleware decide según sesión. |
 | `/sign-in` | `src/app/(auth)/sign-in/page.tsx` | Form con email + password. Server Action `signInAction` llama `signInWithPassword`. |
-| `/sign-up` | `src/app/(auth)/sign-up/page.tsx` | Form con full_name + email + password. Server Action `signUpAction` llama `signUp` pasando `full_name` en `options.data`. |
+| `/sign-up` | `src/app/(auth)/sign-up/page.tsx` | Form con first_name + last_name + email + password. Server Action `signUpAction` llama `signUp` pasando `first_name` y `last_name` en `options.data`. |
 | `/dashboard` | `src/app/dashboard/page.tsx` | Placeholder: "Bienvenido, {email}" + botón cerrar sesión. |
 
 El middleware raíz redirige:
@@ -97,7 +98,7 @@ Al cerrar la fase, los siguientes deben pasar (todos):
 | c | Build prod compila | `npm run build` exit 0 |
 | d | Dev server levanta | `npm run dev` responde en `localhost:3000` |
 | e | Supabase corre | `npx supabase status` muestra todos los servicios "running" |
-| f | Sign-up crea profile | Registrarse en `/sign-up`. Verificar fila en `auth.users` Y en `public.profiles` con `full_name` correcto |
+| f | Sign-up crea profile | Registrarse en `/sign-up`. Verificar fila en `auth.users` Y en `public.profiles` con `first_name`, `last_name` y `full_name` (generada) correctos |
 | g | Sign-in funciona | Logout y login con esas credenciales redirige a `/dashboard` |
 | h | Ruta protegida | Sin sesión, abrir `/dashboard` redirige a `/sign-in` |
 | i | Auth con sesión | Con sesión, abrir `/sign-in` redirige a `/dashboard` |
@@ -136,16 +137,26 @@ Durante esta fase NO se hace:
 
 Cualquier desvío encontrado durante la implementación se anota en la sección "Aprendizajes" de `docs/method.md` al cerrar, no se trata mid-fase.
 
-## Verificación de cierre (2026-04-29)
+## Verificación de cierre (2026-04-29, re-verificada 2026-04-30)
 
 Todos los criterios a-k pasaron. Resumen de los más relevantes:
 
 - `npm run typecheck`, `npm run lint`, `npm run build` — exit 0 (build genera 5 rutas + Proxy reconocido).
-- Sign-up vía Supabase REST con `data.full_name` → trigger `handle_new_user` crea `public.profiles` con el `full_name` correcto (verificado: `c85e519a-...` → `User A`).
+- Sign-up vía Supabase REST con `data.first_name` / `data.last_name` → trigger `handle_new_user` crea `public.profiles` con `first_name`, `last_name` y `full_name` (generada) correctos (verificado: `María Camila` + `Vélez` → `María Camila Vélez`).
 - Sign-in retorna access token JWT.
 - `/dashboard` sin sesión → 307 a `/sign-in`. `/sign-in` y `/sign-up` públicas → 200.
 - RLS aislamiento: User A inserta proyecto, lo ve. User B con su propio token: `SELECT * FROM projects` devuelve `[]`.
 
-Datos de prueba (`a@test.com`, `b@test.com`) borrados al cerrar.
+Datos de prueba borrados al cerrar.
+
+### Ajuste post-cierre (2026-04-30)
+
+Tras el primer testeo de la interfaz, se reabrió la fase para un ajuste de alcance: el registro ahora captura **nombre y apellido por separado**. Cambios:
+
+- `profiles`: `full_name` (campo libre) → `first_name` + `last_name` (NOT NULL) + `full_name` como columna `GENERATED ALWAYS ... STORED`.
+- Trigger `handle_new_user` inserta `first_name`/`last_name`; `full_name` se deriva sola.
+- Form de `/sign-up`: dos campos (`Nombre`, `Apellido`) en lugar de uno.
+- Migración inicial `_init.sql` editada en sitio (decisión del usuario; nunca se desplegó fuera de local).
+- PRD § 3.2 actualizado.
 
 Las divergencias entre el plan original y lo entregado están documentadas en la sección "Aprendizajes" de [`docs/method.md`](../method.md).
