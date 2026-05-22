@@ -26,6 +26,7 @@ import {
   PolygonalConfigFields,
   type PolygonalConfigState,
 } from "./polygonal-config-fields";
+import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
 import { StationsTable, type StationDraftState } from "./stations-table";
 
@@ -285,15 +286,34 @@ export function PolygonalEditor({
       </Card>
 
       {!readOnly && (
-        <div className="flex items-center justify-end gap-3">
-          {captureBlocked && (
-            <span className="text-sm text-danger-500">
-              Corrige las celdas con error para poder guardar.
-            </span>
-          )}
-          <Button onClick={handleSave} disabled={isPending || captureBlocked}>
-            {isPending ? "Guardando…" : "Guardar"}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ReassignCoordinatesDialog
+            startNorth={config.startNorth}
+            startEast={config.startEast}
+            startAzimuth={config.startAzimuth}
+            onApply={(north, east, azimuth) => {
+              setConfig({
+                ...config,
+                startNorth: north,
+                startEast: east,
+                startAzimuth: azimuth,
+              });
+              setSaved(false);
+            }}
+          />
+          <div className="flex items-center gap-3">
+            {captureBlocked && (
+              <span className="text-sm text-danger-500">
+                Corrige las celdas con error para poder guardar.
+              </span>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={isPending || captureBlocked}
+            >
+              {isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </div>
         </div>
       )}
     </div>
