@@ -1,4 +1,11 @@
 export { Alert } from "./alert";
+export { Badge } from "./badge";
 export { Button } from "./button";
 export { Card } from "./card";
+export { EmptyState } from "./empty-state";
 export { Input } from "./input";
+export { KpiCard } from "./kpi-card";
+export { Modal } from "./modal";
+export { Select, type SelectOption } from "./select";
+export { Tabs, type TabItem } from "./tabs";
+export { Textarea } from "./textarea";
