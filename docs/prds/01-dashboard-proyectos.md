@@ -146,8 +146,10 @@ schema.
   `description`, `projection`, `latitude` (−90..90), `longitude` (−180..180).
 - **Reference point** — obligatorios: `code`, `type` ∈ {bm, control, gps, detail}.
   Opcionales: `north`, `east`, `elevation`, `description`.
-- Formato: coordenadas (`latitude`/`longitude`/`north`/`east`) a 3 decimales;
-  cotas (`elevation`) a 4 decimales (regla de CLAUDE.md).
+- Formato (regla de CLAUDE.md): las coordenadas topográficas `north`/`east` de los
+  puntos de referencia se redondean a 3 decimales y la cota `elevation` a 4. La
+  latitud/longitud geográfica del proyecto (`decimal(10,7)`) no entra en esa regla
+  — solo se valida el rango (−90..90 / −180..180); la columna conserva su precisión.
 
 ## Componentes nuevos
 
