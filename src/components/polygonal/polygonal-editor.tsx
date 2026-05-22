@@ -26,6 +26,7 @@ import {
   PolygonalConfigFields,
   type PolygonalConfigState,
 } from "./polygonal-config-fields";
+import { CloseProcessDialog } from "./close-process-dialog";
 import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
 import { StationsTable, type StationDraftState } from "./stations-table";
@@ -153,7 +154,8 @@ export function PolygonalEditor({
     process.correction_method ?? "bowditch",
   );
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const result = useMemo(
@@ -183,7 +185,6 @@ export function PolygonalEditor({
 
   function handleSave() {
     setError(null);
-    setSaved(false);
     const controlled = config.type === "open_controlled";
     startTransition(async () => {
       const response = await savePolygonalProcessAction({
@@ -215,8 +216,12 @@ export function PolygonalEditor({
           horizontalDistance: parseNumber(st.distance),
         })),
       });
-      if (response.ok) setSaved(true);
-      else setError(response.error ?? "No se pudo guardar el proceso.");
+      if (response.ok) {
+        setDirty(false);
+        setSaveMessage("Proceso guardado.");
+      } else {
+        setError(response.error ?? "No se pudo guardar el proceso.");
+      }
     });
   }
 
@@ -245,7 +250,7 @@ export function PolygonalEditor({
         </Alert>
       )}
       {error && <Alert variant="error">{error}</Alert>}
-      {saved && <Alert variant="success">Proceso guardado.</Alert>}
+      {saveMessage && <Alert variant="success">{saveMessage}</Alert>}
 
       <Card title="Configuración">
         <PolygonalConfigFields
@@ -253,7 +258,8 @@ export function PolygonalEditor({
           disabled={readOnly}
           onChange={(v) => {
             setConfig(v);
-            setSaved(false);
+            setDirty(true);
+            setSaveMessage(null);
           }}
         />
       </Card>
@@ -267,7 +273,8 @@ export function PolygonalEditor({
           disabled={readOnly}
           onChange={(v) => {
             setStations(v);
-            setSaved(false);
+            setDirty(true);
+            setSaveMessage(null);
           }}
         />
       </Card>
@@ -280,7 +287,8 @@ export function PolygonalEditor({
           disabled={readOnly}
           onMethodChange={(m) => {
             setMethod(m);
-            setSaved(false);
+            setDirty(true);
+            setSaveMessage(null);
           }}
         />
       </Card>
@@ -298,7 +306,8 @@ export function PolygonalEditor({
                 startEast: east,
                 startAzimuth: azimuth,
               });
-              setSaved(false);
+              setDirty(true);
+              setSaveMessage(null);
             }}
           />
           <div className="flex items-center gap-3">
@@ -313,6 +322,13 @@ export function PolygonalEditor({
             >
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
+            <CloseProcessDialog
+              processId={process.id}
+              type={config.type}
+              result={result}
+              captureBlocked={captureBlocked}
+              dirty={dirty}
+            />
           </div>
         </div>
       )}
