@@ -1,8 +1,8 @@
 # PRD-de-fase 3 — Módulo Poligonal
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-05-22
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-05-22
 
 ## Propósito
 

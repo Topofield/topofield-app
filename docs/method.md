@@ -12,7 +12,7 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 |---|---|---|---|
 | 1 | Setup técnico | [`prds/00-setup.md`](./prds/00-setup.md) | cerrada |
 | 2 | Dashboard y Proyectos | [`prds/01-dashboard-proyectos.md`](./prds/01-dashboard-proyectos.md) | cerrada |
-| 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | en curso |
+| 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | cerrada |
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | pendiente |
 | 5 | Módulo Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | pendiente |
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | pendiente |
@@ -103,6 +103,21 @@ Sección viva. Cada cierre de fase añade una entrada con:
 - **Tres patrones de Server Action según el caso:** `useActionState` para formularios con validación por campo que se quedan en pantalla (wizard, edición); acción-como-función + validación en cliente para formularios en modal; `<form action>` plano para operaciones de solo-id (archivar, restaurar, eliminar).
 - **Mover una carpeta de ruta deja `.next/types` obsoleto:** tras mover `dashboard/` al route group `(app)`, `tsc` falló por un `validator.ts` generado que aún referenciaba la ruta vieja. `npm run build` regenera esos tipos. Conviene hacer build (no solo typecheck) tras mover rutas.
 - Los validadores puros de `src/lib/validators/` se reutilizan en cliente y servidor sin fricción; confirma el enfoque de funciones puras para la lógica de validación.
+
+### Cierre Fase 3 — Módulo Poligonal (2026-05-22)
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El PRD-de-fase contemplaba "autodetectar" el sentido del recorrido de la poligonal cerrada por el error de cierre. Resultó **imposible**: las dos orientaciones (horario/antihorario) producen polígonos espejo que *ambos* cierran (Σ(180±ángulo) son ambos múltiplos de 360°). Se fijó la convención `Az_i = Az_{i-1} + 180° − ángulo interno_i`, la del caso 1 del marco teórico, validada con un fixture de cuadrado de cierre conocido.
+- El editor no tiene botón "Calcular" separado: el cálculo es siempre en vivo y "Guardar" persiste datos + resultados (decisión #4, confirmada en la práctica).
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Limpiar `.next` al alternar `build` y `dev`.** Tras `npm run build`, arrancar `npm run dev` sobre el mismo `.next` hizo que una ruta estática (`polygonal/new`) se resolviera como dinámica (`[pid]`) y devolviera 404. `rm -rf .next` antes de `dev` lo soluciona.
+- **El servidor recalcula con las funciones puras**, no confía en los resultados del cliente: `savePolygonalProcessAction` reconstruye el input y corre `computePolygonal`. Una sola fuente de verdad para lo persistido. Replicar en nivelación y asentamientos.
+- **Funciones de cálculo puras + Vitest con fixtures verificados a mano** (un cuadrado con cierre conocido) atrapan errores de convención que la documentación ilustrativa no resuelve. Patrón clave para Fases 4-5.
+- **Los números de los casos de estudio del marco teórico son ilustrativos**: las tablas no son internamente consistentes (sumas y azimuts que no cuadran). Sirven de guía del método, no de fixture exacto — los fixtures se construyen con entradas limpias.
+- El mecanismo de cierre (estado `closed`/`rejected`, `closed_at`/`closed_by`, inmutabilidad en los Server Actions, modo solo lectura del editor) queda listo para reutilizarse en los módulos de nivelación y asentamientos.
 
 ## Anti-patrones a evitar
 
