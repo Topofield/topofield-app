@@ -34,6 +34,199 @@ export type Database = {
   }
   public: {
     Tables: {
+      polygonal_processes: {
+        Row: {
+          angle_type: string
+          angular_error_seconds: number | null
+          closed_at: string | null
+          closed_by: string | null
+          correction_method: string | null
+          created_at: string
+          end_azimuth_deg: number | null
+          end_azimuth_min: number | null
+          end_azimuth_sec: number | null
+          end_east: number | null
+          end_north: number | null
+          end_point_code: string | null
+          id: string
+          linear_error: number | null
+          meets_tolerance: boolean | null
+          name: string
+          notes: string | null
+          perimeter: number | null
+          project_id: string
+          relative_precision: string | null
+          start_azimuth_deg: number | null
+          start_azimuth_min: number | null
+          start_azimuth_sec: number | null
+          start_east: number
+          start_north: number
+          start_point_code: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          angle_type?: string
+          angular_error_seconds?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          correction_method?: string | null
+          created_at?: string
+          end_azimuth_deg?: number | null
+          end_azimuth_min?: number | null
+          end_azimuth_sec?: number | null
+          end_east?: number | null
+          end_north?: number | null
+          end_point_code?: string | null
+          id?: string
+          linear_error?: number | null
+          meets_tolerance?: boolean | null
+          name: string
+          notes?: string | null
+          perimeter?: number | null
+          project_id: string
+          relative_precision?: string | null
+          start_azimuth_deg?: number | null
+          start_azimuth_min?: number | null
+          start_azimuth_sec?: number | null
+          start_east: number
+          start_north: number
+          start_point_code: string
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          angle_type?: string
+          angular_error_seconds?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          correction_method?: string | null
+          created_at?: string
+          end_azimuth_deg?: number | null
+          end_azimuth_min?: number | null
+          end_azimuth_sec?: number | null
+          end_east?: number | null
+          end_north?: number | null
+          end_point_code?: string | null
+          id?: string
+          linear_error?: number | null
+          meets_tolerance?: boolean | null
+          name?: string
+          notes?: string | null
+          perimeter?: number | null
+          project_id?: string
+          relative_precision?: string | null
+          start_azimuth_deg?: number | null
+          start_azimuth_min?: number | null
+          start_azimuth_sec?: number | null
+          start_east?: number
+          start_north?: number
+          start_point_code?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polygonal_processes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polygonal_stations: {
+        Row: {
+          angle_deg: number | null
+          angle_min: number | null
+          angle_sec: number | null
+          azimuth_deg: number | null
+          azimuth_min: number | null
+          azimuth_sec: number | null
+          corrected_angle_deg: number | null
+          corrected_angle_min: number | null
+          corrected_angle_sec: number | null
+          corrected_delta_east: number | null
+          corrected_delta_north: number | null
+          created_at: string
+          deflection_direction: string | null
+          delta_east: number | null
+          delta_north: number | null
+          east: number | null
+          has_warnings: boolean
+          horizontal_distance: number | null
+          id: string
+          north: number | null
+          point_code: string
+          process_id: string
+          station_order: number
+          warning_messages: Json | null
+        }
+        Insert: {
+          angle_deg?: number | null
+          angle_min?: number | null
+          angle_sec?: number | null
+          azimuth_deg?: number | null
+          azimuth_min?: number | null
+          azimuth_sec?: number | null
+          corrected_angle_deg?: number | null
+          corrected_angle_min?: number | null
+          corrected_angle_sec?: number | null
+          corrected_delta_east?: number | null
+          corrected_delta_north?: number | null
+          created_at?: string
+          deflection_direction?: string | null
+          delta_east?: number | null
+          delta_north?: number | null
+          east?: number | null
+          has_warnings?: boolean
+          horizontal_distance?: number | null
+          id?: string
+          north?: number | null
+          point_code: string
+          process_id: string
+          station_order: number
+          warning_messages?: Json | null
+        }
+        Update: {
+          angle_deg?: number | null
+          angle_min?: number | null
+          angle_sec?: number | null
+          azimuth_deg?: number | null
+          azimuth_min?: number | null
+          azimuth_sec?: number | null
+          corrected_angle_deg?: number | null
+          corrected_angle_min?: number | null
+          corrected_angle_sec?: number | null
+          corrected_delta_east?: number | null
+          corrected_delta_north?: number | null
+          created_at?: string
+          deflection_direction?: string | null
+          delta_east?: number | null
+          delta_north?: number | null
+          east?: number | null
+          has_warnings?: boolean
+          horizontal_distance?: number | null
+          id?: string
+          north?: number | null
+          point_code?: string
+          process_id?: string
+          station_order?: number
+          warning_messages?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polygonal_stations_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "polygonal_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
