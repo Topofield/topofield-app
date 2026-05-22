@@ -5,6 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Project, ProjectStatus, ReferencePoint } from "@/types/project";
+import type { PolygonalProcess, PolygonalStation } from "@/types/polygonal";
 
 type Client = SupabaseClient<Database>;
 
@@ -85,4 +86,51 @@ export async function getReferencePoints(
 
   if (error) throw error;
   return (data ?? []) as ReferencePoint[];
+}
+
+/** Procesos poligonales de un proyecto, del más reciente al más antiguo. */
+export async function getPolygonalProcesses(
+  supabase: Client,
+  projectId: string,
+): Promise<PolygonalProcess[]> {
+  const { data, error } = await supabase
+    .from("polygonal_processes")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as PolygonalProcess[];
+}
+
+/** Un proceso poligonal por id, o `null` si no existe o es de otro usuario. */
+export async function getPolygonalProcess(
+  supabase: Client,
+  id: string,
+): Promise<PolygonalProcess | null> {
+  if (!UUID_RE.test(id)) return null;
+
+  const { data, error } = await supabase
+    .from("polygonal_processes")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as PolygonalProcess | null) ?? null;
+}
+
+/** Estaciones de un proceso poligonal, ordenadas por station_order. */
+export async function getPolygonalStations(
+  supabase: Client,
+  processId: string,
+): Promise<PolygonalStation[]> {
+  const { data, error } = await supabase
+    .from("polygonal_stations")
+    .select("*")
+    .eq("process_id", processId)
+    .order("station_order", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as PolygonalStation[];
 }
