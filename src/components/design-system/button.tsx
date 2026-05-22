@@ -26,6 +26,27 @@ const SIZE_CLASSES: Record<Size, string> = {
   lg: "h-12 px-6 text-lg",
 };
 
+/**
+ * Composición de clases de un botón. Se exporta para que un `next/link` pueda
+ * verse como botón sin anidar un `<button>` dentro de un `<a>` (HTML inválido).
+ */
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: Variant;
+  size?: Size;
+  className?: string;
+} = {}) {
+  return cn(
+    "inline-flex items-center justify-center rounded-md font-medium transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
+    VARIANT_CLASSES[variant],
+    SIZE_CLASSES[size],
+    className,
+  );
+}
+
 export function Button({
   variant = "primary",
   size = "md",
@@ -36,12 +57,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={cn(
-        "inline-flex items-center justify-center rounded-md font-medium transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
-        VARIANT_CLASSES[variant],
-        SIZE_CLASSES[size],
-        className,
-      )}
+      className={buttonClasses({ variant, size, className })}
       {...rest}
     />
   );

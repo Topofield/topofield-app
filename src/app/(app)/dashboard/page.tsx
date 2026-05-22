@@ -1,11 +1,88 @@
-export default function DashboardPage() {
+import Link from "next/link";
+import { buttonClasses, EmptyState, KpiCard } from "@/components/design-system";
+import { DashboardFilter } from "@/components/projects/dashboard-filter";
+import { ProjectCard } from "@/components/projects/project-card";
+import { createClient } from "@/lib/supabase/server";
+import {
+  getDashboardKpis,
+  getDashboardProjects,
+} from "@/lib/supabase/queries";
+import type { ProjectStatus } from "@/types/project";
+
+interface DashboardPageProps {
+  searchParams: Promise<{ status?: string }>;
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: DashboardPageProps) {
+  const { status: statusParam } = await searchParams;
+  const status: ProjectStatus =
+    statusParam === "archived" ? "archived" : "active";
+
+  const supabase = await createClient();
+  const [kpis, projects] = await Promise.all([
+    getDashboardKpis(supabase),
+    getDashboardProjects(supabase, status),
+  ]);
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
-      <p className="mt-2 text-sm text-neutral-500">
-        Los KPIs y la lista de proyectos se construyen a continuación en la
-        Fase 2.
-      </p>
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
+        <Link href="/projects/new" className={buttonClasses()}>
+          + Nuevo Proyecto
+        </Link>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <KpiCard label="Proyectos activos" value={kpis.activeProjects} />
+        <KpiCard
+          label="Procesos pendientes de cierre"
+          value="—"
+          hint="Disponible al implementar los módulos de proceso."
+        />
+        <KpiCard
+          label="Alertas activas"
+          value="—"
+          hint="Disponible al implementar los asentamientos."
+        />
+      </div>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-neutral-900">Proyectos</h2>
+          <DashboardFilter activeStatus={status} />
+        </div>
+
+        {projects.length === 0 ? (
+          <EmptyState
+            title={
+              status === "active"
+                ? "Aún no tienes proyectos"
+                : "No hay proyectos archivados"
+            }
+            description={
+              status === "active"
+                ? "Crea tu primer proyecto para empezar a registrar procesos topográficos."
+                : undefined
+            }
+            action={
+              status === "active" ? (
+                <Link href="/projects/new" className={buttonClasses()}>
+                  + Nuevo Proyecto
+                </Link>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {projects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
