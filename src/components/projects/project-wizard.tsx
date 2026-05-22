@@ -1,15 +1,9 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import {
-  Alert,
-  Button,
-  Input,
-  Select,
-  Textarea,
-} from "@/components/design-system";
+import { Alert, Button } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
-import { PRECISION_ORDER_OPTIONS } from "@/types/project";
+import { BasicFields, EquipmentFields } from "./project-fields";
 import {
   createProjectAction,
   type CreateProjectState,
@@ -27,9 +21,9 @@ export function ProjectWizard() {
   const fieldErrors = state.fieldErrors ?? {};
 
   // "Siguiente": valida nativamente solo los campos del paso 1 antes de avanzar.
-  // Esa validación (required + rango min/max) cubre todo lo que el validador del
+  // Esa validación (required + rango min/max) cubre lo que el validador del
   // servidor revisa del paso 1, así que un error de servidor del paso 1 solo
-  // ocurriría manipulando el DOM; no se navega de vuelta automáticamente.
+  // ocurriría manipulando el DOM.
   function goToStep2() {
     const controls = step1Ref.current?.querySelectorAll<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -50,9 +44,7 @@ export function ProjectWizard() {
       <ol className="flex items-center gap-2 text-sm">
         <li
           className={
-            step === 1
-              ? "font-semibold text-primary-600"
-              : "text-neutral-500"
+            step === 1 ? "font-semibold text-primary-600" : "text-neutral-500"
           }
         >
           1. Datos básicos
@@ -60,9 +52,7 @@ export function ProjectWizard() {
         <li className="text-neutral-300">›</li>
         <li
           className={
-            step === 2
-              ? "font-semibold text-primary-600"
-              : "text-neutral-500"
+            step === 2 ? "font-semibold text-primary-600" : "text-neutral-500"
           }
         >
           2. Equipo y precisión
@@ -71,131 +61,21 @@ export function ProjectWizard() {
 
       {state.error && <Alert variant="error">{state.error}</Alert>}
 
-      {/* Paso 1 — siempre montado; oculto cuando no está activo, para que el
+      {/* Ambos pasos siempre montados; el inactivo se oculta con CSS para que el
           FormData final recoja todos los campos. */}
       <div
         ref={step1Ref}
         className={cn("flex-col gap-4", step === 1 ? "flex" : "hidden")}
       >
-        <Input
-          label="Nombre del proyecto"
-          name="name"
-          required
-          error={fieldErrors.name}
-        />
-        <Textarea label="Descripción" name="description" />
-        <Input
-          label="Cliente"
-          name="client"
-          required
-          error={fieldErrors.client}
-        />
-        <Input
-          label="Ubicación"
-          name="location"
-          required
-          error={fieldErrors.location}
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Latitud"
-            name="latitude"
-            type="number"
-            step="any"
-            min={-90}
-            max={90}
-            helperText="Opcional (grados decimales)."
-            error={fieldErrors.latitude}
-          />
-          <Input
-            label="Longitud"
-            name="longitude"
-            type="number"
-            step="any"
-            min={-180}
-            max={180}
-            helperText="Opcional (grados decimales)."
-            error={fieldErrors.longitude}
-          />
-        </div>
+        <BasicFields errors={fieldErrors} />
       </div>
-
-      {/* Paso 2 */}
       <div className={cn("flex-col gap-4", step === 2 ? "flex" : "hidden")}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Datum"
-            name="datum"
-            defaultValue="MAGNA-SIRGAS"
-            required
-            error={fieldErrors.datum}
-          />
-          <Input label="Proyección" name="projection" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Marca del equipo"
-            name="equipment_brand"
-            required
-            error={fieldErrors.equipment_brand}
-          />
-          <Input
-            label="Modelo del equipo"
-            name="equipment_model"
-            required
-            error={fieldErrors.equipment_model}
-          />
-        </div>
-        <Input
-          label="Serie del equipo"
-          name="equipment_serial"
-          required
-          error={fieldErrors.equipment_serial}
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Precisión angular (segundos)"
-            name="angular_precision_seconds"
-            type="number"
-            step="0.1"
-            min={0}
-            required
-            error={fieldErrors.angular_precision_seconds}
-          />
-          <Input
-            label="Precisión lineal"
-            name="linear_precision"
-            placeholder="ej: 2+2ppm"
-            required
-            error={fieldErrors.linear_precision}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Fecha de calibración"
-            name="equipment_calibration_date"
-            type="date"
-            required
-            error={fieldErrors.equipment_calibration_date}
-          />
-          <Select
-            label="Orden de precisión"
-            name="precision_order"
-            options={PRECISION_ORDER_OPTIONS}
-            placeholder="Selecciona…"
-            required
-            error={fieldErrors.precision_order}
-          />
-        </div>
+        <EquipmentFields errors={fieldErrors} />
       </div>
 
       <div className="flex items-center justify-between gap-3">
         {step === 2 ? (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setStep(1)}
-          >
+          <Button type="button" variant="secondary" onClick={() => setStep(1)}>
             Atrás
           </Button>
         ) : (

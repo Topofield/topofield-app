@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { Button, EmptyState, Tabs, type TabItem } from "@/components/design-system";
+import { ProjectConfigTab } from "@/components/projects/project-config-tab";
 import { ProjectHeader } from "@/components/projects/project-header";
 import { createClient } from "@/lib/supabase/server";
-import { getProjectById } from "@/lib/supabase/queries";
+import { getProjectById, getReferencePoints } from "@/lib/supabase/queries";
 
 const TABS: TabItem[] = [
   { id: "processes", label: "Procesos" },
@@ -29,6 +30,11 @@ export default async function ProjectHubPage({
   if (!project) {
     notFound();
   }
+
+  const referencePoints =
+    activeTab === "config"
+      ? await getReferencePoints(supabase, project.id)
+      : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,9 +73,9 @@ export default async function ProjectHubPage({
       )}
 
       {activeTab === "config" && (
-        <EmptyState
-          title="Configuración"
-          description="La edición del proyecto y los puntos de referencia se construyen a continuación."
+        <ProjectConfigTab
+          project={project}
+          referencePoints={referencePoints}
         />
       )}
     </div>
