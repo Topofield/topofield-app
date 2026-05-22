@@ -260,7 +260,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   const hasData =
     n >= 2 &&
     distances.every(isNum) &&
-    stations.slice(1).every((s) => isNum(s.angle));
+    stations.slice(1, sideCount).every((s) => isNum(s.angle));
 
   if (!hasData || !hasEnd) {
     return {
@@ -368,7 +368,7 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
   const hasData =
     n >= 2 &&
     distances.every(isNum) &&
-    stations.slice(1).every((s) => isNum(s.angle));
+    stations.slice(1, sideCount).every((s) => isNum(s.angle));
 
   if (!hasData) {
     return {
