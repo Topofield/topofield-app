@@ -1,8 +1,8 @@
 # PRD-de-fase 2 — Dashboard y Proyectos
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-05-21
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-05-21
 
 ## Propósito
 

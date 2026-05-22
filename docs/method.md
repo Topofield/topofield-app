@@ -11,7 +11,7 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 | # | Fase | PRD de fase | Estado |
 |---|---|---|---|
 | 1 | Setup técnico | [`prds/00-setup.md`](./prds/00-setup.md) | cerrada |
-| 2 | Dashboard y Proyectos | [`prds/01-dashboard-proyectos.md`](./prds/01-dashboard-proyectos.md) | en curso |
+| 2 | Dashboard y Proyectos | [`prds/01-dashboard-proyectos.md`](./prds/01-dashboard-proyectos.md) | cerrada |
 | 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | pendiente |
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | pendiente |
 | 5 | Módulo Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | pendiente |
@@ -88,6 +88,21 @@ Sección viva. Cada cierre de fase añade una entrada con:
 - El comando `supabase gen types --local` imprime un log a stdout (`Connecting to db 5432`) que contamina el archivo si se usa `>`. Hay que usar `2>/dev/null > out.ts` o post-procesar.
 
 **Ajuste post-cierre (2026-04-30):** tras el primer testeo de UI, el usuario pidió capturar nombre y apellido por separado. Se reabrió la fase (estado `en curso`), se editó la migración inicial en sitio (`full_name` → `first_name` + `last_name` + `full_name` como columna generada), se actualizó el trigger, el form de sign-up y el PRD § 3.2, y se re-cerró. Patrón válido por el método ("extender el alcance del PRD-de-fase explícitamente" antes que cerrar con deuda) y viable porque la migración nunca salió de local. A futuro, si una migración ya se desplegó a cloud, este tipo de cambio iría en una migración nueva con `ALTER TABLE`, no editando la inicial.
+
+### Cierre Fase 2 — Dashboard y Proyectos (2026-05-21)
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El PRD-de-fase asumió redondear `latitude`/`longitude` a 3 decimales. Se corrigió mid-fase: la regla "coordenadas a 3 decimales" de CLAUDE.md aplica a coordenadas topográficas N/E (metros), no a la latitud/longitud geográfica del proyecto, que conserva su precisión `decimal(10,7)`. El validador solo le verifica el rango.
+- Las tabs del hub se resolvieron con enlaces a `?tab=` desde un Server Component, no con un client component como sugería el plan inicial. Mismo resultado (deep-link por tab) sin JS de cliente.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **`react-hooks/set-state-in-effect` es error de lint.** Con React 19 + el plugin `react-hooks`, llamar `setState` dentro de un `useEffect` rompe el lint. Hay que derivar el estado en render o ajustarlo en callbacks de evento/transición. El wizard tuvo que quitar un efecto de auto-navegación por esto.
+- **Formularios en modal sin el problema de "cerrar al éxito":** `reference-points-manager` valida en cliente con el validador puro y llama al Server Action **como función** dentro de `startTransition`, cerrando el modal en el callback. Evita `useActionState` + efecto. Patrón a replicar en los editores de proceso (Fases 3-5), que tendrán modales similares.
+- **Tres patrones de Server Action según el caso:** `useActionState` para formularios con validación por campo que se quedan en pantalla (wizard, edición); acción-como-función + validación en cliente para formularios en modal; `<form action>` plano para operaciones de solo-id (archivar, restaurar, eliminar).
+- **Mover una carpeta de ruta deja `.next/types` obsoleto:** tras mover `dashboard/` al route group `(app)`, `tsc` falló por un `validator.ts` generado que aún referenciaba la ruta vieja. `npm run build` regenera esos tipos. Conviene hacer build (no solo typecheck) tras mover rutas.
+- Los validadores puros de `src/lib/validators/` se reutilizan en cliente y servidor sin fricción; confirma el enfoque de funciones puras para la lógica de validación.
 
 ## Anti-patrones a evitar
 
