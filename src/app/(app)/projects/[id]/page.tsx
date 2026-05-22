@@ -1,9 +1,16 @@
 import { notFound } from "next/navigation";
-import { Button, EmptyState, Tabs, type TabItem } from "@/components/design-system";
+import { EmptyState, Tabs, type TabItem } from "@/components/design-system";
+import { NewProcessSelector } from "@/components/projects/new-process-selector";
+import { ProcessCard } from "@/components/projects/process-card";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
 import { ProjectHeader } from "@/components/projects/project-header";
 import { createClient } from "@/lib/supabase/server";
-import { getProjectById, getReferencePoints } from "@/lib/supabase/queries";
+import {
+  getPolygonalProcesses,
+  getProjectById,
+  getReferencePoints,
+} from "@/lib/supabase/queries";
+import type { PolygonalProcess } from "@/types/polygonal";
 
 const TABS: TabItem[] = [
   { id: "processes", label: "Procesos" },
@@ -11,9 +18,42 @@ const TABS: TabItem[] = [
   { id: "config", label: "Configuración" },
 ];
 
+const IN_PROGRESS_STATUSES = ["draft", "in_progress", "calculated"];
+
 interface ProjectHubPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
+}
+
+function ProcessSection({
+  title,
+  projectId,
+  processes,
+  emptyText,
+}: {
+  title: string;
+  projectId: string;
+  processes: PolygonalProcess[];
+  emptyText: string;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
+      {processes.length === 0 ? (
+        <p className="text-sm text-neutral-500">{emptyText}</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {processes.map((process) => (
+            <ProcessCard
+              key={process.id}
+              projectId={projectId}
+              process={process}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default async function ProjectHubPage({
@@ -31,10 +71,21 @@ export default async function ProjectHubPage({
     notFound();
   }
 
+  const processes =
+    activeTab === "processes"
+      ? await getPolygonalProcesses(supabase, project.id)
+      : [];
   const referencePoints =
     activeTab === "config"
       ? await getReferencePoints(supabase, project.id)
       : [];
+
+  const inProgress = processes.filter((p) =>
+    IN_PROGRESS_STATUSES.includes(p.status),
+  );
+  const closed = processes.filter(
+    (p) => !IN_PROGRESS_STATUSES.includes(p.status),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -46,22 +97,34 @@ export default async function ProjectHubPage({
       />
 
       {activeTab === "processes" && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-neutral-900">
               Procesos
             </h2>
-            <Button
-              disabled
-              title="Disponible al implementar los módulos de proceso."
-            >
-              + Nuevo Proceso
-            </Button>
+            <NewProcessSelector projectId={project.id} />
           </div>
-          <EmptyState
-            title="Aún no hay procesos"
-            description="Los editores de poligonal, nivelación y asentamientos se construyen en las próximas fases."
-          />
+          {processes.length === 0 ? (
+            <EmptyState
+              title="Aún no hay procesos"
+              description="Crea el primer proceso topográfico del proyecto con «+ Nuevo Proceso»."
+            />
+          ) : (
+            <>
+              <ProcessSection
+                title="En progreso"
+                projectId={project.id}
+                processes={inProgress}
+                emptyText="No hay procesos en progreso."
+              />
+              <ProcessSection
+                title="Cerrados"
+                projectId={project.id}
+                processes={closed}
+                emptyText="No hay procesos cerrados."
+              />
+            </>
+          )}
         </div>
       )}
 
