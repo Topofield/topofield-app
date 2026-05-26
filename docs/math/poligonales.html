@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>TopoField — Fundamentos del módulo poligonal</title>
+<style>
+  :root {
+    --text: #1a252f;
+    --muted: #5d6d7e;
+    --accent: #0b3d5c;
+    --code-bg: #f2f3f4;
+    --border: #d5d8dc;
+  }
+  body {
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: #ffffff;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 28px; margin: 0; color: var(--accent); }
+  h2 { font-size: 22px; margin-top: 40px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { font-size: 17px; margin-top: 28px; }
+  p { margin: 10px 0; }
+  ol, ul { margin: 8px 0 10px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; font-size: 13px; }
+  table { border-collapse: collapse; margin: 12px 0; width: 100%; font-size: 13px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .formula { font-family: ui-monospace, "SF Mono", monospace; padding: 10px 14px; background: var(--code-bg); border-left: 3px solid var(--accent); margin: 10px 0; font-size: 13.5px; line-height: 1.7; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  nav.toc { background: #f8f9fa; padding: 14px 20px; border-radius: 6px; margin: 22px 0 30px; }
+  nav.toc strong { display: block; margin-bottom: 6px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  @media print {
+    body { max-width: none; padding: 0 12mm; }
+    pre, table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Fundamentos matemáticos del módulo poligonal</h1>
+<p class="muted">Reporte de auditoría · Fase 3 (Módulo Poligonal) cerrada · TopoField</p>
+
+<p>Este documento explica los algoritmos del cálculo de poligonales tal como
+están implementados en TopoField, en lenguaje claro y con las fórmulas
+verificables. Cada sección apunta al archivo del repositorio que la implementa
+para que cualquier lector pueda confirmar que la aritmética es correcta antes
+de aceptar los resultados como buenos.</p>
+
+<nav class="toc">
+<strong>Contenido</strong>
+<ol>
+  <li><a href="#mapa">Mapa del código</a></li>
+  <li><a href="#convenciones">Convenciones</a></li>
+  <li><a href="#tipos">Tres tipos de poligonal</a></li>
+  <li><a href="#metodos">Tres métodos de corrección</a></li>
+  <li><a href="#ejemplo">Ejemplo trabajado paso a paso</a></li>
+  <li><a href="#verificacion">Tests y verificación</a></li>
+</ol>
+</nav>
+
+<h2 id="mapa">1. Mapa del código</h2>
+<p>El cálculo vive en <code>src/lib/calculations/</code>. Son funciones puras
+de TypeScript: no usan React, ni Supabase, ni nada del navegador. Reciben un
+objeto con los datos de campo y devuelven otro con los resultados.</p>
+
+<table>
+<tr><th>Archivo</th><th>Qué hace</th></tr>
+<tr><td><code>angles.ts</code></td><td>Convierte ángulos entre grados-minutos-segundos y decimal (con acarreo de desbordamiento), normaliza azimuts al rango [0°, 360°) y expone trigonometría en grados (<code>cosDeg</code>, <code>sinDeg</code>).</td></tr>
+<tr><td><code>tolerances.ts</code></td><td>Constantes de tolerancia angular y precisión relativa mínima por orden de precisión (PRD § 5.4).</td></tr>
+<tr><td><code>polygonal.ts</code></td><td>El cálculo principal: los tres tipos de poligonal y los tres métodos de corrección. Es una función pura <code>computePolygonal(input)</code> que nunca lanza; con datos incompletos devuelve campos en <code>null</code>.</td></tr>
+</table>
+
+<h2 id="convenciones">2. Convenciones</h2>
+
+<h3>2.1. Ángulos en grados, minutos y segundos</h3>
+<p>El usuario captura los ángulos en su forma natural de campo (DMS). Para los
+cálculos se pasa a grados decimales:</p>
+<div class="formula">decimal = grados + minutos / 60 + segundos / 3600</div>
+<p>Y se vuelve a DMS para mostrar resultados. Al volver a DMS se acarrea el
+desbordamiento (60″ → +1′; 60′ → +1°) para no devolver nunca 60 en minutos o
+segundos. En <code>angles.ts</code>:</p>
+<pre><code>export function dmsToDecimal(deg, min, sec) {
+  const sign = deg &lt; 0 ? -1 : 1;
+  return sign * (Math.abs(deg) + min / 60 + sec / 3600);
+}</code></pre>
+
+<h3>2.2. Convención de azimut</h3>
+<p>El azimut de cada lado se obtiene del azimut del lado anterior y del ángulo
+medido en la estación que los une. La fórmula difiere según el tipo de
+poligonal porque los datos de campo son distintos:</p>
+
+<table>
+<tr><th>Tipo</th><th>Fórmula del azimut del lado <em>i</em></th></tr>
+<tr><td>Cerrada</td><td><code>Az<sub>i</sub> = Az<sub>i−1</sub> + 180° − ángulo interno<sub>i</sub></code></td></tr>
+<tr><td>Abierta sin control</td><td><code>Az<sub>i</sub> = Az<sub>i−1</sub> + 180° + ángulo horizontal<sub>i</sub></code></td></tr>
+<tr><td>Abierta con control</td><td><code>Az<sub>i</sub> = Az<sub>i−1</sub> ± deflexión<sub>i</sub></code> &nbsp;(+ derecha · − izquierda)</td></tr>
+</table>
+<p>Todo se normaliza a [0°, 360°) con <code>normalizeAzimuth</code>.</p>
+<p class="small muted">Nota: en la poligonal cerrada las dos orientaciones del
+recorrido (horario y antihorario) producen polígonos espejo que igualmente
+cierran, porque <code>Σ(180 ± α)</code> es siempre múltiplo de 360°. Por eso la
+convención debe ser fija; no se puede autodetectar. La que se usa es la del caso
+1 del marco teórico (<code>+ 180° − ángulo</code>).</p>
+
+<h3>2.3. Tolerancias por orden de precisión (§ 5.4)</h3>
+<table>
+<tr><th>Orden</th><th>Tolerancia angular</th><th>Precisión relativa mínima</th></tr>
+<tr><td>Primer orden (geodésico)</td><td>1″ · √n</td><td>1:100 000</td></tr>
+<tr><td>Segundo orden (control urbano)</td><td>5″ · √n</td><td>1:20 000</td></tr>
+<tr><td>Tercer orden (topográfico)</td><td>15″ · √n</td><td>1:5 000</td></tr>
+<tr><td>Ordinario (rural)</td><td>30″ · √n</td><td>1:3 000</td></tr>
+</table>
+<p>donde <code>n</code> es el número de ángulos medidos. Implementación
+(<code>tolerances.ts</code>):</p>
+<pre><code>export function angularTolerance(order, n) {
+  return ANGULAR_TOLERANCE_K[order] * Math.sqrt(n);
+}</code></pre>
+
+<h2 id="tipos">3. Tres tipos de poligonal</h2>
+
+<h3>3.1. Cerrada — <code>computeClosed</code></h3>
+<p>El recorrido empieza y termina en el mismo punto formando un polígono. La
+suma de los ángulos internos debe valer <code>(n − 2) · 180°</code>; cualquier
+diferencia es el error angular, que se distribuye equitativo entre las
+<em>n</em> estaciones antes de propagar los azimuts.</p>
+
+<p>Pasos:</p>
+<ol>
+  <li>Verificación angular: <code>error_angular = Σ α − (n − 2) · 180°</code> (en segundos: ×&nbsp;3600).</li>
+  <li>Corrección equitativa: a cada ángulo se le suma <code>− error / n</code> (en decimal).</li>
+  <li>Azimut del lado 0 = azimut de partida; cada lado siguiente con la convención cerrada.</li>
+  <li>Proyecciones: <code>ΔN = d · cos(Az)</code>, <code>ΔE = d · sin(Az)</code>.</li>
+  <li>Error de cierre lineal: <code>√((Σ ΔN)² + (Σ ΔE)²)</code>. Perímetro y precisión relativa <code>P / error</code> (se expresa como 1:X).</li>
+  <li>Se aplica el método de corrección elegido (sección 4) para distribuir el error lineal.</li>
+</ol>
+<p>Una poligonal cerrada cumple si pasa ambas tolerancias (angular y lineal); de
+lo contrario solo se puede cerrar como "rechazada".</p>
+
+<h3>3.2. Abierta con control — <code>computeOpenControlled</code></h3>
+<p>Empieza en un punto conocido y termina en otro punto conocido distinto. Las
+direcciones se miden como deflexiones (giro a derecha o izquierda desde la
+prolongación del lado anterior).</p>
+<p>Pasos:</p>
+<ol>
+  <li>Si se da el azimut de llegada conocido y la deflexión en la última estación, se hace cierre angular: se propagan las deflexiones crudas hasta la dirección de llegada y se compara con el azimut conocido. El error angular se reparte equitativo entre las deflexiones.</li>
+  <li>Con las deflexiones corregidas, se propaga el azimut de cada lado.</li>
+  <li>Proyecciones y coordenadas calculadas igual que en la cerrada.</li>
+  <li>Cierre lineal contra el punto conocido: <code>(N<sub>calc</sub> − N<sub>conocida</sub>, E<sub>calc</sub> − E<sub>conocida</sub>)</code>.</li>
+  <li>Se aplica el método de corrección.</li>
+</ol>
+<p>Si falta el azimut de llegada o la deflexión final, el cálculo omite el
+cierre angular y solo hace el lineal — degrada con elegancia sin perder la
+parte de la verificación que sí es calculable.</p>
+
+<h3>3.3. Abierta sin control — <code>computeOpenUncontrolled</code></h3>
+<p>Empieza en un punto conocido pero no termina en otro punto conocido. No hay
+cierre que verificar; las coordenadas se aceptan tal cual resultan. Solo se
+recomienda para reconocimientos preliminares; la app la marca como "sin
+verificación de cierre".</p>
+<p>El cálculo es trivial: propagar azimuts con la convención horizontal,
+proyectar y encadenar coordenadas. No hay corrección.</p>
+
+<h2 id="metodos">4. Tres métodos de corrección</h2>
+<p>Los métodos aplican cuando hay un error de cierre lineal que distribuir
+(cerrada y abierta con control). Cada uno reparte ese error de manera
+distinta.</p>
+
+<h3>4.1. Bowditch (brújula)</h3>
+<p>Reparte el error proporcionalmente a la <strong>longitud</strong> de cada
+lado. Es el método más usado en la práctica profesional cuando ángulos y
+distancias se midieron con precisión parecida.</p>
+<div class="formula">
+Corr_ΔN<sub>i</sub> = − Error_N · ( d<sub>i</sub> / perímetro )<br />
+Corr_ΔE<sub>i</sub> = − Error_E · ( d<sub>i</sub> / perímetro )
+</div>
+<pre><code>if (method === "bowditch") {
+  for (let i = 0; i &lt; n; i++) {
+    const ratio = perimeter &gt; 0 ? distances[i] / perimeter : 0;
+    correctedDeltaN.push(deltaN[i] - errorN * ratio);
+    correctedDeltaE.push(deltaE[i] - errorE * ratio);
+  }
+}</code></pre>
+
+<h3>4.2. Tránsito</h3>
+<p>Reparte el error según las <strong>proyecciones absolutas</strong>, dando
+más peso a los lados con proyección grande en cada eje. Es más apropiado cuando
+la precisión angular supera a la lineal (estación total con cinta, por
+ejemplo).</p>
+<div class="formula">
+Corr_ΔN<sub>i</sub> = − Error_N · ( |ΔN<sub>i</sub>| / Σ|ΔN| )<br />
+Corr_ΔE<sub>i</sub> = − Error_E · ( |ΔE<sub>i</sub>| / Σ|ΔE| )
+</div>
+
+<h3>4.3. Crandall (mínimos cuadrados ponderados sobre distancias)</h3>
+<p>Mantiene los ángulos como inalterables y ajusta solo las distancias para que
+la poligonal cierre. Es un caso de mínimos cuadrados con <code>peso = 1/d</code>.</p>
+<p>Planteamiento:</p>
+<div class="formula">
+Minimizar:&nbsp;&nbsp; Σ ( δd<sub>i</sub>² / d<sub>i</sub> )<br />
+Sujeto a:&nbsp;&nbsp;&nbsp; Σ δd<sub>i</sub> · cos(Az<sub>i</sub>) = − Error_N&nbsp;&nbsp;y&nbsp;&nbsp;Σ δd<sub>i</sub> · sin(Az<sub>i</sub>) = − Error_E
+</div>
+<p>Por multiplicadores de Lagrange se obtiene <code>δd<sub>i</sub> = d<sub>i</sub>·(λ₁·cos(Az<sub>i</sub>) + λ₂·sin(Az<sub>i</sub>))</code>, donde λ₁ y λ₂ resuelven el sistema lineal 2×2:</p>
+<div class="formula">
+[ Σ d·cos²&nbsp;&nbsp;&nbsp;&nbsp;Σ d·cos·sin ]&nbsp;&nbsp;[ λ₁ ]&nbsp;&nbsp;&nbsp;[ −Error_N ]<br />
+[ Σ d·cos·sin&nbsp;&nbsp;Σ d·sin²&nbsp;&nbsp; ] · [ λ₂ ] = [ −Error_E ]
+</div>
+<p>Una vez resuelto, la proyección corregida del lado <em>i</em> es
+<code>ΔN_corr<sub>i</sub> = (d<sub>i</sub> + δd<sub>i</sub>) · cos(Az<sub>i</sub>)</code> y
+análogo para ΔE.</p>
+
+<h2 id="ejemplo">5. Ejemplo trabajado — cuadrado con un lado largo</h2>
+<p>Es uno de los fixtures de los tests automáticos. Con números concretos se ve
+cómo cada método produce un resultado distinto a partir del mismo error de
+cierre.</p>
+
+<p><strong>Datos:</strong></p>
+<ul>
+<li>Tipo: cerrada, 4 vértices A, B, C, D.</li>
+<li>Ángulos internos: 90° cada uno (suma = 360° = (4 − 2) · 180°). Error angular = 0″.</li>
+<li>Distancias: A→B = <strong>100.4 m</strong>, las otras tres = 100 m. Perímetro = 400.4 m.</li>
+<li>Punto de partida: (0, 0). Azimut de partida: 0°. Orden: tercer orden.</li>
+</ul>
+
+<p><strong>Paso 1 — Azimuts.</strong> Con la convención cerrada
+(<code>+180° − ángulo interno</code>):</p>
+<table>
+<tr><th>Lado</th><th>Cálculo</th><th>Azimut</th></tr>
+<tr><td>A→B</td><td>(partida)</td><td>0°</td></tr>
+<tr><td>B→C</td><td>0 + 180 − 90 = 90</td><td>90°</td></tr>
+<tr><td>C→D</td><td>90 + 180 − 90 = 180</td><td>180°</td></tr>
+<tr><td>D→A</td><td>180 + 180 − 90 = 270</td><td>270°</td></tr>
+</table>
+
+<p><strong>Paso 2 — Proyecciones base.</strong></p>
+<table>
+<tr><th>Lado</th><th class="num">d</th><th>Az</th><th class="num">ΔN</th><th class="num">ΔE</th></tr>
+<tr><td>A→B</td><td class="num">100.4</td><td>0°</td><td class="num">+100.400</td><td class="num">0</td></tr>
+<tr><td>B→C</td><td class="num">100</td><td>90°</td><td class="num">0</td><td class="num">+100.000</td></tr>
+<tr><td>C→D</td><td class="num">100</td><td>180°</td><td class="num">−100.000</td><td class="num">0</td></tr>
+<tr><td>D→A</td><td class="num">100</td><td>270°</td><td class="num">0</td><td class="num">−100.000</td></tr>
+<tr><th>Σ</th><th></th><th></th><th class="num">+0.400</th><th class="num">0</th></tr>
+</table>
+<p>Error de cierre lineal: <code>√(0.4² + 0²) = 0.400 m</code>. Precisión
+relativa: <code>400.4 / 0.4 ≈ 1:1 001</code>. La tolerancia de tercer orden
+exige 1:5 000, así que este caso no la cumple — solo se podría cerrar como
+"rechazado". Aun así cualquier método debe dejar la poligonal matemáticamente
+cerrada.</p>
+
+<h3>5.1. Corrección por Bowditch</h3>
+<p>Razón <code>d<sub>i</sub> / perímetro</code>:</p>
+<table>
+<tr><th>Lado</th><th class="num">d<sub>i</sub> / P</th><th class="num">Corr ΔN = −0.4 · d/P</th><th class="num">ΔN corregido</th></tr>
+<tr><td>A→B</td><td class="num">100.4 / 400.4 = 0.25075</td><td class="num">−0.1003</td><td class="num">+100.2997</td></tr>
+<tr><td>B→C</td><td class="num">100 / 400.4 = 0.24975</td><td class="num">−0.0999</td><td class="num">−0.0999</td></tr>
+<tr><td>C→D</td><td class="num">100 / 400.4 = 0.24975</td><td class="num">−0.0999</td><td class="num">−100.0999</td></tr>
+<tr><td>D→A</td><td class="num">100 / 400.4 = 0.24975</td><td class="num">−0.0999</td><td class="num">−0.0999</td></tr>
+<tr><th>Σ</th><th></th><th class="num">−0.400</th><th class="num">0.000 ✓</th></tr>
+</table>
+<p>Coordenadas finales con Bowditch:</p>
+<table>
+<tr><th>Estación</th><th class="num">N</th><th class="num">E</th></tr>
+<tr><td>A</td><td class="num">0.000</td><td class="num">0.000</td></tr>
+<tr><td>B</td><td class="num">+100.300</td><td class="num">0.000</td></tr>
+<tr><td>C</td><td class="num">+100.200</td><td class="num">+100.000</td></tr>
+<tr><td>D</td><td class="num">+0.100</td><td class="num">+100.000</td></tr>
+</table>
+
+<h3>5.2. Corrección por Tránsito</h3>
+<p>Σ |ΔN| = 100.4 + 0 + 100 + 0 = 200.4. La razón <code>|ΔN<sub>i</sub>| / Σ|ΔN|</code> solo
+es distinta de cero en los lados que proyectan sobre el eje N (A→B y C→D):</p>
+<table>
+<tr><th>Lado</th><th class="num">|ΔN<sub>i</sub>| / Σ</th><th class="num">Corr ΔN</th><th class="num">ΔN corregido</th></tr>
+<tr><td>A→B</td><td class="num">100.4 / 200.4 = 0.50100</td><td class="num">−0.2004</td><td class="num">+100.1996</td></tr>
+<tr><td>B→C</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+<tr><td>C→D</td><td class="num">100 / 200.4 = 0.49900</td><td class="num">−0.1996</td><td class="num">−100.1996</td></tr>
+<tr><td>D→A</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+</table>
+<p>El Tránsito carga toda la corrección en los lados que efectivamente proyectan
+sobre el eje del error. Coordenada B con Tránsito: N = +100.1996.</p>
+
+<h3>5.3. Corrección por Crandall</h3>
+<p>Sumas auxiliares:</p>
+<div class="formula">
+a₁₁ = Σ d · cos² = 100.4·1 + 100·0 + 100·1 + 100·0 = 200.4<br />
+a₂₂ = Σ d · sin² = 0 + 100·1 + 0 + 100·1 = 200<br />
+a₁₂ = Σ d · cos · sin = 0&nbsp; (cos·sin = 0 en azimuts axiales)<br />
+det = 200.4 · 200 − 0 = 40 080
+</div>
+<p>Solución del sistema 2×2:</p>
+<div class="formula">
+λ₁ = ( a₂₂ · (−Error_N) − a₁₂ · (−Error_E) ) / det = (200 · (−0.4) − 0) / 40 080 = −0.001996<br />
+λ₂ = ( −a₁₂ · (−Error_N) + a₁₁ · (−Error_E) ) / det = 0
+</div>
+<p>Correcciones por distancia <code>δd<sub>i</sub> = d<sub>i</sub> · (λ₁·cos(Az) + λ₂·sin(Az))</code>:</p>
+<table>
+<tr><th>Lado</th><th class="num">d</th><th class="num">cos(Az)</th><th class="num">δd<sub>i</sub></th></tr>
+<tr><td>A→B</td><td class="num">100.4</td><td class="num">1</td><td class="num">−0.2004</td></tr>
+<tr><td>B→C</td><td class="num">100</td><td class="num">0</td><td class="num">0</td></tr>
+<tr><td>C→D</td><td class="num">100</td><td class="num">−1</td><td class="num">+0.1996</td></tr>
+<tr><td>D→A</td><td class="num">100</td><td class="num">0</td><td class="num">0</td></tr>
+</table>
+<p>Las proyecciones corregidas <code>ΔN_corr<sub>i</sub> = (d<sub>i</sub> + δd<sub>i</sub>) · cos(Az<sub>i</sub>)</code> coinciden
+exactamente con las del Tránsito en este ejemplo (±100.1996 en los dos lados
+que proyectan sobre N). Coordenada B con Crandall: N = +100.1996.</p>
+<p>Para este cuadrado axial los métodos Tránsito y Crandall dan el mismo
+resultado porque los productos <code>cos · sin</code> se anulan; en una
+poligonal con azimuts no axiales los dos divergen y se ven sus diferencias en
+la práctica.</p>
+
+<h3>5.4. Comparación de los tres métodos</h3>
+<table>
+<tr><th>Método</th><th class="num">N de B</th><th class="num">E de B</th><th class="num">N de D</th></tr>
+<tr><td>Bowditch</td><td class="num">+100.300</td><td class="num">0.000</td><td class="num">+0.100</td></tr>
+<tr><td>Tránsito</td><td class="num">+100.200</td><td class="num">0.000</td><td class="num">0.000</td></tr>
+<tr><td>Crandall</td><td class="num">+100.200</td><td class="num">0.000</td><td class="num">0.000</td></tr>
+</table>
+<p>Estos números son exactamente los que devuelve <code>computePolygonal</code> y los
+que afirma el archivo de tests <code>polygonal.test.ts</code>:</p>
+<pre><code>// fixture: 4 estaciones, A→B = 100.4 m, las otras 100 m
+expect(r.stations[1]?.north).toBeCloseTo(100.2997, 3);  // Bowditch
+expect(r.stations[1]?.north).toBeCloseTo(100.1996, 3);  // Tránsito
+expect(r.stations[1]?.north).toBeCloseTo(100.1996, 3);  // Crandall</code></pre>
+
+<h2 id="verificacion">6. Tests y verificación</h2>
+<p>El conjunto de pruebas automatizadas (Vitest) cubre los tres archivos de
+cálculo. <code>npm run test</code> ejecuta 26 pruebas:</p>
+<table>
+<tr><th>Archivo</th><th class="num">Tests</th><th>Qué cubre</th></tr>
+<tr><td><code>angles.test.ts</code></td><td class="num">8</td><td>DMS ↔ decimal con acarreo de desbordamiento, normalización de azimut, y trigonometría en grados.</td></tr>
+<tr><td><code>tolerances.test.ts</code></td><td class="num">2</td><td><code>K · √n</code> por orden y la tabla de precisiones mínimas.</td></tr>
+<tr><td><code>polygonal.test.ts</code></td><td class="num">16</td><td>Cuadrado perfecto y cuadrado con error 0.4 m; los tres métodos contra fixtures verificados a mano; pentágono del marco teórico (caso 1); abierta sin control (caso 3) — incluyendo el match exacto de azimuts del documento; abierta con control con y sin cierre angular; degradación con datos insuficientes.</td></tr>
+</table>
+
+<p>Ciclo de verificación recomendado para una poligonal real:</p>
+<ol>
+  <li>Capturar los datos en el editor y observar las columnas calculadas en vivo.</li>
+  <li>Comparar azimuts, ΔN/ΔE y error de cierre con la plantilla Excel (<code>docs/templates/poligonales.xlsx</code>).</li>
+  <li>Comparar coordenadas corregidas por cada método; los tres deben converger en los lados más relevantes y diferir en la magnitud que el ejemplo trabajado anticipa.</li>
+</ol>
+
+<p class="small muted">Documento generado como parte de la verificación
+post-cierre de la Fase 3. La auditoría detectó y corrigió la ausencia del
+cierre angular en la poligonal abierta con control; el comportamiento actual
+se documenta arriba (sección 3.2).</p>
+
+</body>
+</html>
