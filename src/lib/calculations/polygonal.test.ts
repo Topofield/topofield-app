@@ -203,6 +203,60 @@ describe("computePolygonal — abierta con control", () => {
     expect(r.stations[2]?.north).toBeCloseTo(-50.1, 4);
     expect(r.stations[2]?.east).toBeCloseTo(186.60254, 4);
   });
+
+  // Tramo de enlace con cierre angular: comienza apuntando al norte (az 0°), gira
+  // 90° derecha en P2 (norte → este), gira 90° derecha en P3 (este → sur, az 180°).
+  // El último giro conecta el último lado con la dirección de llegada conocida.
+  const angularStations = [
+    st("P1", 0, 100),
+    st("P2", 90, 100, "right"),
+    st("P3", 90, 0, "right"),
+  ];
+
+  it("cierra angularmente contra el azimut conocido", () => {
+    const r = computePolygonal({
+      ...BASE,
+      type: "open_controlled",
+      method: "bowditch",
+      startAzimuth: 0,
+      endNorth: 100,
+      endEast: 100,
+      endAzimuth: 180,
+      stations: angularStations,
+    });
+    expect(r.angularError).toBeCloseTo(0, 4);
+    expect(r.anglesMeetTolerance).toBe(true);
+    expect(r.linearError).toBeCloseTo(0, 4);
+    expect(r.meetsTolerance).toBe(true);
+  });
+
+  it("distribuye el error angular entre las deflexiones", () => {
+    // Misma geometría pero con la deflexión final 1° corta: 89° en vez de 90°.
+    const off = [
+      st("P1", 0, 100),
+      st("P2", 90, 100, "right"),
+      st("P3", 89, 0, "right"),
+    ];
+    const r = computePolygonal({
+      ...BASE,
+      type: "open_controlled",
+      method: "bowditch",
+      startAzimuth: 0,
+      endNorth: 100,
+      endEast: 100,
+      endAzimuth: 180,
+      stations: off,
+    });
+    // Error angular = (calc 179°) − (conocido 180°) = −1° = −3600″.
+    expect(r.angularError).toBeCloseTo(-3600, 1);
+    // La distribución reparte +0.5° a cada una de las dos deflexiones, así
+    // que el azimut del segundo lado pasa de 90° a 90.5°.
+    expect(r.stations[1]?.azimuth).toBeCloseTo(90.5, 4);
+    // Tras la corrección lineal posterior, la coordenada final coincide con
+    // el punto de llegada conocido.
+    expect(r.stations[2]?.north).toBeCloseTo(100, 4);
+    expect(r.stations[2]?.east).toBeCloseTo(100, 4);
+  });
 });
 
 describe("computePolygonal — datos insuficientes", () => {

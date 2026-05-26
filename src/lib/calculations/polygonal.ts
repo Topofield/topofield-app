@@ -257,10 +257,21 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   const distances = stations.slice(0, sideCount).map((s) => s.distance);
   const perimeter = distances.reduce((a, d) => (isNum(d) ? a + d : a), 0);
   const hasEnd = isNum(input.endNorth) && isNum(input.endEast);
-  const hasData =
-    n >= 2 &&
-    distances.every(isNum) &&
-    stations.slice(1, sideCount).every((s) => isNum(s.angle));
+
+  // Cierre angular (§6.6 Paso 2): requiere azimut de llegada conocido + la
+  // deflexión en la última estación, que conecta el último lado con la
+  // dirección de llegada. Si falta cualquiera, el cierre angular se omite y
+  // solo se hace el lineal (degrada con elegancia).
+  const lastStation = stations[n - 1];
+  const hasEndAzimuth = isNum(input.endAzimuth);
+  const hasClosingDeflection =
+    lastStation != null && isNum(lastStation.angle);
+  const doAngularClosure = hasEndAzimuth && hasClosingDeflection;
+  const requiredDeflectionsLast = doAngularClosure ? n - 1 : n - 2;
+  const deflectionsValid = stations
+    .slice(1, requiredDeflectionsLast + 1)
+    .every((s) => isNum(s.angle));
+  const hasData = n >= 2 && distances.every(isNum) && deflectionsValid;
 
   if (!hasData || !hasEnd) {
     return {
@@ -280,14 +291,36 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
     };
   }
 
-  // Azimut de cada lado por deflexión acumulada.
+  // Cierre angular: propaga deflexiones crudas hasta la dirección de llegada y
+  // compara contra el azimut conocido. La corrección se reparte equitativa.
+  let angularError: number | null = null;
+  let angularToleranceValue: number | null = null;
+  let anglesMeetTolerance: boolean | null = null;
+  let correctionPerDeflection = 0;
+  if (doAngularClosure) {
+    let azCalc = input.startAzimuth;
+    for (let i = 1; i <= n - 1; i++) {
+      const st = stations[i];
+      const dir = st?.deflectionDirection === "left" ? -1 : 1;
+      azCalc = normalizeAzimuth(azCalc + dir * (st?.angle ?? 0));
+    }
+    let errorDeg = azCalc - (input.endAzimuth ?? 0);
+    // Normaliza a (-180, 180] para tomar el error en valor absoluto menor.
+    errorDeg = ((errorDeg + 540) % 360) - 180;
+    angularError = degreesToSeconds(errorDeg);
+    angularToleranceValue = angularTolerance(input.order, n - 1);
+    anglesMeetTolerance = Math.abs(angularError) <= angularToleranceValue;
+    correctionPerDeflection = -errorDeg / (n - 1);
+  }
+
+  // Azimut de cada lado con la deflexión corregida (la corrección es 0 si no
+  // hubo cierre angular).
   const azimuths: number[] = [input.startAzimuth];
   for (let i = 1; i < sideCount; i++) {
     const station = stations[i];
     const dir = station?.deflectionDirection === "left" ? -1 : 1;
-    azimuths.push(
-      normalizeAzimuth((azimuths[i - 1] ?? 0) + dir * (station?.angle ?? 0)),
-    );
+    const signedDefl = dir * (station?.angle ?? 0) + correctionPerDeflection;
+    azimuths.push(normalizeAzimuth((azimuths[i - 1] ?? 0) + signedDefl));
   }
   const deltaN = azimuths.map((az, i) => (distances[i] ?? 0) * cosDeg(az));
   const deltaE = azimuths.map((az, i) => (distances[i] ?? 0) * sinDeg(az));
@@ -341,16 +374,17 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   return {
     angleSum: null,
     theoreticalSum: null,
-    angularError: null,
-    angularTolerance: null,
-    anglesMeetTolerance: null,
+    angularError,
+    angularTolerance: angularToleranceValue,
+    anglesMeetTolerance,
     errorNorth: errorN,
     errorEast: errorE,
     linearError,
     perimeter,
     relativePrecision,
     meetsLinearTolerance,
-    meetsTolerance: meetsLinearTolerance,
+    meetsTolerance:
+      (anglesMeetTolerance ?? true) && meetsLinearTolerance,
     stations: stationResults,
   };
 }
