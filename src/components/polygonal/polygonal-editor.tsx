@@ -252,7 +252,9 @@ export function PolygonalEditor({
       {readOnly &&
         !(process.status === "closed" && process.meets_tolerance === false) && (
           <Alert variant="info">
-            Este proceso está cerrado; los datos son de solo lectura.
+            {process.status === "rejected"
+              ? "Este proceso fue rechazado; los datos son de solo lectura."
+              : "Este proceso está cerrado; los datos son de solo lectura."}
           </Alert>
         )}
       {error && <Alert variant="error">{error}</Alert>}
@@ -266,10 +268,24 @@ export function PolygonalEditor({
 
       <details
         open={process.status === "draft" || process.status === "in_progress"}
-        className="rounded-lg border border-neutral-200 bg-white shadow-sm"
+        className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
       >
-        <summary className="cursor-pointer list-none px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
           Configuración
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            className="h-4 w-4 shrink-0 rotate-0 text-neutral-500 transition-transform group-open:rotate-90 motion-reduce:transition-none"
+          >
+            <path
+              d="M7.5 4.5L13 10l-5.5 5.5"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </summary>
         <div className="border-t border-neutral-100 px-5 py-4">
           <PolygonalConfigFields
