@@ -35,6 +35,7 @@ export default async function PolygonalEditorPage({
       process={process}
       stations={stations}
       projectId={id}
+      projectName={project.name}
       precisionOrder={project.precision_order}
     />
   );

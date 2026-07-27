@@ -11,13 +11,42 @@ interface TabsProps {
   activeId: string;
   /** Ruta base; cada tab enlaza a `${basePath}?tab=${id}`. */
   basePath: string;
+  /** Parámetros actuales, para no perderlos al cambiar de pestaña. */
+  searchParams?: SearchParams;
+}
+
+/**
+ * Forma de los `searchParams` de Next: un parámetro repetido en la URL
+ * (`?estado=a&estado=b`) llega como arreglo, no como cadena.
+ */
+export type SearchParams = Record<string, string | string[] | undefined>;
+
+/**
+ * Destino de una pestaña, conservando los demás parámetros de la consulta.
+ * Los parámetros repetidos se conservan como tales: colapsarlos en una sola
+ * cadena cambiaría su significado.
+ */
+export function tabHref(
+  basePath: string,
+  tabId: string,
+  searchParams?: SearchParams,
+): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams ?? {})) {
+    if (key === "tab" || value == null) continue;
+    for (const v of Array.isArray(value) ? value : [value]) {
+      if (v !== "") params.append(key, v);
+    }
+  }
+  params.set("tab", tabId);
+  return `${basePath}?${params.toString()}`;
 }
 
 /**
  * Barra de tabs basada en enlaces: cada tab navega a `?tab=<id>`, así el panel
  * activo lo decide el Server Component que lee el searchParam. Sin JS de cliente.
  */
-export function Tabs({ items, activeId, basePath }: TabsProps) {
+export function Tabs({ items, activeId, basePath, searchParams }: TabsProps) {
   return (
     <nav className="flex gap-1 border-b border-neutral-200">
       {items.map((item) => {
@@ -25,7 +54,7 @@ export function Tabs({ items, activeId, basePath }: TabsProps) {
         return (
           <Link
             key={item.id}
-            href={`${basePath}?tab=${item.id}`}
+            href={tabHref(basePath, item.id, searchParams)}
             aria-current={active ? "page" : undefined}
             className={cn(
               "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",

@@ -39,7 +39,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         className="relative w-full max-w-md rounded-lg border border-neutral-200 bg-white shadow-lg"
       >
         <header className="border-b border-neutral-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
+          <h2 className="text-lg font-semibold">{title}</h2>
         </header>
         <div className="px-6 py-4">{children}</div>
         {footer && (

@@ -142,9 +142,14 @@ listado de procesos pierde su estado al cambiar de pestaña y volver.
 
 | Rol | Familia | Uso |
 |---|---|---|
-| Títulos | **Space Grotesk** | `h1`–`h3`, cifra del veredicto, marca |
+| Títulos | **Space Grotesk** | `h1`–`h3`, marca |
 | Cuerpo | system-ui (actual) | Etiquetas, párrafos, formularios, botones |
-| Datos | monoespaciada (actual) | Coordenadas, azimuts, precisiones |
+| Datos | monoespaciada (actual) | Coordenadas, azimuts, precisiones, cifra del veredicto |
+
+La cifra del veredicto es un dato, no un título: va en la monoespaciada junto con
+el resto de valores numéricos de la aplicación. Las cifras tabulares permiten
+compararla visualmente con las precisiones y demás datos de las tablas, en lugar
+de romper la alineación con la proporcional de Space Grotesk.
 
 **Por qué Space Grotesk.** Es una grotesca de construcción técnica: terminaciones
 rectas, aberturas cerradas y dígitos de aire cartográfico. Evoca la rotulación de

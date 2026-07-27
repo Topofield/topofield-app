@@ -1,5 +1,11 @@
 import { notFound } from "next/navigation";
-import { EmptyState, Tabs, type TabItem } from "@/components/design-system";
+import {
+  Breadcrumbs,
+  EmptyState,
+  Tabs,
+  type SearchParams,
+  type TabItem,
+} from "@/components/design-system";
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
 import { ProcessCard } from "@/components/projects/process-card";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
@@ -20,7 +26,7 @@ const TABS: TabItem[] = [
 
 interface ProjectHubPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<SearchParams>;
 }
 
 function ProcessSection({
@@ -36,7 +42,7 @@ function ProcessSection({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
+      <h3 className="text-sm font-semibold">{title}</h3>
       {processes.length === 0 ? (
         <p className="text-sm text-neutral-500">{emptyText}</p>
       ) : (
@@ -59,7 +65,8 @@ export default async function ProjectHubPage({
   searchParams,
 }: ProjectHubPageProps) {
   const { id } = await params;
-  const { tab } = await searchParams;
+  const sp = await searchParams;
+  const tab = sp.tab;
   const activeTab =
     tab === "reports" || tab === "config" ? tab : "processes";
 
@@ -87,17 +94,24 @@ export default async function ProjectHubPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: project.name },
+        ]}
+      />
       <ProjectHeader project={project} />
       <Tabs
         items={TABS}
         activeId={activeTab}
         basePath={`/projects/${project.id}`}
+        searchParams={sp}
       />
 
       {activeTab === "processes" && (
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-neutral-900">
+            <h2 className="text-lg font-semibold">
               Procesos
             </h2>
             <NewProcessSelector projectId={project.id} />

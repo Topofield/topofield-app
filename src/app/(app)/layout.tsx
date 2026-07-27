@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/design-system";
+import { Button, Logo } from "@/components/design-system";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "./actions";
 
@@ -30,9 +30,10 @@ export default async function AppLayout({
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
-            className="text-lg font-bold text-primary-700"
+            aria-label="TopoField — ir al dashboard"
+            className="rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           >
-            TopoField
+            <Logo />
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-neutral-500 sm:inline">
