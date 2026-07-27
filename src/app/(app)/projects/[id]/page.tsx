@@ -1,5 +1,10 @@
 import { notFound } from "next/navigation";
-import { EmptyState, Tabs, type TabItem } from "@/components/design-system";
+import {
+  Breadcrumbs,
+  EmptyState,
+  Tabs,
+  type TabItem,
+} from "@/components/design-system";
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
 import { ProcessCard } from "@/components/projects/process-card";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
@@ -87,6 +92,12 @@ export default async function ProjectHubPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: project.name },
+        ]}
+      />
       <ProjectHeader project={project} />
       <Tabs
         items={TABS}

@@ -1,8 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
-import { Alert, Badge, Button, Card } from "@/components/design-system";
+import {
+  Alert,
+  Badge,
+  Breadcrumbs,
+  Button,
+  Card,
+} from "@/components/design-system";
 import type { DmsValue } from "@/components/design-system";
 import { dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
@@ -135,6 +140,7 @@ interface PolygonalEditorProps {
   process: PolygonalProcess;
   stations: PolygonalStation[];
   projectId: string;
+  projectName: string;
   precisionOrder: PrecisionOrder;
 }
 
@@ -142,6 +148,7 @@ export function PolygonalEditor({
   process,
   stations: initialStations,
   projectId,
+  projectName,
   precisionOrder,
 }: PolygonalEditorProps) {
   const readOnly = process.status === "closed" || process.status === "rejected";
@@ -225,12 +232,13 @@ export function PolygonalEditor({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link
-          href={`/projects/${projectId}?tab=processes`}
-          className="text-sm font-medium text-primary-600"
-        >
-          ← Volver al proyecto
-        </Link>
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: projectName, href: `/projects/${projectId}?tab=processes` },
+            { label: process.name },
+          ]}
+        />
         <div className="mt-2 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-neutral-900">
             {process.name}
