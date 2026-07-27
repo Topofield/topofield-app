@@ -1,5 +1,5 @@
-import { Input, Select, Textarea } from "@/components/design-system";
-import { PRECISION_ORDER_OPTIONS } from "@/types/project";
+import { Input, Textarea } from "@/components/design-system";
+import { PrecisionOrderSelect } from "./precision-order-select";
 
 /** Valores por defecto de los campos de proyecto (todo string para los inputs). */
 export interface ProjectFormValues {
@@ -153,11 +153,7 @@ export function EquipmentFields({ values, errors }: FieldsProps) {
           defaultValue={values?.equipment_calibration_date}
           error={errors.equipment_calibration_date}
         />
-        <Select
-          label="Orden de precisión"
-          name="precision_order"
-          options={PRECISION_ORDER_OPTIONS}
-          placeholder="Selecciona…"
+        <PrecisionOrderSelect
           required
           defaultValue={values?.precision_order}
           error={errors.precision_order}
