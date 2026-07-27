@@ -54,7 +54,9 @@ export function ProcessCard({
         <span>
           {process.relative_precision
             ? `Precisión ${process.relative_precision}`
-            : "Sin calcular"}
+            : process.type === "open_uncontrolled"
+              ? "Sin verificación de cierre"
+              : "Sin calcular"}
         </span>
         <span className="shrink-0">{formatDate(process.created_at)}</span>
       </div>
