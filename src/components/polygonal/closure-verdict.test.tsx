@@ -30,6 +30,7 @@ describe("verdictFor", () => {
     );
     expect(v.tone).toBe("ok");
     expect(v.title).toBe("Cumple tercer orden");
+    expect(v.achieved).toBe("1:8.000");
   });
 
   it("marca incumplimiento cuando no alcanza la tolerancia", () => {
@@ -40,18 +41,34 @@ describe("verdictFor", () => {
     );
     expect(v.tone).toBe("danger");
     expect(v.title).toBe("No cumple tercer orden");
+    expect(v.achieved).toBe("1:1.001");
     expect(v.required).toBe("1:5.000");
+  });
+
+  it("marca cumplimiento con precisión infinita cuando el cierre es exacto", () => {
+    const v = verdictFor(
+      resultWith({ meetsTolerance: true, relativePrecision: Infinity }),
+      "closed",
+      "tercer_orden",
+    );
+    expect(v.tone).toBe("ok");
+    expect(v.title).toBe("Cumple tercer orden");
+    expect(v.achieved).toBe("1:∞");
   });
 
   it("no exige cierre en poligonal abierta sin control", () => {
     const v = verdictFor(resultWith({}), "open_uncontrolled", "tercer_orden");
     expect(v.tone).toBe("neutral");
     expect(v.title).toBe("Sin verificación de cierre");
+    expect(v.achieved).toBeNull();
+    expect(v.required).toBeNull();
   });
 
   it("señala datos incompletos cuando falta el cálculo", () => {
     const v = verdictFor(resultWith({}), "closed", "tercer_orden");
     expect(v.tone).toBe("neutral");
     expect(v.title).toBe("Datos incompletos");
+    expect(v.achieved).toBeNull();
+    expect(v.required).toBeNull();
   });
 });

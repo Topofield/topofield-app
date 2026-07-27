@@ -95,6 +95,7 @@ export function ClosureVerdict({
       className={cn("rounded-lg border p-5", TONE_CLASSES[v.tone], className)}
     >
       <p
+        role="status"
         className={cn(
           "text-xs font-semibold uppercase tracking-wide",
           TITLE_CLASSES[v.tone],
