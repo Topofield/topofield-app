@@ -96,6 +96,11 @@ function resultFieldsFor(spec, order) {
   };
 }
 
+/** ¿El status representa un proceso ya cerrado (y por tanto inmutable)? */
+function isClosedStatus(status) {
+  return status === "closed" || status === "rejected";
+}
+
 async function insertPolygonal(projectId, spec, userId, order) {
   const startAz = spec.startAz ?? [0, 0, 0];
   const endAz = spec.endAz ?? [null, null, null];
@@ -119,16 +124,11 @@ async function insertPolygonal(projectId, spec, userId, order) {
       end_azimuth_min: endAz[1],
       end_azimuth_sec: endAz[2],
       correction_method: spec.correctionMethod ?? null,
-      status: spec.status,
+      // El proceso nace abierto aunque el fixture lo quiera cerrado: los
+      // triggers de inmutabilidad rechazan escribir estaciones bajo un proceso
+      // ya cerrado. El cierre se aplica al final, como hace la aplicación.
+      status: isClosedStatus(spec.status) ? "calculated" : spec.status,
       ...resultFieldsFor(spec, order),
-      closed_at:
-        spec.status === "closed" || spec.status === "rejected"
-          ? new Date().toISOString()
-          : null,
-      closed_by:
-        spec.status === "closed" || spec.status === "rejected"
-          ? userId
-          : null,
       notes: spec.notes ?? null,
     })
     .select("id")
@@ -151,6 +151,20 @@ async function insertPolygonal(projectId, spec, userId, order) {
       .insert(rows);
     if (stErr) throw stErr;
   }
+
+  // Cierre al final, una vez cargadas las estaciones.
+  if (isClosedStatus(spec.status)) {
+    const { error: closeErr } = await admin
+      .from("polygonal_processes")
+      .update({
+        status: spec.status,
+        closed_at: new Date().toISOString(),
+        closed_by: userId,
+      })
+      .eq("id", proc.id);
+    if (closeErr) throw closeErr;
+  }
+
   return proc.id;
 }
 
