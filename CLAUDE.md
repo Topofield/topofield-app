@@ -57,6 +57,11 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.
 - No saltar a código de una fase sin su PRD-de-fase aprobado y commiteado.
 
+## Documentación de handoff
+- `docs/tecnica/README.md` → arquitectura, modelo de datos, seguridad, motor de cálculo, sistema de diseño, cómo añadir un módulo y deuda técnica. Es la referencia para desarrollar.
+- `docs/manual/README.md` → manual de usuario, con capturas de la app real.
+- IMPORTANT: ambos se actualizan **al cerrar cada fase**, no al final del proyecto. Al implementar un módulo: mover su sección de «Módulos pendientes» al cuerpo del manual, regenerar capturas con `node docs/manual/capturas.mjs`, y actualizar en la doc técnica el estado de fases, la tabla de pruebas y la deuda técnica.
+
 ## Workflow
 - Antes de tareas complejas, leer las secciones relevantes de `PRD-TopoField.md` y el PRD de la fase actual en `docs/prds/`.
 - Cambios mínimos: no refactorizar código que no esté relacionado con la tarea.

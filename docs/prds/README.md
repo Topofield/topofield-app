@@ -15,6 +15,9 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
+Al cerrar una fase se actualizan también los documentos de handoff:
+[`docs/tecnica/`](../tecnica/README.md) y [`docs/manual/`](../manual/README.md).
+
 ## Cómo leer esto
 
 - ¿Vas a empezar a trabajar en algo? Lee primero [`../method.md`](../method.md) y luego el PRD de la fase actual.
