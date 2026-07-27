@@ -53,15 +53,20 @@ describe("computePolygonal — poligonal cerrada", () => {
     expect(square.linearError).toBeCloseTo(0, 6);
     expect(square.perimeter).toBe(400);
     expect(square.meetsTolerance).toBe(true);
-    // Cierre exacto: el residuo de punto flotante de linearError no debe
-    // producir una precisión relativa absurda (p. ej. 1:17222920531038532).
-    expect(square.relativePrecision).toBe(Infinity);
     expect(square.stations[1]?.north).toBeCloseTo(100, 6);
     expect(square.stations[1]?.east).toBeCloseTo(0, 6);
     expect(square.stations[2]?.north).toBeCloseTo(100, 6);
     expect(square.stations[2]?.east).toBeCloseTo(100, 6);
     expect(square.stations[3]?.north).toBeCloseTo(0, 6);
     expect(square.stations[3]?.east).toBeCloseTo(100, 6);
+  });
+
+  it("un cierre exacto da precisión relativa 1:∞, no un número absurdo", () => {
+    // linearError no es exactamente 0 en un cierre perfecto: queda un
+    // residuo de punto flotante (~1e-14) por la acumulación de senos y
+    // cosenos. Sin el umbral de exactitud, ese residuo produciría algo
+    // como 1:17222920531038532 en lugar de 1:∞.
+    expect(square.relativePrecision).toBe(Infinity);
   });
 });
 
