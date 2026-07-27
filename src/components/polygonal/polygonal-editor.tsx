@@ -27,6 +27,7 @@ import {
   type PolygonalConfigState,
 } from "./polygonal-config-fields";
 import { CloseProcessDialog } from "./close-process-dialog";
+import { ClosureVerdict } from "./closure-verdict";
 import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
 import { StationsTable, type StationDraftState } from "./stations-table";
@@ -143,8 +144,7 @@ export function PolygonalEditor({
   projectId,
   precisionOrder,
 }: PolygonalEditorProps) {
-  const readOnly =
-    process.status === "closed" || process.status === "rejected";
+  const readOnly = process.status === "closed" || process.status === "rejected";
 
   const [config, setConfig] = useState(() => processToConfig(process));
   const [stations, setStations] = useState(() =>
@@ -159,7 +159,8 @@ export function PolygonalEditor({
   const [isPending, startTransition] = useTransition();
 
   const result = useMemo(
-    () => computePolygonal(buildInput(config, stations, method, precisionOrder)),
+    () =>
+      computePolygonal(buildInput(config, stations, method, precisionOrder)),
     [config, stations, method, precisionOrder],
   );
 
@@ -179,9 +180,7 @@ export function PolygonalEditor({
     [stations, config.type],
   );
 
-  const captureBlocked = issues.some(
-    (i) => Object.keys(i.errors).length > 0,
-  );
+  const captureBlocked = issues.some((i) => Object.keys(i.errors).length > 0);
 
   function handleSave() {
     setError(null);
@@ -197,9 +196,7 @@ export function PolygonalEditor({
         startAzimuthDeg: parseNumber(config.startAzimuth.deg),
         startAzimuthMin: parseNumber(config.startAzimuth.min),
         startAzimuthSec: parseNumber(config.startAzimuth.sec),
-        endPointCode: controlled
-          ? config.endPointCode.trim() || null
-          : null,
+        endPointCode: controlled ? config.endPointCode.trim() || null : null,
         endNorth: controlled ? parseNumber(config.endNorth) : null,
         endEast: controlled ? parseNumber(config.endEast) : null,
         endAzimuthDeg: controlled ? parseNumber(config.endAzimuth.deg) : null,
@@ -244,25 +241,48 @@ export function PolygonalEditor({
         </div>
       </div>
 
-      {readOnly && (
-        <Alert variant="info">
-          Este proceso está cerrado; los datos son de solo lectura.
-        </Alert>
-      )}
+      {readOnly &&
+        process.status === "closed" &&
+        process.meets_tolerance === false && (
+          <Alert variant="warning">
+            Este proceso se cerró sin alcanzar la tolerancia del orden de
+            precisión. Los datos son de solo lectura.
+          </Alert>
+        )}
+      {readOnly &&
+        !(process.status === "closed" && process.meets_tolerance === false) && (
+          <Alert variant="info">
+            Este proceso está cerrado; los datos son de solo lectura.
+          </Alert>
+        )}
       {error && <Alert variant="error">{error}</Alert>}
       {saveMessage && <Alert variant="success">{saveMessage}</Alert>}
 
-      <Card title="Configuración">
-        <PolygonalConfigFields
-          value={config}
-          disabled={readOnly}
-          onChange={(v) => {
-            setConfig(v);
-            setDirty(true);
-            setSaveMessage(null);
-          }}
-        />
-      </Card>
+      <ClosureVerdict
+        result={result}
+        type={config.type}
+        order={precisionOrder}
+      />
+
+      <details
+        open={process.status === "draft" || process.status === "in_progress"}
+        className="rounded-lg border border-neutral-200 bg-white shadow-sm"
+      >
+        <summary className="cursor-pointer list-none px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
+          Configuración
+        </summary>
+        <div className="border-t border-neutral-100 px-5 py-4">
+          <PolygonalConfigFields
+            value={config}
+            disabled={readOnly}
+            onChange={(v) => {
+              setConfig(v);
+              setDirty(true);
+              setSaveMessage(null);
+            }}
+          />
+        </div>
+      </details>
 
       <Card title="Estaciones">
         <StationsTable
@@ -316,12 +336,10 @@ export function PolygonalEditor({
                 Corrige las celdas con error para poder guardar.
               </span>
             )}
-            <Button
-              onClick={handleSave}
-              disabled={isPending || captureBlocked}
-            >
+            <Button onClick={handleSave} disabled={isPending || captureBlocked}>
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
+            <span aria-hidden className="h-6 w-px bg-neutral-200" />
             <CloseProcessDialog
               processId={process.id}
               type={config.type}
