@@ -25,7 +25,7 @@ const TABS: TabItem[] = [
 
 interface ProjectHubPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }
 
 function ProcessSection({
@@ -64,7 +64,8 @@ export default async function ProjectHubPage({
   searchParams,
 }: ProjectHubPageProps) {
   const { id } = await params;
-  const { tab } = await searchParams;
+  const sp = await searchParams;
+  const tab = sp.tab;
   const activeTab =
     tab === "reports" || tab === "config" ? tab : "processes";
 
@@ -103,6 +104,7 @@ export default async function ProjectHubPage({
         items={TABS}
         activeId={activeTab}
         basePath={`/projects/${project.id}`}
+        searchParams={sp}
       />
 
       {activeTab === "processes" && (
