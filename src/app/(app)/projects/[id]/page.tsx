@@ -18,8 +18,6 @@ const TABS: TabItem[] = [
   { id: "config", label: "Configuración" },
 ];
 
-const IN_PROGRESS_STATUSES = ["draft", "in_progress", "calculated"];
-
 interface ProjectHubPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
@@ -80,12 +78,12 @@ export default async function ProjectHubPage({
       ? await getReferencePoints(supabase, project.id)
       : [];
 
-  const inProgress = processes.filter((p) =>
-    IN_PROGRESS_STATUSES.includes(p.status),
+  const drafts = processes.filter(
+    (p) => p.status === "draft" || p.status === "in_progress",
   );
-  const closed = processes.filter(
-    (p) => !IN_PROGRESS_STATUSES.includes(p.status),
-  );
+  const calculated = processes.filter((p) => p.status === "calculated");
+  const closed = processes.filter((p) => p.status === "closed");
+  const rejected = processes.filter((p) => p.status === "rejected");
 
   return (
     <div className="flex flex-col gap-6">
@@ -112,16 +110,28 @@ export default async function ProjectHubPage({
           ) : (
             <>
               <ProcessSection
-                title="En progreso"
+                title="Borradores"
                 projectId={project.id}
-                processes={inProgress}
-                emptyText="No hay procesos en progreso."
+                processes={drafts}
+                emptyText="No hay borradores."
+              />
+              <ProcessSection
+                title="Calculados"
+                projectId={project.id}
+                processes={calculated}
+                emptyText="No hay procesos calculados."
               />
               <ProcessSection
                 title="Cerrados"
                 projectId={project.id}
                 processes={closed}
                 emptyText="No hay procesos cerrados."
+              />
+              <ProcessSection
+                title="Rechazados"
+                projectId={project.id}
+                processes={rejected}
+                emptyText="No hay procesos rechazados."
               />
             </>
           )}
