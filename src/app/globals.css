@@ -41,6 +41,19 @@ body {
     "Helvetica Neue",
     Arial,
     sans-serif;
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 32px 32px;
+  background-position: center;
 }
 
 @layer base {
