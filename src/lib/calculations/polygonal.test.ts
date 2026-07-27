@@ -53,6 +53,9 @@ describe("computePolygonal — poligonal cerrada", () => {
     expect(square.linearError).toBeCloseTo(0, 6);
     expect(square.perimeter).toBe(400);
     expect(square.meetsTolerance).toBe(true);
+    // Cierre exacto: el residuo de punto flotante de linearError no debe
+    // producir una precisión relativa absurda (p. ej. 1:17222920531038532).
+    expect(square.relativePrecision).toBe(Infinity);
     expect(square.stations[1]?.north).toBeCloseTo(100, 6);
     expect(square.stations[1]?.east).toBeCloseTo(0, 6);
     expect(square.stations[2]?.north).toBeCloseTo(100, 6);
