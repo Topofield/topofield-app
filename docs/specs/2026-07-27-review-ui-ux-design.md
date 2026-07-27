@@ -42,6 +42,16 @@ muestra con el mismo badge verde "Cerrado" que un levantamiento conforme.
 Cerrar fuera de tolerancia es un caso legítimo —documentar un levantamiento
 deficiente— pero hoy es indistinguible de un cierre correcto.
 
+**Corrección al diagnóstico inicial:** `evaluatePolygonalClosure`
+(`src/lib/validators/polygonal.ts:132-141`) ya impide cerrar como `closed` un
+proceso que no alcanza la tolerancia lineal: fuerza `mustReject`, de modo que solo
+puede cerrarse como `rejected`. La aplicación no tiene esa falla.
+
+El estado inconsistente proviene otra vez del seed, que fuerza `status: "closed"`
+sin pasar por la validación. La guarda de cierre no hay que construirla; hay que
+dejar de eludirla desde el seed. Lo que sí falta es **comunicar visualmente** el
+caso, para procesos históricos o migrados que puedan presentarlo.
+
 ### 2.3 Gestalt
 
 - Configuración, Estaciones y Resultados usan la misma tarjeta blanca con el mismo
@@ -101,13 +111,17 @@ Dos opciones, a elegir en implementación:
 La primera preserva la utilidad de los fixtures (que existen para representar casos
 de tolerancia concretos) y es la recomendada.
 
-**Guarda de cierre.** El diálogo de cierre exige una nota justificativa cuando
-`meets_tolerance === false`. El proceso se cierra igual —no se bloquea— pero queda
-la trazabilidad de por qué.
+**Cierre.** La guarda ya existe y funciona: no se toca la lógica de
+`evaluatePolygonalClosure`. El seed deja de forzar `status: "closed"` en procesos
+que no alcanzan la tolerancia; el "Pentágono oficial" pasa a un fixture que sí
+cumple, y el caso fuera de tolerancia queda representado por el proceso
+`rejected`, que es su desenlace correcto.
 
-**Estado visual.** Un proceso cerrado fuera de tolerancia se muestra como
-"Cerrado fuera de tolerancia" en ámbar, distinto del "Cerrado" verde de un
-levantamiento conforme.
+**Estado visual.** Para procesos históricos o migrados que aún presenten
+`status: "closed"` con `meets_tolerance === false`, la tarjeta y el editor lo
+muestran como "Cerrado fuera de tolerancia" en ámbar, distinto del "Cerrado" verde
+de un levantamiento conforme. Es una salvaguarda de presentación, no una vía nueva
+para cerrar fuera de norma.
 
 ### 4.2 Jerarquía del editor
 
@@ -200,7 +214,7 @@ escritorio.
 1. Ningún proceso muestra "Sin calcular" y "Calculado" simultáneamente.
 2. Un proceso cerrado fuera de tolerancia es visualmente distinguible de uno
    conforme, en el hub y en el editor.
-3. El cierre fuera de tolerancia exige nota justificativa.
+3. El seed no produce ningún proceso `closed` con `meets_tolerance === false`.
 4. El veredicto de tolerancia es el primer elemento del editor en procesos
    calculados.
 5. Los datos numéricos usan familia monoespaciada con cifras tabulares.
