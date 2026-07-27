@@ -7,6 +7,7 @@ export { DmsInput, EMPTY_DMS, type DmsValue } from "./dms-input";
 export { EmptyState } from "./empty-state";
 export { Input } from "./input";
 export { KpiCard } from "./kpi-card";
+export { Logo, LogoMark } from "./logo";
 export { Modal } from "./modal";
 export { Select, type SelectOption } from "./select";
 export { StatusIndicator } from "./status-indicator";
