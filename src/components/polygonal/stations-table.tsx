@@ -72,7 +72,7 @@ export function StationsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
@@ -191,6 +191,118 @@ export function StationsTable({
           </tbody>
         </table>
       </div>
+      <ul className="flex flex-col gap-3 md:hidden">
+        {stations.map((station, i) => {
+          const issue = issues[i];
+          const computed = result.stations[i];
+          return (
+            <li
+              key={station.id}
+              className="rounded-lg border border-neutral-200 p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <Input
+                  value={station.pointCode}
+                  disabled={disabled}
+                  onChange={(e) => update(i, { pointCode: e.target.value })}
+                  className="w-28"
+                  aria-label={`Código de la estación ${i + 1}`}
+                />
+                {!disabled && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => onChange(stations.filter((_, j) => j !== i))}
+                  >
+                    Eliminar
+                  </Button>
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-col gap-3">
+                <div>
+                  <p className="mb-1 text-xs font-medium text-neutral-500">Ángulo</p>
+                  <DmsInput
+                    value={station.angle}
+                    disabled={disabled}
+                    error={issue?.errors.angle}
+                    onChange={(v) => update(i, { angle: v })}
+                  />
+                  {issue?.warnings.angle && (
+                    <p className="mt-1 text-xs text-warning-500">
+                      {issue.warnings.angle}
+                    </p>
+                  )}
+                </div>
+
+                {showDeflection && (
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-neutral-500">
+                      Sentido
+                    </p>
+                    <Select
+                      options={DEFLECTION_OPTIONS}
+                      placeholder="—"
+                      value={station.deflectionDirection ?? ""}
+                      disabled={disabled}
+                      onChange={(e) =>
+                        update(i, {
+                          deflectionDirection:
+                            e.target.value === ""
+                              ? null
+                              : (e.target.value as DeflectionDirection),
+                        })
+                      }
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-neutral-500">
+                    Distancia (m)
+                  </p>
+                  <Input
+                    type="number"
+                    step="any"
+                    inputMode="decimal"
+                    value={station.distance}
+                    disabled={disabled}
+                    error={issue?.errors.distance}
+                    onChange={(e) => update(i, { distance: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-neutral-100 pt-3">
+                <div>
+                  <dt className="text-xs text-neutral-500">Azimut</dt>
+                  <dd className="font-mono text-sm tabular-nums text-neutral-700">
+                    {formatAngle(computed?.azimuth ?? null)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-neutral-500">ΔN</dt>
+                  <dd className="font-mono text-sm tabular-nums text-neutral-700">
+                    {formatCoord(computed?.deltaNorth ?? null)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-neutral-500">ΔE</dt>
+                  <dd className="font-mono text-sm tabular-nums text-neutral-700">
+                    {formatCoord(computed?.deltaEast ?? null)}
+                  </dd>
+                </div>
+              </dl>
+            </li>
+          );
+        })}
+        {stations.length === 0 && (
+          <li className="py-6 text-center text-sm text-neutral-500">
+            Aún no hay estaciones. Agrega la primera para empezar.
+          </li>
+        )}
+      </ul>
       {!disabled && (
         <div>
           <Button
