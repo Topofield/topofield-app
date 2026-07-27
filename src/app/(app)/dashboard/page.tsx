@@ -29,7 +29,7 @@ export default async function DashboardPage({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
         <Link href="/projects/new" className={buttonClasses()}>
           + Nuevo Proyecto
         </Link>
@@ -51,7 +51,7 @@ export default async function DashboardPage({
 
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-neutral-900">Proyectos</h2>
+          <h2 className="text-lg font-semibold">Proyectos</h2>
           <DashboardFilter activeStatus={status} />
         </div>
 

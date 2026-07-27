@@ -4,7 +4,7 @@ import { buttonClasses } from "@/components/design-system";
 export default function ProjectNotFound() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-      <h1 className="text-2xl font-bold text-neutral-900">
+      <h1 className="text-2xl font-bold">
         Proyecto no encontrado
       </h1>
       <p className="text-sm text-neutral-500">

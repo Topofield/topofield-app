@@ -240,7 +240,7 @@ export function PolygonalEditor({
           ]}
         />
         <div className="mt-2 flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-neutral-900">
+          <h1 className="text-2xl font-bold">
             {process.name}
           </h1>
           <Badge tone={STATUS_TONE[process.status]}>
@@ -279,7 +279,7 @@ export function PolygonalEditor({
         className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
       >
         <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
-          <h2 className="text-base font-semibold text-neutral-900">
+          <h2 className="text-base font-semibold">
             Configuración
           </h2>
           <svg

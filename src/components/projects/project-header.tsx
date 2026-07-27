@@ -26,7 +26,7 @@ export function ProjectHeader({ project }: { project: Project }) {
     <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">
+          <h1 className="text-2xl font-bold">
             {project.name}
           </h1>
           <p className="mt-1 text-sm text-neutral-500">{project.client}</p>

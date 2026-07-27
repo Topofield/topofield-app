@@ -41,7 +41,7 @@ function ProcessSection({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
+      <h3 className="text-sm font-semibold">{title}</h3>
       {processes.length === 0 ? (
         <p className="text-sm text-neutral-500">{emptyText}</p>
       ) : (
@@ -110,7 +110,7 @@ export default async function ProjectHubPage({
       {activeTab === "processes" && (
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-neutral-900">
+            <h2 className="text-lg font-semibold">
               Procesos
             </h2>
             <NewProcessSelector projectId={project.id} />

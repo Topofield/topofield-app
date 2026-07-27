@@ -10,7 +10,7 @@ export function ProjectCard({ project }: { project: Project }) {
       className="block rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-colors hover:border-primary-200"
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="font-semibold text-neutral-900">{project.name}</h3>
+        <h3 className="font-semibold">{project.name}</h3>
         <Badge tone={project.status === "active" ? "success" : "neutral"}>
           {PROJECT_STATUS_LABELS[project.status]}
         </Badge>

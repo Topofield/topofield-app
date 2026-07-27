@@ -44,7 +44,7 @@ export function ProcessCard({
           <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
             Poligonal · {POLYGONAL_TYPE_LABELS[process.type]}
           </p>
-          <h3 className="mt-0.5 font-semibold text-neutral-900">
+          <h3 className="mt-0.5 font-semibold">
             {process.name}
           </h3>
         </div>

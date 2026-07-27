@@ -68,7 +68,7 @@ export function ResultsPanel({
       <div className="grid gap-6 sm:grid-cols-2">
         {type === "closed" && (
           <div>
-            <h3 className="mb-1 text-sm font-semibold text-neutral-900">
+            <h3 className="mb-1 text-sm font-semibold">
               Verificación angular
             </h3>
             <Row label="Suma medida" value={formatAngleSum(result.angleSum)} />
@@ -87,7 +87,7 @@ export function ResultsPanel({
           </div>
         )}
         <div>
-          <h3 className="mb-1 text-sm font-semibold text-neutral-900">
+          <h3 className="mb-1 text-sm font-semibold">
             Cierre lineal
           </h3>
           <Row
@@ -106,7 +106,7 @@ export function ResultsPanel({
 
       {result.stations.some((s) => s.north != null) && (
         <div className="overflow-x-auto">
-          <h3 className="mb-2 text-sm font-semibold text-neutral-900">
+          <h3 className="mb-2 text-sm font-semibold">
             Coordenadas {type !== "open_uncontrolled" ? "corregidas" : ""}
           </h3>
           <table className="w-full text-sm">
