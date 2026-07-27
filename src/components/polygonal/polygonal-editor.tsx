@@ -271,7 +271,9 @@ export function PolygonalEditor({
         className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
       >
         <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
-          Configuración
+          <h2 className="text-base font-semibold text-neutral-900">
+            Configuración
+          </h2>
           <svg
             aria-hidden="true"
             viewBox="0 0 20 20"
