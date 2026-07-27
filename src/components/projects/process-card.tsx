@@ -10,7 +10,7 @@ import {
 
 const STATUS_TONE: Record<
   ProcessStatus,
-  "neutral" | "primary" | "success" | "danger"
+  "neutral" | "primary" | "success" | "danger" | "warning"
 > = {
   draft: "neutral",
   in_progress: "neutral",
@@ -26,6 +26,14 @@ export function ProcessCard({
   projectId: string;
   process: PolygonalProcess;
 }) {
+  const outOfTolerance =
+    process.status === "closed" && process.meets_tolerance === false;
+
+  const tone = outOfTolerance ? "warning" : STATUS_TONE[process.status];
+  const label = outOfTolerance
+    ? "Cerrado fuera de tolerancia"
+    : PROCESS_STATUS_LABELS[process.status];
+
   return (
     <Link
       href={`/projects/${projectId}/polygonal/${process.id}`}
@@ -40,15 +48,15 @@ export function ProcessCard({
             {process.name}
           </h3>
         </div>
-        <Badge tone={STATUS_TONE[process.status]}>
-          {PROCESS_STATUS_LABELS[process.status]}
-        </Badge>
+        <Badge tone={tone}>{label}</Badge>
       </div>
       <div className="mt-4 flex items-center justify-between gap-3 text-xs text-neutral-500">
         <span>
           {process.relative_precision
             ? `Precisión ${process.relative_precision}`
-            : "Sin calcular"}
+            : process.type === "open_uncontrolled"
+              ? "Sin verificación de cierre"
+              : "Sin calcular"}
         </span>
         <span className="shrink-0">{formatDate(process.created_at)}</span>
       </div>

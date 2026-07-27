@@ -38,14 +38,14 @@ export default async function DashboardPage({
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard label="Proyectos activos" value={kpis.activeProjects} />
         <KpiCard
-          label="Procesos pendientes de cierre"
-          value="—"
-          hint="Disponible al implementar los módulos de proceso."
+          label="Procesos calculados"
+          value={kpis.calculatedProcesses}
+          hint="Listos para revisar y cerrar."
         />
         <KpiCard
-          label="Alertas activas"
-          value="—"
-          hint="Disponible al implementar los asentamientos."
+          label="Fuera de tolerancia"
+          value={kpis.outOfTolerance}
+          hint="Requieren revisión antes del cierre."
         />
       </div>
 

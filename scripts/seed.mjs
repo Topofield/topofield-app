@@ -12,6 +12,8 @@
 // (lee SUPABASE_SECRET_KEY desde .env.local).
 
 import { createClient } from "@supabase/supabase-js";
+import { computePolygonal } from "../src/lib/calculations/polygonal.ts";
+import { dmsToDecimal } from "../src/lib/calculations/angles.ts";
 
 const URL = "http://127.0.0.1:54321";
 const SECRET = process.env.SUPABASE_SECRET_KEY;
@@ -59,7 +61,42 @@ async function insertReferencePoints(projectId, points) {
   if (error) throw error;
 }
 
-async function insertPolygonal(projectId, spec, userId) {
+/**
+ * Calcula los resultados de un fixture con el mismo motor que usa la app
+ * (`computePolygonal`), para que el seed nunca quede desincronizado con lo
+ * que produciría `saveProcess` en un guardado real.
+ */
+function resultFieldsFor(spec, order) {
+  const input = {
+    type: spec.type,
+    startNorth: spec.startNorth,
+    startEast: spec.startEast,
+    startAzimuth: dmsToDecimal(...(spec.startAz ?? [0, 0, 0])),
+    endNorth: spec.endNorth ?? null,
+    endEast: spec.endEast ?? null,
+    endAzimuth: spec.endAz ? dmsToDecimal(...spec.endAz) : null,
+    order,
+    method: spec.correctionMethod,
+    stations: spec.stations.map((st) => ({
+      pointCode: st.code,
+      angle: st.angle ? dmsToDecimal(...st.angle) : Number.NaN,
+      deflectionDirection: st.dir ?? null,
+      distance: st.distance ?? Number.NaN,
+    })),
+  };
+  const r = computePolygonal(input);
+  const rel = r.relativePrecision;
+  return {
+    angular_error_seconds: r.angularError,
+    linear_error: r.linearError,
+    perimeter: r.perimeter,
+    relative_precision:
+      rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
+    meets_tolerance: r.meetsTolerance,
+  };
+}
+
+async function insertPolygonal(projectId, spec, userId, order) {
   const startAz = spec.startAz ?? [0, 0, 0];
   const endAz = spec.endAz ?? [null, null, null];
   const { data: proc, error } = await admin
@@ -83,6 +120,7 @@ async function insertPolygonal(projectId, spec, userId) {
       end_azimuth_sec: endAz[2],
       correction_method: spec.correctionMethod ?? null,
       status: spec.status,
+      ...resultFieldsFor(spec, order),
       closed_at:
         spec.status === "closed" || spec.status === "rejected"
           ? new Date().toISOString()
@@ -220,18 +258,23 @@ const PROCESSES = [
       "Caso 3 del marco teórico (ajustado a la convención de TopoField: distancia en la fila de la estación de SALIDA). Sin verificación de cierre.",
   },
   {
-    name: "Pentágono oficial (cerrado)",
+    name: "Cuadrado oficial (cerrado)",
     type: "closed",
     angle_type: "internal",
     startPointCode: "A",
     startNorth: 1000,
     startEast: 1000,
-    startAz: [45, 0, 0],
+    startAz: [0, 0, 0],
     correctionMethod: "bowditch",
     status: "closed",
-    stations: pentagonStations,
+    stations: [
+      { code: "A", angle: [90, 0, 0], distance: 100 },
+      { code: "B", angle: [90, 0, 0], distance: 100 },
+      { code: "C", angle: [90, 0, 0], distance: 100 },
+      { code: "D", angle: [90, 0, 0], distance: 100 },
+    ],
     notes:
-      "Mismo pentágono pero cerrado oficialmente: el editor debe abrirlo en modo solo lectura.",
+      "Cuadrado que cierra exacto, cerrado oficialmente: el editor debe abrirlo en modo solo lectura.",
   },
   {
     name: "Cuadrado marginal (rechazado)",
@@ -324,8 +367,10 @@ async function main() {
     `  ✓ ${REFERENCE_POINTS.length} puntos de referencia en "Lote catastral"`,
   );
 
+  // Los 7 procesos van al proyecto "Lote catastral" (tercer_orden): el mismo
+  // orden de precisión con el que `computePolygonal` evalúa sus tolerancias.
   for (const spec of PROCESSES) {
-    await insertPolygonal(catastral, spec, userId);
+    await insertPolygonal(catastral, spec, userId, "tercer_orden");
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 

@@ -211,8 +211,14 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
   );
 
   const linearError = base.linearError;
+  // Umbral de exactitud: un cierre "perfecto" no da linearError === 0 sino un
+  // residuo de punto flotante (del orden de 1e-14) por la acumulación de senos
+  // y cosenos en el encadenamiento de coordenadas. 1e-9 m (1 nanómetro) está
+  // diez órdenes de magnitud por debajo de cualquier precisión instrumental
+  // real y muy por encima de ese residuo, así que sirve como umbral de "cierre
+  // exacto" sin arriesgar falsos positivos.
   const relativePrecision =
-    linearError > 0 ? perimeter / linearError : Infinity;
+    linearError > 1e-9 ? perimeter / linearError : Infinity;
   const meetsLinearTolerance =
     relativePrecision >= minRelativePrecision(input.order);
 

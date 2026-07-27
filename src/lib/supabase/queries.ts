@@ -14,27 +14,41 @@ const UUID_RE =
 
 export interface DashboardKpis {
   activeProjects: number;
-  pendingClosures: number;
-  activeAlerts: number;
+  calculatedProcesses: number;
+  outOfTolerance: number;
 }
 
 /**
- * KPIs del dashboard. "Proyectos activos" se calcula real; "procesos pendientes"
- * y "alertas activas" devuelven 0 porque sus tablas llegan en Fases 3-6 — el 0
- * se encapsula aquí para que en esas fases solo cambie esta función.
+ * KPIs del dashboard: proyectos activos, procesos calculados listos para
+ * revisar/cerrar, y procesos fuera de tolerancia que requieren atención.
  */
 export async function getDashboardKpis(
   supabase: Client,
 ): Promise<DashboardKpis> {
-  const { count } = await supabase
-    .from("projects")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "active");
+  const [
+    { count: activeProjectsCount },
+    { count: calculatedCount },
+    { count: outOfToleranceCount },
+  ] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active"),
+    supabase
+      .from("polygonal_processes")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "calculated"),
+    supabase
+      .from("polygonal_processes")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "calculated")
+      .eq("meets_tolerance", false),
+  ]);
 
   return {
-    activeProjects: count ?? 0,
-    pendingClosures: 0,
-    activeAlerts: 0,
+    activeProjects: activeProjectsCount ?? 0,
+    calculatedProcesses: calculatedCount ?? 0,
+    outOfTolerance: outOfToleranceCount ?? 0,
   };
 }
 

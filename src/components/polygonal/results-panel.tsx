@@ -1,4 +1,4 @@
-import { Select, StatusIndicator } from "@/components/design-system";
+import { Select } from "@/components/design-system";
 import { decimalToDms } from "@/lib/calculations/angles";
 import {
   CORRECTION_METHOD_OPTIONS,
@@ -31,7 +31,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
       <span className="text-sm text-neutral-500">{label}</span>
-      <span className="text-sm tabular-nums text-neutral-900">{value}</span>
+      <span className="font-mono text-sm tabular-nums text-neutral-900">{value}</span>
     </div>
   );
 }
@@ -51,20 +51,10 @@ export function ResultsPanel({
   onMethodChange,
   disabled,
 }: ResultsPanelProps) {
-  const indicator =
-    result.meetsTolerance === true
-      ? { status: "ok" as const, label: "Cumple la tolerancia" }
-      : result.meetsTolerance === false
-        ? { status: "danger" as const, label: "No cumple la tolerancia" }
-        : type === "open_uncontrolled"
-          ? { status: "warning" as const, label: "Sin verificación de cierre" }
-          : { status: "warning" as const, label: "Datos incompletos" };
-
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <StatusIndicator status={indicator.status} label={indicator.label} />
-        {type !== "open_uncontrolled" && (
+      {type !== "open_uncontrolled" && (
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Select
             label="Método de corrección"
             options={CORRECTION_METHOD_OPTIONS}
@@ -72,8 +62,8 @@ export function ResultsPanel({
             disabled={disabled}
             onChange={(e) => onMethodChange(e.target.value as CorrectionMethod)}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="grid gap-6 sm:grid-cols-2">
         {type === "closed" && (
@@ -135,16 +125,16 @@ export function ResultsPanel({
                   <td className="py-2 pr-3 font-medium text-neutral-900">
                     {s.pointCode || `E${i + 1}`}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.correctedDeltaNorth)}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.correctedDeltaEast)}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.north)}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.east)}
                   </td>
                 </tr>

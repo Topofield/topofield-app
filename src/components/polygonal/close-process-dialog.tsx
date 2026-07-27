@@ -69,6 +69,7 @@ export function CloseProcessDialog({
     <>
       <Button
         type="button"
+        variant="secondary"
         onClick={() => {
           setConfirmed(false);
           setError(null);
