@@ -37,7 +37,7 @@ export function ProcessCard({
   return (
     <Link
       href={`/projects/${projectId}/polygonal/${process.id}`}
-      className="block rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-colors hover:border-primary-200"
+      className="block rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-colors hover:border-primary-200 hover:bg-primary-50"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
