@@ -1,5 +1,6 @@
 export { Alert } from "./alert";
 export { Badge } from "./badge";
+export { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
 export { Button, buttonClasses } from "./button";
 export { Card } from "./card";
 export { DmsInput, EMPTY_DMS, type DmsValue } from "./dms-input";
