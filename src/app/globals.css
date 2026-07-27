@@ -43,10 +43,12 @@ body {
     sans-serif;
 }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  color: var(--color-primary-600);
-  letter-spacing: -0.01em;
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    color: var(--color-primary-600);
+    letter-spacing: -0.01em;
+  }
 }
