@@ -152,13 +152,13 @@ export function StationsTable({
                       className="w-28"
                     />
                   </td>
-                  <td className="whitespace-nowrap py-2 pr-3 text-neutral-700">
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatAngle(computed?.azimuth ?? null)}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatCoord(computed?.deltaNorth ?? null)}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatCoord(computed?.deltaEast ?? null)}
                   </td>
                   {!disabled && (

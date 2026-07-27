@@ -31,7 +31,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
       <span className="text-sm text-neutral-500">{label}</span>
-      <span className="text-sm tabular-nums text-neutral-900">{value}</span>
+      <span className="font-mono text-sm tabular-nums text-neutral-900">{value}</span>
     </div>
   );
 }
@@ -135,16 +135,16 @@ export function ResultsPanel({
                   <td className="py-2 pr-3 font-medium text-neutral-900">
                     {s.pointCode || `E${i + 1}`}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.correctedDeltaNorth)}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.correctedDeltaEast)}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.north)}
                   </td>
-                  <td className="py-2 pr-3 tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatMeters(s.east)}
                   </td>
                 </tr>

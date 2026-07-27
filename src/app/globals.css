@@ -25,6 +25,9 @@
   --color-semaphore-yellow: #f1c40f;
   --color-semaphore-orange: #e67e22;
   --color-semaphore-red: #e74c3c;
+
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
+    "DejaVu Sans Mono", Consolas, monospace;
 }
 
 body {
