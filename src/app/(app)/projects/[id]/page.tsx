@@ -3,6 +3,7 @@ import {
   Breadcrumbs,
   EmptyState,
   Tabs,
+  type SearchParams,
   type TabItem,
 } from "@/components/design-system";
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
@@ -25,7 +26,7 @@ const TABS: TabItem[] = [
 
 interface ProjectHubPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<SearchParams>;
 }
 
 function ProcessSection({

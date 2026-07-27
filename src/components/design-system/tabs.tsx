@@ -12,19 +12,30 @@ interface TabsProps {
   /** Ruta base; cada tab enlaza a `${basePath}?tab=${id}`. */
   basePath: string;
   /** Parámetros actuales, para no perderlos al cambiar de pestaña. */
-  searchParams?: Record<string, string | undefined>;
+  searchParams?: SearchParams;
 }
 
-/** Destino de una pestaña, conservando los demás parámetros de la consulta. */
+/**
+ * Forma de los `searchParams` de Next: un parámetro repetido en la URL
+ * (`?estado=a&estado=b`) llega como arreglo, no como cadena.
+ */
+export type SearchParams = Record<string, string | string[] | undefined>;
+
+/**
+ * Destino de una pestaña, conservando los demás parámetros de la consulta.
+ * Los parámetros repetidos se conservan como tales: colapsarlos en una sola
+ * cadena cambiaría su significado.
+ */
 export function tabHref(
   basePath: string,
   tabId: string,
-  searchParams?: Record<string, string | undefined>,
+  searchParams?: SearchParams,
 ): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams ?? {})) {
-    if (key !== "tab" && value != null && value !== "") {
-      params.set(key, value);
+    if (key === "tab" || value == null) continue;
+    for (const v of Array.isArray(value) ? value : [value]) {
+      if (v !== "") params.append(key, v);
     }
   }
   params.set("tab", tabId);

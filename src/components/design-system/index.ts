@@ -11,5 +11,5 @@ export { Logo, LogoMark } from "./logo";
 export { Modal } from "./modal";
 export { Select, type SelectOption } from "./select";
 export { StatusIndicator } from "./status-indicator";
-export { Tabs, type TabItem } from "./tabs";
+export { Tabs, type SearchParams, type TabItem } from "./tabs";
 export { Textarea } from "./textarea";

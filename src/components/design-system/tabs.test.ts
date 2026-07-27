@@ -29,4 +29,19 @@ describe("tabHref", () => {
     const href = tabHref("/projects/1", "config", { q: undefined, estado: "" });
     expect(href).toBe("/projects/1?tab=config");
   });
+
+  it("conserva los parámetros repetidos sin colapsarlos", () => {
+    const href = tabHref("/projects/1", "config", {
+      estado: ["calculated", "closed"],
+    });
+    const params = new URLSearchParams(href.split("?")[1]);
+    expect(params.getAll("estado")).toEqual(["calculated", "closed"]);
+    expect(href).not.toContain("calculated%2Cclosed");
+  });
+
+  it("descarta los valores vacíos dentro de un parámetro repetido", () => {
+    const href = tabHref("/projects/1", "config", { estado: ["", "closed"] });
+    const params = new URLSearchParams(href.split("?")[1]);
+    expect(params.getAll("estado")).toEqual(["closed"]);
+  });
 });
