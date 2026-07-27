@@ -28,6 +28,7 @@
 
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
     "DejaVu Sans Mono", Consolas, monospace;
+  --font-display: var(--font-display-src), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -40,4 +41,12 @@ body {
     "Helvetica Neue",
     Arial,
     sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  color: var(--color-primary-600);
+  letter-spacing: -0.01em;
 }
