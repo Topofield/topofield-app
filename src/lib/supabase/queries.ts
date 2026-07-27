@@ -25,23 +25,28 @@ export interface DashboardKpis {
 export async function getDashboardKpis(
   supabase: Client,
 ): Promise<DashboardKpis> {
-  const { count } = await supabase
-    .from("projects")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "active");
-
-  const { count: calculatedCount } = await supabase
-    .from("polygonal_processes")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "calculated");
-
-  const { count: outOfToleranceCount } = await supabase
-    .from("polygonal_processes")
-    .select("id", { count: "exact", head: true })
-    .eq("meets_tolerance", false);
+  const [
+    { count: activeProjectsCount },
+    { count: calculatedCount },
+    { count: outOfToleranceCount },
+  ] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active"),
+    supabase
+      .from("polygonal_processes")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "calculated"),
+    supabase
+      .from("polygonal_processes")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "calculated")
+      .eq("meets_tolerance", false),
+  ]);
 
   return {
-    activeProjects: count ?? 0,
+    activeProjects: activeProjectsCount ?? 0,
     calculatedProcesses: calculatedCount ?? 0,
     outOfTolerance: outOfToleranceCount ?? 0,
   };
