@@ -246,6 +246,7 @@ export function StationsTable({
                       placeholder="—"
                       value={station.deflectionDirection ?? ""}
                       disabled={disabled}
+                      aria-label="Sentido"
                       onChange={(e) =>
                         update(i, {
                           deflectionDirection:
@@ -269,6 +270,7 @@ export function StationsTable({
                     value={station.distance}
                     disabled={disabled}
                     error={issue?.errors.distance}
+                    aria-label="Distancia (m)"
                     onChange={(e) => update(i, { distance: e.target.value })}
                   />
                 </div>
