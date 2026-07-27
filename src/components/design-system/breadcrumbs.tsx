@@ -61,8 +61,14 @@ export function Breadcrumbs({
         </Link>
       )}
 
-      {/* Escritorio: ruta completa. */}
-      <ol className="hidden min-w-0 items-center gap-1.5 text-sm sm:flex">
+      {/* Escritorio: ruta completa. En móvil, se muestra también aquí si no
+          hay retorno (parent?.href) que la reemplace. */}
+      <ol
+        className={cn(
+          "min-w-0 items-center gap-1.5 text-sm sm:flex",
+          parent?.href ? "hidden" : "flex",
+        )}
+      >
         {trail.map((item, i) => (
           <li key={`${item.label}-${i}`} className="flex min-w-0 items-center gap-1.5">
             {i > 0 && (

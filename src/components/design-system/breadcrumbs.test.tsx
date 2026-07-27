@@ -39,4 +39,15 @@ describe("resolveBreadcrumbs", () => {
     expect(r.trail).toHaveLength(2);
     expect(r.trail[1]?.label).toBe("Proceso");
   });
+
+  it("deja trail vacío y parent nulo cuando todos los labels están vacíos", () => {
+    const r = resolveBreadcrumbs([
+      { label: "", href: "/dashboard" },
+      { label: "", href: "/projects/1" },
+      { label: "" },
+    ]);
+    expect(r.trail).toHaveLength(0);
+    expect(r.trail[0]?.label).toBeUndefined();
+    expect(r.parent).toBeNull();
+  });
 });
