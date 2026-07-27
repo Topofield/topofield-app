@@ -4,7 +4,7 @@ function Block({ className }: { className: string }) {
 
 export default function DashboardLoading() {
   return (
-    <div className="flex flex-col gap-8" aria-busy="true" aria-live="polite">
+    <div className="flex flex-col gap-8" role="status" aria-busy="true">
       <span className="sr-only">Cargando el dashboard…</span>
       <div className="flex items-center justify-between gap-4">
         <Block className="h-8 w-40" />

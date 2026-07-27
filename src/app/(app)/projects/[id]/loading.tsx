@@ -4,7 +4,7 @@ function Block({ className }: { className: string }) {
 
 export default function ProjectLoading() {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-live="polite">
+    <div className="flex flex-col gap-6" role="status" aria-busy="true">
       <span className="sr-only">Cargando el proyecto…</span>
       <Block className="h-4 w-56" />
       <Block className="h-64" />
