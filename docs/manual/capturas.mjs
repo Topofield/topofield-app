@@ -15,7 +15,9 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "img");
-const BASE = "http://localhost:3000";
+// Puerto del dev server. Next usa 3001 si el 3000 está ocupado; ajústalo con
+// `PORT=3001 node docs/manual/capturas.mjs` si hace falta.
+const BASE = `http://localhost:${process.env.PORT ?? 3000}`;
 const CREDENCIALES = { email: "seed@topofield.local", password: "seed1234" };
 
 /** Consulta un único valor en la base local. */

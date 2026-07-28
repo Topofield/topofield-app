@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-07-27 · Fases 1-3 implementadas · 76 tests.
+**Última actualización:** 2026-07-27 · Fases 1-3 implementadas · 117 tests.
 
 Otros documentos:
 - [Manual de usuario](../manual/README.md) — cómo se usa la aplicación
@@ -119,6 +119,7 @@ src/
 ├── lib/
 │   ├── calculations/        algoritmos puros
 │   ├── validators/          reglas de validación
+│   ├── process-list.ts      filtrado y orden del listado de procesos
 │   ├── supabase/            clientes y consultas
 │   └── utils/
 ├── types/                   tipos, incluido database.ts generado
@@ -158,7 +159,7 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/new/actions.ts` | `createProjectAction` |
 | `(app)/projects/[id]/actions.ts` | `updateProjectAction`, `archiveProjectAction`, `restoreProjectAction`, `deleteProjectAction`, `createReferencePointAction`, `updateReferencePointAction`, `deleteReferencePointAction` |
 | `(app)/projects/[id]/polygonal/new/actions.ts` | `createPolygonalProcessAction` |
-| `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `closePolygonalProcessAction` |
+| `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `closePolygonalProcessAction`, `duplicatePolygonalProcessAction`, `renamePolygonalProcessAction`, `deletePolygonalProcessAction` |
 
 ---
 
@@ -412,12 +413,26 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 - Todo control con foco visible; ningún `outline: none` sin sustituto.
 - `prefers-reduced-motion` respetado.
 - Elementos decorativos con `aria-hidden` y `pointer-events-none`.
+- El color nunca es el único canal: los indicadores llevan texto para lectores
+  de pantalla.
+
+> **Los tres colores de la paleta se ajustaron para cumplir AA.** Los valores
+> originales fallaban como texto sobre blanco: `primary-500` daba 4.42:1,
+> `danger-500` 3.82:1 y `success-500` 2.87:1, todos por debajo de 4.5:1.
+> Afectaba a los botones primarios, al veredicto de cierre y a los mensajes de
+> error de formulario.
+>
+> Al elegir un tono no basta con medirlo sobre blanco: estos colores también se
+> usan como texto sobre su propio fondo teñido (`Badge` al 10 %, la banda del
+> veredicto al 5 %). Un verde que cumplía sobre blanco con 4.78:1 se quedaba en
+> 4.21:1 sobre el badge. **Verifique los tres contextos** antes de cambiar un
+> token de estado.
 
 ---
 
 ## 9. Pruebas
 
-76 tests en Vitest, entorno `node` **sin jsdom**.
+117 tests en Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -425,6 +440,8 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/calculations/angles.test.ts` | 8 | Conversiones DMS ↔ decimal |
 | `lib/calculations/tolerances.test.ts` | 2 | Tolerancias por orden |
 | `lib/validators/polygonal.test.ts` | 33 | Captura y cierre |
+| `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
+| `lib/utils/format.test.ts` | 13 | Fecha relativa y sus fronteras |
 | `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
@@ -484,10 +501,14 @@ Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 Registrada durante el desarrollo, ninguna bloqueante:
 
 **`relative_precision` se persiste como texto ya formateado.** El mismo proceso
-se lee `1:1001` en el hub y `1:1.001` en el editor, porque hay cuatro copias de
-`formatPrecision` con criterios distintos. Impide además ordenar numéricamente.
-Corresponde extraer un formateador único a `src/lib/utils/format.ts` y evaluar
-guardar el número en vez de la cadena.
+se lee `1:1001` en el listado y `1:1.001` en el editor, porque hay cuatro copias
+de `formatPrecision` con criterios distintos.
+
+El problema de ordenamiento que esto causaba ya está sorteado: `parsePrecision`
+(`src/lib/process-list.ts`) extrae el valor numérico antes de comparar, para que
+`1:46` no quede después de `1:1001`. Pero es una solución en la capa de
+presentación. Lo que corresponde es extraer un formateador único a
+`src/lib/utils/format.ts` y evaluar guardar el número en vez de la cadena.
 
 **Los KPI del dashboard no filtran por estado del proyecto.** «Procesos
 calculados» y «Fuera de tolerancia» cuentan sobre todos los procesos del
