@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Input, Modal } from "@/components/design-system";
+import { Alert, Button, Input, Modal } from "@/components/design-system";
 import {
   deletePolygonalProcessAction,
   duplicatePolygonalProcessAction,
@@ -25,6 +25,7 @@ export function ProcessRowActions({
   const [eliminando, setEliminando] = useState(false);
   const [nombre, setNombre] = useState(process.name);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function ejecutar(accion: () => Promise<{ ok: boolean; error?: string }>) {
@@ -40,44 +41,65 @@ export function ProcessRowActions({
     });
   }
 
-  return (
-    <div className="flex items-center justify-end gap-1">
-      <Button
-        size="sm"
-        variant="ghost"
-        type="button"
-        disabled={isPending}
-        onClick={() => ejecutar(() => duplicatePolygonalProcessAction(process.id))}
-      >
-        Duplicar
-      </Button>
+  function duplicar() {
+    setDuplicateError(null);
+    startTransition(async () => {
+      const r = await duplicatePolygonalProcessAction(process.id);
+      if (!r.ok) {
+        setDuplicateError(r.error ?? "No se pudo duplicar el proceso.");
+      }
+    });
+  }
 
-      {!inmutable && (
-        <>
-          <Button
-            size="sm"
-            variant="ghost"
-            type="button"
-            onClick={() => {
-              setNombre(process.name);
-              setError(null);
-              setRenombrando(true);
-            }}
-          >
-            Renombrar
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            type="button"
-            onClick={() => {
-              setError(null);
-              setEliminando(true);
-            }}
-          >
-            Eliminar
-          </Button>
-        </>
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center justify-end gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          type="button"
+          aria-label={`Duplicar «${process.name}»`}
+          disabled={isPending}
+          onClick={duplicar}
+        >
+          Duplicar
+        </Button>
+
+        {!inmutable && (
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              type="button"
+              aria-label={`Renombrar «${process.name}»`}
+              onClick={() => {
+                setNombre(process.name);
+                setError(null);
+                setRenombrando(true);
+              }}
+            >
+              Renombrar
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              type="button"
+              aria-label={`Eliminar «${process.name}»`}
+              onClick={() => {
+                setError(null);
+                setEliminando(true);
+              }}
+            >
+              Eliminar
+            </Button>
+          </>
+        )}
+      </div>
+
+      {duplicateError && (
+        <Alert variant="error" className="w-full max-w-xs py-2">
+          {duplicateError}
+        </Alert>
       )}
 
       <Modal
@@ -104,8 +126,12 @@ export function ProcessRowActions({
           label="Nombre del proceso"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          error={error ?? undefined}
         />
+        {error && (
+          <Alert variant="error" className="mt-2 py-2">
+            {error}
+          </Alert>
+        )}
       </Modal>
 
       <Modal
@@ -133,7 +159,11 @@ export function ProcessRowActions({
           Se eliminará «{process.name}» y todas sus estaciones. Esta acción no se
           puede deshacer.
         </p>
-        {error && <p className="mt-2 text-sm text-danger-500">{error}</p>}
+        {error && (
+          <Alert variant="error" className="mt-2 py-2">
+            {error}
+          </Alert>
+        )}
       </Modal>
     </div>
   );

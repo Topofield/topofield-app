@@ -291,6 +291,7 @@ export async function duplicatePolygonalProcessAction(
     end_azimuth_min: original.end_azimuth_min,
     end_azimuth_sec: original.end_azimuth_sec,
     correction_method: original.correction_method,
+    notes: original.notes,
     status: "draft",
   });
   if (error) return { ok: false, error: "No se pudo duplicar el proceso." };
