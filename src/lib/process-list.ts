@@ -95,22 +95,35 @@ export function filterProcesses(
 
   const factor = filters.dir === "asc" ? 1 : -1;
 
+  /** Comparación por signo: a diferencia de la resta, no produce NaN con infinitos empatados. */
+  function compareValues(a: number | string, b: number | string): number {
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+
   return filtered.sort((a, b) => {
+    let cmp: number;
     switch (filters.orden) {
       case "nombre":
-        return a.name.localeCompare(b.name, "es-CO") * factor;
+        cmp = a.name.localeCompare(b.name, "es-CO") * factor;
+        break;
       case "precision":
-        return (
-          (parsePrecision(a.relative_precision) -
-            parsePrecision(b.relative_precision)) *
-          factor
-        );
+        cmp =
+          compareValues(
+            parsePrecision(a.relative_precision),
+            parsePrecision(b.relative_precision),
+          ) * factor;
+        break;
       case "actividad":
-        return (
-          (new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()) *
-          factor
-        );
+        cmp =
+          compareValues(
+            new Date(a.updated_at).getTime(),
+            new Date(b.updated_at).getTime(),
+          ) * factor;
+        break;
     }
+    // Desempate estable: si el criterio principal iguala, ordenar por id
+    // da un resultado determinista sin depender de la estabilidad del motor.
+    return cmp !== 0 ? cmp : compareValues(a.id, b.id);
   });
 }
 

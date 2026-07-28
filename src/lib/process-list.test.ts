@@ -46,6 +46,18 @@ describe("parsePrecision", () => {
   it("devuelve -Infinity cuando no hay precisión, para que ordene al final", () => {
     expect(parsePrecision(null)).toBe(Number.NEGATIVE_INFINITY);
   });
+
+  it("trata 1:0 como cero", () => {
+    expect(parsePrecision("1:0")).toBe(0);
+  });
+
+  it("devuelve -Infinity con una cadena malformada", () => {
+    expect(parsePrecision("abc")).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  it("devuelve -Infinity cuando la parte tras 1: no es numérica", () => {
+    expect(parsePrecision("1:abc")).toBe(Number.NEGATIVE_INFINITY);
+  });
 });
 
 describe("filterProcesses — búsqueda", () => {
@@ -179,6 +191,32 @@ describe("filterProcesses — ordenamiento", () => {
     ];
     const r = filterProcesses(lista, { ...SIN_FILTRO, dir: "asc" });
     expect(r.map((p) => p.id)).toEqual(["viejo", "nuevo"]);
+  });
+
+  it("desempata de forma determinista cuando dos precisiones son 1:∞ (caso real del seed)", () => {
+    const lista = [
+      proc({ id: "b", relative_precision: "1:∞" }),
+      proc({ id: "a", relative_precision: "1:∞" }),
+    ];
+    const primero = filterProcesses(lista, { ...SIN_FILTRO, orden: "precision", dir: "desc" }).map(
+      (p) => p.id,
+    );
+    const segundo = filterProcesses(lista, { ...SIN_FILTRO, orden: "precision", dir: "desc" }).map(
+      (p) => p.id,
+    );
+    expect(primero).toEqual(segundo);
+    expect(primero).toEqual(["a", "b"]);
+  });
+
+  it("desempata de forma determinista cuando dos updated_at son idénticos", () => {
+    const lista = [
+      proc({ id: "b", updated_at: "2026-07-10T00:00:00Z" }),
+      proc({ id: "a", updated_at: "2026-07-10T00:00:00Z" }),
+    ];
+    const primero = filterProcesses(lista, SIN_FILTRO).map((p) => p.id);
+    const segundo = filterProcesses(lista, SIN_FILTRO).map((p) => p.id);
+    expect(primero).toEqual(segundo);
+    expect(primero).toEqual(["a", "b"]);
   });
 
   it("no altera el arreglo recibido", () => {
