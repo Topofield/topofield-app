@@ -48,7 +48,6 @@ function SortLink({
   return (
     <Link
       href={`/projects/${projectId}?${params.toString()}`}
-      aria-sort={activa ? (filters.dir === "asc" ? "ascending" : "descending") : undefined}
       className={cn(
         "inline-flex items-center gap-1 transition-colors hover:text-primary-600",
         activa && "text-neutral-900",
@@ -59,6 +58,41 @@ function SortLink({
         <span aria-hidden>{filters.dir === "asc" ? "↑" : "↓"}</span>
       )}
     </Link>
+  );
+}
+
+/**
+ * Encabezado de columna ordenable. `aria-sort` es propiedad del `<th>`
+ * (role="columnheader"), no de su hijo interactivo — WAI-ARIA lo exige
+ * así para que un lector de pantalla lo asocie con la celda.
+ */
+function SortableHeader({
+  columna,
+  etiqueta,
+  projectId,
+  filters,
+}: {
+  columna: SortKey;
+  etiqueta: string;
+  projectId: string;
+  filters: ProcessFilters;
+}) {
+  const activa = filters.orden === columna;
+  const ariaSort = activa
+    ? filters.dir === "asc"
+      ? "ascending"
+      : "descending"
+    : undefined;
+
+  return (
+    <th scope="col" className="px-4 py-3 font-medium" aria-sort={ariaSort}>
+      <SortLink
+        columna={columna}
+        etiqueta={etiqueta}
+        projectId={projectId}
+        filters={filters}
+      />
+    </th>
   );
 }
 
@@ -104,32 +138,26 @@ export function ProcessTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
-              <th scope="col" className="px-4 py-3 font-medium">
-                <SortLink
-                  columna="nombre"
-                  etiqueta="Proceso"
-                  projectId={projectId}
-                  filters={filters}
-                />
-              </th>
+              <SortableHeader
+                columna="nombre"
+                etiqueta="Proceso"
+                projectId={projectId}
+                filters={filters}
+              />
               <th scope="col" className="px-4 py-3 font-medium">Estado</th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                <SortLink
-                  columna="precision"
-                  etiqueta="Precisión"
-                  projectId={projectId}
-                  filters={filters}
-                />
-              </th>
+              <SortableHeader
+                columna="precision"
+                etiqueta="Precisión"
+                projectId={projectId}
+                filters={filters}
+              />
               <th scope="col" className="px-4 py-3 text-center font-medium">Cumple</th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                <SortLink
-                  columna="actividad"
-                  etiqueta="Última actividad"
-                  projectId={projectId}
-                  filters={filters}
-                />
-              </th>
+              <SortableHeader
+                columna="actividad"
+                etiqueta="Última actividad"
+                projectId={projectId}
+                filters={filters}
+              />
             </tr>
           </thead>
           <tbody>
