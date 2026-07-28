@@ -3,6 +3,10 @@ import { formatRelativeDate } from "./format";
 
 const AHORA = new Date("2026-07-27T12:00:00Z");
 
+function haceDias(dias: number): string {
+  return new Date(AHORA.getTime() - dias * 86_400_000).toISOString();
+}
+
 describe("formatRelativeDate", () => {
   it("dice «hoy» para el mismo día", () => {
     expect(formatRelativeDate("2026-07-27T08:00:00Z", AHORA)).toBe("hoy");
@@ -34,5 +38,29 @@ describe("formatRelativeDate", () => {
 
   it("usa años a partir de trescientos sesenta y cinco días", () => {
     expect(formatRelativeDate("2025-07-27T12:00:00Z", AHORA)).toBe("hace 1 año");
+  });
+
+  it("dice «hoy» para una fecha futura", () => {
+    expect(formatRelativeDate(haceDias(-1), AHORA)).toBe("hoy");
+  });
+
+  it("distingue el límite entre días y semanas: 6 vs 7 días", () => {
+    expect(formatRelativeDate(haceDias(6), AHORA)).toBe("hace 6 días");
+    expect(formatRelativeDate(haceDias(7), AHORA)).toBe("hace 1 semana");
+  });
+
+  it("distingue el límite entre semanas y meses: 27 vs 28 días", () => {
+    expect(formatRelativeDate(haceDias(27), AHORA)).toBe("hace 3 semanas");
+    expect(formatRelativeDate(haceDias(28), AHORA)).toBe("hace 1 mes");
+  });
+
+  it("no salta a «4 semanas» en 29 días: sigue siendo 1 mes", () => {
+    expect(formatRelativeDate(haceDias(29), AHORA)).toBe("hace 1 mes");
+    expect(formatRelativeDate(haceDias(30), AHORA)).toBe("hace 1 mes");
+  });
+
+  it("distingue el límite entre meses y años: 363 vs 365 días", () => {
+    expect(formatRelativeDate(haceDias(363), AHORA)).toBe("hace 1 año");
+    expect(formatRelativeDate(haceDias(365), AHORA)).toBe("hace 1 año");
   });
 });

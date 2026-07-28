@@ -31,7 +31,10 @@ export function formatDateOnly(date: string): string {
  * Comunica la recencia mejor que una fecha absoluta en un listado. La fecha
  * exacta debe quedar disponible en el atributo `title` de quien la muestre.
  *
- * `now` se inyecta para poder testear de forma determinista.
+ * `now` se inyecta para poder testear de forma determinista. Las fechas
+ * futuras (`iso` posterior a `now`) también devuelven «hoy»: `updated_at` lo
+ * escribe la base de datos y puede ir unos segundos por delante del reloj
+ * del cliente, así que tratar ese desfase como «hoy» es intencional.
  */
 export function formatRelativeDate(iso: string, now: Date = new Date()): string {
   const dias = Math.floor(
@@ -42,16 +45,16 @@ export function formatRelativeDate(iso: string, now: Date = new Date()): string 
   if (dias === 1) return "ayer";
   if (dias < 7) return `hace ${dias} días`;
 
-  if (dias < 30) {
+  if (dias < 28) {
     const semanas = Math.floor(dias / 7);
     return `hace ${semanas} ${semanas === 1 ? "semana" : "semanas"}`;
   }
 
-  if (dias < 365) {
-    const meses = Math.floor(dias / 30);
+  if (dias < 360) {
+    const meses = Math.max(1, Math.floor(dias / 30));
     return `hace ${meses} ${meses === 1 ? "mes" : "meses"}`;
   }
 
-  const años = Math.floor(dias / 365);
+  const años = Math.max(1, Math.floor(dias / 365));
   return `hace ${años} ${años === 1 ? "año" : "años"}`;
 }
