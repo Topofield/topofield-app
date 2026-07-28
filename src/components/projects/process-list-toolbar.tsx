@@ -70,10 +70,12 @@ export function ProcessListToolbar({
   // Restauración: si la URL no trae filtros, recupera el último usado.
   // La URL manda siempre — un enlace compartido debe mostrar lo que envió su
   // autor, no los filtros de quien lo abre.
-  // Se mantiene declarado antes que el efecto de persistencia, pero ya no es
-  // crítico: ese efecto nunca escribe "tab=processes" (ver más abajo), así
-  // que un montaje con filtros por defecto no puede pisar lo guardado sin
-  // importar el orden en que corran ambos efectos.
+  //
+  // IMPORTANTE: este efecto debe quedar declarado ANTES que el de
+  // persistencia. React los ejecuta en orden de declaración, y en un montaje
+  // con filtros por defecto el de persistencia elimina la clave (ver abajo):
+  // si corriera primero, borraría el filtro guardado antes de que este
+  // pudiera leerlo. No reordenar.
   useEffect(() => {
     const url = new URL(window.location.href);
     const traeFiltros = ["q", "estado", "tipo", "orden", "dir"].some((k) =>
@@ -94,11 +96,12 @@ export function ProcessListToolbar({
   }, []);
 
   // Persistencia: guarda el filtro aplicado para la próxima visita.
-  // Si los filtros son los de por defecto, no escribimos "tab=processes":
-  // eliminamos la clave en su lugar. Así un montaje con filtros por defecto
-  // nunca puede pisar un filtro guardado previamente (el orden de los dos
-  // efectos deja de ser una invariante crítica), y "Limpiar filtros" sigue
-  // significando "olvida mi filtro" en vez de guardar el valor por defecto.
+  //
+  // Con los filtros por defecto no se guarda "tab=processes" sino que se
+  // elimina la clave, para que «Limpiar filtros» signifique «olvida mi
+  // filtro» y no «recuerda que no filtré».
+  //
+  // Va declarado DESPUÉS del efecto de restauración: ver la nota de arriba.
   useEffect(() => {
     const query = toQuery(filters);
     try {
