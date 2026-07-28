@@ -7,16 +7,24 @@ import {
   type TabItem,
 } from "@/components/design-system";
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
-import { ProcessCard } from "@/components/projects/process-card";
+import { ProcessListToolbar } from "@/components/projects/process-list-toolbar";
+import { ProcessTable } from "@/components/projects/process-table";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
 import { ProjectHeader } from "@/components/projects/project-header";
+import {
+  countByStatus,
+  filterProcesses,
+  type ProcessFilters,
+  type SortKey,
+  type StatusFilter,
+} from "@/lib/process-list";
 import { createClient } from "@/lib/supabase/server";
 import {
   getPolygonalProcesses,
   getProjectById,
   getReferencePoints,
 } from "@/lib/supabase/queries";
-import type { PolygonalProcess } from "@/types/polygonal";
+import { POLYGONAL_TYPES, type PolygonalType } from "@/types/polygonal";
 
 const TABS: TabItem[] = [
   { id: "processes", label: "Procesos" },
@@ -24,40 +32,18 @@ const TABS: TabItem[] = [
   { id: "config", label: "Configuración" },
 ];
 
+const STATUS_FILTERS: StatusFilter[] = [
+  "todos",
+  "borradores",
+  "calculados",
+  "cerrados",
+  "rechazados",
+];
+const SORT_KEYS: SortKey[] = ["actividad", "nombre", "precision"];
+
 interface ProjectHubPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<SearchParams>;
-}
-
-function ProcessSection({
-  title,
-  projectId,
-  processes,
-  emptyText,
-}: {
-  title: string;
-  projectId: string;
-  processes: PolygonalProcess[];
-  emptyText: string;
-}) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      {processes.length === 0 ? (
-        <p className="text-sm text-neutral-500">{emptyText}</p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {processes.map((process) => (
-            <ProcessCard
-              key={process.id}
-              projectId={projectId}
-              process={process}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
 }
 
 export default async function ProjectHubPage({
@@ -85,12 +71,22 @@ export default async function ProjectHubPage({
       ? await getReferencePoints(supabase, project.id)
       : [];
 
-  const drafts = processes.filter(
-    (p) => p.status === "draft" || p.status === "in_progress",
-  );
-  const calculated = processes.filter((p) => p.status === "calculated");
-  const closed = processes.filter((p) => p.status === "closed");
-  const rejected = processes.filter((p) => p.status === "rejected");
+  const filters: ProcessFilters = {
+    q: typeof sp.q === "string" ? sp.q : "",
+    estado: STATUS_FILTERS.includes(sp.estado as StatusFilter)
+      ? (sp.estado as StatusFilter)
+      : "todos",
+    tipo: POLYGONAL_TYPES.includes(sp.tipo as PolygonalType)
+      ? (sp.tipo as PolygonalType)
+      : "todos",
+    orden: SORT_KEYS.includes(sp.orden as SortKey)
+      ? (sp.orden as SortKey)
+      : "actividad",
+    dir: sp.dir === "asc" ? "asc" : "desc",
+  };
+
+  const visibles = filterProcesses(processes, filters);
+  const counts = countByStatus(processes);
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,32 +118,25 @@ export default async function ProjectHubPage({
               description="Crea el primer proceso topográfico del proyecto con «+ Nuevo Proceso»."
             />
           ) : (
-            <>
-              <ProcessSection
-                title="Borradores"
+            <div className="flex flex-col gap-4">
+              <ProcessListToolbar
                 projectId={project.id}
-                processes={drafts}
-                emptyText="No hay borradores."
+                filters={filters}
+                counts={counts}
               />
-              <ProcessSection
-                title="Calculados"
-                projectId={project.id}
-                processes={calculated}
-                emptyText="No hay procesos calculados."
-              />
-              <ProcessSection
-                title="Cerrados"
-                projectId={project.id}
-                processes={closed}
-                emptyText="No hay procesos cerrados."
-              />
-              <ProcessSection
-                title="Rechazados"
-                projectId={project.id}
-                processes={rejected}
-                emptyText="No hay procesos rechazados."
-              />
-            </>
+              {visibles.length === 0 ? (
+                <EmptyState
+                  title="Ningún proceso coincide"
+                  description="Ajusta la búsqueda o los filtros para ver otros procesos."
+                />
+              ) : (
+                <ProcessTable
+                  projectId={project.id}
+                  processes={visibles}
+                  filters={filters}
+                />
+              )}
+            </div>
           )}
         </div>
       )}
