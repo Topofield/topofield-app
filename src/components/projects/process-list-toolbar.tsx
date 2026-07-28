@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Select } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
@@ -52,6 +52,20 @@ export function ProcessListToolbar({
   counts: StatusCounts;
 }) {
   const router = useRouter();
+  // El buscador es no controlado (defaultValue) para que teclear rápido nunca
+  // se vea sobrescrito por el valor de filters.q, que llega con el retraso de
+  // la navegación. Cuando filters.q vuelve a "" (p. ej. tras "Limpiar
+  // filtros") cambiamos la key para forzar un remonte con el campo vacío.
+  // Ajuste de estado durante el render (patrón documentado de React para
+  // derivar estado de props sin pasar por un efecto y sus renders en cascada).
+  const [resetKey, setResetKey] = useState(0);
+  const [prevQ, setPrevQ] = useState(filters.q);
+  if (filters.q === "" && prevQ !== "") {
+    setPrevQ(filters.q);
+    setResetKey((k) => k + 1);
+  } else if (filters.q !== prevQ) {
+    setPrevQ(filters.q);
+  }
 
   // Persistencia: guarda el filtro aplicado para la próxima visita.
   useEffect(() => {
@@ -62,9 +76,14 @@ export function ProcessListToolbar({
     }
   }, [projectId, filters]);
 
-  function navegar(cambios: Partial<ProcessFilters>) {
+  function navegar(cambios: Partial<ProcessFilters>, modo: "push" | "replace" = "push") {
     const query = toQuery({ ...filters, ...cambios });
-    router.push(`/projects/${projectId}?${query}`);
+    const url = `/projects/${projectId}?${query}`;
+    if (modo === "replace") {
+      router.replace(url);
+    } else {
+      router.push(url);
+    }
   }
 
   const hayFiltro =
@@ -76,12 +95,13 @@ export function ProcessListToolbar({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <Input
+          key={resetKey}
           type="search"
           defaultValue={filters.q}
           placeholder="Buscar proceso…"
           aria-label="Buscar proceso por nombre"
           className="w-full sm:max-w-xs"
-          onChange={(e) => navegar({ q: e.target.value })}
+          onChange={(e) => navegar({ q: e.target.value }, "replace")}
         />
         <Select
           options={TIPO_OPTIONS}
@@ -111,7 +131,7 @@ export function ProcessListToolbar({
             <button
               key={chip.value}
               type="button"
-              aria-pressed={activo}
+              aria-current={activo ? "true" : undefined}
               onClick={() => navegar({ estado: chip.value })}
               className={cn(
                 "rounded-full border px-3 py-1 text-sm transition-colors",
