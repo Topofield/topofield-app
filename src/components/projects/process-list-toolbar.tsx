@@ -67,6 +67,31 @@ export function ProcessListToolbar({
     setPrevQ(filters.q);
   }
 
+  // Restauración: si la URL no trae filtros, recupera el último usado.
+  // La URL manda siempre — un enlace compartido debe mostrar lo que envió su
+  // autor, no los filtros de quien lo abre.
+  // Declarado antes que el efecto de persistencia: ambos corren al montar, y
+  // este debe leer localStorage antes de que el otro lo sobrescriba con los
+  // filtros por defecto de la URL sin parámetros.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const traeFiltros = ["q", "estado", "tipo", "orden", "dir"].some((k) =>
+      url.searchParams.has(k),
+    );
+    if (traeFiltros) return;
+
+    try {
+      const guardado = window.localStorage.getItem(storageKey(projectId));
+      if (guardado && guardado !== "tab=processes") {
+        router.replace(`/projects/${projectId}?${guardado}`);
+      }
+    } catch {
+      // localStorage no disponible; se usa el filtro por defecto.
+    }
+    // Solo al montar: restaurar en cada cambio provocaría un bucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Persistencia: guarda el filtro aplicado para la próxima visita.
   useEffect(() => {
     try {
