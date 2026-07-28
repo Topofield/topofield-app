@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/design-system";
-import { formatDate } from "@/lib/utils/format";
+import { formatDate, formatRelativeDate } from "@/lib/utils/format";
 import {
   POLYGONAL_TYPE_LABELS,
   PROCESS_STATUS_LABELS,
@@ -18,6 +18,28 @@ const STATUS_TONE: Record<
   closed: "success",
   rejected: "danger",
 };
+
+/** Semáforo de tolerancia. El color no es el único canal: lleva texto.
+ *  Mismo criterio y textos que `ToleranceMark` en `process-table.tsx`. */
+function ToleranceMark({ meets }: { meets: boolean | null }) {
+  if (meets === true) {
+    return (
+      <span className="text-success-500">
+        <span aria-hidden>✓</span>
+        <span className="sr-only">Cumple la tolerancia</span>
+      </span>
+    );
+  }
+  if (meets === false) {
+    return (
+      <span className="text-danger-500">
+        <span aria-hidden>✕</span>
+        <span className="sr-only">No cumple la tolerancia</span>
+      </span>
+    );
+  }
+  return null;
+}
 
 export function ProcessCard({
   projectId,
@@ -51,14 +73,17 @@ export function ProcessCard({
         <Badge tone={tone}>{label}</Badge>
       </div>
       <div className="mt-4 flex items-center justify-between gap-3 text-xs text-neutral-500">
-        <span>
+        <span className="inline-flex items-center gap-1.5">
           {process.relative_precision
             ? `Precisión ${process.relative_precision}`
             : process.type === "open_uncontrolled"
               ? "Sin verificación de cierre"
               : "Sin calcular"}
+          <ToleranceMark meets={process.meets_tolerance} />
         </span>
-        <span className="shrink-0">{formatDate(process.created_at)}</span>
+        <span className="shrink-0" title={formatDate(process.updated_at)}>
+          {formatRelativeDate(process.updated_at)}
+        </span>
       </div>
     </Link>
   );

@@ -260,3 +260,96 @@ export async function closePolygonalProcessAction(
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
 }
+
+/** Duplica un proceso: misma configuración, sin estaciones, en borrador. */
+export async function duplicatePolygonalProcessAction(
+  processId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: original } = await supabase
+    .from("polygonal_processes")
+    .select("*")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!original) return { ok: false, error: "Proceso no encontrado." };
+
+  const { error } = await supabase.from("polygonal_processes").insert({
+    project_id: original.project_id,
+    name: `${original.name} (copia)`,
+    type: original.type,
+    angle_type: original.angle_type,
+    start_point_code: original.start_point_code,
+    start_north: original.start_north,
+    start_east: original.start_east,
+    start_azimuth_deg: original.start_azimuth_deg,
+    start_azimuth_min: original.start_azimuth_min,
+    start_azimuth_sec: original.start_azimuth_sec,
+    end_point_code: original.end_point_code,
+    end_north: original.end_north,
+    end_east: original.end_east,
+    end_azimuth_deg: original.end_azimuth_deg,
+    end_azimuth_min: original.end_azimuth_min,
+    end_azimuth_sec: original.end_azimuth_sec,
+    correction_method: original.correction_method,
+    notes: original.notes,
+    status: "draft",
+  });
+  if (error) return { ok: false, error: "No se pudo duplicar el proceso." };
+
+  revalidatePath(`/projects/${original.project_id}`);
+  return { ok: true };
+}
+
+/** Renombra un proceso. Rechaza los cerrados: son inmutables. */
+export async function renamePolygonalProcessAction(
+  processId: string,
+  name: string,
+): Promise<ActionResult> {
+  const limpio = name.trim();
+  if (!limpio) return { ok: false, error: "El nombre no puede estar vacío." };
+
+  const supabase = await createClient();
+  const { data: process } = await supabase
+    .from("polygonal_processes")
+    .select("id, status, project_id")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  if (process.status === "closed" || process.status === "rejected") {
+    return { ok: false, error: "El proceso está cerrado y no puede modificarse." };
+  }
+
+  const { error } = await supabase
+    .from("polygonal_processes")
+    .update({ name: limpio })
+    .eq("id", processId);
+  if (error) return { ok: false, error: "No se pudo renombrar el proceso." };
+
+  revalidatePath(`/projects/${process.project_id}`);
+  return { ok: true };
+}
+
+/** Elimina un proceso. Rechaza los cerrados: son inmutables. */
+export async function deletePolygonalProcessAction(
+  processId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: process } = await supabase
+    .from("polygonal_processes")
+    .select("id, status, project_id")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  if (process.status === "closed" || process.status === "rejected") {
+    return { ok: false, error: "El proceso está cerrado y no puede eliminarse." };
+  }
+
+  const { error } = await supabase
+    .from("polygonal_processes")
+    .delete()
+    .eq("id", processId);
+  if (error) return { ok: false, error: "No se pudo eliminar el proceso." };
+
+  revalidatePath(`/projects/${process.project_id}`);
+  return { ok: true };
+}

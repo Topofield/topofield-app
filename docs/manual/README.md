@@ -121,9 +121,8 @@ Donde *n* es el número de ángulos medidos.
 
 La ficha superior resume los datos del proyecto. Debajo, tres pestañas:
 
-**Procesos** — los levantamientos, agrupados por estado: Borradores, Calculados,
-Cerrados y Rechazados. Cada tarjeta muestra el tipo de poligonal, su estado y su
-precisión alcanzada.
+**Procesos** — el listado de levantamientos del proyecto. Se detalla en
+[§ 4.3](#43-el-listado-de-procesos).
 
 **Informes** — *pendiente de la fase 6.*
 
@@ -135,6 +134,58 @@ referencia.
 Los **puntos de referencia** son coordenadas conocidas (vértices geodésicos,
 mojones) que puede reutilizar como punto de partida o de llegada de sus
 poligonales, sin volver a teclearlas.
+
+### 4.3 El listado de procesos
+
+Todos los levantamientos del proyecto en una sola lista, con una barra para
+encontrar lo que busca.
+
+**Buscar.** Filtra por nombre mientras escribe. No distingue mayúsculas ni
+acentos: «via» encuentra «Vía terciaria».
+
+**Filtrar por estado.** Los chips muestran cuántos procesos hay en cada grupo,
+así que ve la distribución del proyecto sin desplegar nada. Pulse uno para ver
+solo ese grupo.
+
+**Filtrar por tipo.** El selector acota a un tipo de poligonal.
+
+Cuando hay algún filtro activo aparece **Limpiar filtros**, para volver a verlo
+todo de un clic.
+
+> El listado recuerda el último filtro que usó en cada proyecto, así que al
+> volver lo encuentra como lo dejó. Si abre un enlace que alguien le compartió,
+> manda lo que traiga ese enlace: verá lo mismo que quien se lo envió.
+
+**Las columnas.**
+
+| Columna | Qué muestra |
+|---|---|
+| Proceso | Nombre y tipo de poligonal |
+| Estado | Borrador, Calculado, Cerrado o Rechazado |
+| Precisión | La precisión relativa alcanzada |
+| Cumple | ✓ si alcanza el orden del proyecto, ✕ si no, — si no aplica |
+| Última actividad | Cuándo se modificó por última vez |
+
+La columna **Cumple** es la que evita abrir cada proceso para saber si el
+levantamiento sirve.
+
+Pulse **Proceso**, **Precisión** o **Última actividad** para ordenar por esa
+columna; pulsar de nuevo invierte el orden. Por defecto se ordena por actividad
+reciente, así que lo que está trabajando queda arriba.
+
+**Acciones por proceso.** Cada fila ofrece:
+
+- **Duplicar** — crea un proceso nuevo con la misma configuración (tipo, punto
+  de partida, método de corrección) pero sin estaciones, en estado Borrador.
+- **Renombrar** — cambia el nombre sin abrir el editor.
+- **Eliminar** — borra el proceso y sus estaciones, con confirmación previa.
+
+> **Los procesos cerrados y rechazados solo se pueden duplicar.** No admiten
+> renombrarse ni eliminarse, porque son inmutables. Si necesita rehacer un
+> levantamiento cerrado, duplíquelo: obtendrá una copia editable y el original
+> queda intacto como constancia.
+
+En el teléfono, la tabla se convierte en tarjetas, una por proceso.
 
 ---
 
