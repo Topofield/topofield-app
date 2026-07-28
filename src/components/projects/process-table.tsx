@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/design-system";
 import { ProcessCard } from "@/components/projects/process-card";
+import { ProcessRowActions } from "@/components/projects/process-row-actions";
 import { formatDate, formatRelativeDate } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import type { ProcessFilters, SortKey } from "@/lib/process-list";
@@ -158,6 +159,9 @@ export function ProcessTable({
                 projectId={projectId}
                 filters={filters}
               />
+              <th scope="col" className="px-4 py-3">
+                <span className="sr-only">Acciones</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -202,6 +206,9 @@ export function ProcessTable({
                     title={formatDate(p.updated_at)}
                   >
                     {formatRelativeDate(p.updated_at)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ProcessRowActions process={p} />
                   </td>
                 </tr>
               );
