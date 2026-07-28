@@ -70,9 +70,10 @@ export function ProcessListToolbar({
   // Restauración: si la URL no trae filtros, recupera el último usado.
   // La URL manda siempre — un enlace compartido debe mostrar lo que envió su
   // autor, no los filtros de quien lo abre.
-  // Declarado antes que el efecto de persistencia: ambos corren al montar, y
-  // este debe leer localStorage antes de que el otro lo sobrescriba con los
-  // filtros por defecto de la URL sin parámetros.
+  // Se mantiene declarado antes que el efecto de persistencia, pero ya no es
+  // crítico: ese efecto nunca escribe "tab=processes" (ver más abajo), así
+  // que un montaje con filtros por defecto no puede pisar lo guardado sin
+  // importar el orden en que corran ambos efectos.
   useEffect(() => {
     const url = new URL(window.location.href);
     const traeFiltros = ["q", "estado", "tipo", "orden", "dir"].some((k) =>
@@ -93,9 +94,19 @@ export function ProcessListToolbar({
   }, []);
 
   // Persistencia: guarda el filtro aplicado para la próxima visita.
+  // Si los filtros son los de por defecto, no escribimos "tab=processes":
+  // eliminamos la clave en su lugar. Así un montaje con filtros por defecto
+  // nunca puede pisar un filtro guardado previamente (el orden de los dos
+  // efectos deja de ser una invariante crítica), y "Limpiar filtros" sigue
+  // significando "olvida mi filtro" en vez de guardar el valor por defecto.
   useEffect(() => {
+    const query = toQuery(filters);
     try {
-      window.localStorage.setItem(storageKey(projectId), toQuery(filters));
+      if (query === "tab=processes") {
+        window.localStorage.removeItem(storageKey(projectId));
+      } else {
+        window.localStorage.setItem(storageKey(projectId), query);
+      }
     } catch {
       // localStorage puede no estar disponible (modo privado); no es crítico.
     }
