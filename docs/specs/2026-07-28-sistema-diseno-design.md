@@ -76,23 +76,64 @@ al contrato y a la tabla de verificación, no se usa suelto.
 
 ### 2.3 Verificación
 
-`src/lib/design/contrast.ts` — módulo de funciones puras: hex → RGB, luminancia
-relativa, razón de contraste, y `compose(fg, bg, alpha)` para obtener el color
-efectivo de un fondo teñido antes de medirlo. Sin React, sin dependencias
-nuevas; mismo patrón que `src/lib/calculations/`.
+**Implementado** (commit 07c3312):
 
-`src/lib/design/contrast.test.ts` declara **la tabla de parejas que el sistema
-usa realmente** y afirma el umbral de cada una. La tabla es el contrato en forma
-ejecutable: `npm test` ya corre en el proyecto, así que a partir de aquí el
-contraste deja de ser un paso manual que alguien deba recordar. Una pareja nueva
-introducida en la fase 5 falla la prueba en lugar de llegar a producción.
+- `src/lib/design/contrast.ts` — funciones puras: hex → RGB, luminancia
+  relativa, razón de contraste, y `composite(color, alpha, base)` para obtener
+  el color efectivo de un fondo teñido antes de medirlo. Sin React, sin
+  dependencias nuevas; mismo patrón que `src/lib/calculations/`.
+- `src/lib/design/pairings.ts` — la tabla de las parejas que el sistema usa
+  realmente, con el umbral de cada una. Es el contrato en forma de datos.
+- `/design-system` — página de desarrollo que mide la tabla y la muestra.
 
-Lo que esto **no** cubre: verifica las parejas declaradas, no lo que el JSX
-compone en tiempo de ejecución. Las clases se ensamblan dinámicamente
-(`TONE_CLASSES`, `cn()`), y rastrearlas desde el código fuente sería frágil. Una
-auditoría real sobre el DOM con Playwright —ya presente como devDependency para
-`docs/manual/capturas.mjs`— queda registrada como trabajo futuro, no como
-guardarraíl de cada commit: necesita servidor y base sembrada.
+Los tokens se **leen de `globals.css` en tiempo de render**
+(`parseThemeColors`), no se duplican en TypeScript. La hoja de estilos sigue
+siendo la única fuente de verdad, así que las muestras y las razones no pueden
+desincronizarse de la paleta real — que es exactamente el momento en que hay que
+medir.
+
+**Decisión sobre la prueba automatizada:** no se añade `contrast.test.ts`. La
+verificación es la página, que se abre cuando se toca la paleta. La tabla de
+parejas queda escrita y medible, de modo que convertirla en prueba de Vitest son
+unas pocas líneas si más adelante conviene.
+
+Lo que esto **no** cubre: mide las parejas declaradas, no lo que el JSX compone
+en tiempo de ejecución. Las clases se ensamblan dinámicamente (`TONE_CLASSES`,
+`cn()`), y rastrearlas desde el código fuente sería frágil. Al añadir una pareja
+nueva —un `Badge` con un tono nuevo, un fondo teñido distinto— hay que
+declararla en `pairings.ts`.
+
+### 2.4 Resultado de la primera medición
+
+31 parejas medidas: **26 cumplen, 4 no, 1 exenta**.
+
+Los cuatro tokens corregidos en las fases 1–3 se sostienen **también sobre su
+propio tinte**, que era la duda: `success-500` 4.70:1, `danger-500` 4.69:1,
+`warning-500` 5.23:1 sobre el badge al 10 %. Pasan, con dos décimas de margen —
+confirma que la regla de los tres contextos era necesaria y que cualquier ajuste
+futuro de esos tres tokens hay que volver a medirlo.
+
+Los cuatro incumplimientos son casos que nadie había medido:
+
+| Razón | Mín. | Pareja | Dónde |
+|---|---|---|---|
+| 1.43:1 | 3:1 | `neutral-200` sobre blanco | Borde de `Input`/`Select`/`Textarea` |
+| 1.66:1 | 3:1 | `semaphore-yellow` | Semáforo — fase 5 |
+| 2.85:1 | 3:1 | `semaphore-orange` | Semáforo — fase 5 |
+| 2.87:1 | 3:1 | `semaphore-green` | Semáforo — fase 5 |
+
+El borde de los campos incumple WCAG 1.4.11. Agrava el caso que el campo sea
+blanco sobre un fondo de página `neutral-50`: el borde es lo único que marca
+dónde está el control.
+
+Tres de los cuatro tokens del semáforo fallan como indicador gráfico
+(`semaphore-red` cumple con 3.82:1). Ningún componente los usa todavía, así que
+corregirlos ahora no puede causar regresión visual.
+
+**Exención registrada:** `neutral-500` sobre `neutral-200` (botón deshabilitado)
+da 3.71:1, pero WCAG 1.4.3 exime los componentes de interfaz inactivos. Se mide
+y se muestra como «Exento», sin contar como incumplimiento. Declararla con
+umbral 4.5:1 habría mandado a corregir algo que la norma no exige.
 
 ## 3. Regla de composición
 
@@ -171,26 +212,36 @@ una refactorización de los 15 componentes.
    que la propia documentación técnica advierte: una regla fuera de capa gana
    sobre las utilidades y las anula en silencio. Mover a `@layer base`.
 2. **Convergir los chips de `process-list-toolbar.tsx` a `<Link>`** (§ 4.1).
-   Simplifica el componente y salda deuda registrada.
-3. **Retirar los `ring` de `buttonClasses`, `Input`, `Select`, `Textarea`;
-   ampliar el selector base a los campos de formulario** (§ 4.2).
-4. **`src/lib/design/contrast.ts` + su tabla de parejas** (§ 2.3).
-5. **`docs/tecnica/README.md` § 8** recoge el contrato de tokens, la regla de
-   composición y los patrones canónicos.
+   Simplifica el componente y salda deuda registrada. Hay que confirmar que la
+   persistencia en `localStorage` sigue funcionando: es la parte delicada.
+3. **Retirar los `ring` de `buttonClasses`, `Input`, `Select`, `Textarea` y
+   `DmsInput`; ampliar el selector base a los campos de formulario** (§ 4.2).
+4. **Subir el contraste del borde de los campos de formulario** a ≥ 3:1
+   (§ 2.4). Afecta a `Input`, `Select`, `Textarea` y `DmsInput`, que hoy usan
+   `border-neutral-200` (1.43:1). Requiere un token de borde de control con
+   contraste suficiente; el borde decorativo de `Card` y `KpiCard` puede seguir
+   en `neutral-200`, porque no delimita un control.
+5. **Corregir los cuatro tokens del semáforo** para que cumplan 3:1 como
+   indicador gráfico (§ 2.4). Sin uso todavía: cambio sin regresión posible.
+6. **`docs/tecnica/README.md` § 8** recoge el contrato de tokens, la regla de
+   composición, los patrones canónicos y la exención de 1.4.3.
 
-Fuera de alcance: rediseño visual, componentes nuevos, tokens nuevos, y los
-componentes que las reglas no señalan.
+Fuera de alcance: rediseño visual, componentes nuevos, y los componentes que las
+reglas no señalan. `/design-system` es herramienta de desarrollo, no producto.
 
 ## 6. Criterios de aceptación
 
 1. `npm run typecheck`, `npm run lint` y `npm test` pasan limpios.
-2. `contrast.test.ts` cubre las tres parejas de cada token de estado, las de
-   `primary`, y falla si se altera un token por debajo de su umbral.
+2. `/design-system` reporta **0 parejas por debajo de su umbral** (la exención
+   de 1.4.3 sigue apareciendo como «Exento», no como fallo).
 3. Ningún componente del sistema de diseño declara `focus-visible:ring-*`; el
    foco es visible en botones, enlaces, chips, tabs y campos de formulario.
 4. Ninguna regla CSS de `globals.css` queda fuera de `@layer`.
 5. Los chips de estado son enlaces con `aria-current`, y el filtro sigue
-   persistiendo y restaurándose como hoy.
+   persistiendo y restaurándose como hoy — verificado con los cuatro casos de
+   la tarea 7 de la fase 3: restaura, la URL manda, limpiar olvida, sin bucle.
 6. Ningún componente de `design-system/` importa de `@/types/*` ni de
    `@/lib/*` salvo `cn`.
-7. La documentación técnica § 8 refleja las reglas.
+7. Los editores de poligonal siguen viéndose y funcionando igual: el cambio de
+   foco y de borde afecta a todos los formularios de la aplicación.
+8. La documentación técnica § 8 refleja las reglas.
