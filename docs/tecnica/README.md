@@ -27,6 +27,7 @@ Otros documentos:
 9. [Pruebas](#9-pruebas)
 10. [Cómo extender](#10-cómo-extender)
 11. [Deuda técnica conocida](#11-deuda-técnica-conocida)
+12. [Manual de usuario en la app](#12-manual-de-usuario-en-la-app)
 
 ---
 
@@ -108,10 +109,13 @@ src/
 │   ├── (auth)/              login y registro
 │   ├── (app)/               pantallas autenticadas
 │   │   ├── dashboard/
+│   │   ├── manual/          manual de usuario (§ 12)
 │   │   └── projects/[id]/polygonal/[pid]/
+│   ├── design-system/       galería del sistema de diseño (404 en producción)
 │   ├── layout.tsx           layout raíz, carga de fuentes
 │   ├── globals.css          tokens de tema y capas base
 │   └── icon.svg             favicon
+├── public/manual/           capturas que sirve la página /manual
 ├── components/
 │   ├── design-system/       componentes propios reutilizables
 │   ├── polygonal/           editor de poligonales
@@ -624,3 +628,65 @@ porque el semáforo, por regla del sistema de diseño, nunca usa el color como
 Si la fase 5 necesita mayor separación visual, la alternativa es volver a
 rellenos vivos con anillos oscuros `#0f5c2e`, `#7a6207`, `#8a4a0c`, `#8f2418`,
 todos ≥ 5.8:1 sobre blanco.
+
+---
+
+## 12. Manual de usuario en la app
+
+La ruta `/manual` (`src/app/(app)/manual/`) sirve el manual de usuario dentro de
+la aplicación. **A diferencia de `/design-system`, existe en producción**: es
+documentación del producto, no una herramienta de desarrollo. Vive dentro del
+grupo `(app)`, así que hereda la comprobación de sesión y el encabezado.
+
+### Estructura
+
+| Archivo | Responsabilidad |
+|---|---|
+| `manual-data.ts` | Todo el contenido: textos, filas de tabla, metadatos de las capturas |
+| `page.tsx` | Encabezado, índice de anclas y orden de las secciones |
+| `indice.ts` | `construirIndice` e `idsDuplicados`, funciones puras con prueba |
+| `secciones/*.tsx` | Una por sección del manual (9) |
+| `componentes/*.tsx` | `Seccion`, `Captura`, `Tabla`, `Nota` — locales, no del sistema de diseño |
+
+Los componentes de presentación **no** van a `src/components/design-system/`
+porque conocen el dominio (rutas de captura, terminología topográfica), y el
+criterio de composición (§ 8) lo prohíbe.
+
+### Decisiones que conviene conocer antes de tocarlo
+
+**`<img>` plano, no `next/image`.** Las capturas son PNG estáticos ya generados
+al tamaño correcto por `docs/manual/capturas.mjs` y versionados en
+`public/manual/`. La optimización en tiempo de ejecución no aporta nada que
+compense su coste, y se factura por uso. El riesgo real de `<img>` —el salto de
+layout— se evita con `width`/`height` reales en cada imagen. Hay un
+`eslint-disable` puntual con esa explicación.
+
+**`loading="lazy"` en todas menos la primera.** Las once capturas suman 2,8 MB;
+sin esto la página las descargaría de golpe. Medido: 3 de 11 en la carga
+inicial, las once tras recorrer la página.
+
+**`Nota` propia en lugar de `Alert`.** `Alert` lleva `role="alert"` siempre, lo
+que anuncia el contenido con prioridad al lector de pantalla. Una nota
+informativa de un manual no es una alerta activa.
+
+**Los módulos pendientes dicen la palabra «Pendiente».** El color nunca es el
+único canal, y las tarjetas no contienen nada accionable para que nadie crea
+que puede entrar a un módulo que aún no existe.
+
+**El índice son anclas de HTML**, sin JavaScript de cliente, igual que las
+pestañas y los filtros del resto de la aplicación. `idsDuplicados` tiene prueba
+porque dos anclas iguales navegan siempre a la primera, sin dar ningún error.
+
+### El texto vive por duplicado
+
+`docs/manual/README.md` es la fuente de la redacción; `manual-data.ts` es su
+maquetación. No hay generación automática entre los dos: eliminar la
+duplicación exigiría un parseador de Markdown, que el proyecto no admite.
+
+**Al cambiar la redacción, cambie los dos en el mismo commit.** Es una regla
+manual, como la verificación de contraste — no hay nada que falle en `npm test`
+si divergen.
+
+Al implementar una fase nueva hay que tocar los dos sitios: mover el módulo
+fuera de «Módulos pendientes» en el Markdown, y en `manual-data.ts` quitarlo de
+`MODULOS_PENDIENTES` añadiendo su sección en `secciones/`.
