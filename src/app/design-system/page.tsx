@@ -444,37 +444,44 @@ export default async function DesignSystemPage() {
       >
         <div className="space-y-8">
           <Demo
-            titulo="§ 4.1 Filtro excluyente — dos convenciones hoy"
-            nota="La spec propone converger en A. Compare y decida."
+            titulo="§ 4.1 Filtro excluyente — patrón vigente"
+            nota="El filtro es navegación: se resuelve con <Link> y aria-current, no con botón y estado de cliente."
           >
             <FiltroComparacion />
           </Demo>
 
           <Demo
-            titulo="§ 4.2 Foco visible — dos sistemas hoy"
-            nota="Recorra con el tabulador. El botón del sistema de diseño usa ring; el enlace y el chip usan el outline de la capa base."
+            titulo="§ 4.2 Foco visible — un solo sistema"
+            nota="Recorra con el tabulador. Los cuatro controles usan el mismo outline de @layer base: ningún componente declara ya su propio ring."
           >
             <div className="flex flex-wrap items-center gap-4">
-              <Button variant="secondary">Botón (ring propio)</Button>
+              <Button variant="secondary">Botón</Button>
               <a
                 href="#patrones"
                 className="text-sm font-medium text-primary-600 underline"
               >
-                Enlace (outline de la base)
+                Enlace
               </a>
               <button
                 type="button"
                 className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-500"
               >
-                Chip (outline de la base)
+                Chip
               </button>
-              <Input aria-label="Campo de prueba" placeholder="Campo (ring propio)" />
+              <Input aria-label="Campo de prueba" placeholder="Campo" />
             </div>
             <p className="mt-4 max-w-2xl text-sm text-neutral-500">
-              Ambos son accesibles y del mismo color, pero cuál se aplica
-              depende de qué componente se usó. El <code>ring</code> sigue el
-              radio del borde; el <code>outline</code> no, y por eso la regla
-              base lleva un <code>border-radius</code> propio.
+              El selector base es{" "}
+              <code>
+                :where(a, button, summary, input, select,
+                textarea):focus-visible
+              </code>
+              , con especificidad cero. Al tabular por los cuatro controles el
+              foco se ve idéntico: mismo <code>outline</code> de 2 px en{" "}
+              <code>primary-600</code>. Que el selector use <code>:where()</code>{" "}
+              es lo que permite que cada componente siga fijando su propio{" "}
+              <code>border-radius</code> sin que la regla de foco compita por
+              especificidad.
             </p>
           </Demo>
 
@@ -494,30 +501,30 @@ export default async function DesignSystemPage() {
       {/* ── Decisiones ────────────────────────────────────────────────── */}
       <Seccion
         id="decisiones"
-        titulo="Decisiones pendientes"
-        descripcion="Lo que hay que resolver antes de convertir la spec en plan."
+        titulo="Decisiones tomadas"
+        descripcion="Lo que resolvió este plan de estabilización, y por qué."
       >
         <ol className="space-y-4">
           {[
             {
-              t: "Foco: outline o ring",
-              d: "La spec elige el outline de la capa base y retira los ring de los componentes: cero mantenimiento y ya cubre lo que no tiene ring. La opción contraria —ring en todo, quitar la regla base— se ve mejor porque sigue el radio del borde. Ver § 4.2 arriba con ambos en pantalla.",
+              t: "Foco: outline, no ring",
+              d: "Se retiraron los ring propios de los componentes; queda un solo selector en @layer base, :where(a, button, summary, input, select, textarea):focus-visible, con especificidad cero. Cero mantenimiento y cubre también lo que nunca tuvo ring. La alternativa —ring en todo, quitar la regla base— seguía mejor el radio del borde, pero exigía repetirlo en cada componente nuevo. Ver § 4.2 arriba: los cuatro controles dan el mismo outline.",
             },
             {
-              t: "Filtro excluyente: enlace o botón",
-              d: "La spec elige el enlace. Afecta a process-list-toolbar.tsx, que además persiste el filtro en localStorage; hay que confirmar que la convergencia no rompe esa restauración.",
+              t: "Filtro excluyente: enlace, no botón",
+              d: "Se convergió en <Link> + aria-current. Los chips del listado de procesos (process-list-toolbar.tsx) ya son enlaces; la restauración de filtro por URL sustituyó a la que antes vivía en localStorage. Un botón con router.push exige \"use client\" y no se puede abrir en pestaña nueva ni compartir — coste que no se justifica cuando el control no necesita estado de cliente.",
             },
             {
-              t: "Prueba de contraste automatizada",
-              d: "La tabla de parejas ya existe y esta página la mide. Convertirla en prueba de Vitest cuesta un archivo y hace que un token mal ajustado falle en npm test en lugar de llegar a producción. Queda a su decisión.",
+              t: "Prueba de contraste: no se añade, la página es la verificación",
+              d: "La tabla de parejas (pairings.ts) y las funciones puras de contrast.ts ya existen; /design-system las mide en vivo contra globals.css en cada carga. Convertirla en prueba de Vitest exigiría jsdom, que el proyecto no usa (environment: \"node\"). Al tocar la paleta o añadir una pareja, abrir la página es el paso de verificación — no hay gate automático en npm test.",
             },
             {
-              t: "Semáforo de asentamientos",
-              d: "Cuatro tokens reservados para la fase 5 que nunca se midieron. Ver los hallazgos arriba antes de construir el módulo.",
+              t: "Semáforo de asentamientos: rellenos oscurecidos",
+              d: "Los cuatro tokens (#1e8e4e, #8a6d0b, #c25e08, #d94436) se midieron y corrigieron tres de los cuatro. Deuda pendiente: los niveles contiguos quedan poco separados entre sí (1.18, 1.15, 1.01), por lo que el color solo no basta para distinguirlos — el módulo debe apoyarse en la etiqueta de texto, no en el matiz. La alternativa considerada, anillos oscuros sobre el mismo relleno claro, se descartó por ahora: exige un segundo canal gráfico (el anillo) además del texto, más costoso que oscurecer el relleno.",
             },
             {
-              t: "Borde de los campos de formulario",
-              d: "neutral-200 delimita Input, Select y Textarea. WCAG 1.4.11 pide 3:1 para el límite de un control. Ver hallazgos.",
+              t: "Borde de los campos de formulario: neutral-400",
+              d: "neutral-200 (1.43:1) no alcanzaba el 3:1 que exige WCAG 1.4.11 para el límite de un control. Input, Select y Textarea usan ahora neutral-400 (3.41:1 sobre blanco, 3.24:1 sobre neutral-50). Los bordes decorativos, que no delimitan un control interactivo, se quedan en neutral-200.",
             },
           ].map((item, i) => (
             <li

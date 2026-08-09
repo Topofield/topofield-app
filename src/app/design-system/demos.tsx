@@ -73,79 +73,44 @@ const ESTADOS = [
 ] as const;
 
 /**
- * Las dos convenciones que hoy conviven para el filtro excluyente, una al lado
- * de la otra. Ambas son locales aquí (sin navegar) para poder compararlas;
- * las reales cambian la URL.
+ * El patrón canónico del filtro excluyente (§ 4.1): <Link> + aria-current.
+ * Es local aquí (sin navegar de verdad) solo para poder mostrarlo aislado;
+ * el filtro real cambia la URL, como en dashboard-filter.tsx.
  */
 export function FiltroComparacion() {
-  const [conBoton, setConBoton] = useState<string>("todos");
-
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <div>
-        <p className="mb-2 text-sm font-medium text-neutral-800">
-          A · <code>&lt;Link&gt;</code> + <code>aria-current</code>
-        </p>
-        <p className="mb-3 text-xs text-neutral-500">
-          Como <code>dashboard-filter.tsx</code>. El filtro es navegación: se
-          puede abrir en pestaña nueva y compartir. Sin JS de cliente.
-        </p>
-        <div className="inline-flex rounded-md border border-neutral-200 bg-white p-0.5">
-          {ESTADOS.map((opcion) => {
-            const activo = opcion.value === "todos";
-            return (
-              <Link
-                key={opcion.value}
-                href="/design-system#patrones"
-                aria-current={activo ? "true" : undefined}
-                className={cn(
-                  "rounded px-3 py-1.5 text-sm font-medium transition-colors",
-                  activo
-                    ? "bg-primary-500 text-white"
-                    : "text-neutral-500 hover:text-neutral-800",
-                )}
-              >
-                {opcion.label}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      <div>
-        <p className="mb-2 text-sm font-medium text-neutral-800">
-          B · <code>&lt;button&gt;</code> + <code>router.push</code>
-        </p>
-        <p className="mb-3 text-xs text-neutral-500">
-          Como <code>process-list-toolbar.tsx</code>. Exige{" "}
-          <code>&quot;use client&quot;</code> y no se puede abrir en pestaña
-          nueva ni compartir con el filtro puesto.
-        </p>
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label="Filtrar por estado"
-        >
-          {ESTADOS.map((opcion) => {
-            const activo = opcion.value === conBoton;
-            return (
-              <button
-                key={opcion.value}
-                type="button"
-                aria-current={activo ? "true" : undefined}
-                onClick={() => setConBoton(opcion.value)}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-sm transition-colors",
-                  activo
-                    ? "border-primary-500 bg-primary-500 text-white"
-                    : "border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800",
-                )}
-              >
-                {opcion.label}
-              </button>
-            );
-          })}
-        </div>
+    <div>
+      <p className="mb-2 text-sm font-medium text-neutral-800">
+        <code>&lt;Link&gt;</code> + <code>aria-current</code>
+      </p>
+      <p className="mb-3 max-w-2xl text-xs text-neutral-500">
+        Como en <code>dashboard-filter.tsx</code> y ya también en el listado
+        de procesos. El filtro es navegación: se puede abrir en pestaña
+        nueva, compartir por URL y no exige{" "}
+        <code>&quot;use client&quot;</code>. La alternativa descartada era{" "}
+        <code>&lt;button&gt;</code> + <code>router.push</code>, que rompe
+        ambas cosas; se reserva solo para controles que necesiten estado de
+        cliente que un enlace no pueda expresar.
+      </p>
+      <div className="inline-flex rounded-md border border-neutral-200 bg-white p-0.5">
+        {ESTADOS.map((opcion) => {
+          const activo = opcion.value === "todos";
+          return (
+            <Link
+              key={opcion.value}
+              href="/design-system#patrones"
+              aria-current={activo ? "true" : undefined}
+              className={cn(
+                "rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                activo
+                  ? "bg-primary-500 text-white"
+                  : "text-neutral-500 hover:text-neutral-800",
+              )}
+            >
+              {opcion.label}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
