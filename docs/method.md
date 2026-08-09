@@ -119,6 +119,68 @@ Sección viva. Cada cierre de fase añade una entrada con:
 - **Los números de los casos de estudio del marco teórico son ilustrativos**: las tablas no son internamente consistentes (sumas y azimuts que no cuadran). Sirven de guía del método, no de fixture exacto — los fixtures se construyen con entradas limpias.
 - El mecanismo de cierre (estado `closed`/`rejected`, `closed_at`/`closed_by`, inmutabilidad en los Server Actions, modo solo lectura del editor) queda listo para reutilizarse en los módulos de nivelación y asentamientos.
 
+### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
+
+Este ciclo no fue una fase del § 9 del PRD principal, sino un plan lateral de
+saneamiento (`docs/plans/2026-07-30-sistema-diseno.md`) para fijar reglas en
+`src/components/design-system/` antes de encarar las Fases 4-6. Mismo método
+de tareas verificadas en secuencia, aplicado fuera del índice de fases.
+
+**Reglas fijadas:**
+
+- Toda regla CSS global vive en `@layer` (`body` se movió a `@layer base`: una
+  regla fuera de capa gana sobre las utilidades de Tailwind y las anula en
+  silencio).
+- Un solo sistema de foco: el `outline` de `@layer base`, con el selector
+  ampliado a `input`, `select` y `textarea`. Ningún componente declara su
+  propio `ring`.
+- Nuevo escalón `--color-neutral-400` (`#828c98`) como borde de control,
+  reservado a los 5 controles de formulario; los bordes decorativos siguen en
+  `neutral-200`.
+- Los cuatro tokens del semáforo (`primary-500`, `danger-500`, `success-500`,
+  `warning-500`) se oscurecieron para cumplir AA en sus tres contextos de uso,
+  no solo sobre blanco.
+- Los chips de filtro convergieron a `<Link>` con `aria-current`, en vez de
+  `<button>` + `router.push`, para que el filtro siga siendo navegación
+  (compartible, abrible en pestaña nueva).
+
+**La primera medición sistemática encontró lo que las revisiones manuales no veían.**
+La página `/design-system` mide en vivo, contra `globals.css`, la tabla de
+parejas de `src/lib/design/pairings.ts`. Antes de esta medición nadie había
+detectado que el borde de los campos de formulario (`neutral-200` sobre
+blanco) daba **1.43:1**, muy por debajo del 3:1 exigido a un elemento gráfico,
+ni que **tres de los cuatro tokens del semáforo** fallaban en el contexto de
+"texto sobre su propio fondo teñido al 10 %" (`success-500` daba 2.87:1,
+`warning-500` 2.19:1) aunque sí cumplían sobre blanco. Confirma la regla de
+los tres contextos: cumplir en uno no implica cumplir en los otros, y solo una
+medición programática contra los tokens reales lo atrapa de forma confiable.
+
+**Deuda registrada, a la espera de la fase 5:** tras oscurecer el semáforo, la
+medición cierra en 0 fallos, pero los niveles contiguos quedan con poca
+separación de luminancia entre sí — verde/amarillo 1.18, amarillo/naranja
+1.15, naranja/rojo 1.01. No se pierde información porque el semáforo siempre
+va acompañado de texto, pero conviene revisarlo cuando la Fase 5
+(Asentamientos) use estos mismos niveles para alertas de velocidad, antes de
+que la similitud visual sea una sorpresa.
+
+**Documentar un sistema mientras el mismo plan lo sigue cambiando deja texto
+obsoleto atrás, y hace falta más de una ronda para cazarlo todo.** La tarea de
+documentación (Tarea 6) escribió la § 8 de `docs/tecnica/README.md` con las
+reglas ya fijadas, pero el resto del repositorio no se actualizó solo: la
+§ 11 de "Deuda técnica conocida" siguió afirmando que "dos sistemas de foco
+conviven y conviene converger" — cierto antes de la Tarea 2, falso después—,
+contradiciendo la propia § 8 escrita en el mismo commit. Por separado, la
+página `/design-system` llegó a afirmar que "la restauración de filtro por
+URL sustituyó a la que antes vivía en `localStorage`", lo cual era falso: la
+Tarea 5 convirtió los chips en `<Link>`, pero no tocó la persistencia en
+`localStorage`, que sigue funcionando exactamente igual que antes. Hicieron
+falta **dos rondas de revisión** para eliminar estas afirmaciones que habían
+dejado de ser ciertas. Lección para el método: cuando una tarea documenta un
+sistema que otras tareas del mismo plan siguen modificando, conviene tratar
+esa documentación como el último paso, no como uno paralelo, y revisarla
+explícitamente contra el estado final antes de cerrar — no basta con que
+quien la escribió tuviera razón en el momento de escribirla.
+
 ## Anti-patrones a evitar
 
 - **Saltar a código sin PRD-de-fase aprobado.** Aunque "esté claro", el ejercicio de redactar el PRD-de-fase fuerza decisiones que de otro modo emergen tarde.
