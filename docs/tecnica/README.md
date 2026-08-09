@@ -371,17 +371,98 @@ mano, inline.
 `EmptyState` · `Input` · `KpiCard` · `Logo` · `Modal` · `Select` ·
 `StatusIndicator` · `Tabs` · `Textarea`
 
-### Tokens
+### Contrato de tokens
 
-Definidos en `@theme` de `src/app/globals.css`:
+| Escalón | Rol | Uso válido |
+|---|---|---|
+| `-50` | Fondo teñido claro | Solo fondo. Nunca texto. |
+| `-100`, `-200` | Fondo y bordes decorativos | Nunca texto sobre blanco. No sirve como límite de un control. |
+| `-400` | Borde de control | Límite de campos de formulario: cumple 3:1. |
+| `-500` | Base accesible | Texto sobre blanco · fondo bajo texto blanco · borde · punto de estado. |
+| `-600` | Texto y profundidad | Texto sobre blanco y sobre `-50` · `hover:` de un fondo `-500`. |
+| `-700` | Texto de máximo contraste | Texto sobre `-50` · `active:` de un fondo `-500`. |
 
-| Token | Uso |
-|---|---|
-| `--color-primary-500/600/700` | Azul de marca |
-| `--color-success/warning/danger-500` | Estados |
-| `--color-neutral-*` | Grises |
-| `--font-display` | Space Grotesk, títulos |
-| `--font-mono` | Monoespaciada del sistema, datos numéricos |
+`neutral-500` es la excepción deliberada: se usa como texto secundario sobre
+blanco y cumple AA en ese uso.
+
+`--font-display` (Space Grotesk) para títulos, `--font-mono` para datos
+numéricos.
+
+### La regla de los tres contextos
+
+Un token de estado se usa de tres maneras, y **cumplir en una no implica cumplir
+en las otras**:
+
+1. **Texto sobre blanco** — 4.5:1.
+2. **Texto sobre su propio fondo teñido** — 4.5:1. `Badge` usa
+   `bg-success-500/10 text-success-500`: el fondo efectivo es el token al 10 %
+   sobre blanco, no blanco. *Este es el contexto que falló y que ninguna
+   revisión manual medía.*
+3. **Fondo bajo texto blanco** — 4.5:1.
+
+Puntos y bordes de control son elementos gráficos: 3:1.
+
+`/10` es la única transparencia sancionada. Otra crea un contexto nuevo que hay
+que declarar y medir.
+
+**Excepción de WCAG 1.4.3:** los componentes de interfaz inactivos no tienen
+requisito de contraste. El botón deshabilitado da 3.71:1 y es correcto así.
+
+### Cómo se verifica el contraste
+
+`src/lib/design/contrast.ts` son funciones puras (hex → RGB, luminancia, razón,
+y `composite()` para resolver un fondo teñido antes de medirlo).
+`src/lib/design/pairings.ts` declara las parejas que el sistema usa de verdad.
+
+La ruta `/design-system` las mide y las muestra. Es herramienta de desarrollo:
+devuelve 404 en producción y hace falta sesión para abrirla.
+
+Los tokens se **leen de `globals.css` en tiempo de render**, no se duplican en
+TypeScript: la hoja de estilos sigue siendo la única fuente de verdad, así que
+las mediciones no pueden desincronizarse de la paleta real.
+
+**Al tocar la paleta o añadir una pareja nueva** —un `Badge` con un tono nuevo,
+un fondo teñido distinto— hay que declararla en `pairings.ts` y abrir la página.
+No hay prueba automática que lo obligue.
+
+### Qué entra en el sistema de diseño
+
+**Un componente pertenece al sistema de diseño si no conoce el dominio de
+TopoField.** Recibe cadenas, `href`s y uniones definidas en su propio archivo.
+No importa nada de `@/types/*` ni de `@/lib/*` salvo `cn`.
+
+Es un criterio verificable leyendo los imports, y explica la separación que ya
+existe: `Breadcrumbs` recibe `{ label, href }[]` y sirve a cualquier jerarquía;
+`ProcessTable` importa `PolygonalProcess` y conoce estados y tolerancias.
+
+Consecuencia para los módulos nuevos: la tabla de nivelación **no** va al
+sistema de diseño. Si comparte estructura con la de poligonales, lo que se
+extrae es el patrón, no un componente genérico parametrizado.
+
+### Patrones canónicos
+
+**Filtro excluyente** — `<Link>` + `aria-current`. El filtro es navegación:
+debe poder abrirse en pestaña nueva y compartirse. Referencia:
+`dashboard-filter.tsx`. Usar `<button>` + `router.push` solo si el control
+necesita estado de cliente que un enlace no pueda expresar.
+
+**Foco visible** — un solo sistema: el `outline` de `@layer base`, que cubre
+`a`, `button`, `summary`, `input`, `select` y `textarea` con `:where()`
+(especificidad cero). Los componentes **no declaran su propio `ring`**.
+
+**Estado de carga** — se deshabilita el control y cambia su texto
+(«Guardando…»), sin spinner: el cambio de texto lo anuncia el lector de
+pantalla, un spinner decorativo no.
+
+**Indicador de estado** — el color nunca es el único canal. `StatusIndicator`
+es la referencia: punto `aria-hidden` más etiqueta de texto real, no solo
+`aria-label`.
+
+**Tabla en escritorio, tarjetas en móvil** — corte en 768 px. La tarjeta y la
+fila muestran **los mismos campos y los mismos valores**; ya falló una vez
+(una mostraba `created_at` y la otra `updated_at`). Si la tarjeta necesita
+acciones por fila, no se envuelve entera en un `<Link>`: un `<button>` dentro
+de un `<a>` es HTML inválido.
 
 ### Reglas tipográficas
 
@@ -416,17 +497,15 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 - El color nunca es el único canal: los indicadores llevan texto para lectores
   de pantalla.
 
-> **Los tres colores de la paleta se ajustaron para cumplir AA.** Los valores
-> originales fallaban como texto sobre blanco: `primary-500` daba 4.42:1,
-> `danger-500` 3.82:1 y `success-500` 2.87:1, todos por debajo de 4.5:1.
-> Afectaba a los botones primarios, al veredicto de cierre y a los mensajes de
-> error de formulario.
+> **Historial de la paleta.** Los cuatro tokens de estado se ajustaron para
+> cumplir AA: `primary-500` daba 4.42:1, `danger-500` 3.82:1, `success-500`
+> 2.87:1 y `warning-500` 2.19:1. Después, la primera medición sistemática
+> encontró dos casos más que nadie había medido: el borde de los campos de
+> formulario (`neutral-200`, 1.43:1) y tres de los cuatro tokens del semáforo.
+> Todos corregidos.
 >
-> Al elegir un tono no basta con medirlo sobre blanco: estos colores también se
-> usan como texto sobre su propio fondo teñido (`Badge` al 10 %, la banda del
-> veredicto al 5 %). Un verde que cumplía sobre blanco con 4.78:1 se quedaba en
-> 4.21:1 sobre el badge. **Verifique los tres contextos** antes de cambiar un
-> token de estado.
+> Al elegir un tono no basta con medirlo sobre blanco. Verifique los tres
+> contextos.
 
 ---
 
