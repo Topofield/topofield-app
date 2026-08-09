@@ -21,11 +21,12 @@
   --color-neutral-800: #2c3e50;
   --color-neutral-900: #1a252f;
 
-  /* Semáforo de asentamientos */
-  --color-semaphore-green: #27ae60;
-  --color-semaphore-yellow: #f1c40f;
-  --color-semaphore-orange: #e67e22;
-  --color-semaphore-red: #e74c3c;
+  /* Semáforo de asentamientos. Oscurecidos para cumplir 3:1 como indicador
+     gráfico: los valores vivos originales daban 2.87, 1.66 y 2.85. */
+  --color-semaphore-green: #1e8e4e;
+  --color-semaphore-yellow: #8a6d0b;
+  --color-semaphore-orange: #c25e08;
+  --color-semaphore-red: #d94436;
 
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
     "DejaVu Sans Mono", Consolas, monospace;

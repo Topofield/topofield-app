@@ -297,6 +297,34 @@ export const PAIRINGS: Pairing[] = [
     umbral: AA_GRAFICO,
     donde: "Semáforo de asentamientos — fase 5",
   },
+  {
+    fg: "semaphore-green",
+    bg: "neutral-50",
+    contexto: "grafico",
+    umbral: AA_GRAFICO,
+    donde: "Semáforo sobre el fondo de página — fase 5",
+  },
+  {
+    fg: "semaphore-yellow",
+    bg: "neutral-50",
+    contexto: "grafico",
+    umbral: AA_GRAFICO,
+    donde: "Semáforo sobre el fondo de página — fase 5",
+  },
+  {
+    fg: "semaphore-orange",
+    bg: "neutral-50",
+    contexto: "grafico",
+    umbral: AA_GRAFICO,
+    donde: "Semáforo sobre el fondo de página — fase 5",
+  },
+  {
+    fg: "semaphore-red",
+    bg: "neutral-50",
+    contexto: "grafico",
+    umbral: AA_GRAFICO,
+    donde: "Semáforo sobre el fondo de página — fase 5",
+  },
 ];
 
 export interface Medicion extends Pairing {
