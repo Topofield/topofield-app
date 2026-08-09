@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getDashboardKpis,
   getDashboardProjects,
+  getProcessCountsByProject,
 } from "@/lib/supabase/queries";
 import type { ProjectStatus } from "@/types/project";
 
@@ -21,9 +22,10 @@ export default async function DashboardPage({
     statusParam === "archived" ? "archived" : "active";
 
   const supabase = await createClient();
-  const [kpis, projects] = await Promise.all([
+  const [kpis, projects, processCounts] = await Promise.all([
     getDashboardKpis(supabase),
     getDashboardProjects(supabase, status),
+    getProcessCountsByProject(supabase),
   ]);
 
   return (
@@ -78,7 +80,11 @@ export default async function DashboardPage({
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard
+                key={project.id}
+                project={project}
+                processCount={processCounts[project.id] ?? 0}
+              />
             ))}
           </div>
         )}

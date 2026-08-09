@@ -3,7 +3,13 @@ import { Badge } from "@/components/design-system";
 import { formatDate } from "@/lib/utils/format";
 import { PROJECT_STATUS_LABELS, type Project } from "@/types/project";
 
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({
+  project,
+  processCount,
+}: {
+  project: Project;
+  processCount: number;
+}) {
   return (
     <Link
       href={`/projects/${project.id}`}
@@ -20,7 +26,10 @@ export function ProjectCard({ project }: { project: Project }) {
         <span className="truncate">{project.location}</span>
         <span className="shrink-0">{formatDate(project.created_at)}</span>
       </div>
-      <p className="mt-2 text-xs text-neutral-500">0 procesos</p>
+      <p className="mt-2 text-xs text-neutral-500">
+        <span className="tabular-nums">{processCount}</span>{" "}
+        {processCount === 1 ? "proceso" : "procesos"}
+      </p>
     </Link>
   );
 }

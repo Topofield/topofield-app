@@ -68,6 +68,34 @@ export async function getDashboardProjects(
 }
 
 /**
+ * Cuántos procesos tiene cada proyecto, indexado por `project_id`.
+ *
+ * Una sola consulta para todos los proyectos en lugar de una por tarjeta: con
+ * N proyectos en pantalla, contar por separado sería N+1 viajes a la base.
+ * RLS ya limita las filas a las del usuario, así que no hace falta filtrar por
+ * `user_id` aquí.
+ *
+ * Un proyecto sin procesos no aparece en el resultado; quien consulte debe
+ * tratar la ausencia como 0.
+ */
+export async function getProcessCountsByProject(
+  supabase: Client,
+): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from("polygonal_processes")
+    .select("project_id");
+
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  for (const { project_id } of data ?? []) {
+    if (project_id == null) continue;
+    counts[project_id] = (counts[project_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/**
  * Un proyecto por id, o `null` si no existe o es de otro usuario (RLS).
  * Un id que ni siquiera es UUID se descarta antes de consultar.
  */

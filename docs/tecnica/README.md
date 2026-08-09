@@ -591,7 +591,10 @@ presentación. Lo que corresponde es extraer un formateador único a
 
 **Los KPI del dashboard no filtran por estado del proyecto.** «Procesos
 calculados» y «Fuera de tolerancia» cuentan sobre todos los procesos del
-usuario, sin excluir los de proyectos archivados.
+usuario, sin excluir los de proyectos archivados. Lo mismo aplica a
+`getProcessCountsByProject`, que cuenta todos los procesos de cada proyecto sin
+distinguir su estado — correcto para la cuenta de la tarjeta, pero conviene
+recordarlo si algún día se quiere «7 procesos (2 cerrados)».
 
 **El helper `Block` está duplicado** en los dos `loading.tsx`. Con las fases 4-6
 serán cinco o más: conviene extraerlo a `design-system/skeleton.tsx` antes.
