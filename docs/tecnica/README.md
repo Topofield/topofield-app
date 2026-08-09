@@ -610,3 +610,16 @@ son las rutas con más trabajo de servidor.
 decimales, lo que deja un error residual de 3.8e-7 m y una precisión de
 `1:528479954`. El motor lo clasifica correctamente; el dato del fixture es el
 impreciso.
+
+**Los cuatro tokens del semáforo de asentamientos quedaron con poco margen
+entre niveles contiguos.** Se oscurecieron para cumplir 3:1 como indicador
+gráfico (`semaphore-green`, `-yellow`, `-orange`, `-red`), pero el efecto
+colateral medido es que los niveles contiguos se separan poco en luminancia
+(verde/amarillo 1.18, amarillo/naranja 1.15, naranja/rojo 1.01): naranja y
+rojo son prácticamente indistinguibles entre sí. No se pierde información
+porque el semáforo, por regla del sistema de diseño, nunca usa el color como
+único canal — siempre lleva texto (§ 4.4).
+
+Si la fase 5 necesita mayor separación visual, la alternativa es volver a
+rellenos vivos con anillos oscuros `#0f5c2e`, `#7a6207`, `#8a4a0c`, `#8f2418`,
+todos ≥ 5.8:1 sobre blanco.

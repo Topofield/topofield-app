@@ -105,6 +105,13 @@ declararla en `pairings.ts`.
 
 ### 2.4 Resultado de la primera medición
 
+**Nota (medición inicial, superada):** esta sección registra el estado *antes*
+de implementar el plan. Los cuatro incumplimientos de la tabla de abajo se
+corrigieron en `docs/plans/2026-07-30-sistema-diseno.md`. El estado actual es
+**36 parejas medidas: 35 cumplen, 0 no cumplen, 1 exenta**. Se conserva el
+registro histórico porque explica qué se encontró y por qué se hizo el
+trabajo — no describe el estado presente.
+
 31 parejas medidas: **26 cumplen, 4 no, 1 exenta**.
 
 Los cuatro tokens corregidos en las fases 1–3 se sostienen **también sobre su

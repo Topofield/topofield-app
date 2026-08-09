@@ -57,11 +57,12 @@ const GRUPOS: { titulo: string; nota: string; tokens: string[] }[] = [
   },
   {
     titulo: "Neutrales",
-    nota: "neutral-500 es la excepción: se usa como texto secundario sobre blanco y cumple AA ahí.",
+    nota: "neutral-400 es el borde de control · neutral-500 es la excepción: se usa como texto secundario sobre blanco y cumple AA ahí.",
     tokens: [
       "neutral-50",
       "neutral-100",
       "neutral-200",
+      "neutral-400",
       "neutral-500",
       "neutral-800",
       "neutral-900",
@@ -478,7 +479,7 @@ export default async function DesignSystemPage() {
               </code>
               , con especificidad cero. Al tabular por los cuatro controles el
               foco se ve idéntico: mismo <code>outline</code> de 2 px en{" "}
-              <code>primary-600</code>. Que el selector use <code>:where()</code>{" "}
+              <code>primary-500</code>. Que el selector use <code>:where()</code>{" "}
               es lo que permite que cada componente siga fijando su propio{" "}
               <code>border-radius</code> sin que la regla de foco compita por
               especificidad.
