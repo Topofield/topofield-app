@@ -183,6 +183,20 @@ export const PAIRINGS: Pairing[] = [
     umbral: AA_TEXTO,
     donde: "Cuerpo de la aplicación (body)",
   },
+  {
+    fg: "neutral-900",
+    bg: "primary-50",
+    contexto: "texto-sobre-tinte",
+    umbral: AA_TEXTO,
+    donde: "Manual — cuerpo de las notas destacadas",
+  },
+  {
+    fg: "neutral-800",
+    bg: "neutral-50",
+    contexto: "texto-sobre-tinte",
+    umbral: AA_TEXTO,
+    donde: "Manual — tarjetas de módulos pendientes",
+  },
 
   // ── Fondo bajo texto blanco ─────────────────────────────────────────────
   {

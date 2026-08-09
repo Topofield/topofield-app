@@ -39,6 +39,14 @@ export default async function AppLayout({
             <span className="hidden text-sm text-neutral-500 sm:inline">
               {user.email}
             </span>
+            {/* Visible también en móvil, al contrario que el correo: la ayuda
+                hace falta sobre todo en el teléfono, en campo. */}
+            <Link
+              href="/manual"
+              className="text-sm font-medium text-primary-600 transition-colors hover:text-primary-700"
+            >
+              Manual
+            </Link>
             <form action={signOutAction}>
               <Button type="submit" variant="ghost" size="sm">
                 Cerrar sesión

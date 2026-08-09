@@ -8,6 +8,12 @@ Este manual cubre lo que la aplicación permite hacer **hoy**. Las secciones
 marcadas como *pendiente* corresponden a módulos aún no implementados; se
 detallan aquí para que se vea el alcance completo previsto.
 
+> **Este documento es la fuente de la redacción.** La página `/manual` de la
+> aplicación (`src/app/(app)/manual/`) es una maquetación de este mismo texto
+> con el sistema de diseño. El contenido vive por duplicado y no hay generación
+> automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
+> mismo commit — y viceversa.
+
 **Última actualización:** 2026-07-27 · Fases 1-3 implementadas.
 
 ---
@@ -373,5 +379,14 @@ Requiere el entorno local levantado (`npx supabase start`, `npm run dev`) y los
 datos de ejemplo sembrados. El script consulta los identificadores en la base,
 así que funciona después de cualquier `supabase db reset`.
 
-Al implementar una fase nueva, mueva su sección de [Módulos
-pendientes](#8-módulos-pendientes) al cuerpo del manual y añada sus capturas.
+El script escribe cada captura en **dos destinos**: `docs/manual/img/`, que
+consume este documento, y `public/manual/`, que sirve la página `/manual` de la
+aplicación. Así no se desincronizan.
+
+Al implementar una fase nueva:
+
+1. Mueva su sección de [Módulos pendientes](#8-módulos-pendientes) al cuerpo del
+   manual y añada sus capturas.
+2. Haga lo mismo en `src/app/(app)/manual/`: el texto en `manual-data.ts`, la
+   sección nueva en `secciones/`, y quite el módulo de `MODULOS_PENDIENTES`.
+3. Regenere las capturas.
