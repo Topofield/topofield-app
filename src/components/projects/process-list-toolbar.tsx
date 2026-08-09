@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, Select } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
@@ -40,6 +41,15 @@ function toQuery(filters: ProcessFilters): string {
   if (filters.orden !== "actividad") params.set("orden", filters.orden);
   if (filters.dir !== "desc") params.set("dir", filters.dir);
   return params.toString();
+}
+
+/** Destino de un chip de estado, conservando el resto de filtros. */
+function chipHref(
+  projectId: string,
+  filters: ProcessFilters,
+  estado: StatusFilter,
+): string {
+  return `/projects/${projectId}?${toQuery({ ...filters, estado })}`;
 }
 
 export function ProcessListToolbar({
@@ -167,11 +177,10 @@ export function ProcessListToolbar({
         {CHIPS.map((chip) => {
           const activo = chip.value === filters.estado;
           return (
-            <button
+            <Link
               key={chip.value}
-              type="button"
+              href={chipHref(projectId, filters, chip.value)}
               aria-current={activo ? "true" : undefined}
-              onClick={() => navegar({ estado: chip.value })}
               className={cn(
                 "rounded-full border px-3 py-1 text-sm transition-colors",
                 activo
@@ -181,7 +190,7 @@ export function ProcessListToolbar({
             >
               {chip.label}{" "}
               <span className="tabular-nums">({counts[chip.value]})</span>
-            </button>
+            </Link>
           );
         })}
       </div>
