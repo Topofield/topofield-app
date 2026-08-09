@@ -604,10 +604,6 @@ desde el `page.tsx`.
 **Faltan `loading.tsx`** en el editor de poligonal y en «nuevo proyecto», que
 son las rutas con más trabajo de servidor.
 
-**Dos sistemas de foco conviven**: el `ring` propio de los componentes del
-design system y el `outline` de la regla base. Ambos accesibles y del mismo
-color; conviene converger.
-
 **`ProjectCard` no tiene hover de fondo**, a diferencia de `ProcessCard`.
 
 **El fixture «Enlace P1-P3»** del seed tiene su punto de llegada redondeado a 5

@@ -268,7 +268,7 @@ export const PAIRINGS: Pairing[] = [
     donde: "Borde de control sobre el fondo de página",
   },
 
-  // ── Semáforo de asentamientos (fase 5, sin verificar hasta ahora) ───────
+  // ── Semáforo de asentamientos (fase 5, ya cumple 3:1) ───────────────────
   {
     fg: "semaphore-green",
     bg: BLANCO,

@@ -512,7 +512,7 @@ export default async function DesignSystemPage() {
             },
             {
               t: "Filtro excluyente: enlace, no botón",
-              d: "Se convergió en <Link> + aria-current. Los chips del listado de procesos (process-list-toolbar.tsx) ya son enlaces; la restauración de filtro por URL sustituyó a la que antes vivía en localStorage. Un botón con router.push exige \"use client\" y no se puede abrir en pestaña nueva ni compartir — coste que no se justifica cuando el control no necesita estado de cliente.",
+              d: "Se convergió en <Link> + aria-current. Los chips del listado de procesos (process-list-toolbar.tsx) ya son enlaces: eso es lo que cambió. La persistencia en localStorage se conservó intacta, con sus dos useEffect (restauración y guardado) en el mismo orden — invertirlo reintroduce un bug ya corregido. Un botón con router.push exige \"use client\" y no se puede abrir en pestaña nueva ni compartir — coste que no se justifica cuando el control no necesita estado de cliente.",
             },
             {
               t: "Prueba de contraste: no se añade, la página es la verificación",
@@ -520,7 +520,7 @@ export default async function DesignSystemPage() {
             },
             {
               t: "Semáforo de asentamientos: rellenos oscurecidos",
-              d: "Los cuatro tokens (#1e8e4e, #8a6d0b, #c25e08, #d94436) se midieron y corrigieron tres de los cuatro. Deuda pendiente: los niveles contiguos quedan poco separados entre sí (1.18, 1.15, 1.01), por lo que el color solo no basta para distinguirlos — el módulo debe apoyarse en la etiqueta de texto, no en el matiz. La alternativa considerada, anillos oscuros sobre el mismo relleno claro, se descartó por ahora: exige un segundo canal gráfico (el anillo) además del texto, más costoso que oscurecer el relleno.",
+              d: "Se midieron los cuatro tokens: verde, amarillo y naranja fallaban como indicador gráfico (2.87, 1.66 y 2.85). Los cuatro se oscurecieron a #1e8e4e, #8a6d0b, #c25e08 y #d94436, y ahora cumplen 3:1. Deuda pendiente: los niveles contiguos quedan poco separados entre sí (1.18, 1.15, 1.01), por lo que el color solo no basta para distinguirlos — el módulo debe apoyarse en la etiqueta de texto, no en el matiz. La alternativa considerada, anillos oscuros sobre el mismo relleno claro, se descartó por ahora: exige un segundo canal gráfico (el anillo) además del texto, más costoso que oscurecer el relleno.",
             },
             {
               t: "Borde de los campos de formulario: neutral-400",
