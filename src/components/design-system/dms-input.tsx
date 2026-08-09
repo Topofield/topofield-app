@@ -28,7 +28,7 @@ export function DmsInput({
 }: DmsInputProps) {
   const id = useId();
   const cell = cn(
-    "h-9 min-h-11 w-16 md:w-14 rounded-md border border-neutral-200 bg-white px-1.5 text-center text-sm text-neutral-900",
+    "h-9 min-h-11 w-16 md:w-14 rounded-md border border-neutral-400 bg-white px-1.5 text-center text-sm text-neutral-900",
     "disabled:bg-neutral-100 disabled:text-neutral-500",
     error && "border-danger-500",
   );

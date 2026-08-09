@@ -152,7 +152,7 @@ export function CloseProcessDialog({
                   type="checkbox"
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
-                  className="h-4 w-4 rounded border-neutral-200"
+                  className="h-4 w-4 rounded border-neutral-400"
                 />
                 Confirmo que los datos son correctos.
               </label>

@@ -254,11 +254,18 @@ export const PAIRINGS: Pairing[] = [
     donde: "Foco visible (outline), borde de Tabs activa",
   },
   {
-    fg: "neutral-200",
+    fg: "neutral-400",
     bg: BLANCO,
     contexto: "grafico",
     umbral: AA_GRAFICO,
-    donde: "Borde de Input/Select/Textarea — límite del control",
+    donde: "Borde de Input/Select/Textarea/DmsInput — límite del control",
+  },
+  {
+    fg: "neutral-400",
+    bg: "neutral-50",
+    contexto: "grafico",
+    umbral: AA_GRAFICO,
+    donde: "Borde de control sobre el fondo de página",
   },
 
   // ── Semáforo de asentamientos (fase 5, sin verificar hasta ahora) ───────
