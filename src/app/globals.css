@@ -31,32 +31,32 @@
   --font-display: var(--font-display-src), ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
-  @apply bg-neutral-50 text-neutral-900 antialiased;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
-  background-image:
-    linear-gradient(
-      to right,
-      color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
-      transparent 1px
-    );
-  background-size: 32px 32px;
-  background-position: center;
-}
-
 @layer base {
+  body {
+    @apply bg-neutral-50 text-neutral-900 antialiased;
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 32px 32px;
+    background-position: center;
+  }
+
   h1,
   h2,
   h3 {
