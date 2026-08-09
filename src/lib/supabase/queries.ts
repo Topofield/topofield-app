@@ -21,6 +21,16 @@ export interface DashboardKpis {
 /**
  * KPIs del dashboard: proyectos activos, procesos calculados listos para
  * revisar/cerrar, y procesos fuera de tolerancia que requieren atención.
+ *
+ * Los dos KPI de procesos **solo cuentan los de proyectos activos**. Archivar
+ * un proyecto es sacarlo de la vista de trabajo, así que sus procesos no deben
+ * seguir apareciendo como pendientes de revisar. Sin el filtro, el panel podía
+ * contradecirse a sí mismo: «1 proyecto activo» junto a «5 procesos
+ * calculados» cuando esos cinco colgaban del proyecto archivado.
+ *
+ * El filtro se expresa como `projects!inner(status)`: el `!inner` convierte la
+ * relación en un INNER JOIN, de modo que `eq("projects.status", "active")`
+ * descarta las filas cuyo proyecto no esté activo.
  */
 export async function getDashboardKpis(
   supabase: Client,
@@ -36,13 +46,15 @@ export async function getDashboardKpis(
       .eq("status", "active"),
     supabase
       .from("polygonal_processes")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "calculated"),
+      .select("id, projects!inner(status)", { count: "exact", head: true })
+      .eq("status", "calculated")
+      .eq("projects.status", "active"),
     supabase
       .from("polygonal_processes")
-      .select("id", { count: "exact", head: true })
+      .select("id, projects!inner(status)", { count: "exact", head: true })
       .eq("status", "calculated")
-      .eq("meets_tolerance", false),
+      .eq("meets_tolerance", false)
+      .eq("projects.status", "active"),
   ]);
 
   return {
