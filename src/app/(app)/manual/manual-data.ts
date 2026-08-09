@@ -4,9 +4,8 @@
 // cambiar el texto aquí, refléjelo también allí — y viceversa. No hay
 // generación automática entre los dos.
 //
-// Los datos viven separados de la maquetación para que el texto se pueda
-// revisar sin ruido de JSX, y para que el índice de secciones se construya por
-// código en vez de a mano (ver indice.ts).
+// Los datos viven separados de la maquetación (page.tsx) para que el texto se
+// pueda revisar y comparar con el Markdown sin ruido de JSX.
 
 /** Una captura de la aplicación real, generada por docs/manual/capturas.mjs. */
 export interface Captura {

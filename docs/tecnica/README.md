@@ -643,13 +643,13 @@ grupo `(app)`, así que hereda la comprobación de sesión y el encabezado.
 | Archivo | Responsabilidad |
 |---|---|
 | `manual-data.ts` | Todo el contenido: textos, filas de tabla, metadatos de las capturas |
-| `page.tsx` | Encabezado, índice de anclas y orden de las secciones |
-| `indice.ts` | `construirIndice` e `idsDuplicados`, funciones puras con prueba |
-| `secciones/*.tsx` | Una por sección del manual (9) |
-| `componentes/*.tsx` | `Seccion`, `Captura`, `Tabla`, `Nota` — locales, no del sistema de diseño |
+| `page.tsx` | Las nueve secciones y sus piezas de presentación (`Seccion`, `Captura`, `Tabla`, `Nota`) |
 
-Los componentes de presentación **no** van a `src/components/design-system/`
-porque conocen el dominio (rutas de captura, terminología topográfica), y el
+**Dos archivos, a propósito.** Es un documento, no funcionalidad: cada sección
+se renderiza una vez, en un orden fijo, así que repartirlas en un archivo por
+sección solo añadía imports. Las piezas de presentación viven al final de
+`page.tsx`, como en `/design-system`; no van a `src/components/design-system/`
+porque conocen el dominio (rutas de captura, terminología topográfica) y el
 criterio de composición (§ 8) lo prohíbe.
 
 ### Decisiones que conviene conocer antes de tocarlo
@@ -674,8 +674,9 @@ informativa de un manual no es una alerta activa.
 que puede entrar a un módulo que aún no existe.
 
 **El índice son anclas de HTML**, sin JavaScript de cliente, igual que las
-pestañas y los filtros del resto de la aplicación. `idsDuplicados` tiene prueba
-porque dos anclas iguales navegan siempre a la primera, sin dar ningún error.
+pestañas y los filtros del resto de la aplicación. Los `id` de `SECCIONES` deben
+ser únicos: dos anclas iguales navegan siempre a la primera, sin dar error. Son
+nueve en una sola lista, así que se comprueba a ojo.
 
 ### El texto vive por duplicado
 
@@ -688,5 +689,5 @@ manual, como la verificación de contraste — no hay nada que falle en `npm tes
 si divergen.
 
 Al implementar una fase nueva hay que tocar los dos sitios: mover el módulo
-fuera de «Módulos pendientes» en el Markdown, y en `manual-data.ts` quitarlo de
-`MODULOS_PENDIENTES` añadiendo su sección en `secciones/`.
+fuera de «Módulos pendientes» en el Markdown, y en la app quitarlo de
+`MODULOS_PENDIENTES` (`manual-data.ts`) añadiendo su sección en `page.tsx`.

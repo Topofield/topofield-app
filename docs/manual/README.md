@@ -388,5 +388,5 @@ Al implementar una fase nueva:
 1. Mueva su sección de [Módulos pendientes](#8-módulos-pendientes) al cuerpo del
    manual y añada sus capturas.
 2. Haga lo mismo en `src/app/(app)/manual/`: el texto en `manual-data.ts`, la
-   sección nueva en `secciones/`, y quite el módulo de `MODULOS_PENDIENTES`.
+   sección nueva en `page.tsx`, y quite el módulo de `MODULOS_PENDIENTES`.
 3. Regenere las capturas.
