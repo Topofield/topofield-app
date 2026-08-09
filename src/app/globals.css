@@ -65,7 +65,7 @@
     letter-spacing: -0.01em;
   }
 
-  :where(a, button, summary):focus-visible {
+  :where(a, button, summary, input, select, textarea):focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
     border-radius: 0.25rem;

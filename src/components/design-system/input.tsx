@@ -39,9 +39,8 @@ export function Input({
         aria-describedby={describedBy}
         className={cn(
           "h-10 rounded-md border border-neutral-200 bg-white px-3 text-base text-neutral-900 placeholder:text-neutral-500",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1",
           "disabled:bg-neutral-100 disabled:text-neutral-500",
-          error && "border-danger-500 focus-visible:ring-danger-500",
+          error && "border-danger-500",
           className,
         )}
         {...rest}

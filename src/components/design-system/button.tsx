@@ -40,7 +40,7 @@ export function buttonClasses({
   className?: string;
 } = {}) {
   return cn(
-    "inline-flex items-center justify-center rounded-md font-medium transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
+    "inline-flex items-center justify-center rounded-md font-medium transition-colors disabled:cursor-not-allowed",
     VARIANT_CLASSES[variant],
     SIZE_CLASSES[size],
     className,
