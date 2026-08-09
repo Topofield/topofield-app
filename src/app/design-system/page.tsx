@@ -69,7 +69,7 @@ const GRUPOS: { titulo: string; nota: string; tokens: string[] }[] = [
   },
   {
     titulo: "Semáforo de asentamientos",
-    nota: "Reservado para la fase 5. Nunca se ha verificado su contraste.",
+    nota: "Reservado para la fase 5. Ya cumple 3:1 como indicador gráfico, pero los niveles contiguos quedaron a luminancia parecida (1.18, 1.15, 1.01): el semáforo debe ir siempre con texto.",
     tokens: [
       "semaphore-green",
       "semaphore-yellow",
