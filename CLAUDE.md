@@ -61,7 +61,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `docs/tecnica/README.md` → arquitectura, modelo de datos, seguridad, motor de cálculo, sistema de diseño, cómo añadir un módulo y deuda técnica. Es la referencia para desarrollar.
 - `docs/manual/README.md` → manual de usuario, con capturas de la app real. Es la **fuente de la redacción**.
 - `src/app/(app)/manual/` → la ruta `/manual` de la app: el mismo manual maquetado con el sistema de diseño, visible para el usuario final y en producción. IMPORTANT: el texto vive **por duplicado** en los dos sitios y no hay generación automática; al editar uno, editar el otro en el mismo commit.
-- `docs/manual/capturas.mjs` → regenera las capturas en `docs/manual/img/` y en `public/manual/` a la vez.
+- `docs/manual/capturas.mjs` → regenera las capturas en `public/manual/` (copia única; el Markdown las referencia con ruta relativa).
 - IMPORTANT: ambos se actualizan **al cerrar cada fase**, no al final del proyecto. Al implementar un módulo: mover su sección de «Módulos pendientes» al cuerpo del manual, regenerar capturas con `node docs/manual/capturas.mjs`, y actualizar en la doc técnica el estado de fases, la tabla de pruebas y la deuda técnica.
 
 ## Workflow

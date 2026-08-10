@@ -66,7 +66,7 @@ lo que da trazabilidad al trabajo.
 
 ## 2. Entrar a la aplicación
 
-![Pantalla de inicio de sesión](img/01-inicio-sesion.png)
+![Pantalla de inicio de sesión](../../public/manual/01-inicio-sesion.png)
 
 Ingrese con su correo y contraseña. Si aún no tiene cuenta, use **Regístrate**.
 
@@ -78,7 +78,7 @@ Cada usuario ve únicamente sus propios proyectos.
 
 Es la pantalla de inicio tras entrar.
 
-![Dashboard](img/02-dashboard.png)
+![Dashboard](../../public/manual/02-dashboard.png)
 
 Arriba, tres indicadores del estado general:
 
@@ -97,7 +97,7 @@ Use **+ Nuevo Proyecto** para crear uno.
 
 ### 4.1 Crear un proyecto
 
-![Nuevo proyecto](img/03-nuevo-proyecto.png)
+![Nuevo proyecto](../../public/manual/03-nuevo-proyecto.png)
 
 El formulario tiene dos pasos:
 
@@ -123,7 +123,7 @@ Donde *n* es el número de ángulos medidos.
 
 ### 4.2 El proyecto por dentro
 
-![Hub del proyecto](img/04-hub-proyecto.png)
+![Hub del proyecto](../../public/manual/04-hub-proyecto.png)
 
 La ficha superior resume los datos del proyecto. Debajo, tres pestañas:
 
@@ -135,7 +135,7 @@ La ficha superior resume los datos del proyecto. Debajo, tres pestañas:
 **Configuración** — edición de los datos del proyecto y gestión de los puntos de
 referencia.
 
-![Configuración del proyecto](img/05-configuracion-proyecto.png)
+![Configuración del proyecto](../../public/manual/05-configuracion-proyecto.png)
 
 Los **puntos de referencia** son coordenadas conocidas (vértices geodésicos,
 mojones) que puede reutilizar como punto de partida o de llegada de sus
@@ -214,7 +214,7 @@ explícitamente en vez de mostrar una precisión inexistente.
 
 ### 5.2 Crear una poligonal
 
-![Nueva poligonal](img/06-nueva-poligonal.png)
+![Nueva poligonal](../../public/manual/06-nueva-poligonal.png)
 
 Desde el proyecto, **+ Nuevo Proceso → Poligonal**. Indique el nombre, el tipo y
 el punto de partida (código, Norte, Este y azimut inicial).
@@ -223,14 +223,14 @@ Si el tipo es *abierta con control*, deberá indicar además el punto de llegada
 
 ### 5.3 El editor
 
-![Editor de poligonal](img/07-editor-no-cumple.png)
+![Editor de poligonal](../../public/manual/07-editor-no-cumple.png)
 
 La pantalla se lee de arriba abajo:
 
 **El veredicto.** Lo primero y más visible: si el levantamiento cumple o no el
 orden de precisión exigido.
 
-![Veredicto de cierre](img/08-veredicto.png)
+![Veredicto de cierre](../../public/manual/08-veredicto.png)
 
 Muestra la precisión alcanzada junto a la requerida, el error de cierre y el
 perímetro. El color lo resume: verde cumple, rojo no cumple.
@@ -292,11 +292,11 @@ precisión y la fecha. Debe marcar la confirmación explícitamente.
 
 **Proceso cerrado:**
 
-![Proceso cerrado](img/09-proceso-cerrado.png)
+![Proceso cerrado](../../public/manual/09-proceso-cerrado.png)
 
 **Proceso rechazado:**
 
-![Proceso rechazado](img/10-proceso-rechazado.png)
+![Proceso rechazado](../../public/manual/10-proceso-rechazado.png)
 
 En ambos casos el editor se abre en solo lectura: los campos están
 deshabilitados y no hay botones de guardado.
@@ -307,7 +307,7 @@ deshabilitados y no hay botones de guardado.
 
 La aplicación está pensada para usarse también desde el teléfono, en sitio.
 
-![Editor en móvil](img/11-editor-movil.png)
+![Editor en móvil](../../public/manual/11-editor-movil.png)
 
 En pantallas pequeñas, la tabla de estaciones se convierte en **tarjetas**: una
 por estación, con sus campos apilados y el azimut, ΔN y ΔE visibles sin
@@ -379,9 +379,11 @@ Requiere el entorno local levantado (`npx supabase start`, `npm run dev`) y los
 datos de ejemplo sembrados. El script consulta los identificadores en la base,
 así que funciona después de cualquier `supabase db reset`.
 
-El script escribe cada captura en **dos destinos**: `docs/manual/img/`, que
-consume este documento, y `public/manual/`, que sirve la página `/manual` de la
-aplicación. Así no se desincronizan.
+Las capturas viven en **`public/manual/`**, una sola copia: la sirve la página
+`/manual` de la aplicación, y este documento las referencia con una ruta
+relativa (`../../public/manual/…`), que GitHub resuelve sin problema. Guardar
+una segunda copia en `docs/` añadía 2,8 MB al historial de git en cada
+regeneración, sin ganar nada.
 
 Al implementar una fase nueva:
 

@@ -1,8 +1,9 @@
-// Regenera las capturas del manual de usuario.
+// Regenera las capturas del manual de usuario en `public/manual/`.
 //
-// Escribe cada captura en DOS destinos, para que no se desincronicen:
-//   - docs/manual/img/  → las consume el manual en Markdown.
-//   - public/manual/    → las sirve la página /manual de la aplicación.
+// Una sola copia: la sirve la página /manual de la aplicación, y el manual en
+// Markdown (README.md, hermano de este archivo) la referencia con una ruta
+// relativa. Antes se escribían dos copias, una aquí y otra en public/, y cada
+// regeneración añadía 2,8 MB al historial de git por duplicado.
 //
 // Uso:
 //   1. Levanta el entorno:  npx supabase start && npm run dev
@@ -15,15 +16,11 @@
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const DESTINOS = [
-  join(AQUI, "img"), // docs/manual/img/
-  join(AQUI, "..", "..", "public", "manual"), // public/manual/
-];
+const OUT = join(AQUI, "..", "..", "public", "manual");
 // Puerto del dev server. Next usa 3001 si el 3000 está ocupado; ajústalo con
 // `PORT=3001 node docs/manual/capturas.mjs` si hace falta.
 const BASE = `http://localhost:${process.env.PORT ?? 3000}`;
@@ -38,7 +35,7 @@ function sql(query) {
   ).trim();
 }
 
-for (const dir of DESTINOS) mkdirSync(dir, { recursive: true });
+mkdirSync(OUT, { recursive: true });
 
 const proyecto = sql("select id from public.projects where name='Lote catastral' limit 1;");
 const calculado = sql("select id from public.polygonal_processes where name like 'Cuadrado con error%';");
@@ -57,25 +54,10 @@ const page = await browser.newPage({
   deviceScaleFactor: 2,
 });
 
-/**
- * Reparte un buffer de captura en todos los destinos.
- *
- * `tomar` es quien produce el buffer, así que sirve tanto a `page.screenshot`
- * como al recorte con `locator.screenshot` del veredicto: este helper no
- * necesita saber quién lo generó. Sin `path`, Playwright devuelve el buffer en
- * vez de escribirlo, que es lo que permite escribirlo dos veces.
- */
-async function guardar(nombre, tomar) {
-  const buffer = await tomar();
-  for (const dir of DESTINOS) {
-    await writeFile(join(dir, `${nombre}.png`), buffer);
-  }
-  console.log("✓", nombre);
-}
-
 async function capturar(nombre, opciones = {}) {
   await page.waitForTimeout(900);
-  await guardar(nombre, () => page.screenshot(opciones));
+  await page.screenshot({ path: join(OUT, `${nombre}.png`), ...opciones });
+  console.log("✓", nombre);
 }
 
 // Sesión
@@ -105,7 +87,8 @@ await capturar("07-editor-no-cumple", { fullPage: true });
 
 const veredicto = page.locator('[aria-label="Veredicto de cierre"]');
 if (await veredicto.count()) {
-  await guardar("08-veredicto", () => veredicto.screenshot());
+  await veredicto.screenshot({ path: join(OUT, "08-veredicto.png") });
+  console.log("✓ 08-veredicto");
 }
 
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${cerrado}`, { waitUntil: "networkidle" });
@@ -119,4 +102,4 @@ await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUnt
 await capturar("11-editor-movil", { fullPage: true });
 
 await browser.close();
-console.log(`\nCapturas actualizadas en:\n${DESTINOS.map((d) => `  ${d}`).join("\n")}`);
+console.log(`\nCapturas actualizadas en ${OUT}`);
