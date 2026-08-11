@@ -375,8 +375,14 @@ CREATE TABLE leveling_readings (
   run_type TEXT NOT NULL DEFAULT 'forward' CHECK (run_type IN ('forward', 'return')),
   reading_order INT NOT NULL,
   point_code TEXT NOT NULL,
+  -- Añadido en Fase 4: los puntos intermedios (radiaciones) solo reciben
+  -- lectura adelante, cuelgan de la AI vigente, no propagan cota y quedan
+  -- fuera de la comprobación aritmética y de la compensación.
+  point_type TEXT NOT NULL DEFAULT 'pc'
+    CHECK (point_type IN ('bm', 'pc', 'intermediate')),
   backsight DECIMAL(6,4),                   -- lectura atrás
   foresight DECIMAL(6,4),                   -- lectura adelante
+  distance_m DECIMAL(8,1),                  -- distancia de la visual (equilibrado)
   distance_accumulated_km DECIMAL(8,3),
   -- Calculados
   instrument_height DECIMAL(10,4),          -- AI
@@ -911,17 +917,32 @@ Para cada punto i:
 
 ### 6.9 Nivelación Ida y Vuelta
 
+> **Enmendado en la Fase 4** (2026-08-11). La versión original promediaba
+> **por tramo entre puntos consecutivos**, lo que presupone que ida y vuelta
+> comparten los puntos de cambio. No es así en la práctica: los PC son
+> provisionales, no se reocupan al regresar, y ambos recorridos suelen tener
+> distinto número de armadas. Además, reusarlos anularía el fundamento del
+> doble recorrido — un PC mal asentado introduciría el mismo error con el mismo
+> signo en ambos, y el promedio lo conservaría en vez de revelarlo. El
+> emparejamiento correcto es **a nivel de sección** (entre los BM extremos).
+> Ver `docs/prds/03-nivelacion.md`, decisión #2 y hallazgo 3.
+
 ```
-Para cada tramo entre puntos consecutivos:
-  Desnivel_ida = Cota_adelante_ida - Cota_atrás_ida
-  Desnivel_vuelta = -(Cota_adelante_vuelta - Cota_atrás_vuelta)
-  
-  Desnivel_promedio = (Desnivel_ida + Desnivel_vuelta) / 2
+Cada recorrido se calcula de forma independiente y produce el desnivel
+de la sección completa (entre los BM extremos):
 
-Discrepancia = |Error_ida| + |Error_vuelta|
-Tolerancia_ida_vuelta = Tolerancia × √2
+  Δh_ida    = Cota_final_ida    - Cota_inicial_ida
+  Δh_vuelta = Cota_final_vuelta - Cota_inicial_vuelta   (signo opuesto a la ida)
 
-Si Discrepancia ≤ Tolerancia_ida_vuelta → usar desniveles promediados
+  Discrepancia  = |Δh_ida - (-Δh_vuelta)|
+  Tolerancia_iv = Tolerancia × √2
+
+Si Discrepancia ≤ Tolerancia_iv → se adopta el desnivel promediado:
+
+  Δh_adoptado = (Δh_ida - Δh_vuelta) / 2
+
+La corrección proporcional (§ 6.8) se aplica al recorrido de ida usando
+el desnivel adoptado. NO se promedia tramo a tramo.
 ```
 
 ### 6.10 Asentamientos — Cálculos
