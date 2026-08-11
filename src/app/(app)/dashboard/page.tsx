@@ -2,6 +2,10 @@ import Link from "next/link";
 import { buttonClasses, EmptyState, KpiCard } from "@/components/design-system";
 import { DashboardFilter } from "@/components/projects/dashboard-filter";
 import { ProjectCard } from "@/components/projects/project-card";
+import {
+  crearProyectoDemo,
+  faltaProyectoDemo,
+} from "@/lib/demo/crear-proyecto-demo";
 import { createClient } from "@/lib/supabase/server";
 import {
   getDashboardKpis,
@@ -22,6 +26,30 @@ export default async function DashboardPage({
     statusParam === "archived" ? "archived" : "active";
 
   const supabase = await createClient();
+
+  // Red de seguridad del proyecto de ejemplo.
+  //
+  // Lo normal es que lo cree `/auth/callback` al confirmar la cuenta. Pero si
+  // esa vuelta falla —o no llega a ocurrir, como cuando el `Site URL` de
+  // Supabase apunta a otro sitio y el enlace del correo nunca pasa por la
+  // aplicación—, el usuario se quedaría sin demo para siempre y sin forma de
+  // recuperarla. Aquí se reintenta.
+  //
+  // No duplica nada: `crearProyectoDemo` reclama la marca `demo_seeded_at` con
+  // un UPDATE condicionado a NULL, así que solo una llamada puede ganar. La
+  // comprobación previa es solo para no intentarlo en cada visita.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    try {
+      if (await faltaProyectoDemo(supabase, user.id)) {
+        await crearProyectoDemo(supabase, user.id);
+      }
+    } catch (e) {
+      // Nunca debe impedir ver el dashboard.
+      console.error("No se pudo crear el proyecto de ejemplo:", e);
+    }
+  }
+
   const [kpis, projects, processCounts] = await Promise.all([
     getDashboardKpis(supabase),
     getDashboardProjects(supabase, status),

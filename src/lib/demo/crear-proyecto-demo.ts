@@ -140,6 +140,27 @@ async function insertarProceso(
 }
 
 /**
+ * ¿A este usuario le falta todavía el proyecto de ejemplo?
+ *
+ * Consulta barata (una fila por su clave primaria) para poder llamarla en el
+ * dashboard sin coste apreciable. Solo decide si vale la pena intentarlo; quien
+ * reclama de verdad la marca —de forma atómica— es `crearProyectoDemo`.
+ */
+export async function faltaProyectoDemo(
+  supabase: Client,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("demo_seeded_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.demo_seeded_at == null;
+}
+
+/**
  * Crea el proyecto de ejemplo si a este usuario todavía no se le ha creado.
  *
  * Devuelve `true` si lo creó, `false` si ya lo tenía. Quien la llama debe
