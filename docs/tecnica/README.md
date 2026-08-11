@@ -303,6 +303,13 @@ Dos detalles que rompen el flujo en silencio si se olvidan:
 - `/auth/callback` no puede sufrir el desvío del proxy que manda al dashboard a
   quien ya tiene sesión. Por eso está en `RUTAS_SIN_DESVIO` en `src/proxy.ts`.
 
+**El dashboard reintenta la demo si falta.** El callback es el camino normal,
+pero si falla —o nunca se ejecuta, que fue lo que pasó al desplegar con el
+`Site URL` mal puesto—, `src/app/(app)/dashboard/page.tsx` la crea en la
+primera visita. No puede duplicar: `crearProyectoDemo` reclama
+`demo_seeded_at` con un UPDATE condicionado a NULL, así que de varias llamadas
+simultáneas solo una gana. Comprobado con tres peticiones a la vez.
+
 ---
 
 ## 6. Motor de cálculo
