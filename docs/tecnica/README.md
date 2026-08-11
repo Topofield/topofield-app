@@ -4,7 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-07-27 · Fases 1-3 implementadas · 117 tests.
+**Última actualización:** 2026-08-11 · Fases 1-3 implementadas · 134 tests ·
+**desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
 - [Manual de usuario](../manual/README.md) — cómo se usa la aplicación
@@ -28,6 +29,7 @@ Otros documentos:
 10. [Cómo extender](#10-cómo-extender)
 11. [Deuda técnica conocida](#11-deuda-técnica-conocida)
 12. [Manual de usuario en la app](#12-manual-de-usuario-en-la-app)
+13. [Despliegue](#13-despliegue)
 
 ---
 
@@ -623,6 +625,15 @@ Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 
 Registrada durante el desarrollo, ninguna bloqueante:
 
+**Solo puede registrarse el dueño de la cuenta de Resend.** El remitente de
+pruebas `onboarding@resend.dev` únicamente entrega a esa dirección; a cualquier
+otra, Resend responde 403 y el correo no sale. Mientras siga así, nadie más
+puede crear una cuenta, y los correos que sí salen caen en spam.
+
+Para abrirlo —jurado, compañeros, cualquier prueba con terceros— hay que
+verificar un dominio propio en Resend y cambiar el remitente a ese dominio. Es
+configuración de paneles, no código. Ver § 13.
+
 **`relative_precision` se persiste como texto ya formateado.** El mismo proceso
 se lee `1:1001` en el listado y `1:1.001` en el editor, porque hay cuatro copias
 de `formatPrecision` con criterios distintos.
@@ -731,3 +742,102 @@ si divergen.
 Al implementar una fase nueva hay que tocar los dos sitios: mover el módulo
 fuera de «Módulos pendientes» en el Markdown, y en la app quitarlo de
 `MODULOS_PENDIENTES` (`manual-data.ts`) añadiendo su sección en `page.tsx`.
+
+---
+
+## 13. Despliegue
+
+En producción desde el 2026-08-11:
+
+| Pieza | Dónde |
+|---|---|
+| Aplicación | Vercel — [topofield-app.vercel.app](https://topofield-app.vercel.app) |
+| Base y autenticación | Supabase Cloud, proyecto `Topofield` (`rlipktdjlxynyxpiqgsu`), región `us-east-2` |
+| Correo saliente | Resend, vía SMTP de Supabase |
+
+Cada `git push` a `main` redespliega en Vercel. Las migraciones **no** viajan
+con el código: se aplican aparte con la CLI.
+
+### Variables de entorno en Vercel
+
+| Variable | Nota |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Pública. *Project URL* del panel de Supabase. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Pública por diseño: viaja al navegador. |
+| `SIGNUP_INVITE_CODE` | Secreta. Sin ella el registro queda bloqueado (§ 5). |
+
+**`SUPABASE_SECRET_KEY` no está declarada en Vercel**, y no debe estarlo: ningún
+archivo de `src/` la usa.
+
+### Aplicar migraciones a la nube
+
+```bash
+npx supabase link --project-ref rlipktdjlxynyxpiqgsu
+npx supabase db push
+```
+
+`npx supabase migration list` compara local contra remoto antes de empujar.
+**Nunca `db reset` contra la nube**: borra y recrea la base.
+
+Para consultar la base de producción, `db query` necesita `--linked`; sin esa
+bandera consulta la local y los resultados engañan:
+
+```bash
+npx supabase db query --linked --file consulta.sql
+```
+
+### Configuración de Auth en el panel
+
+*Authentication → URL Configuration*:
+
+| Campo | Valor |
+|---|---|
+| Site URL | `https://topofield-app.vercel.app` |
+| Redirect URLs | `https://topofield-app.vercel.app/auth/callback` |
+
+Los dos importan, y por motivos distintos:
+
+- El **Site URL** es el que usa la plantilla del correo para construir el
+  enlace. Si se queda en `localhost`, el correo de confirmación lleva al
+  usuario a su propia máquina y la cuenta queda confirmada pero sin pasar por
+  `/auth/callback`, así que **no se le crea el proyecto de ejemplo**. Ocurrió.
+- La **Redirect URL** autoriza el destino. Si falta, Supabase no da error:
+  redirige al Site URL en silencio.
+
+*Authentication → Providers → Email*: «Confirm email» viene activo por defecto
+en la nube, al contrario que en local.
+
+### SMTP (Resend)
+
+*Authentication → Emails → SMTP Settings*:
+
+| Campo | Valor |
+|---|---|
+| Host | `smtp.resend.com` |
+| Port | **`465`** |
+| Username | `resend` (literal, no un correo) |
+| Password | la API key `re_…` |
+| Sender | `onboarding@resend.dev` |
+
+El puerto es 465, no 587. Con 587 el registro se queda colgado y termina en un
+**504 a los 36 segundos**: Supabase reintenta el envío hasta rendirse. El
+síntoma en la aplicación es una alerta vacía, porque un 504 no trae cuerpo JSON
+del que sacar un mensaje.
+
+Sin SMTP propio, Supabase limita a ~4 correos por hora.
+
+### Limitación vigente: solo puede registrarse el dueño de la cuenta de Resend
+
+`onboarding@resend.dev` es el remitente de pruebas de Resend y **solo entrega al
+correo del titular de la cuenta**. Cualquier otro destinatario recibe un 403
+(«Testing domain restriction») y no llega nada.
+
+Consecuencia práctica: hoy nadie más puede crear una cuenta. Para probar el
+registro con otras direcciones sirve el truco de Gmail
+(`titular+loquesea@gmail.com`), que Supabase trata como usuarios distintos.
+
+**Para abrirlo a otras personas —jurado, compañeros— hay que verificar un
+dominio propio en Resend** (*Domains → Add Domain*, más los registros DNS de
+SPF y DKIM) y cambiar el remitente a ese dominio. Eso resuelve además que los
+correos lleguen a spam, cosa que pasa justamente por enviar desde un dominio
+que no es el nuestro. Queda pendiente.

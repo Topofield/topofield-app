@@ -187,3 +187,31 @@ quien la escribió tuviera razón en el momento de escribirla.
 - **Redactar todos los PRDs por adelantado.** Lo que se aprende implementando la fase 1 cambia las decisiones óptimas de la fase 2. Redactar todos al inicio congela decisiones con información incompleta.
 - **Refactorizar fuera de alcance** durante la ejecución de una fase. Si algo de una fase anterior molesta, se anota en aprendizajes y se trata en la fase a la que pertenece — o en una fase de saneamiento explícita.
 - **Cerrar una fase con criterios de aceptación a medias.** Mejor extender el alcance del PRD-de-fase explícitamente que declarar cierre con deuda.
+
+### Despliegue a producción (2026-08-11)
+
+Fuera del ciclo de fases: el PRD de la fase 1 dejaba «Supabase Cloud y deploy a
+Vercel» para «fase 6 o cuando se requiera», y se adelantó para poder mostrar el
+progreso. Entró con registro por invitación, confirmación de correo y un
+proyecto de ejemplo automático (ver `docs/prds/00-setup.md` y
+`docs/tecnica/README.md` § 13).
+
+**Lo que enseñó, por si se repite en otro entorno:**
+
+- **Los fallos de configuración de Auth no dan error, redirigen.** Si el destino
+  de `emailRedirectTo` no está en las «Redirect URLs», Supabase manda al
+  `Site URL` sin avisar. Y si el `Site URL` sigue apuntando a `localhost`, el
+  correo de confirmación lleva al usuario a su propia máquina: la cuenta queda
+  confirmada, pero el callback nunca corre. Pasaron las dos cosas, una en local
+  y otra en producción.
+- **Un 504 deja la interfaz sin nada que decir.** El SMTP mal configurado
+  (puerto 587 en vez de 465) colgaba el registro 36 segundos y devolvía un 504,
+  que no trae cuerpo JSON; la alerta salía vacía. Conviene que el manejo de
+  errores distinga «el servicio respondió con un error» de «el servicio no
+  respondió».
+- **`supabase db query` consulta la base local salvo que se le pase
+  `--linked`.** Sin esa bandera los resultados parecen válidos y describen otra
+  base. Estuve a punto de sacar conclusiones equivocadas por esto.
+- **El problema de permisos tras `db reset` es solo local.** En la nube los
+  `GRANT` vienen bien de fábrica; el `permission denied for table profiles` que
+  apareció en local no se reprodujo en producción.

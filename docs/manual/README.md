@@ -14,7 +14,10 @@ detallan aquí para que se vea el alcance completo previsto.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-07-27 · Fases 1-3 implementadas.
+**Última actualización:** 2026-08-11 · Fases 1-3 implementadas.
+
+La aplicación está publicada en
+**[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
 
 ---
 
