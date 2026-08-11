@@ -71,6 +71,11 @@ npm run dev
 
 Credenciales de los datos de ejemplo: `seed@topofield.local` / `seed1234`.
 
+**El registro exige un código de invitación.** Defina `SIGNUP_INVITE_CODE` en
+`.env.local` (ver `.env.example`); sin esa variable nadie puede registrarse, ni
+en local. Y como la confirmación de correo está activa, el mensaje se lee en
+Mailpit: `http://127.0.0.1:54324`.
+
 ### Comandos
 
 | Comando | Qué hace |
@@ -260,6 +265,41 @@ Los triggers permiten la transición *hacia* cerrado —el cierre mismo es un
 `SUPABASE_SECRET_KEY` se usa **solo** en `scripts/seed.mjs`. Ningún archivo de
 `src/` lo referencia. El cliente usa exclusivamente
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+
+Sigue siendo cierto tras añadir el proyecto de ejemplo: lo crea el cliente del
+propio usuario, porque las políticas RLS de inserción ya le permiten crear sus
+propios datos. No hizo falta introducir un cliente con la llave secreta en la
+aplicación, y conviene que siga sin haberlo.
+
+### Registro por invitación
+
+`SIGNUP_INVITE_CODE` guarda el código que hay que introducir para crear una
+cuenta. **Sin el prefijo `NEXT_PUBLIC_`**: con él acabaría en el JavaScript que
+se envía al navegador y cualquiera podría leerlo. Se comprueba solo en el Server
+Action (`src/app/(auth)/sign-up/actions.ts`), nunca en el cliente.
+
+**Si la variable no está definida, el registro queda bloqueado**, no abierto. Un
+despliegue al que se le olvidó configurarla debe fallar de forma visible —nadie
+puede registrarse— en lugar de quedar con la puerta abierta sin que nadie lo
+note. Lo cubre `src/lib/validators/sign-up.test.ts`.
+
+No se usa comparación en tiempo constante: protegería frente a un atacante capaz
+de medir microsegundos de latencia de red repetidamente, y la complejidad no se
+justifica aquí. Queda escrito para que la omisión sea una decisión.
+
+### Confirmación de correo y `/auth/callback`
+
+`@supabase/ssr` usa PKCE, así que el enlace del correo trae un `code` que hay
+que canjear por una sesión. De eso se encarga la Route Handler
+`src/app/auth/callback/route.ts`, que además crea el proyecto de ejemplo.
+
+Dos detalles que rompen el flujo en silencio si se olvidan:
+
+- El destino de `emailRedirectTo` **debe estar en las «Redirect URLs»** de
+  Supabase (`additional_redirect_urls` en local). Si no está, Supabase no da
+  error: redirige a `site_url` y el canje nunca ocurre.
+- `/auth/callback` no puede sufrir el desvío del proxy que manda al dashboard a
+  quien ya tiene sesión. Por eso está en `RUTAS_SIN_DESVIO` en `src/proxy.ts`.
 
 ---
 

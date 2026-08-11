@@ -70,6 +70,14 @@ lo que da trazabilidad al trabajo.
 
 Ingrese con su correo y contraseña. Si aún no tiene cuenta, use **Regístrate**.
 
+**Para crear una cuenta necesita un código de invitación.** Al registrarse se le
+pide, junto con su nombre, correo y contraseña. Después recibirá un mensaje para
+confirmar su dirección: hasta que pulse ese enlace no podrá entrar.
+
+La primera vez que entre encontrará un **proyecto de ejemplo** con cuatro
+poligonales ya calculadas, para que pueda ver cómo funciona la aplicación sin
+capturar nada. Puede modificarlo o eliminarlo cuando quiera.
+
 Cada usuario ve únicamente sus propios proyectos.
 
 ---

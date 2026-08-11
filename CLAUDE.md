@@ -42,6 +42,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - IMPORTANT: los ángulos se almacenan como 3 campos separados (deg, min, sec) en la DB, NO como decimal. La conversión se hace solo para cálculos internos.
 - IMPORTANT: el proyecto corre sobre Next.js 16 + React 19, con breaking changes frente a versiones previas (p. ej. `middleware` → `proxy`). Ver `AGENTS.md` y consultar `node_modules/next/dist/docs/` antes de escribir código de Next.
 - Toda la autenticación va por Supabase Auth. No usar Clerk ni ningún otro servicio de auth externo.
+- IMPORTANT: el registro exige el código de `SIGNUP_INVITE_CODE` y confirmación de correo. La variable NO lleva prefijo `NEXT_PUBLIC_` y solo se lee en el Server Action; si falta, el registro se bloquea (nunca se abre).
 - No usar shadcn/ui ni ninguna librería de componentes. El sistema de diseño está en `src/components/design-system/` y se construye sobre Tailwind puro.
 - Las coordenadas van a 3 decimales (0.000), las cotas a 4 decimales (0.0000), los ángulos en DMS.
 - Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado.

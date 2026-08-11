@@ -160,3 +160,25 @@ Tras el primer testeo de la interfaz, se reabrió la fase para un ajuste de alca
 - PRD § 3.2 actualizado.
 
 Las divergencias entre el plan original y lo entregado están documentadas en la sección "Aprendizajes" de [`docs/method.md`](../method.md).
+
+---
+
+## Nota posterior — el despliegue diferido (2026-08-10)
+
+El «deploy a Vercel y conexión a Supabase Cloud» que este PRD dejó para «fase 6
+o cuando se requiera» se ejecutó antes, para poder mostrar el progreso. Con él
+entraron tres cosas que este documento no contemplaba:
+
+- **Registro por código de invitación** (`SIGNUP_INVITE_CODE`). Publicar la
+  aplicación en una URL abierta significaba que cualquiera podía crearse una
+  cuenta. No introduce un rol nuevo —el PRD principal sigue teniendo un solo
+  rol—: es una barrera de entrada al registro, no un permiso distinto dentro de
+  la aplicación.
+- **Confirmación de correo obligatoria**, que este PRD había desactivado en
+  local (`enable_confirmations = false`) anotando que habría que decidirlo al
+  conectar la nube. Se decidió activarla.
+- **Proyecto de ejemplo automático** al confirmar la cuenta, para que quien
+  entre por primera vez encuentre algo que mirar. Hoy solo poligonales; se
+  ampliará con nivelación y asentamientos cuando existan.
+
+Detalles técnicos en `docs/tecnica/README.md` § 5.

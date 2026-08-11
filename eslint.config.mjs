@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Artefactos que genera `supabase start`. No son código del proyecto y
+    // están fuera del control de versiones.
+    "supabase/.temp/**",
   ]),
 ]);
 

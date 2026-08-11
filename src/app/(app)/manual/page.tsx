@@ -112,6 +112,18 @@ export default function ManualPage() {
           Ingrese con su correo y contraseña. Si aún no tiene cuenta, use{" "}
           <strong>Regístrate</strong>.
         </p>
+        <p>
+          <strong>Para crear una cuenta necesita un código de invitación.</strong>{" "}
+          Al registrarse se le pide, junto con su nombre, correo y contraseña.
+          Después recibirá un mensaje para confirmar su dirección: hasta que
+          pulse ese enlace no podrá entrar.
+        </p>
+        <p>
+          La primera vez que entre encontrará un{" "}
+          <strong>proyecto de ejemplo</strong> con cuatro poligonales ya
+          calculadas, para que pueda ver cómo funciona la aplicación sin
+          capturar nada. Puede modificarlo o eliminarlo cuando quiera.
+        </p>
         <p>Cada usuario ve únicamente sus propios proyectos.</p>
       </Seccion>
 
