@@ -382,7 +382,7 @@ CREATE TABLE leveling_readings (
     CHECK (point_type IN ('bm', 'pc', 'intermediate')),
   backsight DECIMAL(6,4),                   -- lectura atrás
   foresight DECIMAL(6,4),                   -- lectura adelante
-  distance_m DECIMAL(8,1),                  -- distancia de la visual (equilibrado)
+  distance_m DECIMAL(8,1),                  -- distancia de la visual (dato de campo; el equilibrado atrás/adelante NO se valida en esta fase, ver deuda técnica)
   distance_accumulated_km DECIMAL(8,3),
   -- Calculados
   instrument_height DECIMAL(10,4),          -- AI

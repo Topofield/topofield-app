@@ -5,8 +5,12 @@
 --   · point_type (decisión #7): los puntos intermedios no propagan cota ni
 --     entran en la comprobación aritmética. Sin distinguirlos el cálculo es
 --     incorrecto.
---   · distance_m (decisión #8): distancia por visual, necesaria para validar el
---     equilibrado atrás/adelante. Guardar solo la acumulada lo impediría.
+--   · distance_m (decisión #8): distancia de la visual, dato de campo. NO se
+--     usa para validar el equilibrado atrás/adelante: eso compara d_atrás con
+--     d_adelante DENTRO de una armada, y esta columna guarda un solo valor por
+--     fila. El equilibrado no se valida en esta fase (ver deuda técnica en
+--     docs/tecnica/README.md). Comentario corregido en la revisión final de
+--     la Fase 4 (hallazgo 3); el DDL no cambia, la migración ya está aplicada.
 --   · correction_method con CHECK explícito (decisión #3): hoy un solo método.
 -- ============================================================================
 
