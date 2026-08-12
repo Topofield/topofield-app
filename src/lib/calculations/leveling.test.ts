@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { computeRun } from "./leveling";
-import type { PointType, ReadingInput } from "@/types/leveling";
+import { computeRun, computeLeveling } from "./leveling";
+import type { LevelingInput, PointType, ReadingInput } from "@/types/leveling";
 
 function r(
   pointCode: string,
@@ -118,5 +118,124 @@ describe("computeRun — el orden consumir → generar", () => {
     expect(run.readings[0]?.elevationCalculated).toBeCloseTo(100.0, 6);
     expect(run.readings[0]?.instrumentHeight).toBeCloseTo(101.5, 6);
     expect(run.heightDifference).toBeCloseTo(0, 6);
+  });
+});
+
+const CLOSED_INPUT: LevelingInput = {
+  type: "closed",
+  startElevation: 100.0,
+  endElevation: null,
+  order: "tercer_orden",
+  totalDistanceKm: 0.9,
+  forward: CLOSED_RUN,
+  return: null,
+};
+
+describe("computeLeveling — cerrada", () => {
+  const result = computeLeveling(CLOSED_INPUT);
+
+  it("cierra contra el BM de partida: error −8.0 mm", () => {
+    expect(result.closureErrorMm).toBeCloseTo(-8.0, 4);
+  });
+
+  it("compara contra K·√D = 12·√0.9 = 11.38 mm y cumple", () => {
+    expect(result.toleranceMm).toBeCloseTo(11.3842, 3);
+    expect(result.meetsTolerance).toBe(true);
+  });
+
+  it("distribuye la corrección proporcional a la distancia acumulada", () => {
+    // Corr_i = −error × (d_i / D) → +8.0 mm × (d_i / 0.9)
+    const corrections = result.forward.readings.map((x) =>
+      Number((x.correctionApplied * 1000).toFixed(2)),
+    );
+    expect(corrections).toEqual([0.0, 2.67, 5.33, 8.0]);
+  });
+
+  it("hace que el BM final cierre exacto tras la corrección", () => {
+    const last = result.forward.readings.at(-1);
+    expect(last?.elevationCorrected).toBeCloseTo(100.0, 6);
+  });
+});
+
+describe("computeLeveling — enlace", () => {
+  // BM-A 250.000 → BM-B conocida 248.700. Cadena que llega a 248.685: −15 mm.
+  const linkRun: ReadingInput[] = [
+    r("BM-A", "bm", 1.0, null, 0.0),
+    r("PC-1", "pc", 2.0, 1.5, 1.1),
+    r("BM-B", "bm", null, 2.815, 2.2),
+  ];
+  const result = computeLeveling({
+    type: "link",
+    startElevation: 250.0,
+    endElevation: 248.7,
+    order: "tercer_orden",
+    totalDistanceKm: 2.2,
+    forward: linkRun,
+    return: null,
+  });
+
+  it("cierra contra la cota conocida del BM de llegada", () => {
+    // 250 + 1.0 = 251.0 AI; PC-1 = 249.5; AI = 251.5; BM-B = 248.685
+    expect(result.forward.readings.at(-1)?.elevationCalculated).toBeCloseTo(
+      248.685,
+      6,
+    );
+    expect(result.closureErrorMm).toBeCloseTo(-15.0, 4);
+  });
+
+  it("cumple tercer orden: 15 mm < 12·√2.2 = 17.8 mm", () => {
+    expect(result.toleranceMm).toBeCloseTo(17.7986, 3);
+    expect(result.meetsTolerance).toBe(true);
+  });
+
+  it("corrige hasta hacer coincidir el BM-B con su cota conocida", () => {
+    expect(result.forward.readings.at(-1)?.elevationCorrected).toBeCloseTo(
+      248.7,
+      6,
+    );
+  });
+});
+
+describe("computeLeveling — abierta sin control", () => {
+  const result = computeLeveling({
+    type: "open",
+    startElevation: 500.0,
+    endElevation: null,
+    order: "tercer_orden",
+    totalDistanceKm: 0.4,
+    forward: [
+      r("BM-X", "bm", 1.325, null, 0.0),
+      r("PC-1", "pc", 0.654, 0.876, 0.08),
+      r("PC-2", "pc", null, 1.987, 0.16),
+    ],
+    return: null,
+  });
+
+  it("no calcula error de cierre ni tolerancia", () => {
+    expect(result.closureErrorMm).toBeNull();
+    expect(result.toleranceMm).toBeNull();
+    expect(result.meetsTolerance).toBeNull();
+  });
+
+  it("no aplica corrección: cota corregida = cota calculada", () => {
+    for (const reading of result.forward.readings) {
+      expect(reading.elevationCorrected).toBeCloseTo(
+        reading.elevationCalculated,
+        6,
+      );
+      expect(reading.correctionApplied).toBe(0);
+    }
+  });
+});
+
+describe("computeLeveling — fuera de tolerancia", () => {
+  it("marca meetsTolerance false y NO corrige", () => {
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      order: "primer_orden", // tolerancia 3·√0.9 = 2.85 mm < 8.0 mm de error
+    });
+    expect(result.meetsTolerance).toBe(false);
+    // Sin cumplir tolerancia el trabajo se repite; no se compensa.
+    expect(result.forward.readings.at(-1)?.correctionApplied).toBe(0);
   });
 });

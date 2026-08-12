@@ -1,7 +1,14 @@
 // Algoritmos de nivelación geométrica (PRD § 6.7-6.9).
 // Funciones puras de TypeScript: sin React, sin hooks, sin Supabase. Solo math.
 
-import type { ComputedReading, ReadingInput } from "@/types/leveling";
+import { levelingTolerance } from "./tolerances";
+import type {
+  ComputedReading,
+  LevelingInput,
+  LevelingResult,
+  ReadingInput,
+  RunResult,
+} from "@/types/leveling";
 
 /** Tolerancia de la comprobación aritmética, en metros (0.1 mm). */
 const ARITHMETIC_EPSILON = 0.0001;
@@ -84,5 +91,103 @@ export function computeRun(
     sumBacksights,
     sumForesights,
     arithmeticCheckOk,
+  };
+}
+
+/**
+ * Corrección proporcional a la distancia acumulada (§ 6.8):
+ *
+ *   Corr_i = −Error × (d_acum_i / D_total)
+ *
+ * La suma de correcciones iguala −Error, de modo que el punto final cierra
+ * exactamente contra su cota conocida. Los puntos `intermediate` heredan la
+ * corrección de la armada de la que cuelgan: se interpola por su propia
+ * distancia acumulada, que es la de esa armada.
+ */
+export function applyProportionalCorrection(
+  readings: ComputedReading[],
+  errorMm: number,
+  totalDistanceKm: number,
+): ComputedReading[] {
+  if (totalDistanceKm <= 0) {
+    return readings.map((reading) => ({
+      ...reading,
+      elevationCorrected: reading.elevationCalculated,
+      correctionApplied: 0,
+    }));
+  }
+
+  const errorM = errorMm / 1000;
+
+  return readings.map((reading) => {
+    const accumulated = reading.distanceAccumulatedKm ?? 0;
+    const correction = -errorM * (accumulated / totalDistanceKm);
+    return {
+      ...reading,
+      correctionApplied: correction,
+      elevationCorrected: reading.elevationCalculated + correction,
+    };
+  });
+}
+
+/** Cota conocida contra la que cierra el recorrido, o null si no cierra. */
+function knownClosingElevation(input: LevelingInput): number | null {
+  if (input.type === "closed") return input.startElevation;
+  if (input.type === "link") return input.endElevation;
+  return null; // `open` no cierra contra nada.
+}
+
+/**
+ * Calcula un proceso de nivelación completo (§ 6.7-6.9).
+ *
+ * `open` se calcula pero no se cierra ni se corrige: sin un segundo punto de
+ * cota conocida no hay forma de detectar el error acumulado.
+ */
+export function computeLeveling(input: LevelingInput): LevelingResult {
+  const forward = computeRun(input.forward, input.startElevation);
+  const known = knownClosingElevation(input);
+
+  let closureErrorMm: number | null = null;
+  let toleranceMm: number | null = null;
+  let meetsTolerance: boolean | null = null;
+  let readings = forward.readings;
+
+  if (known != null) {
+    const lastElevation =
+      forward.readings.at(-1)?.elevationCalculated ?? input.startElevation;
+    closureErrorMm = (lastElevation - known) * 1000;
+    toleranceMm = levelingTolerance(input.order, input.totalDistanceKm);
+    meetsTolerance = Math.abs(closureErrorMm) <= toleranceMm;
+
+    // Solo se compensa un trabajo que cumple la tolerancia. Si no cumple, se
+    // repite el levantamiento (marco teórico § 8.1).
+    if (meetsTolerance) {
+      readings = applyProportionalCorrection(
+        forward.readings,
+        closureErrorMm,
+        input.totalDistanceKm,
+      );
+    }
+  }
+
+  const forwardResult: RunResult = {
+    readings,
+    heightDifference: forward.heightDifference,
+    errorMm: closureErrorMm,
+  };
+
+  return {
+    forward: forwardResult,
+    return: null,
+    arithmeticCheckOk: forward.arithmeticCheckOk,
+    sumBacksights: forward.sumBacksights,
+    sumForesights: forward.sumForesights,
+    closureErrorMm,
+    toleranceMm,
+    meetsTolerance,
+    discrepancyMm: null,
+    discrepancyToleranceMm: null,
+    meetsDiscrepancy: null,
+    adoptedHeightDifference: null,
   };
 }
