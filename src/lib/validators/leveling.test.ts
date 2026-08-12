@@ -24,10 +24,7 @@ function reading(over: Partial<ReadingInput> = {}): ReadingInput {
     pointType: "pc",
     backsight: 1.5,
     foresight: 1.2,
-    // Dentro del límite de equilibrado incluso del orden más exigente
-    // (primer_orden: 2 m), para que el fixture "normal" no dispare la
-    // advertencia de equilibrado de visuales por defecto.
-    distanceM: 1.5,
+    distanceM: 40, // visual normal de campo
     distanceAccumulatedKm: 0.1,
     ...over,
   };
@@ -132,23 +129,6 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
       "tercer_orden",
     );
     expect(issues.errors.distanceAccumulatedKm).toBeUndefined();
-  });
-
-  it("advierte cuando el desequilibrio de visuales supera el límite del orden", () => {
-    // La lectura no separa distancia de visual atrás y adelante: se toma
-    // `distanceM` como la distancia de la visual de esta fila (ver comentario
-    // en la implementación) y se compara contra el límite del orden.
-    const issues = validateReadingCapture(
-      reading({ distanceM: 50 }),
-      "primer_orden", // límite 2 m
-    );
-    expect(issues.warnings.sightBalance).toBeDefined();
-    expect(issues.errors).toEqual({});
-  });
-
-  it("no advierte desequilibrio de visuales dentro del límite del orden", () => {
-    const issues = validateReadingCapture(reading({ distanceM: 5 }), "ordinario"); // límite 6 m
-    expect(issues.warnings.sightBalance).toBeUndefined();
   });
 });
 

@@ -17,26 +17,18 @@ export interface ReadingCaptureIssues {
   errors: Partial<
     Record<"pointCode" | "backsight" | "foresight" | "distanceAccumulatedKm", string>
   >;
-  warnings: Partial<Record<"backsight" | "foresight" | "sightBalance", string>>;
+  warnings: Partial<Record<"backsight" | "foresight", string>>;
 }
 
 /** Rango físico de una lectura de mira, en metros (§ 5.1). */
 const MIN_READING = 0;
 const MAX_READING = 4;
 
-/**
- * Diferencia máxima admisible entre la distancia de la visual atrás y la de
- * adelante, en metros, según orden de precisión (§ 5.1). El equilibrado de
- * visuales cancela de una vez la curvatura terrestre, la refracción
- * atmosférica y el error de colimación del instrumento. Es calidad de campo,
- * no error de captura: nunca bloquea, solo advierte.
- */
-export const SIGHT_BALANCE_LIMIT_M: Record<PrecisionOrder, number> = {
-  primer_orden: 2,
-  segundo_orden: 3,
-  tercer_orden: 4,
-  ordinario: 6,
-};
+// El equilibrado de visuales (|d_atrás − d_adelante| ≤ 2/3/4/6 m según orden)
+// NO se valida aquí: es una propiedad de la armada, que compara la distancia a
+// la mira de atrás con la de adelante, y `distanceM` guarda un solo valor por
+// fila. Validarlo exigiría capturar ambas distancias por armada — un cambio de
+// modelo de datos que no entra en esta fase. Se registra como deuda técnica.
 
 /**
  * Tipos de punto que entran en la comprobación aritmética y en la
@@ -49,22 +41,14 @@ function requiresDistanceAccumulated(pointType: PointType): boolean {
 
 /**
  * Valida la captura de una lectura de la libreta de nivelación.
- *
- * Limitación conocida: tanto `ReadingInput` como `leveling_readings.distance_m`
- * en el schema (PRD § 3.2) traen una sola distancia de visual por fila, no
- * d_atrás y d_adelante por separado. El equilibrado de visuales estricto de
- * § 5.1 (|d_atrás − d_adelante| ≤ límite) exige comparar dos filas — la que
- * abrió la armada con L.At y la que la consumió con L.Ad — y esta función
- * valida una fila de forma aislada, sin acceso a sus vecinas. Como proxy no
- * se inventan datos que el tipo no trae: se compara `distanceM` de la fila
- * contra el límite del orden como si fuera la magnitud a controlar. Es una
- * aproximación deliberada, documentada aquí en vez de silenciosa; si la
- * libreta llega a separar ambas distancias, esta validación debe ajustarse
- * para comparar la diferencia real entre armadas.
  */
 export function validateReadingCapture(
   reading: ReadingInput,
-  order: PrecisionOrder,
+  // El orden de precisión no se usa hoy: se mantiene en la firma porque el
+  // equilibrado de visuales que lo consumía se retiró (ver comentario de
+  // deuda técnica arriba), pero la firma se conserva estable para la Tarea
+  // 10 y por si una futura regla de captura vuelve a necesitarlo.
+  _order: PrecisionOrder,
 ): ReadingCaptureIssues {
   const errors: ReadingCaptureIssues["errors"] = {};
   const warnings: ReadingCaptureIssues["warnings"] = {};
@@ -103,11 +87,6 @@ export function validateReadingCapture(
     reading.backsight === reading.foresight
   ) {
     warnings.foresight = "Lectura atrás y adelante idénticas: posible error de anotación.";
-  }
-
-  const limit = SIGHT_BALANCE_LIMIT_M[order];
-  if (reading.distanceM != null && reading.distanceM > limit) {
-    warnings.sightBalance = `El equilibrado de visuales (${reading.distanceM.toFixed(1)} m) supera el límite del orden (${limit} m).`;
   }
 
   return { errors, warnings };
