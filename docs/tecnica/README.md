@@ -707,6 +707,19 @@ así que conviene resolverlo para ambos módulos a la vez. Los triggers de la
 base sí protegen la inmutabilidad de un proceso ya cerrado; lo que no está
 protegido es el acto de cerrarlo con el estado equivocado.
 
+**El desnivel adoptado (`adoptedHeightDifference`) no alimenta la
+compensación.** `computeLeveling` lo calcula como el promedio de ida y vuelta
+(§ 6.9) y el panel de resultados lo muestra («Desnivel adoptado (promedio)»),
+pero la corrección proporcional del recorrido de ida se aplica hoy con el
+error de cierre de la propia ida, no con el desnivel adoptado — la vuelta es
+control de calidad (discrepancia vs T·√2), no insumo de la compensación.
+Documentado y verificado en la revisión final de la Fase 4 (hallazgo 2); el
+PRD principal y `docs/prds/03-nivelacion.md` afirmaban lo contrario y se
+corrigieron. Si en una fase futura se decide que el desnivel adoptado sí debe
+entrar en la compensación, es un cambio de motor de cálculo con tests nuevos,
+no un ajuste menor: altera todas las cotas corregidas de un recorrido con
+vuelta.
+
 ---
 
 ## 12. Manual de usuario en la app

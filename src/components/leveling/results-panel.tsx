@@ -182,7 +182,22 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                     : "—"}
                 </dd>
               </div>
+              <div>
+                <dt className="text-neutral-500">
+                  Desnivel adoptado (promedio)
+                </dt>
+                <dd className="font-mono tabular-nums text-neutral-900">
+                  {result.adoptedHeightDifference != null
+                    ? formatElevation(result.adoptedHeightDifference)
+                    : "—"}
+                </dd>
+              </div>
             </dl>
+            <p className="text-xs text-neutral-500">
+              El desnivel adoptado es el promedio informativo de ida y vuelta
+              (§ 6.9). Hoy no alimenta la compensación: las cotas corregidas se
+              calculan con el error de cierre de la ida.
+            </p>
             {result.meetsDiscrepancy != null ? (
               <StatusIndicator
                 status={result.meetsDiscrepancy ? "ok" : "danger"}

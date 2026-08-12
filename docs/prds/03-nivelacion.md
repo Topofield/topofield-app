@@ -243,8 +243,20 @@ el error compara un recorrido contra una cota **conocida**, mientras que la
 discrepancia compara los dos recorridos **entre sí**. El marco teórico reporta
 así su Caso 1, con «Error ida» y «Error vuelta» por separado.
 
-La corrección se aplica al recorrido de ida usando el desnivel adoptado. **No
-hay promediado por tramo.**
+**Corregido en la revisión final de la Fase 4 (hallazgo 2).** Esta sección
+afirmaba que la corrección se aplica al recorrido de ida usando el desnivel
+adoptado. Eso no es lo que hace el código, y se deja así deliberadamente: el
+comportamiento actual está verificado extremo a extremo y el manual de
+usuario ya lo describe bien («compara los desniveles totales»). La
+compensación se aplica al recorrido de ida usando **su propio error de
+cierre** (cota calculada del BM final de la ida menos la cota conocida), no
+el desnivel adoptado. La vuelta, en esta fase, es control de calidad —
+discrepancia contra T·√2 — no insumo de la compensación. `Δh_adoptado` se
+calcula y se muestra en el panel de resultados como dato informativo del
+doble recorrido, pero no entra en el cálculo de las cotas corregidas. Si una
+fase futura decide que deba hacerlo, es un cambio de motor con tests nuevos
+(ver deuda técnica en `docs/tecnica/README.md`). **No hay promediado por
+tramo.**
 
 ### Tests (Vitest)
 

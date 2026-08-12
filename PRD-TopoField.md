@@ -926,6 +926,16 @@ Para cada punto i:
 > signo en ambos, y el promedio lo conservaría en vez de revelarlo. El
 > emparejamiento correcto es **a nivel de sección** (entre los BM extremos).
 > Ver `docs/prds/03-nivelacion.md`, decisión #2 y hallazgo 3.
+>
+> **Corregido en la revisión final de la Fase 4** (2026-08-12, hallazgo 2). El
+> texto original de esta sección afirmaba que la corrección proporcional se
+> aplica «usando el desnivel adoptado». Eso nunca se implementó así: la
+> compensación del recorrido de ida usa **el error de cierre de la propia
+> ida**, no el desnivel adoptado. La vuelta, en esta fase, es control de
+> calidad (discrepancia vs T·√2) — no insumo de la compensación. El desnivel
+> adoptado se calcula y se muestra como dato informativo del doble recorrido,
+> pero **no entra en el cálculo de las cotas corregidas**. Ver deuda técnica
+> en `docs/tecnica/README.md`.
 
 ```
 Cada recorrido se calcula de forma independiente y produce el desnivel
@@ -941,8 +951,10 @@ Si Discrepancia ≤ Tolerancia_iv → se adopta el desnivel promediado:
 
   Δh_adoptado = (Δh_ida - Δh_vuelta) / 2
 
-La corrección proporcional (§ 6.8) se aplica al recorrido de ida usando
-el desnivel adoptado. NO se promedia tramo a tramo.
+Δh_adoptado se calcula y se informa como dato del doble recorrido, pero HOY
+NO alimenta la compensación: la corrección proporcional (§ 6.8) se aplica al
+recorrido de ida usando el error de cierre de la propia ida (Cota_calculada -
+Cota_conocida), no el desnivel adoptado. NO se promedia tramo a tramo.
 ```
 
 ### 6.10 Asentamientos — Cálculos
