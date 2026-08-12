@@ -218,8 +218,11 @@ Corr_i = −Error × (d_acum_i / D_total)
 ```
 
 Aplicada sobre la cadena de `bm`/`pc`. Cada `intermediate` hereda la corrección
-de la armada de la que cuelga. Σcorrecciones = −Error, de modo que el BM final
-cierra exacto.
+de la armada de la que cuelga. La corrección **de la fila terminal** (aquella
+cuya distancia acumulada es la distancia total) iguala −Error, de modo que el BM
+final cierra exacto. Ojo: no es la *suma* de las correcciones la que da −Error —
+cada corrección es acumulativa desde el origen, no un incremento, así que la suma
+de todas es mayor.
 
 ### Ida y vuelta (`§6.9`, enmendado — decisión #2)
 
@@ -239,7 +242,7 @@ hay promediado por tramo.**
 
 Fixtures construidos y verificados a mano, **nunca copiados del marco teórico**
 (ver hallazgo 1). Cubren: cálculo base con y sin intermedios; comprobación
-aritmética; los 3 tipos; corrección proporcional (Σcorrecciones = −Error, cierre
+aritmética; los 3 tipos; corrección proporcional (corrección terminal = −Error, cierre
 exacto en el BM final); e ida/vuelta **con distinto número de armadas por
 recorrido**, que es el caso que rompe la implementación ingenua.
 
@@ -294,7 +297,7 @@ recorrido**, que es el caso que rompe la implementación ingenua.
 | f | Los `intermediate` no propagan cota ni entran en la comprobación aritmética |
 | g | La comprobación aritmética se muestra y marca en rojo crítico si no cuadra |
 | h | Error de cierre vs `K·√D` reflejado por `StatusIndicator` según el orden del proyecto |
-| i | Corrección proporcional: Σcorrecciones = −Error; el BM final cierra exacto |
+| i | Corrección proporcional: la corrección de la fila terminal = −Error; el BM final cierra exacto |
 | j | Ida/vuelta: dos recorridos independientes, discrepancia vs `T√2`, desnivel promediado |
 | k | Tipo `open`: calcula sin cierre ni corrección |
 | l | Validación de captura: lectura fuera de [0, 4] m bloquea guardar |

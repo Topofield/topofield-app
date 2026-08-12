@@ -921,7 +921,8 @@ import type { LevelingInput, LevelingResult, RunResult } from "@/types/leveling"
  *
  *   Corr_i = −Error × (d_acum_i / D_total)
  *
- * La suma de correcciones iguala −Error, de modo que el punto final cierra
+ * La corrección de la fila terminal (la que tiene d_acum = D_total) iguala
+ * −Error, de modo que el punto final cierra
  * exactamente contra su cota conocida. Los puntos `intermediate` heredan la
  * corrección de la armada de la que cuelgan: se interpola por su propia
  * distancia acumulada, que es la de esa armada.
