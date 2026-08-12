@@ -99,8 +99,11 @@ export function computeRun(
  *
  *   Corr_i = −Error × (d_acum_i / D_total)
  *
- * La suma de correcciones iguala −Error, de modo que el punto final cierra
- * exactamente contra su cota conocida. Los puntos `intermediate` heredan la
+ * La corrección de la fila terminal (la que tiene d_acum = D_total) iguala
+ * −Error, de modo que el punto final cierra exactamente contra su cota
+ * conocida. No es la *suma* de las correcciones: cada una es acumulativa desde
+ * el origen, no un incremento, así que la suma de todas es mayor que −Error.
+ * Los puntos `intermediate` heredan la
  * corrección de la armada de la que cuelgan: se interpola por su propia
  * distancia acumulada, que es la de esa armada.
  *
