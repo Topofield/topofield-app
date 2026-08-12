@@ -1,10 +1,11 @@
-// Seed para verificación manual del módulo poligonal.
+// Seed para verificación manual de los módulos poligonal y nivelación.
 //
 // Crea (idempotente — borra y recrea):
 //  - Un usuario seed@topofield.local con password fijo.
 //  - 2 proyectos (uno de tercer_orden, otro de primer_orden).
 //  - 7 procesos poligonales precargados que cubren los 3 tipos, los 3 métodos
 //    y los estados closed / rejected.
+//  - 1 proceso de nivelación cerrada calculado, para las capturas del manual.
 //  - Algunos reference_points para probar el CRUD de la tab Configuración.
 //
 // Uso: con `npx supabase start` activo, ejecutar
@@ -13,6 +14,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { computePolygonal } from "../src/lib/calculations/polygonal.ts";
+import { computeLeveling } from "../src/lib/calculations/leveling.ts";
 import { dmsToDecimal } from "../src/lib/calculations/angles.ts";
 
 const URL = "http://127.0.0.1:54321";
@@ -168,6 +170,105 @@ async function insertPolygonal(projectId, spec, userId, order) {
   return proc.id;
 }
 
+/**
+ * Inserta un proceso de nivelación con `computeLeveling` como fuente de la
+ * verdad de los resultados persistidos, igual que `insertPolygonal` con
+ * `computePolygonal`: el seed nunca queda desincronizado con lo que
+ * produciría `saveLevelingProcessAction` en un guardado real.
+ */
+async function insertLeveling(projectId, spec, userId, order) {
+  const input = {
+    type: spec.type,
+    startElevation: spec.startElevation,
+    endElevation: spec.endElevation ?? null,
+    order,
+    totalDistanceKm: spec.totalDistanceKm,
+    forward: spec.forward.map((r) => ({
+      pointCode: r.code,
+      pointType: r.type,
+      backsight: r.back ?? null,
+      foresight: r.fore ?? null,
+      distanceM: r.distanceM ?? null,
+      distanceAccumulatedKm: r.distanceAccumKm ?? null,
+    })),
+    return: spec.return
+      ? spec.return.map((r) => ({
+          pointCode: r.code,
+          pointType: r.type,
+          backsight: r.back ?? null,
+          foresight: r.fore ?? null,
+          distanceM: r.distanceM ?? null,
+          distanceAccumulatedKm: r.distanceAccumKm ?? null,
+        }))
+      : null,
+  };
+  const result = computeLeveling(input);
+
+  const { data: proc, error } = await admin
+    .from("leveling_processes")
+    .insert({
+      project_id: projectId,
+      name: spec.name,
+      type: spec.type,
+      start_bm_code: spec.startBmCode,
+      start_bm_elevation: spec.startElevation,
+      end_bm_code: spec.endBmCode ?? null,
+      end_bm_elevation: spec.endElevation ?? null,
+      has_return_run: spec.return != null,
+      total_distance_km: spec.totalDistanceKm,
+      // Nace calculado, no cerrado: los triggers de inmutabilidad rechazan
+      // escribir lecturas bajo un proceso ya cerrado (mismo motivo que en
+      // insertPolygonal). Este fixture se deja "calculated" a propósito.
+      status: "calculated",
+      closure_error_mm: result.closureErrorMm,
+      tolerance_mm: result.toleranceMm,
+      meets_tolerance: result.meetsTolerance,
+      forward_error_mm: result.forward.errorMm,
+      return_error_mm: result.return?.errorMm ?? null,
+      discrepancy_mm: result.discrepancyMm,
+      notes: spec.notes ?? null,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  function runRows(runType, drafts, computedReadings) {
+    return drafts.map((draft, i) => {
+      const r = computedReadings[i];
+      return {
+        process_id: proc.id,
+        run_type: runType,
+        reading_order: i + 1,
+        point_code: draft.code,
+        point_type: draft.type,
+        backsight: draft.back ?? null,
+        foresight: draft.fore ?? null,
+        distance_m: draft.distanceM ?? null,
+        distance_accumulated_km: draft.distanceAccumKm ?? null,
+        instrument_height: r?.instrumentHeight ?? null,
+        elevation_calculated: r?.elevationCalculated ?? null,
+        elevation_corrected: r?.elevationCorrected ?? null,
+        correction_applied: r?.correctionApplied ?? null,
+      };
+    });
+  }
+
+  const rows = [
+    ...runRows("forward", spec.forward, result.forward.readings),
+    ...(spec.return && result.return
+      ? runRows("return", spec.return, result.return.readings)
+      : []),
+  ];
+  if (rows.length > 0) {
+    const { error: readingsErr } = await admin
+      .from("leveling_readings")
+      .insert(rows);
+    if (readingsErr) throw readingsErr;
+  }
+
+  return proc.id;
+}
+
 // ----------------------------------------------------------------------------
 // Definiciones de los procesos
 // ----------------------------------------------------------------------------
@@ -311,6 +412,39 @@ const PROCESSES = [
   },
 ];
 
+// Circuito cerrado, 0.9 km, tercer orden, BM 100.000. Error de cierre −8.0 mm
+// contra tolerancia 11.4 mm (cumple); el BM final corregido cierra exacto en
+// 100.0000. Verificado a mano en el brief de la Tarea 13 de la Fase 4.
+const LEVELING_PROCESSES = [
+  {
+    name: "Circuito BM-1 (cerrado, tercer orden)",
+    type: "closed",
+    startBmCode: "BM-1",
+    startElevation: 100.0,
+    totalDistanceKm: 0.9,
+    forward: [
+      { code: "BM-1", type: "bm", back: 1.5, distanceAccumKm: 0.0 },
+      {
+        code: "PC-1",
+        type: "pc",
+        fore: 1.2,
+        back: 2.0,
+        distanceAccumKm: 0.3,
+      },
+      {
+        code: "PC-2",
+        type: "pc",
+        fore: 2.5,
+        back: 1.0,
+        distanceAccumKm: 0.6,
+      },
+      { code: "BM-1", type: "bm", fore: 0.808, distanceAccumKm: 0.9 },
+    ],
+    notes:
+      "Circuito cerrado de verificación: sale y vuelve a BM-1. Error de cierre −8.0 mm contra tolerancia 11.4 mm (K=12 · √0.9 km). Cumple tercer orden.",
+  },
+];
+
 const REFERENCE_POINTS = [
   {
     code: "BM-01",
@@ -386,6 +520,11 @@ async function main() {
   for (const spec of PROCESSES) {
     await insertPolygonal(catastral, spec, userId, "tercer_orden");
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
+  }
+
+  for (const spec of LEVELING_PROCESSES) {
+    await insertLeveling(catastral, spec, userId, "tercer_orden");
+    console.log(`  ✓ Proceso de nivelación: ${spec.name}`);
   }
 
   console.log("");

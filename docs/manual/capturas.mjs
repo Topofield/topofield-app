@@ -41,8 +41,9 @@ const proyecto = sql("select id from public.projects where name='Lote catastral'
 const calculado = sql("select id from public.polygonal_processes where name like 'Cuadrado con error%';");
 const cerrado = sql("select id from public.polygonal_processes where status='closed';");
 const rechazado = sql("select id from public.polygonal_processes where status='rejected';");
+const nivelacion = sql("select id from public.leveling_processes where name like 'Circuito BM-1%';");
 
-if (!proyecto || !calculado || !cerrado || !rechazado) {
+if (!proyecto || !calculado || !cerrado || !rechazado || !nivelacion) {
   throw new Error(
     "Faltan datos de seed. Corré: npx tsx --env-file=.env.local scripts/seed.mjs",
   );
@@ -96,10 +97,16 @@ await capturar("09-proceso-cerrado", { fullPage: true });
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${rechazado}`, { waitUntil: "networkidle" });
 await capturar("10-proceso-rechazado", { fullPage: true });
 
+// Nivelación
+await page.goto(`${BASE}/projects/${proyecto}/leveling/new`, { waitUntil: "networkidle" });
+await capturar("11-nueva-nivelacion");
+await page.goto(`${BASE}/projects/${proyecto}/leveling/${nivelacion}`, { waitUntil: "networkidle" });
+await capturar("12-editor-nivelacion", { fullPage: true });
+
 // Campo
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUntil: "networkidle" });
-await capturar("11-editor-movil", { fullPage: true });
+await capturar("13-editor-movil", { fullPage: true });
 
 await browser.close();
 console.log(`\nCapturas actualizadas en ${OUT}`);
