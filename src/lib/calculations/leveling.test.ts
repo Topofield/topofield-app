@@ -315,6 +315,13 @@ describe("computeLeveling — ida y vuelta", () => {
     expect(result.return?.heightDifference).toBeCloseTo(0.01, 6);
   });
 
+  it("calcula el error de cierre de la vuelta contra el BM de partida de la ida", () => {
+    // La vuelta arranca en 100.000 (known) y su desnivel es +0.010, así que
+    // cierra en 100.010 contra el BM-1 de partida (100.000): error +10.0 mm.
+    // Distinto de la discrepancia (2.0 mm), que compara ida contra vuelta.
+    expect(result.return?.errorMm).toBeCloseTo(10.0, 4);
+  });
+
   it("calcula la discrepancia entre recorridos", () => {
     // |Δh_ida − (−Δh_vuelta)| = |−0.008 + 0.010| = 0.002 m = 2.0 mm
     expect(result.discrepancyMm).toBeCloseTo(2.0, 4);

@@ -219,10 +219,22 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     adoptedHeightDifference =
       (forward.heightDifference - back.heightDifference) / 2;
 
+    // Error de cierre de la vuelta: compara su cota final contra la cota
+    // conocida del origen de la ida (en `closed` y en `link` la vuelta
+    // siempre regresa a input.startElevation). Distinto de la discrepancia,
+    // que compara ida contra vuelta entre sí. Sin cota conocida (`known ==
+    // null`, tipo `open`) no hay contra qué cerrar.
+    const returnErrorMm =
+      known != null
+        ? ((back.readings.at(-1)?.elevationCalculated ?? returnStart) -
+            input.startElevation) *
+          1000
+        : null;
+
     returnResult = {
       readings: back.readings,
       heightDifference: back.heightDifference,
-      errorMm: null,
+      errorMm: returnErrorMm,
     };
   }
 
