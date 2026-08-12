@@ -174,8 +174,34 @@ export function LevelingEditor({
     hasReadingErrors(forwardIssues) ||
     (config.hasReturnRun && hasReadingErrors(backIssues));
 
+  // La cota del BM de partida (y, en `link`, la de llegada) es el único dato
+  // de entrada que ninguna validación posterior puede atrapar: desplaza todas
+  // las cotas por igual y el error de cierre sigue dando exacto (ver
+  // `bm-selector.tsx`). La ruta `/new` ya lo exige al crear el proceso; el
+  // editor debe exigirlo también al guardar, o un campo vaciado por el
+  // usuario ("Otro (entrada libre)" sin cota) persistiría como `0` en
+  // silencio. `parseNumber` devuelve `null` tanto si el campo está vacío como
+  // si el texto no es un número válido, así que ambos casos bloquean aquí.
+  const startElevationInvalid = parseNumber(config.startBm.elevation) == null;
+  const endElevationInvalid =
+    config.type === "link" && parseNumber(config.endBm.elevation) == null;
+  const configBlocked = startElevationInvalid || endElevationInvalid;
+
   function handleSave() {
     setError(null);
+    // Defensa en profundidad: el botón ya queda disabled con configBlocked,
+    // pero handleSave no debe persistir una cota inventada (`?? 0`) bajo
+    // ninguna vía de invocación. Ver bm-selector.tsx: un 0 aquí desplaza
+    // todas las cotas del proceso en silencio y ninguna validación posterior
+    // lo detecta.
+    if (configBlocked) {
+      setError(
+        startElevationInvalid
+          ? "La cota del BM de partida es obligatoria y debe ser un número."
+          : "La cota del BM de llegada es obligatoria y debe ser un número.",
+      );
+      return;
+    }
     startTransition(async () => {
       const response = await saveLevelingProcessAction({
         processId: process.id,
@@ -345,17 +371,27 @@ export function LevelingEditor({
 
       {!readOnly && (
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {captureBlocked && (
+          {configBlocked && (
+            <span className="text-sm text-danger-500">
+              {startElevationInvalid
+                ? "La cota del BM de partida es obligatoria y debe ser un número."
+                : "La cota del BM de llegada es obligatoria y debe ser un número."}
+            </span>
+          )}
+          {!configBlocked && captureBlocked && (
             <span className="text-sm text-danger-500">
               Corrige las celdas con error para poder guardar.
             </span>
           )}
-          {!captureBlocked && dirty && (
+          {!configBlocked && !captureBlocked && dirty && (
             <span className="text-sm text-neutral-500">
               Hay cambios sin guardar.
             </span>
           )}
-          <Button onClick={handleSave} disabled={isPending || captureBlocked}>
+          <Button
+            onClick={handleSave}
+            disabled={isPending || captureBlocked || configBlocked}
+          >
             {isPending ? "Guardando…" : "Guardar"}
           </Button>
           <span aria-hidden className="h-6 w-px bg-neutral-200" />
@@ -363,7 +399,7 @@ export function LevelingEditor({
             processId={process.id}
             type={config.type}
             result={result}
-            captureBlocked={captureBlocked}
+            captureBlocked={captureBlocked || configBlocked}
             dirty={dirty}
           />
         </div>
