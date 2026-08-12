@@ -230,10 +230,18 @@ Cada recorrido se calcula de forma independiente y produce su desnivel de
 sección:
 
 ```
+Error_ida      = cota_calculada_final_ida    − cota_conocida_de_cierre
+Error_vuelta   = cota_calculada_final_vuelta − cota_de_partida_de_la_ida
 Discrepancia   = |Δh_ida − (−Δh_vuelta)|
 Tolerancia_iv  = T × √2
 Δh_adoptado    = (Δh_ida − Δh_vuelta) / 2
 ```
+
+Cada recorrido tiene **su propio error de cierre**, que se persiste en
+`forward_error_mm` y `return_error_mm`. Es un dato distinto de la discrepancia:
+el error compara un recorrido contra una cota **conocida**, mientras que la
+discrepancia compara los dos recorridos **entre sí**. El marco teórico reporta
+así su Caso 1, con «Error ida» y «Error vuelta» por separado.
 
 La corrección se aplica al recorrido de ida usando el desnivel adoptado. **No
 hay promediado por tramo.**
