@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Project, ProjectStatus, ReferencePoint } from "@/types/project";
 import type { PolygonalProcess, PolygonalStation } from "@/types/polygonal";
+import type { LevelingProcess, LevelingReading } from "@/types/leveling";
 
 type Client = SupabaseClient<Database>;
 
@@ -187,4 +188,52 @@ export async function getPolygonalStations(
 
   if (error) throw error;
   return (data ?? []) as PolygonalStation[];
+}
+
+/** Procesos de nivelación de un proyecto, del más reciente al más antiguo. */
+export async function getLevelingProcesses(
+  supabase: Client,
+  projectId: string,
+): Promise<LevelingProcess[]> {
+  const { data, error } = await supabase
+    .from("leveling_processes")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as LevelingProcess[];
+}
+
+/** Un proceso de nivelación por id, o `null` si no existe o es de otro usuario. */
+export async function getLevelingProcess(
+  supabase: Client,
+  id: string,
+): Promise<LevelingProcess | null> {
+  if (!UUID_RE.test(id)) return null;
+
+  const { data, error } = await supabase
+    .from("leveling_processes")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as LevelingProcess | null) ?? null;
+}
+
+/** Lecturas de un proceso de nivelación, ordenadas por recorrido y orden. */
+export async function getLevelingReadings(
+  supabase: Client,
+  processId: string,
+): Promise<LevelingReading[]> {
+  const { data, error } = await supabase
+    .from("leveling_readings")
+    .select("*")
+    .eq("process_id", processId)
+    .order("run_type", { ascending: true })
+    .order("reading_order", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as LevelingReading[];
 }
