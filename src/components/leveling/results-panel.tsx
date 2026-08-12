@@ -75,46 +75,55 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
       </Card>
 
       {/* Bloque 2: cierre. Oculto en `open`, que no cierra contra nada. */}
-      {type !== "open" &&
-        result.closureErrorMm != null &&
-        result.toleranceMm != null &&
-        result.meetsTolerance != null && (
-          <Card title="Cierre">
-            <div className="flex flex-col gap-4">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-                <div>
-                  <dt className="text-neutral-500">Error de cierre</dt>
-                  <dd className="font-mono tabular-nums text-neutral-900">
-                    {formatMm(result.closureErrorMm)} mm
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-neutral-500">Tolerancia (K·√D)</dt>
-                  <dd className="font-mono tabular-nums text-neutral-900">
-                    {formatMm(result.toleranceMm)} mm
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-neutral-500">Cumplimiento</dt>
-                  <dd>
-                    <StatusIndicator
-                      status={result.meetsTolerance ? "ok" : "danger"}
-                      label={result.meetsTolerance ? "Cumple" : "No cumple"}
-                    />
-                  </dd>
-                </div>
-              </dl>
-              {closure.messages.map((message) => (
-                <Alert
-                  key={message}
-                  variant={closure.mustReject ? "error" : "warning"}
-                >
-                  {message}
-                </Alert>
-              ))}
-            </div>
-          </Card>
-        )}
+      {type !== "open" && result.closureErrorMm != null && (
+        <Card title="Cierre">
+          <div className="flex flex-col gap-4">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="text-neutral-500">Error de cierre</dt>
+                <dd className="font-mono tabular-nums text-neutral-900">
+                  {formatMm(result.closureErrorMm)} mm
+                </dd>
+              </div>
+              {/* Sin distancia total no hay con qué evaluar K·√D: no se
+                  muestra ni tolerancia ni semáforo, solo el aviso de abajo. */}
+              {result.toleranceMm != null && result.meetsTolerance != null && (
+                <>
+                  <div>
+                    <dt className="text-neutral-500">Tolerancia (K·√D)</dt>
+                    <dd className="font-mono tabular-nums text-neutral-900">
+                      {formatMm(result.toleranceMm)} mm
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-neutral-500">Cumplimiento</dt>
+                    <dd>
+                      <StatusIndicator
+                        status={result.meetsTolerance ? "ok" : "danger"}
+                        label={result.meetsTolerance ? "Cumple" : "No cumple"}
+                      />
+                    </dd>
+                  </div>
+                </>
+              )}
+            </dl>
+            {result.toleranceMm == null && (
+              <p className="text-sm text-neutral-500">
+                Indica la distancia total del recorrido para evaluar la
+                tolerancia.
+              </p>
+            )}
+            {closure.messages.map((message) => (
+              <Alert
+                key={message}
+                variant={closure.mustReject ? "error" : "warning"}
+              >
+                {message}
+              </Alert>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Bloque 3: ida y vuelta. Solo si hay recorrido de vuelta. */}
       {result.return != null && (
@@ -174,7 +183,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                 </dd>
               </div>
             </dl>
-            {result.meetsDiscrepancy != null && (
+            {result.meetsDiscrepancy != null ? (
               <StatusIndicator
                 status={result.meetsDiscrepancy ? "ok" : "danger"}
                 label={
@@ -183,6 +192,11 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                     : "Discrepancia fuera de tolerancia"
                 }
               />
+            ) : (
+              <p className="text-sm text-neutral-500">
+                Indica la distancia total del recorrido para evaluar la
+                tolerancia.
+              </p>
             )}
           </div>
         </Card>

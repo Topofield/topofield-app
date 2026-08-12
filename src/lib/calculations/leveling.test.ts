@@ -352,3 +352,96 @@ describe("computeLeveling — ida y vuelta", () => {
     expect(strict.meetsDiscrepancy).toBe(false);
   });
 });
+
+describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea 11)", () => {
+  // Un proceso recién creado no tiene distancia total: el formulario de
+  // creación no la pide (vive solo en el editor), así que `buildInput` la
+  // convierte en `Number.NaN`. Antes del fix, `levelingTolerance(order, NaN)`
+  // propagaba `NaN` a `toleranceMm`, y `meetsTolerance` salía `false` sin más
+  // (toda comparación con NaN es false) — un "no cumple" que no significaba
+  // nada, visible en el panel como un literal "NaN mm" antes de escribir una
+  // sola lectura. El error de cierre SÍ debe seguir calculándose: no depende
+  // de la distancia.
+
+  it("con totalDistanceKm NaN dejar tolerancia y cumplimiento en null, sin tocar el error de cierre", () => {
+    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: Number.NaN });
+    expect(result.closureErrorMm).toBeCloseTo(-8.0, 4);
+    expect(result.toleranceMm).toBeNull();
+    expect(result.meetsTolerance).toBeNull();
+  });
+
+  it("con totalDistanceKm = 0 dejar tolerancia y cumplimiento en null", () => {
+    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: 0 });
+    expect(result.closureErrorMm).toBeCloseTo(-8.0, 4);
+    expect(result.toleranceMm).toBeNull();
+    expect(result.meetsTolerance).toBeNull();
+  });
+
+  it("con totalDistanceKm negativo dejar tolerancia y cumplimiento en null", () => {
+    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: -1 });
+    expect(result.toleranceMm).toBeNull();
+    expect(result.meetsTolerance).toBeNull();
+  });
+
+  it("no aplica corrección proporcional sin tolerancia calculable", () => {
+    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: Number.NaN });
+    for (const reading of result.forward.readings) {
+      expect(reading.correctionApplied).toBe(0);
+      expect(reading.elevationCorrected).toBeCloseTo(
+        reading.elevationCalculated,
+        6,
+      );
+    }
+  });
+
+  it("en ida y vuelta, con totalDistanceKm NaN deja discrepancyToleranceMm y meetsDiscrepancy en null", () => {
+    const returnRun: ReadingInput[] = [
+      r("BM-1", "bm", 1.2, null, 0.0),
+      r("PV-1", "pc", 1.6, 0.9, 0.45),
+      r("BM-1", "bm", null, 1.89, 0.9),
+    ];
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      totalDistanceKm: Number.NaN,
+      return: returnRun,
+    });
+    // La discrepancia en sí (no depende de K, solo de los dos desniveles) se
+    // sigue calculando; solo la tolerancia contra la que se compara queda null.
+    expect(result.discrepancyMm).toBeCloseTo(2.0, 4);
+    expect(result.discrepancyToleranceMm).toBeNull();
+    expect(result.meetsDiscrepancy).toBeNull();
+  });
+
+  it("no produce NaN en ningún campo numérico del resultado", () => {
+    const returnRun: ReadingInput[] = [
+      r("BM-1", "bm", 1.2, null, 0.0),
+      r("PV-1", "pc", 1.6, 0.9, 0.45),
+      r("BM-1", "bm", null, 1.89, 0.9),
+    ];
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      totalDistanceKm: Number.NaN,
+      return: returnRun,
+    });
+    const numericFields = [
+      result.closureErrorMm,
+      result.toleranceMm,
+      result.discrepancyMm,
+      result.discrepancyToleranceMm,
+      result.adoptedHeightDifference,
+      result.forward.heightDifference,
+      result.forward.errorMm,
+      result.return?.heightDifference ?? null,
+      result.return?.errorMm ?? null,
+    ];
+    for (const value of numericFields) {
+      if (value != null) {
+        expect(Number.isNaN(value)).toBe(false);
+      }
+    }
+    for (const reading of result.forward.readings) {
+      expect(Number.isNaN(reading.correctionApplied)).toBe(false);
+      expect(Number.isNaN(reading.elevationCorrected)).toBe(false);
+    }
+  });
+});

@@ -162,10 +162,30 @@ function knownClosingElevation(input: LevelingInput): number | null {
  * mientras las cotas corregidas quedan mal calculadas. Rechazar o exigir esos
  * datos en captura es responsabilidad de la capa de validadores
  * (`src/lib/validators/leveling.ts`, Tarea 7), no del motor de cálculo.
+ *
+ * `totalDistanceKm` no finito o ≤ 0 (p. ej. `Number.NaN`, el valor con el
+ * que nace un proceso recién creado, antes de que el editor lo complete) dejan
+ * `toleranceMm`/`meetsTolerance` y `discrepancyToleranceMm`/`meetsDiscrepancy`
+ * en `null`: sin distancia no hay con qué evaluar K·√D. `closureErrorMm` (y
+ * el error de cierre de la vuelta) NO dependen de la distancia y se calculan
+ * igual.
  */
 export function computeLeveling(input: LevelingInput): LevelingResult {
   const forward = computeRun(input.forward, input.startElevation);
   const known = knownClosingElevation(input);
+
+  // El formulario de creación no pide la distancia total (vive solo en el
+  // editor), así que un proceso recién creado llega aquí con
+  // `totalDistanceKm: Number.NaN` (ver `buildInput` en `leveling-editor.tsx`).
+  // Sin una distancia finita y positiva no hay con qué evaluar K·√D: NO se
+  // puede calcular la tolerancia, así que se deja en `null` en vez de dejar
+  // que `levelingTolerance` propague `NaN` (que además vuelve `meetsTolerance`
+  // `false` sin más — un "no cumple" que no significa nada porque toda
+  // comparación con `NaN` es `false`). El error de cierre SÍ es independiente
+  // de la distancia (compara cotas, no depende de K·√D) y se sigue calculando
+  // igual.
+  const hasValidDistance =
+    Number.isFinite(input.totalDistanceKm) && input.totalDistanceKm > 0;
 
   let closureErrorMm: number | null = null;
   let toleranceMm: number | null = null;
@@ -176,17 +196,20 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     const lastElevation =
       forward.readings.at(-1)?.elevationCalculated ?? input.startElevation;
     closureErrorMm = (lastElevation - known) * 1000;
-    toleranceMm = levelingTolerance(input.order, input.totalDistanceKm);
-    meetsTolerance = Math.abs(closureErrorMm) <= toleranceMm;
 
-    // Solo se compensa un trabajo que cumple la tolerancia. Si no cumple, se
-    // repite el levantamiento (marco teórico § 8.1).
-    if (meetsTolerance) {
-      readings = applyProportionalCorrection(
-        forward.readings,
-        closureErrorMm,
-        input.totalDistanceKm,
-      );
+    if (hasValidDistance) {
+      toleranceMm = levelingTolerance(input.order, input.totalDistanceKm);
+      meetsTolerance = Math.abs(closureErrorMm) <= toleranceMm;
+
+      // Solo se compensa un trabajo que cumple la tolerancia. Si no cumple,
+      // se repite el levantamiento (marco teórico § 8.1).
+      if (meetsTolerance) {
+        readings = applyProportionalCorrection(
+          forward.readings,
+          closureErrorMm,
+          input.totalDistanceKm,
+        );
+      }
     }
   }
 
@@ -213,9 +236,11 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
 
     discrepancyMm =
       Math.abs(forward.heightDifference + back.heightDifference) * 1000;
-    discrepancyToleranceMm =
-      levelingTolerance(input.order, input.totalDistanceKm) * Math.SQRT2;
-    meetsDiscrepancy = discrepancyMm <= discrepancyToleranceMm;
+    if (hasValidDistance) {
+      discrepancyToleranceMm =
+        levelingTolerance(input.order, input.totalDistanceKm) * Math.SQRT2;
+      meetsDiscrepancy = discrepancyMm <= discrepancyToleranceMm;
+    }
     adoptedHeightDifference =
       (forward.heightDifference - back.heightDifference) / 2;
 
