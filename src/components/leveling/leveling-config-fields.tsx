@@ -68,7 +68,22 @@ export function LevelingConfigFields({
           options={LEVELING_TYPE_OPTIONS}
           value={value.type}
           disabled={disabled}
-          onChange={(e) => set("type", e.target.value as LevelingType)}
+          onChange={(e) => {
+            const nextType = e.target.value as LevelingType;
+            // Al salir de "link" el BmSelector de llegada se desmonta, pero
+            // su valor vive en este padre y no se limpia solo. Si se vuelve
+            // a "link" después, el selector remonta con selectedId vacío
+            // (muestra "Selecciona…") mientras los inputs seguirían
+            // arrastrando el BM viejo del padre — un dato invisible en el
+            // <select> que igual se guardaría al enviar. Se resetea aquí,
+            // en el mismo evento que cambia el tipo, para que nunca exista
+            // un estado intermedio con endBm rancio.
+            onChange({
+              ...value,
+              type: nextType,
+              endBm: nextType === "link" ? value.endBm : EMPTY_BM_VALUE,
+            });
+          }}
         />
       </div>
 
