@@ -12,16 +12,19 @@
 // referencia del proyecto (en vez de digitarla a mano) elimina el error de
 // transcripción en ese punto ciego.
 //
-// CUIDADO AL MONTARLO CONDICIONALMENTE: la selección (`selectedId`) es estado
-// local de este componente, pero el valor (código y cota) vive en el padre.
-// Si se desmonta y vuelve a montar, `selectedId` arranca vacío mientras el
-// padre conserva el BM anterior: el <select> aparece sin elegir y los campos
-// muestran datos que el usuario ya no confirmó — y se envían igual. Pasó con
-// el BM de llegada al alternar el tipo de nivelación, y llegó a persistirse.
-// Quien lo monte tras una condición debe limpiar el valor en el padre, en el
-// mismo evento que dispara el desmontaje (ver `leveling-config-fields.tsx`).
+// La selección del <select> (`selectedId`) NO es estado local: se deriva en
+// cada render a partir de `value` y `points` (buscando el punto del catálogo
+// cuyo código y cota coincidan). Antes era un `useState` que arrancaba vacío
+// sin importar qué trajera `value` — así que al reabrir un proceso guardado
+// con un BM del catálogo, el <select> mostraba el placeholder y, peor, los
+// campos Código/Cota quedaban DESHABILITADOS (`disabled` exige
+// `isFromCatalog || isOther`, y con `selectedId` vacío ninguno de los dos era
+// cierto), bloqueando la edición de un proceso en borrador. Derivarlo en
+// render —igual que el resto del proyecto deriva estado sin `useEffect`—
+// elimina esa clase de bug de raíz: no hay estado que sincronizar, así que
+// tampoco hay forma de que se desincronice al montar, desmontar o recibir un
+// `value` inicial.
 
-import { useState } from "react";
 import { Input, Select } from "@/components/design-system";
 import type { ReferencePoint } from "@/types/project";
 
@@ -42,6 +45,19 @@ interface BmSelectorProps {
   disabled?: boolean;
 }
 
+/** El punto del catálogo cuyo código y cota coinciden con `value`, o `undefined`. */
+function matchingPoint(
+  points: ReferencePoint[],
+  value: BmValue,
+): ReferencePoint | undefined {
+  if (value.code.trim() === "") return undefined;
+  return points.find(
+    (p) =>
+      p.code === value.code &&
+      (p.elevation != null ? String(p.elevation) : "") === value.elevation,
+  );
+}
+
 /**
  * Select de BM del catálogo del proyecto + opción "Otro (entrada libre)".
  * Al elegir un BM, código y cota se rellenan y quedan de solo lectura. Al
@@ -54,14 +70,14 @@ export function BmSelector({
   onChange,
   disabled,
 }: BmSelectorProps) {
-  // Selección actual del <select>: id del punto elegido, o "otro"/vacío.
-  const [selectedId, setSelectedId] = useState<string>("");
-
-  const isOther = selectedId === OTHER_VALUE;
-  const isFromCatalog = selectedId !== "" && !isOther;
+  // Selección del <select>: derivada de `value`, no estado propio.
+  const catalogMatch = matchingPoint(points, value);
+  const hasValue = value.code.trim() !== "" || value.elevation.trim() !== "";
+  const isFromCatalog = catalogMatch != null;
+  const isOther = hasValue && !isFromCatalog;
+  const selectedId = isFromCatalog ? catalogMatch.id : isOther ? OTHER_VALUE : "";
 
   function handleSelect(id: string) {
-    setSelectedId(id);
     if (id === OTHER_VALUE || id === "") {
       onChange(EMPTY_BM_VALUE);
       return;
