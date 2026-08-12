@@ -91,6 +91,49 @@ export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
   return issues.some((i) => Object.keys(i.errors).length > 0);
 }
 
+/**
+ * Valida una libreta completa (un recorrido), añadiendo a
+ * `validateReadingCapture` el único error que depende de la POSICIÓN de la
+ * fila dentro del recorrido: la lectura atrás de la fila `bm` inicial.
+ *
+ * Por qué hace falta: `backsightDisabled` en `ReadingsTable` deshabilita la
+ * celda de L.At en la última fila `bm` (la de cierre, que por definición no
+ * la lleva), pero la habilita en cualquier otra — incluida la primera fila
+ * en el instante en que el usuario la marca como `bm` antes de agregar el
+ * resto de la libreta. En ese instante es a la vez primera y última, así que
+ * queda deshabilitada; al agregar más filas se habilita pero arranca vacía,
+ * y nada lo señalaba: `validateReadingCapture` no exige `backsight` en
+ * ninguna fila porque no conoce su posición. El resultado es una AI en
+ * blanco y todas las cotas desplazadas por igual, con el proceso guardable
+ * igual. Medido en verificación de la Tarea 10.
+ *
+ * La fila `bm` FINAL (última del recorrido) es la única excepción legítima:
+ * por definición no lleva L.At, así que aquí no se exige.
+ */
+export function validateRunCapture(
+  readings: ReadingInput[],
+): ReadingCaptureIssues[] {
+  const lastIndex = readings.length - 1;
+  return readings.map((reading, index) => {
+    const issues = validateReadingCapture(reading);
+    // Toda fila `bm` que no sea la última de cierre abre una armada y por
+    // tanto necesita L.At. La última `bm` es la única excepción legítima:
+    // por definición cierra el recorrido y no lleva lectura atrás.
+    const mustHaveBacksight = reading.pointType === "bm" && index !== lastIndex;
+    if (mustHaveBacksight && reading.backsight == null) {
+      return {
+        ...issues,
+        errors: {
+          ...issues.errors,
+          backsight:
+            "Este BM necesita la lectura atrás: sin ella la AI de su armada queda vacía y todas las cotas siguientes se desplazan.",
+        },
+      };
+    }
+    return issues;
+  });
+}
+
 // --- Capa 2: validación de cierre (§ 5.2) -------------------------------------
 
 export interface ClosureEvaluation {

@@ -13,6 +13,7 @@ import {
   evaluateLevelingClosure,
   hasReadingErrors,
   validateReadingCapture,
+  validateRunCapture,
 } from "./leveling";
 import type { LevelingResult, ReadingInput } from "@/types/leveling";
 
@@ -105,6 +106,48 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
         distanceAccumulatedKm: null,
       }));
     expect(issues.errors.distanceAccumulatedKm).toBeUndefined();
+  });
+});
+
+describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () => {
+  it("rechaza una fila bm inicial sin lectura atrás", () => {
+    const readings = [
+      reading({ pointCode: "BM-1", pointType: "bm", backsight: null, distanceAccumulatedKm: 0 }),
+      reading({ pointCode: "PC-1", pointType: "pc" }),
+      reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
+    ];
+    const issues = validateRunCapture(readings);
+    expect(issues.at(0)?.errors.backsight).toBeDefined();
+  });
+
+  it("no rechaza una fila bm final sin lectura atrás (es lo correcto: cierra el recorrido)", () => {
+    const readings = [
+      reading({ pointCode: "BM-1", pointType: "bm", foresight: null, distanceAccumulatedKm: 0 }),
+      reading({ pointCode: "PC-1", pointType: "pc" }),
+      reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
+    ];
+    const issues = validateRunCapture(readings);
+    expect(issues.at(2)?.errors.backsight).toBeUndefined();
+  });
+
+  it("acepta una fila bm inicial con lectura atrás presente", () => {
+    const readings = [
+      reading({ pointCode: "BM-1", pointType: "bm", foresight: null, distanceAccumulatedKm: 0 }),
+      reading({ pointCode: "PC-1", pointType: "pc" }),
+      reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
+    ];
+    const issues = validateRunCapture(readings);
+    expect(issues.at(0)?.errors.backsight).toBeUndefined();
+  });
+
+  it("conserva los demás errores de validateReadingCapture (p. ej. código vacío)", () => {
+    const readings = [
+      reading({ pointCode: "", pointType: "bm", backsight: null, distanceAccumulatedKm: 0 }),
+      reading({ pointCode: "BM-2", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.5 }),
+    ];
+    const issues = validateRunCapture(readings);
+    expect(issues.at(0)?.errors.pointCode).toBeDefined();
+    expect(issues.at(0)?.errors.backsight).toBeDefined();
   });
 });
 

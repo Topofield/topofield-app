@@ -7,7 +7,7 @@ import { computeLeveling } from "@/lib/calculations/leveling";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   hasReadingErrors,
-  validateReadingCapture,
+  validateRunCapture,
   type ReadingCaptureIssues,
 } from "@/lib/validators/leveling";
 import { saveLevelingProcessAction } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
@@ -153,12 +153,15 @@ export function LevelingEditor({
     [config, totalDistanceKm, forward, back, precisionOrder],
   );
 
+  // validateRunCapture (no validateReadingCapture fila a fila) porque el
+  // error de la fila `bm` inicial sin L.At depende de su POSICIÓN en el
+  // recorrido, no solo de sus propios campos.
   const forwardIssues = useMemo<ReadingCaptureIssues[]>(
-    () => forward.map((r) => validateReadingCapture(draftToReadingInput(r))),
+    () => validateRunCapture(forward.map(draftToReadingInput)),
     [forward],
   );
   const backIssues = useMemo<ReadingCaptureIssues[]>(
-    () => back.map((r) => validateReadingCapture(draftToReadingInput(r))),
+    () => validateRunCapture(back.map(draftToReadingInput)),
     [back],
   );
 
