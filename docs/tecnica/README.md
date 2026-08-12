@@ -698,14 +698,45 @@ No se valida porque compara `d_atrás` con `d_adelante` dentro de una armada y
 Implementarlo exige dos columnas por armada o un modelo por armada en vez de
 por punto: toca el modelo de datos en producción.
 
-**El cierre y la captura no se revalidan en el servidor.**
-`closeLevelingProcessAction` recibe `asRejected` del cliente y no recalcula la
-evaluación de cierre; `saveLevelingProcessAction` tampoco revalida las
-lecturas. La clave publicable de Supabase es pública por diseño, así que la
-regla de negocio depende hoy de la UI. **Afecta igual a poligonal (Fase 3)**,
-así que conviene resolverlo para ambos módulos a la vez. Los triggers de la
-base sí protegen la inmutabilidad de un proceso ya cerrado; lo que no está
-protegido es el acto de cerrarlo con el estado equivocado.
+**La captura no se revalida en el servidor** (el cierre sí, desde 2026-08-12).
+`saveLevelingProcessAction` recalcula los resultados con las funciones puras
+—así que los números persistidos son del servidor— pero no revalida las
+lecturas contra `validateRunCapture`. La clave publicable de Supabase es
+pública por diseño, así que una llamada directa a la acción podría guardar una
+libreta que la interfaz habría bloqueado. Afecta igual a poligonal. No se
+cerró junto con el cierre porque exige reconstruir el `ReadingInput[]` /
+`StationInput[]` en el servidor y decidir qué hacer con procesos históricos
+que quizá no pasarían la validación actual.
+
+**Cerrado — la derivación del estado de cierre vive en el servidor.** Antes,
+`close*ProcessAction` usaba el `asRejected` que enviaba el cliente, de modo que
+una llamada directa podía cerrar como `closed` un proceso fuera de tolerancia.
+Hoy el servidor lo deriva de `meets_tolerance`, que él mismo escribió al
+guardar: si no cumple, queda `rejected` aunque el cliente pida lo contrario.
+La asimetría es deliberada — el cliente puede ser más estricto (rechazar un
+trabajo que sí cumple, por razones que el sistema no ve), nunca más laxo. La
+lógica es pura y está en `close-status.ts` de cada módulo, con tests. Único
+matiz: `open` y `open_uncontrolled` tienen `meets_tolerance` en `null` de forma
+estructural (no hay tolerancia que evaluar), así que para ellos el criterio es
+solo haber llegado a `calculated`.
+
+**Antes de desplegar, comprobar en producción** que no existan procesos en
+estado `calculated` con `meets_tolerance` nulo fuera de los tipos que no
+evalúan tolerancia: la nueva regla les impediría cerrarse. No debería haberlos
+por cómo calculan `computeClosed`/`computeOpenControlled`, pero no se pudo
+auditar la base real desde el entorno local. La consulta (con `--linked` para
+que apunte a la nube, no a la base local):
+
+```sql
+select 'polygonal' as modulo, id, type, status from public.polygonal_processes
+ where status='calculated' and meets_tolerance is null and type <> 'open_uncontrolled'
+union all
+select 'leveling', id, type, status from public.leveling_processes
+ where status='calculated' and meets_tolerance is null and type <> 'open';
+```
+
+Debe devolver cero filas. Si devuelve alguna, esos procesos hay que
+recalcularlos y guardarlos antes de desplegar, o no podrán cerrarse.
 
 **El desnivel adoptado (`adoptedHeightDifference`) no alimenta la
 compensación.** `computeLeveling` lo calcula como el promedio de ida y vuelta
