@@ -67,8 +67,9 @@ Generar el timestamp con `date -u +%Y%m%d%H%M%S` y crear `supabase/migrations/<t
 --   · point_type (decisión #7): los puntos intermedios no propagan cota ni
 --     entran en la comprobación aritmética. Sin distinguirlos el cálculo es
 --     incorrecto.
---   · distance_m (decisión #8): distancia por visual, necesaria para validar el
---     equilibrado atrás/adelante. Guardar solo la acumulada lo impediría.
+--   · distance_m (decisión #8): distancia de la visual, dato de campo. NOTA: se
+--     añadió pensando en validar el equilibrado atrás/adelante, pero una sola
+--     columna por fila no basta para eso (ver deuda técnica del PRD de fase).
 --   · correction_method con CHECK explícito (decisión #3): hoy un solo método.
 -- ============================================================================
 
@@ -1342,18 +1343,12 @@ export interface ValidationIssue {
 const MIN_READING = 0;
 const MAX_READING = 4;
 
-/**
- * Diferencia máxima admisible entre la distancia de la visual atrás y la de
- * adelante, en metros. El equilibrado de visuales cancela de una vez la
- * curvatura terrestre, la refracción atmosférica y el error de colimación.
- * Es calidad de campo, no error de captura: se reporta como advertencia.
- */
-const SIGHT_BALANCE_LIMIT_M: Record<PrecisionOrder, number> = {
-  primer_orden: 2,
-  segundo_orden: 3,
-  tercer_orden: 4,
-  ordinario: 6,
-};
+// El equilibrado de visuales (|d_atrás − d_adelante| ≤ 2/3/4 m según orden) NO
+// se valida en esta fase: es una propiedad de la ARMADA, que compara la
+// distancia a la mira de atrás con la de adelante, y `distanceM` guarda un solo
+// valor por fila. Con un único número no hay diferencia que calcular; compararlo
+// contra el límite haría saltar la advertencia en toda visual normal (40 m
+// contra un límite de 4 m). Registrado como deuda técnica en el PRD de fase.
 
 /** Capa 1 — validación en captura, por fila de la libreta (§ 5.1). */
 export function validateReading(
@@ -1448,8 +1443,6 @@ export function validateLevelingClosure(
 
   return issues;
 }
-
-export { SIGHT_BALANCE_LIMIT_M };
 ```
 
 - [ ] **Step 5: Ejecutar los tests**

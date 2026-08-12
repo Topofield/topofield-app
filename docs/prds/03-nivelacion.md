@@ -135,7 +135,7 @@ principal, que se corrige en el mismo commit de apertura de esta fase.
 | 5 | BM de partida/llegada por **selector desde `reference_points`** (`type='bm'`) **con fallback a entrada libre**. | La tabla ya tiene `elevation` y el tipo `bm`: el encaje es exacto, y da por fin un consumidor al catálogo de la Fase 2. Una cota de partida errónea desplaza todas las cotas por igual y **cierra perfecto**, así que el error es invisible al control de cierre. Diverge de la decisión #6 de Fase 3 porque allí el encaje era parcial. |
 | 6 | Libreta con **una fila por punto** (no por armada). | Es lo que fijan el `§3.2` (`leveling_readings` tiene ambas lecturas por fila), el marco teórico y la práctica de campo. El objetivo del producto es digitalizar una libreta que el topógrafo ya conoce. |
 | 7 | Columna nueva **`point_type`** (`bm` / `pc` / `intermediate`). | Los puntos intermedios (radiaciones) solo reciben L.Ad, cuelgan de la AI vigente, no propagan cota y **quedan fuera de la comprobación aritmética y de la compensación**. Sin distinguirlos el motor de cálculo es incorrecto. El `§3.2` no los modela. |
-| 8 | Columna nueva **`distance_m`** por visual (atrás/adelante), además de la acumulada. | Guardar solo la distancia acumulada impide validar el equilibrado de visuales, que es lo que cancela curvatura, refracción y colimación. Añadirla después obligaría a migrar datos de producción. |
+| 8 | Columna nueva **`distance_m`**, además de la acumulada. | Se añadió pensando en validar el equilibrado de visuales. **Corregido durante la Tarea 7:** una sola columna por fila no basta para eso — el equilibrado compara `d_atrás` con `d_adelante` *dentro de una armada*, y eso exige dos distancias por armada, no una por fila. La columna se conserva porque registra la distancia de la visual (dato de campo útil y ya en producción), pero el equilibrado **no se valida en esta fase**. Ver «Deuda técnica». |
 | 9 | La **D de la tolerancia** `K·√D` es la distancia **en un solo sentido**, no ida+vuelta. | Contradicción real entre fuentes: FGCS distingue `D` (longitud de sección en un sentido) de `F` (perímetro de circuito); IGAC usa la distancia nivelada de la sección. Usar el recorrido total inflaría la tolerancia en √2 (≈41 %). Se fija como constante documentada. |
 | 10 | La **AI se persiste** como columna calculada. | Coherente con la decisión #11 de la Fase 3: los informes de la Fase 6 leen sin recalcular. |
 | 11 | El editor es **client component** con cálculo en vivo; el servidor **recalcula** al guardar. | Patrón heredado de la Fase 3: una sola fuente de verdad para lo persistido. |
@@ -150,7 +150,7 @@ Migración nueva `<timestamp>_leveling.sql` con `leveling_processes` y
 -- en leveling_readings
 point_type TEXT NOT NULL DEFAULT 'pc'
   CHECK (point_type IN ('bm', 'pc', 'intermediate')),
-distance_m DECIMAL(8,1),          -- distancia de la visual (equilibrado)
+distance_m DECIMAL(8,1),          -- distancia de la visual (dato de campo)
 
 -- en leveling_processes
 correction_method TEXT NOT NULL DEFAULT 'proportional_distance'
@@ -250,9 +250,17 @@ recorrido**, que es el caso que rompe la implementación ingenua.
 
 - **Capa captura** (`§5.1`): lectura de mira < 0 o > 4.000 m → error, bloquea
   guardar; L.At = L.Ad exacta → advertencia; campo requerido vacío → error.
-  Se añade el **equilibrado de visuales** (`|d_atrás − d_adelante|` > 2/3/4 m
-  según orden) como **advertencia**, no bloqueo: es calidad de campo, no error
-  de captura.
+  Se añade **distancia acumulada obligatoria** en `bm` y `pc` → error. Sin ella
+  la corrección proporcional trata el punto como si estuviera en el origen y lo
+  deja sin compensar en silencio, mientras el proceso sigue reportando que
+  cumple la tolerancia (medido en la Tarea 5: el BM final cerraba en 99.992 en
+  vez de 100.000). Los `intermediate` sí pueden traerla nula: no se compensan.
+
+  **El equilibrado de visuales queda fuera de esta fase.** Es una propiedad de
+  la armada — compara la distancia a la mira de atrás con la de adelante — y
+  `distance_m` guarda un solo valor por fila. Validarlo exigiría capturar ambas
+  distancias por armada, un cambio de modelo de datos que no entra aquí. Ver
+  «Deuda técnica».
 - **Capa cierre** (`§5.2`): error > tolerancia → bloquea el cierre, permite
   cerrar como `rejected`; enlace fuera de tolerancia → banner rojo; discrepancia
   ida/vuelta > `T√2` → banner amarillo; fallo de la comprobación aritmética →
@@ -305,6 +313,26 @@ recorrido**, que es el caso que rompe la implementación ingenua.
 | n | Cerrar registra `closed_at`/`closed_by`, pone `status=closed` y deja solo lectura; fuera de tolerancia puede cerrarse como `rejected` |
 | o | RLS: un usuario no accede a procesos de proyectos ajenos (404) |
 | p | Un proceso `closed` rechaza la mutación **también vía API REST directa** (trigger de base) |
+
+## Deuda técnica registrada
+
+**Equilibrado de visuales sin validar.** La regla de campo más importante de la
+nivelación de precisión es mantener distancias iguales del nivel a las miras de
+atrás y adelante: cancela de una vez la curvatura terrestre, la refracción
+atmosférica y el error de colimación. Los límites son 2/3/4 m por estación
+según orden (IGAC), sobre la **diferencia** `|d_atrás − d_adelante|`.
+
+No se valida en esta fase porque `leveling_readings.distance_m` guarda una sola
+distancia por fila, y el equilibrado es una propiedad de la **armada**, que
+necesita las dos. Implementarlo exige decidir dónde viven esas dos distancias:
+o dos columnas nuevas (`distance_backsight_m`, `distance_foresight_m`), o un
+modelo por armada en lugar de por punto. Ambas opciones tocan el modelo de
+datos en producción, así que la decisión merece su propio ciclo.
+
+Se detectó en la Tarea 7, al ver que la primera implementación comparaba la
+distancia de la visual contra el límite de la diferencia: una visual normal de
+40 m habría disparado la advertencia en todas las filas de tercer orden
+(límite 4 m). Una advertencia que salta siempre enseña a ignorarlas.
 
 ## Riesgos conocidos
 
