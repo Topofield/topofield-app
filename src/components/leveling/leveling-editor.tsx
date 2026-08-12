@@ -18,6 +18,7 @@ import {
   type LevelingProcess,
   type LevelingReading,
   type ReadingInput,
+  type RunType,
 } from "@/types/leveling";
 import type { PrecisionOrder, ReferencePoint } from "@/types/project";
 import {
@@ -26,6 +27,8 @@ import {
 } from "./leveling-config-fields";
 import type { BmValue } from "./bm-selector";
 import { ReadingsTable, type ReadingDraftState } from "./readings-table";
+import { ResultsPanel } from "./results-panel";
+import { RunTabs } from "./run-tabs";
 
 const STATUS_TONE: Record<
   ProcessStatus,
@@ -139,6 +142,7 @@ export function LevelingEditor({
   const [back, setBack] = useState(() =>
     initialReadings.filter((r) => r.run_type === "return").map(readingToDraft),
   );
+  const [activeRun, setActiveRun] = useState<RunType>("forward");
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -296,37 +300,47 @@ export function LevelingEditor({
         </div>
       </details>
 
-      <Card title={`Libreta — ${RUN_TYPE_LABELS.forward}`}>
-        <ReadingsTable
-          readings={forward}
-          computed={result.forward.readings}
-          issues={forwardIssues}
-          disabled={readOnly}
-          onChange={(v) => {
-            setForward(v);
-            setDirty(true);
-            setSaveMessage(null);
-          }}
-        />
+      <Card
+        title={
+          config.hasReturnRun
+            ? "Libreta"
+            : `Libreta — ${RUN_TYPE_LABELS.forward}`
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {config.hasReturnRun && (
+            <RunTabs active={activeRun} onChange={setActiveRun} />
+          )}
+          {(!config.hasReturnRun || activeRun === "forward") && (
+            <ReadingsTable
+              readings={forward}
+              computed={result.forward.readings}
+              issues={forwardIssues}
+              disabled={readOnly}
+              onChange={(v) => {
+                setForward(v);
+                setDirty(true);
+                setSaveMessage(null);
+              }}
+            />
+          )}
+          {config.hasReturnRun && activeRun === "return" && (
+            <ReadingsTable
+              readings={back}
+              computed={result.return?.readings ?? []}
+              issues={backIssues}
+              disabled={readOnly}
+              onChange={(v) => {
+                setBack(v);
+                setDirty(true);
+                setSaveMessage(null);
+              }}
+            />
+          )}
+        </div>
       </Card>
 
-      {config.hasReturnRun && (
-        <Card title={`Libreta — ${RUN_TYPE_LABELS.return}`}>
-          <ReadingsTable
-            readings={back}
-            computed={result.return?.readings ?? []}
-            issues={backIssues}
-            disabled={readOnly}
-            onChange={(v) => {
-              setBack(v);
-              setDirty(true);
-              setSaveMessage(null);
-            }}
-          />
-        </Card>
-      )}
-
-      {/* El panel de resultados y las tabs de ida/vuelta llegan en la Tarea 11. */}
+      <ResultsPanel result={result} type={config.type} />
 
       {!readOnly && (
         <div className="flex flex-wrap items-center justify-end gap-3">
