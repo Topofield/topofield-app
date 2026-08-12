@@ -11,6 +11,15 @@
 // posterior puede atrapar. Forzar la elección desde el catálogo de puntos de
 // referencia del proyecto (en vez de digitarla a mano) elimina el error de
 // transcripción en ese punto ciego.
+//
+// CUIDADO AL MONTARLO CONDICIONALMENTE: la selección (`selectedId`) es estado
+// local de este componente, pero el valor (código y cota) vive en el padre.
+// Si se desmonta y vuelve a montar, `selectedId` arranca vacío mientras el
+// padre conserva el BM anterior: el <select> aparece sin elegir y los campos
+// muestran datos que el usuario ya no confirmó — y se envían igual. Pasó con
+// el BM de llegada al alternar el tipo de nivelación, y llegó a persistirse.
+// Quien lo monte tras una condición debe limpiar el valor en el padre, en el
+// mismo evento que dispara el desmontaje (ver `leveling-config-fields.tsx`).
 
 import { useState } from "react";
 import { Input, Select } from "@/components/design-system";
