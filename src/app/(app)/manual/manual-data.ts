@@ -84,8 +84,21 @@ export const CAPTURAS = {
     width: 2560,
     height: 2904,
   },
+  nuevaNivelacion: {
+    src: "/manual/11-nueva-nivelacion.png",
+    alt: "Formulario de nuevo proceso de nivelación, con el tipo y el BM de partida.",
+    width: 2560,
+    height: 1600,
+  },
+  editorNivelacion: {
+    src: "/manual/12-editor-nivelacion.png",
+    alt: "Editor de nivelación completo: libreta, comprobación aritmética, cierre y cotas corregidas.",
+    pie: "Circuito cerrado que cumple la tolerancia: el BM final corrige exacto a su cota conocida.",
+    width: 2560,
+    height: 2774,
+  },
   editorMovil: {
-    src: "/manual/11-editor-movil.png",
+    src: "/manual/13-editor-movil.png",
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
     pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
     width: 780,
@@ -108,6 +121,7 @@ export const SECCIONES: SeccionManual[] = [
   { id: "dashboard", titulo: "El dashboard" },
   { id: "proyectos", titulo: "Proyectos" },
   { id: "poligonales", titulo: "Poligonales" },
+  { id: "nivelacion", titulo: "Nivelación" },
   { id: "cierre", titulo: "Cerrar un proceso" },
   { id: "campo", titulo: "Trabajo en campo" },
   { id: "pendientes", titulo: "Módulos pendientes" },
@@ -214,6 +228,56 @@ export const METODOS_CORRECCION = [
   },
 ];
 
+// --- § 6.1 Tipos de nivelación ---
+
+export const TIPOS_NIVELACION = [
+  {
+    tipo: "Cerrada",
+    descripcion: "Sale de un BM y vuelve a ese mismo BM",
+    verificacion: "Error de cierre contra la cota de partida",
+  },
+  {
+    tipo: "De enlace",
+    descripcion: "Va de un BM conocido a otro BM conocido distinto",
+    verificacion: "Error de cierre contra la cota de llegada",
+  },
+  {
+    tipo: "Abierta sin control",
+    descripcion: "No cierra contra ningún BM",
+    verificacion: "No tiene verificación de cierre",
+  },
+];
+
+// --- § 6.3 Tipos de punto de nivelación ---
+
+export const TIPOS_PUNTO_NIVELACION = [
+  {
+    tipo: "BM",
+    hace: "Banco de nivel, de cota conocida. Ancla el recorrido",
+    lecturas:
+      "La primera fila solo lleva atrás; la última, si es BM, solo lleva adelante",
+  },
+  {
+    tipo: "Punto de cambio",
+    hace: "Transmite la cota de una armada a la siguiente",
+    lecturas: "Atrás y adelante (salvo en los extremos)",
+  },
+  {
+    tipo: "Intermedio (radiación)",
+    hace: "Solo se lee para conocer su cota, sin continuar el recorrido a través de él",
+    lecturas: "Solo adelante",
+  },
+];
+
+// --- § 6.5 Tolerancia K·√D de nivelación ---
+
+export const TOLERANCIA_NIVELACION = [
+  { orden: "Primer orden", k: "3" },
+  { orden: "Segundo orden", k: "6" },
+  { orden: "Tercer orden", k: "12" },
+  { orden: "Ordinario", k: "24" },
+];
+
 // --- § 6 Desenlaces del cierre ---
 
 export const DESENLACES_CIERRE = [
@@ -241,12 +305,6 @@ export interface ModuloPendiente {
 }
 
 export const MODULOS_PENDIENTES: ModuloPendiente[] = [
-  {
-    nombre: "Nivelación",
-    fase: 4,
-    descripcion:
-      "Nivelación geométrica cerrada, de enlace e ida y vuelta, con corrección proporcional a la distancia y tolerancia K·√D.",
-  },
   {
     nombre: "Asentamientos",
     fase: 5,
@@ -294,6 +352,17 @@ export const PREGUNTAS: Pregunta[] = [
       "Cambié el orden de precisión del proyecto. ¿Se recalculan los procesos?",
     respuesta:
       "Los procesos abiertos se reevalúan contra el orden nuevo al recalcularlos. Los cerrados conservan su veredicto original, porque son inmutables.",
+  },
+  {
+    pregunta:
+      "Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición está bien?",
+    respuesta:
+      "No. La comprobación aritmética (ΣL.Atrás − ΣL.Adelante = desnivel total) solo valida que las cuentas de gabinete están bien hechas: cuadra igual con un nivel descolimado. La calidad de la medición la juzga el error de cierre contra la tolerancia K·√D.",
+  },
+  {
+    pregunta: "¿Por qué una fila de mi libreta de nivelación no admite corrección?",
+    respuesta:
+      "Le falta la distancia acumulada. Es obligatoria en los puntos BM y de cambio: sin ella la aplicación no sabe a qué distancia del origen está el punto y no puede repartirle su parte del error de cierre.",
   },
   {
     pregunta: "¿Otros usuarios pueden ver mis proyectos?",

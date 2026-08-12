@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-08-11 · Fases 1-3 implementadas · 134 tests ·
+**Última actualización:** 2026-08-12 · Fases 1-4 implementadas · 193 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -56,7 +56,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 1 | Setup técnico | cerrada |
 | 2 | Dashboard y proyectos | cerrada |
 | 3 | Poligonales | cerrada |
-| 4 | Nivelación | pendiente |
+| 4 | Nivelación | implementada |
 | 5 | Asentamientos | pendiente |
 | 6 | Cierre, informes, exportación | pendiente |
 
@@ -564,19 +564,23 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-117 tests en Vitest, entorno `node` **sin jsdom**.
+193 tests en 13 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
-| `lib/calculations/angles.test.ts` | 8 | Conversiones DMS ↔ decimal |
-| `lib/calculations/tolerances.test.ts` | 2 | Tolerancias por orden |
-| `lib/validators/polygonal.test.ts` | 33 | Captura y cierre |
+| `lib/calculations/leveling.test.ts` | 36 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
+| `lib/validators/polygonal.test.ts` | 33 | Captura y cierre de poligonal |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
+| `lib/validators/leveling.test.ts` | 20 | Captura y cierre de nivelación |
+| `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
 | `lib/utils/format.test.ts` | 13 | Fecha relativa y sus fronteras |
+| `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
+| `lib/calculations/angles.test.ts` | 8 | Conversiones DMS ↔ decimal |
+| `lib/demo/fixtures.test.ts` | 7 | Fixtures del proyecto de ejemplo |
+| `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
+| `lib/calculations/tolerances.test.ts` | 5 | Tolerancias por orden (poligonal y nivelación) |
 | `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
-| `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 
 ### Cómo se testea la interfaz
 
@@ -686,6 +690,22 @@ porque el semáforo, por regla del sistema de diseño, nunca usa el color como
 Si la fase 5 necesita mayor separación visual, la alternativa es volver a
 rellenos vivos con anillos oscuros `#0f5c2e`, `#7a6207`, `#8a4a0c`, `#8f2418`,
 todos ≥ 5.8:1 sobre blanco.
+
+**Equilibrado de visuales sin validar.** Es la regla de campo más importante
+de la nivelación de precisión (cancela curvatura, refracción y colimación).
+No se valida porque compara `d_atrás` con `d_adelante` dentro de una armada y
+`leveling_readings.distance_m` guarda una sola distancia por fila.
+Implementarlo exige dos columnas por armada o un modelo por armada en vez de
+por punto: toca el modelo de datos en producción.
+
+**El cierre y la captura no se revalidan en el servidor.**
+`closeLevelingProcessAction` recibe `asRejected` del cliente y no recalcula la
+evaluación de cierre; `saveLevelingProcessAction` tampoco revalida las
+lecturas. La clave publicable de Supabase es pública por diseño, así que la
+regla de negocio depende hoy de la UI. **Afecta igual a poligonal (Fase 3)**,
+así que conviene resolverlo para ambos módulos a la vez. Los triggers de la
+base sí protegen la inmutabilidad de un proceso ya cerrado; lo que no está
+protegido es el acto de cerrarlo con el estado equivocado.
 
 ---
 

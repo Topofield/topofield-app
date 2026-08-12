@@ -14,7 +14,7 @@ detallan aquí para que se vea el alcance completo previsto.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-08-11 · Fases 1-3 implementadas.
+**Última actualización:** 2026-08-12 · Fases 1-4 implementadas.
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -28,10 +28,11 @@ La aplicación está publicada en
 3. [El dashboard](#3-el-dashboard)
 4. [Proyectos](#4-proyectos)
 5. [Poligonales](#5-poligonales)
-6. [Cerrar un proceso](#6-cerrar-un-proceso)
-7. [Trabajo en campo](#7-trabajo-en-campo)
-8. [Módulos pendientes](#8-módulos-pendientes)
-9. [Preguntas frecuentes](#9-preguntas-frecuentes)
+6. [Nivelación](#6-nivelación)
+7. [Cerrar un proceso](#7-cerrar-un-proceso)
+8. [Trabajo en campo](#8-trabajo-en-campo)
+9. [Módulos pendientes](#9-módulos-pendientes)
+10. [Preguntas frecuentes](#10-preguntas-frecuentes)
 
 ---
 
@@ -281,7 +282,120 @@ punto de arranque.
 
 ---
 
-## 6. Cerrar un proceso
+## 6. Nivelación
+
+### 6.1 Tipos
+
+TopoField maneja tres tipos de nivelación geométrica:
+
+| Tipo | Descripción | Cómo se verifica |
+|---|---|---|
+| **Cerrada** | Sale de un BM y vuelve a ese mismo BM | Error de cierre contra la cota de partida |
+| **De enlace** | Va de un BM conocido a otro BM conocido distinto | Error de cierre contra la cota de llegada |
+| **Abierta sin control** | No cierra contra ningún BM | **No tiene verificación de cierre** |
+
+La nivelación abierta sin control sirve solo para reconocimiento: calcula
+cotas, pero no hay forma de comprobar si son correctas, igual que la
+poligonal abierta sin control (§ 5.1). No se puede calcular error de cierre ni
+compensar.
+
+### 6.2 Cómo se llena la libreta
+
+La libreta es una fila por punto. Cada fila puede llevar dos lecturas:
+
+- **Lectura atrás (L.Atrás)** — la primera que se toma tras estacionar el
+  nivel. Con ella se **abre la armada siguiente**: fija la altura del
+  instrumento (AI) que usarán las filas venideras.
+- **Lectura adelante (L.Adelante)** — **fija la cota del punto** de la fila.
+  Viene de la armada anterior: la resta de la AI vigente.
+
+Por eso la columna **AI solo tiene valor en las filas que llevan lectura
+atrás**: la altura de instrumento es un dato de la armada, no de la fila. Una
+fila con solo lectura adelante (que cierra una armada sin abrir la
+siguiente) no muestra AI propia; usa la de la armada en curso.
+
+### 6.3 Tipos de punto
+
+Cada fila indica de qué tipo es el punto que registra:
+
+| Tipo | Qué hace | Lecturas que lleva |
+|---|---|---|
+| **BM** | Banco de nivel, de cota conocida. Ancla el recorrido | La primera fila solo lleva atrás; la última, si es BM, solo lleva adelante |
+| **Punto de cambio** | Transmite la cota de una armada a la siguiente | Atrás y adelante (salvo en los extremos) |
+| **Intermedio (radiación)** | Solo se lee para conocer su cota, sin continuar el recorrido a través de él | Solo adelante |
+
+El punto intermedio cuelga de la AI vigente pero **no propaga cota ni abre
+una armada nueva**, y por eso queda fuera de la comprobación aritmética y de
+la compensación: un error en su lectura no contamina el resto del recorrido,
+pero tampoco se corrige.
+
+### 6.4 Crear una nivelación
+
+![Nueva nivelación](../../public/manual/11-nueva-nivelacion.png)
+
+Desde el proyecto, **+ Nuevo Proceso → Nivelación**. Indique el nombre, el
+tipo y el BM de partida: puede elegirlo del catálogo de puntos de referencia
+del proyecto (autocompleta código y cota) o teclearlo directamente si no lo
+tiene registrado.
+
+Si el tipo es *de enlace*, deberá indicar además el BM de llegada. Marque
+**Incluye recorrido de vuelta** si va a medir ida y vuelta.
+
+### 6.5 El editor
+
+![Editor de nivelación](../../public/manual/12-editor-nivelacion.png)
+
+La libreta se captura por fila: punto, tipo, lecturas atrás y adelante,
+distancia del tramo y **distancia acumulada** desde el origen.
+
+> **La distancia acumulada es obligatoria en los BM y en los puntos de
+> cambio.** Sin ella la fila no recibe corrección: la aplicación no adivina
+> a qué distancia del origen está un punto, así que un dato faltante deja esa
+> cota sin corregir en silencio hasta que se complete.
+
+**Comprobación aritmética.** ΣL.Atrás − ΣL.Adelante debe coincidir con el
+desnivel total del recorrido. Es una verificación de gabinete: confirma que
+las sumas y traslados de la libreta son correctos, **no dice nada sobre la
+calidad de la medición** — cuadra igual con un nivel descolimado. Los puntos
+intermedios quedan fuera de esta suma.
+
+**Cierre.** El error de cierre se compara contra la tolerancia K·√D, donde D
+es la distancia del recorrido **en un solo sentido**, en kilómetros, y K
+depende del orden de precisión del proyecto:
+
+| Orden | K (mm) |
+|---|---|
+| Primer orden | 3 |
+| Segundo orden | 6 |
+| Tercer orden | 12 |
+| Ordinario | 24 |
+
+**Corrección proporcional a la distancia.** Si el cierre cumple la
+tolerancia, la aplicación reparte el error entre los puntos según su
+distancia acumulada: a mayor distancia del origen, mayor corrección. El
+resultado es que el **BM final cierra exacto** contra su cota conocida, con
+corrección igual y de signo opuesto al error de cierre.
+
+### 6.6 Ida y vuelta
+
+Al activar el recorrido de vuelta, la libreta muestra dos pestañas. Ida y
+vuelta son **mediciones independientes**: cada una tiene sus propios puntos
+de cambio, y no hace falta —de hecho es mejor no— reocupar los mismos puntos
+en los dos sentidos.
+
+La aplicación compara los **desniveles totales** de ambos recorridos. La
+discrepancia entre ellos se contrasta contra **T·√2**, donde T es la misma
+tolerancia K·√D del cierre individual.
+
+### 6.7 Cierre irreversible
+
+Igual que en poligonales, cerrar una nivelación es **irreversible**
+(§ 7). Un trabajo que no alcanza la tolerancia solo puede cerrarse como
+**rechazado**; no hay forma de cerrarlo como conforme si no cumple.
+
+---
+
+## 7. Cerrar un proceso
 
 Cerrar es **irreversible**. Antes de permitirlo, la aplicación comprueba el
 trabajo y decide entre tres desenlaces:
@@ -314,11 +428,11 @@ deshabilitados y no hay botones de guardado.
 
 ---
 
-## 7. Trabajo en campo
+## 8. Trabajo en campo
 
 La aplicación está pensada para usarse también desde el teléfono, en sitio.
 
-![Editor en móvil](../../public/manual/11-editor-movil.png)
+![Editor en móvil](../../public/manual/13-editor-movil.png)
 
 En pantallas pequeñas, la tabla de estaciones se convierte en **tarjetas**: una
 por estación, con sus campos apilados y el azimut, ΔN y ΔE visibles sin
@@ -330,13 +444,10 @@ completa.
 
 ---
 
-## 8. Módulos pendientes
+## 9. Módulos pendientes
 
 Los siguientes módulos están especificados en el PRD pero **aún no
 implementados**:
-
-**Nivelación** *(fase 4)* — nivelación geométrica cerrada, de enlace e
-ida y vuelta, con corrección proporcional a la distancia y tolerancia K·√D.
 
 **Asentamientos** *(fase 5)* — control de asentamientos por punto, cálculo de
 velocidades y semáforo de alertas por umbrales.
@@ -348,7 +459,7 @@ La pestaña **Informes** del proyecto está visible pero vacía hasta entonces.
 
 ---
 
-## 9. Preguntas frecuentes
+## 10. Preguntas frecuentes
 
 **Cerré un proceso por error. ¿Puedo reabrirlo?**
 No. El cierre es definitivo por diseño: es lo que da valor probatorio al
@@ -371,6 +482,18 @@ datos teóricos o levantamientos muy precisos.
 **Cambié el orden de precisión del proyecto. ¿Se recalculan los procesos?**
 Los procesos abiertos se reevalúan contra el orden nuevo al recalcularlos. Los
 cerrados conservan su veredicto original, porque son inmutables.
+
+**Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición
+está bien?**
+No. La comprobación aritmética (ΣL.Atrás − ΣL.Adelante = desnivel total) solo
+valida que las cuentas de gabinete están bien hechas: cuadra igual con un
+nivel descolimado. La calidad de la medición la juzga el error de cierre
+contra la tolerancia K·√D.
+
+**¿Por qué una fila de mi libreta de nivelación no admite corrección?**
+Le falta la distancia acumulada. Es obligatoria en los puntos BM y de cambio:
+sin ella la aplicación no sabe a qué distancia del origen está el punto y no
+puede repartirle su parte del error de cierre.
 
 **¿Otros usuarios pueden ver mis proyectos?**
 No. Cada usuario accede solo a los suyos; la restricción se aplica en la base de

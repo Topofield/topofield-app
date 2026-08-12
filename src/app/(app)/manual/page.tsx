@@ -12,14 +12,17 @@ import {
   ORDENES_PRECISION,
   PREGUNTAS,
   SECCIONES,
+  TIPOS_NIVELACION,
   TIPOS_POLIGONAL,
+  TIPOS_PUNTO_NIVELACION,
+  TOLERANCIA_NIVELACION,
   type Captura as DatosCaptura,
 } from "./manual-data";
 
 export const metadata: Metadata = {
   title: "Manual de usuario — TopoField",
   description:
-    "Cómo usar TopoField: proyectos, poligonales, cierre con trazabilidad y trabajo en campo.",
+    "Cómo usar TopoField: proyectos, poligonales, nivelación, cierre con trazabilidad y trabajo en campo.",
 };
 
 /**
@@ -444,8 +447,179 @@ export default function ManualPage() {
         <VolverArriba />
       </Seccion>
 
-      {/* ── 6. Cerrar un proceso ───────────────────────────────────────── */}
-      <Seccion id="cierre" titulo="6. Cerrar un proceso">
+      {/* ── 6. Nivelación ───────────────────────────────────────────────── */}
+      <Seccion id="nivelacion" titulo="6. Nivelación">
+        <h3 className="text-lg font-semibold">6.1 Tipos</h3>
+
+        <p>TopoField maneja tres tipos de nivelación geométrica:</p>
+
+        <Tabla
+          caption="Tipos de nivelación"
+          columnas={["Tipo", "Descripción", "Cómo se verifica"]}
+        >
+          {TIPOS_NIVELACION.map((t) => (
+            <Fila key={t.tipo} celdas={[t.tipo, t.descripcion, t.verificacion]} />
+          ))}
+        </Tabla>
+
+        <p>
+          La nivelación abierta sin control sirve solo para reconocimiento:
+          calcula cotas, pero no hay forma de comprobar si son correctas,
+          igual que la poligonal abierta sin control. No se puede calcular
+          error de cierre ni compensar.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          6.2 Cómo se llena la libreta
+        </h3>
+
+        <p>
+          La libreta es una fila por punto. Cada fila puede llevar dos
+          lecturas:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Lectura atrás (L.Atrás)</strong> — la primera que se toma
+            tras estacionar el nivel. Con ella se <strong>abre la armada
+            siguiente</strong>: fija la altura del instrumento (AI) que usarán
+            las filas venideras.
+          </li>
+          <li>
+            <strong>Lectura adelante (L.Adelante)</strong> —{" "}
+            <strong>fija la cota del punto</strong> de la fila. Viene de la
+            armada anterior: la resta de la AI vigente.
+          </li>
+        </ul>
+
+        <p>
+          Por eso la columna <strong>AI solo tiene valor en las filas que
+          llevan lectura atrás</strong>: la altura de instrumento es un dato
+          de la armada, no de la fila. Una fila con solo lectura adelante (que
+          cierra una armada sin abrir la siguiente) no muestra AI propia; usa
+          la de la armada en curso.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">6.3 Tipos de punto</h3>
+
+        <p>Cada fila indica de qué tipo es el punto que registra:</p>
+
+        <Tabla
+          caption="Tipos de punto de nivelación"
+          columnas={["Tipo", "Qué hace", "Lecturas que lleva"]}
+        >
+          {TIPOS_PUNTO_NIVELACION.map((t) => (
+            <Fila key={t.tipo} celdas={[t.tipo, t.hace, t.lecturas]} />
+          ))}
+        </Tabla>
+
+        <p>
+          El punto intermedio cuelga de la AI vigente pero{" "}
+          <strong>no propaga cota ni abre una armada nueva</strong>, y por eso
+          queda fuera de la comprobación aritmética y de la compensación: un
+          error en su lectura no contamina el resto del recorrido, pero
+          tampoco se corrige.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          6.4 Crear una nivelación
+        </h3>
+
+        <Captura {...CAPTURAS.nuevaNivelacion} />
+
+        <p>
+          Desde el proyecto, <strong>+ Nuevo Proceso → Nivelación</strong>.
+          Indique el nombre, el tipo y el BM de partida: puede elegirlo del
+          catálogo de puntos de referencia del proyecto (autocompleta código y
+          cota) o teclearlo directamente si no lo tiene registrado.
+        </p>
+
+        <p>
+          Si el tipo es <em>de enlace</em>, deberá indicar además el BM de
+          llegada. Marque <strong>Incluye recorrido de vuelta</strong> si va a
+          medir ida y vuelta.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">6.5 El editor</h3>
+
+        <Captura {...CAPTURAS.editorNivelacion} />
+
+        <p>
+          La libreta se captura por fila: punto, tipo, lecturas atrás y
+          adelante, distancia del tramo y <strong>distancia acumulada</strong>{" "}
+          desde el origen.
+        </p>
+
+        <Nota titulo="La distancia acumulada es obligatoria en los BM y en los puntos de cambio">
+          Sin ella la fila no recibe corrección: la aplicación no adivina a
+          qué distancia del origen está un punto, así que un dato faltante
+          deja esa cota sin corregir en silencio hasta que se complete.
+        </Nota>
+
+        <p>
+          <strong>Comprobación aritmética.</strong> ΣL.Atrás − ΣL.Adelante
+          debe coincidir con el desnivel total del recorrido. Es una
+          verificación de gabinete: confirma que las sumas y traslados de la
+          libreta son correctos,{" "}
+          <strong>no dice nada sobre la calidad de la medición</strong> —
+          cuadra igual con un nivel descolimado. Los puntos intermedios
+          quedan fuera de esta suma.
+        </p>
+
+        <p>
+          <strong>Cierre.</strong> El error de cierre se compara contra la
+          tolerancia K·√D, donde D es la distancia del recorrido{" "}
+          <strong>en un solo sentido</strong>, en kilómetros, y K depende del
+          orden de precisión del proyecto:
+        </p>
+
+        <Tabla caption="Coeficiente K de la tolerancia K·√D" columnas={["Orden", "K (mm)"]}>
+          {TOLERANCIA_NIVELACION.map((t) => (
+            <Fila key={t.orden} celdas={[t.orden, t.k]} />
+          ))}
+        </Tabla>
+
+        <p>
+          <strong>Corrección proporcional a la distancia.</strong> Si el
+          cierre cumple la tolerancia, la aplicación reparte el error entre
+          los puntos según su distancia acumulada: a mayor distancia del
+          origen, mayor corrección. El resultado es que el{" "}
+          <strong>BM final cierra exacto</strong> contra su cota conocida, con
+          corrección igual y de signo opuesto al error de cierre.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">6.6 Ida y vuelta</h3>
+
+        <p>
+          Al activar el recorrido de vuelta, la libreta muestra dos pestañas.
+          Ida y vuelta son <strong>mediciones independientes</strong>: cada
+          una tiene sus propios puntos de cambio, y no hace falta —de hecho
+          es mejor no— reocupar los mismos puntos en los dos sentidos.
+        </p>
+
+        <p>
+          La aplicación compara los <strong>desniveles totales</strong> de
+          ambos recorridos. La discrepancia entre ellos se contrasta contra{" "}
+          <strong>T·√2</strong>, donde T es la misma tolerancia K·√D del
+          cierre individual.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          6.7 Cierre irreversible
+        </h3>
+
+        <p>
+          Igual que en poligonales, cerrar una nivelación es{" "}
+          <strong>irreversible</strong>. Un trabajo que no alcanza la
+          tolerancia solo puede cerrarse como <strong>rechazado</strong>; no
+          hay forma de cerrarlo como conforme si no cumple.
+        </p>
+
+        <VolverArriba />
+      </Seccion>
+
+      {/* ── 7. Cerrar un proceso ───────────────────────────────────────── */}
+      <Seccion id="cierre" titulo="7. Cerrar un proceso">
         <p>
           Cerrar es <strong>irreversible</strong>. Antes de permitirlo, la
           aplicación comprueba el trabajo y decide el desenlace:
@@ -488,8 +662,8 @@ export default function ManualPage() {
         </p>
       </Seccion>
 
-      {/* ── 7. Trabajo en campo ────────────────────────────────────────── */}
-      <Seccion id="campo" titulo="7. Trabajo en campo">
+      {/* ── 8. Trabajo en campo ────────────────────────────────────────── */}
+      <Seccion id="campo" titulo="8. Trabajo en campo">
         <p>
           La aplicación está pensada para usarse también desde el teléfono, en
           sitio.
@@ -511,8 +685,8 @@ export default function ManualPage() {
         </p>
       </Seccion>
 
-      {/* ── 8. Módulos pendientes ──────────────────────────────────────── */}
-      <Seccion id="pendientes" titulo="8. Módulos pendientes">
+      {/* ── 9. Módulos pendientes ──────────────────────────────────────── */}
+      <Seccion id="pendientes" titulo="9. Módulos pendientes">
         <p>
           Los siguientes módulos están especificados en el PRD pero{" "}
           <strong>aún no implementados</strong>. Se listan aquí para que se vea
@@ -548,8 +722,8 @@ export default function ManualPage() {
         </p>
       </Seccion>
 
-      {/* ── 9. Preguntas frecuentes ────────────────────────────────────── */}
-      <Seccion id="faq" titulo="9. Preguntas frecuentes">
+      {/* ── 10. Preguntas frecuentes ───────────────────────────────────── */}
+      <Seccion id="faq" titulo="10. Preguntas frecuentes">
         <dl className="flex flex-col gap-5">
           {PREGUNTAS.map((p) => (
             <div key={p.pregunta}>
