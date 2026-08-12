@@ -196,18 +196,48 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     errorMm: closureErrorMm,
   };
 
+  // --- Ida y vuelta (§ 6.9, enmendado — decisión #2) -----------------------
+  // Los recorridos son mediciones independientes: distintos puntos de cambio
+  // y, con frecuencia, distinto número de armadas. El emparejamiento es a
+  // nivel de SECCIÓN (entre los BM extremos), nunca tramo a tramo.
+  let returnResult: RunResult | null = null;
+  let discrepancyMm: number | null = null;
+  let discrepancyToleranceMm: number | null = null;
+  let meetsDiscrepancy: boolean | null = null;
+  let adoptedHeightDifference: number | null = null;
+
+  if (input.return != null && input.return.length > 0) {
+    // La vuelta parte de la cota conocida del extremo al que llegó la ida.
+    const returnStart = known ?? input.startElevation;
+    const back = computeRun(input.return, returnStart);
+
+    discrepancyMm =
+      Math.abs(forward.heightDifference + back.heightDifference) * 1000;
+    discrepancyToleranceMm =
+      levelingTolerance(input.order, input.totalDistanceKm) * Math.SQRT2;
+    meetsDiscrepancy = discrepancyMm <= discrepancyToleranceMm;
+    adoptedHeightDifference =
+      (forward.heightDifference - back.heightDifference) / 2;
+
+    returnResult = {
+      readings: back.readings,
+      heightDifference: back.heightDifference,
+      errorMm: null,
+    };
+  }
+
   return {
     forward: forwardResult,
-    return: null,
+    return: returnResult,
     arithmeticCheckOk: forward.arithmeticCheckOk,
     sumBacksights: forward.sumBacksights,
     sumForesights: forward.sumForesights,
     closureErrorMm,
     toleranceMm,
     meetsTolerance,
-    discrepancyMm: null,
-    discrepancyToleranceMm: null,
-    meetsDiscrepancy: null,
-    adoptedHeightDifference: null,
+    discrepancyMm,
+    discrepancyToleranceMm,
+    meetsDiscrepancy,
+    adoptedHeightDifference,
   };
 }

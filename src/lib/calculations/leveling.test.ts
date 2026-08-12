@@ -288,3 +288,60 @@ describe("applyProportionalCorrection", () => {
     );
   });
 });
+
+describe("computeLeveling — ida y vuelta", () => {
+  // La vuelta es una medición INDEPENDIENTE: distintos puntos de cambio y
+  // distinto número de armadas que la ida. Solo comparten los BM extremos.
+  //   ida:    3 armadas, Δh = −0.008
+  //   vuelta: 2 armadas, Δh = +0.010 (sentido opuesto)
+  const returnRun: ReadingInput[] = [
+    r("BM-1", "bm", 1.2, null, 0.0),
+    r("PV-1", "pc", 1.6, 0.9, 0.45),
+    r("BM-1", "bm", null, 1.89, 0.9),
+  ];
+
+  const result = computeLeveling({
+    ...CLOSED_INPUT,
+    return: returnRun,
+  });
+
+  it("calcula cada recorrido de forma independiente", () => {
+    expect(result.forward.readings).toHaveLength(4);
+    expect(result.return?.readings).toHaveLength(3);
+  });
+
+  it("obtiene el desnivel de sección de cada recorrido", () => {
+    expect(result.forward.heightDifference).toBeCloseTo(-0.008, 6);
+    expect(result.return?.heightDifference).toBeCloseTo(0.01, 6);
+  });
+
+  it("calcula la discrepancia entre recorridos", () => {
+    // |Δh_ida − (−Δh_vuelta)| = |−0.008 + 0.010| = 0.002 m = 2.0 mm
+    expect(result.discrepancyMm).toBeCloseTo(2.0, 4);
+  });
+
+  it("compara la discrepancia contra T·√2", () => {
+    // 12·√0.9·√2 = 16.10 mm
+    expect(result.discrepancyToleranceMm).toBeCloseTo(16.0997, 3);
+    expect(result.meetsDiscrepancy).toBe(true);
+  });
+
+  it("adopta el desnivel promediado", () => {
+    // (Δh_ida − Δh_vuelta) / 2 = (−0.008 − 0.010) / 2 = −0.009
+    expect(result.adoptedHeightDifference).toBeCloseTo(-0.009, 6);
+  });
+
+  it("marca la discrepancia fuera de tolerancia con órdenes exigentes", () => {
+    const strict = computeLeveling({
+      ...CLOSED_INPUT,
+      order: "primer_orden", // T·√2 = 3·√0.9·√2 = 4.02 mm
+      return: [
+        r("BM-1", "bm", 1.2, null, 0.0),
+        r("BM-1", "bm", null, 1.17, 0.9),
+      ], // Δh = +0.030 → discrepancia |−0.008 + 0.030| = 22 mm
+      forward: CLOSED_RUN,
+    });
+    expect(strict.discrepancyMm).toBeCloseTo(22.0, 4);
+    expect(strict.meetsDiscrepancy).toBe(false);
+  });
+});
