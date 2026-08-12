@@ -169,3 +169,37 @@ create trigger leveling_processes_set_updated_at
 create trigger leveling_processes_reject_update_on_closed
   before update on public.leveling_processes
   for each row execute function public.reject_update_on_closed_process();
+
+create trigger leveling_processes_reject_delete_when_closed
+  before delete on public.leveling_processes
+  for each row execute function public.reject_delete_on_closed_process();
+
+-- Las lecturas son los datos de campo del proceso. De nada sirve blindar la
+-- cabecera si sus mediciones pueden reescribirse: la trazabilidad del cierre
+-- depende de que ambas queden congeladas.
+create or replace function public.reject_write_on_closed_process_reading()
+returns trigger
+language plpgsql
+as $$
+declare
+  target_process uuid := coalesce(new.process_id, old.process_id);
+  process_status text;
+begin
+  select status into process_status
+  from public.leveling_processes
+  where id = target_process;
+
+  if process_status in ('closed', 'rejected') then
+    raise exception
+      'El proceso % está cerrado (%); sus lecturas son inmutables.',
+      target_process, process_status
+      using errcode = 'restrict_violation';
+  end if;
+
+  return coalesce(new, old);
+end;
+$$;
+
+create trigger leveling_readings_reject_write_when_closed
+  before insert or update or delete on public.leveling_readings
+  for each row execute function public.reject_write_on_closed_process_reading();
