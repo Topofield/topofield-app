@@ -34,6 +34,160 @@ export type Database = {
   }
   public: {
     Tables: {
+      leveling_processes: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closure_error_mm: number | null
+          correction_method: string
+          created_at: string
+          discrepancy_mm: number | null
+          end_bm_code: string | null
+          end_bm_elevation: number | null
+          forward_error_mm: number | null
+          has_return_run: boolean
+          id: string
+          meets_tolerance: boolean | null
+          name: string
+          notes: string | null
+          project_id: string
+          return_error_mm: number | null
+          start_bm_code: string
+          start_bm_elevation: number
+          status: string
+          tolerance_mm: number | null
+          total_distance_km: number | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_error_mm?: number | null
+          correction_method?: string
+          created_at?: string
+          discrepancy_mm?: number | null
+          end_bm_code?: string | null
+          end_bm_elevation?: number | null
+          forward_error_mm?: number | null
+          has_return_run?: boolean
+          id?: string
+          meets_tolerance?: boolean | null
+          name: string
+          notes?: string | null
+          project_id: string
+          return_error_mm?: number | null
+          start_bm_code: string
+          start_bm_elevation: number
+          status?: string
+          tolerance_mm?: number | null
+          total_distance_km?: number | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_error_mm?: number | null
+          correction_method?: string
+          created_at?: string
+          discrepancy_mm?: number | null
+          end_bm_code?: string | null
+          end_bm_elevation?: number | null
+          forward_error_mm?: number | null
+          has_return_run?: boolean
+          id?: string
+          meets_tolerance?: boolean | null
+          name?: string
+          notes?: string | null
+          project_id?: string
+          return_error_mm?: number | null
+          start_bm_code?: string
+          start_bm_elevation?: number
+          status?: string
+          tolerance_mm?: number | null
+          total_distance_km?: number | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leveling_processes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leveling_readings: {
+        Row: {
+          backsight: number | null
+          correction_applied: number | null
+          created_at: string
+          distance_accumulated_km: number | null
+          distance_m: number | null
+          elevation_calculated: number | null
+          elevation_corrected: number | null
+          foresight: number | null
+          has_warnings: boolean
+          id: string
+          instrument_height: number | null
+          point_code: string
+          point_type: string
+          process_id: string
+          reading_order: number
+          run_type: string
+          warning_messages: Json | null
+        }
+        Insert: {
+          backsight?: number | null
+          correction_applied?: number | null
+          created_at?: string
+          distance_accumulated_km?: number | null
+          distance_m?: number | null
+          elevation_calculated?: number | null
+          elevation_corrected?: number | null
+          foresight?: number | null
+          has_warnings?: boolean
+          id?: string
+          instrument_height?: number | null
+          point_code: string
+          point_type?: string
+          process_id: string
+          reading_order: number
+          run_type?: string
+          warning_messages?: Json | null
+        }
+        Update: {
+          backsight?: number | null
+          correction_applied?: number | null
+          created_at?: string
+          distance_accumulated_km?: number | null
+          distance_m?: number | null
+          elevation_calculated?: number | null
+          elevation_corrected?: number | null
+          foresight?: number | null
+          has_warnings?: boolean
+          id?: string
+          instrument_height?: number | null
+          point_code?: string
+          point_type?: string
+          process_id?: string
+          reading_order?: number
+          run_type?: string
+          warning_messages?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leveling_readings_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "leveling_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       polygonal_processes: {
         Row: {
           angle_type: string
