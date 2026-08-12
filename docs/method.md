@@ -13,7 +13,7 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 | 1 | Setup técnico | [`prds/00-setup.md`](./prds/00-setup.md) | cerrada |
 | 2 | Dashboard y Proyectos | [`prds/01-dashboard-proyectos.md`](./prds/01-dashboard-proyectos.md) | cerrada |
 | 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | cerrada |
-| 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | en curso |
+| 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | cerrada |
 | 5 | Módulo Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | pendiente |
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | pendiente |
 
@@ -118,6 +118,60 @@ Sección viva. Cada cierre de fase añade una entrada con:
 - **Funciones de cálculo puras + Vitest con fixtures verificados a mano** (un cuadrado con cierre conocido) atrapan errores de convención que la documentación ilustrativa no resuelve. Patrón clave para Fases 4-5.
 - **Los números de los casos de estudio del marco teórico son ilustrativos**: las tablas no son internamente consistentes (sumas y azimuts que no cuadran). Sirven de guía del método, no de fixture exacto — los fixtures se construyen con entradas limpias.
 - El mecanismo de cierre (estado `closed`/`rejected`, `closed_at`/`closed_by`, inmutabilidad en los Server Actions, modo solo lectura del editor) queda listo para reutilizarse en los módulos de nivelación y asentamientos.
+
+### Cierre Fase 4 — Módulo Nivelación (2026-08-12)
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El `§6.9` del PRD principal promediaba ida y vuelta **por tramo**, lo que
+  presupone que ambos recorridos comparten los puntos de cambio. La
+  investigación de práctica estándar (IGAC, FGCS/NGS) mostró que no es así: los
+  PC son provisionales y no se reocupan, y reusarlos anularía el fundamento del
+  doble recorrido — un PC mal asentado metería el mismo error con el mismo signo
+  en ambos y el promedio lo conservaría en vez de revelarlo. Se enmendó el
+  `§6.9` **antes** de implementar: el emparejamiento es a nivel de sección.
+- El `§3.2` no modelaba los **puntos intermedios** (radiaciones), que solo
+  reciben lectura adelante y quedan fuera de la comprobación aritmética y de la
+  compensación. Se añadió `point_type`.
+- La decisión #8 justificaba la columna `distance_m` por la validación del
+  equilibrado de visuales. Resultó imposible con una sola distancia por fila: el
+  equilibrado compara `d_atrás` con `d_adelante` **dentro de una armada**. Se
+  retiró la validación y se registró como deuda.
+- El `§6.9` afirmaba que la corrección usa el desnivel adoptado. El motor usa el
+  error de cierre de la propia ida; el adoptado se informa pero no compensa. Se
+  corrigió la documentación, no el motor.
+
+**Aprendizajes a llevar a la Fase 5:**
+
+- **El marco teórico no sirve como fixture, por segunda vez.** Las tablas del
+  Caso 1 de nivelación no son aritméticamente consistentes: verificadas contra
+  las tres hipótesis de alineación de filas, ninguna se cumple en todas. Ya pasó
+  con poligonales. Para asentamientos: construir los fixtures a mano y
+  verificarlos con código antes de escribirlos en un test.
+- **Los fallos de este dominio son silenciosos y plausibles.** Los cuatro
+  hallazgos más graves de la fase produjeron números creíbles, no errores:
+  una distancia acumulada nula dejaba el cierre sin compensar (99.992 en vez de
+  100.000) mientras el proceso reportaba conformidad; una radiación al final del
+  recorrido falseaba el error de cierre (−5.0 en vez de −8.0) con la
+  comprobación aritmética en verde; la lectura atrás del BM inicial quedaba
+  bloqueada y vacía, desplazando todas las cotas de forma coherente; y un
+  proceso recién creado mostraba «NaN mm» y un rechazo en rojo. **Ninguno lo
+  atrapó el typecheck, el lint ni la suite de tests.** Todos salieron de
+  ejecutar la app y comparar contra un valor calculado a mano.
+- **Verificar contra la base de datos, no contra la interfaz.** Un fallo se creyó
+  inexistente porque el guard del cliente parecía cubrirlo; solo al consultar
+  la tabla se vio que el dato rancio sí se persistía. La interfaz puede mentir
+  sobre lo que se guardó.
+- **Un test que necesita un dato imposible está probando una regla equivocada.**
+  El del equilibrado solo pasaba con una visual de 1.5 m, distancia que en campo
+  no existe. Esa fue la señal de que la regla estaba mal formulada, no el test.
+- **La revisión final ve lo que las revisiones por tarea no pueden.** El fallo
+  crítico de la radiación final vivía en la costura entre el motor (que mantiene
+  dos nociones de cota) y la UI (que permite elegir el tipo de punto en
+  cualquier fila). Ninguna tarea por separado lo contenía.
+- **Un comentario desactualizado cuesta una ronda de corrección.** Pasó dos
+  veces en esta fase, en el mismo archivo. Al cambiar el contrato de una
+  función, actualizar su JSDoc en el mismo commit.
 
 ### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
 

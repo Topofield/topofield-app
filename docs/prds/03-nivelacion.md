@@ -1,7 +1,8 @@
 # PRD-de-fase 4 — Módulo Nivelación
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-08-11
+**Fecha de cierre:** 2026-08-12
 
 ## Propósito
 
