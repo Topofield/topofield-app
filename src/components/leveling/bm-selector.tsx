@@ -25,6 +25,7 @@
 // tampoco hay forma de que se desincronice al montar, desmontar o recibir un
 // `value` inicial.
 
+import { useState } from "react";
 import { Input, Select } from "@/components/design-system";
 import type { ReferencePoint } from "@/types/project";
 
@@ -70,20 +71,36 @@ export function BmSelector({
   onChange,
   disabled,
 }: BmSelectorProps) {
-  // Selección del <select>: derivada de `value`, no estado propio.
+  // Selección del <select>: derivada de `value`, no estado propio — salvo
+  // por `otherRequested`, que SÍ es estado local. Es necesario porque "Otro"
+  // arranca en EMPTY_BM_VALUE, idéntico al estado inicial sin selección: sin
+  // esta bandera, `hasValue` da false, `isOther` da false, y los campos
+  // Código/Cota nunca se habilitan (bug detectado en la verificación final de
+  // la Fase 4, hallazgo 4). La bandera se apaga sola en cuanto el catálogo
+  // vuelve a coincidir con `value` — así que no puede quedar "pegada" y
+  // esconder un BM real ya elegido.
+  const [otherRequested, setOtherRequested] = useState(false);
+
   const catalogMatch = matchingPoint(points, value);
   const hasValue = value.code.trim() !== "" || value.elevation.trim() !== "";
   const isFromCatalog = catalogMatch != null;
-  const isOther = hasValue && !isFromCatalog;
+  const isOther = (hasValue || otherRequested) && !isFromCatalog;
   const selectedId = isFromCatalog ? catalogMatch.id : isOther ? OTHER_VALUE : "";
 
   function handleSelect(id: string) {
-    if (id === OTHER_VALUE || id === "") {
+    if (id === OTHER_VALUE) {
+      setOtherRequested(true);
+      onChange(EMPTY_BM_VALUE);
+      return;
+    }
+    if (id === "") {
+      setOtherRequested(false);
       onChange(EMPTY_BM_VALUE);
       return;
     }
     const point = points.find((p) => p.id === id);
     if (!point) return;
+    setOtherRequested(false);
     onChange({
       code: point.code,
       elevation: point.elevation != null ? String(point.elevation) : "",
