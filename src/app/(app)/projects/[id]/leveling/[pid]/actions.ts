@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeLeveling } from "@/lib/calculations/leveling";
+import { deriveLevelingCloseStatus } from "./close-status";
 import type {
   LevelingInput,
   LevelingType,
@@ -185,7 +186,15 @@ export async function saveLevelingProcessAction(
   return { ok: true };
 }
 
-/** Cierra un proceso (como `closed` o `rejected`) registrando la trazabilidad. */
+/**
+ * Cierra un proceso (como `closed` o `rejected`) registrando la trazabilidad.
+ *
+ * El `status` final lo decide el servidor (`deriveLevelingCloseStatus`), no
+ * el `asRejected` que manda el cliente: ver el comentario de esa función
+ * para el porqué. El diálogo de cierre (`close-process-dialog.tsx`) sigue
+ * evaluando `evaluateLevelingClosure` para la experiencia normal — esto es
+ * defensa en profundidad detrás de la UI, no un reemplazo.
+ */
 export async function closeLevelingProcessAction(
   payload: CloseLevelingPayload,
 ): Promise<ActionResult> {
@@ -197,7 +206,7 @@ export async function closeLevelingProcessAction(
 
   const { data: process } = await supabase
     .from("leveling_processes")
-    .select("id, status, project_id")
+    .select("id, status, project_id, type, meets_tolerance")
     .eq("id", payload.processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
@@ -205,10 +214,13 @@ export async function closeLevelingProcessAction(
     return { ok: false, error: "El proceso ya está cerrado." };
   }
 
+  const derived = deriveLevelingCloseStatus(process, payload.asRejected);
+  if (!derived.ok) return { ok: false, error: derived.error };
+
   const { error } = await supabase
     .from("leveling_processes")
     .update({
-      status: payload.asRejected ? "rejected" : "closed",
+      status: derived.status,
       closed_at: new Date().toISOString(),
       closed_by: user.id,
     })
