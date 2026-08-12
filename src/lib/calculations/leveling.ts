@@ -103,6 +103,16 @@ export function computeRun(
  * exactamente contra su cota conocida. Los puntos `intermediate` heredan la
  * corrección de la armada de la que cuelgan: se interpola por su propia
  * distancia acumulada, que es la de esa armada.
+ *
+ * CONTRATO: el cierre exacto del punto final depende de que su fila traiga
+ * `distanceAccumulatedKm` no nulo e igual a `totalDistanceKm`. Una fila con
+ * `distanceAccumulatedKm: null` se trata como si estuviera en el origen
+ * (`?? 0`) y por tanto recibe corrección 0, NO el reparto que le
+ * correspondería. Si la fila del punto final llega con distancia nula, el
+ * cierre exacto no se produce y el resultado queda sin corregir en silencio
+ * — esta función no valida datos de entrada, solo reparte con la distancia
+ * que recibe. Detectar filas con distancia faltante es responsabilidad de la
+ * capa de validadores (`src/lib/validators/leveling.ts`, Tarea 7).
  */
 export function applyProportionalCorrection(
   readings: ComputedReading[],
@@ -142,6 +152,13 @@ function knownClosingElevation(input: LevelingInput): number | null {
  *
  * `open` se calcula pero no se cierra ni se corrige: sin un segundo punto de
  * cota conocida no hay forma de detectar el error acumulado.
+ *
+ * Esta función NO valida que las filas traigan `distanceAccumulatedKm`
+ * completo (ver el contrato documentado en `applyProportionalCorrection`).
+ * Si faltan distancias acumuladas, `meetsTolerance` puede seguir en `true`
+ * mientras las cotas corregidas quedan mal calculadas. Rechazar o exigir esos
+ * datos en captura es responsabilidad de la capa de validadores
+ * (`src/lib/validators/leveling.ts`, Tarea 7), no del motor de cálculo.
  */
 export function computeLeveling(input: LevelingInput): LevelingResult {
   const forward = computeRun(input.forward, input.startElevation);

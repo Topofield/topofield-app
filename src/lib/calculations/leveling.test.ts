@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeRun, computeLeveling } from "./leveling";
+import { computeRun, computeLeveling, applyProportionalCorrection } from "./leveling";
 import type { LevelingInput, PointType, ReadingInput } from "@/types/leveling";
 
 function r(
@@ -237,5 +237,54 @@ describe("computeLeveling — fuera de tolerancia", () => {
     expect(result.meetsTolerance).toBe(false);
     // Sin cumplir tolerancia el trabajo se repite; no se compensa.
     expect(result.forward.readings.at(-1)?.correctionApplied).toBe(0);
+  });
+});
+
+describe("applyProportionalCorrection", () => {
+  // Readings reales (con elevationCalculated ya resuelto) sobre las que
+  // ejercitar la función directamente, sin pasar por computeLeveling.
+  const readings = computeRun(CLOSED_RUN, 100.0).readings;
+
+  it("con totalDistanceKm = 0 no reparte nada y no produce NaN/Infinity", () => {
+    const corrected = applyProportionalCorrection(readings, -8.0, 0);
+    for (const reading of corrected) {
+      expect(reading.correctionApplied).toBe(0);
+      expect(reading.elevationCorrected).toBeCloseTo(
+        reading.elevationCalculated,
+        6,
+      );
+      expect(Number.isFinite(reading.correctionApplied)).toBe(true);
+      expect(Number.isFinite(reading.elevationCorrected)).toBe(true);
+    }
+  });
+
+  it("la corrección de la fila con distancia = D_total iguala −error", () => {
+    const errorMm = -8.0;
+    const corrected = applyProportionalCorrection(readings, errorMm, 0.9);
+    // La fila del punto final trae distanceAccumulatedKm = 0.9 = D_total, así
+    // que su corrección es exactamente −error (en metros): la propiedad que
+    // hace cerrar exacto el punto final (ver test de computeLeveling —
+    // cerrada, que comprueba lo mismo end-to-end vía elevationCorrected).
+    const last = corrected.at(-1);
+    expect(last?.correctionApplied).toBeCloseTo(-errorMm / 1000, 6);
+  });
+
+  it("una fila con distanceAccumulatedKm null recibe corrección 0 (contrato documentado)", () => {
+    // Fija el comportamiento del `?? 0`: una fila sin distancia acumulada se
+    // trata como si estuviera en el origen, así que su reparto sale 0 en vez
+    // del que le correspondería. Si esta fila fuera el punto final del
+    // recorrido, el cierre exacto NO se produciría — ver el CONTRATO en el
+    // JSDoc de applyProportionalCorrection.
+    const withNullDistance = [{ ...readings[3]!, distanceAccumulatedKm: null }];
+    const [corrected] = applyProportionalCorrection(
+      withNullDistance,
+      -8.0,
+      0.9,
+    );
+    expect(corrected!.correctionApplied).toBe(0);
+    expect(corrected!.elevationCorrected).toBeCloseTo(
+      corrected!.elevationCalculated,
+      6,
+    );
   });
 });
