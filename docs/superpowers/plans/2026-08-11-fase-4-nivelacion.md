@@ -1242,6 +1242,28 @@ describe("validateReading — capa de captura (§ 5.1)", () => {
     const issues = validateReading(reading({ pointCode: "" }), "tercer_orden");
     expect(issues.some((i) => i.severity === "error")).toBe(true);
   });
+
+  it("exige distancia acumulada en los puntos que se compensan", () => {
+    // Sin ella la corrección proporcional trata el punto como si estuviera en
+    // el origen y lo deja sin compensar, en silencio.
+    const issues = validateReading(
+      reading({ pointType: "pc", distanceAccumulatedKm: null }),
+      "tercer_orden",
+    );
+    expect(
+      issues.some(
+        (i) => i.field === "distanceAccumulatedKm" && i.severity === "error",
+      ),
+    ).toBe(true);
+  });
+
+  it("no la exige en los puntos intermedios, que no se compensan", () => {
+    const issues = validateReading(
+      reading({ pointType: "intermediate", backsight: null, distanceAccumulatedKm: null }),
+      "tercer_orden",
+    );
+    expect(issues.some((i) => i.field === "distanceAccumulatedKm")).toBe(false);
+  });
 });
 
 describe("validateLevelingClosure — capa de cierre (§ 5.2)", () => {
@@ -1344,6 +1366,24 @@ export function validateReading(
       field: "pointCode",
       severity: "error",
       message: "El punto necesita un código.",
+    });
+  }
+
+  // La distancia acumulada es obligatoria en bm y pc porque la corrección
+  // proporcional la usa como peso. Un null se compensaría como 0 — es decir,
+  // sin corrección — y el punto de cierre quedaría descompensado en silencio,
+  // con el proceso reportando que cumple la tolerancia. Medido en la Tarea 5:
+  // el BM final cerraba en 99.992 en vez de 100.000, con los −8 mm intactos.
+  // Los `intermediate` sí pueden traerla nula: no entran en la compensación.
+  if (
+    reading.pointType !== "intermediate" &&
+    reading.distanceAccumulatedKm == null
+  ) {
+    issues.push({
+      field: "distanceAccumulatedKm",
+      severity: "error",
+      message:
+        "La distancia acumulada es obligatoria: sin ella el punto no recibe corrección.",
     });
   }
 
