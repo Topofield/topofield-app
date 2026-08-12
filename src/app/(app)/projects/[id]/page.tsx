@@ -7,6 +7,7 @@ import {
   type TabItem,
 } from "@/components/design-system";
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
+import { ProcessCard } from "@/components/projects/process-card";
 import { ProcessListToolbar } from "@/components/projects/process-list-toolbar";
 import { ProcessTable } from "@/components/projects/process-table";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
@@ -20,11 +21,13 @@ import {
 } from "@/lib/process-list";
 import { createClient } from "@/lib/supabase/server";
 import {
+  getLevelingProcesses,
   getPolygonalProcesses,
   getProjectById,
   getReferencePoints,
 } from "@/lib/supabase/queries";
 import { POLYGONAL_TYPES, type PolygonalType } from "@/types/polygonal";
+import type { LevelingProcess } from "@/types/leveling";
 
 const TABS: TabItem[] = [
   { id: "processes", label: "Procesos" },
@@ -66,6 +69,10 @@ export default async function ProjectHubPage({
     activeTab === "processes"
       ? await getPolygonalProcesses(supabase, project.id)
       : [];
+  const levelingProcesses: LevelingProcess[] =
+    activeTab === "processes"
+      ? await getLevelingProcesses(supabase, project.id)
+      : [];
   const referencePoints =
     activeTab === "config"
       ? await getReferencePoints(supabase, project.id)
@@ -105,38 +112,52 @@ export default async function ProjectHubPage({
       />
 
       {activeTab === "processes" && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-8">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">
               Procesos
             </h2>
             <NewProcessSelector projectId={project.id} />
           </div>
-          {processes.length === 0 ? (
+          {processes.length === 0 && levelingProcesses.length === 0 ? (
             <EmptyState
               title="Aún no hay procesos"
               description="Crea el primer proceso topográfico del proyecto con «+ Nuevo Proceso»."
             />
           ) : (
-            <div className="flex flex-col gap-4">
-              <ProcessListToolbar
-                projectId={project.id}
-                filters={filters}
-                counts={counts}
-              />
-              {visibles.length === 0 ? (
-                <EmptyState
-                  title="Ningún proceso coincide"
-                  description="Ajusta la búsqueda o los filtros para ver otros procesos."
-                />
-              ) : (
-                <ProcessTable
+            <>
+              {processes.length > 0 && (
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                    Poligonal
+                  </h3>
+                  <ProcessListToolbar
+                    projectId={project.id}
+                    filters={filters}
+                    counts={counts}
+                  />
+                  {visibles.length === 0 ? (
+                    <EmptyState
+                      title="Ningún proceso coincide"
+                      description="Ajusta la búsqueda o los filtros para ver otros procesos."
+                    />
+                  ) : (
+                    <ProcessTable
+                      projectId={project.id}
+                      processes={visibles}
+                      filters={filters}
+                    />
+                  )}
+                </div>
+              )}
+
+              {levelingProcesses.length > 0 && (
+                <LevelingProcessSection
                   projectId={project.id}
-                  processes={visibles}
-                  filters={filters}
+                  processes={levelingProcesses}
                 />
               )}
-            </div>
+            </>
           )}
         </div>
       )}
@@ -153,6 +174,67 @@ export default async function ProjectHubPage({
           project={project}
           referencePoints={referencePoints}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Procesos de nivelación del proyecto, agrupados en «En progreso» y
+ * «Cerrados». A diferencia de la poligonal (Fase 3), esta sección no tiene
+ * todavía buscador ni filtros propios: se resuelve cuando la cantidad de
+ * procesos de nivelación lo justifique.
+ */
+function LevelingProcessSection({
+  projectId,
+  processes,
+}: {
+  projectId: string;
+  processes: LevelingProcess[];
+}) {
+  const enProgreso = processes.filter(
+    (p) => p.status !== "closed" && p.status !== "rejected",
+  );
+  const cerrados = processes.filter(
+    (p) => p.status === "closed" || p.status === "rejected",
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+        Nivelación
+      </h3>
+      {enProgreso.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h4 className="text-xs font-medium text-neutral-500">
+            En progreso
+          </h4>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {enProgreso.map((p) => (
+              <ProcessCard
+                key={p.id}
+                projectId={projectId}
+                process={p}
+                kind="leveling"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {cerrados.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h4 className="text-xs font-medium text-neutral-500">Cerrados</h4>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {cerrados.map((p) => (
+              <ProcessCard
+                key={p.id}
+                projectId={projectId}
+                process={p}
+                kind="leveling"
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

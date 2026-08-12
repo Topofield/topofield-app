@@ -7,6 +7,7 @@ import {
   type PolygonalProcess,
   type ProcessStatus,
 } from "@/types/polygonal";
+import { LEVELING_TYPE_LABELS, type LevelingProcess } from "@/types/leveling";
 
 const STATUS_TONE: Record<
   ProcessStatus,
@@ -41,13 +42,51 @@ function ToleranceMark({ meets }: { meets: boolean | null }) {
   return null;
 }
 
-export function ProcessCard({
-  projectId,
-  process,
-}: {
-  projectId: string;
-  process: PolygonalProcess;
-}) {
+/**
+ * Tarjeta de proceso del hub. Acepta poligonal o nivelación: cada una define
+ * su propia ruta de edición y su propia etiqueta de tipo, el resto de la
+ * tarjeta (estado, precisión/tolerancia, actividad) es común a ambas.
+ */
+type ProcessCardProps =
+  | { projectId: string; process: PolygonalProcess; kind?: "polygonal" }
+  | { projectId: string; process: LevelingProcess; kind: "leveling" };
+
+function typeLabel(props: ProcessCardProps): string {
+  if (props.kind === "leveling") {
+    return `Nivelación · ${LEVELING_TYPE_LABELS[props.process.type]}`;
+  }
+  return `Poligonal · ${POLYGONAL_TYPE_LABELS[props.process.type]}`;
+}
+
+function editorHref(props: ProcessCardProps): string {
+  const { projectId, process } = props;
+  return props.kind === "leveling"
+    ? `/projects/${projectId}/leveling/${process.id}`
+    : `/projects/${projectId}/polygonal/${process.id}`;
+}
+
+/** Sin verificación de cierre: solo aplica a la poligonal abierta sin control
+ *  y a la nivelación abierta sin control (`open`). */
+function noClosureCheck(props: ProcessCardProps): boolean {
+  if (props.kind === "leveling") return props.process.type === "open";
+  return props.process.type === "open_uncontrolled";
+}
+
+/** Métrica principal de la tarjeta: precisión relativa en poligonal, error de
+ *  cierre en nivelación (no comparten la misma columna en el schema). */
+function metricLabel(props: ProcessCardProps): string | null {
+  if (props.kind === "leveling") {
+    return props.process.closure_error_mm != null
+      ? `Error de cierre ${props.process.closure_error_mm.toFixed(1)} mm`
+      : null;
+  }
+  return props.process.relative_precision
+    ? `Precisión ${props.process.relative_precision}`
+    : null;
+}
+
+export function ProcessCard(props: ProcessCardProps) {
+  const { process } = props;
   const outOfTolerance =
     process.status === "closed" && process.meets_tolerance === false;
 
@@ -58,13 +97,13 @@ export function ProcessCard({
 
   return (
     <Link
-      href={`/projects/${projectId}/polygonal/${process.id}`}
+      href={editorHref(props)}
       className="block rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-colors hover:border-primary-200 hover:bg-primary-50"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Poligonal · {POLYGONAL_TYPE_LABELS[process.type]}
+            {typeLabel(props)}
           </p>
           <h3 className="mt-0.5 font-semibold">
             {process.name}
@@ -74,11 +113,8 @@ export function ProcessCard({
       </div>
       <div className="mt-4 flex items-center justify-between gap-3 text-xs text-neutral-500">
         <span className="inline-flex items-center gap-1.5">
-          {process.relative_precision
-            ? `Precisión ${process.relative_precision}`
-            : process.type === "open_uncontrolled"
-              ? "Sin verificación de cierre"
-              : "Sin calcular"}
+          {metricLabel(props) ??
+            (noClosureCheck(props) ? "Sin verificación de cierre" : "Sin calcular")}
           <ToleranceMark meets={process.meets_tolerance} />
         </span>
         <span className="shrink-0" title={formatDate(process.updated_at)}>

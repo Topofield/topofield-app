@@ -26,6 +26,7 @@ import {
   type LevelingConfigState,
 } from "./leveling-config-fields";
 import type { BmValue } from "./bm-selector";
+import { CloseProcessDialog } from "./close-process-dialog";
 import { ReadingsTable, type ReadingDraftState } from "./readings-table";
 import { ResultsPanel } from "./results-panel";
 import { RunTabs } from "./run-tabs";
@@ -357,6 +358,14 @@ export function LevelingEditor({
           <Button onClick={handleSave} disabled={isPending || captureBlocked}>
             {isPending ? "Guardando…" : "Guardar"}
           </Button>
+          <span aria-hidden className="h-6 w-px bg-neutral-200" />
+          <CloseProcessDialog
+            processId={process.id}
+            type={config.type}
+            result={result}
+            captureBlocked={captureBlocked}
+            dirty={dirty}
+          />
         </div>
       )}
     </div>
