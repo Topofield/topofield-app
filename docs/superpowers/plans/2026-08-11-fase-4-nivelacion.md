@@ -168,7 +168,7 @@ create trigger leveling_processes_set_updated_at
 -- borrable y sus lecturas reescribibles vía la API REST con el JWT del dueño:
 -- la clave publicable es pública por diseño y salta la capa de aplicación.
 
-create trigger leveling_processes_reject_update_when_closed
+create trigger leveling_processes_reject_update_on_closed
   before update on public.leveling_processes
   for each row execute function public.reject_update_on_closed_process();
 
