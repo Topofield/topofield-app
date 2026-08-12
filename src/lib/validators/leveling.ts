@@ -8,7 +8,6 @@
 // (`issues.errors.backsight`) sin recorrer un array filtrando por `field`.
 
 import type { LevelingResult, PointType, ReadingInput } from "@/types/leveling";
-import type { PrecisionOrder } from "@/types/project";
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
@@ -44,11 +43,6 @@ function requiresDistanceAccumulated(pointType: PointType): boolean {
  */
 export function validateReadingCapture(
   reading: ReadingInput,
-  // El orden de precisión no se usa hoy: se mantiene en la firma porque el
-  // equilibrado de visuales que lo consumía se retiró (ver comentario de
-  // deuda técnica arriba), pero la firma se conserva estable para la Tarea
-  // 10 y por si una futura regla de captura vuelve a necesitarlo.
-  _order: PrecisionOrder,
 ): ReadingCaptureIssues {
   const errors: ReadingCaptureIssues["errors"] = {};
   const warnings: ReadingCaptureIssues["warnings"] = {};

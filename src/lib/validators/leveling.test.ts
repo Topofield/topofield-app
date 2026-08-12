@@ -53,57 +53,39 @@ function resultWith(over: Partial<LevelingResult> = {}): LevelingResult {
 
 describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
   it("acepta una lectura normal", () => {
-    const issues = validateReadingCapture(reading(), "tercer_orden");
+    const issues = validateReadingCapture(reading());
     expect(issues.errors).toEqual({});
     expect(issues.warnings).toEqual({});
   });
 
   it("rechaza lectura de mira negativa", () => {
-    const issues = validateReadingCapture(
-      reading({ backsight: -0.1 }),
-      "tercer_orden",
-    );
+    const issues = validateReadingCapture(reading({ backsight: -0.1 }));
     expect(issues.errors.backsight).toBeDefined();
   });
 
   it("rechaza lectura de mira mayor que 4.000 m", () => {
-    const issues = validateReadingCapture(
-      reading({ foresight: 4.5 }),
-      "tercer_orden",
-    );
+    const issues = validateReadingCapture(reading({ foresight: 4.5 }));
     expect(issues.errors.foresight).toBeDefined();
   });
 
   it("advierte cuando L.At y L.Ad son exactamente iguales", () => {
-    const issues = validateReadingCapture(
-      reading({ backsight: 1.5, foresight: 1.5 }),
-      "tercer_orden",
-    );
+    const issues = validateReadingCapture(reading({ backsight: 1.5, foresight: 1.5 }));
     expect(issues.warnings.backsight ?? issues.warnings.foresight).toBeDefined();
     expect(issues.errors).toEqual({});
   });
 
   it("rechaza un punto sin código", () => {
-    const issues = validateReadingCapture(
-      reading({ pointCode: "" }),
-      "tercer_orden",
-    );
+    const issues = validateReadingCapture(reading({ pointCode: "" }));
     expect(issues.errors.pointCode).toBeDefined();
   });
 
   it("rechaza un punto con código en blanco (solo espacios)", () => {
-    const issues = validateReadingCapture(
-      reading({ pointCode: "   " }),
-      "tercer_orden",
-    );
+    const issues = validateReadingCapture(reading({ pointCode: "   " }));
     expect(issues.errors.pointCode).toBeDefined();
   });
 
   it("exige distancia acumulada en bm", () => {
-    const issues = validateReadingCapture(
-      reading({ pointType: "bm", distanceAccumulatedKm: null }),
-      "tercer_orden",
-    );
+    const issues = validateReadingCapture(reading({ pointType: "bm", distanceAccumulatedKm: null }));
     expect(issues.errors.distanceAccumulatedKm).toBeDefined();
   });
 
@@ -112,22 +94,16 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
     // el origen y lo deja sin compensar, en silencio: el cierre reporta que
     // cumple tolerancia con el error real intacto (medido: 99.992 vs 100.000
     // esperado, con los −8 mm sin corregir).
-    const issues = validateReadingCapture(
-      reading({ pointType: "pc", distanceAccumulatedKm: null }),
-      "tercer_orden",
-    );
+    const issues = validateReadingCapture(reading({ pointType: "pc", distanceAccumulatedKm: null }));
     expect(issues.errors.distanceAccumulatedKm).toBeDefined();
   });
 
   it("no la exige en los puntos intermedios, que no se compensan", () => {
-    const issues = validateReadingCapture(
-      reading({
+    const issues = validateReadingCapture(reading({
         pointType: "intermediate",
         backsight: null,
         distanceAccumulatedKm: null,
-      }),
-      "tercer_orden",
-    );
+      }));
     expect(issues.errors.distanceAccumulatedKm).toBeUndefined();
   });
 });
@@ -135,26 +111,23 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
 describe("hasReadingErrors", () => {
   it("es false cuando ninguna fila tiene errores", () => {
     const issues = [
-      validateReadingCapture(reading(), "tercer_orden"),
-      validateReadingCapture(reading({ pointCode: "PC-2" }), "tercer_orden"),
+      validateReadingCapture(reading()),
+      validateReadingCapture(reading({ pointCode: "PC-2" })),
     ];
     expect(hasReadingErrors(issues)).toBe(false);
   });
 
   it("es true si alguna fila tiene un error", () => {
     const issues = [
-      validateReadingCapture(reading(), "tercer_orden"),
-      validateReadingCapture(reading({ pointCode: "" }), "tercer_orden"),
+      validateReadingCapture(reading()),
+      validateReadingCapture(reading({ pointCode: "" })),
     ];
     expect(hasReadingErrors(issues)).toBe(true);
   });
 
   it("una advertencia sola no cuenta como error", () => {
     const issues = [
-      validateReadingCapture(
-        reading({ backsight: 1.5, foresight: 1.5 }),
-        "tercer_orden",
-      ),
+      validateReadingCapture(reading({ backsight: 1.5, foresight: 1.5 })),
     ];
     expect(hasReadingErrors(issues)).toBe(false);
   });
