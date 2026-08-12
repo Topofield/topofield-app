@@ -162,10 +162,50 @@ create trigger leveling_processes_set_updated_at
   before update on public.leveling_processes
   for each row execute function public.set_updated_at();
 
--- Inmutabilidad de procesos cerrados (reusa la función genérica de la Fase 3).
-create trigger leveling_processes_reject_update_on_closed
+-- --- Inmutabilidad de procesos cerrados -------------------------------------
+-- La garantía tiene TRES capas, igual que en poligonal (migración
+-- 20260727180000). Blindar solo el UPDATE de la cabecera deja el proceso
+-- borrable y sus lecturas reescribibles vía la API REST con el JWT del dueño:
+-- la clave publicable es pública por diseño y salta la capa de aplicación.
+
+create trigger leveling_processes_reject_update_when_closed
   before update on public.leveling_processes
   for each row execute function public.reject_update_on_closed_process();
+
+create trigger leveling_processes_reject_delete_when_closed
+  before delete on public.leveling_processes
+  for each row execute function public.reject_delete_on_closed_process();
+
+-- Las lecturas son los datos de campo del proceso. De nada sirve blindar la
+-- cabecera si sus mediciones pueden reescribirse: la trazabilidad del cierre
+-- depende de que ambas queden congeladas. La función de poligonal no se puede
+-- reutilizar porque consulta `polygonal_processes` por nombre.
+create or replace function public.reject_write_on_closed_process_reading()
+returns trigger
+language plpgsql
+as $$
+declare
+  target_process uuid := coalesce(new.process_id, old.process_id);
+  process_status text;
+begin
+  select status into process_status
+  from public.leveling_processes
+  where id = target_process;
+
+  if process_status in ('closed', 'rejected') then
+    raise exception
+      'El proceso % está cerrado (%); sus lecturas son inmutables.',
+      target_process, process_status
+      using errcode = 'restrict_violation';
+  end if;
+
+  return coalesce(new, old);
+end;
+$$;
+
+create trigger leveling_readings_reject_write_when_closed
+  before insert or update or delete on public.leveling_readings
+  for each row execute function public.reject_write_on_closed_process_reading();
 ```
 
 - [ ] **Step 2: Verificar el patrón RLS y de triggers contra la migración de poligonal**
@@ -1732,7 +1772,7 @@ Expected: exit 0 en los cuatro.
 Abrir `docs/prds/03-nivelacion.md` y verificar uno por uno los 16 criterios de la tabla, anotando el resultado. Los que no se puedan verificar en el navegador (o, p — RLS e inmutabilidad) se prueban así:
 
 - **(o) RLS:** con la sesión de un usuario, pedir `/projects/<id de otro usuario>/leveling/<pid>` → debe dar 404.
-- **(p) Inmutabilidad vía REST:** con el JWT del dueño, `UPDATE` directo sobre un proceso `closed` por la API REST de Supabase → debe fallar con `restrict_violation`. El trigger es la única defensa real: la clave publicable es pública por diseño.
+- **(p) Inmutabilidad vía REST:** con el JWT del dueño, y contra un proceso `closed`, las **tres** operaciones deben fallar con `restrict_violation`: `UPDATE` sobre `leveling_processes`, `DELETE` sobre `leveling_processes`, y `INSERT`/`UPDATE`/`DELETE` sobre sus `leveling_readings`. Los triggers son la única defensa real: la clave publicable es pública por diseño y salta la capa de aplicación. Probar las tres por separado — blindar solo la cabecera deja los datos de campo reescribibles.
 
 - [ ] **Step 3: Regenerar las capturas del manual**
 
