@@ -162,12 +162,12 @@ export function LevelingEditor({
   // error de la fila `bm` inicial sin L.At depende de su POSICIÓN en el
   // recorrido, no solo de sus propios campos.
   const forwardIssues = useMemo<ReadingCaptureIssues[]>(
-    () => validateRunCapture(forward.map(draftToReadingInput)),
-    [forward],
+    () => validateRunCapture(forward.map(draftToReadingInput), config.type),
+    [forward, config.type],
   );
   const backIssues = useMemo<ReadingCaptureIssues[]>(
-    () => validateRunCapture(back.map(draftToReadingInput)),
-    [back],
+    () => validateRunCapture(back.map(draftToReadingInput), config.type),
+    [back, config.type],
   );
 
   const captureBlocked =

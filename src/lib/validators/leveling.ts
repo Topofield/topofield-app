@@ -7,14 +7,22 @@
 // celda de la libreta según su propio estado y así se consulta directo
 // (`issues.errors.backsight`) sin recorrer un array filtrando por `field`.
 
-import type { LevelingResult, PointType, ReadingInput } from "@/types/leveling";
+import type {
+  LevelingResult,
+  LevelingType,
+  PointType,
+  ReadingInput,
+} from "@/types/leveling";
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
 /** Issues de captura de una lectura, indexados por celda de la libreta. */
 export interface ReadingCaptureIssues {
   errors: Partial<
-    Record<"pointCode" | "backsight" | "foresight" | "distanceAccumulatedKm", string>
+    Record<
+      "pointCode" | "pointType" | "backsight" | "foresight" | "distanceAccumulatedKm",
+      string
+    >
   >;
   warnings: Partial<Record<"backsight" | "foresight", string>>;
 }
@@ -109,28 +117,53 @@ export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
  *
  * La fila `bm` FINAL (última del recorrido) es la única excepción legítima:
  * por definición no lleva L.At, así que aquí no se exige.
+ *
+ * `levelingType` habilita una segunda regla posicional (hallazgo 1 de la
+ * revisión final de la Fase 4): en un recorrido `closed` o `link` la ÚLTIMA
+ * fila debe ser de tipo `bm` — es el punto de cierre contra el que se calcula
+ * el error. `computeLeveling` usa la cota de la CADENA bm/pc para el cierre,
+ * no la de la última fila, así que si esa última fila es una radiación
+ * (`intermediate`) colgada después del BM de cierre, el motor sigue cerrando
+ * correcto — pero una libreta así es, de todos modos, una captura mal
+ * formada: la decisión #7 del PRD da por hecho que la última fila de un
+ * recorrido que cierra es su BM. Se bloquea aquí para que nunca se guarde.
+ * En `open` NO se exige: un recorrido sin control puede terminar donde sea.
  */
 export function validateRunCapture(
   readings: ReadingInput[],
+  levelingType: LevelingType,
 ): ReadingCaptureIssues[] {
   const lastIndex = readings.length - 1;
+  const mustEndInBm = levelingType !== "open";
   return readings.map((reading, index) => {
     const issues = validateReadingCapture(reading);
+    let errors = issues.errors;
+
     // Toda fila `bm` que no sea la última de cierre abre una armada y por
     // tanto necesita L.At. La última `bm` es la única excepción legítima:
     // por definición cierra el recorrido y no lleva lectura atrás.
     const mustHaveBacksight = reading.pointType === "bm" && index !== lastIndex;
     if (mustHaveBacksight && reading.backsight == null) {
-      return {
-        ...issues,
-        errors: {
-          ...issues.errors,
-          backsight:
-            "Este BM necesita la lectura atrás: sin ella la AI de su armada queda vacía y todas las cotas siguientes se desplazan.",
-        },
+      errors = {
+        ...errors,
+        backsight:
+          "Este BM necesita la lectura atrás: sin ella la AI de su armada queda vacía y todas las cotas siguientes se desplazan.",
       };
     }
-    return issues;
+
+    if (
+      mustEndInBm &&
+      index === lastIndex &&
+      reading.pointType !== "bm"
+    ) {
+      errors = {
+        ...errors,
+        pointType:
+          "La última fila de un recorrido que cierra debe ser el BM de cierre.",
+      };
+    }
+
+    return errors === issues.errors ? issues : { ...issues, errors };
   });
 }
 

@@ -17,6 +17,14 @@ export interface RunComputation {
   readings: ComputedReading[];
   /** Desnivel de la sección: cota final − cota inicial. */
   heightDifference: number;
+  /**
+   * Cota final de la CADENA del recorrido (la que propagan `bm`/`pc`), no la
+   * de la última fila. Un `intermediate` al final de la libreta no la altera:
+   * su cota es una radiación colgada de la AI vigente, no el punto de cierre.
+   * Úsala para cualquier cálculo de error de cierre; `readings.at(-1)` es la
+   * última FILA capturada, que puede ser una radiación.
+   */
+  finalElevation: number;
   sumBacksights: number;
   sumForesights: number;
   arithmeticCheckOk: boolean;
@@ -88,6 +96,7 @@ export function computeRun(
   return {
     readings: computed,
     heightDifference,
+    finalElevation: currentElevation,
     sumBacksights,
     sumForesights,
     arithmeticCheckOk,
@@ -193,9 +202,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
   let readings = forward.readings;
 
   if (known != null) {
-    const lastElevation =
-      forward.readings.at(-1)?.elevationCalculated ?? input.startElevation;
-    closureErrorMm = (lastElevation - known) * 1000;
+    closureErrorMm = (forward.finalElevation - known) * 1000;
 
     if (hasValidDistance) {
       toleranceMm = levelingTolerance(input.order, input.totalDistanceKm);
@@ -251,9 +258,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     // null`, tipo `open`) no hay contra qué cerrar.
     const returnErrorMm =
       known != null
-        ? ((back.readings.at(-1)?.elevationCalculated ?? returnStart) -
-            input.startElevation) *
-          1000
+        ? (back.finalElevation - input.startElevation) * 1000
         : null;
 
     returnResult = {

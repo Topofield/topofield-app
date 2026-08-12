@@ -131,6 +131,7 @@ export function ReadingsTable({
                       options={POINT_TYPE_OPTIONS}
                       value={reading.pointType}
                       disabled={disabled}
+                      error={issue?.errors.pointType}
                       onChange={(e) =>
                         update(i, {
                           pointType: e.target.value as PointType,

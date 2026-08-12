@@ -353,6 +353,81 @@ describe("computeLeveling — ida y vuelta", () => {
   });
 });
 
+describe("computeLeveling — el cierre usa la cota de la CADENA, no la última fila (hallazgo 1)", () => {
+  // Reproduce el hallazgo crítico de la revisión final: si la libreta termina
+  // con una radiación (`intermediate`) DESPUÉS del BM de cierre, el error de
+  // cierre no debe tomar la cota de esa radiación — debe seguir usando la
+  // cota de la cadena bm/pc, que es la del BM de cierre real.
+  //
+  // Para que la radiación final tenga una AI vigente de la que colgar, el
+  // recorrido necesita que el BM de cierre lleve L.At (algo inusual en la
+  // práctica de campo, pero es exactamente el escenario que hace que el
+  // bug se manifieste: una fila después del BM de cierre con una AI
+  // vigente y lectura adelante 0.805, tal como lo reportó la revisión).
+  const closedRunWithBacksightAtClose: ReadingInput[] = [
+    r("BM-1", "bm", 1.5, null, 0.0),
+    r("PC-1", "pc", 2.0, 1.2, 0.3),
+    r("PC-2", "pc", 1.0, 2.5, 0.6),
+    r("BM-1", "bm", 1.5, 0.808, 0.9), // BM de cierre, ahora con L.At propia
+    r("RAD-1", "intermediate", null, 0.805, 0.9), // radiación tras el cierre
+  ];
+
+  const result = computeLeveling({
+    ...CLOSED_INPUT,
+    forward: closedRunWithBacksightAtClose,
+  });
+
+  it("el error de cierre sigue siendo el del BM de cierre (−8.0 mm), no el de la radiación", () => {
+    expect(result.closureErrorMm).toBeCloseTo(-8.0, 4);
+  });
+
+  it("el BM de cierre corregido cierra exacto en 100.0000, no la radiación", () => {
+    const bmFinal = result.forward.readings.at(-2);
+    expect(bmFinal?.pointCode).toBe("BM-1");
+    expect(bmFinal?.elevationCorrected).toBeCloseTo(100.0, 6);
+  });
+
+  it("una radiación en MEDIO del recorrido (no al final) sigue funcionando como antes", () => {
+    // Caso de regresión: reordenar computeRun no debe alterar el cálculo
+    // normal de un intermedio interior, ya cubierto en el describe de
+    // "computeRun — puntos intermedios" pero verificado aquí también a
+    // nivel de computeLeveling end-to-end.
+    const withMiddleIntermediate: ReadingInput[] = [
+      r("BM-1", "bm", 1.5, null, 0.0),
+      r("A", "intermediate", null, 1.1, 0.1),
+      r("PC-1", "pc", 2.0, 1.2, 0.3),
+      r("PC-2", "pc", 1.0, 2.5, 0.6),
+      r("BM-1", "bm", null, 0.808, 0.9),
+    ];
+    const midResult = computeLeveling({
+      ...CLOSED_INPUT,
+      forward: withMiddleIntermediate,
+    });
+    expect(midResult.closureErrorMm).toBeCloseTo(-8.0, 4);
+    expect(midResult.forward.readings.at(-1)?.elevationCorrected).toBeCloseTo(
+      100.0,
+      6,
+    );
+  });
+
+  it("el error de cierre de la VUELTA también usa la cadena, no la última fila", () => {
+    const returnWithTrailingIntermediate: ReadingInput[] = [
+      r("BM-1", "bm", 1.2, null, 0.0),
+      r("PV-1", "pc", 1.6, 0.9, 0.45),
+      r("BM-1", "bm", 1.0, 1.89, 0.9), // BM de cierre de la vuelta, con L.At
+      r("RAD-V", "intermediate", null, 0.5, 0.9), // radiación tras el cierre
+    ];
+    const rtResult = computeLeveling({
+      ...CLOSED_INPUT,
+      return: returnWithTrailingIntermediate,
+    });
+    // Igual que en el test "ida y vuelta" original: vuelta arranca en 100.000
+    // y cierra en 100.010 contra el BM-1 de partida → error +10.0 mm, SIN
+    // que la radiación final (que colgaría de una cota distinta) lo altere.
+    expect(rtResult.return?.errorMm).toBeCloseTo(10.0, 4);
+  });
+});
+
 describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea 11)", () => {
   // Un proceso recién creado no tiene distancia total: el formulario de
   // creación no la pide (vive solo en el editor), así que `buildInput` la
