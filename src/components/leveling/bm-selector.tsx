@@ -24,6 +24,12 @@
 // elimina esa clase de bug de raíz: no hay estado que sincronizar, así que
 // tampoco hay forma de que se desincronice al montar, desmontar o recibir un
 // `value` inicial.
+//
+// ÚNICA excepción: la bandera `otherRequested` (ver su comentario más abajo),
+// que solo distingue «el usuario pidió entrada libre» de «no hay selección»,
+// dos estados que `value` por sí solo no puede diferenciar porque ambos son
+// `EMPTY_BM_VALUE`. Cede siempre ante el catálogo, así que no puede esconder
+// un BM real ni reintroducir el problema de hidratación descrito arriba.
 
 import { useState } from "react";
 import { Input, Select } from "@/components/design-system";
