@@ -2942,18 +2942,17 @@ export async function saveVisitAction(
     .eq("id", payload.visitId);
   if (headerError) return { ok: false, error: headerError.message };
 
-  // Las lecturas se reemplazan en bloque: es más simple y más seguro que
-  // reconciliar altas, bajas y modificaciones fila a fila.
-  const { error: deleteError } = await supabase
-    .from("settlement_readings")
-    .delete()
-    .eq("visit_id", payload.visitId);
-  if (deleteError) return { ok: false, error: deleteError.message };
-
+  // Las lecturas se actualizan con upsert, NO con delete + insert.
+  //
+  // Corregido en la revisión de la Tarea 9: un `delete` seguido de un `insert`
+  // que fallara dejaría la visita sin ninguna lectura y perdería el dato de
+  // campo que el usuario ya había capturado — exactamente el daño que este
+  // módulo existe para evitar. El `UNIQUE (visit_id, point_id)` hace que el
+  // upsert actualice la fila en vez de duplicarla.
   if (computed.readings.length > 0) {
-    const { error: insertError } = await supabase
+    const { error: upsertError } = await supabase
       .from("settlement_readings")
-      .insert(
+      .upsert(
         computed.readings.map((r) => ({
           visit_id: payload.visitId,
           point_id: r.pointId,
@@ -2963,9 +2962,24 @@ export async function saveVisitAction(
           velocity: r.velocity,
           alert_status: r.alertStatus,
         })),
+        { onConflict: "visit_id,point_id" },
       );
-    if (insertError) return { ok: false, error: insertError.message };
+    if (upsertError) return { ok: false, error: upsertError.message };
   }
+
+  // Las lecturas de puntos que ya no vienen en el payload se retiran DESPUÉS
+  // de que el upsert haya confirmado las vigentes, nunca antes: así ningún
+  // fallo intermedio deja la visita sin datos.
+  const idsVigentes = computed.readings.map((r) => r.pointId);
+  const purga = supabase
+    .from("settlement_readings")
+    .delete()
+    .eq("visit_id", payload.visitId);
+  const { error: purgaError } =
+    idsVigentes.length > 0
+      ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
+      : await purga;
+  if (purgaError) return { ok: false, error: purgaError.message };
 
   revalidatePath(`/projects/${projectId}/settlement/${payload.siteId}`);
   return { ok: true };
@@ -3053,7 +3067,7 @@ git commit -m "feat: queries y acciones de sitio y visitas con revalidacion en s
 - Create: `src/app/(app)/projects/[id]/sites/[siteId]/point-actions.ts`
 
 **Interfaces:**
-- Consumes: `createSiteAction`, `saveSiteAction`, `closeSiteAction`; `thresholdsFor`; `STRUCTURE_TYPES`, `STRUCTURE_TYPE_LABELS`.
+- Consumes: `createSiteAction`, `saveSiteAction`; `thresholdsFor`; `STRUCTURE_TYPES`, `STRUCTURE_TYPE_LABELS`. (`closeSiteAction` NO se consume aquí: el botón «Cerrar Lugar» llega en la Task 14, Step 4.)
 - Produces: `SiteForm`, `ThresholdsFields`, `PointsCatalog`; acciones `createPointAction`, `savePointAction`, `deletePointAction`.
 
 **Contexto de patrones:** el formulario en modal con validación en cliente y acción-como-función dentro de `startTransition` está en `src/components/projects/reference-points-manager.tsx` (aprendizaje de la Fase 2). Replicarlo para el catálogo de puntos. **No** usar `setState` dentro de `useEffect`: `react-hooks/set-state-in-effect` es error de lint en este proyecto.
