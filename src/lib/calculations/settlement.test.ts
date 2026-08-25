@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyAlert,
+  classifyReadings,
   computeDifferentials,
+  computeHistory,
   computeSettlements,
+  computeTrends,
   daysBetween,
   horizontalDistance,
   monthsBetween,
 } from "./settlement";
+import { thresholdsFor } from "./tolerances";
 import type {
   ComputedReading,
   PointInput,
+  Thresholds,
   VisitInput,
 } from "@/types/settlement";
 
@@ -326,5 +332,169 @@ describe("computeDifferentials", () => {
       500,
     );
     expect(pairs[0]?.differentialMm).toBeCloseTo(4, 6);
+  });
+});
+
+const T: Thresholds = thresholdsFor("edificio");
+// velocidad 2/5/10 mm/mes · acumulado 25/50/75 mm
+
+describe("classifyAlert", () => {
+  it("es normal por debajo de todos los umbrales", () => {
+    expect(classifyAlert(-1.9, -24, T)).toBe("normal");
+  });
+
+  it("clasifica en la frontera exacta del umbral (>=, no >)", () => {
+    expect(classifyAlert(-2, 0, T)).toBe("caution");
+    expect(classifyAlert(-5, 0, T)).toBe("alert");
+    expect(classifyAlert(-10, 0, T)).toBe("alarm");
+    expect(classifyAlert(0, -25, T)).toBe("caution");
+    expect(classifyAlert(0, -50, T)).toBe("alert");
+    expect(classifyAlert(0, -75, T)).toBe("alarm");
+  });
+
+  it("usa el valor absoluto: un levantamiento rápido también alerta", () => {
+    expect(classifyAlert(6, 0, T)).toBe("alert");
+    expect(classifyAlert(0, 80, T)).toBe("alarm");
+  });
+
+  it("gana la peor de las dos clasificaciones", () => {
+    // Velocidad normal pero acumulado en alarma.
+    expect(classifyAlert(-1, -80, T)).toBe("alarm");
+    // Velocidad en alarma pero acumulado normal.
+    expect(classifyAlert(-12, -5, T)).toBe("alarm");
+  });
+
+  it("trata la velocidad ausente como no clasificable por velocidad", () => {
+    // La línea base no tiene velocidad; solo debe pesar el acumulado.
+    expect(classifyAlert(null, -30, T)).toBe("caution");
+    expect(classifyAlert(null, 0, T)).toBe("normal");
+  });
+
+  it("trata el acumulado ausente como no clasificable por acumulado", () => {
+    expect(classifyAlert(-6, null, T)).toBe("alert");
+  });
+
+  it("es normal si no hay ni velocidad ni acumulado", () => {
+    expect(classifyAlert(null, null, T)).toBe("normal");
+  });
+});
+
+describe("classifyReadings", () => {
+  it("asigna el nivel a cada lectura y el peor a la visita", () => {
+    const visitas = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        // −60 mm en un mes: acumulado en alerta, velocidad en alarma.
+        visita(1, "2025-02-15", 99.94),
+      ],
+    );
+    const clasificadas = classifyReadings(visitas, T);
+    expect(clasificadas[0]?.readings[0]?.alertStatus).toBe("normal");
+    expect(clasificadas[1]?.readings[0]?.alertStatus).toBe("alarm");
+    expect(clasificadas[1]?.worstAlert).toBe("alarm");
+  });
+
+  it("el peor de la visita es el máximo entre sus puntos", () => {
+    const P2: PointInput = { ...P1, id: "p2", code: "P-02" };
+    const visitas = computeSettlements(
+      [P1, P2],
+      [
+        {
+          id: "v0",
+          visitNumber: 0,
+          date: "2025-01-15",
+          readings: [
+            { pointId: "p1", elevation: 100.0 },
+            { pointId: "p2", elevation: 100.0 },
+          ],
+        },
+        {
+          id: "v1",
+          visitNumber: 1,
+          date: "2025-02-15",
+          readings: [
+            { pointId: "p1", elevation: 99.999 }, // −1 mm: normal
+            { pointId: "p2", elevation: 99.994 }, // −6 mm: alerta por velocidad
+          ],
+        },
+      ],
+    );
+    const clasificadas = classifyReadings(visitas, T);
+    expect(clasificadas[1]?.worstAlert).toBe("alert");
+  });
+});
+
+describe("computeTrends", () => {
+  it("no afirma nada con menos de 3 visitas", () => {
+    const visitas = computeSettlements(
+      [P1],
+      [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 99.994)],
+    );
+    expect(computeTrends(visitas)).toEqual({});
+  });
+
+  it("marca convergente cuando la velocidad decrece en magnitud", () => {
+    const visitas = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        visita(1, "2025-02-15", 99.994), // −6.0 mm
+        visita(2, "2025-03-15", 99.992), // −2.0 mm
+      ],
+    );
+    expect(computeTrends(visitas).p1).toBe("converging");
+  });
+
+  it("marca acelerando cuando la velocidad crece en magnitud", () => {
+    const visitas = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        visita(1, "2025-02-15", 99.998), // −2.0 mm
+        visita(2, "2025-03-15", 99.99), // −8.0 mm
+      ],
+    );
+    expect(computeTrends(visitas).p1).toBe("accelerating");
+  });
+});
+
+describe("computeHistory", () => {
+  it("compone visitas clasificadas, diferenciales de la última y tendencias", () => {
+    const A2: PointInput = { ...A, initialElevation: 100 };
+    const B2: PointInput = { ...B, initialElevation: 100 };
+    const visitas: VisitInput[] = [
+      {
+        id: "v0",
+        visitNumber: 0,
+        date: "2025-01-15",
+        readings: [
+          { pointId: "a", elevation: 100.0 },
+          { pointId: "b", elevation: 100.0 },
+        ],
+      },
+      {
+        id: "v1",
+        visitNumber: 1,
+        date: "2025-02-15",
+        readings: [
+          { pointId: "a", elevation: 99.999 },
+          { pointId: "b", elevation: 99.998 },
+        ],
+      },
+    ];
+    const h = computeHistory([A2, B2], visitas, T);
+    expect(h.visits).toHaveLength(2);
+    // Los diferenciales se calculan sobre la ÚLTIMA visita.
+    expect(h.differentials).toHaveLength(1);
+    expect(h.differentials[0]?.differentialMm).toBeCloseTo(1.0, 6);
+    expect(h.trends).toEqual({});
+  });
+
+  it("devuelve estructuras vacías si no hay visitas", () => {
+    const h = computeHistory([A], [], T);
+    expect(h.visits).toEqual([]);
+    expect(h.differentials).toEqual([]);
+    expect(h.trends).toEqual({});
   });
 });

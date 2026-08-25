@@ -12,9 +12,13 @@ import type {
   ComputedReading,
   DifferentialPair,
   PointInput,
+  SettlementHistory,
+  Thresholds,
+  Trend,
   VisitInput,
   VisitResult,
 } from "@/types/settlement";
+import { ALERT_LEVELS } from "@/types/settlement";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -213,4 +217,145 @@ export function computeDifferentials(
   }
 
   return pairs;
+}
+
+/**
+ * Clasifica una lectura en el semáforo de 4 niveles (§ 6.11): gana la peor
+ * clasificación entre velocidad y acumulado, ambas en valor absoluto.
+ *
+ * Un valor `null` no clasifica por ese criterio —no lo fuerza a `normal`—: la
+ * línea base no tiene velocidad y debe poder clasificarse solo por acumulado.
+ *
+ * ATENCIÓN: los estados de alerta de los casos de estudio del marco teórico NO
+ * se derivan de sus propios umbrales (verificado; ver hallazgo 3 del PRD de
+ * fase). No sirven para comprobar esta función.
+ */
+export function classifyAlert(
+  velocity: number | null,
+  accumulated: number | null,
+  thresholds: Thresholds,
+): AlertLevel {
+  const byVelocity: AlertLevel =
+    velocity === null
+      ? "normal"
+      : level(Math.abs(velocity), [
+          thresholds.velocityCaution,
+          thresholds.velocityAlert,
+          thresholds.velocityAlarm,
+        ]);
+
+  const byAccumulated: AlertLevel =
+    accumulated === null
+      ? "normal"
+      : level(Math.abs(accumulated), [
+          thresholds.accumulatedCaution,
+          thresholds.accumulatedAlert,
+          thresholds.accumulatedAlarm,
+        ]);
+
+  return worst(byVelocity, byAccumulated);
+}
+
+/** Nivel de un valor absoluto contra [precaución, alerta, alarma]. */
+function level(
+  absolute: number,
+  [caution, alert, alarm]: [number, number, number],
+): AlertLevel {
+  if (absolute >= alarm) return "alarm";
+  if (absolute >= alert) return "alert";
+  if (absolute >= caution) return "caution";
+  return "normal";
+}
+
+/** El peor de dos niveles, según el orden de ALERT_LEVELS. */
+export function worst(a: AlertLevel, b: AlertLevel): AlertLevel {
+  return ALERT_LEVELS.indexOf(a) >= ALERT_LEVELS.indexOf(b) ? a : b;
+}
+
+/**
+ * Asigna el nivel de alerta a cada lectura y el peor de ellos a cada visita.
+ * Se aplica sobre el resultado de `computeSettlements`.
+ */
+export function classifyReadings(
+  visits: VisitResult[],
+  thresholds: Thresholds,
+): VisitResult[] {
+  return visits.map((visit) => {
+    const readings = visit.readings.map((reading) => ({
+      ...reading,
+      alertStatus: classifyAlert(
+        reading.velocity,
+        reading.accumulatedSettlement,
+        thresholds,
+      ),
+    }));
+
+    return {
+      ...visit,
+      readings,
+      worstAlert: readings.reduce<AlertLevel>(
+        (acc, r) => worst(acc, r.alertStatus),
+        "normal",
+      ),
+    };
+  });
+}
+
+/**
+ * Tendencia de cada punto comparando sus dos últimas velocidades (§ 5.3).
+ *
+ * Un punto solo aparece en el resultado si tiene **al menos dos velocidades**,
+ * lo que exige tres visitas. Con menos no se incluye: devolver `"converging"`
+ * afirmaría una convergencia que nadie ha comprobado.
+ */
+export function computeTrends(visits: VisitResult[]): Record<string, Trend> {
+  const velocities = new Map<string, number[]>();
+
+  for (const visit of visits) {
+    for (const reading of visit.readings) {
+      if (reading.velocity === null) continue;
+      const list = velocities.get(reading.pointId) ?? [];
+      list.push(reading.velocity);
+      velocities.set(reading.pointId, list);
+    }
+  }
+
+  const trends: Record<string, Trend> = {};
+  for (const [pointId, list] of velocities) {
+    if (list.length < 2) continue;
+    const last = Math.abs(list[list.length - 1]!);
+    const previous = Math.abs(list[list.length - 2]!);
+    trends[pointId] = last > previous ? "accelerating" : "converging";
+  }
+  return trends;
+}
+
+/**
+ * Histórico completo de un lugar: visitas calculadas y clasificadas,
+ * diferenciales de la **última** visita y tendencia por punto.
+ */
+export function computeHistory(
+  points: PointInput[],
+  visits: VisitInput[],
+  thresholds: Thresholds,
+): SettlementHistory {
+  const computed = classifyReadings(
+    computeSettlements(points, visits),
+    thresholds,
+  );
+
+  const last = computed[computed.length - 1];
+  const differentials = last
+    ? computeDifferentials(
+        points,
+        last.readings,
+        thresholds.angularDistortionLimit,
+      )
+    : [];
+
+  return {
+    visits: computed,
+    differentials,
+    trends: computeTrends(computed),
+  };
 }
