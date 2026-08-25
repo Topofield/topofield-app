@@ -968,6 +968,34 @@ coordenadas, pero no para un punto que tiene coordenadas pero le falta la
 lectura de la visita actual — un caso distinto al de coordenadas ausentes, y
 sin test que fije su comportamiento.
 
+**La propagación de lecturas al guardar una visita no tiene test de
+regresión.** `saveVisitAction` reescribe las lecturas de las visitas
+**abiertas** cuyos valores cambian al guardar otra: el parcial, el acumulado
+y la velocidad de una visita dependen de la anterior, así que intercalar una
+visita, mover su fecha o corregir una cota base deja obsoletas las lecturas
+ya persistidas de las que le siguen si nadie las recalcula. El fallo se
+encontró y se corrigió en la revisión final de la Fase 5 (verificado a mano
+contra la base: una velocidad pasó de −30.95 a −32.61 al intercalar una
+visita), pero el test que se añadió ejercita `computeSettlements` —el motor,
+que nunca estuvo roto— y no la capa de persistencia, que es donde vivía el
+fallo. Si alguien borra ese bucle de `saveVisitAction`, los 297 tests siguen
+en verde. Probarlo exigiría mockear el cliente de Supabase o montar pruebas
+de integración contra la base local, y hoy el proyecto no tiene ninguna de
+las dos cosas.
+
+**Las series de la gráfica de asentamientos repiten forma a partir de la
+sexta.** `SERIES_MARKERS` tiene 5 formas y `SERIES_COLORS` 4 colores, y al
+ser coprimos la combinación completa (forma + color) no se repite hasta la
+serie 20 — hay un aviso cuando se supera ese número. Pero la **forma sola**
+sí se repite en la serie 6, porque solo hay 5 formas distintas: con
+acromatopsia, donde el color no distingue, dos series pueden compartir
+marcador y solo diferenciarse por su posición en la gráfica. Un catálogo de
+6 o más puntos seleccionados a la vez lo provoca, y el marco teórico del
+dominio usa 9 y 10 puntos por sistema (edificio, presa, terraplén), así que
+no es un caso límite improbable. El aviso actual no cubre este rango — solo
+avisa a partir de 20 series, no entre 6 y 20. Lo correcto sería añadir formas
+de marcador hasta cubrir el catálogo típico del dominio (9-10 puntos).
+
 ---
 
 ## 12. Manual de usuario en la app

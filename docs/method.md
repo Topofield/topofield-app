@@ -14,7 +14,7 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 | 2 | Dashboard y Proyectos | [`prds/01-dashboard-proyectos.md`](./prds/01-dashboard-proyectos.md) | cerrada |
 | 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | cerrada |
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | cerrada |
-| 5 | Control de Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | en curso |
+| 5 | Control de Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | cerrada |
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | pendiente |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
@@ -172,6 +172,68 @@ Sección viva. Cada cierre de fase añade una entrada con:
 - **Un comentario desactualizado cuesta una ronda de corrección.** Pasó dos
   veces en esta fase, en el mismo archivo. Al cambiar el contrato de una
   función, actualizar su JSDoc en el mismo commit.
+
+### Cierre Fase 5 — Control de Asentamientos (2026-08-25)
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El PRD hacía que el motor redondeara la velocidad a 2 decimales, mientras
+  sus propios tests exigían precisión a 6: eran incompatibles entre sí. Se
+  quitó el redondeo del motor, y no por comodidad — redondear antes de
+  clasificar cambia el nivel de alerta (una velocidad real de 1.996 mm/mes se
+  convierte en 2.00 al redondear y salta de `normal` a `caution`). El
+  redondeo pertenece a la persistencia (`velocity DECIMAL(8,2)`) y a la
+  presentación (`.toFixed(2)`), no al motor.
+- El PRD asignaba `closeSiteAction` a la tarea de rutas del lugar; en
+  realidad correspondía a la tarea de cierre.
+- El plan proponía reemplazar las lecturas de una visita con `delete`+`insert`
+  al guardar, describiéndolo como «más seguro». Resultó lo contrario: un
+  fallo entre ambas sentencias deja la visita sin datos, justo lo que el
+  módulo existe para evitar. Se cambió a upsert por punto con purga posterior
+  de los puntos retirados.
+
+**Aprendizajes a llevar a la Fase 6:**
+
+- **El marco teórico falló por tercera vez, y esta vez en el cálculo.** En
+  las Fases 3 y 4 las tablas del marco teórico eran aritméticamente
+  inconsistentes en su forma; esta vez sus asentamientos y distorsiones
+  angulares son exactos (35 valores verificados), pero las velocidades no
+  cuadran en 3 de 7 intervalos —copia el asentamiento parcial en la columna
+  de velocidad cuando el intervalo es «un mes»— y los estados de alerta no se
+  derivan de sus propios umbrales (en el terraplén, 40 mm es «Normal» y 45
+  «Precaución», pero 60 vuelve a «Precaución» y 66 salta a «Alerta»). Son
+  juicio editorial, no cálculo, y ninguna fórmula los reproduce.
+- **La revisión de conjunto encontró dos fallos críticos que ninguna revisión
+  por tarea podía ver**, y ambos son del tipo que el dominio predice. Uno: un
+  proyecto nuevo no podía crear ninguna poligonal ni nivelación, porque
+  `site_id` pasó a ser obligatorio y ninguna tarea creaba el lugar al crear
+  el proyecto — una regresión sobre funcionalidad de las Fases 3 y 4 que no
+  salió antes porque toda la verificación corrió sobre datos sembrados, que
+  sí tenían lugar. Dos: guardar una visita dejaba obsoletas las lecturas de
+  las visitas posteriores en la base, mientras el panel seguía mostrando los
+  valores recalculados en vivo. Los dos vivían en costuras entre tareas, no
+  dentro de ninguna tarea.
+- **Verificar sobre datos sembrados oculta los fallos del arranque en frío.**
+  Es el aprendizaje operativo más transferible de esta fase: además de
+  verificar con el seed cargado, hay que probar también el camino del
+  usuario que empieza de cero (proyecto nuevo, sin lugares, sin procesos).
+- **Una caché derivada que nadie invalida diverge por todas las puertas que
+  alimentan el mismo cálculo, no solo por la que se documentó primero.** El
+  Ruling 6 de esta fase registró la divergencia entre hub y panel al editar
+  los umbrales de un lugar, y la dio por acotada («mientras nadie edite
+  umbrales, no hay divergencia»). Era falso: el mismo mecanismo —lecturas
+  persistidas que no se recalculan— afectaba también a intercalar una visita
+  y a corregir la cota base de un punto, dos operaciones normales del flujo,
+  no ediciones excepcionales. Al documentar una limitación de este tipo
+  conviene preguntarse qué otras entradas alimentan el mismo cálculo antes de
+  darla por acotada.
+- **Los tests de la capa de persistencia no existen y se echaron de menos.**
+  Los fallos de esta fase que llegaron más lejos —la propagación de lecturas
+  entre visitas— vivían en los Server Actions, no en el motor de cálculo, que
+  está bien cubierto por tests puros. El proyecto no tiene hoy manera de
+  mockear el cliente de Supabase ni pruebas de integración contra la base
+  local; sin eso, esta clase de fallo seguirá dependiendo de verificación
+  manual.
 
 ### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
 
