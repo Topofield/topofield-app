@@ -10,7 +10,11 @@ const DOT_CLASSES: Record<Status, string> = {
   danger: "bg-danger-500",
 };
 
-const LEVEL_CLASSES: Record<AlertLevel, string> = {
+/**
+ * Color por nivel de alerta — el primer canal. Cada nivel usa un token
+ * `semaphore-*` distinto (ver el comentario de contraste en globals.css).
+ */
+export const LEVEL_CLASSES: Record<AlertLevel, string> = {
   normal: "bg-semaphore-green",
   caution: "bg-semaphore-yellow",
   alert: "bg-semaphore-orange",
@@ -37,14 +41,35 @@ export const SEMAPHORE_SHAPES: Record<AlertLevel, string> = {
   alarm: "clip-triangle",              // ▲  triángulo
 };
 
-interface StatusIndicatorProps {
-  /** Semáforo de 3 niveles (tolerancia). Mutuamente excluyente con `level`. */
-  status?: Status;
-  /** Semáforo de 4 niveles del control de asentamientos. */
-  level?: AlertLevel;
+interface StatusIndicatorBaseProps {
   label: string;
   className?: string;
 }
+
+/**
+ * Semáforo de 3 niveles (tolerancia cumplida o no) — poligonal y nivelación.
+ */
+interface StatusIndicatorStatusProps extends StatusIndicatorBaseProps {
+  status: Status;
+  level?: never;
+}
+
+/**
+ * Semáforo de 4 niveles del control de asentamientos.
+ */
+interface StatusIndicatorLevelProps extends StatusIndicatorBaseProps {
+  level: AlertLevel;
+  status?: never;
+}
+
+/**
+ * El tipo obliga a pasar `status` o `level`, nunca ninguno ni ambos: un
+ * indicador sin nivel caería en verde «normal» y afirmaría en silencio que
+ * todo está bien, que es justo lo que este componente existe para no hacer.
+ */
+export type StatusIndicatorProps =
+  | StatusIndicatorStatusProps
+  | StatusIndicatorLevelProps;
 
 /**
  * Semáforo de cumplimiento con etiqueta.
@@ -70,7 +95,7 @@ export function StatusIndicator({
           "h-2.5 w-2.5 shrink-0",
           isLevel
             ? cn(LEVEL_CLASSES[level], SEMAPHORE_SHAPES[level])
-            : cn(DOT_CLASSES[status ?? "ok"], "rounded-full"),
+            : cn(DOT_CLASSES[status as Status], "rounded-full"),
         )}
       />
       <span className="text-sm font-medium text-neutral-800">{label}</span>
