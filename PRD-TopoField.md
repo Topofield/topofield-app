@@ -164,20 +164,28 @@ User (Supabase Auth)
        └── Project
        ├── Equipment (config del equipo)
        ├── ReferencePoint (BMs y puntos compartidos)
-       ├── PolygonalProcess
-       │    ├── PolygonalStation (lecturas)
-       │    └── PolygonalResult (coordenadas corregidas)
-       ├── LevelingProcess
-       │    ├── LevelingReading (lecturas)
-       │    └── LevelingResult (cotas corregidas)
-       ├── SettlementSystem
-       │    ├── SettlementPoint (catálogo de puntos)
-       │    ├── SettlementCampaign
-       │    │    └── SettlementReading (lecturas por campaña)
-       │    └── SettlementAlert (alertas generadas)
+       ├── Site (lugar donde se ejecuta el trabajo)
+       │    ├── PolygonalProcess
+       │    │    ├── PolygonalStation (lecturas)
+       │    │    └── PolygonalResult (coordenadas corregidas)
+       │    ├── LevelingProcess
+       │    │    ├── LevelingReading (lecturas)
+       │    │    └── LevelingResult (cotas corregidas)
+       │    ├── SettlementPoint (catálogo de puntos de control)
+       │    └── SettlementVisit
+       │         └── SettlementReading (lecturas por visita)
        ├── Report (informes generados)
        └── Recipient (destinatarios de informes)
 ```
+
+**Enmendado en la Fase 5 (2026-08-25).** El `Site` (lugar) se introdujo como
+entidad transversal: todo proceso pertenece a un lugar. En el control de
+asentamientos el lugar es además lo que agrupa las visitas y hace posible el
+histórico. `SettlementSystem` desapareció —el lugar lo absorbe— y
+`SettlementCampaign` pasó a llamarse `SettlementVisit`. `SettlementAlert` no
+llegó a existir: las alertas se derivan de los umbrales del lugar en cada
+lectura (`alert_status`), no se almacenan como entidad aparte. Ver
+`docs/prds/04-asentamientos.md`, decisiones #1, #4 y #6.
 
 ### 3.2 Tablas SQL (Supabase / PostgreSQL)
 
@@ -396,22 +404,28 @@ CREATE TABLE leveling_readings (
 );
 ```
 
-#### `settlement_systems`
+#### `sites`
+
+**Añadida en la Fase 5.** El lugar donde se ejecuta el trabajo, transversal a
+los tres módulos. Absorbe lo que este PRD llamaba `settlement_systems`, que ya
+no existe: eran dos entidades para el mismo concepto.
+
 ```sql
-CREATE TABLE settlement_systems (
+CREATE TABLE sites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  structure_type TEXT NOT NULL,              -- ej: "edificio", "presa", "terraplen"
-  -- Umbrales de alerta
-  velocity_caution DECIMAL(6,2) DEFAULT 2.0,    -- mm/mes
-  velocity_alert DECIMAL(6,2) DEFAULT 5.0,
-  velocity_alarm DECIMAL(6,2) DEFAULT 10.0,
-  accumulated_caution DECIMAL(8,2) DEFAULT 10.0, -- mm
-  accumulated_alert DECIMAL(8,2) DEFAULT 25.0,
-  accumulated_alarm DECIMAL(8,2) DEFAULT 50.0,
-  angular_distortion_limit TEXT DEFAULT '1/500',
-  -- Estado
+  description TEXT,
+  structure_type TEXT NOT NULL
+    CHECK (structure_type IN ('edificio', 'presa', 'terraplen', 'otro')),
+  -- Umbrales de alerta (preset por structure_type, siempre editables)
+  velocity_caution DECIMAL(6,2) NOT NULL DEFAULT 2.0,     -- mm/mes
+  velocity_alert   DECIMAL(6,2) NOT NULL DEFAULT 5.0,
+  velocity_alarm   DECIMAL(6,2) NOT NULL DEFAULT 10.0,
+  accumulated_caution DECIMAL(8,2) NOT NULL DEFAULT 25.0, -- mm
+  accumulated_alert   DECIMAL(8,2) NOT NULL DEFAULT 50.0,
+  accumulated_alarm   DECIMAL(8,2) NOT NULL DEFAULT 75.0,
+  angular_distortion_limit INT NOT NULL DEFAULT 500,      -- el X de 1/X
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed')),
   closed_at TIMESTAMPTZ,
   closed_by TEXT,
@@ -421,24 +435,46 @@ CREATE TABLE settlement_systems (
 );
 ```
 
+Dos correcciones respecto a lo que definía `settlement_systems`:
+
+- **Los defaults de acumulado eran los de presa (10/25/50), no los de edificio.**
+  Contradecían la tabla de umbrales del marco teórico (`§4.1`), donde el edificio
+  es 25/50/75. Un sistema creado con los defaults clasificaba un edificio con
+  criterio de presa. Ahora el default es el de edificio y el preset real lo fija
+  el `structure_type`.
+- **`angular_distortion_limit` es `INT`, no `TEXT`.** Guardarlo como `'1/500'`
+  obligaba a parsear una cadena en cada comparación numérica. Se guarda el
+  denominador y se formatea al mostrar.
+
 #### `settlement_points`
 ```sql
 CREATE TABLE settlement_points (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  system_id UUID REFERENCES settlement_systems(id) ON DELETE CASCADE,
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   location_description TEXT NOT NULL,       -- ej: "Columna A1 — Esquina NW"
+  northing DECIMAL(12,3),                   -- para la distorsión angular
+  easting  DECIMAL(12,3),
   initial_elevation DECIMAL(10,4),          -- C0
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (site_id, code)
 );
 ```
 
-#### `settlement_campaigns`
+`northing`/`easting` se añadieron en la Fase 5: la distorsión angular del `§6.10`
+necesita la distancia horizontal entre puntos, y sin coordenadas habría que
+capturarla par por par.
+
+#### `settlement_visits`
+
+**Renombrada en la Fase 5** (antes `settlement_campaigns`): en la interfaz el
+concepto se llama «visita».
+
 ```sql
-CREATE TABLE settlement_campaigns (
+CREATE TABLE settlement_visits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  system_id UUID REFERENCES settlement_systems(id) ON DELETE CASCADE,
-  campaign_number INT NOT NULL,             -- 0 = línea base
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  visit_number INT NOT NULL,                -- 0 = línea base
   date DATE NOT NULL,
   operator TEXT,
   equipment TEXT,
@@ -448,7 +484,9 @@ CREATE TABLE settlement_campaigns (
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'calculated', 'closed')),
   closed_at TIMESTAMPTZ,
   closed_by TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (site_id, visit_number)
 );
 ```
 
@@ -456,17 +494,27 @@ CREATE TABLE settlement_campaigns (
 ```sql
 CREATE TABLE settlement_readings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  campaign_id UUID REFERENCES settlement_campaigns(id) ON DELETE CASCADE,
-  point_id UUID REFERENCES settlement_points(id) ON DELETE CASCADE,
+  visit_id UUID NOT NULL REFERENCES settlement_visits(id) ON DELETE CASCADE,
+  point_id UUID NOT NULL REFERENCES settlement_points(id) ON DELETE CASCADE,
   elevation DECIMAL(10,4) NOT NULL,
   -- Calculados
-  partial_settlement DECIMAL(8,1),          -- mm, vs campaña anterior
+  partial_settlement DECIMAL(8,1),          -- mm, vs visita anterior
   accumulated_settlement DECIMAL(8,1),      -- mm, vs C0
   velocity DECIMAL(8,2),                    -- mm/mes
-  alert_status TEXT DEFAULT 'normal' CHECK (alert_status IN ('normal', 'caution', 'alert', 'alarm')),
-  created_at TIMESTAMPTZ DEFAULT now()
+  alert_status TEXT NOT NULL DEFAULT 'normal' CHECK (alert_status IN ('normal', 'caution', 'alert', 'alarm')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (visit_id, point_id)
 );
 ```
+
+Los tres `UNIQUE` se añadieron en la Fase 5 porque expresan reglas del dominio:
+un código de punto no se repite en un lugar, no hay dos visitas con el mismo
+número, y un punto tiene una sola lectura por visita. Sin ellos, un doble envío
+del formulario duplica lecturas y el asentamiento parcial se calcula contra la
+fila equivocada — un fallo silencioso.
+
+**`polygonal_processes` y `leveling_processes` ganaron `site_id UUID NOT NULL
+REFERENCES sites(id)`** en la misma fase: todo proceso pertenece a un lugar.
 
 #### `reports`
 ```sql
@@ -590,29 +638,37 @@ CREATE TABLE recipients (
 - Si ida y vuelta: discrepancia entre recorridos
 - Tabla de cotas corregidas (corrección proporcional a distancia)
 
-### 4.5 Editor de Asentamientos
+### 4.5 Editor de Control de Asentamientos
 
-**Pantalla:** `/projects/[id]/settlement/[pid]`
+**Terminología precisada en la Fase 5:** el módulo se llama «Control de
+Asentamientos», cada medición periódica es una **visita** (antes «campaña»), y
+la configuración vive en el **lugar** (`sites`), no en un «sistema».
 
-**Configuración del sistema (una vez):**
-- Nombre, tipo de estructura
-- Catálogo de puntos: tabla editable (código, ubicación, cota C0)
+**Pantallas:**
+- `/projects/[id]/sites/[siteId]` — configuración del lugar
+- `/projects/[id]/settlement/[siteId]` — panel del control y lista de visitas
+- `/projects/[id]/settlement/[siteId]/visits/[visitId]` — editor de visita
+
+**Configuración del lugar (una vez):**
+- Nombre, descripción, tipo de estructura (aplica el preset de umbrales)
+- Catálogo de puntos: tabla editable (código, ubicación, coordenadas N/E, cota C0)
 - Umbrales de alerta: editables (velocidad, acumulado, distorsión angular)
 
-**Gestión de campañas:**
-- Lista cronológica de campañas
-- Botón "+ Nueva Campaña" → crea campaña con los puntos del catálogo pre-cargados
-- Campaña C0 marcada como "Línea Base"
-- Cada campaña expandible para ver/editar lecturas
+**Gestión de visitas:**
+- Lista cronológica de visitas
+- Botón "+ Nueva Visita" → crea la visita con los puntos del catálogo pre-cargados
+- Visita 0 marcada como "Línea Base" (sin asentamiento ni velocidad)
+- Cada visita se abre en su editor para ver/editar lecturas
+- Una visita cerrada queda inmutable; el lugar se cierra al terminar el monitoreo
 
-**Tabla de lecturas por campaña:**
+**Tabla de lecturas por visita:**
 - Columnas: punto, cota medida
 - Calculados (auto): asentamiento parcial, acumulado, velocidad, estado (semáforo)
 
 **Panel de análisis (lateral en desktop, debajo en mobile):**
 - Gráfica: asentamiento acumulado vs tiempo (multi-punto seleccionable)
 - Tabla de asentamientos diferenciales con distorsión angular
-- Indicador semáforo por punto
+- Indicador semáforo por punto e indicador de tendencia (aceleración)
 
 ### 4.6 Cierre y Bloqueo de Procesos
 
@@ -961,23 +1017,58 @@ Cota_conocida), no el desnivel adoptado. NO se promedia tramo a tramo.
 
 ```
 Asentamiento parcial:
-  Δs_parcial = Cota_campaña_n - Cota_campaña_(n-1)   (en mm)
+  Δs_parcial = Cota_visita_n - Cota_visita_(n-1)   (en mm)
 
 Asentamiento acumulado:
-  Δs_acumulado = Cota_campaña_n - Cota_C0   (en mm)
+  Δs_acumulado = Cota_visita_n - Cota_C0   (en mm)
 
 Velocidad:
-  V = Δs_parcial / Δt   (mm/mes, donde Δt es el intervalo en meses)
+  Δt_meses = (fecha_n - fecha_(n-1)) en días / 30.4375
+  V = Δs_parcial / Δt_meses   (mm/mes)
 
 Asentamiento diferencial entre puntos i y j:
   Δs_diferencial = |Δs_acumulado_i - Δs_acumulado_j|
 
 Distorsión angular:
-  β = Δs_diferencial / L   (donde L = distancia horizontal entre puntos, en mm)
+  L = √((N_i-N_j)² + (E_i-E_j)²)   (distancia horizontal, en m)
+  β_inverso = (L × 1000) / Δs_diferencial
   Se expresa como 1/β_inverso (ej: 1/2,500)
 ```
 
+**Precisado en la Fase 5 (2026-08-25).** Un mes son **30.4375 días**
+(`365.25/12`), fijado como constante en `tolerances.ts`. Antes esta sección decía
+«Δt es el intervalo en meses» sin definir el mes, que es justo el punto donde se
+equivoca el marco teórico: sus tablas copian el asentamiento parcial en la
+columna de velocidad siempre que el intervalo sea «un mes», ignorando que los
+meses tienen 28, 30 o 31 días. Verificado con código: 3 de los 7 intervalos del
+histórico de P-09 no coinciden con ningún cálculo correcto.
+
+Casos frontera que la fórmula no dice y el motor debe respetar:
+
+- `Δt = 0` (dos visitas el mismo día) → velocidad `null`, nunca `Infinity` ni
+  `NaN`.
+- `Δs_diferencial = 0` → distorsión `1/∞`, que es **normal**: dos puntos que se
+  asientan igual no tienen distorsión entre sí.
+- Un par con coordenadas ausentes queda **fuera** de la tabla de diferenciales;
+  calcularlo con L = 0 daría distorsión infinita y aparentaría normalidad.
+- El signo se conserva: un valor positivo es un levantamiento y se muestra como
+  tal, no en valor absoluto.
+
+Las fórmulas de asentamiento parcial, acumulado y distorsión angular **sí se
+verificaron correctas** contra los tres casos de estudio del marco teórico
+(35 valores, todos exactos).
+
 ### 6.11 Clasificación de Alertas en Asentamientos
+
+**Nota de la Fase 5 (2026-08-25).** El algoritmo de abajo es correcto y es el
+que se implementa. Lo que **no** sirve como referencia son los estados de alerta
+de los casos de estudio del marco teórico: se verificaron con código y no se
+derivan de ningún umbral. En el caso del edificio, cuatro puntos que superan el
+umbral de precaución de velocidad figuran como «Normal»; en el del terraplén,
+40 mm es «Normal» y 45 mm «Precaución», pero 60 mm vuelve a «Precaución» y 66 mm
+salta a «Alerta» — no existe umbral monótono que produzca esa secuencia. Son
+juicio editorial del autor, no clasificación calculada. **No usarlos como caso
+de prueba.**
 
 ```typescript
 function classifyAlert(
