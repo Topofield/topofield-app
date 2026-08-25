@@ -7,6 +7,12 @@ import type { Database } from "@/types/database";
 import type { Project, ProjectStatus, ReferencePoint } from "@/types/project";
 import type { PolygonalProcess, PolygonalStation } from "@/types/polygonal";
 import type { LevelingProcess, LevelingReading } from "@/types/leveling";
+import type { Site } from "@/types/site";
+import type {
+  SettlementPoint,
+  SettlementVisit,
+  SettlementReading,
+} from "@/types/settlement";
 
 type Client = SupabaseClient<Database>;
 
@@ -236,4 +242,121 @@ export async function getLevelingReadings(
 
   if (error) throw error;
   return (data ?? []) as LevelingReading[];
+}
+
+/** Lugares de un proyecto, del más antiguo al más reciente. */
+export async function getSites(
+  supabase: Client,
+  projectId: string,
+): Promise<Site[]> {
+  if (!UUID_RE.test(projectId)) return [];
+  const { data, error } = await supabase
+    .from("sites")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Site[];
+}
+
+/** Un lugar por id, o null si no existe o es de otro usuario (RLS). */
+export async function getSite(
+  supabase: Client,
+  siteId: string,
+): Promise<Site | null> {
+  if (!UUID_RE.test(siteId)) return null;
+  const { data, error } = await supabase
+    .from("sites")
+    .select("*")
+    .eq("id", siteId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as Site | null;
+}
+
+/** Catálogo de puntos de un lugar, por código. */
+export async function getSitePoints(
+  supabase: Client,
+  siteId: string,
+): Promise<SettlementPoint[]> {
+  if (!UUID_RE.test(siteId)) return [];
+  const { data, error } = await supabase
+    .from("settlement_points")
+    .select("*")
+    .eq("site_id", siteId)
+    .order("code", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Visitas de un lugar, en orden cronológico.
+ *
+ * Se ordena por `date` y no por `visit_number`: el número es una etiqueta del
+ * usuario y el motor de cálculo trabaja en orden de fecha.
+ */
+export async function getVisits(
+  supabase: Client,
+  siteId: string,
+): Promise<SettlementVisit[]> {
+  if (!UUID_RE.test(siteId)) return [];
+  const { data, error } = await supabase
+    .from("settlement_visits")
+    .select("*")
+    .eq("site_id", siteId)
+    .order("date", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as SettlementVisit[];
+}
+
+/** Una visita con sus lecturas, o null si no existe o es ajena. */
+export async function getVisit(
+  supabase: Client,
+  visitId: string,
+): Promise<{ visit: SettlementVisit; readings: SettlementReading[] } | null> {
+  if (!UUID_RE.test(visitId)) return null;
+  const { data: visit, error } = await supabase
+    .from("settlement_visits")
+    .select("*")
+    .eq("id", visitId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!visit) return null;
+
+  const { data: readings, error: readingsError } = await supabase
+    .from("settlement_readings")
+    .select("*")
+    .eq("visit_id", visitId);
+  if (readingsError) throw readingsError;
+
+  return {
+    visit: visit as SettlementVisit,
+    readings: (readings ?? []) as SettlementReading[],
+  };
+}
+
+/**
+ * Todas las lecturas de un lugar, agrupadas por visita — la serie temporal que
+ * alimenta la gráfica, los diferenciales y las tendencias.
+ *
+ * Una sola consulta con join en vez de una por visita: un lugar con 12 visitas
+ * haría 12 viajes a la base al pintar el panel.
+ */
+export async function getSettlementReadingsBySite(
+  supabase: Client,
+  siteId: string,
+): Promise<Record<string, SettlementReading[]>> {
+  if (!UUID_RE.test(siteId)) return {};
+  const { data, error } = await supabase
+    .from("settlement_readings")
+    .select("*, settlement_visits!inner(site_id)")
+    .eq("settlement_visits.site_id", siteId);
+  if (error) throw error;
+
+  const grouped: Record<string, SettlementReading[]> = {};
+  for (const row of data ?? []) {
+    const reading = row as unknown as SettlementReading;
+    (grouped[reading.visit_id] ??= []).push(reading);
+  }
+  return grouped;
 }
