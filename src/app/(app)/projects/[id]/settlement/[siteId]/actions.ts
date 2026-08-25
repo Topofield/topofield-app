@@ -11,6 +11,7 @@ import type {
   PointInput,
   Thresholds,
   VisitInput,
+  VisitStatus,
 } from "@/types/settlement";
 import type { Site } from "@/types/site";
 
@@ -78,6 +79,25 @@ async function loadContext(
     .select("*, settlement_visits!inner(site_id)")
     .eq("settlement_visits.site_id", siteId);
 
+  // Estado y lecturas ya persistidas de cada visita, indexadas por id. Las
+  // necesita `saveVisitAction` para saber, tras recalcular, qué visitas
+  // ABIERTAS quedaron con valores obsoletos en la base (ver CRÍTICO 2 de la
+  // ronda de correcciones) — las CERRADAS no se tocan.
+  const statusByVisit = new Map<string, VisitStatus>();
+  for (const v of visits ?? []) {
+    statusByVisit.set(v.id, v.status as VisitStatus);
+  }
+  const persistedReadingsByVisit = new Map<
+    string,
+    Map<string, PersistedReading>
+  >();
+  for (const row of readings ?? []) {
+    const r = row as unknown as PersistedReading & { visit_id: string };
+    const byPoint = persistedReadingsByVisit.get(r.visit_id) ?? new Map();
+    byPoint.set(r.point_id, r);
+    persistedReadingsByVisit.set(r.visit_id, byPoint);
+  }
+
   const pointInputs: PointInput[] = (points ?? []).map((p) => ({
     id: p.id,
     code: p.code,
@@ -106,7 +126,49 @@ async function loadContext(
     readings: readingsByVisit.get(v.id) ?? [],
   }));
 
-  return { site: site as Site, points: pointInputs, visits: visitInputs };
+  return {
+    site: site as Site,
+    points: pointInputs,
+    visits: visitInputs,
+    statusByVisit,
+    persistedReadingsByVisit,
+  };
+}
+
+/** Forma mínima de una lectura ya persistida, para comparar contra la recalculada. */
+interface PersistedReading {
+  point_id: string;
+  partial_settlement: number | null;
+  accumulated_settlement: number | null;
+  velocity: string | number | null;
+  alert_status: string;
+}
+
+/**
+ * ¿La lectura recalculada difiere de la ya persistida?
+ *
+ * `velocity` llega de la base como `string` (columna `decimal`) o `number`
+ * según el punto de la fila; se compara como número para no marcar como
+ * "distinta" una fila que solo cambió de representación.
+ */
+function readingChanged(
+  computed: {
+    partialSettlement: number | null;
+    accumulatedSettlement: number | null;
+    velocity: number | null;
+    alertStatus: string;
+  },
+  persisted: PersistedReading | undefined,
+): boolean {
+  if (!persisted) return true;
+  const persistedVelocity =
+    persisted.velocity === null ? null : Number(persisted.velocity);
+  return (
+    computed.partialSettlement !== persisted.partial_settlement ||
+    computed.accumulatedSettlement !== persisted.accumulated_settlement ||
+    computed.velocity !== persistedVelocity ||
+    computed.alertStatus !== persisted.alert_status
+  );
 }
 
 /** Crea una visita con el número siguiente y la fecha dada. */
@@ -292,6 +354,53 @@ export async function saveVisitAction(
       ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
       : await purga;
   if (deleteError) return { ok: false, error: deleteError.message };
+
+  // --- Propagación a visitas posteriores ABIERTAS ---------------------------
+  // `computeHistory` recalculó TODO el histórico (`merged`), no solo la visita
+  // que se guarda: el parcial, el acumulado y la velocidad de cada visita
+  // dependen de la visita anterior con lectura de ese punto (ver
+  // `computeSettlements`). Insertar, borrar o mover en el tiempo una visita
+  // cambia esos valores en las visitas que le siguen cronológicamente, y hasta
+  // este punto solo se había persistido `payload.visitId`: las demás quedaban
+  // con el valor viejo en la base mientras el panel (que recalcula en cliente)
+  // ya mostraba el nuevo. Divergencia sin error — el hallazgo CRÍTICO 2 de la
+  // ronda de correcciones.
+  //
+  // Solo se reescriben las visitas ABIERTAS (draft/calculated) cuyo valor
+  // calculado difiere del persistido: las CERRADAS son inmutables por diseño
+  // (el trigger `settlement_readings_reject_write_when_closed` las protege de
+  // todos modos) y conservan el criterio con el que se cerraron — eso es lo
+  // correcto para la trazabilidad, no un descuido. Comparar antes de escribir
+  // evita reescribir visitas cuyos valores no cambiaron.
+  for (const otherVisit of others) {
+    if (otherVisit.id === payload.visitId) continue;
+    if (context.statusByVisit.get(otherVisit.id) === "closed") continue;
+
+    const recalculated = history.visits.find((v) => v.visitId === otherVisit.id);
+    if (!recalculated || recalculated.readings.length === 0) continue;
+
+    const persistedByPoint = context.persistedReadingsByVisit.get(otherVisit.id);
+    const toUpdate = recalculated.readings.filter((r) =>
+      readingChanged(r, persistedByPoint?.get(r.pointId)),
+    );
+    if (toUpdate.length === 0) continue;
+
+    const { error: propagateError } = await supabase
+      .from("settlement_readings")
+      .upsert(
+        toUpdate.map((r) => ({
+          visit_id: otherVisit.id,
+          point_id: r.pointId,
+          elevation: r.elevation,
+          partial_settlement: r.partialSettlement,
+          accumulated_settlement: r.accumulatedSettlement,
+          velocity: r.velocity,
+          alert_status: r.alertStatus,
+        })),
+        { onConflict: "visit_id,point_id" },
+      );
+    if (propagateError) return { ok: false, error: propagateError.message };
+  }
 
   // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
   revalidatePath(`/projects/${context.site.project_id}/settlement/${payload.siteId}`);

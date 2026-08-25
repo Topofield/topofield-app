@@ -137,6 +137,48 @@ describe("computeSettlements — velocidad", () => {
   });
 });
 
+describe("computeSettlements — visita intercalada (CRÍTICO 2, ronda de correcciones)", () => {
+  // Reproduce el hallazgo: al intercalar una visita entre dos ya existentes,
+  // la velocidad de la visita POSTERIOR cambia, porque ahora se mide contra
+  // la visita intercalada (la nueva "última con lectura") y no contra la
+  // anterior original. `saveVisitAction` debe detectar esta diferencia y
+  // volver a persistir la visita posterior — si no lo hace, la base conserva
+  // el valor viejo mientras el panel (que recalcula en cliente) ya muestra el
+  // nuevo, y ambos divergen sin ningún error visible.
+  it("la velocidad de la visita posterior cambia al intercalar una visita anterior", () => {
+    const sinIntercalar = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        visita(1, "2025-03-15", 99.994),
+        visita(2, "2025-05-15", 99.988),
+      ],
+    );
+    const velocidadOriginal = sinIntercalar[2]?.readings[0]?.velocity;
+    expect(velocidadOriginal).toBeCloseTo(-2.9938524590163933, 6);
+
+    const conIntercalada = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        visita(1, "2025-03-15", 99.994),
+        visita(3, "2025-04-15", 99.991), // intercalada entre v1 y v2
+        visita(2, "2025-05-15", 99.988),
+      ],
+    );
+    // v2 ahora se mide contra v3 (99.991, 2025-04-15), no contra v1: el
+    // parcial pasa de −6 a −3 y la velocidad cambia de valor.
+    const visitaPosterior = conIntercalada.find((v) => v.visitId === "v2");
+    expect(visitaPosterior?.readings[0]?.partialSettlement).toBeCloseTo(
+      -3.0,
+      6,
+    );
+    const velocidadTrasIntercalar = visitaPosterior?.readings[0]?.velocity;
+    expect(velocidadTrasIntercalar).toBeCloseTo(-3.04375, 6);
+    expect(velocidadTrasIntercalar).not.toBeCloseTo(velocidadOriginal!, 2);
+  });
+});
+
 describe("computeSettlements — orden", () => {
   it("ordena por fecha, no por visit_number", () => {
     // Una visita numerada 2 pero fechada antes que la 1: el parcial de cada una
