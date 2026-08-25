@@ -12,6 +12,12 @@ import type { SettlementPoint } from "@/types/settlement";
 
 type Dialog = { mode: "create" } | { mode: "edit"; point: SettlementPoint };
 
+/** Punto a la espera de que el usuario confirme el borrado con arrastre. */
+interface PendingDelete {
+  point: SettlementPoint;
+  lecturasAfectadas: number;
+}
+
 interface PointsCatalogProps {
   siteId: string;
   points: SettlementPoint[];
@@ -73,6 +79,9 @@ export function PointsCatalog({ siteId, points, disabled }: PointsCatalogProps) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
+    null,
+  );
   const [isPending, startTransition] = useTransition();
 
   function open(next: Dialog) {
@@ -159,10 +168,37 @@ export function PointsCatalog({ siteId, points, disabled }: PointsCatalogProps) 
     setDeleteError(null);
     startTransition(async () => {
       const response = await deletePointAction(siteId, point.id);
+      if (response.ok) return;
+
+      // El punto tiene lecturas en visitas abiertas: no se borró nada, hace
+      // falta que el usuario confirme explícitamente que quiere perderlas.
+      if (response.requiereConfirmacion) {
+        setPendingDelete({
+          point,
+          lecturasAfectadas: response.lecturasAfectadas ?? 0,
+        });
+        return;
+      }
+
+      setDeleteError(response.error ?? "No se pudo eliminar el punto.");
+    });
+  }
+
+  function confirmPendingDelete() {
+    if (!pendingDelete) return;
+    const { point } = pendingDelete;
+    setDeleteError(null);
+    startTransition(async () => {
+      const response = await deletePointAction(siteId, point.id, true);
       if (!response.ok) {
         setDeleteError(response.error ?? "No se pudo eliminar el punto.");
       }
+      setPendingDelete(null);
     });
+  }
+
+  function cancelPendingDelete() {
+    setPendingDelete(null);
   }
 
   const point = dialog?.mode === "edit" ? dialog.point : null;
@@ -310,6 +346,45 @@ export function PointsCatalog({ siteId, points, disabled }: PointsCatalogProps) 
               </Button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {pendingDelete && (
+        <Modal
+          open
+          onClose={cancelPendingDelete}
+          title="Eliminar punto con lecturas registradas"
+        >
+          <div className="flex flex-col gap-4">
+            <Alert variant="warning">
+              El punto <strong>{pendingDelete.point.code}</strong> tiene{" "}
+              {pendingDelete.lecturasAfectadas}{" "}
+              {pendingDelete.lecturasAfectadas === 1
+                ? "lectura registrada"
+                : "lecturas registradas"}{" "}
+              en visitas abiertas. Si continúas, el punto y esas lecturas se
+              eliminarán de forma permanente.
+            </Alert>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={cancelPendingDelete}
+                disabled={isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={confirmPendingDelete}
+                disabled={isPending}
+              >
+                {isPending ? "Eliminando…" : "Eliminar de todos modos"}
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </Card>

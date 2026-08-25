@@ -7,6 +7,13 @@ export interface ActionResult {
   ok: boolean;
   error?: string;
   pointId?: string;
+  /**
+   * Solo en `deletePointAction`: el borrado no se ejecutó porque el punto
+   * tiene lecturas en visitas abiertas y hace falta que el usuario confirme.
+   * `lecturasAfectadas` es el número de lecturas que se perderían.
+   */
+  requiereConfirmacion?: boolean;
+  lecturasAfectadas?: number;
 }
 
 export interface PointPayload {
@@ -141,21 +148,30 @@ export async function savePointAction(
 }
 
 /**
- * Elimina un punto del catálogo. Rechaza el borrado si el punto tiene
- * lecturas en visitas cerradas: esas lecturas son parte del registro
- * inmutable del monitoreo y borrar el punto las dejaría huérfanas de
- * catálogo.
+ * Elimina un punto del catálogo.
+ *
+ * Rechaza el borrado sin excepción si el punto tiene lecturas en visitas
+ * cerradas: esas lecturas son parte del registro inmutable del monitoreo y
+ * borrar el punto las dejaría huérfanas de catálogo.
+ *
+ * Si el punto tiene lecturas en visitas abiertas (`draft` / `calculated`),
+ * el `DELETE` de `settlement_points` cascadea por la FK
+ * `settlement_readings_point_id_fkey` y se llevaría esas lecturas con él: son
+ * cotas medidas en terreno, no un registro administrativo, así que no se
+ * borran a la primera. Sin `confirmado`, se informa cuántas lecturas se
+ * perderían y no se borra nada; con `confirmado: true`, se procede.
  */
 export async function deletePointAction(
   siteId: string,
   pointId: string,
+  confirmado = false,
 ): Promise<ActionResult> {
   const supabase = await createClient();
 
   const siteCheck = await loadOpenSite(supabase, siteId);
   if (!siteCheck.ok) return { ok: false, error: siteCheck.error };
 
-  const { count } = await supabase
+  const { count: lecturasCerradas } = await supabase
     .from("settlement_readings")
     .select("id, settlement_visits!inner(status)", {
       count: "exact",
@@ -163,11 +179,36 @@ export async function deletePointAction(
     })
     .eq("point_id", pointId)
     .eq("settlement_visits.status", "closed");
-  if ((count ?? 0) > 0) {
+  if ((lecturasCerradas ?? 0) > 0) {
     return {
       ok: false,
       error: "El punto tiene lecturas en visitas cerradas y no puede eliminarse.",
     };
+  }
+
+  if (!confirmado) {
+    const { count: lecturasAbiertas } = await supabase
+      .from("settlement_readings")
+      .select("id, settlement_visits!inner(status)", {
+        count: "exact",
+        head: true,
+      })
+      .eq("point_id", pointId)
+      .neq("settlement_visits.status", "closed");
+    // Un punto sin lecturas se borra sin más. Uno CON lecturas en visitas
+    // abiertas arrastra esas mediciones por la FK en cascada, así que no se
+    // borra a la primera: se informa cuántas se perderían y se exige
+    // confirmación explícita. Son cotas medidas en terreno, no un registro
+    // administrativo.
+    if ((lecturasAbiertas ?? 0) > 0) {
+      const n = lecturasAbiertas ?? 0;
+      return {
+        ok: false,
+        requiereConfirmacion: true,
+        lecturasAfectadas: n,
+        error: `El punto tiene ${n} ${n === 1 ? "lectura registrada" : "lecturas registradas"} en visitas abiertas. Si continúas, se eliminarán junto con el punto.`,
+      };
+    }
   }
 
   const { error } = await supabase
