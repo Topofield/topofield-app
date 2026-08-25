@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-08-12 · Fases 1-4 implementadas · 193 tests ·
+**Última actualización:** 2026-08-14 · Fases 1-4 implementadas · 217 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -564,7 +564,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-193 tests en 13 archivos, Vitest, entorno `node` **sin jsdom**.
+217 tests en 15 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -896,6 +896,33 @@ síntoma en la aplicación es una alerta vacía, porque un 504 no trae cuerpo JS
 del que sacar un mensaje.
 
 Sin SMTP propio, Supabase limita a ~4 correos por hora.
+
+### Un proyecto pausado se manifiesta como `fetch failed`, no como un error claro
+
+Los proyectos gratuitos de Supabase **se pausan por inactividad**. Cuando eso
+pasa, el síntoma en la aplicación es un `fetch failed` en el Server Action —
+sin código de estado, sin mensaje del servicio, indistinguible a primera vista
+de una variable de entorno mal puesta o de un despliegue roto.
+
+Lo que despista es que **el CLI sigue funcionando**: `supabase db query
+--linked` responde con normalidad, porque la conexión del CLI despierta el
+proyecto. Así que se puede estar mirando una base que contesta perfectamente
+mientras la API pública que usa la aplicación no responde a nadie.
+
+Cómo distinguirlo en un minuto, antes de sospechar del código:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}
+" https://<ref>.supabase.co/auth/v1/health
+```
+
+Un `200` descarta la pausa. Si no responde, entrar al panel de Supabase y mirar
+si el proyecto aparece pausado; «Restore project» lo revive en un par de
+minutos. Ocurrió al desplegar la Fase 4 (2026-08-14): el `fetch failed` no lo
+causaba el despliegue —que no toca cliente, claves ni proxy— sino el proyecto
+pausado. **Señal de que ya está resuelto:** el error cambia de `fetch failed` a
+uno de negocio («Credenciales inválidas»), que significa que la aplicación ya
+habla con la base y esta le contesta.
 
 ### Limitación vigente: solo puede registrarse el dueño de la cuenta de Resend
 
