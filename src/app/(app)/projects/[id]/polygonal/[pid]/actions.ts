@@ -287,6 +287,7 @@ export async function duplicatePolygonalProcessAction(
 
   const { error } = await supabase.from("polygonal_processes").insert({
     project_id: original.project_id,
+    site_id: original.site_id,
     name: `${original.name} (copia)`,
     type: original.type,
     angle_type: original.angle_type,
