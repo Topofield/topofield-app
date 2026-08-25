@@ -657,8 +657,9 @@ presentación. Lo que corresponde es extraer un formateador único a
 
 **`getProcessCountsByProject` no distingue el estado del proceso.** La tarjeta
 dice «7 procesos» contando borradores, calculados, cerrados y rechazados por
-igual. Es lo correcto para esa cuenta, pero habrá que revisarlo si alguna vez
-se quiere un desglose del tipo «7 procesos (2 cerrados)».
+igual. Desde la Fase 5 cuenta los tres módulos (poligonales, nivelaciones y
+lugares de control de asentamientos, un lugar = un trabajo). Sigue sin haber
+desglose del tipo «7 procesos (2 cerrados)».
 
 **El helper `Block` está duplicado** en los dos `loading.tsx`. Con las fases 4-6
 serán cinco o más: conviene extraerlo a `design-system/skeleton.tsx` antes.

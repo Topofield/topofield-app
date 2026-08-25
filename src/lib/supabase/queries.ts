@@ -40,14 +40,31 @@ export interface DashboardKpis {
  * El filtro se expresa como `projects!inner(status)`: el `!inner` convierte la
  * relación en un INNER JOIN, de modo que `eq("projects.status", "active")`
  * descarta las filas cuyo proyecto no esté activo.
+ *
+ * Los KPI cuentan los tres módulos desde la Fase 5. Antes solo miraban
+ * `polygonal_processes`, de modo que un proyecto de nivelación o de
+ * asentamientos aparecía vacío en el dashboard.
+ *
+ * Para asentamientos no hay `meets_tolerance`: el equivalente de «fuera de
+ * tolerancia» es que alguna LECTURA esté en alerta o alarma (`alert_status`),
+ * no la visita ni el lugar. Se cuentan lecturas porque el KPI mide urgencia
+ * — cuántos puntos requieren atención — y esa señal vive en la lectura, la
+ * única fila con `alert_status`. La visita no lo tiene: puede mezclar puntos
+ * en distintos niveles y contarla como «una» perdería cuántos puntos están
+ * mal. El lugar tampoco: usar `getSiteSummariesByProject` colapsaría todas
+ * las lecturas del lugar a un único peor nivel, deshaciendo la cuenta.
  */
 export async function getDashboardKpis(
   supabase: Client,
 ): Promise<DashboardKpis> {
   const [
     { count: activeProjectsCount },
-    { count: calculatedCount },
-    { count: outOfToleranceCount },
+    { count: polygonalCalculated },
+    { count: polygonalOutOfTolerance },
+    { count: levelingCalculated },
+    { count: levelingOutOfTolerance },
+    { count: settlementCalculated },
+    { count: settlementAlarming },
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -64,12 +81,48 @@ export async function getDashboardKpis(
       .eq("status", "calculated")
       .eq("meets_tolerance", false)
       .eq("projects.status", "active"),
+    supabase
+      .from("leveling_processes")
+      .select("id, projects!inner(status)", { count: "exact", head: true })
+      .eq("status", "calculated")
+      .eq("projects.status", "active"),
+    supabase
+      .from("leveling_processes")
+      .select("id, projects!inner(status)", { count: "exact", head: true })
+      .eq("status", "calculated")
+      .eq("meets_tolerance", false)
+      .eq("projects.status", "active"),
+    supabase
+      .from("settlement_visits")
+      .select("id, sites!inner(project_id, projects!inner(status))", {
+        count: "exact",
+        head: true,
+      })
+      .eq("status", "calculated")
+      .eq("sites.projects.status", "active"),
+    // «Fuera de tolerancia» no aplica a una visita: lo equivalente es que
+    // alguna lectura esté en alerta o alarma. Se cuenta a nivel de lectura,
+    // no de visita ni de lugar (ver JSDoc).
+    supabase
+      .from("settlement_readings")
+      .select(
+        "id, settlement_visits!inner(status, sites!inner(projects!inner(status)))",
+        { count: "exact", head: true },
+      )
+      .in("alert_status", ["alert", "alarm"])
+      .eq("settlement_visits.sites.projects.status", "active"),
   ]);
 
   return {
     activeProjects: activeProjectsCount ?? 0,
-    calculatedProcesses: calculatedCount ?? 0,
-    outOfTolerance: outOfToleranceCount ?? 0,
+    calculatedProcesses:
+      (polygonalCalculated ?? 0) +
+      (levelingCalculated ?? 0) +
+      (settlementCalculated ?? 0),
+    outOfTolerance:
+      (polygonalOutOfTolerance ?? 0) +
+      (levelingOutOfTolerance ?? 0) +
+      (settlementAlarming ?? 0),
   };
 }
 
@@ -91,10 +144,14 @@ export async function getDashboardProjects(
 /**
  * Cuántos procesos tiene cada proyecto, indexado por `project_id`.
  *
- * Una sola consulta para todos los proyectos en lugar de una por tarjeta: con
- * N proyectos en pantalla, contar por separado sería N+1 viajes a la base.
- * RLS ya limita las filas a las del usuario, así que no hace falta filtrar por
- * `user_id` aquí.
+ * Tres consultas en paralelo en lugar de una por proyecto: con N proyectos en
+ * pantalla, contar por separado sería N+1 viajes a la base. RLS ya limita las
+ * filas a las del usuario, así que no hace falta filtrar por `user_id` aquí.
+ *
+ * Cuenta los tres módulos desde la Fase 5: poligonales, nivelaciones y
+ * lugares de control de asentamientos. Un lugar cuenta como uno, no una vez
+ * por visita: lo que el usuario reconoce como «un trabajo» es el monitoreo
+ * del lugar completo, no cada visita individual.
  *
  * Un proyecto sin procesos no aparece en el resultado; quien consulte debe
  * tratar la ausencia como 0.
@@ -102,16 +159,22 @@ export async function getDashboardProjects(
 export async function getProcessCountsByProject(
   supabase: Client,
 ): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from("polygonal_processes")
-    .select("project_id");
+  const [polygonal, leveling, sites] = await Promise.all([
+    supabase.from("polygonal_processes").select("project_id"),
+    supabase.from("leveling_processes").select("project_id"),
+    supabase.from("sites").select("project_id"),
+  ]);
 
-  if (error) throw error;
+  for (const { error } of [polygonal, leveling, sites]) {
+    if (error) throw error;
+  }
 
   const counts: Record<string, number> = {};
-  for (const { project_id } of data ?? []) {
-    if (project_id == null) continue;
-    counts[project_id] = (counts[project_id] ?? 0) + 1;
+  for (const rows of [polygonal.data, leveling.data, sites.data]) {
+    for (const { project_id } of rows ?? []) {
+      if (project_id == null) continue;
+      counts[project_id] = (counts[project_id] ?? 0) + 1;
+    }
   }
   return counts;
 }
