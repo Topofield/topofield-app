@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Alert } from "@/components/design-system";
 import { linearScale, niceTicks } from "@/lib/design/chart-scale";
 import type { PointInput, VisitResult } from "@/types/settlement";
 
@@ -20,14 +21,41 @@ const SERIES_MARKERS = [
 ] as const;
 type SeriesMarker = (typeof SERIES_MARKERS)[number];
 
-/** Colores de refuerzo por índice de serie (canal secundario, no el único). */
+/**
+ * Colores de refuerzo por índice de serie (canal secundario, no el único).
+ *
+ * Formas y colores ciclan con longitudes COPRIMAS (5 y 4), así que la
+ * combinación forma+color no se repite hasta la serie 20 (mcm(5,4)). Con
+ * longitudes iguales, la serie 6 habría repetido forma y color de la
+ * primera y las dos habrían sido indistinguibles por cualquiera de los dos
+ * canales a la vez: un lugar con 9 puntos de control (una grilla 3×3 es
+ * disposición estándar en el marco teórico de este dominio, y el caso de la
+ * presa usa 10) lo habría provocado de inmediato al seleccionar todos.
+ *
+ * `warning-500` se dejó fuera de los 4: es un marrón-anaranjado demasiado
+ * cercano a `semaphore-orange`, el color menos distinguible del resto.
+ */
 const SERIES_COLORS = [
   "#187aae", // primary-500
   "#1e8e4e", // semaphore-green
   "#c25e08", // semaphore-orange
-  "#8a5806", // warning-500
   "#c0392b", // danger-500
 ] as const;
+
+/**
+ * A partir de esta cantidad de series seleccionadas, alguna pareja repite
+ * forma y color a la vez: mcm(longitud de formas, longitud de colores).
+ */
+function lcm(a: number, b: number): number {
+  function gcd(x: number, y: number): number {
+    return y === 0 ? x : gcd(y, x % y);
+  }
+  return (a * b) / gcd(a, b);
+}
+const MAX_DISTINGUISHABLE_SERIES = lcm(
+  SERIES_MARKERS.length,
+  SERIES_COLORS.length,
+);
 
 const MARKER_SIZE = 5;
 
@@ -191,6 +219,15 @@ export function SettlementChart({ points, visits }: SettlementChartProps) {
           </label>
         ))}
       </fieldset>
+
+      {selectedPoints.length > MAX_DISTINGUISHABLE_SERIES && (
+        <Alert variant="warning">
+          Hay {selectedPoints.length} puntos seleccionados: a partir de{" "}
+          {MAX_DISTINGUISHABLE_SERIES + 1} algunas series repiten forma y
+          color a la vez y dejan de distinguirse con claridad. Selecciona
+          menos puntos, o usa la tabla de abajo para leer los valores exactos.
+        </Alert>
+      )}
 
       {!hasData || selectedPoints.length === 0 ? (
         <p className="text-sm text-neutral-500">
