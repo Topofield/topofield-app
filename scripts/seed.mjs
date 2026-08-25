@@ -15,8 +15,16 @@
 //  - Algunos reference_points para probar el CRUD de la tab Configuración.
 //
 // Uso: con `npx supabase start` activo, ejecutar
-//   `node --env-file=.env.local scripts/seed.mjs`
-// (lee SUPABASE_SECRET_KEY desde .env.local).
+//   `npm run seed`
+// (equivale a `npx tsx --env-file=.env.local scripts/seed.mjs`; lee
+// SUPABASE_SECRET_KEY desde .env.local).
+//
+// Se ejecuta con `tsx` y no con `node` a secas porque este script importa los
+// módulos de cálculo directamente desde `src/` en TypeScript, y el Node
+// mínimo que declara el proyecto (20.19.4) no sabe cargar `.ts`. Los
+// resultados que se persisten los calcula el motor real, así que importar
+// `src/` es deliberado: un seed que replicara los cálculos por su cuenta
+// dejaría de verificarlos.
 
 import { createClient } from "@supabase/supabase-js";
 import { computePolygonal } from "../src/lib/calculations/polygonal.ts";
@@ -29,7 +37,7 @@ const URL = "http://127.0.0.1:54321";
 const SECRET = process.env.SUPABASE_SECRET_KEY;
 if (!SECRET) {
   console.error(
-    "Falta SUPABASE_SECRET_KEY. Corré con: node --env-file=.env.local scripts/seed.mjs",
+    "Falta SUPABASE_SECRET_KEY. Corré con: npm run seed",
   );
   process.exit(1);
 }

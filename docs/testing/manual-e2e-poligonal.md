@@ -8,7 +8,7 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 
 1. Con Supabase local activo (`npx supabase start`), correr:
    ```
-   node --env-file=.env.local scripts/seed.mjs
+   npm run seed
    ```
    El script lee `SUPABASE_SECRET_KEY` desde `.env.local`. Se imprimen
    credenciales y URL al final.
