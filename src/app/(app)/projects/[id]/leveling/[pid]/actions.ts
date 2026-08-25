@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeLeveling } from "@/lib/calculations/leveling";
+import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
 import { deriveLevelingCloseStatus } from "./close-status";
 import type {
   LevelingInput,
@@ -100,7 +101,31 @@ export async function saveLevelingProcessAction(
     .maybeSingle();
   const order = (project?.precision_order ?? "ordinario") as PrecisionOrder;
 
-  const result = computeLeveling(buildInput(payload, order));
+  const input = buildInput(payload, order);
+
+  // --- Revalidación en el servidor -----------------------------------------
+  // La clave publicable de Supabase es pública por diseño: una llamada
+  // directa a esta acción podría guardar una libreta que la interfaz habría
+  // bloqueado. Antes solo se recalculaban los resultados, de modo que los
+  // números eran del servidor pero los datos de campo no se comprobaban.
+  const forwardIssues = validateRunCapture(input.forward, input.type);
+  if (hasReadingErrors(forwardIssues)) {
+    return {
+      ok: false,
+      error: "La libreta de ida tiene errores de captura; corrígelos antes de guardar.",
+    };
+  }
+  if (input.return) {
+    const returnIssues = validateRunCapture(input.return, input.type);
+    if (hasReadingErrors(returnIssues)) {
+      return {
+        ok: false,
+        error: "La libreta de vuelta tiene errores de captura; corrígelos antes de guardar.",
+      };
+    }
+  }
+
+  const result = computeLeveling(input);
 
   const computed = result.forward.readings.length > 0;
   const status = computed

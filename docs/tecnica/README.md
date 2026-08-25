@@ -698,15 +698,18 @@ No se valida porque compara `d_atrás` con `d_adelante` dentro de una armada y
 Implementarlo exige dos columnas por armada o un modelo por armada en vez de
 por punto: toca el modelo de datos en producción.
 
-**La captura no se revalida en el servidor** (el cierre sí, desde 2026-08-12).
-`saveLevelingProcessAction` recalcula los resultados con las funciones puras
-—así que los números persistidos son del servidor— pero no revalida las
-lecturas contra `validateRunCapture`. La clave publicable de Supabase es
-pública por diseño, así que una llamada directa a la acción podría guardar una
-libreta que la interfaz habría bloqueado. Afecta igual a poligonal. No se
-cerró junto con el cierre porque exige reconstruir el `ReadingInput[]` /
-`StationInput[]` en el servidor y decidir qué hacer con procesos históricos
-que quizá no pasarían la validación actual.
+**Cerrado — la captura se revalida en el servidor.** Desde la Fase 5, las tres
+acciones de guardado (`savePolygonalProcessAction`, `saveLevelingProcessAction`
+y `saveVisitAction`) revalidan los datos de campo con los validadores puros
+antes de persistir, además de recalcular los resultados. La clave publicable de
+Supabase es pública por diseño, así que una llamada directa a una acción podía
+guardar datos que la interfaz habría bloqueado. Lo que retrasaba el retrofit era
+qué hacer con procesos históricos que no pasaran la validación actual; al no
+haber datos de trabajo que preservar, se aplicó sin excepciones. En poligonal,
+`expectStationCapture` (compartida con el editor) evita bloquear captura
+parcial legítima: una estación inicial sin ángulo, o una final sin ángulo ni
+distancia, no es un error, según el tipo de poligonal y la posición de la
+estación (§ 5.1).
 
 **Cerrado — la derivación del estado de cierre vive en el servidor.** Antes,
 `close*ProcessAction` usaba el `asRejected` que enviaba el cliente, de modo que

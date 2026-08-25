@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
+import {
+  expectStationCapture,
+  hasCaptureErrors,
+  validatePolygonalStation,
+} from "@/lib/validators/polygonal";
 import { derivePolygonalCloseStatus } from "./close-status";
 import type {
   CorrectionMethod,
@@ -123,6 +128,32 @@ export async function savePolygonalProcessAction(
     .eq("id", process.project_id)
     .maybeSingle();
   const order = (project?.precision_order ?? "ordinario") as PrecisionOrder;
+
+  // --- Revalidación en el servidor -----------------------------------------
+  // La clave publicable de Supabase es pública por diseño: una llamada
+  // directa a esta acción podría guardar una libreta que la interfaz habría
+  // bloqueado. Antes solo se recalculaban los resultados, de modo que los
+  // números eran del servidor pero los datos de campo no se comprobaban.
+  // Se usa `expectStationCapture` (la misma regla que el editor) para no
+  // bloquear captura parcial legítima: una estación inicial sin ángulo, o
+  // una final sin ángulo ni distancia, no es un error (§ 5.1).
+  const issues = payload.stations.map((st, i) =>
+    validatePolygonalStation(
+      {
+        angleDeg: st.angleDeg,
+        angleMin: st.angleMin,
+        angleSec: st.angleSec,
+        distance: st.horizontalDistance,
+      },
+      expectStationCapture(payload.type, i, payload.stations.length),
+    ),
+  );
+  if (hasCaptureErrors(issues)) {
+    return {
+      ok: false,
+      error: "Hay celdas con errores de captura; corrígelas antes de guardar.",
+    };
+  }
 
   const result = computePolygonal(buildInput(payload, order));
 
