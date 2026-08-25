@@ -10,6 +10,7 @@ import { DAYS_PER_MONTH } from "./tolerances";
 import type {
   AlertLevel,
   ComputedReading,
+  DifferentialPair,
   PointInput,
   VisitInput,
   VisitResult,
@@ -122,4 +123,94 @@ export function computeSettlements(
       worstAlert: "normal" as AlertLevel,
     };
   });
+}
+
+/**
+ * Distancia horizontal entre dos puntos, en metros, desde sus coordenadas N/E.
+ * Null si a alguno le faltan coordenadas.
+ */
+export function horizontalDistance(
+  a: PointInput,
+  b: PointInput,
+): number | null {
+  if (
+    a.northing === null ||
+    a.easting === null ||
+    b.northing === null ||
+    b.easting === null
+  ) {
+    return null;
+  }
+  const dn = a.northing - b.northing;
+  const de = a.easting - b.easting;
+  return Math.sqrt(dn * dn + de * de);
+}
+
+/**
+ * Asentamientos diferenciales y distorsión angular de cada par de puntos
+ * (§ 6.10), para las lecturas de una visita.
+ *
+ * La distorsión se expresa como `1/X`, donde `X = (L × 1000) / Δs_diferencial`.
+ * Un X MENOR es más severo: 1/300 es peor que 1/500. De ahí que `exceedsLimit`
+ * compare `distortionInverse < limit`.
+ *
+ * Dos exclusiones deliberadas, ambas para no fabricar tranquilidad falsa:
+ * - Un par sin coordenadas en algún punto queda fuera. Calcularlo con L = 0
+ *   daría distorsión infinita, que se lee como «normal».
+ * - Un par donde algún punto no tiene acumulado queda fuera: no hay nada que
+ *   comparar.
+ *
+ * Un diferencial de 0 sí se incluye, con `distortionInverse = Infinity`: dos
+ * puntos que se asientan igual no tienen distorsión entre sí, y eso es un
+ * resultado legítimo, no un dato ausente.
+ */
+export function computeDifferentials(
+  points: PointInput[],
+  readings: ComputedReading[],
+  angularDistortionLimit: number,
+): DifferentialPair[] {
+  const byId = new Map(points.map((p) => [p.id, p]));
+  const accumulated = new Map(
+    readings.map((r) => [r.pointId, r.accumulatedSettlement]),
+  );
+
+  const pairs: DifferentialPair[] = [];
+
+  for (let i = 0; i < readings.length; i++) {
+    for (let j = i + 1; j < readings.length; j++) {
+      const readingA = readings[i];
+      const readingB = readings[j];
+      if (!readingA || !readingB) continue;
+
+      const idA = readingA.pointId;
+      const idB = readingB.pointId;
+      const pointA = byId.get(idA);
+      const pointB = byId.get(idB);
+      if (!pointA || !pointB) continue;
+
+      const accA = accumulated.get(idA);
+      const accB = accumulated.get(idB);
+      if (accA == null || accB == null) continue;
+
+      const distanceM = horizontalDistance(pointA, pointB);
+      if (distanceM === null) continue;
+
+      const differentialMm = round(Math.abs(accA - accB), 1);
+      const distortionInverse =
+        differentialMm === 0
+          ? Number.POSITIVE_INFINITY
+          : (distanceM * 1000) / differentialMm;
+
+      pairs.push({
+        pointIdA: idA,
+        pointIdB: idB,
+        differentialMm,
+        distanceM,
+        distortionInverse,
+        exceedsLimit: distortionInverse < angularDistortionLimit,
+      });
+    }
+  }
+
+  return pairs;
 }

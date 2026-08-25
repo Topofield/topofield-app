@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeDifferentials,
   computeSettlements,
   daysBetween,
+  horizontalDistance,
   monthsBetween,
 } from "./settlement";
-import type { PointInput, VisitInput } from "@/types/settlement";
+import type {
+  ComputedReading,
+  PointInput,
+  VisitInput,
+} from "@/types/settlement";
 
 const P1: PointInput = {
   id: "p1",
@@ -199,5 +205,126 @@ describe("computeSettlements — orden", () => {
     expect(p1EnV2.partialSettlement).toBeCloseTo(-6.0, 6);
     // Y la velocidad usa el intervalo real v0→v2 (59 días), no v1→v2.
     expect(p1EnV2.velocity).toBeCloseTo(-6.0 / (59 / (365.25 / 12)), 6);
+  });
+});
+
+/** Lectura ya calculada, para probar los diferenciales aisladamente. */
+function lectura(
+  pointId: string,
+  accumulated: number | null,
+): ComputedReading {
+  return {
+    pointId,
+    elevation: 100,
+    partialSettlement: null,
+    accumulatedSettlement: accumulated,
+    velocity: null,
+    alertStatus: "normal",
+  };
+}
+
+const A: PointInput = {
+  id: "a",
+  code: "P-A",
+  northing: 0,
+  easting: 0,
+  initialElevation: 100,
+};
+const B: PointInput = {
+  id: "b",
+  code: "P-B",
+  northing: 0,
+  easting: 6,
+  initialElevation: 100,
+};
+
+describe("horizontalDistance", () => {
+  it("es la distancia euclidiana en el plano N/E", () => {
+    expect(horizontalDistance(A, B)).toBeCloseTo(6, 10);
+    const C: PointInput = { ...A, id: "c", northing: 3, easting: 4 };
+    expect(horizontalDistance(A, C)).toBeCloseTo(5, 10);
+  });
+
+  it("es null si a algún punto le faltan coordenadas", () => {
+    const sinCoords: PointInput = { ...B, northing: null };
+    expect(horizontalDistance(A, sinCoords)).toBeNull();
+  });
+});
+
+describe("computeDifferentials", () => {
+  it("calcula el diferencial y la distorsión como 1/X", () => {
+    // Diferencial |−1.8 − (−2.5)| = 0.7 mm sobre 6 m ⇒ 6000/0.7 = 1/8571.4
+    const pairs = computeDifferentials(
+      [A, B],
+      [lectura("a", -1.8), lectura("b", -2.5)],
+      500,
+    );
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0]?.differentialMm).toBeCloseTo(0.7, 6);
+    expect(pairs[0]?.distanceM).toBeCloseTo(6, 6);
+    expect(pairs[0]?.distortionInverse).toBeCloseTo(8571.43, 1);
+    expect(pairs[0]?.exceedsLimit).toBe(false);
+  });
+
+  it("marca el par que supera el límite: 1/X con X MENOR que el límite", () => {
+    // 20 mm sobre 6 m ⇒ 1/300, más severo que 1/500 ⇒ excede.
+    const pairs = computeDifferentials(
+      [A, B],
+      [lectura("a", 0), lectura("b", -20)],
+      500,
+    );
+    expect(pairs[0]?.distortionInverse).toBeCloseTo(300, 6);
+    expect(pairs[0]?.exceedsLimit).toBe(true);
+  });
+
+  it("un diferencial de 0 da 1/∞ y NO excede el límite", () => {
+    // Dos puntos que se asientan igual no tienen distorsión entre sí.
+    const pairs = computeDifferentials(
+      [A, B],
+      [lectura("a", -5), lectura("b", -5)],
+      500,
+    );
+    expect(pairs[0]?.differentialMm).toBe(0);
+    expect(pairs[0]?.distortionInverse).toBe(Number.POSITIVE_INFINITY);
+    expect(pairs[0]?.exceedsLimit).toBe(false);
+  });
+
+  it("excluye el par si a un punto le faltan coordenadas", () => {
+    // Calcularlo con L = 0 daría distorsión infinita y aparentaría normalidad.
+    const sinCoords: PointInput = { ...B, easting: null };
+    const pairs = computeDifferentials(
+      [A, sinCoords],
+      [lectura("a", 0), lectura("b", -20)],
+      500,
+    );
+    expect(pairs).toHaveLength(0);
+  });
+
+  it("excluye el par si a un punto le falta el acumulado", () => {
+    const pairs = computeDifferentials(
+      [A, B],
+      [lectura("a", -5), lectura("b", null)],
+      500,
+    );
+    expect(pairs).toHaveLength(0);
+  });
+
+  it("genera cada par una sola vez, sin repetir el simétrico", () => {
+    const C: PointInput = { ...A, id: "c", easting: 12 };
+    const pairs = computeDifferentials(
+      [A, B, C],
+      [lectura("a", -1), lectura("b", -2), lectura("c", -3)],
+      500,
+    );
+    expect(pairs).toHaveLength(3); // a-b, a-c, b-c
+  });
+
+  it("el diferencial es siempre positivo, sea cual sea el orden", () => {
+    const pairs = computeDifferentials(
+      [A, B],
+      [lectura("a", -5), lectura("b", -1)],
+      500,
+    );
+    expect(pairs[0]?.differentialMm).toBeCloseTo(4, 6);
   });
 });
