@@ -45,22 +45,28 @@ export interface DashboardKpis {
  * `polygonal_processes`, de modo que un proyecto de nivelación o de
  * asentamientos aparecía vacío en el dashboard.
  *
- * En asentamientos no hay «tolerancia», así que el equivalente es un lugar con
- * al menos un punto en alerta o alarma. Se cuentan LUGARES y no lecturas para
- * que la unidad sea la misma que en las otras dos ramas del KPI: un lugar con
- * nueve puntos afectados es un trabajo que requiere atención, no nueve — igual
- * que un proceso de poligonal o nivelación fuera de tolerancia suma 1, sin
- * importar cuántas estaciones o lecturas individuales lo hicieron fallar. Es
- * la misma unidad que usa `getProcessCountsByProject` («un lugar = un
- * proceso»), así que el KPI y el conteo por proyecto quedan coherentes entre
- * sí.
+ * En asentamientos no hay «proceso calculado» ni «tolerancia» tal como los
+ * entienden poligonal y nivelación: lo transversal es el LUGAR, no la visita
+ * (una visita es solo una medición puntual de ese trabajo en curso). Por eso
+ * ambas ramas del KPI de asentamientos —`settlementCalculated` y su aporte a
+ * `outOfTolerance`— cuentan LUGARES, nunca visitas ni lecturas: un lugar con
+ * diez visitas calculadas es un trabajo, no diez, igual que un proceso de
+ * poligonal o nivelación fuera de tolerancia suma 1 sin importar cuántas
+ * estaciones o lecturas lo hicieron fallar. Es la misma unidad que usa
+ * `getProcessCountsByProject` («un lugar = un proceso»), así que el KPI y el
+ * conteo por proyecto quedan coherentes entre sí.
  *
- * PostgREST no ofrece `count(distinct ...)`: se trae el `site_id` de cada
- * lectura en alerta/alarma con `head: false` (no puede ser un conteo de
- * cabecera si necesitamos las filas) y se cuentan los lugares únicos en
- * memoria con un `Set`, igual que agrupa `getSiteSummariesByProject`. El
- * volumen es acotado por el número de lecturas en alerta del usuario, no por
- * el total de la tabla.
+ * `settlementCalculated` cuenta lugares DISTINTOS con al menos una visita en
+ * estado `calculated`; un lugar cuyas visitas están todas en `draft` o
+ * `closed` no suma (igual que `polygonalCalculated`/`levelingCalculated`
+ * tampoco cuentan procesos en otro estado). PostgREST no ofrece
+ * `count(distinct ...)`:
+ * se trae el `site_id` de cada visita calculada con `head: false` (no puede
+ * ser un conteo de cabecera si necesitamos las filas) y se cuentan los
+ * lugares únicos en memoria con un `Set`, igual que hace la rama de
+ * `outOfTolerance` de abajo y que `getSiteSummariesByProject`. El volumen es
+ * acotado por el número de visitas calculadas del usuario, no por el total de
+ * la tabla.
  */
 export async function getDashboardKpis(
   supabase: Client,
@@ -71,7 +77,7 @@ export async function getDashboardKpis(
     { count: polygonalOutOfTolerance },
     { count: levelingCalculated },
     { count: levelingOutOfTolerance },
-    { count: settlementCalculated },
+    { data: calculatedVisits, error: calculatedVisitsError },
     { data: alarmingReadings, error: alarmingError },
   ] = await Promise.all([
     supabase
@@ -100,12 +106,11 @@ export async function getDashboardKpis(
       .eq("status", "calculated")
       .eq("meets_tolerance", false)
       .eq("projects.status", "active"),
+    // No es `head: true`: hace falta la fila con el `site_id` de cada visita
+    // calculada, para reducirla a lugares únicos abajo (ver JSDoc).
     supabase
       .from("settlement_visits")
-      .select("id, sites!inner(project_id, projects!inner(status))", {
-        count: "exact",
-        head: true,
-      })
+      .select("site_id, sites!inner(project_id, projects!inner(status))")
       .eq("status", "calculated")
       .eq("sites.projects.status", "active"),
     // «Fuera de tolerancia» no aplica a una visita: lo equivalente es que
@@ -120,7 +125,14 @@ export async function getDashboardKpis(
       .in("alert_status", ["alert", "alarm"])
       .eq("settlement_visits.sites.projects.status", "active"),
   ]);
+  if (calculatedVisitsError) throw calculatedVisitsError;
   if (alarmingError) throw alarmingError;
+
+  const settlementCalculatedSites = new Set<string>();
+  for (const row of calculatedVisits ?? []) {
+    const siteId = (row as unknown as { site_id: string }).site_id;
+    settlementCalculatedSites.add(siteId);
+  }
 
   const alarmingSites = new Set<string>();
   for (const row of alarmingReadings ?? []) {
@@ -135,7 +147,7 @@ export async function getDashboardKpis(
     calculatedProcesses:
       (polygonalCalculated ?? 0) +
       (levelingCalculated ?? 0) +
-      (settlementCalculated ?? 0),
+      settlementCalculatedSites.size,
     outOfTolerance:
       (polygonalOutOfTolerance ?? 0) +
       (levelingOutOfTolerance ?? 0) +
