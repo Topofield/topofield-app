@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { Breadcrumbs } from "@/components/design-system";
+import Link from "next/link";
+import { Breadcrumbs, buttonClasses } from "@/components/design-system";
 import { PointsCatalog } from "@/components/settlement/points-catalog";
 import { SiteForm } from "@/components/settlement/site-form";
 import { createClient } from "@/lib/supabase/server";
@@ -35,6 +36,15 @@ export default async function SitePage({ params }: SitePageProps) {
           { label: site.name },
         ]}
       />
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-xl font-semibold">{site.name}</h1>
+        <Link
+          href={`/projects/${project.id}/settlement/${site.id}`}
+          className={buttonClasses({ variant: "secondary" })}
+        >
+          Ver análisis y visitas
+        </Link>
+      </div>
       <SiteForm projectId={project.id} site={site} />
       <PointsCatalog siteId={site.id} points={points} disabled={disabled} />
     </div>

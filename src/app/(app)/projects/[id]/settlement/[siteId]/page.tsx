@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { Breadcrumbs } from "@/components/design-system";
+import Link from "next/link";
+import { Breadcrumbs, buttonClasses } from "@/components/design-system";
 import { AnalysisPanel } from "@/components/settlement/analysis-panel";
 import { VisitsList } from "@/components/settlement/visits-list";
 import { createClient } from "@/lib/supabase/server";
@@ -105,6 +106,15 @@ export default async function SettlementAnalysisPage({
           { label: "Análisis" },
         ]}
       />
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-xl font-semibold">{site.name}</h1>
+        <Link
+          href={`/projects/${project.id}/sites/${site.id}`}
+          className={buttonClasses({ variant: "secondary" })}
+        >
+          Editar lugar
+        </Link>
+      </div>
       <VisitsList
         projectId={project.id}
         siteId={site.id}
