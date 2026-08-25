@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-08-14 · Fases 1-4 implementadas · 217 tests ·
+**Última actualización:** 2026-08-25 · Fases 1-5 implementadas · 296 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -56,8 +56,8 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 1 | Setup técnico | cerrada |
 | 2 | Dashboard y proyectos | cerrada |
 | 3 | Poligonales | cerrada |
-| 4 | Nivelación | implementada |
-| 5 | Asentamientos | pendiente |
+| 4 | Nivelación | cerrada |
+| 5 | Asentamientos | cerrada |
 | 6 | Cierre, informes, exportación | pendiente |
 
 ---
@@ -66,8 +66,8 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 
 ```bash
 npm install
-npx supabase start                              # levanta PostgreSQL local
-npx tsx --env-file=.env.local scripts/seed.mjs  # datos de ejemplo
+npx supabase start   # levanta PostgreSQL local
+npm run seed         # datos de ejemplo (lee .env.local)
 npm run dev
 ```
 
@@ -88,6 +88,7 @@ Mailpit: `http://127.0.0.1:54324`.
 | `npm run lint` | ESLint |
 | `npm run test` | Vitest (una pasada) |
 | `npm run test:watch` | Vitest en modo continuo |
+| `npm run seed` | Siembra los datos de ejemplo (`tsx --env-file=.env.local scripts/seed.mjs`) |
 | `npx supabase db reset` | Recrea la base y reaplica migraciones |
 | `npx supabase gen types typescript --local > src/types/database.ts` | Regenera tipos |
 
@@ -117,7 +118,11 @@ src/
 │   ├── (app)/               pantallas autenticadas
 │   │   ├── dashboard/
 │   │   ├── manual/          manual de usuario (§ 12)
-│   │   └── projects/[id]/polygonal/[pid]/
+│   │   └── projects/[id]/
+│   │       ├── polygonal/[pid]/
+│   │       ├── leveling/[pid]/
+│   │       ├── sites/[siteId]/          alta y editor del lugar
+│   │       └── settlement/[siteId]/     panel de análisis y visitas
 │   ├── design-system/       galería del sistema de diseño (404 en producción)
 │   ├── layout.tsx           layout raíz, carga de fuentes
 │   ├── globals.css          tokens de tema y capas base
@@ -126,10 +131,13 @@ src/
 ├── components/
 │   ├── design-system/       componentes propios reutilizables
 │   ├── polygonal/           editor de poligonales
+│   ├── leveling/            editor de nivelación
+│   ├── settlement/          lugar, visitas, semáforo, gráfica
 │   └── projects/            dashboard y gestión de proyectos
 ├── lib/
 │   ├── calculations/        algoritmos puros
 │   ├── validators/          reglas de validación
+│   ├── design/              escalas de gráfica y medición de contraste
 │   ├── process-list.ts      filtrado y orden del listado de procesos
 │   ├── supabase/            clientes y consultas
 │   └── utils/
@@ -171,20 +179,39 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/[id]/actions.ts` | `updateProjectAction`, `archiveProjectAction`, `restoreProjectAction`, `deleteProjectAction`, `createReferencePointAction`, `updateReferencePointAction`, `deleteReferencePointAction` |
 | `(app)/projects/[id]/polygonal/new/actions.ts` | `createPolygonalProcessAction` |
 | `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `closePolygonalProcessAction`, `duplicatePolygonalProcessAction`, `renamePolygonalProcessAction`, `deletePolygonalProcessAction` |
+| `(app)/projects/[id]/leveling/new/actions.ts` | `createLevelingProcessAction` |
+| `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction`, `closeLevelingProcessAction` |
+| `(app)/projects/[id]/sites/actions.ts` | `createSiteAction`, `saveSiteAction`, `closeSiteAction` |
+| `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction`, `saveVisitAction`, `closeVisitAction` |
 
 ---
 
 ## 4. Modelo de datos
 
-Cinco tablas en `public`:
+Diez tablas en `public`:
 
 ```
 profiles         perfil del usuario (1:1 con auth.users)
 projects         proyecto topográfico
 ├── reference_points      puntos de coordenadas conocidas
-└── polygonal_processes   levantamiento poligonal
-    └── polygonal_stations    estaciones del levantamiento
+├── sites                 lugar de monitoreo (entidad transversal, Fase 5)
+│   ├── settlement_points     catálogo de puntos de control
+│   └── settlement_visits     visitas sucesivas en el tiempo
+│       └── settlement_readings   lectura por punto en cada visita
+├── polygonal_processes   levantamiento poligonal — site_id NOT NULL
+│   └── polygonal_stations    estaciones del levantamiento
+└── leveling_processes    levantamiento de nivelación — site_id NOT NULL
+    └── leveling_readings     lecturas de la libreta
 ```
+
+**`sites` (el lugar) es transversal a los tres módulos**, no propia del
+control de asentamientos. `polygonal_processes` y `leveling_processes` tienen
+`site_id NOT NULL`: todo proceso pertenece a un lugar, aunque sea el lugar
+genérico `General` que la migración crea por backfill (ver
+[deuda técnica](#11-deuda-técnica-conocida)). El lugar reemplaza a la tabla
+`settlement_systems` del PRD principal `§3.2` — decisión registrada en
+`docs/prds/04-asentamientos.md`, decisión #6: guarda nombre, `structure_type`
+y los siete umbrales de alerta, así que una tabla aparte para lo mismo sobraba.
 
 ### Convenciones que gobiernan el esquema
 
@@ -214,13 +241,29 @@ Estas las escribe `savePolygonalProcessAction` tras cada cálculo:
 `status` puede ser `draft`, `in_progress`, `calculated`, `closed` o `rejected`.
 Los dos últimos son terminales.
 
+### `settlement_readings` — columnas de resultado
+
+Igual que `polygonal_processes`, los cálculos se persisten para que los
+informes de la Fase 6 los lean sin recalcular:
+
+| Columna | Contenido |
+|---|---|
+| `partial_settlement` | Asentamiento desde la visita anterior, en mm (signo: negativo = descenso) |
+| `accumulated_settlement` | Asentamiento desde la línea base (C0), en mm |
+| `velocity` | mm/mes, con los días reales entre visitas (`DAYS_PER_MONTH = 30.4375`) |
+| `alert_status` | `normal` \| `caution` \| `alert` \| `alarm` — la peor clasificación entre velocidad y acumulado |
+
+`settlement_visits.status` puede ser `draft`, `calculated` o `closed` — sin
+`rejected`: una visita no se rechaza, se cierra o no. `sites.status` es
+`active` o `closed`.
+
 ---
 
 ## 5. Seguridad
 
 ### Row Level Security
 
-Las cinco tablas tienen RLS activo, con políticas para SELECT, INSERT, UPDATE y
+Las diez tablas tienen RLS activo, con políticas para SELECT, INSERT, UPDATE y
 DELETE.
 
 `projects` filtra por `user_id = auth.uid()`. Las tablas hijas heredan la
@@ -257,6 +300,19 @@ proceso cerrado tenía éxito.
 
 Los triggers permiten la transición *hacia* cerrado —el cierre mismo es un
 `UPDATE`— y bloquean todo cambio posterior.
+
+**`settlement_readings` necesitó su propia función**, no la genérica. El
+trigger de cabecera (`sites`, `settlement_visits`) reutiliza
+`reject_update_on_closed_process()` tal cual — es genérica, solo mira
+`old.status`, y `'closed'` está en el conjunto de estados que rechaza incluso
+sin `'rejected'` (`settlement_visits.status` no lo tiene: una visita se
+cierra o no, nunca se rechaza). Pero la función de las filas hijas de
+poligonal y nivelación (`reject_write_on_closed_process_station()`) consulta
+`public.polygonal_processes` por nombre de tabla, así que no sirve para
+`settlement_readings`: tiene su propia función análoga que consulta
+`settlement_visits`. Verificado con un ataque real vía REST directo (PATCH,
+DELETE) contra una visita cerrada: las tres vías —lectura, cabecera de
+visita— quedan bloqueadas con el mismo código `23001`.
 
 > **Consecuencia para el seed:** los procesos se crean abiertos, se les cargan
 > las estaciones y se cierran al final. Insertarlos ya cerrados hace fallar la
@@ -322,7 +378,9 @@ testear los algoritmos de forma aislada y es lo que sostiene la monografía.
 |---|---|
 | `angles.ts` | `dmsToDecimal`, `decimalToDms`, `normalizeAzimuth`, `degreesToSeconds`, `cosDeg`, `sinDeg` |
 | `polygonal.ts` | `computePolygonal` — el motor completo |
-| `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `angularTolerance`, `minRelativePrecision` |
+| `leveling.ts` | `computeLeveling` — libreta, corrección proporcional, cierre, ida y vuelta |
+| `settlement.ts` | `computeSettlements`, `computeDifferentials`, `classifyAlert`, `computeTrends`, `computeHistory` |
+| `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `LEVELING_TOLERANCE_K`, `DAYS_PER_MONTH`, `SETTLEMENT_THRESHOLD_PRESETS`, `angularTolerance`, `minRelativePrecision`, `levelingTolerance`, `thresholdsFor` |
 
 ### `computePolygonal`
 
@@ -369,6 +427,40 @@ punto flotante (~1e-14) que producía precisiones absurdas como
 `1:17222920531038532`. Un nanómetro está diez órdenes de magnitud por debajo de
 cualquier precisión instrumental real.
 
+### `computeSettlements`, `computeDifferentials`, `classifyAlert`
+
+El motor de asentamientos, en `settlement.ts`, se apoya en tres piezas
+verificadas independientemente contra el marco teórico del dominio (ver
+`docs/prds/04-asentamientos.md`, «Hallazgos de la verificación»):
+
+- **Asentamiento** — `Δs_parcial = (cota_n − cota_{n-1}) × 1000`,
+  `Δs_acumulado = (cota_n − C0) × 1000`, ambos en mm. Un signo positivo es
+  levantamiento y se muestra como tal, no como valor absoluto.
+- **Velocidad** — `V = Δs_parcial / (días_entre_visitas / DAYS_PER_MONTH)`,
+  con `DAYS_PER_MONTH = 30.4375` (`365.25/12`). Si el intervalo es 0 días,
+  devuelve `null`, nunca `Infinity` ni `NaN`. El marco teórico calcula esta
+  columna mal —copia el parcial cuando el intervalo «parece» un mes— y
+  ninguno de sus números entra como fixture de test; los tests derivan el
+  valor esperado por cálculo directo con cinco intervalos reales (28, 30,
+  31, 61, 92 días).
+- **`classifyAlert`** — la peor clasificación entre velocidad y acumulado
+  gana, evaluada en las fronteras exactas de cada umbral (`>=`, no `>`). Los
+  estados del marco teórico tampoco sirven como fixture: no se derivan de
+  ningún juego de umbrales consistente (mismo documento, hallazgo 3).
+
+`computeDifferentials` calcula la distorsión angular entre cada par de
+puntos como `1/((L×1000)/Δs_diferencial)`; un diferencial de 0 da `1/∞`,
+clasificado normal, y un par sin coordenadas en alguno de sus puntos queda
+fuera de la tabla en vez de calcularse con `L=0` (que daría una distorsión
+infinita y aparentaría normalidad falsa).
+
+`computeHistory` compone todo lo anterior sobre la serie completa de un
+lugar: ordena las visitas **por fecha, no por `visit_number`** —hay un test
+que fija ese contrato— y añade `computeTrends`, que solo emite tendencia
+(`accelerating` / `converging`) con al menos tres visitas (dos velocidades
+que comparar). Con menos, el punto queda sin indicador: devolver
+`"converging"` afirmaría una convergencia que nadie ha comprobado.
+
 ---
 
 ## 7. Validación
@@ -411,6 +503,30 @@ Devuelve `{ canClose, mustReject, blocked, messages }`:
 La asimetría es deliberada: un **error angular** invalida el levantamiento y
 bloquea el cierre; una **precisión insuficiente** significa que el trabajo se
 hizo pero no alcanza la calidad exigida, y se documenta como rechazado.
+
+### `validators/settlement.ts` — la capa estadística no bloquea
+
+Tres capas, igual que el patrón, pero con una diferencia deliberada frente a
+poligonal y nivelación: la capa estadística (semáforo, tendencia) **nunca
+bloquea nada**.
+
+- **Captura** — cota vacía o no numérica: error. Cota que se aleja más de 1 m
+  de C0: advertencia, no error (podría ser un terraplén real sobre turba; el
+  error de transcripción es la lectura más probable, pero no la única). Fecha
+  de visita anterior o igual a la visita previa: error — evita un intervalo
+  negativo que invertiría el signo de la velocidad. Punto duplicado o
+  fantasma en la misma visita: error.
+- **Cierre** — exige lectura de todos los puntos del catálogo; una visita
+  cerrada es el registro inmutable de una fecha, y cerrarla incompleta deja
+  un hueco que ya no se puede rellenar.
+- **Estadística** — clasifica el semáforo, pero **no participa en si se
+  puede guardar o cerrar**. Un punto en alarma se guarda y se cierra con
+  normalidad: es el hallazgo que el monitoreo existe para documentar, no un
+  error de captura. Verificado con un test explícito
+  (`validators/settlement.test.ts`, «NO bloquea el cierre por un
+  asentamiento en alarma») y con las Server Actions, que solo invocan
+  `validateVisitCapture`/`validateVisitClose` — ninguna de las dos consulta
+  `alert_status`.
 
 ---
 
@@ -509,7 +625,16 @@ pantalla, un spinner decorativo no.
 
 **Indicador de estado** — el color nunca es el único canal. `StatusIndicator`
 es la referencia: punto `aria-hidden` más etiqueta de texto real, no solo
-`aria-label`.
+`aria-label`. Desde la Fase 5 admite dos modos: `status` (3 niveles —
+poligonal y nivelación) o `level` (4 niveles — semáforo de asentamientos), y
+el tipo obliga a pasar uno u otro, nunca ninguno ni ambos. El semáforo de 4
+niveles añade además **forma** como segundo canal gráfico (círculo,
+cuadrado, rombo, triángulo): los cuatro tokens de color cumplen 3:1 contra
+blanco individualmente, pero medidos entre sí quedan comprimidos en una
+banda estrecha de luminancia (verde/rojo 1.03) que ningún cuarteto de colores
+alternativo resuelve — es una limitación estructural de intentar 4 niveles
+con contraste AA en una sola escala, no una mala elección de hexadecimales.
+Ver `docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
 
 **Tabla en escritorio, tarjetas en móvil** — corte en 768 px. La tarjeta y la
 fila muestran **los mismos campos y los mismos valores**; ya falló una vez
@@ -564,23 +689,33 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-217 tests en 15 archivos, Vitest, entorno `node` **sin jsdom**.
+296 tests en 19 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/leveling.test.ts` | 36 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
+| `lib/calculations/leveling.test.ts` | 40 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
+| `lib/calculations/settlement.test.ts` | 40 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico |
 | `lib/validators/polygonal.test.ts` | 33 | Captura y cierre de poligonal |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
-| `lib/validators/leveling.test.ts` | 20 | Captura y cierre de nivelación |
+| `lib/validators/leveling.test.ts` | 24 | Captura y cierre de nivelación |
+| `lib/validators/settlement.test.ts` | 21 | Captura y cierre de asentamientos — incluye que la alarma no bloquea |
 | `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
 | `lib/utils/format.test.ts` | 13 | Fecha relativa y sus fronteras |
+| `lib/calculations/tolerances.test.ts` | 10 | Tolerancias por orden (poligonal, nivelación) y presets de asentamientos |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
+| `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles, unión discriminada `status`/`level` |
 | `lib/calculations/angles.test.ts` | 8 | Conversiones DMS ↔ decimal |
+| `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor (`deriveLevelingCloseStatus`) |
+| `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor (`derivePolygonalCloseStatus`) |
 | `lib/demo/fixtures.test.ts` | 7 | Fixtures del proyecto de ejemplo |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
-| `lib/calculations/tolerances.test.ts` | 5 | Tolerancias por orden (poligonal y nivelación) |
 | `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
+| `lib/design/chart-scale.test.ts` | 5 | Escala lineal y marcas «nice» de la gráfica SVG |
+
+Falta cobertura propia de `expectStationCapture` (compartida cliente/servidor
+desde el retrofit de revalidación) y de `niceTicks`/`computeDifferentials` en
+sus casos extremos — ver [deuda técnica](#11-deuda-técnica-conocida).
 
 ### Cómo se testea la interfaz
 
@@ -600,22 +735,40 @@ tiene el recorrido completo del módulo poligonal.
 
 ## 10. Cómo extender
 
-### Añadir un módulo de proceso (nivelación, asentamientos)
+### Añadir un módulo de proceso
 
-El módulo poligonal es la plantilla. Un módulo nuevo necesita:
+El módulo poligonal es la plantilla; nivelación y asentamientos ya la
+siguieron, así que el patrón está probado tres veces. Un módulo nuevo
+necesita:
 
 1. **Migración** con su tabla de proceso y su tabla de detalle, con RLS vía
    proyecto y **los triggers de inmutabilidad** equivalentes a los de
-   `20260727180000_immutable_closed_processes.sql`.
+   `20260727180000_immutable_closed_processes.sql`. Si la tabla de detalle no
+   cuelga directamente del proceso (como `settlement_readings`, que cuelga de
+   `settlement_visits`), la función del trigger de filas hijas
+   (`reject_write_on_closed_process_station()`) **no es reutilizable**:
+   consulta la tabla de cabecera por nombre. Escriba una función análoga.
 2. **Tipos** en `src/types/`, y regenerar `database.ts`.
 3. **Algoritmo** en `src/lib/calculations/<modulo>.ts` — función pura, con sus
-   tests. Añadir sus tolerancias a `tolerances.ts`.
-4. **Validadores** en `src/lib/validators/<modulo>.ts`, con las dos capas y sus
-   tests.
-5. **Server Actions** con las guardas de proceso cerrado.
+   tests derivados por cálculo directo, **nunca copiados de un documento de
+   referencia sin verificar contra él primero** (asentamientos encontró que
+   el marco teórico calculaba mal tanto la velocidad como los estados de
+   alerta). Añadir sus tolerancias a `tolerances.ts`.
+4. **Validadores** en `src/lib/validators/<modulo>.ts`, con las dos capas de
+   captura y cierre, y sus tests. Decida explícitamente si el módulo necesita
+   una tercera capa estadística que **no bloquee** captura ni cierre — es el
+   caso de asentamientos: un hallazgo alarmante debe poder registrarse.
+5. **Server Actions** con las guardas de proceso cerrado y **revalidación de
+   la captura en el servidor** desde el primer commit: la clave publicable de
+   Supabase es pública por diseño, así que un cliente hostil puede llamar a
+   la acción directamente con datos que la interfaz nunca habría enviado.
+   Retrasarlo a un retrofit —como pasó con poligonal y nivelación— es deuda
+   evitable.
 6. **Editor** en `src/components/<modulo>/`, reutilizando el design system.
 7. **Ruta** `src/app/(app)/projects/[id]/<modulo>/[pid]/`.
-8. **Manual**: mover la sección de «Módulos pendientes» al cuerpo y capturar.
+8. **Manual**: mover la sección de «Módulos pendientes» al cuerpo **en los
+   dos sitios** (`docs/manual/README.md` y `src/app/(app)/manual/`, mismo
+   commit) y regenerar capturas con `node docs/manual/capturas.mjs`.
 
 Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 [`docs/method.md`](../method.md).
@@ -659,18 +812,29 @@ presentación. Lo que corresponde es extraer un formateador único a
 dice «7 procesos» contando borradores, calculados, cerrados y rechazados por
 igual. Desde la Fase 5 cuenta los tres módulos (poligonales, nivelaciones y
 lugares de control de asentamientos, un lugar = un trabajo). Sigue sin haber
-desglose del tipo «7 procesos (2 cerrados)».
+desglose del tipo «7 procesos (2 cerrados)». Ver también, más abajo, la
+entrada sobre el lugar «General» del backfill: el mismo conteo tiene un
+segundo problema propio de la Fase 5.
 
-**El helper `Block` está duplicado** en los dos `loading.tsx`. Con las fases 4-6
-serán cinco o más: conviene extraerlo a `design-system/skeleton.tsx` antes.
+**El helper `Block` está duplicado** en los dos `loading.tsx` que existen
+(`dashboard/`, `projects/[id]/`). Nivelación y asentamientos no añadieron
+`loading.tsx` propios —ver la entrada siguiente—, así que la duplicación no
+creció con la Fase 5, pero sigue sin extraerse a
+`design-system/skeleton.tsx`.
 
-**Las migas del editor viven dentro del Client Component**, lo que obliga a
-pasar `projectName` a través de la frontera cliente/servidor. Los editores de
-nivelación y asentamientos repetirían el patrón; lo correcto es renderizarlas
-desde el `page.tsx`.
+**Las migas del editor de poligonal y de nivelación viven dentro del Client
+Component**, lo que obliga a pasar `projectName` a través de la frontera
+cliente/servidor (`leveling-editor.tsx` repitió el patrón de
+`polygonal-editor.tsx`). **Asentamientos no repitió el patrón**: sus rutas
+(`sites/[siteId]/page.tsx`, `settlement/[siteId]/page.tsx`) renderizan
+`Breadcrumbs` directamente desde el Server Component, que es lo correcto.
+Queda pendiente llevar poligonal y nivelación al mismo patrón.
 
-**Faltan `loading.tsx`** en el editor de poligonal y en «nuevo proyecto», que
-son las rutas con más trabajo de servidor.
+**Faltan `loading.tsx` en los editores.** Ni el de poligonal, ni el de
+nivelación, ni los de asentamientos (lugar en `sites/[siteId]`, visita en
+`settlement/[siteId]/visits/[visitId]`) tienen `loading.tsx` propio — tampoco
+«nuevo proyecto». Son las rutas con más trabajo de servidor y las que más se
+beneficiarían de un esqueleto durante la carga.
 
 **`ProjectCard` no tiene hover de fondo**, a diferencia de `ProcessCard`.
 
@@ -679,18 +843,19 @@ decimales, lo que deja un error residual de 3.8e-7 m y una precisión de
 `1:528479954`. El motor lo clasifica correctamente; el dato del fixture es el
 impreciso.
 
-**Los cuatro tokens del semáforo de asentamientos quedaron con poco margen
-entre niveles contiguos.** Se oscurecieron para cumplir 3:1 como indicador
-gráfico (`semaphore-green`, `-yellow`, `-orange`, `-red`), pero el efecto
-colateral medido es que los niveles contiguos se separan poco en luminancia
-(verde/amarillo 1.18, amarillo/naranja 1.15, naranja/rojo 1.01): naranja y
-rojo son prácticamente indistinguibles entre sí. No se pierde información
-porque el semáforo, por regla del sistema de diseño, nunca usa el color como
-único canal — siempre lleva texto (§ 4.4).
-
-Si la fase 5 necesita mayor separación visual, la alternativa es volver a
-rellenos vivos con anillos oscuros `#0f5c2e`, `#7a6207`, `#8a4a0c`, `#8f2418`,
-todos ≥ 5.8:1 sobre blanco.
+**Cerrado — el semáforo de 4 niveles.** Los cuatro tokens (`semaphore-green`,
+`-yellow`, `-orange`, `-red`) cumplen 3:1 individualmente, pero medidos entre
+sí los niveles contiguos se separan poco en luminancia (verde/amarillo 1.18,
+amarillo/naranja 1.15, naranja/rojo 1.01) y verde/rojo —los dos extremos—
+está en 1.03. Se midió también la alternativa de rellenos vivos con anillos
+oscuros que esta sección proponía: mejora los pares contiguos pero empeora
+verde/rojo (1.065), así que **no hay cuarteto de colores que lo resuelva** —
+la causa es estructural, cuatro niveles con AA comprimidos en una banda
+estrecha de luminancia. La Fase 5 cierra la deuda con un canal distinto en
+vez de perseguir otro cuarteto: `StatusIndicator` en modo `level` añade
+**forma** (círculo, cuadrado, rombo, triángulo) como segundo canal gráfico,
+además del texto que el sistema de diseño ya exigía. Ver
+`docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
 
 **Equilibrado de visuales sin validar.** Es la regla de campo más importante
 de la nivelación de precisión (cancela curvatura, refracción y colimación).
@@ -699,30 +864,24 @@ No se valida porque compara `d_atrás` con `d_adelante` dentro de una armada y
 Implementarlo exige dos columnas por armada o un modelo por armada en vez de
 por punto: toca el modelo de datos en producción.
 
-**Cerrado — la captura se revalida en el servidor.** Desde la Fase 5, las tres
-acciones de guardado (`savePolygonalProcessAction`, `saveLevelingProcessAction`
-y `saveVisitAction`) revalidan los datos de campo con los validadores puros
-antes de persistir, además de recalcular los resultados. La clave publicable de
-Supabase es pública por diseño, así que una llamada directa a una acción podía
-guardar datos que la interfaz habría bloqueado. Lo que retrasaba el retrofit era
-qué hacer con procesos históricos que no pasaran la validación actual; al no
-haber datos de trabajo que preservar, se aplicó sin excepciones. En poligonal,
-`expectStationCapture` (compartida con el editor) evita bloquear captura
-parcial legítima: una estación inicial sin ángulo, o una final sin ángulo ni
-distancia, no es un error, según el tipo de poligonal y la posición de la
-estación (§ 5.1).
+Dos deudas de revalidación en servidor, ambas cerradas durante la Fase 5 y ya
+sin rastro que corregir en el código actual:
 
-**Cerrado — la derivación del estado de cierre vive en el servidor.** Antes,
-`close*ProcessAction` usaba el `asRejected` que enviaba el cliente, de modo que
-una llamada directa podía cerrar como `closed` un proceso fuera de tolerancia.
-Hoy el servidor lo deriva de `meets_tolerance`, que él mismo escribió al
-guardar: si no cumple, queda `rejected` aunque el cliente pida lo contrario.
-La asimetría es deliberada — el cliente puede ser más estricto (rechazar un
-trabajo que sí cumple, por razones que el sistema no ve), nunca más laxo. La
-lógica es pura y está en `close-status.ts` de cada módulo, con tests. Único
-matiz: `open` y `open_uncontrolled` tienen `meets_tolerance` en `null` de forma
-estructural (no hay tolerancia que evaluar), así que para ellos el criterio es
-solo haber llegado a `calculated`.
+- **La captura se revalida en el servidor en los tres módulos.**
+  `savePolygonalProcessAction`, `saveLevelingProcessAction` y
+  `saveVisitAction` revalidan los datos de campo con los validadores puros
+  antes de persistir, además de recalcular los resultados — no solo confían
+  en lo que el cliente ya validó. Verificado con ataques reales vía HTTP
+  directo a las tres acciones (payload con datos inválidos, sesión legítima,
+  sin pasar por la UI): las tres rechazan y no mutan la base. Asentamientos
+  nació ya con esta garantía (decisión #10 del PRD de fase); poligonal y
+  nivelación la recibieron por retrofit.
+- **La derivación del estado de cierre vive en el servidor**, no en el
+  `asRejected` que enviaba el cliente: el servidor deriva `closed` o
+  `rejected` de `meets_tolerance`, que él mismo escribió al guardar. La
+  asimetría es deliberada — el cliente puede ser más estricto que el
+  servidor, nunca más laxo. Lógica pura en `close-status.ts` de cada módulo,
+  con tests.
 
 **Antes de desplegar, comprobar en producción** que no existan procesos en
 estado `calculated` con `meets_tolerance` nulo fuera de los tipos que no
@@ -755,6 +914,60 @@ entrar en la compensación, es un cambio de motor de cálculo con tests nuevos,
 no un ajuste menor: altera todas las cotas corregidas de un recorrido con
 vuelta.
 
+**El `worstAlert` del hub y el del panel de lugar pueden divergir.** El hub
+(sub-tab de asentamientos) lee `alert_status` tal como quedó persistido en
+`settlement_readings` la última vez que se guardó la visita. El panel de
+análisis del lugar (§ 7.4 del manual) lo **recalcula** en cada carga con los
+umbrales actuales del lugar. Si alguien edita los umbrales de un lugar que ya
+tiene visitas guardadas, las dos vistas dejan de coincidir hasta que cada
+visita se vuelva a guardar. El valor autoritativo es el recalculado, porque
+es el que usa los umbrales vigentes. Arreglo pendiente: que `saveSiteAction`
+reescriba el `alert_status` de las visitas **abiertas** al cambiar los
+umbrales — las cerradas conservan su clasificación original, por
+trazabilidad (una visita cerrada documenta el criterio con el que se evaluó
+en su momento).
+
+**`validatePolygonalStation` no valida `pointCode` vacío.** El validador de
+nivelación sí lo hace (`validateReadingCapture` en `leveling.ts`, regla
+`pointCode.trim() === ""`); el de poligonal no tiene el chequeo equivalente,
+así que una estación sin código se persiste igual en cliente y servidor —
+no es un hallazgo de la Fase 5, pero se detectó al escribir el paralelo con
+nivelación y asentamientos y no se corrigió, porque tocar `polygonal.ts` no
+era alcance de esta fase.
+
+**`expectStationCapture` no tiene test propio.** Desde el retrofit de
+revalidación en servidor (Task 16), esta función pasó de ser una regla que
+solo usaba el editor a ser la fuente de verdad compartida entre cliente y
+`savePolygonalProcessAction`: si se desvía, el servidor y la pantalla podrían
+dejar de estar de acuerdo sobre qué celdas son obligatorias sin que ningún
+test lo detecte.
+
+**Quedan 4 copias de `thresholdsOf`** repartidas por el repo (server actions
+y componentes de asentamientos), con la misma lógica de leer los siete
+umbrales de un `Site`. Mismo patrón de fondo que la deuda de
+`formatPrecision`: candidato a extraer a un solo lugar, probablemente
+`src/lib/calculations/settlement.ts` o `tolerances.ts`.
+
+**El lugar «General» del backfill infla el conteo de procesos de proyectos
+que ya tenían trabajo.** La migración de la Fase 5 crea un lugar `General`
+por cada proyecto con procesos existentes y les asigna ese `site_id` (ver
+§ 4). Ese lugar en sí mismo no representa ningún monitoreo real, pero
+`getProcessCountsByProject` lo cuenta igual que un lugar de control genuino:
+un proyecto que antes tenía «7 procesos» ahora puede mostrar «8» sin que se
+haya creado ningún trabajo nuevo. No se corrige aquí porque distinguir «lugar
+artefacto del backfill» de «lugar real sin visitas todavía» no tiene una
+señal limpia en el esquema actual (los dos son un lugar `active` sin
+visitas).
+
+**Faltan tests de `niceTicks` con rangos extremos y de `computeDifferentials`
+con un punto sin lectura.** `niceTicks` (`src/lib/design/chart-scale.ts`)
+tiene 5 tests que cubren el caso general de la gráfica de asentamientos, pero
+no un rango degenerado (`min === max`, o un rango que fuerce redondeos en el
+límite del `step`). `computeDifferentials` está cubierto para pares sin
+coordenadas, pero no para un punto que tiene coordenadas pero le falta la
+lectura de la visita actual — un caso distinto al de coordenadas ausentes, y
+sin test que fije su comportamiento.
+
 ---
 
 ## 12. Manual de usuario en la app
@@ -769,7 +982,7 @@ grupo `(app)`, así que hereda la comprobación de sesión y el encabezado.
 | Archivo | Responsabilidad |
 |---|---|
 | `manual-data.ts` | Todo el contenido: textos, filas de tabla, metadatos de las capturas |
-| `page.tsx` | Las nueve secciones y sus piezas de presentación (`Seccion`, `Captura`, `Tabla`, `Nota`) |
+| `page.tsx` | Las once secciones y sus piezas de presentación (`Seccion`, `Captura`, `Tabla`, `Nota`) |
 
 **Dos archivos, a propósito.** Es un documento, no funcionalidad: cada sección
 se renderiza una vez, en un orden fijo, así que repartirlas en un archivo por
@@ -787,9 +1000,8 @@ compense su coste, y se factura por uso. El riesgo real de `<img>` —el salto d
 layout— se evita con `width`/`height` reales en cada imagen. Hay un
 `eslint-disable` puntual con esa explicación.
 
-**`loading="lazy"` en todas menos la primera.** Las once capturas suman 2,8 MB;
-sin esto la página las descargaría de golpe. Medido: 3 de 11 en la carga
-inicial, las once tras recorrer la página.
+**`loading="lazy"` en todas menos la primera.** Las diecisiete capturas suman
+4,6 MB; sin esto la página las descargaría de golpe.
 
 **`Nota` propia en lugar de `Alert`.** `Alert` lleva `role="alert"` siempre, lo
 que anuncia el contenido con prioridad al lector de pantalla. Una nota
@@ -802,7 +1014,7 @@ que puede entrar a un módulo que aún no existe.
 **El índice son anclas de HTML**, sin JavaScript de cliente, igual que las
 pestañas y los filtros del resto de la aplicación. Los `id` de `SECCIONES` deben
 ser únicos: dos anclas iguales navegan siempre a la primera, sin dar error. Son
-nueve en una sola lista, así que se comprueba a ojo.
+once en una sola lista, así que se comprueba a ojo.
 
 ### El texto vive por duplicado
 

@@ -7,7 +7,7 @@
 //
 // Uso:
 //   1. Levanta el entorno:  npx supabase start && npm run dev
-//   2. Siembra los datos:   npx tsx --env-file=.env.local scripts/seed.mjs
+//   2. Siembra los datos:   npm run seed
 //   3. Ejecuta:             node docs/manual/capturas.mjs
 //
 // Los IDs de proyecto y proceso cambian con cada `supabase db reset`, así que
@@ -42,11 +42,23 @@ const calculado = sql("select id from public.polygonal_processes where name like
 const cerrado = sql("select id from public.polygonal_processes where status='closed';");
 const rechazado = sql("select id from public.polygonal_processes where status='rejected';");
 const nivelacion = sql("select id from public.leveling_processes where name like 'Circuito BM-1%';");
+const proyectoMonitoreo = sql("select id from public.projects where name='Edificio en monitoreo' limit 1;");
+const lugarMonitoreo = sql("select id from public.sites where name='Edificio Torre Central' limit 1;");
+const visitaCalculada = sql(
+  "select id from public.settlement_visits where site_id=(select id from public.sites where name='Edificio Torre Central') and visit_number=1;",
+);
 
-if (!proyecto || !calculado || !cerrado || !rechazado || !nivelacion) {
-  throw new Error(
-    "Faltan datos de seed. Corré: npx tsx --env-file=.env.local scripts/seed.mjs",
-  );
+if (
+  !proyecto ||
+  !calculado ||
+  !cerrado ||
+  !rechazado ||
+  !nivelacion ||
+  !proyectoMonitoreo ||
+  !lugarMonitoreo ||
+  !visitaCalculada
+) {
+  throw new Error("Faltan datos de seed. Corré: npm run seed");
 }
 
 const browser = await chromium.launch();
@@ -103,10 +115,23 @@ await capturar("11-nueva-nivelacion");
 await page.goto(`${BASE}/projects/${proyecto}/leveling/${nivelacion}`, { waitUntil: "networkidle" });
 await capturar("12-editor-nivelacion", { fullPage: true });
 
+// Control de asentamientos
+await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/new`, { waitUntil: "networkidle" });
+await capturar("13-nuevo-lugar");
+await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/${lugarMonitoreo}`, { waitUntil: "networkidle" });
+await capturar("14-editor-lugar", { fullPage: true });
+await page.goto(`${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarMonitoreo}`, { waitUntil: "networkidle" });
+await capturar("15-panel-asentamientos", { fullPage: true });
+await page.goto(
+  `${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarMonitoreo}/visits/${visitaCalculada}`,
+  { waitUntil: "networkidle" },
+);
+await capturar("16-editor-visita", { fullPage: true });
+
 // Campo
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUntil: "networkidle" });
-await capturar("13-editor-movil", { fullPage: true });
+await capturar("17-editor-movil", { fullPage: true });
 
 await browser.close();
 console.log(`\nCapturas actualizadas en ${OUT}`);
