@@ -386,6 +386,26 @@ export async function getSettlementReadingsBySite(
  * «nada que reportar todavía», no «verificado y sano»: un lugar recién
  * creado y uno con diez visitas en verde no se distinguen aquí a propósito;
  * quien necesite esa distinción debe mirar `visitCount`.
+ *
+ * LIMITACIÓN CONOCIDA — puede discrepar con el panel de detalle del lugar:
+ * `worstAlert` sale del `alert_status` que el servidor escribió al guardar
+ * cada visita (`saveVisitAction`), calculado con los umbrales del lugar
+ * VIGENTES EN ESE MOMENTO. El panel de detalle (`settlement/[siteId]/page.tsx`)
+ * en cambio recalcula con `computeHistory` y los umbrales ACTUALES del lugar.
+ * `saveSiteAction` no reescribe las lecturas existentes al editar umbrales, así
+ * que si alguien corrige los umbrales de un lugar que ya tiene visitas
+ * guardadas, esta función y el panel pueden mostrar semáforos distintos para
+ * el mismo lugar hasta que esas visitas se vuelvan a guardar.
+ *
+ * El valor autoritativo es el RECALCULADO, no el persistido: los umbrales son
+ * un criterio de interpretación del proyecto, no un dato de campo, y al
+ * corregirlos el semáforo debería reinterpretarse entero. Aun así, aquí se
+ * lee a propósito el `alert_status` ya guardado en vez de recalcular por
+ * lugar: recalcular reintroduciría el N+1 (3 consultas por lugar) que esta
+ * función existe para evitar. El arreglo de fondo, pendiente, es que
+ * `saveSiteAction` reescriba el `alert_status` de las visitas ABIERTAS al
+ * cambiar los umbrales — las CERRADAS deben conservar el criterio con el que
+ * se cerraron, por trazabilidad. Ver deuda técnica de la Fase 5.
  */
 export async function getSiteSummariesByProject(
   supabase: Client,
