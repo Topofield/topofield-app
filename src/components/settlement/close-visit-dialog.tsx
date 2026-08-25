@@ -20,6 +20,13 @@ interface CloseVisitDialogProps {
   visitDate: string;
   pointsMeasured: number;
   worstAlert: AlertLevel;
+  /**
+   * Hay cambios sin guardar en el editor. Mismo patrón que
+   * `close-process-dialog.tsx` de poligonal: cerrar con cambios sin guardar
+   * sellaría los valores VIEJOS de la base como si fueran los que se ven en
+   * pantalla — irreversible, porque una visita cerrada es inmutable.
+   */
+  dirty: boolean;
 }
 
 /**
@@ -40,10 +47,13 @@ export function CloseVisitDialog({
   visitDate,
   pointsMeasured,
   worstAlert,
+  dirty,
 }: CloseVisitDialogProps) {
   const [confirmed, setConfirmed] = useState(false);
 
   if (!open) return null;
+
+  const canConfirm = !dirty && confirmed && !isPending;
 
   const now = new Intl.DateTimeFormat("es-CO", {
     dateStyle: "long",
@@ -69,7 +79,7 @@ export function CloseVisitDialog({
           <Button
             type="button"
             onClick={onConfirm}
-            disabled={!confirmed || isPending}
+            disabled={!canConfirm}
           >
             {isPending ? "Cerrando…" : "Confirmar Cierre"}
           </Button>
@@ -78,6 +88,12 @@ export function CloseVisitDialog({
     >
       <div className="flex flex-col gap-4">
         {error && <Alert variant="error">{error}</Alert>}
+
+        {dirty && (
+          <Alert variant="warning">
+            Tienes cambios sin guardar. Guárdalos antes de cerrar la visita.
+          </Alert>
+        )}
 
         <p className="text-sm text-neutral-700">
           El cierre deja la visita en solo lectura, con responsable y fecha

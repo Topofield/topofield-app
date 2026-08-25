@@ -92,6 +92,12 @@ export function VisitEditor({
   );
   const [serverError, setServerError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Cambios sin guardar. Mismo patrón que `polygonal-editor.tsx`: se vuelve
+  // `true` con cualquier edición y `false` solo tras un guardado exitoso. El
+  // diálogo de cierre lo usa para no permitir confirmar mientras haya cambios
+  // sin guardar — cerrar sellaría los valores VIEJOS de la base, de forma
+  // irreversible (IMPORTANTE 1 de la ronda de correcciones).
+  const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
@@ -150,12 +156,14 @@ export function VisitEditor({
       event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
       setSaved(false);
+      setDirty(true);
       setHeader((prev) => ({ ...prev, [key]: event.target.value }));
     };
   }
 
   function handleElevationChange(pointId: string, value: string) {
     setSaved(false);
+    setDirty(true);
     setRawElevations((prev) => ({ ...prev, [pointId]: value }));
   }
 
@@ -201,6 +209,7 @@ export function VisitEditor({
       const response = await saveVisitAction(projectId, payload);
       if (response.ok) {
         setSaved(true);
+        setDirty(false);
       } else {
         setServerError(response.error ?? "Ocurrió un error al guardar.");
       }
@@ -351,6 +360,7 @@ export function VisitEditor({
         visitDate={header.date}
         pointsMeasured={pointsMeasured}
         worstAlert={worstAlert}
+        dirty={dirty}
       />
     </div>
   );
