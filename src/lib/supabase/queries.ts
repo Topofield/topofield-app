@@ -45,14 +45,22 @@ export interface DashboardKpis {
  * `polygonal_processes`, de modo que un proyecto de nivelación o de
  * asentamientos aparecía vacío en el dashboard.
  *
- * Para asentamientos no hay `meets_tolerance`: el equivalente de «fuera de
- * tolerancia» es que alguna LECTURA esté en alerta o alarma (`alert_status`),
- * no la visita ni el lugar. Se cuentan lecturas porque el KPI mide urgencia
- * — cuántos puntos requieren atención — y esa señal vive en la lectura, la
- * única fila con `alert_status`. La visita no lo tiene: puede mezclar puntos
- * en distintos niveles y contarla como «una» perdería cuántos puntos están
- * mal. El lugar tampoco: usar `getSiteSummariesByProject` colapsaría todas
- * las lecturas del lugar a un único peor nivel, deshaciendo la cuenta.
+ * En asentamientos no hay «tolerancia», así que el equivalente es un lugar con
+ * al menos un punto en alerta o alarma. Se cuentan LUGARES y no lecturas para
+ * que la unidad sea la misma que en las otras dos ramas del KPI: un lugar con
+ * nueve puntos afectados es un trabajo que requiere atención, no nueve — igual
+ * que un proceso de poligonal o nivelación fuera de tolerancia suma 1, sin
+ * importar cuántas estaciones o lecturas individuales lo hicieron fallar. Es
+ * la misma unidad que usa `getProcessCountsByProject` («un lugar = un
+ * proceso»), así que el KPI y el conteo por proyecto quedan coherentes entre
+ * sí.
+ *
+ * PostgREST no ofrece `count(distinct ...)`: se trae el `site_id` de cada
+ * lectura en alerta/alarma con `head: false` (no puede ser un conteo de
+ * cabecera si necesitamos las filas) y se cuentan los lugares únicos en
+ * memoria con un `Set`, igual que agrupa `getSiteSummariesByProject`. El
+ * volumen es acotado por el número de lecturas en alerta del usuario, no por
+ * el total de la tabla.
  */
 export async function getDashboardKpis(
   supabase: Client,
@@ -64,7 +72,7 @@ export async function getDashboardKpis(
     { count: levelingCalculated },
     { count: levelingOutOfTolerance },
     { count: settlementCalculated },
-    { count: settlementAlarming },
+    { data: alarmingReadings, error: alarmingError },
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -101,17 +109,26 @@ export async function getDashboardKpis(
       .eq("status", "calculated")
       .eq("sites.projects.status", "active"),
     // «Fuera de tolerancia» no aplica a una visita: lo equivalente es que
-    // alguna lectura esté en alerta o alarma. Se cuenta a nivel de lectura,
-    // no de visita ni de lugar (ver JSDoc).
+    // algún lugar tenga al menos un punto en alerta o alarma (ver JSDoc). Se
+    // trae el `site_id` de cada lectura afectada (no `head: true`, hace falta
+    // la fila) y se reduce a lugares únicos abajo.
     supabase
       .from("settlement_readings")
       .select(
-        "id, settlement_visits!inner(status, sites!inner(projects!inner(status)))",
-        { count: "exact", head: true },
+        "settlement_visits!inner(site_id, sites!inner(projects!inner(status)))",
       )
       .in("alert_status", ["alert", "alarm"])
       .eq("settlement_visits.sites.projects.status", "active"),
   ]);
+  if (alarmingError) throw alarmingError;
+
+  const alarmingSites = new Set<string>();
+  for (const row of alarmingReadings ?? []) {
+    const siteId = (
+      row as unknown as { settlement_visits: { site_id: string } }
+    ).settlement_visits.site_id;
+    alarmingSites.add(siteId);
+  }
 
   return {
     activeProjects: activeProjectsCount ?? 0,
@@ -122,7 +139,7 @@ export async function getDashboardKpis(
     outOfTolerance:
       (polygonalOutOfTolerance ?? 0) +
       (levelingOutOfTolerance ?? 0) +
-      (settlementAlarming ?? 0),
+      alarmingSites.size,
   };
 }
 
