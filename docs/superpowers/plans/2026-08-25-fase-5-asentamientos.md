@@ -1155,7 +1155,15 @@ export function computeSettlements(
         const months = monthsBetween(prev.date, visit.date);
         // Dos visitas el mismo día no definen una velocidad. Devolver null y
         // no Infinity: un «NaN mm» en pantalla ya ocurrió en la Fase 4.
-        velocity = months === 0 ? null : round(partialSettlement / months, 2);
+        //
+        // La velocidad NO se redondea aquí. Redondear antes de clasificar
+        // cambiaría el nivel de alerta: 1.996 mm/mes pasaría a 2.00 y saltaría
+        // de `normal` a `caution` cruzando un umbral que en realidad no cruzó.
+        // El redondeo pertenece a la persistencia (`velocity DECIMAL(8,2)`) y a
+        // la presentación (`.toFixed(2)`), no al motor. El parcial y el
+        // acumulado sí se redondean: son diferencias de cotas medidas, donde el
+        // decimal extra es ruido de medición y no señal.
+        velocity = months === 0 ? null : partialSettlement / months;
       }
 
       const accumulatedSettlement =
