@@ -148,7 +148,22 @@ export async function createVisitAction(
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // 23505 = unique_violation. `nextNumber` se calcula en memoria a partir
+    // del historial ya cargado; dos peticiones concurrentes (un doble clic,
+    // dos pestañas) pueden calcular el mismo número antes de que ninguna haya
+    // insertado, y el UNIQUE (site_id, visit_number) es la última defensa.
+    // Sin traducirlo, el usuario vería el mensaje crudo de Postgres, en
+    // inglés, dentro de una interfaz en español.
+    if (error.code === "23505") {
+      return {
+        ok: false,
+        error:
+          "Ya existe una visita con ese número. Recarga la página e inténtalo de nuevo.",
+      };
+    }
+    return { ok: false, error: error.message };
+  }
 
   // Se revalida con `context.site.project_id` (leído del lugar) y no con el
   // `projectId` recibido como parámetro: el mismo criterio que en
@@ -240,18 +255,15 @@ export async function saveVisitAction(
     .eq("id", payload.visitId);
   if (headerError) return { ok: false, error: headerError.message };
 
-  // Las lecturas se reemplazan en bloque: es más simple y más seguro que
-  // reconciliar altas, bajas y modificaciones fila a fila.
-  const { error: deleteError } = await supabase
-    .from("settlement_readings")
-    .delete()
-    .eq("visit_id", payload.visitId);
-  if (deleteError) return { ok: false, error: deleteError.message };
-
+  // Upsert en vez de delete+insert: un `delete` seguido de un `insert` que
+  // fallara dejaría la visita sin lecturas y perdería el dato de campo ya
+  // capturado — justo lo que este módulo existe para evitar. El UNIQUE
+  // (visit_id, point_id) hace que `upsert` actualice la fila existente en
+  // vez de duplicarla.
   if (computed.readings.length > 0) {
-    const { error: insertError } = await supabase
+    const { error: upsertError } = await supabase
       .from("settlement_readings")
-      .insert(
+      .upsert(
         computed.readings.map((r) => ({
           visit_id: payload.visitId,
           point_id: r.pointId,
@@ -261,9 +273,25 @@ export async function saveVisitAction(
           velocity: r.velocity,
           alert_status: r.alertStatus,
         })),
+        { onConflict: "visit_id,point_id" },
       );
-    if (insertError) return { ok: false, error: insertError.message };
+    if (upsertError) return { ok: false, error: upsertError.message };
   }
+
+  // Las lecturas de puntos que ya no vienen en el payload se retiran DESPUÉS
+  // de que el upsert haya confirmado las actuales, nunca antes: así ningún
+  // fallo intermedio deja la visita sin datos. Si no queda ninguna lectura
+  // vigente (el usuario borró todas), se purga la visita completa.
+  const idsVigentes = computed.readings.map((r) => r.pointId);
+  const purga = supabase
+    .from("settlement_readings")
+    .delete()
+    .eq("visit_id", payload.visitId);
+  const { error: deleteError } =
+    idsVigentes.length > 0
+      ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
+      : await purga;
+  if (deleteError) return { ok: false, error: deleteError.message };
 
   // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
   revalidatePath(`/projects/${context.site.project_id}/settlement/${payload.siteId}`);
