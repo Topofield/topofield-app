@@ -7,11 +7,13 @@ import {
   Button,
   Card,
   Input,
+  Modal,
   Select,
   Textarea,
 } from "@/components/design-system";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
 import {
+  closeSiteAction,
   createSiteAction,
   saveSiteAction,
   type SitePayload,
@@ -74,7 +76,19 @@ export function SiteForm({ projectId, site }: SiteFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+  const [isClosing, startCloseTransition] = useTransition();
+
   const disabled = site?.status === "closed";
+  const closedLabel =
+    site?.status === "closed" && site.closed_at
+      ? new Intl.DateTimeFormat("es-CO", {
+          dateStyle: "long",
+          timeStyle: "short",
+          timeZone: "America/Bogota",
+        }).format(new Date(site.closed_at))
+      : null;
 
   function handleStructureTypeChange(tipo: StructureType) {
     setStructureType(tipo);
@@ -126,13 +140,38 @@ export function SiteForm({ projectId, site }: SiteFormProps) {
     });
   }
 
+  function openCloseDialog() {
+    setCloseError(null);
+    setCloseDialogOpen(true);
+  }
+
+  function closeCloseDialog() {
+    setCloseDialogOpen(false);
+  }
+
+  function handleConfirmClose() {
+    if (!site) return;
+    setCloseError(null);
+    startCloseTransition(async () => {
+      const response = await closeSiteAction(projectId, site.id);
+      if (response.ok) {
+        setCloseDialogOpen(false);
+        router.refresh();
+      } else {
+        setCloseError(response.error ?? "No se pudo cerrar el lugar.");
+      }
+    });
+  }
+
   return (
     <Card title={isEdit ? "Datos del lugar" : "Nuevo lugar"}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {error && <Alert variant="error">{error}</Alert>}
         {disabled && (
           <Alert variant="info">
-            El lugar está cerrado; sus datos no admiten cambios.
+            {closedLabel
+              ? `Lugar cerrado el ${closedLabel}. Sus datos y los de sus visitas no admiten cambios.`
+              : "El lugar está cerrado; sus datos no admiten cambios."}
           </Alert>
         )}
 
@@ -180,7 +219,22 @@ export function SiteForm({ projectId, site }: SiteFormProps) {
           disabled={disabled || isPending}
         />
 
-        {!disabled && (
+        {!disabled && isEdit && (
+          <div className="flex justify-between gap-2">
+            <Button
+              type="button"
+              variant="danger"
+              onClick={openCloseDialog}
+              disabled={isPending}
+            >
+              Cerrar Lugar
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </div>
+        )}
+        {!disabled && !isEdit && (
           <div className="flex justify-end gap-2">
             <Button type="submit" disabled={isPending}>
               {isPending ? "Guardando…" : "Guardar"}
@@ -188,6 +242,41 @@ export function SiteForm({ projectId, site }: SiteFormProps) {
           </div>
         )}
       </form>
+
+      {closeDialogOpen && (
+        <Modal
+          open
+          onClose={closeCloseDialog}
+          title="Cerrar lugar"
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={closeCloseDialog}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={handleConfirmClose}
+                disabled={isClosing}
+              >
+                {isClosing ? "Cerrando…" : "Confirmar Cierre"}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            {closeError && <Alert variant="error">{closeError}</Alert>}
+            <p className="text-sm text-neutral-700">
+              Cerrar el lugar finaliza el monitoreo: el lugar queda en solo
+              lectura, con responsable y fecha de registro.
+            </p>
+            <Alert variant="warning">
+              Esto también cierra todas sus visitas: quedarán en solo lectura
+              y ninguna admitirá más ediciones.
+            </Alert>
+          </div>
+        </Modal>
+      )}
     </Card>
   );
 }

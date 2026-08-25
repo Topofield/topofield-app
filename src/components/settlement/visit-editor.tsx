@@ -2,9 +2,14 @@
 
 import { useMemo, useState, useTransition, type ChangeEvent } from "react";
 import { Alert, Button, Card, Input, Textarea } from "@/components/design-system";
+import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { ReadingsTable } from "@/components/settlement/readings-table";
 import { computeHistory } from "@/lib/calculations/settlement";
-import { saveVisitAction, type VisitPayload } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
+import {
+  closeVisitAction,
+  saveVisitAction,
+  type VisitPayload,
+} from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
 import type {
   PointInput,
   SettlementPoint,
@@ -25,6 +30,8 @@ interface VisitEditorProps {
   thresholds: Thresholds;
   /** Solo lectura si el lugar o la visita están cerrados. */
   disabled: boolean;
+  /** El lugar está cerrado (además, o en vez de, la visita misma). */
+  siteClosed: boolean;
 }
 
 interface HeaderState {
@@ -77,6 +84,7 @@ export function VisitEditor({
   otherVisits,
   thresholds,
   disabled,
+  siteClosed,
 }: VisitEditorProps) {
   const [header, setHeader] = useState<HeaderState>(() => headerOf(visit));
   const [rawElevations, setRawElevations] = useState<Record<string, string>>(
@@ -85,6 +93,10 @@ export function VisitEditor({
   const [serverError, setServerError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+  const [isClosing, startCloseTransition] = useTransition();
 
   const isBaseline = visit.visit_number === 0;
 
@@ -129,6 +141,9 @@ export function VisitEditor({
       computedByPoint[reading.pointId] = reading;
     }
   }
+
+  const pointsMeasured = computedVisit?.readings.length ?? 0;
+  const worstAlert = computedVisit?.worstAlert ?? "normal";
 
   function setField(key: keyof HeaderState) {
     return (
@@ -192,6 +207,38 @@ export function VisitEditor({
     });
   }
 
+  function openCloseDialog() {
+    setCloseError(null);
+    setCloseDialogOpen(true);
+  }
+
+  function closeCloseDialog() {
+    setCloseDialogOpen(false);
+  }
+
+  function handleConfirmClose() {
+    setCloseError(null);
+    startCloseTransition(async () => {
+      const response = await closeVisitAction(projectId, siteId, visit.id);
+      if (response.ok) {
+        setCloseDialogOpen(false);
+      } else {
+        // No se cierra el modal: el error (p. ej. lecturas incompletas) hay
+        // que verlo junto al resumen que se estaba confirmando.
+        setCloseError(response.error ?? "No se pudo cerrar la visita.");
+      }
+    });
+  }
+
+  const closedLabel =
+    visit.status === "closed" && visit.closed_at
+      ? new Intl.DateTimeFormat("es-CO", {
+          dateStyle: "long",
+          timeStyle: "short",
+          timeZone: "America/Bogota",
+        }).format(new Date(visit.closed_at))
+      : null;
+
   return (
     <div className="flex flex-col gap-6">
       <Card
@@ -215,6 +262,16 @@ export function VisitEditor({
           <Alert variant="info" className="mb-4">
             Esta es la línea base del lugar: no tiene visita anterior, así que
             no muestra asentamiento parcial ni velocidad.
+          </Alert>
+        )}
+        {closedLabel && (
+          <Alert variant="info" className="mb-4">
+            Visita cerrada el {closedLabel}. Queda en solo lectura.
+          </Alert>
+        )}
+        {!closedLabel && siteClosed && (
+          <Alert variant="info" className="mb-4">
+            El lugar está cerrado; esta visita quedó en solo lectura.
           </Alert>
         )}
 
@@ -275,12 +332,26 @@ export function VisitEditor({
       </Card>
 
       {!disabled && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={openCloseDialog} disabled={isPending}>
+            Cerrar Visita
+          </Button>
           <Button onClick={handleSave} disabled={isPending}>
             {isPending ? "Guardando…" : "Guardar visita"}
           </Button>
         </div>
       )}
+
+      <CloseVisitDialog
+        open={closeDialogOpen}
+        onClose={closeCloseDialog}
+        onConfirm={handleConfirmClose}
+        isPending={isClosing}
+        error={closeError}
+        visitDate={header.date}
+        pointsMeasured={pointsMeasured}
+        worstAlert={worstAlert}
+      />
     </div>
   );
 }

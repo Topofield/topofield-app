@@ -113,6 +113,7 @@ export default async function VisitEditorPage({
         otherVisits={otherVisits}
         thresholds={thresholdsOf(site)}
         disabled={disabled}
+        siteClosed={site.status === "closed"}
       />
     </div>
   );
