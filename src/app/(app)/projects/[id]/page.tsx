@@ -23,20 +23,17 @@ import {
   type StatusFilter,
 } from "@/lib/process-list";
 import { createClient } from "@/lib/supabase/server";
-import { computeHistory, worst } from "@/lib/calculations/settlement";
 import {
   getLevelingProcesses,
   getPolygonalProcesses,
   getProjectById,
   getReferencePoints,
-  getSettlementReadingsBySite,
-  getSitePoints,
+  getSiteSummariesByProject,
   getSites,
-  getVisits,
 } from "@/lib/supabase/queries";
 import { POLYGONAL_TYPES, type PolygonalType } from "@/types/polygonal";
 import type { LevelingProcess } from "@/types/leveling";
-import type { AlertLevel, PointInput, Thresholds, VisitInput } from "@/types/settlement";
+import type { AlertLevel } from "@/types/settlement";
 import type { Site } from "@/types/site";
 
 const TABS: TabItem[] = [
@@ -52,22 +49,6 @@ const SUBTABS: { key: Modulo; label: string }[] = [
   { key: "nivelaciones", label: "Nivelaciones" },
   { key: "asentamientos", label: "Control de Asentamientos" },
 ];
-
-/** Umbrales del lugar, desnormalizados para el motor de cálculo (mismo
- *  patrón que `settlement/[siteId]/page.tsx`, `visits/[visitId]/page.tsx` y
- *  `site-form.tsx`: la conversión es tan corta que no justifica una
- *  dependencia compartida entre Server Components y componentes cliente). */
-function thresholdsOf(site: Site): Thresholds {
-  return {
-    velocityCaution: Number(site.velocity_caution),
-    velocityAlert: Number(site.velocity_alert),
-    velocityAlarm: Number(site.velocity_alarm),
-    accumulatedCaution: Number(site.accumulated_caution),
-    accumulatedAlert: Number(site.accumulated_alert),
-    accumulatedAlarm: Number(site.accumulated_alarm),
-    angularDistortionLimit: site.angular_distortion_limit,
-  };
-}
 
 /** Destino de una sub-tab, conservando el resto de parámetros de la URL. */
 function subtabHref(
@@ -137,46 +118,22 @@ export default async function ProjectHubPage({
       : [];
 
   // El conteo de visitas y la peor alerta solo se necesitan para pintar la
-  // sub-tab de asentamientos: cargar el historial completo de cada lugar en
-  // las otras dos sub-tabs sería trabajo tirado, y un lugar con muchas
-  // visitas hace de esta consulta la más cara de las tres.
+  // sub-tab de asentamientos, y se resuelven con dos consultas fijas para
+  // todo el proyecto (`getSiteSummariesByProject`), no una tanda de tres por
+  // lugar: con N lugares, ir lugar a lugar serían 3N viajes a la base.
   const siteRows =
     activeTab === "processes" && modulo === "asentamientos"
-      ? await Promise.all(
-          sites.map(async (site) => {
-            const [points, visits, readingsBySite] = await Promise.all([
-              getSitePoints(supabase, site.id),
-              getVisits(supabase, site.id),
-              getSettlementReadingsBySite(supabase, site.id),
-            ]);
-
-            const pointInputs: PointInput[] = points.map((p) => ({
-              id: p.id,
-              code: p.code,
-              northing: p.northing === null ? null : Number(p.northing),
-              easting: p.easting === null ? null : Number(p.easting),
-              initialElevation:
-                p.initial_elevation === null ? null : Number(p.initial_elevation),
-            }));
-            const visitInputs: VisitInput[] = visits.map((v) => ({
-              id: v.id,
-              visitNumber: v.visit_number,
-              date: v.date,
-              readings: (readingsBySite[v.id] ?? []).map((r) => ({
-                pointId: r.point_id,
-                elevation: Number(r.elevation),
-              })),
-            }));
-
-            const history = computeHistory(pointInputs, visitInputs, thresholdsOf(site));
-            const worstAlert = history.visits.reduce<AlertLevel>(
-              (acc, v) => worst(acc, v.worstAlert),
-              "normal",
-            );
-
-            return { site, visitCount: visits.length, worstAlert };
-          }),
-        )
+      ? await (async () => {
+          const summaries = await getSiteSummariesByProject(supabase, project.id);
+          return sites.map((site) => {
+            const summary = summaries[site.id];
+            return {
+              site,
+              visitCount: summary?.visitCount ?? 0,
+              worstAlert: summary?.worstAlert ?? ("normal" as AlertLevel),
+            };
+          });
+        })()
       : [];
 
   const filters: ProcessFilters = {

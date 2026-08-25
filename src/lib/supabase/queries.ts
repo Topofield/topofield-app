@@ -9,10 +9,12 @@ import type { PolygonalProcess, PolygonalStation } from "@/types/polygonal";
 import type { LevelingProcess, LevelingReading } from "@/types/leveling";
 import type { Site } from "@/types/site";
 import type {
+  AlertLevel,
   SettlementPoint,
   SettlementVisit,
   SettlementReading,
 } from "@/types/settlement";
+import { worst } from "@/lib/calculations/settlement";
 
 type Client = SupabaseClient<Database>;
 
@@ -359,4 +361,71 @@ export async function getSettlementReadingsBySite(
     (grouped[reading.visit_id] ??= []).push(reading);
   }
   return grouped;
+}
+
+/**
+ * Conteo de visitas y peor nivel de alerta de cada lugar de un proyecto que
+ * tiene al menos una visita, indexado por `site_id`.
+ *
+ * Dos consultas fijas en lugar de tres por lugar: con N lugares en el hub,
+ * resolverlo lugar a lugar serían 3N viajes a la base (`getSitePoints` +
+ * `getVisits` + `getSettlementReadingsBySite`, uno de cada por lugar). Es la
+ * misma razón por la que `getProcessCountsByProject` agrupa en vez de contar
+ * por tarjeta.
+ *
+ * El peor nivel de alerta NO se recalcula con `computeHistory`: se reduce
+ * directamente `settlement_readings.alert_status`, que ya quedó persistido
+ * por el servidor al guardar cada visita (`saveVisitAction`, autoritativo).
+ * Evita traer también los puntos del catálogo, que el cálculo completo sí
+ * necesitaría.
+ *
+ * OJO al consumir el resultado: un lugar sin ninguna visita simplemente NO
+ * aparece como clave de este `Record` — no hay fila en `settlement_visits`
+ * de la que partir. El llamador debe tratar toda clave ausente como
+ * `{ visitCount: 0, worstAlert: "normal" }`, y ese `"normal"` significa
+ * «nada que reportar todavía», no «verificado y sano»: un lugar recién
+ * creado y uno con diez visitas en verde no se distinguen aquí a propósito;
+ * quien necesite esa distinción debe mirar `visitCount`.
+ */
+export async function getSiteSummariesByProject(
+  supabase: Client,
+  projectId: string,
+): Promise<Record<string, { visitCount: number; worstAlert: AlertLevel }>> {
+  if (!UUID_RE.test(projectId)) return {};
+
+  const summaries: Record<string, { visitCount: number; worstAlert: AlertLevel }> =
+    {};
+
+  const { data: visits, error: visitsError } = await supabase
+    .from("settlement_visits")
+    .select("site_id, sites!inner(project_id)")
+    .eq("sites.project_id", projectId);
+  if (visitsError) throw visitsError;
+
+  for (const row of visits ?? []) {
+    const siteId = (row as unknown as { site_id: string }).site_id;
+    const entry = (summaries[siteId] ??= { visitCount: 0, worstAlert: "normal" });
+    entry.visitCount += 1;
+  }
+
+  const { data: readings, error: readingsError } = await supabase
+    .from("settlement_readings")
+    .select("alert_status, settlement_visits!inner(site_id, sites!inner(project_id))")
+    .eq("settlement_visits.sites.project_id", projectId);
+  if (readingsError) throw readingsError;
+
+  for (const row of readings ?? []) {
+    const r = row as unknown as {
+      alert_status: string;
+      settlement_visits: { site_id: string };
+    };
+    const siteId = r.settlement_visits.site_id;
+    // La entrada ya existe si el lugar tiene visitas (siempre el caso: una
+    // lectura no puede existir sin la visita que la contiene), pero se crea
+    // por si acaso para no asumir el orden de llegada de las filas.
+    const entry = (summaries[siteId] ??= { visitCount: 0, worstAlert: "normal" });
+    entry.worstAlert = worst(entry.worstAlert, r.alert_status as AlertLevel);
+  }
+
+  return summaries;
 }
