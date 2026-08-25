@@ -1,5 +1,6 @@
 import { Card, EmptyState, StatusIndicator } from "@/components/design-system";
 import { DifferentialsTable } from "@/components/settlement/differentials-table";
+import { SettlementChart } from "@/components/settlement/settlement-chart";
 import {
   ALERT_LEVEL_LABELS,
   type DifferentialPair,
@@ -32,10 +33,8 @@ function formatMm(value: number | null): string {
 
 /**
  * Panel de análisis de un lugar: semáforo por punto de la última visita,
- * tendencia por punto y tabla de asentamientos diferenciales.
- *
- * La gráfica de evolución (Tarea 13, `SettlementChart`) va en el hueco
- * señalado más abajo; esta tarea solo lo deja preparado.
+ * tendencia por punto, tabla de asentamientos diferenciales y gráfica de
+ * evolución del acumulado por punto a lo largo de las visitas.
  */
 export function AnalysisPanel({
   points,
@@ -118,11 +117,16 @@ export function AnalysisPanel({
         />
       </Card>
 
-      {/*
-        Hueco para la Tarea 13: aquí va <SettlementChart /> con la evolución
-        del acumulado por punto a lo largo de las visitas. No se implementa
-        en esta tarea.
-      */}
+      <Card title="Evolución del asentamiento acumulado">
+        {!hasReadings ? (
+          <EmptyState
+            title="Todavía no hay lecturas"
+            description="La gráfica se dibuja con el acumulado de cada visita. Registra al menos una visita con lecturas para verla."
+          />
+        ) : (
+          <SettlementChart points={points} visits={visits} />
+        )}
+      </Card>
     </div>
   );
 }
