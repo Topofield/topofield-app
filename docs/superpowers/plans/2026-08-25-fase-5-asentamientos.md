@@ -1852,7 +1852,7 @@ git commit -m "feat: clasificacion de alertas, tendencia e historico de asentami
 
 **Interfaces:**
 - Consumes: `PointInput`, `VisitInput`, `ReadingInput` de `@/types/settlement`.
-- Produces: `validateReadingCapture(reading, point)`, `validateVisitCapture(visit, points, previousVisitDate)`, `validateVisitClose(visit, points)`. Todas devuelven `{ errors, warnings }` indexado por campo, siguiendo el patrón de `validators/leveling.ts`.
+- Produces: `validateReadingCapture(reading, point)`, `validateVisitCapture(visit, points, previousVisitDate)`, `validateVisitClose(visit, points, previousVisitDate)`. Todas devuelven `{ errors, warnings }` indexado por campo, siguiendo el patrón de `validators/leveling.ts`.
 
 **Contexto:** la capa estadística **no bloquea nada**. Un asentamiento en alarma es un hallazgo del monitoreo, no un error de captura.
 
@@ -2995,7 +2995,16 @@ export async function closeVisitAction(
   const visit = context.visits.find((v) => v.id === visitId);
   if (!visit) return { ok: false, error: "Visita no encontrada." };
 
-  const issues = validateVisitClose(visit, context.points);
+  // La fecha de la visita cronológicamente anterior a esta. El cierre también
+  // comprueba el orden: sellar como inmutable una visita fechada fuera de orden
+  // dejaría un intervalo negativo imposible de corregir después.
+  const previousDate =
+    context.visits
+      .filter((v) => v.id !== visitId && v.date < visit.date)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .at(-1)?.date ?? null;
+
+  const issues = validateVisitClose(visit, context.points, previousDate);
   if (Object.keys(issues.errors).length > 0) {
     return { ok: false, error: Object.values(issues.errors)[0] };
   }

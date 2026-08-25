@@ -32,6 +32,24 @@ const MAX_PLAUSIBLE_DEVIATION_M = 1;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * ¿La cadena es una fecha ISO `YYYY-MM-DD` que además existe en el calendario?
+ *
+ * El regex por sí solo no basta: `2025-02-30` tiene la forma correcta y
+ * `Date.parse` la reinterpreta en silencio como `2025-03-02`, desplazando el
+ * intervalo entre visitas y con él la velocidad calculada. El round-trip
+ * detecta ese desplazamiento porque la fecha reconstruida ya no coincide con
+ * la de entrada.
+ */
+function isCalendarDate(value: string): boolean {
+  if (!ISO_DATE_RE.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}
+
 /** Valida la cota medida de un punto en una visita (§ 5.1). */
 export function validateReadingCapture(
   reading: ReadingInput,
@@ -71,7 +89,7 @@ export function validateVisitCapture(
   const warnings: VisitCaptureIssues["warnings"] = {};
   const readingIssues: Record<string, ReadingCaptureIssues> = {};
 
-  if (!ISO_DATE_RE.test(visit.date)) {
+  if (!isCalendarDate(visit.date)) {
     errors.date = "La visita necesita una fecha válida.";
   } else if (previousVisitDate !== null && visit.date <= previousVisitDate) {
     errors.date = `La fecha debe ser posterior a la de la visita anterior (${previousVisitDate}).`;
@@ -79,19 +97,31 @@ export function validateVisitCapture(
 
   const byId = new Map(points.map((p) => [p.id, p]));
   const seen = new Set<string>();
+  // Varios problemas pueden coexistir en la misma visita (un fantasma y un
+  // duplicado a la vez); se acumulan en vez de sobrescribirse para no perder
+  // el diagnóstico del primero.
+  const readingMessages: string[] = [];
 
   for (const reading of visit.readings) {
     const point = byId.get(reading.pointId);
     if (!point) {
-      errors.readings = "Hay una lectura de un punto que no está en el catálogo.";
+      readingMessages.push(
+        "Hay una lectura de un punto que no está en el catálogo.",
+      );
       continue;
     }
     if (seen.has(reading.pointId)) {
-      errors.readings = `El punto ${point.code} tiene más de una lectura en esta visita.`;
+      readingMessages.push(
+        `El punto ${point.code} tiene más de una lectura en esta visita.`,
+      );
       continue;
     }
     seen.add(reading.pointId);
     readingIssues[reading.pointId] = validateReadingCapture(reading, point);
+  }
+
+  if (readingMessages.length > 0) {
+    errors.readings = readingMessages.join(" ");
   }
 
   return { errors, warnings, readingIssues };
@@ -104,22 +134,32 @@ export function validateVisitCapture(
  * el registro inmutable de una fecha, y cerrarla incompleta deja un hueco que
  * ya no se puede rellenar.
  *
+ * También repite la comprobación de orden cronológico de `validateVisitCapture`
+ * (vía `previousVisitDate`): el cierre sella la visita como inmutable, así que
+ * es el último punto donde una fecha fuera de orden puede atajarse. Sin este
+ * chequeo se podría cerrar con el mismo dato que la captura ya habría
+ * rechazado, dejando un intervalo negativo grabado para siempre.
+ *
  * NO evalúa los umbrales de alerta. Un punto en alarma se cierra con
  * normalidad; es el hallazgo que el monitoreo busca documentar.
  */
 export function validateVisitClose(
   visit: VisitInput,
   points: PointInput[],
+  previousVisitDate: string | null,
 ): VisitCaptureIssues {
-  const issues = validateVisitCapture(visit, points, null);
+  const issues = validateVisitCapture(visit, points, previousVisitDate);
 
   const measured = new Set(visit.readings.map((r) => r.pointId));
   const missing = points.filter((p) => !measured.has(p.id));
 
   if (missing.length > 0) {
-    issues.errors.readings = `Faltan lecturas de: ${missing
+    const missingMessage = `Faltan lecturas de: ${missing
       .map((p) => p.code)
       .join(", ")}.`;
+    issues.errors.readings = issues.errors.readings
+      ? `${issues.errors.readings} ${missingMessage}`
+      : missingMessage;
   }
 
   return issues;
