@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   Breadcrumbs,
+  buttonClasses,
   EmptyState,
   Tabs,
   type SearchParams,
@@ -15,6 +16,7 @@ import { ProjectConfigTab } from "@/components/projects/project-config-tab";
 import { ProjectHeader } from "@/components/projects/project-header";
 import { SiteCard } from "@/components/projects/site-card";
 import { cn } from "@/lib/utils/cn";
+import { formatDate } from "@/lib/utils/format";
 import {
   countByStatus,
   filterProcesses,
@@ -28,6 +30,7 @@ import {
   getPolygonalProcesses,
   getProjectById,
   getReferencePoints,
+  getReports,
   getSiteSummariesByProject,
   getSites,
 } from "@/lib/supabase/queries";
@@ -116,6 +119,8 @@ export default async function ProjectHubPage({
     activeTab === "config"
       ? await getReferencePoints(supabase, project.id)
       : [];
+  const reports =
+    activeTab === "reports" ? await getReports(supabase, project.id) : [];
 
   // El conteo de visitas y la peor alerta solo se necesitan para pintar la
   // sub-tab de asentamientos, y se resuelven con dos consultas fijas para
@@ -273,10 +278,42 @@ export default async function ProjectHubPage({
       )}
 
       {activeTab === "reports" && (
-        <EmptyState
-          title="Aún no hay informes"
-          description="El generador de informes se construye en la última fase."
-        />
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-end">
+            <Link
+              href={`/projects/${project.id}/reports/new`}
+              className={buttonClasses({ variant: "primary" })}
+            >
+              Generar Nuevo Informe
+            </Link>
+          </div>
+          {reports.length === 0 ? (
+            <EmptyState
+              title="Aún no hay informes"
+              description="Un informe reúne procesos ya cerrados de este proyecto y produce un documento imprimible con su registro de trazabilidad."
+            />
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {reports.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={`/projects/${project.id}/reports/${r.id}`}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
+                  >
+                    <span className="font-medium">{r.title}</span>
+                    <span className="text-sm text-neutral-500">
+                      {r.included_processes.length}{" "}
+                      {r.included_processes.length === 1
+                        ? "proceso"
+                        : "procesos"}
+                      {r.generated_at ? ` · ${formatDate(r.generated_at)}` : ""}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {activeTab === "config" && (

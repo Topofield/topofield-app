@@ -92,3 +92,196 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* --- Informe imprimible (§ 4.7) --------------------------------------------
+   El PDF se produce con «Imprimir → Guardar como PDF» del navegador sobre la
+   ruta `/reports/[id]/print`, así que estas reglas son la maquetación real del
+   documento, no una decoración. Van en `@layer components` para que las
+   utilidades de Tailwind sigan pudiendo sobrescribirlas: una regla fuera de
+   capa gana sobre ellas y las anula en silencio (§ 8 de la doc técnica). */
+@layer components {
+  .report {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    color: var(--color-neutral-900);
+  }
+
+  .report-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 2rem;
+  }
+
+  .report-cover {
+    border-bottom: 2px solid var(--color-primary-500);
+    padding-bottom: 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .report-kicker {
+    font-size: 0.8125rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary-500);
+    font-weight: 600;
+  }
+
+  .report-title {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0.5rem 0 1.5rem;
+  }
+
+  .report-cover-grid,
+  .report-pairs {
+    display: grid;
+    grid-template-columns: minmax(10rem, auto) 1fr;
+    gap: 0.375rem 1.5rem;
+    font-size: 0.9375rem;
+  }
+
+  .report-cover-grid dt,
+  .report-pairs dt {
+    color: var(--color-neutral-500);
+  }
+
+  .report-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .report-section h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-neutral-200);
+  }
+
+  .report-kind-tag {
+    margin-left: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-neutral-500);
+  }
+
+  .report-index {
+    list-style: none;
+    padding: 0;
+    font-size: 0.9375rem;
+  }
+
+  .report-index li {
+    display: grid;
+    grid-template-columns: 12rem 1fr auto;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px dotted var(--color-neutral-200);
+  }
+
+  .report-index-kind {
+    color: var(--color-neutral-500);
+  }
+
+  .report-index-num {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-neutral-500);
+  }
+
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+  }
+
+  .report-table th {
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-neutral-400);
+    padding: 0.4rem 0.5rem;
+  }
+
+  .report-table td {
+    border-bottom: 1px solid var(--color-neutral-200);
+    padding: 0.35rem 0.5rem;
+  }
+
+  .report-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .report-table .mono {
+    font-size: 0.75rem;
+    color: var(--color-neutral-500);
+  }
+
+  .report-observations {
+    white-space: pre-wrap;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  .report-missing {
+    font-size: 0.9375rem;
+    color: var(--color-danger-500);
+  }
+
+  .report-footer {
+    margin-top: 1.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-neutral-500);
+  }
+}
+
+@media print {
+  /* Márgenes del papel: lo único del PDF que se puede fijar desde CSS. El
+     resto —encabezados y pies del navegador— lo controla el usuario en su
+     propio diálogo de impresión, y varía entre navegadores. */
+  @page {
+    size: A4;
+    margin: 18mm 16mm;
+  }
+
+  /* La navegación de la aplicación y el botón de imprimir no van en el PDF. */
+  .report-actions,
+  header,
+  nav,
+  footer.app-footer {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .report {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Cada proceso empieza en página nueva: un informe con varios procesos se
+     lee mucho mejor así, y evita tablas partidas por la mitad. */
+  .report-break {
+    break-before: page;
+  }
+
+  .report-section {
+    break-inside: avoid-page;
+  }
+
+  .report-table {
+    break-inside: auto;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+
+  .report-table thead {
+    display: table-header-group;
+  }
+}

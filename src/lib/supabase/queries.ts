@@ -15,6 +15,8 @@ import type {
   SettlementReading,
 } from "@/types/settlement";
 import { worst } from "@/lib/calculations/settlement";
+import type { EligibleCandidate } from "@/lib/reports/eligibility";
+import type { Report } from "@/types/report";
 
 type Client = SupabaseClient<Database>;
 
@@ -540,4 +542,99 @@ export async function getSiteSummariesByProject(
   }
 
   return summaries;
+}
+
+// --- Informes (§ 4.7) --------------------------------------------------------
+
+/**
+ * Los trabajos **cerrados** de un proyecto, en el formato que consume el
+ * selector de informes.
+ *
+ * Trae los tres tipos con el mismo `select` mínimo para poder ordenarlos y
+ * mostrarlos juntos. El filtro por estado se aplica aquí (`eq("status",
+ * "closed")`) además de en `isEligible`: la consulta evita traer filas que se
+ * van a descartar, y la función pura sigue siendo la que decide la regla —y la
+ * que tiene los tests.
+ */
+export async function getClosedWorkForReports(
+  supabase: Client,
+  projectId: string,
+): Promise<EligibleCandidate[]> {
+  if (!UUID_RE.test(projectId)) return [];
+
+  const [polygonals, levelings, sites] = await Promise.all([
+    supabase
+      .from("polygonal_processes")
+      .select("id, name, status, closed_at")
+      .eq("project_id", projectId)
+      .eq("status", "closed")
+      .order("closed_at", { ascending: true }),
+    supabase
+      .from("leveling_processes")
+      .select("id, name, status, closed_at")
+      .eq("project_id", projectId)
+      .eq("status", "closed")
+      .order("closed_at", { ascending: true }),
+    supabase
+      .from("sites")
+      .select("id, name, status, closed_at")
+      .eq("project_id", projectId)
+      .eq("status", "closed")
+      .order("closed_at", { ascending: true }),
+  ]);
+
+  if (polygonals.error) throw polygonals.error;
+  if (levelings.error) throw levelings.error;
+  if (sites.error) throw sites.error;
+
+  return [
+    ...(polygonals.data ?? []).map((r) => ({
+      kind: "polygonal" as const,
+      id: r.id,
+      name: r.name,
+      status: r.status,
+    })),
+    ...(levelings.data ?? []).map((r) => ({
+      kind: "leveling" as const,
+      id: r.id,
+      name: r.name,
+      status: r.status,
+    })),
+    ...(sites.data ?? []).map((r) => ({
+      kind: "site" as const,
+      id: r.id,
+      name: r.name,
+      status: r.status,
+    })),
+  ];
+}
+
+/** Informes de un proyecto, del más reciente al más antiguo. */
+export async function getReports(
+  supabase: Client,
+  projectId: string,
+): Promise<Report[]> {
+  if (!UUID_RE.test(projectId)) return [];
+  const { data, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("generated_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as Report[];
+}
+
+/** Un informe por id. */
+export async function getReport(
+  supabase: Client,
+  reportId: string,
+): Promise<Report | null> {
+  if (!UUID_RE.test(reportId)) return null;
+  const { data, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("id", reportId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as Report | null) ?? null;
 }
