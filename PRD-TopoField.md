@@ -520,28 +520,43 @@ REFERENCES sites(id)`** en la misma fase: todo proceso pertenece a un lugar.
 ```sql
 CREATE TABLE reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  included_processes JSONB NOT NULL,        -- [{type, id, name}]
+  included_processes JSONB NOT NULL,        -- [{type, id, name, order}]
   observations TEXT,
   generated_at TIMESTAMPTZ DEFAULT now(),
-  generated_by TEXT NOT NULL,
-  file_url TEXT                             -- URL del PDF generado
+  generated_by TEXT NOT NULL
 );
 ```
 
+**Enmendada en la Fase 6 (2026-08-25).** Tres cambios respecto a la definición
+original:
+
+- **`file_url` se elimina.** El informe no se almacena como archivo: se produce
+  con una ruta imprimible y el navegador lo convierte a PDF. No hay
+  almacenamiento de archivos en el producto, así que la columna nunca se
+  llenaría. Ver `docs/prds/05-cierre-informes-export.md`, decisión #1 y #2.
+- **`project_id` pasa a `NOT NULL`.** Un informe sin proyecto no significa nada,
+  y dejarlo nullable obliga a un camino muerto en cada consulta.
+- **`included_processes` guarda también el `order`.** El `§4.7` pide ordenar las
+  secciones del informe; ese orden es parte del informe y se persiste con él.
+
+Que el informe se reconstruya en vez de guardarse es seguro porque **solo puede
+incluir procesos cerrados**, que son inmutables por trigger de base: regenerarlo
+da siempre el mismo resultado. El `name` se guarda de todos modos porque es el
+nombre **en el momento de emitir**; si un proceso se renombra después, el
+informe conserva el que llevaba.
+
 #### `recipients`
-```sql
-CREATE TABLE recipients (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  role TEXT NOT NULL,                       -- ej: "cliente", "supervisor", "interventor"
-  auto_send BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
+
+**Retirada en la Fase 6 (2026-08-25).** La tabla no se crea y el envío de
+informes por email queda fuera del alcance del producto. La razón es operativa,
+no de diseño: el remitente de pruebas de Resend solo entrega correo a la
+dirección dueña de la cuenta, así que un envío a destinatarios reales fallaría
+con 403 en producción. Construir un camino que no puede funcionar es peor que
+declararlo fuera de alcance. Con ello decae también la pantalla `/settings` del
+`§4.9`, cuyo contenido eran precisamente los destinatarios y el catálogo de
+equipos. Ver `docs/prds/05-cierre-informes-export.md`, decisión #4.
 
 ---
 
@@ -702,8 +717,7 @@ El cierre es el mecanismo de trazabilidad. Aplica a los 3 tipos de proceso.
 3. Definir orden de secciones (drag & drop)
 4. Agregar observaciones generales (texto libre)
 5. Vista previa del PDF
-6. Generar → almacena PDF + registra en tabla `reports`
-7. Si hay destinatarios configurados → envía por email
+6. Generar → registra en tabla `reports`
 
 **Estructura del PDF:**
 - Portada: nombre proyecto, cliente, ubicación, fecha, equipo
@@ -712,6 +726,20 @@ El cierre es el mecanismo de trazabilidad. Aplica a los 3 tipos de proceso.
 - Resumen consolidado de precisiones
 - Observaciones
 - Registro de cierre (quién cerró, cuándo)
+
+**Enmendado en la Fase 6 (2026-08-25).** Dos precisiones sobre el flujo:
+
+- **El envío por email se retira** (paso 7 original), junto con la tabla
+  `recipients` del `§3.2`, por la limitación de entrega de Resend descrita allí.
+- **El PDF no se almacena.** El paso 6 registra el informe en `reports`; el
+  documento se produce con una ruta imprimible (`@media print`) y el navegador
+  lo guarda como PDF. La «vista previa» del paso 5 es esa misma ruta en
+  pantalla, no un visor de PDF embebido.
+
+Solo pueden incluirse **procesos cerrados**, y en el caso de asentamientos la
+unidad incluible es el **lugar cerrado**, no la visita suelta: un lugar activo
+admite visitas nuevas, así que su informe cambiaría al reabrirlo. Un proceso
+`rejected` no es incluible, como ya establece el `§4.6`.
 
 ### 4.8 Exportación a Excel
 
@@ -728,6 +756,12 @@ Disponible en cada proceso (cualquier estado). Genera .xlsx con:
 - Perfil: nombre, empresa, cargo (almacenado en tabla `profiles` vinculada a Supabase Auth)
 - Destinatarios por proyecto: nombre, email, rol
 - Equipos guardados: catálogo reutilizable al crear proyectos
+
+**Retirada en la Fase 6 (2026-08-25).** La pantalla no se construye. Los
+destinatarios decaen con la tabla `recipients` (ver `§3.2`) y el catálogo de
+equipos guardados nunca se modeló; el perfil ya se captura en el registro. Sin
+esas tres secciones, la pantalla se queda sin contenido propio. Ver
+`docs/prds/05-cierre-informes-export.md`, decisión #4.
 
 ---
 
