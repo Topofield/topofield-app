@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Alert, Badge, Breadcrumbs, Button, Card } from "@/components/design-system";
+import {
+  Alert,
+  Badge,
+  Breadcrumbs,
+  Button,
+  buttonClasses,
+  Card,
+} from "@/components/design-system";
 import { PROCESS_STATUS_LABELS, type ProcessStatus } from "@/types/polygonal";
 import { computeLeveling } from "@/lib/calculations/leveling";
 import { parseNumber } from "@/lib/utils/parse";
@@ -252,9 +259,18 @@ export function LevelingEditor({
         />
         <div className="mt-2 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">{process.name}</h1>
-          <Badge tone={STATUS_TONE[process.status]}>
-            {PROCESS_STATUS_LABELS[process.status]}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge tone={STATUS_TONE[process.status]}>
+              {PROCESS_STATUS_LABELS[process.status]}
+            </Badge>
+            <a
+              href={`/projects/${projectId}/leveling/${process.id}/export`}
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
+              download
+            >
+              Exportar a Excel
+            </a>
+          </div>
         </div>
       </div>
 

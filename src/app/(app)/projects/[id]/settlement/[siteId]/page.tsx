@@ -88,12 +88,21 @@ export default async function SettlementAnalysisPage({
       />
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold">{site.name}</h1>
-        <Link
-          href={`/projects/${project.id}/sites/${site.id}`}
-          className={buttonClasses({ variant: "secondary" })}
-        >
-          Editar lugar
-        </Link>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/projects/${project.id}/settlement/${site.id}/export`}
+            className={buttonClasses({ variant: "secondary" })}
+            download
+          >
+            Exportar a Excel
+          </a>
+          <Link
+            href={`/projects/${project.id}/sites/${site.id}`}
+            className={buttonClasses({ variant: "secondary" })}
+          >
+            Editar lugar
+          </Link>
+        </div>
       </div>
       <VisitsList
         projectId={project.id}
