@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Alert, Button, Modal } from "@/components/design-system";
 import { evaluatePolygonalClosure } from "@/lib/validators/polygonal";
 import { closePolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
+import { formatPrecision } from "@/lib/utils/format";
 import {
   POLYGONAL_TYPE_LABELS,
   type PolygonalResult,
@@ -12,12 +13,6 @@ import {
 
 function formatMeters(value: number | null, decimals = 3): string {
   return value == null ? "—" : value.toFixed(decimals);
-}
-
-function formatPrecision(x: number | null): string {
-  if (x == null) return "—";
-  if (!Number.isFinite(x)) return "1:∞";
-  return `1:${Math.round(x).toLocaleString("es-CO")}`;
 }
 
 interface CloseProcessDialogProps {

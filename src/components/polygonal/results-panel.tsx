@@ -1,5 +1,6 @@
 import { Select } from "@/components/design-system";
 import { decimalToDms } from "@/lib/calculations/angles";
+import { formatPrecision } from "@/lib/utils/format";
 import {
   CORRECTION_METHOD_OPTIONS,
   type CorrectionMethod,
@@ -19,12 +20,6 @@ function formatSeconds(value: number | null): string {
 
 function formatMeters(value: number | null, decimals = 3): string {
   return value == null ? "—" : value.toFixed(decimals);
-}
-
-function formatPrecision(x: number | null): string {
-  if (x == null) return "—";
-  if (!Number.isFinite(x)) return "1:∞";
-  return `1:${Math.round(x).toLocaleString("es-CO")}`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

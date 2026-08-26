@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils/cn";
 import { minRelativePrecision } from "@/lib/calculations/tolerances";
 import type { PolygonalResult, PolygonalType } from "@/types/polygonal";
 import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
+import { formatPrecision } from "@/lib/utils/format";
 
 type Tone = "ok" | "danger" | "neutral";
 
@@ -14,12 +15,6 @@ export interface Verdict {
   required: string | null;
 }
 
-function formatPrecision(x: number | null): string | null {
-  if (x == null) return null;
-  if (!Number.isFinite(x)) return "1:∞";
-  return `1:${Math.round(x).toLocaleString("es-CO")}`;
-}
-
 /** Decide el veredicto de cierre. Función pura: testeable sin render. */
 export function verdictFor(
   result: PolygonalResult,
@@ -27,7 +22,12 @@ export function verdictFor(
   order: PrecisionOrder,
 ): Verdict {
   const orderLabel = PRECISION_ORDER_LABELS[order].toLowerCase();
-  const achieved = formatPrecision(result.relativePrecision);
+  // `null` y no "—" cuando no hay precisión: quien renderiza oculta el bloque
+  // entero si `achieved` es nulo, en vez de mostrar un guion suelto.
+  const achieved =
+    result.relativePrecision == null
+      ? null
+      : formatPrecision(result.relativePrecision);
   const required = formatPrecision(minRelativePrecision(order));
 
   if (type === "open_uncontrolled") {

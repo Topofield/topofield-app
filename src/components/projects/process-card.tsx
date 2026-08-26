@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/design-system";
-import { formatDate, formatRelativeDate } from "@/lib/utils/format";
+import { formatDate, formatPrecision, formatRelativeDate } from "@/lib/utils/format";
 import {
   POLYGONAL_TYPE_LABELS,
   PROCESS_STATUS_LABELS,
@@ -81,7 +81,7 @@ function metricLabel(props: ProcessCardProps): string | null {
       : null;
   }
   return props.process.relative_precision
-    ? `Precisión ${props.process.relative_precision}`
+    ? `Precisión ${formatPrecision(props.process.relative_precision)}`
     : null;
 }
 

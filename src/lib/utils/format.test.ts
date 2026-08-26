@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRelativeDate } from "./format";
+import { formatPrecision, formatRelativeDate } from "./format";
 
 const AHORA = new Date("2026-07-27T12:00:00Z");
 
@@ -62,5 +62,52 @@ describe("formatRelativeDate", () => {
   it("distingue el límite entre meses y años: 363 vs 365 días", () => {
     expect(formatRelativeDate(haceDias(363), AHORA)).toBe("hace 1 año");
     expect(formatRelativeDate(haceDias(365), AHORA)).toBe("hace 1 año");
+  });
+});
+
+describe("formatPrecision", () => {
+  it("formatea un número con separador de miles en es-CO", () => {
+    expect(formatPrecision(1001)).toBe("1:1.001");
+    expect(formatPrecision(528479954)).toBe("1:528.479.954");
+    expect(formatPrecision(46)).toBe("1:46");
+  });
+
+  it("redondea a entero: una precisión relativa no lleva decimales", () => {
+    expect(formatPrecision(5000.4)).toBe("1:5.000");
+    expect(formatPrecision(5000.6)).toBe("1:5.001");
+  });
+
+  it("representa el cierre exacto como 1:∞", () => {
+    expect(formatPrecision(Infinity)).toBe("1:∞");
+  });
+
+  it("devuelve el guion largo cuando no hay precisión", () => {
+    expect(formatPrecision(null)).toBe("—");
+    expect(formatPrecision(undefined)).toBe("—");
+  });
+
+  // El listado lee `relative_precision`, que se persiste como TEXTO ya
+  // formateado por el servidor y SIN separador de miles ("1:1001"). El editor
+  // formatea el número y sí lo pone ("1:1.001"). Ese desacuerdo es la deuda
+  // que esta función cierra: el mismo proceso se leía distinto en dos
+  // pantallas. Aceptar también la cadena persistida permite que el listado
+  // use el mismo formateador sin cambiar el esquema.
+  it("normaliza la cadena ya persistida por el servidor", () => {
+    expect(formatPrecision("1:1001")).toBe("1:1.001");
+    expect(formatPrecision("1:528479954")).toBe("1:528.479.954");
+    expect(formatPrecision("1:46")).toBe("1:46");
+  });
+
+  it("acepta una cadena que ya trae separadores, sin duplicarlos", () => {
+    expect(formatPrecision("1:1.001")).toBe("1:1.001");
+  });
+
+  it("respeta el infinito ya persistido como cadena", () => {
+    expect(formatPrecision("1:∞")).toBe("1:∞");
+  });
+
+  it("devuelve el guion largo ante una cadena vacía o ilegible", () => {
+    expect(formatPrecision("")).toBe("—");
+    expect(formatPrecision("sin datos")).toBe("—");
   });
 });

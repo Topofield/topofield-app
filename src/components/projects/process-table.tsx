@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/design-system";
 import { ProcessCard } from "@/components/projects/process-card";
 import { ProcessRowActions } from "@/components/projects/process-row-actions";
-import { formatDate, formatRelativeDate } from "@/lib/utils/format";
+import { formatDate, formatPrecision, formatRelativeDate } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import type { ProcessFilters, SortKey } from "@/lib/process-list";
 import {
@@ -196,7 +196,7 @@ export function ProcessTable({
                     </Badge>
                   </td>
                   <td className="px-4 py-3 font-mono tabular-nums text-neutral-700">
-                    {p.relative_precision ?? "—"}
+                    {formatPrecision(p.relative_precision)}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <ToleranceMark meets={p.meets_tolerance} />
