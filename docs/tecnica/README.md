@@ -883,12 +883,14 @@ sin rastro que corregir en el código actual:
   servidor, nunca más laxo. Lógica pura en `close-status.ts` de cada módulo,
   con tests.
 
-**Antes de desplegar, comprobar en producción** que no existan procesos en
-estado `calculated` con `meets_tolerance` nulo fuera de los tipos que no
-evalúan tolerancia: la nueva regla les impediría cerrarse. No debería haberlos
-por cómo calculan `computeClosed`/`computeOpenControlled`, pero no se pudo
-auditar la base real desde el entorno local. La consulta (con `--linked` para
-que apunte a la nube, no a la base local):
+**Cerrado — comprobado en producción el 2026-08-25.** Quedaba verificar que no
+existieran procesos en estado `calculated` con `meets_tolerance` nulo fuera de
+los tipos que no evalúan tolerancia, porque la regla de cierre les impediría
+cerrarse. Se ejecutó la consulta de abajo contra la nube (`--linked`) antes de
+aplicar las migraciones de la Fase 5: **devolvió cero filas**, así que no hay
+ningún proceso afectado. Se conserva la consulta porque sigue siendo la
+comprobación correcta si en el futuro se cambia la regla de cierre. La consulta
+(con `--linked` para que apunte a la nube, no a la base local):
 
 ```sql
 select 'polygonal' as modulo, id, type, status from public.polygonal_processes
@@ -1093,6 +1095,19 @@ npx supabase db push
 
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
+
+**Estado actual (2026-08-25):** la nube tiene aplicadas las ocho migraciones,
+incluidas las dos de la Fase 5 (`20260825175626_sites_and_settlement` y
+`20260825230000_reject_write_on_closed_site`). Verificado contra la base tras
+aplicarlas —no contra la interfaz—: `site_id` es `NOT NULL` en
+`polygonal_processes` y `leveling_processes`, ningún proceso quedó huérfano,
+ninguno apunta al lugar de otro proyecto, RLS está activo en las cuatro tablas
+nuevas y sus triggers de inmutabilidad existen. El backfill creó **un** lugar
+`General`, el número exacto que la auditoría previa había predicho.
+
+**El orden importa cuando hay auto-deploy.** Vercel despliega solo al empujar a
+`main`, así que la migración va **primero** y el `git push` después: al revés,
+el despliegue serviría código que espera tablas que la base todavía no tiene.
 
 Para consultar la base de producción, `db query` necesita `--linked`; sin esa
 bandera consulta la local y los resultados engañan:
