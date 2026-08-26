@@ -97,8 +97,32 @@ export const CAPTURAS = {
     width: 2560,
     height: 2774,
   },
+  nuevoLugar: {
+    src: "/manual/13-nuevo-lugar.png",
+    alt: "Formulario de nuevo lugar, con el tipo de estructura y los umbrales de alerta.",
+    width: 2560,
+    height: 1600,
+  },
+  editorLugar: {
+    src: "/manual/14-editor-lugar.png",
+    alt: "Editor del lugar: datos generales, umbrales y catálogo de puntos de control.",
+    width: 2560,
+    height: 2916,
+  },
+  panelAsentamientos: {
+    src: "/manual/15-panel-asentamientos.png",
+    alt: "Panel de análisis: lista de visitas, semáforo por punto, diferenciales y gráfica de evolución.",
+    width: 2560,
+    height: 4958,
+  },
+  editorVisita: {
+    src: "/manual/16-editor-visita.png",
+    alt: "Editor de visita con la tabla de lecturas y el cálculo en vivo de parcial, acumulado, velocidad y semáforo.",
+    width: 2560,
+    height: 2184,
+  },
   editorMovil: {
-    src: "/manual/13-editor-movil.png",
+    src: "/manual/17-editor-movil.png",
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
     pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
     width: 780,
@@ -122,6 +146,7 @@ export const SECCIONES: SeccionManual[] = [
   { id: "proyectos", titulo: "Proyectos" },
   { id: "poligonales", titulo: "Poligonales" },
   { id: "nivelacion", titulo: "Nivelación" },
+  { id: "asentamientos", titulo: "Control de Asentamientos" },
   { id: "cierre", titulo: "Cerrar un proceso" },
   { id: "campo", titulo: "Trabajo en campo" },
   { id: "pendientes", titulo: "Módulos pendientes" },
@@ -278,6 +303,31 @@ export const TOLERANCIA_NIVELACION = [
   { orden: "Ordinario", k: "24" },
 ];
 
+// --- § 7.4 Niveles del semáforo de asentamientos ---
+
+export const NIVELES_SEMAFORO = [
+  {
+    nivel: "Normal",
+    significado: "Dentro de todos los umbrales",
+    forma: "● círculo",
+  },
+  {
+    nivel: "Precaución",
+    significado: "Supera el primer umbral; vigile la tendencia",
+    forma: "■ cuadrado",
+  },
+  {
+    nivel: "Alerta",
+    significado: "Supera el segundo umbral; revise el punto",
+    forma: "◆ rombo",
+  },
+  {
+    nivel: "Alarma",
+    significado: "Supera el umbral más alto; requiere atención inmediata",
+    forma: "▲ triángulo",
+  },
+];
+
 // --- § 6 Desenlaces del cierre ---
 
 export const DESENLACES_CIERRE = [
@@ -305,12 +355,6 @@ export interface ModuloPendiente {
 }
 
 export const MODULOS_PENDIENTES: ModuloPendiente[] = [
-  {
-    nombre: "Asentamientos",
-    fase: 5,
-    descripcion:
-      "Control de asentamientos por punto, cálculo de velocidades y semáforo de alertas por umbrales.",
-  },
   {
     nombre: "Informes y exportación",
     fase: 6,
@@ -363,6 +407,18 @@ export const PREGUNTAS: Pregunta[] = [
     pregunta: "¿Por qué una fila de mi libreta de nivelación no admite corrección?",
     respuesta:
       "Le falta la distancia acumulada. Es obligatoria en los puntos BM y de cambio: sin ella la aplicación no sabe a qué distancia del origen está el punto y no puede repartirle su parte del error de cierre.",
+  },
+  {
+    pregunta:
+      "Un punto quedó en alarma. ¿Puedo seguir guardando y cerrando la visita?",
+    respuesta:
+      "Sí. El semáforo es un diagnóstico, no un bloqueo: un punto en alerta o alarma se guarda y se cierra igual que cualquier otro. Es justamente el dato que el control de asentamientos busca detectar y dejar documentado.",
+  },
+  {
+    pregunta:
+      "¿Por qué la velocidad de dos visitas mensuales no me da el mismo número?",
+    respuesta:
+      "Porque se calcula con los días reales entre las dos fechas, no con «un mes» fijo. Un intervalo de 28 días y uno de 31 producen velocidades distintas aunque el asentamiento parcial fuera idéntico.",
   },
   {
     pregunta: "¿Otros usuarios pueden ver mis proyectos?",

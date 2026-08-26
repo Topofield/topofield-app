@@ -12,7 +12,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed": "tsx --env-file=.env.local scripts/seed.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -33,6 +34,7 @@
     "exceljs": "^4.4.0",
     "playwright": "^1.62.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5",
     "vitest": "^4.1.7"
   }

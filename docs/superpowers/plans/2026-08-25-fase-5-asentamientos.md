@@ -1155,7 +1155,15 @@ export function computeSettlements(
         const months = monthsBetween(prev.date, visit.date);
         // Dos visitas el mismo día no definen una velocidad. Devolver null y
         // no Infinity: un «NaN mm» en pantalla ya ocurrió en la Fase 4.
-        velocity = months === 0 ? null : round(partialSettlement / months, 2);
+        //
+        // La velocidad NO se redondea aquí. Redondear antes de clasificar
+        // cambiaría el nivel de alerta: 1.996 mm/mes pasaría a 2.00 y saltaría
+        // de `normal` a `caution` cruzando un umbral que en realidad no cruzó.
+        // El redondeo pertenece a la persistencia (`velocity DECIMAL(8,2)`) y a
+        // la presentación (`.toFixed(2)`), no al motor. El parcial y el
+        // acumulado sí se redondean: son diferencias de cotas medidas, donde el
+        // decimal extra es ruido de medición y no señal.
+        velocity = months === 0 ? null : partialSettlement / months;
       }
 
       const accumulatedSettlement =
@@ -1844,7 +1852,7 @@ git commit -m "feat: clasificacion de alertas, tendencia e historico de asentami
 
 **Interfaces:**
 - Consumes: `PointInput`, `VisitInput`, `ReadingInput` de `@/types/settlement`.
-- Produces: `validateReadingCapture(reading, point)`, `validateVisitCapture(visit, points, previousVisitDate)`, `validateVisitClose(visit, points)`. Todas devuelven `{ errors, warnings }` indexado por campo, siguiendo el patrón de `validators/leveling.ts`.
+- Produces: `validateReadingCapture(reading, point)`, `validateVisitCapture(visit, points, previousVisitDate)`, `validateVisitClose(visit, points, previousVisitDate)`. Todas devuelven `{ errors, warnings }` indexado por campo, siguiendo el patrón de `validators/leveling.ts`.
 
 **Contexto:** la capa estadística **no bloquea nada**. Un asentamiento en alarma es un hallazgo del monitoreo, no un error de captura.
 
@@ -2934,18 +2942,17 @@ export async function saveVisitAction(
     .eq("id", payload.visitId);
   if (headerError) return { ok: false, error: headerError.message };
 
-  // Las lecturas se reemplazan en bloque: es más simple y más seguro que
-  // reconciliar altas, bajas y modificaciones fila a fila.
-  const { error: deleteError } = await supabase
-    .from("settlement_readings")
-    .delete()
-    .eq("visit_id", payload.visitId);
-  if (deleteError) return { ok: false, error: deleteError.message };
-
+  // Las lecturas se actualizan con upsert, NO con delete + insert.
+  //
+  // Corregido en la revisión de la Tarea 9: un `delete` seguido de un `insert`
+  // que fallara dejaría la visita sin ninguna lectura y perdería el dato de
+  // campo que el usuario ya había capturado — exactamente el daño que este
+  // módulo existe para evitar. El `UNIQUE (visit_id, point_id)` hace que el
+  // upsert actualice la fila en vez de duplicarla.
   if (computed.readings.length > 0) {
-    const { error: insertError } = await supabase
+    const { error: upsertError } = await supabase
       .from("settlement_readings")
-      .insert(
+      .upsert(
         computed.readings.map((r) => ({
           visit_id: payload.visitId,
           point_id: r.pointId,
@@ -2955,9 +2962,24 @@ export async function saveVisitAction(
           velocity: r.velocity,
           alert_status: r.alertStatus,
         })),
+        { onConflict: "visit_id,point_id" },
       );
-    if (insertError) return { ok: false, error: insertError.message };
+    if (upsertError) return { ok: false, error: upsertError.message };
   }
+
+  // Las lecturas de puntos que ya no vienen en el payload se retiran DESPUÉS
+  // de que el upsert haya confirmado las vigentes, nunca antes: así ningún
+  // fallo intermedio deja la visita sin datos.
+  const idsVigentes = computed.readings.map((r) => r.pointId);
+  const purga = supabase
+    .from("settlement_readings")
+    .delete()
+    .eq("visit_id", payload.visitId);
+  const { error: purgaError } =
+    idsVigentes.length > 0
+      ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
+      : await purga;
+  if (purgaError) return { ok: false, error: purgaError.message };
 
   revalidatePath(`/projects/${projectId}/settlement/${payload.siteId}`);
   return { ok: true };
@@ -2987,7 +3009,16 @@ export async function closeVisitAction(
   const visit = context.visits.find((v) => v.id === visitId);
   if (!visit) return { ok: false, error: "Visita no encontrada." };
 
-  const issues = validateVisitClose(visit, context.points);
+  // La fecha de la visita cronológicamente anterior a esta. El cierre también
+  // comprueba el orden: sellar como inmutable una visita fechada fuera de orden
+  // dejaría un intervalo negativo imposible de corregir después.
+  const previousDate =
+    context.visits
+      .filter((v) => v.id !== visitId && v.date < visit.date)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .at(-1)?.date ?? null;
+
+  const issues = validateVisitClose(visit, context.points, previousDate);
   if (Object.keys(issues.errors).length > 0) {
     return { ok: false, error: Object.values(issues.errors)[0] };
   }
@@ -3036,7 +3067,7 @@ git commit -m "feat: queries y acciones de sitio y visitas con revalidacion en s
 - Create: `src/app/(app)/projects/[id]/sites/[siteId]/point-actions.ts`
 
 **Interfaces:**
-- Consumes: `createSiteAction`, `saveSiteAction`, `closeSiteAction`; `thresholdsFor`; `STRUCTURE_TYPES`, `STRUCTURE_TYPE_LABELS`.
+- Consumes: `createSiteAction`, `saveSiteAction`; `thresholdsFor`; `STRUCTURE_TYPES`, `STRUCTURE_TYPE_LABELS`. (`closeSiteAction` NO se consume aquí: el botón «Cerrar Lugar» llega en la Task 14, Step 4.)
 - Produces: `SiteForm`, `ThresholdsFields`, `PointsCatalog`; acciones `createPointAction`, `savePointAction`, `deletePointAction`.
 
 **Contexto de patrones:** el formulario en modal con validación en cliente y acción-como-función dentro de `startTransition` está en `src/components/projects/reference-points-manager.tsx` (aprendizaje de la Fase 2). Replicarlo para el catálogo de puntos. **No** usar `setState` dentro de `useEffect`: `react-hooks/set-state-in-effect` es error de lint en este proyecto.

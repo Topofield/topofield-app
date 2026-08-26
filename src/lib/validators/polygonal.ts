@@ -19,6 +19,26 @@ export interface CaptureIssues {
 }
 
 /**
+ * Qué celdas son obligatorias para una estación según su tipo de poligonal y
+ * su posición dentro del recorrido.
+ *
+ * Vive aquí (no en el editor) para que el cliente y la revalidación del
+ * servidor apliquen exactamente la misma regla: una estación inicial sin
+ * ángulo, o una final sin ángulo ni distancia, es captura parcial legítima
+ * (§ 5.1), no un error — y ambos lados deben coincidir en cuál es cuál.
+ */
+export function expectStationCapture(
+  type: PolygonalType,
+  index: number,
+  total: number,
+): { angle: boolean; distance: boolean } {
+  if (type === "closed") return { angle: true, distance: true };
+  if (index === 0) return { angle: false, distance: true };
+  if (index === total - 1) return { angle: false, distance: false };
+  return { angle: true, distance: true };
+}
+
+/**
  * Valida la captura de una estación. `expect` indica qué celdas son obligatorias
  * para esta estación (varía según tipo de poligonal y posición).
  */

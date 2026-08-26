@@ -14,7 +14,7 @@ detallan aquí para que se vea el alcance completo previsto.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-08-12 · Fases 1-4 implementadas.
+**Última actualización:** 2026-08-25 · Fases 1-5 implementadas.
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -29,10 +29,11 @@ La aplicación está publicada en
 4. [Proyectos](#4-proyectos)
 5. [Poligonales](#5-poligonales)
 6. [Nivelación](#6-nivelación)
-7. [Cerrar un proceso](#7-cerrar-un-proceso)
-8. [Trabajo en campo](#8-trabajo-en-campo)
-9. [Módulos pendientes](#9-módulos-pendientes)
-10. [Preguntas frecuentes](#10-preguntas-frecuentes)
+7. [Control de Asentamientos](#7-control-de-asentamientos)
+8. [Cerrar un proceso](#8-cerrar-un-proceso)
+9. [Trabajo en campo](#9-trabajo-en-campo)
+10. [Módulos pendientes](#10-módulos-pendientes)
+11. [Preguntas frecuentes](#11-preguntas-frecuentes)
 
 ---
 
@@ -395,7 +396,117 @@ Igual que en poligonales, cerrar una nivelación es **irreversible**
 
 ---
 
-## 7. Cerrar un proceso
+## 7. Control de Asentamientos
+
+El control de asentamientos sigue el descenso de una estructura en el tiempo:
+cada visita mide la cota de un conjunto de puntos, y la aplicación calcula
+cuánto ha bajado cada uno desde la visita anterior y desde el inicio.
+
+### 7.1 El lugar
+
+Un **lugar** es el sitio que se monitorea: un edificio, una presa, un
+terraplén. Agrupa un catálogo de puntos de control y sus visitas sucesivas —
+es el equivalente, para este módulo, a lo que una poligonal o una nivelación
+son para los otros dos.
+
+![Nuevo lugar](../../public/manual/13-nuevo-lugar.png)
+
+Desde el proyecto, **+ Nuevo Proceso → Control de Asentamientos**. Indique el
+nombre y el **tipo de estructura**: edificio, presa, terraplén u otro. Elegir
+el tipo aplica un juego de **umbrales de alerta** típico para ese tipo de
+estructura — de velocidad y de asentamiento acumulado — que puede editar a
+continuación si el caso lo requiere.
+
+También define el **límite de distorsión angular**, expresado como `1/X`: un
+X menor es más severo (1/300 es peor que 1/500).
+
+### 7.2 Catalogar los puntos
+
+![Editor del lugar con el catálogo de puntos](../../public/manual/14-editor-lugar.png)
+
+Ya creado el lugar, agregue sus **puntos de control**: código, ubicación,
+coordenadas Norte/Este (opcionales, pero necesarias para calcular distorsión
+angular entre puntos) y la **cota inicial (C0)** — la referencia contra la
+que se mide el asentamiento acumulado de todas las visitas futuras.
+
+### 7.3 Registrar una visita
+
+Cada **visita** es una fecha en la que se releyeron los puntos del catálogo.
+La primera visita registrada es la **visita 0 o línea base**: fija el punto
+de partida y no tiene asentamiento ni velocidad propios, porque no hay una
+visita anterior contra la que compararla.
+
+![Editor de visita con lecturas y semáforo por punto](../../public/manual/16-editor-visita.png)
+
+Por cada punto se captura la **cota medida**. La aplicación calcula al
+instante:
+
+- **Parcial** — cuánto bajó (o subió) el punto desde la visita anterior, en mm.
+- **Acumulado** — cuánto ha bajado desde la línea base (C0), en mm.
+- **Velocidad** — el parcial dividido entre el tiempo transcurrido, en
+  mm/mes. **Se calcula con los días reales entre las dos visitas**, no con
+  «un mes» genérico: una visita a 28 días y otra a 31 no dan la misma
+  velocidad aunque el parcial fuera igual.
+- **Estado** — el nivel de alerta de ese punto, semáforo explicado en
+  [§ 7.4](#74-el-semáforo-y-la-gráfica).
+
+Un valor positivo es un **levantamiento**, no un asentamiento, y se muestra
+como tal: es un hallazgo que vale la pena revisar, no un error de signo.
+
+### 7.4 El semáforo y la gráfica
+
+![Panel de análisis: visitas, semáforo por punto, diferenciales y gráfica](../../public/manual/15-panel-asentamientos.png)
+
+El panel del lugar reúne el historial completo:
+
+**Visitas.** La lista cronológica, con la peor alerta de cada una.
+
+**Semáforo por punto.** El estado de cada punto en la última visita, según
+sus umbrales de velocidad y de acumulado — gana el peor de los dos. Tiene
+cuatro niveles:
+
+| Nivel | Significado | Forma |
+|---|---|---|
+| **Normal** | Dentro de todos los umbrales | ● círculo |
+| **Precaución** | Supera el primer umbral; vigile la tendencia | ■ cuadrado |
+| **Alerta** | Supera el segundo umbral; revise el punto | ◆ rombo |
+| **Alarma** | Supera el umbral más alto; requiere atención inmediata | ▲ triángulo |
+
+> **El semáforo no se distingue solo por color.** Cada nivel tiene además una
+> forma propia y su nombre escrito junto al indicador, así que se reconoce
+> igual con daltonismo o en una impresión en blanco y negro.
+
+**Un dato en alarma se registra con normalidad.** El semáforo es un
+diagnóstico, no un control de captura: la aplicación **nunca** impide guardar
+una visita ni cerrarla por tener puntos en alerta o alarma. Un asentamiento
+alarmante es exactamente el hallazgo que este módulo existe para documentar;
+bloquearlo ocultaría el dato que más importa.
+
+**Diferenciales y distorsión angular.** Compara cada par de puntos: cuánto
+difieren sus asentamientos acumulados y qué **distorsión angular** implica
+esa diferencia dada la distancia entre ellos, como `1/X`. Un par sin
+coordenadas capturadas queda fuera de esta tabla en vez de calcularse con una
+distancia de cero.
+
+**Gráfica de evolución.** El asentamiento acumulado de cada punto a lo largo
+de las visitas. Puede activar o desactivar puntos con las casillas de
+arriba. Cada serie se distingue por **forma de marcador además de color**
+(círculo, cuadrado, triángulo, rombo, cruz), así que sigue siendo legible sin
+color. Debajo, la misma información en una **tabla de datos**: la alternativa
+textual para cuando la gráfica no basta.
+
+### 7.5 Cerrar una visita o el lugar
+
+Cerrar una **visita** la deja en solo lectura: es el registro de campo de una
+fecha concreta, y una vez cerrada no admite más cambios.
+
+Cerrar el **lugar** termina el monitoreo por completo: el lugar y todas sus
+visitas —cerradas o no— quedan en solo lectura. Use el cierre del lugar
+cuando el seguimiento del sitio haya concluido, no visita por visita.
+
+---
+
+## 8. Cerrar un proceso
 
 Cerrar es **irreversible**. Antes de permitirlo, la aplicación comprueba el
 trabajo y decide entre tres desenlaces:
@@ -428,11 +539,11 @@ deshabilitados y no hay botones de guardado.
 
 ---
 
-## 8. Trabajo en campo
+## 9. Trabajo en campo
 
 La aplicación está pensada para usarse también desde el teléfono, en sitio.
 
-![Editor en móvil](../../public/manual/13-editor-movil.png)
+![Editor en móvil](../../public/manual/17-editor-movil.png)
 
 En pantallas pequeñas, la tabla de estaciones se convierte en **tarjetas**: una
 por estación, con sus campos apilados y el azimut, ΔN y ΔE visibles sin
@@ -444,13 +555,9 @@ completa.
 
 ---
 
-## 9. Módulos pendientes
+## 10. Módulos pendientes
 
-Los siguientes módulos están especificados en el PRD pero **aún no
-implementados**:
-
-**Asentamientos** *(fase 5)* — control de asentamientos por punto, cálculo de
-velocidades y semáforo de alertas por umbrales.
+El siguiente módulo está especificado en el PRD pero **aún no implementado**:
 
 **Informes y exportación** *(fase 6)* — generación de informes en PDF, carteras
 de campo y exportación de coordenadas.
@@ -459,7 +566,7 @@ La pestaña **Informes** del proyecto está visible pero vacía hasta entonces.
 
 ---
 
-## 10. Preguntas frecuentes
+## 11. Preguntas frecuentes
 
 **Cerré un proceso por error. ¿Puedo reabrirlo?**
 No. El cierre es definitivo por diseño: es lo que da valor probatorio al
@@ -494,6 +601,16 @@ contra la tolerancia K·√D.
 Le falta la distancia acumulada. Es obligatoria en los puntos BM y de cambio:
 sin ella la aplicación no sabe a qué distancia del origen está el punto y no
 puede repartirle su parte del error de cierre.
+
+**Un punto quedó en alarma. ¿Puedo seguir guardando y cerrando la visita?**
+Sí. El semáforo es un diagnóstico, no un bloqueo: un punto en alerta o alarma
+se guarda y se cierra igual que cualquier otro. Es justamente el dato que el
+control de asentamientos busca detectar y dejar documentado.
+
+**¿Por qué la velocidad de dos visitas mensuales no me da el mismo número?**
+Porque se calcula con los días reales entre las dos fechas, no con «un mes»
+fijo. Un intervalo de 28 días y uno de 31 producen velocidades distintas
+aunque el asentamiento parcial fuera idéntico.
 
 **¿Otros usuarios pueden ver mis proyectos?**
 No. Cada usuario accede solo a los suyos; la restricción se aplica en la base de

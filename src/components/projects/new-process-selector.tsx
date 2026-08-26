@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Button, buttonClasses, Modal } from "@/components/design-system";
 
 /**
- * Botón "+ Nuevo Proceso" con el selector de tipo. Poligonal (Fase 3) y
- * nivelación (Fase 4) ya están disponibles; asentamiento llega en la Fase 5.
+ * Botón "+ Nuevo Proceso" con el selector de tipo. Los tres módulos están
+ * disponibles desde la Fase 5.
  */
 export function NewProcessSelector({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
@@ -35,13 +35,12 @@ export function NewProcessSelector({ projectId }: { projectId: string }) {
           >
             Nivelación
           </Link>
-          <Button
-            variant="secondary"
-            disabled
-            title="Disponible en una fase futura"
+          <Link
+            href={`/projects/${projectId}/sites/new`}
+            className={buttonClasses({ variant: "secondary" })}
           >
-            Asentamiento
-          </Button>
+            Control de Asentamientos
+          </Link>
         </div>
       </Modal>
     </>

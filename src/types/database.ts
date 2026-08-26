@@ -52,6 +52,7 @@ export type Database = {
           notes: string | null
           project_id: string
           return_error_mm: number | null
+          site_id: string
           start_bm_code: string
           start_bm_elevation: number
           status: string
@@ -77,6 +78,7 @@ export type Database = {
           notes?: string | null
           project_id: string
           return_error_mm?: number | null
+          site_id: string
           start_bm_code: string
           start_bm_elevation: number
           status?: string
@@ -102,6 +104,7 @@ export type Database = {
           notes?: string | null
           project_id?: string
           return_error_mm?: number | null
+          site_id?: string
           start_bm_code?: string
           start_bm_elevation?: number
           status?: string
@@ -116,6 +119,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leveling_processes_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]
@@ -210,6 +220,7 @@ export type Database = {
           perimeter: number | null
           project_id: string
           relative_precision: string | null
+          site_id: string
           start_azimuth_deg: number | null
           start_azimuth_min: number | null
           start_azimuth_sec: number | null
@@ -241,6 +252,7 @@ export type Database = {
           perimeter?: number | null
           project_id: string
           relative_precision?: string | null
+          site_id: string
           start_azimuth_deg?: number | null
           start_azimuth_min?: number | null
           start_azimuth_sec?: number | null
@@ -272,6 +284,7 @@ export type Database = {
           perimeter?: number | null
           project_id?: string
           relative_precision?: string | null
+          site_id?: string
           start_azimuth_deg?: number | null
           start_azimuth_min?: number | null
           start_azimuth_sec?: number | null
@@ -288,6 +301,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "polygonal_processes_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]
@@ -529,6 +549,228 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "reference_points_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_points: {
+        Row: {
+          code: string
+          created_at: string
+          easting: number | null
+          id: string
+          initial_elevation: number | null
+          location_description: string
+          northing: number | null
+          site_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          easting?: number | null
+          id?: string
+          initial_elevation?: number | null
+          location_description: string
+          northing?: number | null
+          site_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          easting?: number | null
+          id?: string
+          initial_elevation?: number | null
+          location_description?: string
+          northing?: number | null
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_points_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_readings: {
+        Row: {
+          accumulated_settlement: number | null
+          alert_status: string
+          created_at: string
+          elevation: number
+          id: string
+          partial_settlement: number | null
+          point_id: string
+          velocity: number | null
+          visit_id: string
+        }
+        Insert: {
+          accumulated_settlement?: number | null
+          alert_status?: string
+          created_at?: string
+          elevation: number
+          id?: string
+          partial_settlement?: number | null
+          point_id: string
+          velocity?: number | null
+          visit_id: string
+        }
+        Update: {
+          accumulated_settlement?: number | null
+          alert_status?: string
+          created_at?: string
+          elevation?: number
+          id?: string
+          partial_settlement?: number | null
+          point_id?: string
+          velocity?: number | null
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_readings_point_id_fkey"
+            columns: ["point_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_readings_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_visits: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closure_error_mm: number | null
+          created_at: string
+          date: string
+          equipment: string | null
+          id: string
+          notes: string | null
+          operator: string | null
+          site_id: string
+          status: string
+          updated_at: string
+          visit_number: number
+          weather_conditions: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_error_mm?: number | null
+          created_at?: string
+          date: string
+          equipment?: string | null
+          id?: string
+          notes?: string | null
+          operator?: string | null
+          site_id: string
+          status?: string
+          updated_at?: string
+          visit_number: number
+          weather_conditions?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_error_mm?: number | null
+          created_at?: string
+          date?: string
+          equipment?: string | null
+          id?: string
+          notes?: string | null
+          operator?: string | null
+          site_id?: string
+          status?: string
+          updated_at?: string
+          visit_number?: number
+          weather_conditions?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_visits_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sites: {
+        Row: {
+          accumulated_alarm: number
+          accumulated_alert: number
+          accumulated_caution: number
+          angular_distortion_limit: number
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          notes: string | null
+          project_id: string
+          status: string
+          structure_type: string
+          updated_at: string
+          velocity_alarm: number
+          velocity_alert: number
+          velocity_caution: number
+        }
+        Insert: {
+          accumulated_alarm?: number
+          accumulated_alert?: number
+          accumulated_caution?: number
+          angular_distortion_limit?: number
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          project_id: string
+          status?: string
+          structure_type: string
+          updated_at?: string
+          velocity_alarm?: number
+          velocity_alert?: number
+          velocity_caution?: number
+        }
+        Update: {
+          accumulated_alarm?: number
+          accumulated_alert?: number
+          accumulated_caution?: number
+          angular_distortion_limit?: number
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          project_id?: string
+          status?: string
+          structure_type?: string
+          updated_at?: string
+          velocity_alarm?: number
+          velocity_alert?: number
+          velocity_caution?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sites_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"

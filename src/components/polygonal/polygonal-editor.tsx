@@ -13,6 +13,7 @@ import { dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { parseNumber } from "@/lib/utils/parse";
 import {
+  expectStationCapture,
   validatePolygonalStation,
   type CaptureIssues,
 } from "@/lib/validators/polygonal";
@@ -23,7 +24,6 @@ import {
   type PolygonalInput,
   type PolygonalProcess,
   type PolygonalStation,
-  type PolygonalType,
   type ProcessStatus,
 } from "@/types/polygonal";
 import type { PrecisionOrder } from "@/types/project";
@@ -117,14 +117,6 @@ function buildInput(
   };
 }
 
-/** Qué celdas son obligatorias para la estación según tipo y posición. */
-function expectFor(type: PolygonalType, index: number, total: number) {
-  if (type === "closed") return { angle: true, distance: true };
-  if (index === 0) return { angle: false, distance: true };
-  if (index === total - 1) return { angle: false, distance: false };
-  return { angle: true, distance: true };
-}
-
 const STATUS_TONE: Record<
   ProcessStatus,
   "neutral" | "primary" | "success" | "danger"
@@ -181,7 +173,7 @@ export function PolygonalEditor({
             angleSec: parseNumber(st.angle.sec),
             distance: parseNumber(st.distance),
           },
-          expectFor(config.type, i, stations.length),
+          expectStationCapture(config.type, i, stations.length),
         ),
       ),
     [stations, config.type],

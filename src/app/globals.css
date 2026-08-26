@@ -74,6 +74,14 @@
   }
 }
 
+@layer utilities {
+  /* Triángulo del nivel «alarma» del semáforo. Es el cuarto canal de forma:
+     ver el comentario de SEMAPHORE_SHAPES en status-indicator.tsx. */
+  .clip-triangle {
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -9,6 +9,7 @@ import {
   ESTADOS_PROCESO,
   METODOS_CORRECCION,
   MODULOS_PENDIENTES,
+  NIVELES_SEMAFORO,
   ORDENES_PRECISION,
   PREGUNTAS,
   SECCIONES,
@@ -22,7 +23,7 @@ import {
 export const metadata: Metadata = {
   title: "Manual de usuario — TopoField",
   description:
-    "Cómo usar TopoField: proyectos, poligonales, nivelación, cierre con trazabilidad y trabajo en campo.",
+    "Cómo usar TopoField: proyectos, poligonales, nivelación, control de asentamientos, cierre con trazabilidad y trabajo en campo.",
 };
 
 /**
@@ -618,8 +619,191 @@ export default function ManualPage() {
         <VolverArriba />
       </Seccion>
 
-      {/* ── 7. Cerrar un proceso ───────────────────────────────────────── */}
-      <Seccion id="cierre" titulo="7. Cerrar un proceso">
+      {/* ── 7. Control de Asentamientos ────────────────────────────────── */}
+      <Seccion id="asentamientos" titulo="7. Control de Asentamientos">
+        <p>
+          El control de asentamientos sigue el descenso de una estructura en
+          el tiempo: cada visita mide la cota de un conjunto de puntos, y la
+          aplicación calcula cuánto ha bajado cada uno desde la visita
+          anterior y desde el inicio.
+        </p>
+
+        <h3 className="text-lg font-semibold">7.1 El lugar</h3>
+
+        <p>
+          Un <strong>lugar</strong> es el sitio que se monitorea: un
+          edificio, una presa, un terraplén. Agrupa un catálogo de puntos de
+          control y sus visitas sucesivas — es el equivalente, para este
+          módulo, a lo que una poligonal o una nivelación son para los otros
+          dos.
+        </p>
+
+        <Captura {...CAPTURAS.nuevoLugar} />
+
+        <p>
+          Desde el proyecto,{" "}
+          <strong>+ Nuevo Proceso → Control de Asentamientos</strong>.
+          Indique el nombre y el <strong>tipo de estructura</strong>:
+          edificio, presa, terraplén u otro. Elegir el tipo aplica un juego
+          de <strong>umbrales de alerta</strong> típico para ese tipo de
+          estructura —de velocidad y de asentamiento acumulado— que puede
+          editar a continuación si el caso lo requiere.
+        </p>
+
+        <p>
+          También define el <strong>límite de distorsión angular</strong>,
+          expresado como <code>1/X</code>: un X menor es más severo (1/300 es
+          peor que 1/500).
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          7.2 Catalogar los puntos
+        </h3>
+
+        <Captura {...CAPTURAS.editorLugar} />
+
+        <p>
+          Ya creado el lugar, agregue sus <strong>puntos de control</strong>:
+          código, ubicación, coordenadas Norte/Este (opcionales, pero
+          necesarias para calcular distorsión angular entre puntos) y la{" "}
+          <strong>cota inicial (C0)</strong> — la referencia contra la que se
+          mide el asentamiento acumulado de todas las visitas futuras.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          7.3 Registrar una visita
+        </h3>
+
+        <p>
+          Cada <strong>visita</strong> es una fecha en la que se releyeron
+          los puntos del catálogo. La primera visita registrada es la{" "}
+          <strong>visita 0 o línea base</strong>: fija el punto de partida y
+          no tiene asentamiento ni velocidad propios, porque no hay una
+          visita anterior contra la que compararla.
+        </p>
+
+        <Captura {...CAPTURAS.editorVisita} />
+
+        <p>
+          Por cada punto se captura la <strong>cota medida</strong>. La
+          aplicación calcula al instante:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Parcial</strong> — cuánto bajó (o subió) el punto desde la
+            visita anterior, en mm.
+          </li>
+          <li>
+            <strong>Acumulado</strong> — cuánto ha bajado desde la línea base
+            (C0), en mm.
+          </li>
+          <li>
+            <strong>Velocidad</strong> — el parcial dividido entre el tiempo
+            transcurrido, en mm/mes.{" "}
+            <strong>
+              Se calcula con los días reales entre las dos visitas
+            </strong>
+            , no con «un mes» genérico: una visita a 28 días y otra a 31 no
+            dan la misma velocidad aunque el parcial fuera igual.
+          </li>
+          <li>
+            <strong>Estado</strong> — el nivel de alerta de ese punto,
+            semáforo explicado a continuación.
+          </li>
+        </ul>
+
+        <p>
+          Un valor positivo es un <strong>levantamiento</strong>, no un
+          asentamiento, y se muestra como tal: es un hallazgo que vale la
+          pena revisar, no un error de signo.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          7.4 El semáforo y la gráfica
+        </h3>
+
+        <Captura {...CAPTURAS.panelAsentamientos} />
+
+        <p>El panel del lugar reúne el historial completo:</p>
+
+        <p>
+          <strong>Visitas.</strong> La lista cronológica, con la peor alerta
+          de cada una.
+        </p>
+
+        <p>
+          <strong>Semáforo por punto.</strong> El estado de cada punto en la
+          última visita, según sus umbrales de velocidad y de acumulado —
+          gana el peor de los dos. Tiene cuatro niveles:
+        </p>
+
+        <Tabla
+          caption="Niveles del semáforo de asentamientos"
+          columnas={["Nivel", "Significado", "Forma"]}
+        >
+          {NIVELES_SEMAFORO.map((n) => (
+            <Fila key={n.nivel} celdas={[n.nivel, n.significado, n.forma]} />
+          ))}
+        </Tabla>
+
+        <Nota titulo="El semáforo no se distingue solo por color">
+          Cada nivel tiene además una forma propia y su nombre escrito junto
+          al indicador, así que se reconoce igual con daltonismo o en una
+          impresión en blanco y negro.
+        </Nota>
+
+        <p>
+          <strong>Un dato en alarma se registra con normalidad.</strong> El
+          semáforo es un diagnóstico, no un control de captura: la aplicación{" "}
+          <strong>nunca</strong> impide guardar una visita ni cerrarla por
+          tener puntos en alerta o alarma. Un asentamiento alarmante es
+          exactamente el hallazgo que este módulo existe para documentar;
+          bloquearlo ocultaría el dato que más importa.
+        </p>
+
+        <p>
+          <strong>Diferenciales y distorsión angular.</strong> Compara cada
+          par de puntos: cuánto difieren sus asentamientos acumulados y qué
+          distorsión angular implica esa diferencia dada la distancia entre
+          ellos, como <code>1/X</code>. Un par sin coordenadas capturadas
+          queda fuera de esta tabla en vez de calcularse con una distancia de
+          cero.
+        </p>
+
+        <p>
+          <strong>Gráfica de evolución.</strong> El asentamiento acumulado de
+          cada punto a lo largo de las visitas. Puede activar o desactivar
+          puntos con las casillas de arriba. Cada serie se distingue por{" "}
+          <strong>forma de marcador además de color</strong> (círculo,
+          cuadrado, triángulo, rombo, cruz), así que sigue siendo legible sin
+          color. Debajo, la misma información en una{" "}
+          <strong>tabla de datos</strong>: la alternativa textual para cuando
+          la gráfica no basta.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          7.5 Cerrar una visita o el lugar
+        </h3>
+
+        <p>
+          Cerrar una <strong>visita</strong> la deja en solo lectura: es el
+          registro de campo de una fecha concreta, y una vez cerrada no
+          admite más cambios.
+        </p>
+
+        <p>
+          Cerrar el <strong>lugar</strong> termina el monitoreo por completo:
+          el lugar y todas sus visitas —cerradas o no— quedan en solo
+          lectura. Use el cierre del lugar cuando el seguimiento del sitio
+          haya concluido, no visita por visita.
+        </p>
+
+        <VolverArriba />
+      </Seccion>
+
+      {/* ── 8. Cerrar un proceso ───────────────────────────────────────── */}
+      <Seccion id="cierre" titulo="8. Cerrar un proceso">
         <p>
           Cerrar es <strong>irreversible</strong>. Antes de permitirlo, la
           aplicación comprueba el trabajo y decide el desenlace:
@@ -663,7 +847,7 @@ export default function ManualPage() {
       </Seccion>
 
       {/* ── 8. Trabajo en campo ────────────────────────────────────────── */}
-      <Seccion id="campo" titulo="8. Trabajo en campo">
+      <Seccion id="campo" titulo="9. Trabajo en campo">
         <p>
           La aplicación está pensada para usarse también desde el teléfono, en
           sitio.
@@ -686,7 +870,7 @@ export default function ManualPage() {
       </Seccion>
 
       {/* ── 9. Módulos pendientes ──────────────────────────────────────── */}
-      <Seccion id="pendientes" titulo="9. Módulos pendientes">
+      <Seccion id="pendientes" titulo="10. Módulos pendientes">
         <p>
           Los siguientes módulos están especificados en el PRD pero{" "}
           <strong>aún no implementados</strong>. Se listan aquí para que se vea
@@ -723,7 +907,7 @@ export default function ManualPage() {
       </Seccion>
 
       {/* ── 10. Preguntas frecuentes ───────────────────────────────────── */}
-      <Seccion id="faq" titulo="10. Preguntas frecuentes">
+      <Seccion id="faq" titulo="11. Preguntas frecuentes">
         <dl className="flex flex-col gap-5">
           {PREGUNTAS.map((p) => (
             <div key={p.pregunta}>

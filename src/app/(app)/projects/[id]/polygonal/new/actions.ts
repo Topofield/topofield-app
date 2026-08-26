@@ -44,10 +44,25 @@ export async function createPolygonalProcessAction(
   }
 
   const supabase = await createClient();
+
+  // El lugar es obligatorio desde la Fase 5. Mientras el formulario no ofrezca
+  // elegirlo (Task 10), se usa el primero del proyecto.
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id")
+    .eq("project_id", payload.projectId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!site) {
+    return { error: "El proyecto no tiene ningún lugar definido." };
+  }
+
   const { data, error } = await supabase
     .from("polygonal_processes")
     .insert({
       project_id: payload.projectId,
+      site_id: site.id,
       name,
       type: payload.type,
       angle_type: payload.type === "open_controlled" ? "deflection" : "internal",

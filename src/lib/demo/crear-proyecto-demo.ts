@@ -75,6 +75,7 @@ async function reclamarMarca(supabase: Client, userId: string): Promise<boolean>
 async function insertarProceso(
   supabase: Client,
   projectId: string,
+  siteId: string,
   userId: string,
   proceso: ProcesoDemo,
   order: PrecisionOrder,
@@ -85,6 +86,7 @@ async function insertarProceso(
     .from("polygonal_processes")
     .insert({
       project_id: projectId,
+      site_id: siteId,
       name: proceso.name,
       type: proceso.type,
       angle_type: proceso.angleType,
@@ -199,10 +201,28 @@ export async function crearProyectoDemo(
 
   if (error) throw error;
 
+  // El lugar es obligatorio desde la Fase 5. Los procesos demo son el
+  // levantamiento de un lote (poligonales de control, sin construcción
+  // levantada todavía), así que "otro" es el tipo de estructura que le
+  // corresponde: ni edificio, ni presa, ni terraplén.
+  const { data: lugar, error: errLugar } = await supabase
+    .from("sites")
+    .insert({
+      project_id: proyecto.id,
+      name: "Lote de ejemplo",
+      description:
+        "Lote delimitado por el levantamiento poligonal de ejemplo.",
+      structure_type: "otro",
+    })
+    .select("id")
+    .single();
+
+  if (errLugar) throw errLugar;
+
   // En serie y no en paralelo: son cuatro inserciones y el orden en que
   // aparecen en el listado es el de creación.
   for (const proceso of PROCESOS_DEMO) {
-    await insertarProceso(supabase, proyecto.id, userId, proceso, order);
+    await insertarProceso(supabase, proyecto.id, lugar.id, userId, proceso, order);
   }
 
   return true;

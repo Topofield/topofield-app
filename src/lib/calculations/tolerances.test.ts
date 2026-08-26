@@ -40,3 +40,41 @@ describe("levelingTolerance", () => {
     expect(levelingTolerance("ordinario", 0)).toBe(0);
   });
 });
+
+import { DAYS_PER_MONTH, thresholdsFor } from "./tolerances";
+
+describe("DAYS_PER_MONTH", () => {
+  it("es el promedio del año gregoriano, 365.25/12", () => {
+    expect(DAYS_PER_MONTH).toBeCloseTo(30.4375, 10);
+  });
+});
+
+describe("thresholdsFor", () => {
+  it("da al edificio los umbrales de edificio, no los de presa", () => {
+    // El § 3.2 del PRD traía 10/25/50 —los de presa— como default para todos.
+    const t = thresholdsFor("edificio");
+    expect(t.accumulatedCaution).toBe(25);
+    expect(t.accumulatedAlert).toBe(50);
+    expect(t.accumulatedAlarm).toBe(75);
+  });
+
+  it("da a la presa sus propios umbrales, más estrictos", () => {
+    const t = thresholdsFor("presa");
+    expect(t.accumulatedCaution).toBe(10);
+    expect(t.accumulatedAlert).toBe(25);
+    expect(t.accumulatedAlarm).toBe(50);
+  });
+
+  it("usa los mismos umbrales de velocidad en todos los tipos", () => {
+    for (const tipo of ["edificio", "presa", "terraplen", "otro"] as const) {
+      const t = thresholdsFor(tipo);
+      expect(t.velocityCaution).toBe(2);
+      expect(t.velocityAlert).toBe(5);
+      expect(t.velocityAlarm).toBe(10);
+    }
+  });
+
+  it("usa 1/500 como límite de distorsión por defecto", () => {
+    expect(thresholdsFor("edificio").angularDistortionLimit).toBe(500);
+  });
+});

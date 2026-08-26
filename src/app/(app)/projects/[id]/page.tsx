@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
   Breadcrumbs,
   EmptyState,
@@ -12,6 +13,8 @@ import { ProcessListToolbar } from "@/components/projects/process-list-toolbar";
 import { ProcessTable } from "@/components/projects/process-table";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
 import { ProjectHeader } from "@/components/projects/project-header";
+import { SiteCard } from "@/components/projects/site-card";
+import { cn } from "@/lib/utils/cn";
 import {
   countByStatus,
   filterProcesses,
@@ -25,15 +28,45 @@ import {
   getPolygonalProcesses,
   getProjectById,
   getReferencePoints,
+  getSiteSummariesByProject,
+  getSites,
 } from "@/lib/supabase/queries";
 import { POLYGONAL_TYPES, type PolygonalType } from "@/types/polygonal";
 import type { LevelingProcess } from "@/types/leveling";
+import type { AlertLevel } from "@/types/settlement";
+import type { Site } from "@/types/site";
 
 const TABS: TabItem[] = [
   { id: "processes", label: "Procesos" },
   { id: "reports", label: "Informes" },
   { id: "config", label: "Configuración" },
 ];
+
+type Modulo = "poligonales" | "nivelaciones" | "asentamientos";
+
+const SUBTABS: { key: Modulo; label: string }[] = [
+  { key: "poligonales", label: "Poligonales" },
+  { key: "nivelaciones", label: "Nivelaciones" },
+  { key: "asentamientos", label: "Control de Asentamientos" },
+];
+
+/** Destino de una sub-tab, conservando el resto de parámetros de la URL. */
+function subtabHref(
+  projectId: string,
+  modulo: Modulo,
+  sp: SearchParams,
+): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    if (key === "tab" || key === "modulo" || value == null) continue;
+    for (const v of Array.isArray(value) ? value : [value]) {
+      if (v !== "") params.append(key, v);
+    }
+  }
+  params.set("tab", "processes");
+  params.set("modulo", modulo);
+  return `/projects/${projectId}?${params.toString()}`;
+}
 
 const STATUS_FILTERS: StatusFilter[] = [
   "todos",
@@ -58,6 +91,10 @@ export default async function ProjectHubPage({
   const tab = sp.tab;
   const activeTab =
     tab === "reports" || tab === "config" ? tab : "processes";
+  const modulo: Modulo =
+    sp.modulo === "nivelaciones" || sp.modulo === "asentamientos"
+      ? sp.modulo
+      : "poligonales";
 
   const supabase = await createClient();
   const project = await getProjectById(supabase, id);
@@ -73,9 +110,30 @@ export default async function ProjectHubPage({
     activeTab === "processes"
       ? await getLevelingProcesses(supabase, project.id)
       : [];
+  const sites: Site[] =
+    activeTab === "processes" ? await getSites(supabase, project.id) : [];
   const referencePoints =
     activeTab === "config"
       ? await getReferencePoints(supabase, project.id)
+      : [];
+
+  // El conteo de visitas y la peor alerta solo se necesitan para pintar la
+  // sub-tab de asentamientos, y se resuelven con dos consultas fijas para
+  // todo el proyecto (`getSiteSummariesByProject`), no una tanda de tres por
+  // lugar: con N lugares, ir lugar a lugar serían 3N viajes a la base.
+  const siteRows =
+    activeTab === "processes" && modulo === "asentamientos"
+      ? await (async () => {
+          const summaries = await getSiteSummariesByProject(supabase, project.id);
+          return sites.map((site) => {
+            const summary = summaries[site.id];
+            return {
+              site,
+              visitCount: summary?.visitCount ?? 0,
+              worstAlert: summary?.worstAlert ?? ("normal" as AlertLevel),
+            };
+          });
+        })()
       : [];
 
   const filters: ProcessFilters = {
@@ -112,53 +170,105 @@ export default async function ProjectHubPage({
       />
 
       {activeTab === "processes" && (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">
               Procesos
             </h2>
             <NewProcessSelector projectId={project.id} />
           </div>
-          {processes.length === 0 && levelingProcesses.length === 0 ? (
-            <EmptyState
-              title="Aún no hay procesos"
-              description="Crea el primer proceso topográfico del proyecto con «+ Nuevo Proceso»."
-            />
-          ) : (
-            <>
-              {processes.length > 0 && (
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                    Poligonal
-                  </h3>
-                  <ProcessListToolbar
-                    projectId={project.id}
-                    filters={filters}
-                    counts={counts}
-                  />
-                  {visibles.length === 0 ? (
-                    <EmptyState
-                      title="Ningún proceso coincide"
-                      description="Ajusta la búsqueda o los filtros para ver otros procesos."
-                    />
-                  ) : (
-                    <ProcessTable
-                      projectId={project.id}
-                      processes={visibles}
-                      filters={filters}
-                    />
-                  )}
-                </div>
-              )}
 
-              {levelingProcesses.length > 0 && (
-                <LevelingProcessSection
+          <nav
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="Filtrar por módulo"
+          >
+            {SUBTABS.map((st) => {
+              const active = st.key === modulo;
+              const count =
+                st.key === "poligonales"
+                  ? processes.length
+                  : st.key === "nivelaciones"
+                    ? levelingProcesses.length
+                    : sites.length;
+              return (
+                <Link
+                  key={st.key}
+                  href={subtabHref(project.id, st.key, sp)}
+                  aria-current={active ? "true" : undefined}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-sm transition-colors",
+                    active
+                      ? "border-primary-500 bg-primary-500 text-white"
+                      : "border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800",
+                  )}
+                >
+                  {st.label} <span className="tabular-nums">({count})</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {modulo === "poligonales" &&
+            (processes.length === 0 ? (
+              <EmptyState
+                title="Aún no hay poligonales"
+                description="Crea la primera poligonal del proyecto con «+ Nuevo Proceso»."
+              />
+            ) : (
+              <div className="flex flex-col gap-4">
+                <ProcessListToolbar
                   projectId={project.id}
-                  processes={levelingProcesses}
+                  filters={filters}
+                  counts={counts}
                 />
-              )}
-            </>
-          )}
+                {visibles.length === 0 ? (
+                  <EmptyState
+                    title="Ningún proceso coincide"
+                    description="Ajusta la búsqueda o los filtros para ver otros procesos."
+                  />
+                ) : (
+                  <ProcessTable
+                    projectId={project.id}
+                    processes={visibles}
+                    filters={filters}
+                  />
+                )}
+              </div>
+            ))}
+
+          {modulo === "nivelaciones" &&
+            (levelingProcesses.length === 0 ? (
+              <EmptyState
+                title="Aún no hay nivelaciones"
+                description="Crea la primera nivelación del proyecto con «+ Nuevo Proceso»."
+              />
+            ) : (
+              <LevelingProcessSection
+                projectId={project.id}
+                processes={levelingProcesses}
+              />
+            ))}
+
+          {modulo === "asentamientos" &&
+            (siteRows.length === 0 ? (
+              <EmptyState
+                title="Aún no hay lugares"
+                description="Crea el primer lugar de control de asentamientos con «+ Nuevo Proceso»."
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {siteRows.map((row) => (
+                  <SiteCard
+                    key={row.site.id}
+                    projectId={project.id}
+                    site={row.site}
+                    visitCount={row.visitCount}
+                    worstAlert={row.worstAlert}
+                  />
+                ))}
+              </div>
+            ))}
         </div>
       )}
 
@@ -201,9 +311,6 @@ function LevelingProcessSection({
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-        Nivelación
-      </h3>
       {enProgreso.length > 0 && (
         <div className="flex flex-col gap-3">
           <h4 className="text-xs font-medium text-neutral-500">

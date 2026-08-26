@@ -1,8 +1,8 @@
 # PRD-de-fase 5 — Control de Asentamientos
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-08-25
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-08-25
 
 ## Propósito
 
