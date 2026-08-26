@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeHistory } from "@/lib/calculations/settlement";
 import {
+  visitsToRewrite,
+  type PersistedReading,
+} from "@/lib/calculations/settlement-persistence";
+import {
   validateVisitCapture,
   validateVisitClose,
 } from "@/lib/validators/settlement";
@@ -120,42 +124,6 @@ async function loadContext(
     statusByVisit,
     persistedReadingsByVisit,
   };
-}
-
-/** Forma mínima de una lectura ya persistida, para comparar contra la recalculada. */
-interface PersistedReading {
-  point_id: string;
-  partial_settlement: number | null;
-  accumulated_settlement: number | null;
-  velocity: string | number | null;
-  alert_status: string;
-}
-
-/**
- * ¿La lectura recalculada difiere de la ya persistida?
- *
- * `velocity` llega de la base como `string` (columna `decimal`) o `number`
- * según el punto de la fila; se compara como número para no marcar como
- * "distinta" una fila que solo cambió de representación.
- */
-function readingChanged(
-  computed: {
-    partialSettlement: number | null;
-    accumulatedSettlement: number | null;
-    velocity: number | null;
-    alertStatus: string;
-  },
-  persisted: PersistedReading | undefined,
-): boolean {
-  if (!persisted) return true;
-  const persistedVelocity =
-    persisted.velocity === null ? null : Number(persisted.velocity);
-  return (
-    computed.partialSettlement !== persisted.partial_settlement ||
-    computed.accumulatedSettlement !== persisted.accumulated_settlement ||
-    computed.velocity !== persistedVelocity ||
-    computed.alertStatus !== persisted.alert_status
-  );
 }
 
 /** Crea una visita con el número siguiente y la fecha dada. */
@@ -359,24 +327,19 @@ export async function saveVisitAction(
   // todos modos) y conservan el criterio con el que se cerraron — eso es lo
   // correcto para la trazabilidad, no un descuido. Comparar antes de escribir
   // evita reescribir visitas cuyos valores no cambiaron.
-  for (const otherVisit of others) {
-    if (otherVisit.id === payload.visitId) continue;
-    if (context.statusByVisit.get(otherVisit.id) === "closed") continue;
+  const rewrites = visitsToRewrite({
+    recalculated: history.visits,
+    statusByVisit: context.statusByVisit,
+    persistedByVisit: context.persistedReadingsByVisit,
+    skipVisitId: payload.visitId,
+  });
 
-    const recalculated = history.visits.find((v) => v.visitId === otherVisit.id);
-    if (!recalculated || recalculated.readings.length === 0) continue;
-
-    const persistedByPoint = context.persistedReadingsByVisit.get(otherVisit.id);
-    const toUpdate = recalculated.readings.filter((r) =>
-      readingChanged(r, persistedByPoint?.get(r.pointId)),
-    );
-    if (toUpdate.length === 0) continue;
-
+  for (const rewrite of rewrites) {
     const { error: propagateError } = await supabase
       .from("settlement_readings")
       .upsert(
-        toUpdate.map((r) => ({
-          visit_id: otherVisit.id,
+        rewrite.readings.map((r) => ({
+          visit_id: rewrite.visitId,
           point_id: r.pointId,
           elevation: r.elevation,
           partial_settlement: r.partialSettlement,

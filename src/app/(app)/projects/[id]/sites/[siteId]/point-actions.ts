@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
 
 export interface ActionResult {
   ok: boolean;
@@ -143,7 +144,19 @@ export async function savePointAction(
     return { ok: false, error: error.message };
   }
 
+  // La C0 y las coordenadas del punto acaban de cambiar, y de ellas dependen
+  // valores YA PERSISTIDOS en `settlement_readings`: el acumulado es
+  // `(cota − C0) × 1000` y las coordenadas alimentan la distorsión angular.
+  // Sin recalcular, las lecturas guardadas conservan los números de la C0
+  // vieja mientras el panel del lugar los recalcula en vivo — la misma
+  // divergencia que la edición de umbrales, por una puerta distinta.
+  const resync = await resyncSiteReadings(supabase, payload.siteId);
+  if (!resync.ok) return { ok: false, error: resync.error };
+
   revalidatePath(`/projects/${siteCheck.site.project_id}/sites/${payload.siteId}`);
+  revalidatePath(
+    `/projects/${siteCheck.site.project_id}/settlement/${payload.siteId}`,
+  );
   return { ok: true };
 }
 

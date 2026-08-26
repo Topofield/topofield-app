@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { StructureType } from "@/types/site";
+import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
 
 export interface ActionResult {
   ok: boolean;
@@ -146,7 +147,20 @@ export async function saveSiteAction(
 
   if (error) return { ok: false, error: error.message };
 
+  // Los umbrales acaban de cambiar, y `settlement_readings.alert_status` es una
+  // caché derivada de ellos: las lecturas ya guardadas conservan la
+  // clasificación del criterio anterior. El hub las lee tal cual mientras el
+  // panel del lugar recalcula en vivo, así que sin esto las dos vistas se
+  // contradirían — y un informe que mezclara ambas fuentes se contradiría a sí
+  // mismo dentro del mismo documento.
+  //
+  // Solo se reescriben las visitas ABIERTAS; las cerradas conservan el criterio
+  // con el que se cerraron, por trazabilidad.
+  const resync = await resyncSiteReadings(supabase, siteId);
+  if (!resync.ok) return { ok: false, error: resync.error };
+
   revalidatePath(`/projects/${site.project_id}`);
+  revalidatePath(`/projects/${site.project_id}/settlement/${siteId}`);
   return { ok: true };
 }
 
