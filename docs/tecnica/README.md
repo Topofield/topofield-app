@@ -916,18 +916,42 @@ entrar en la compensación, es un cambio de motor de cálculo con tests nuevos,
 no un ajuste menor: altera todas las cotas corregidas de un recorrido con
 vuelta.
 
-**El `worstAlert` del hub y el del panel de lugar pueden divergir.** El hub
-(sub-tab de asentamientos) lee `alert_status` tal como quedó persistido en
-`settlement_readings` la última vez que se guardó la visita. El panel de
-análisis del lugar (§ 7.4 del manual) lo **recalcula** en cada carga con los
-umbrales actuales del lugar. Si alguien edita los umbrales de un lugar que ya
-tiene visitas guardadas, las dos vistas dejan de coincidir hasta que cada
-visita se vuelva a guardar. El valor autoritativo es el recalculado, porque
-es el que usa los umbrales vigentes. Arreglo pendiente: que `saveSiteAction`
-reescriba el `alert_status` de las visitas **abiertas** al cambiar los
-umbrales — las cerradas conservan su clasificación original, por
-trazabilidad (una visita cerrada documenta el criterio con el que se evaluó
-en su momento).
+**Cerrado — el `worstAlert` del hub ya no diverge del panel.** El hub lee el
+`alert_status` persistido en `settlement_readings` y el panel del lugar lo
+recalcula en vivo con los umbrales vigentes, así que cualquier entrada que
+alimente el cálculo y no reescriba lo persistido los separaba. La Fase 6 cerró
+esa brecha: además de `saveVisitAction` (que ya lo hacía desde la Fase 5),
+ahora `saveSiteAction` y `savePointAction` recalculan y reescriben las lecturas
+de las visitas **abiertas** mediante `resyncSiteReadings`
+(`src/lib/supabase/settlement-sync.ts`).
+
+La enumeración de entradas que exigió el PRD de la Fase 6 encontró **una puerta
+más de la que esta deuda registraba**. El `alert_status` depende de tres
+entradas —las cotas de las visitas, el catálogo de puntos y los umbrales del
+lugar— y de las nueve acciones que mutan el módulo, tres las tocan:
+
+| Acción | Qué cambia | Estado |
+|---|---|---|
+| `saveVisitAction` | cotas y fechas | cubierto desde la Fase 5 |
+| `saveSiteAction` | umbrales | la puerta que esta deuda documentaba |
+| `savePointAction` | **C0 y coordenadas** | **no estaba documentada** |
+
+`savePointAction` importa porque el acumulado es `(cota − C0) × 1000`: corregir
+la cota base de un punto deja obsoletas todas sus lecturas persistidas. Es
+literalmente el aprendizaje que la Fase 5 dejó escrito —una caché derivada
+diverge por todas las puertas que alimentan el mismo cálculo, no solo por la
+que se documentó primero— y confirma que conviene enumerar las entradas antes
+de dar por acotada una limitación de este tipo.
+
+Las visitas **cerradas** no se reescriben nunca: conservan la clasificación con
+la que se cerraron, por trazabilidad. Verificado contra la base moviendo la app
+real: con el arreglo, bajar el umbral de acumulado de 25 a 5 mm reclasifica 24
+de 36 lecturas; sin él, las 36 conservan el criterio viejo. Con los umbrales en
+0.1 mm, las visitas abiertas escalan a `alert`/`alarm` y la cerrada mantiene su
+`normal`.
+
+La decisión de qué reescribir vive en funciones puras con tests
+(`src/lib/calculations/settlement-persistence.ts`), no en el Server Action.
 
 **`validatePolygonalStation` no valida `pointCode` vacío.** El validador de
 nivelación sí lo hace (`validateReadingCapture` en `leveling.ts`, regla
@@ -944,11 +968,19 @@ solo usaba el editor a ser la fuente de verdad compartida entre cliente y
 dejar de estar de acuerdo sobre qué celdas son obligatorias sin que ningún
 test lo detecte.
 
-**Quedan 4 copias de `thresholdsOf`** repartidas por el repo (server actions
-y componentes de asentamientos), con la misma lógica de leer los siete
-umbrales de un `Site`. Mismo patrón de fondo que la deuda de
-`formatPrecision`: candidato a extraer a un solo lugar, probablemente
-`src/lib/calculations/settlement.ts` o `tolerances.ts`.
+**Cerrado — `thresholdsOf` vive en un solo lugar.** Las cuatro copias
+repartidas por el módulo de asentamientos se unificaron en
+`src/lib/calculations/tolerances.ts`, junto a `thresholdsFor`, que es su
+hermana: una construye los umbrales desde el preset del tipo de estructura y
+la otra los lee de un lugar guardado. Se hizo al abrir la Fase 6, antes de que
+`resyncSiteReadings` añadiera un quinto consumidor.
+
+El parámetro se declara estructuralmente y no como `Site`, para que sirva igual
+a un `Site` completo y a los `select` parciales que solo piden las siete
+columnas de umbral. Ahora tiene test, que es lo que no tenía: el `Number()` de
+la conversión no es decorativo, porque Postgres entrega las columnas `DECIMAL`
+como cadena vía PostgREST y en JS `25 > "9"` es `false`, de modo que un
+acumulado superaría o no su umbral según cómo hubiera viajado el dato.
 
 **El lugar «General» del backfill infla el conteo de procesos de proyectos
 que ya tenían trabajo.** La migración de la Fase 5 crea un lugar `General`
@@ -970,20 +1002,21 @@ coordenadas, pero no para un punto que tiene coordenadas pero le falta la
 lectura de la visita actual — un caso distinto al de coordenadas ausentes, y
 sin test que fije su comportamiento.
 
-**La propagación de lecturas al guardar una visita no tiene test de
-regresión.** `saveVisitAction` reescribe las lecturas de las visitas
-**abiertas** cuyos valores cambian al guardar otra: el parcial, el acumulado
-y la velocidad de una visita dependen de la anterior, así que intercalar una
-visita, mover su fecha o corregir una cota base deja obsoletas las lecturas
-ya persistidas de las que le siguen si nadie las recalcula. El fallo se
-encontró y se corrigió en la revisión final de la Fase 5 (verificado a mano
-contra la base: una velocidad pasó de −30.95 a −32.61 al intercalar una
-visita), pero el test que se añadió ejercita `computeSettlements` —el motor,
-que nunca estuvo roto— y no la capa de persistencia, que es donde vivía el
-fallo. Si alguien borra ese bucle de `saveVisitAction`, los 297 tests siguen
-en verde. Probarlo exigiría mockear el cliente de Supabase o montar pruebas
-de integración contra la base local, y hoy el proyecto no tiene ninguna de
-las dos cosas.
+**La propagación de lecturas ya tiene tests, aunque no de integración.** La
+decisión de qué filas hay que reescribir salió de `saveVisitAction` a
+`src/lib/calculations/settlement-persistence.ts` (`readingChanged` y
+`visitsToRewrite`) y tiene 14 tests: que un cambio de **solo** el nivel de
+alerta cuenta como cambio —el caso exacto de editar umbrales, donde ningún
+número varía—, que una visita cerrada no se devuelve nunca, que la velocidad
+que llega como cadena no marca una fila como cambiada, y que se devuelven solo
+las lecturas alteradas y no la visita entera.
+
+Queda en pie la limitación de fondo: **el proyecto sigue sin poder probar la
+E/S**. `resyncSiteReadings` y el bucle de `upsert` de `saveVisitAction` no
+tienen cobertura automática, porque no hay forma de mockear el cliente de
+Supabase ni pruebas de integración contra la base local. Lo que se ganó es que
+la parte que **decide** —donde vivían los fallos— ya no depende de
+verificación manual; lo que se escribe sigue dependiendo de ella.
 
 **Las series de la gráfica de asentamientos repiten forma a partir de la
 sexta.** `SERIES_MARKERS` tiene 5 formas y `SERIES_COLORS` 4 colores, y al
