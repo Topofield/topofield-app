@@ -9,10 +9,10 @@ import {
 } from "@/lib/validators/settlement";
 import type {
   PointInput,
-  Thresholds,
   VisitInput,
   VisitStatus,
 } from "@/types/settlement";
+import { thresholdsOf } from "@/lib/calculations/tolerances";
 import type { Site } from "@/types/site";
 
 export interface ActionResult {
@@ -31,19 +31,6 @@ export interface VisitPayload {
   closureErrorMm: number | null;
   notes: string | null;
   readings: { pointId: string; elevation: number }[];
-}
-
-/** Umbrales del lugar, desnormalizados para el motor de cálculo. */
-function thresholdsOf(site: Site): Thresholds {
-  return {
-    velocityCaution: Number(site.velocity_caution),
-    velocityAlert: Number(site.velocity_alert),
-    velocityAlarm: Number(site.velocity_alarm),
-    accumulatedCaution: Number(site.accumulated_caution),
-    accumulatedAlert: Number(site.accumulated_alert),
-    accumulatedAlarm: Number(site.accumulated_alarm),
-    angularDistortionLimit: site.angular_distortion_limit,
-  };
 }
 
 /**

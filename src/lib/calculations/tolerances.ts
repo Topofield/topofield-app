@@ -135,3 +135,42 @@ export const SETTLEMENT_THRESHOLD_PRESETS: Record<StructureType, Thresholds> = {
 export function thresholdsFor(structureType: StructureType): Thresholds {
   return SETTLEMENT_THRESHOLD_PRESETS[structureType];
 }
+
+/**
+ * Las siete columnas de umbral de un lugar, tal como llegan de la base.
+ *
+ * Se declara estructuralmente y no como `Site` para que sirva igual a un
+ * `Site` completo y a un `select` parcial que solo pidió los umbrales, que es
+ * como lo consultan las páginas del módulo.
+ */
+export interface SiteThresholdColumns {
+  velocity_caution: number;
+  velocity_alert: number;
+  velocity_alarm: number;
+  accumulated_caution: number;
+  accumulated_alert: number;
+  accumulated_alarm: number;
+  angular_distortion_limit: number;
+}
+
+/**
+ * Umbrales de un lugar, listos para `classifyAlert`.
+ *
+ * El `Number()` no es decorativo: Postgres entrega las columnas `DECIMAL` como
+ * **cadena** a través de PostgREST, y comparar número contra cadena en JS falla
+ * en silencio —`25 > "9"` es `false`—, de modo que un acumulado superaría o no
+ * su umbral según cómo hubiera viajado el dato. Convertir aquí, en el único
+ * punto por el que pasan todos los consumidores, es lo que evita esa clase de
+ * fallo plausible.
+ */
+export function thresholdsOf(site: SiteThresholdColumns): Thresholds {
+  return {
+    velocityCaution: Number(site.velocity_caution),
+    velocityAlert: Number(site.velocity_alert),
+    velocityAlarm: Number(site.velocity_alarm),
+    accumulatedCaution: Number(site.accumulated_caution),
+    accumulatedAlert: Number(site.accumulated_alert),
+    accumulatedAlarm: Number(site.accumulated_alarm),
+    angularDistortionLimit: Number(site.angular_distortion_limit),
+  };
+}

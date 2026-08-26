@@ -41,7 +41,7 @@ describe("levelingTolerance", () => {
   });
 });
 
-import { DAYS_PER_MONTH, thresholdsFor } from "./tolerances";
+import { DAYS_PER_MONTH, thresholdsFor, thresholdsOf } from "./tolerances";
 
 describe("DAYS_PER_MONTH", () => {
   it("es el promedio del año gregoriano, 365.25/12", () => {
@@ -76,5 +76,72 @@ describe("thresholdsFor", () => {
 
   it("usa 1/500 como límite de distorsión por defecto", () => {
     expect(thresholdsFor("edificio").angularDistortionLimit).toBe(500);
+  });
+});
+
+describe("thresholdsOf", () => {
+  // Postgres devuelve las columnas DECIMAL como CADENA a través de PostgREST.
+  // Si los umbrales llegaran sin convertir, `clasificar` compararía número
+  // contra cadena y el resultado sería silenciosamente equivocado: en JS
+  // `25 > "9"` es false, así que un acumulado de 25 mm NO superaría un umbral
+  // de "9". Este test es la razón de ser de la conversión.
+  it("convierte a número los umbrales que llegan como cadena", () => {
+    const t = thresholdsOf({
+      velocity_caution: "2.00" as unknown as number,
+      velocity_alert: "5.00" as unknown as number,
+      velocity_alarm: "10.00" as unknown as number,
+      accumulated_caution: "25.00" as unknown as number,
+      accumulated_alert: "50.00" as unknown as number,
+      accumulated_alarm: "75.00" as unknown as number,
+      angular_distortion_limit: 500,
+    });
+
+    expect(t.velocityCaution).toBe(2);
+    expect(t.velocityAlert).toBe(5);
+    expect(t.velocityAlarm).toBe(10);
+    expect(t.accumulatedCaution).toBe(25);
+    expect(t.accumulatedAlert).toBe(50);
+    expect(t.accumulatedAlarm).toBe(75);
+    expect(t.angularDistortionLimit).toBe(500);
+    for (const v of Object.values(t)) {
+      expect(typeof v).toBe("number");
+    }
+  });
+
+  it("deja intactos los umbrales que ya son números", () => {
+    const t = thresholdsOf({
+      velocity_caution: 1.5,
+      velocity_alert: 4,
+      velocity_alarm: 8,
+      accumulated_caution: 12,
+      accumulated_alert: 30,
+      accumulated_alarm: 60,
+      angular_distortion_limit: 250,
+    });
+
+    expect(t).toEqual({
+      velocityCaution: 1.5,
+      velocityAlert: 4,
+      velocityAlarm: 8,
+      accumulatedCaution: 12,
+      accumulatedAlert: 30,
+      accumulatedAlarm: 60,
+      angularDistortionLimit: 250,
+    });
+  });
+
+  // Un lugar recién creado toma su preset; leerlo de vuelta debe dar lo mismo.
+  it("es coherente con el preset del que nace un lugar", () => {
+    const preset = thresholdsFor("presa");
+    const leido = thresholdsOf({
+      velocity_caution: preset.velocityCaution,
+      velocity_alert: preset.velocityAlert,
+      velocity_alarm: preset.velocityAlarm,
+      accumulated_caution: preset.accumulatedCaution,
+      accumulated_alert: preset.accumulatedAlert,
+      accumulated_alarm: preset.accumulatedAlarm,
+      angular_distortion_limit: preset.angularDistortionLimit,
+    });
+    expect(leido).toEqual(preset);
   });
 });

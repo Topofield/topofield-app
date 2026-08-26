@@ -11,7 +11,7 @@ import {
   Select,
   Textarea,
 } from "@/components/design-system";
-import { thresholdsFor } from "@/lib/calculations/tolerances";
+import { thresholdsFor, thresholdsOf } from "@/lib/calculations/tolerances";
 import {
   closeSiteAction,
   createSiteAction,
@@ -31,18 +31,6 @@ const STRUCTURE_TYPE_OPTIONS = STRUCTURE_TYPES.map((value) => ({
   value,
   label: STRUCTURE_TYPE_LABELS[value],
 }));
-
-function thresholdsOf(site: Site): Thresholds {
-  return {
-    velocityCaution: Number(site.velocity_caution),
-    velocityAlert: Number(site.velocity_alert),
-    velocityAlarm: Number(site.velocity_alarm),
-    accumulatedCaution: Number(site.accumulated_caution),
-    accumulatedAlert: Number(site.accumulated_alert),
-    accumulatedAlarm: Number(site.accumulated_alarm),
-    angularDistortionLimit: site.angular_distortion_limit,
-  };
-}
 
 interface SiteFormProps {
   projectId: string;

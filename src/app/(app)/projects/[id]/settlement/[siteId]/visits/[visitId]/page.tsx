@@ -10,31 +10,11 @@ import {
   getVisit,
   getVisits,
 } from "@/lib/supabase/queries";
-import type { Thresholds, VisitInput } from "@/types/settlement";
+import { thresholdsOf } from "@/lib/calculations/tolerances";
+import type { VisitInput } from "@/types/settlement";
 
 interface VisitEditorPageProps {
   params: Promise<{ id: string; siteId: string; visitId: string }>;
-}
-
-/** Umbrales del lugar, desnormalizados para el motor de cálculo. */
-function thresholdsOf(site: {
-  velocity_caution: number;
-  velocity_alert: number;
-  velocity_alarm: number;
-  accumulated_caution: number;
-  accumulated_alert: number;
-  accumulated_alarm: number;
-  angular_distortion_limit: number;
-}): Thresholds {
-  return {
-    velocityCaution: Number(site.velocity_caution),
-    velocityAlert: Number(site.velocity_alert),
-    velocityAlarm: Number(site.velocity_alarm),
-    accumulatedCaution: Number(site.accumulated_caution),
-    accumulatedAlert: Number(site.accumulated_alert),
-    accumulatedAlarm: Number(site.accumulated_alarm),
-    angularDistortionLimit: site.angular_distortion_limit,
-  };
 }
 
 export default async function VisitEditorPage({
