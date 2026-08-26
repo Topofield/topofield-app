@@ -101,6 +101,7 @@ export function StationsTable({
                     <Input
                       value={station.pointCode}
                       disabled={disabled}
+                      error={issue?.errors.pointCode}
                       onChange={(e) =>
                         update(i, { pointCode: e.target.value })
                       }
@@ -204,6 +205,7 @@ export function StationsTable({
                 <Input
                   value={station.pointCode}
                   disabled={disabled}
+                  error={issue?.errors.pointCode}
                   onChange={(e) => update(i, { pointCode: e.target.value })}
                   className="w-28"
                   aria-label={`Código de la estación ${i + 1}`}

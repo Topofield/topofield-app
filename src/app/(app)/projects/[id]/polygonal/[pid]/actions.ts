@@ -140,6 +140,7 @@ export async function savePolygonalProcessAction(
   const issues = payload.stations.map((st, i) =>
     validatePolygonalStation(
       {
+        pointCode: st.pointCode,
         angleDeg: st.angleDeg,
         angleMin: st.angleMin,
         angleSec: st.angleSec,

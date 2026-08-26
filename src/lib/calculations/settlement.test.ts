@@ -300,6 +300,38 @@ describe("horizontalDistance", () => {
 });
 
 describe("computeDifferentials", () => {
+  // Distinto del caso «al punto le faltan coordenadas»: aquí el punto SÍ está
+  // en el catálogo y con N/E, pero no se le midió en esta visita. No debe
+  // aparecer en ningún par —no hay asentamiento que comparar— y sobre todo no
+  // debe contarse como diferencial 0, que se leería como distorsión infinita,
+  // es decir, como normalidad perfecta.
+  it("excluye un punto del catálogo que no tiene lectura en la visita", () => {
+    const C: PointInput = { id: "c", code: "P-C", northing: 0, easting: 12, initialElevation: 100 };
+    const pairs = computeDifferentials(
+      [A, B, C],
+      [lectura("a", -10), lectura("b", -4)],
+      500,
+    );
+    expect(pairs).toHaveLength(1);
+    const ids = pairs.flatMap((p) => [p.pointIdA, p.pointIdB]);
+    expect(ids).not.toContain("c");
+  });
+
+  it("no produce pares si solo un punto tiene lectura", () => {
+    expect(computeDifferentials([A, B], [lectura("a", -10)], 500)).toEqual([]);
+  });
+
+  // Una lectura cuyo acumulado es null (el punto no tiene C0) tampoco puede
+  // compararse: se descarta igual que la ausencia de lectura.
+  it("excluye una lectura con acumulado nulo", () => {
+    const pairs = computeDifferentials(
+      [A, B],
+      [lectura("a", -10), lectura("b", null)],
+      500,
+    );
+    expect(pairs).toEqual([]);
+  });
+
   it("calcula el diferencial y la distorsión como 1/X", () => {
     // Diferencial |−1.8 − (−2.5)| = 0.7 mm sobre 6 m ⇒ 6000/0.7 = 1/8571.4
     const pairs = computeDifferentials(

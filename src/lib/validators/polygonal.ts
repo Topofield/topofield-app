@@ -6,16 +6,18 @@ import type { PolygonalResult, PolygonalType } from "@/types/polygonal";
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
 export interface StationCaptureInput {
+  /** Código del punto. Obligatorio siempre: `point_code` es `not null`. */
+  pointCode: string;
   angleDeg: number | null;
   angleMin: number | null;
   angleSec: number | null;
   distance: number | null;
 }
 
-/** Issues de captura de una estación, indexados por celda (`angle` / `distance`). */
+/** Issues de captura de una estación, indexados por celda. */
 export interface CaptureIssues {
-  errors: Partial<Record<"angle" | "distance", string>>;
-  warnings: Partial<Record<"angle" | "distance", string>>;
+  errors: Partial<Record<"pointCode" | "angle" | "distance", string>>;
+  warnings: Partial<Record<"pointCode" | "angle" | "distance", string>>;
 }
 
 /**
@@ -48,6 +50,15 @@ export function validatePolygonalStation(
 ): CaptureIssues {
   const errors: CaptureIssues["errors"] = {};
   const warnings: CaptureIssues["warnings"] = {};
+
+  // Código: obligatorio SIEMPRE, con independencia de `expect`. Una estación
+  // sin ángulo ni distancia (la última de una abierta) sigue siendo un punto
+  // del levantamiento y necesita identificarse; además `point_code` es
+  // `not null` en la base. La regla es la misma que `validateReadingCapture`
+  // aplica en nivelación desde la Fase 4.
+  if (station.pointCode.trim() === "") {
+    errors.pointCode = "El punto necesita un código.";
+  }
 
   // Distancia: ≤ 0 o > 1000 m bloquea; vacía obligatoria bloquea.
   const { distance } = station;

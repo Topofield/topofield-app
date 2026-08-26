@@ -168,6 +168,7 @@ export function PolygonalEditor({
       stations.map((st, i) =>
         validatePolygonalStation(
           {
+            pointCode: st.pointCode,
             angleDeg: parseNumber(st.angle.deg),
             angleMin: parseNumber(st.angle.min),
             angleSec: parseNumber(st.angle.sec),

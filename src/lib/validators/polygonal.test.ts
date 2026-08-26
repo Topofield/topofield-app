@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluatePolygonalClosure,
+  expectStationCapture,
   hasCaptureErrors,
   validatePolygonalStation,
   type CaptureIssues,
@@ -19,6 +20,7 @@ import type { PolygonalResult, StationResult } from "@/types/polygonal";
 /** Estación de captura; por defecto válida, se altera lo que cada caso pruebe. */
 function capture(over: Partial<Parameters<typeof validatePolygonalStation>[0]> = {}) {
   return {
+    pointCode: "E-1",
     angleDeg: 90,
     angleMin: 0,
     angleSec: 0,
@@ -65,6 +67,107 @@ function computedStation(north: number | null): StationResult {
 }
 
 // --- Capa 1: validación de captura (§ 5.1) -----------------------------------
+
+// `expectStationCapture` es la fuente de verdad COMPARTIDA entre el editor y
+// `savePolygonalProcessAction`: decide qué celdas son obligatorias en cada
+// estación. Si se desviara, el servidor y la pantalla dejarían de estar de
+// acuerdo sobre qué es captura parcial legítima y qué es un error, sin que
+// nada lo delatara. Estos tests la fijan.
+describe("expectStationCapture", () => {
+  it("exige ángulo y distancia en TODAS las estaciones de una cerrada", () => {
+    for (const i of [0, 1, 4]) {
+      expect(expectStationCapture("closed", i, 5)).toEqual({
+        angle: true,
+        distance: true,
+      });
+    }
+  });
+
+  it("en una abierta, la primera estación no lleva ángulo pero sí distancia", () => {
+    expect(expectStationCapture("open_controlled", 0, 4)).toEqual({
+      angle: false,
+      distance: true,
+    });
+    expect(expectStationCapture("open_uncontrolled", 0, 4)).toEqual({
+      angle: false,
+      distance: true,
+    });
+  });
+
+  it("en una abierta, la última estación no lleva ángulo ni distancia", () => {
+    expect(expectStationCapture("open_controlled", 3, 4)).toEqual({
+      angle: false,
+      distance: false,
+    });
+  });
+
+  it("en una abierta, las intermedias llevan ambas", () => {
+    expect(expectStationCapture("open_controlled", 1, 4)).toEqual({
+      angle: true,
+      distance: true,
+    });
+    expect(expectStationCapture("open_controlled", 2, 4)).toEqual({
+      angle: true,
+      distance: true,
+    });
+  });
+
+  // Caso límite real: una abierta recién creada con una sola estación. El
+  // índice 0 es a la vez primero y último; gana la regla del primero, porque
+  // se evalúa antes. Se fija para que un refactor no la invierta en silencio.
+  it("con una sola estación abierta, aplica la regla de la primera", () => {
+    expect(expectStationCapture("open_controlled", 0, 1)).toEqual({
+      angle: false,
+      distance: true,
+    });
+  });
+
+  it("una cerrada de una sola estación sigue exigiendo ambas", () => {
+    expect(expectStationCapture("closed", 0, 1)).toEqual({
+      angle: true,
+      distance: true,
+    });
+  });
+});
+
+describe("validatePolygonalStation — código de punto", () => {
+  // El validador de nivelación exige el código desde la Fase 4
+  // (`validateReadingCapture`); el de poligonal no lo hacía, así que una
+  // estación sin código se persistía igual en cliente y servidor, contra una
+  // columna `point_code text not null`.
+  it("exige el código del punto", () => {
+    const r = validatePolygonalStation(capture({ pointCode: "" }), EXPECT_BOTH);
+    expect(r.errors.pointCode).toBe("El punto necesita un código.");
+  });
+
+  it("trata el código en blanco como ausente", () => {
+    const r = validatePolygonalStation(
+      capture({ pointCode: "   " }),
+      EXPECT_BOTH,
+    );
+    expect(r.errors.pointCode).toBe("El punto necesita un código.");
+  });
+
+  it("acepta un código con espacios alrededor", () => {
+    const r = validatePolygonalStation(
+      capture({ pointCode: " E-1 " }),
+      EXPECT_BOTH,
+    );
+    expect(r.errors.pointCode).toBeUndefined();
+  });
+
+  // El código es obligatorio SIEMPRE, también en la última estación de una
+  // abierta, que no lleva ángulo ni distancia: sin ángulo ni distancia sigue
+  // siendo un punto del levantamiento y necesita identificarse.
+  it("lo exige incluso donde no se exigen ángulo ni distancia", () => {
+    const r = validatePolygonalStation(capture({ pointCode: "" }), {
+      angle: false,
+      distance: false,
+    });
+    expect(r.errors.pointCode).toBe("El punto necesita un código.");
+  });
+});
+
 
 describe("validatePolygonalStation — distancia", () => {
   it("acepta una distancia normal", () => {
