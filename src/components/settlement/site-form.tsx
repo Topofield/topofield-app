@@ -7,7 +7,6 @@ import {
   Button,
   Card,
   Input,
-  Modal,
   Select,
   Textarea,
 } from "@/components/design-system";
@@ -26,6 +25,7 @@ import {
 } from "@/types/site";
 import type { Thresholds } from "@/types/settlement";
 import { ThresholdsFields } from "./thresholds-fields";
+import { CloseSiteDialog } from "./close-site-dialog";
 
 const STRUCTURE_TYPE_OPTIONS = STRUCTURE_TYPES.map((value) => ({
   value,
@@ -36,6 +36,10 @@ interface SiteFormProps {
   projectId: string;
   /** Si viene, el formulario edita este lugar; si no, crea uno nuevo. */
   site?: Site;
+  /** Para el resumen del § 4.6 en el diálogo de cierre. */
+  pointsCount?: number;
+  visitsTotal?: number;
+  visitsOpen?: number;
 }
 
 /**
@@ -47,7 +51,13 @@ interface SiteFormProps {
  * es error de lint en este proyecto, y además así el usuario puede editar los
  * umbrales después sin que un efecto se los revierta.
  */
-export function SiteForm({ projectId, site }: SiteFormProps) {
+export function SiteForm({
+  projectId,
+  site,
+  pointsCount = 0,
+  visitsTotal = 0,
+  visitsOpen = 0,
+}: SiteFormProps) {
   const router = useRouter();
   const isEdit = site !== undefined;
 
@@ -67,6 +77,22 @@ export function SiteForm({ projectId, site }: SiteFormProps) {
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [isClosing, startCloseTransition] = useTransition();
+
+  // Cambios sin guardar, derivados en render y no en un efecto
+  // (`react-hooks/set-state-in-effect` es error de lint en este proyecto).
+  // Cerrar con cambios pendientes sellaría los valores VIEJOS de la base como
+  // si fueran los de la pantalla, y un lugar cerrado es inmutable.
+  const saved = site ? thresholdsOf(site) : null;
+  const dirty =
+    site !== undefined &&
+    (name !== (site.name ?? "") ||
+      description !== (site.description ?? "") ||
+      structureType !== site.structure_type ||
+      notes !== (site.notes ?? "") ||
+      saved === null ||
+      (Object.keys(saved) as (keyof Thresholds)[]).some(
+        (k) => thresholds[k] !== saved[k],
+      ));
 
   const disabled = site?.status === "closed";
   const closedLabel =
@@ -231,40 +257,18 @@ export function SiteForm({ projectId, site }: SiteFormProps) {
         )}
       </form>
 
-      {closeDialogOpen && (
-        <Modal
-          open
-          onClose={closeCloseDialog}
-          title="Cerrar lugar"
-          footer={
-            <>
-              <Button type="button" variant="secondary" onClick={closeCloseDialog}>
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                variant="danger"
-                onClick={handleConfirmClose}
-                disabled={isClosing}
-              >
-                {isClosing ? "Cerrando…" : "Confirmar Cierre"}
-              </Button>
-            </>
-          }
-        >
-          <div className="flex flex-col gap-4">
-            {closeError && <Alert variant="error">{closeError}</Alert>}
-            <p className="text-sm text-neutral-700">
-              Cerrar el lugar finaliza el monitoreo: el lugar queda en solo
-              lectura, con responsable y fecha de registro.
-            </p>
-            <Alert variant="warning">
-              Esto también cierra todas sus visitas: quedarán en solo lectura
-              y ninguna admitirá más ediciones.
-            </Alert>
-          </div>
-        </Modal>
-      )}
+      <CloseSiteDialog
+        open={closeDialogOpen}
+        onClose={closeCloseDialog}
+        onConfirm={handleConfirmClose}
+        isPending={isClosing}
+        error={closeError}
+        siteName={site?.name ?? name}
+        pointsCount={pointsCount}
+        visitsTotal={visitsTotal}
+        visitsOpen={visitsOpen}
+        dirty={dirty}
+      />
     </Card>
   );
 }

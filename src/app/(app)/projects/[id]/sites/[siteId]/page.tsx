@@ -4,7 +4,12 @@ import { Breadcrumbs, buttonClasses } from "@/components/design-system";
 import { PointsCatalog } from "@/components/settlement/points-catalog";
 import { SiteForm } from "@/components/settlement/site-form";
 import { createClient } from "@/lib/supabase/server";
-import { getProjectById, getSite, getSitePoints } from "@/lib/supabase/queries";
+import {
+  getProjectById,
+  getSite,
+  getSitePoints,
+  getVisits,
+} from "@/lib/supabase/queries";
 
 interface SitePageProps {
   params: Promise<{ id: string; siteId: string }>;
@@ -25,6 +30,10 @@ export default async function SitePage({ params }: SitePageProps) {
   }
 
   const points = await getSitePoints(supabase, site.id);
+  // El diálogo de cierre resume cuántas visitas se van a congelar (§ 4.6):
+  // cerrar el lugar cierra TODAS sus visitas de una vez.
+  const visits = await getVisits(supabase, site.id);
+  const visitsOpen = visits.filter((v) => v.status !== "closed").length;
   const disabled = site.status === "closed";
 
   return (
@@ -45,7 +54,13 @@ export default async function SitePage({ params }: SitePageProps) {
           Ver análisis y visitas
         </Link>
       </div>
-      <SiteForm projectId={project.id} site={site} />
+      <SiteForm
+        projectId={project.id}
+        site={site}
+        pointsCount={points.length}
+        visitsTotal={visits.length}
+        visitsOpen={visitsOpen}
+      />
       <PointsCatalog siteId={site.id} points={points} disabled={disabled} />
     </div>
   );
