@@ -556,6 +556,44 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          generated_at: string | null
+          generated_by: string
+          id: string
+          included_processes: Json
+          observations: string | null
+          project_id: string
+          title: string
+        }
+        Insert: {
+          generated_at?: string | null
+          generated_by: string
+          id?: string
+          included_processes: Json
+          observations?: string | null
+          project_id: string
+          title: string
+        }
+        Update: {
+          generated_at?: string | null
+          generated_by?: string
+          id?: string
+          included_processes?: Json
+          observations?: string | null
+          project_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settlement_points: {
         Row: {
           code: string
