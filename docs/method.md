@@ -55,7 +55,31 @@ Al cerrar:
 
 - Commit final con mensaje `docs: cerrar fase N — <nombre>` que congela el PRD-de-fase.
 - Se actualiza la tabla de este archivo (`method.md`) y de `prds/README.md` cambiando el estado a `cerrada`.
+- **Se revisa la § 11 de `docs/tecnica/README.md` entrada por entrada, contra
+  el código**, y se reescribe la que la fase haya resuelto. No basta con
+  recordar cuáles se tocaron: hay que comprobarlas. Ver «Por qué este paso
+  existe», abajo.
+- **Se barren las afirmaciones que dejaron de ser ciertas**: conteo de tests,
+  estado de fases, listas de módulos pendientes, y cualquier instrucción que
+  mencione algo que la fase eliminó. Un `grep` de las cifras y los nombres que
+  la fase cambió basta para encontrarlas.
 - Se anota en este mismo archivo, bajo "Aprendizajes", cualquier cosa que el ciclo enseñó y que vale la pena llevar a la siguiente fase.
+
+#### Por qué este paso existe
+
+Porque la lección se aprendió tres veces antes de convertirse en procedimiento.
+La Fase 4 anotó que «un comentario desactualizado cuesta una ronda de
+corrección»; el plan de saneamiento del sistema de diseño necesitó **dos rondas
+de revisión** para eliminar afirmaciones que habían dejado de ser ciertas, y
+dejó escrita la lección casi con estas palabras; y aun así, al cerrar la Fase 6
+quedaron **cuatro entradas de la § 11** describiendo como pendiente algo que esa
+misma fase había resuelto.
+
+Las tres veces el texto era correcto cuando se escribió. Ese es justamente el
+problema: **nada falla cuando una afirmación caduca**. No hay test que lo
+detecte, el `lint` no lo ve y el `build` pasa. Solo lo encuentra alguien que
+compare el documento con el código a propósito — y por eso tiene que ser un
+paso del cierre, no un acto de memoria.
 
 ### 4. Apertura de la siguiente fase
 
@@ -264,6 +288,17 @@ riesgo de la aritmética a la consistencia de lo guardado.
   (`1:1001` vs `1:1.001`) con la causa equivocada. Verificar el código antes de
   actuar sobre lo que la deuda propone es tan necesario como verificar el marco
   teórico: ambos son afirmaciones de otro momento.
+- **Un aprendizaje que no se convierte en procedimiento se vuelve a olvidar.**
+  Al cerrar la fase, cuatro entradas de la § 11 seguían describiendo como
+  pendiente algo que la propia fase había resuelto. Lo revelador no es el
+  descuido, sino que la lección **ya estaba escrita dos veces** —en el cierre
+  de la Fase 4 y en el del plan de saneamiento, esta última casi con las
+  mismas palabras («revisarla explícitamente contra el estado final antes de
+  cerrar»)— y aun así volvió a pasar. Estaba en «Aprendizajes», que se lee al
+  abrir una fase; no estaba en el checklist de cierre, que es cuando hace
+  falta. Se añadió allí. **Regla general: si un aprendizaje describe algo que
+  hay que hacer en un momento concreto del ciclo, su sitio es el checklist de
+  ese momento, no la sección de aprendizajes.**
 - **Una fase que consume datos persistidos destapa lo que las que los producen
   nunca miran.** El seed llevaba tres fases sin escribir los resultados de
   estación —solo los datos de campo— y nadie lo había notado, porque el editor

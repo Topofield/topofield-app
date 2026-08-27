@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-08-26 · Las 6 fases del PRD implementadas · 390 tests ·
+**Última actualización:** 2026-08-26 · Las 6 fases del PRD implementadas · 392 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -749,7 +749,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-390 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
+392 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -761,9 +761,9 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/utils/format.test.ts` | 21 | Fecha relativa y **formateo único de precisión** |
 | `lib/validators/settlement.test.ts` | 21 | Captura y cierre de asentamientos — incluye que la alarma no bloquea |
 | `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
+| `lib/export/polygonal-workbook.test.ts` | 15 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto |
 | `lib/calculations/settlement-persistence.test.ts` | 14 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena |
 | `lib/calculations/tolerances.test.ts` | 13 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
-| `lib/export/polygonal-workbook.test.ts` | 13 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías |
 | `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
