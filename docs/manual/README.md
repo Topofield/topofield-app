@@ -4,9 +4,9 @@ TopoField es una plataforma web para gestionar procesos topográficos: registrar
 los datos de campo, calcularlos con validación en tiempo real y cerrarlos con
 trazabilidad.
 
-Este manual cubre lo que la aplicación permite hacer **hoy**. Las secciones
-marcadas como *pendiente* corresponden a módulos aún no implementados; se
-detallan aquí para que se vea el alcance completo previsto.
+Este manual cubre lo que la aplicación permite hacer **hoy**, que es el
+alcance completo del proyecto: los tres módulos de proceso, el cierre con
+trazabilidad, los informes y la exportación a Excel.
 
 > **Este documento es la fuente de la redacción.** La página `/manual` de la
 > aplicación (`src/app/(app)/manual/`) es una maquetación de este mismo texto
@@ -14,7 +14,7 @@ detallan aquí para que se vea el alcance completo previsto.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-08-25 · Fases 1-5 implementadas.
+**Última actualización:** 2026-08-26 · Las 6 fases del PRD implementadas.
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.

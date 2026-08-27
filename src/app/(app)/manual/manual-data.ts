@@ -359,7 +359,7 @@ export const DESENLACES_CIERRE = [
   },
 ];
 
-// --- § 8 Módulos pendientes ---
+// --- § 10 Informes y § 11 Exportar a Excel ---
 
 // --- § 10 Informes y § 11 Exportar a Excel ---
 

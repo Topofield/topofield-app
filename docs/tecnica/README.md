@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-08-25 · Fases 1-5 implementadas · 296 tests ·
+**Última actualización:** 2026-08-26 · Las 6 fases del PRD implementadas · 390 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -748,7 +748,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-388 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
+390 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -832,9 +832,9 @@ necesita:
    evitable.
 6. **Editor** en `src/components/<modulo>/`, reutilizando el design system.
 7. **Ruta** `src/app/(app)/projects/[id]/<modulo>/[pid]/`.
-8. **Manual**: mover la sección de «Módulos pendientes» al cuerpo **en los
-   dos sitios** (`docs/manual/README.md` y `src/app/(app)/manual/`, mismo
-   commit) y regenerar capturas con `node docs/manual/capturas.mjs`.
+8. **Manual**: escribir su sección **en los dos sitios**
+   (`docs/manual/README.md` y `src/app/(app)/manual/`, mismo commit) y
+   regenerar capturas con `node docs/manual/capturas.mjs`.
 
 Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 [`docs/method.md`](../method.md).
@@ -1190,9 +1190,10 @@ duplicación exigiría un parseador de Markdown, que el proyecto no admite.
 manual, como la verificación de contraste — no hay nada que falle en `npm test`
 si divergen.
 
-Al implementar una fase nueva hay que tocar los dos sitios: mover el módulo
-fuera de «Módulos pendientes» en el Markdown, y en la app quitarlo de
-`MODULOS_PENDIENTES` (`manual-data.ts`) añadiendo su sección en `page.tsx`.
+Al añadir funcionalidad hay que tocar los dos sitios: la sección nueva en el
+Markdown, y en la app su texto en `manual-data.ts` más su sección en
+`page.tsx`. La lista `MODULOS_PENDIENTES` desapareció al cerrar la Fase 6: ya
+no quedan módulos por implementar.
 
 ---
 
