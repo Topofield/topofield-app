@@ -1107,6 +1107,21 @@ cubierta por funciones puras (`settlement-persistence.ts`,
 puede mockear el cliente de Supabase ni montar pruebas de integración contra la
 base local. Toda esa capa depende de verificación manual contra la base.
 
+**Los datos ya creados en producción no tienen resultados de estación.** El
+generador del proyecto de ejemplo (`crear-proyecto-demo.ts`) y el seed
+persistían los datos de campo pero descartaban lo que el motor calculaba por
+estación —ángulo corregido, azimut, proyecciones y coordenadas—. Ambos están
+corregidos, y un usuario nuevo obtiene su demo completa (verificado: 15
+estaciones con coordenadas, frente a 0 antes).
+
+Lo que **no** se corrige solo son los proyectos que ya existen: las 15
+estaciones de la demo en producción siguen con esas columnas vacías, así que
+su exportación a Excel y su informe muestran guiones donde deberían ir
+coordenadas. Se arregla abriendo cada proceso y pulsando **Guardar**, que
+recalcula y persiste — el editor siempre mostró los valores correctos porque
+recalcula en vivo. Un `UPDATE` masivo no es viable: los procesos cerrados son
+inmutables por trigger, y es correcto que lo sean.
+
 **El informe no incluye la gráfica de asentamientos.** La sección de un lugar
 muestra la tabla de la última visita, no la serie temporal. Añadirla exige que
 el SVG se renderice en el servidor con los mismos datos que el panel; es

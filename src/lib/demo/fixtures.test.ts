@@ -73,4 +73,32 @@ describe("fixtures del proyecto demo", () => {
     const r = calcular(porNombre("Enlace"));
     expect(r.linearError).not.toBeNull();
   });
+
+  // El generador del proyecto de ejemplo persiste, además de los campos de
+  // cabecera, los RESULTADOS POR ESTACIÓN (ángulo corregido, azimut,
+  // proyecciones y coordenadas). Durante tres fases no lo hizo, y nadie lo
+  // notó: el editor recalcula en vivo, así que la aplicación se veía bien y
+  // solo el informe y la exportación a Excel —que leen lo persistido— salían
+  // con las celdas vacías. Este test fija que el motor sí produce esos valores
+  // para los fixtures que se muestran al usuario nuevo.
+  it("el motor produce coordenadas para todas las estaciones de la demo", () => {
+    for (const proceso of PROCESOS_DEMO) {
+      const r = calcular(proceso);
+      expect(r.stations).toHaveLength(proceso.stations.length);
+      for (const st of r.stations) {
+        expect(st.north).not.toBeNull();
+        expect(st.east).not.toBeNull();
+        expect(Number.isFinite(st.north as number)).toBe(true);
+        expect(Number.isFinite(st.east as number)).toBe(true);
+      }
+    }
+  });
+
+  it("el motor produce azimut para las estaciones que lo tienen definido", () => {
+    for (const proceso of PROCESOS_DEMO) {
+      const r = calcular(proceso);
+      const conAzimut = r.stations.filter((st) => st.azimuth != null);
+      expect(conAzimut.length).toBeGreaterThan(0);
+    }
+  });
 });
