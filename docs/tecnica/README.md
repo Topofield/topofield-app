@@ -76,7 +76,7 @@ Credenciales de los datos de ejemplo: `seed@topofield.local` / `seed1234`.
 **El registro exige un código de invitación.** Defina `SIGNUP_INVITE_CODE` en
 `.env.local` (ver `.env.example`); sin esa variable nadie puede registrarse, ni
 en local. Y como la confirmación de correo está activa, el mensaje se lee en
-Mailpit: `http://127.0.0.1:54324`.
+Mailpit: `http://127.0.0.1:55324`.
 
 ### Comandos
 
