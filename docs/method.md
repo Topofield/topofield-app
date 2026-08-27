@@ -270,6 +270,15 @@ riesgo de la aritmética a la consistencia de lo guardado.
   recalcula en vivo y la interfaz se veía correcta. Solo se vio cuando el
   informe imprimió una tabla de coordenadas llena de guiones. Todo lo que se
   persiste debería tener al menos un consumidor que lo lea sin recalcular.
+
+  **Y el mismo fallo estaba en producción.** Al revisar el cierre encontré que
+  `crear-proyecto-demo.ts` —que corre para cada usuario nuevo— tenía el defecto
+  idéntico, con un comentario que además afirmaba lo contrario («los resultados
+  que se persisten los calcula el motor real»). Cinco fases sin detectarlo. La
+  lección operativa: cuando se corrige un fallo en un generador de datos, hay
+  que buscar de inmediato sus gemelos — el seed y el generador de la demo
+  comparten forma, y compartían el error. Un comentario que describe una
+  garantía no es prueba de que la garantía exista.
 - **Una regla escrita en un PRD y nunca ejercida no está verificada.** El
   `§4.6` prohibía desde la Fase 3 incluir procesos rechazados en informes. No
   se pudo comprobar hasta que hubo informes, tres fases después. Conviene
