@@ -1127,10 +1127,21 @@ El script queda en el repositorio porque sigue siendo la herramienta correcta
 si vuelve a aparecer un proceso con resultados sin persistir. Corre en modo
 simulación por defecto; escribe solo con `--aplicar`.
 
-**El informe no incluye la gráfica de asentamientos.** La sección de un lugar
-muestra la tabla de la última visita, no la serie temporal. Añadirla exige que
-el SVG se renderice en el servidor con los mismos datos que el panel; es
-viable, pero no entró en la Fase 6.
+**Cerrado — el informe incluye la gráfica de asentamientos.**
+`components/reports/settlement-plot.tsx` dibuja la serie temporal en SVG
+estático, renderizado en el servidor. No reutiliza `settlement-chart.tsx`
+porque aquel es un Client Component con selección de puntos por checkbox, un
+estado que un documento impreso no puede tener; lo que **sí** comparte es todo
+lo que decide la geometría —`chart-scale` y `series-markers`, funciones puras
+con tests—, de modo que el informe no puede dibujar una forma distinta de la
+que se ve en pantalla.
+
+Dos diferencias deliberadas con el panel: dibuja **todos** los puntos del
+catálogo (un informe documenta el monitoreo completo, no una selección), y
+corta la línea donde falta lectura en vez de unir por encima del hueco, que
+dibujaría una pendiente que nadie midió. Verificado en modo `print`: gráfica,
+leyenda y tabla de valores siguen presentes, así que la información no depende
+del canal visual.
 
 **Cerrado — el export de Excel lleva los metadatos geodésicos.** La hoja
 «Resumen» de los tres módulos abre con una sección «Proyecto» que repite

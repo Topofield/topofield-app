@@ -32,6 +32,7 @@ import { ALERT_LEVEL_LABELS, type PointInput, type VisitInput } from "@/types/se
 import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
 import { CANDIDATE_KIND_LABELS, type IncludedProcess } from "@/types/report";
 import { PrintButton } from "@/components/reports/print-button";
+import { SettlementPlot } from "@/components/reports/settlement-plot";
 
 interface PrintPageProps {
   params: Promise<{ id: string; reportId: string }>;
@@ -78,6 +79,8 @@ interface LevelingSection {
 interface SiteSection {
   site: NonNullable<Awaited<ReturnType<typeof getSite>>>;
   points: Awaited<ReturnType<typeof getSitePoints>>;
+  /** Los mismos puntos en la forma que consume la gráfica. */
+  pointInputs: PointInput[];
   visits: Awaited<ReturnType<typeof getVisits>>;
   history: ReturnType<typeof computeHistory>;
 }
@@ -157,7 +160,11 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         visitInputs,
         thresholdsOf(site),
       );
-      return { kind: "site", entry, data: { site, points, visits, history } };
+      return {
+        kind: "site",
+        entry,
+        data: { site, points, pointInputs, visits, history },
+      };
     }),
   );
 
@@ -372,6 +379,10 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                   })()}
                 </dd>
               </dl>
+              <SettlementPlot
+                points={section.data.pointInputs}
+                visits={section.data.history.visits}
+              />
               <table className="report-table">
                 <thead>
                   <tr>

@@ -218,6 +218,33 @@
     color: var(--color-neutral-500);
   }
 
+  .report-plot {
+    margin-top: 1rem;
+    overflow-x: auto;
+  }
+
+  .report-plot svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .report-plot-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    list-style: none;
+    padding: 0;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-neutral-700);
+  }
+
+  .report-plot-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
   .report-observations {
     white-space: pre-wrap;
     font-size: 0.9375rem;
@@ -283,5 +310,11 @@
 
   .report-table thead {
     display: table-header-group;
+  }
+
+  /* La gráfica no debe partirse entre dos páginas: se lee entera o no se lee. */
+  .report-plot {
+    break-inside: avoid;
+    overflow: visible;
   }
 }
