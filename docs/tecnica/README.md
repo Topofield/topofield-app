@@ -398,12 +398,32 @@ directo podía crear un informe en un proyecto propio firmado por otro usuario.
 
 ### Cabeceras de seguridad
 
-`next.config.ts` define `X-Frame-Options: DENY`, `X-Content-Type-Options:
-nosniff` —relevante para los `.xlsx` de exportación—, `Referrer-Policy:
-strict-origin-when-cross-origin` y `Permissions-Policy`, y desactiva
-`poweredByHeader`. **No hay CSP todavía**: Next inyecta estilos y scripts en
-línea, así que exige `'unsafe-inline'` o un nonce por petición, y la decisión
-está pendiente (ver `docs/auditoria-seguridad.md` § 5).
+`next.config.ts` define `Content-Security-Policy`, `X-Frame-Options: DENY`,
+`X-Content-Type-Options: nosniff` —relevante para los `.xlsx` de exportación—,
+`Referrer-Policy: strict-origin-when-cross-origin` y `Permissions-Policy`, y
+desactiva `poweredByHeader`.
+
+La CSP lleva `'unsafe-inline'` en `script-src` y `style-src` **a propósito**:
+Next inyecta el arranque de React y los estilos críticos en línea, y la app usa
+`style={{…}}` en tres componentes. La alternativa —un nonce por petición—
+obliga a generarlo en `src/proxy.ts`, propagarlo y volver dinámicas rutas hoy
+estáticas; no compensa mientras no entre HTML de terceros (hoy hay **cero**
+`dangerouslySetInnerHTML` en `src/`).
+
+Lo que sí cierra, y antes estaba abierto: `frame-ancestors` (clickjacking),
+`base-uri` (inyección de `<base>`), `object-src` y `form-action` (envío de
+formularios a un tercero); `default-src 'self'` corta cualquier origen no
+listado. `connect-src` abre `*.supabase.co` y `wss://*.supabase.co` —hoy no se
+usa realtime, pero el cliente abre el socket en cuanto alguien llame a
+`.channel()`, y sin eso fallaría en silencio—. Las fuentes son de
+`next/font/google`, que las auto-aloja en el build, así que `font-src 'self'`
+basta.
+
+Verificada en navegador (Playwright, con sesión real) sobre dashboard, hub de
+proyecto, editor de asentamientos, catálogo de puntos, informes y manual:
+**cero violaciones de CSP**, estilos aplicados y **descarga real del `.xlsx`
+funcionando**. La descarga no se ve afectada porque es un `<a download>`, una
+navegación normal, no una petición que la CSP filtre.
 
 ### Secretos
 
@@ -1170,14 +1190,13 @@ sin datum una coordenada como «N=1000.000» no identifica su sistema de
 referencia. El helper es `projectPairs` en `lib/export/workbook.ts`, y el
 parámetro es opcional: sin proyecto, la sección simplemente no se escribe.
 
-**Sin CSP.** Tras la auditoría de seguridad (`docs/auditoria-seguridad.md`), la
-app sirve `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y
-`Permissions-Policy`, pero **no** una Content-Security-Policy. Next inyecta
-estilos y scripts en línea, así que una CSP exige `'unsafe-inline'` en
-`style-src` o un nonce por petición —que obligaría a generar el nonce en
-`src/proxy.ts` y volvería dinámicas rutas hoy estáticas—. La propuesta y las
-dos opciones están en el § 5 de la auditoría, pendientes de decisión. Mitiga
-mientras tanto que no hay **ningún** `dangerouslySetInnerHTML` en `src/`.
+**CSP sin nonce (`'unsafe-inline'` en scripts y estilos).** La política que
+sirve la app permite código en línea porque Next lo inyecta y la app usa
+`style={{…}}`. Endurecerla con un nonce por petición exigiría generarlo en
+`src/proxy.ts`, propagarlo por el árbol y volver dinámicas rutas hoy estáticas.
+No se hizo porque hoy no hay superficie que lo justifique: **cero**
+`dangerouslySetInnerHTML` en `src/`. Si algún día se renderiza HTML de
+terceros, esto pasa a ser prioritario. Ver § 5 de `docs/auditoria-seguridad.md`.
 
 **Cerrado — el árbol de dependencias no arrastra vulnerabilidades.** La
 auditoría dejó cinco avisos de `npm audit`; los cinco están cerrados sin perder

@@ -21,7 +21,7 @@ ataque (debe fallar). Un arreglo sin esa doble prueba no se dio por bueno.
 |---|---|---|---|
 | H-1 | ALTA | **Arreglado y verificado** | `supabase/migrations/20260826120000_reject_write_on_closed_site_point.sql` |
 | H-2 | MEDIA | **Arreglado y verificado** | `next` 16.2.4 → 16.3.3 + `overrides` — `npm audit` en **0** |
-| H-3 | MEDIA | **Arreglado (parcial: sin CSP)** | `next.config.ts` — 4 cabeceras + `poweredByHeader: false` |
+| H-3 | MEDIA | **Arreglado y verificado** | `next.config.ts` — CSP + 4 cabeceras + `poweredByHeader: false` |
 | H-4 | BAJA | **Arreglado y verificado** | `supabase/migrations/20260826120100_reports_insert_check_generated_by.sql` |
 | § 4 · Redirect URLs | — | **Comprobado: no explotable** | Sin cambios; la allowlist de producción ya era exacta |
 
@@ -112,10 +112,20 @@ contra la nube fue una **lectura** de la configuración de Auth, § 4).
   config):** las cuatro cabeceras aparecen en `/sign-in` y también en la ruta de
   exportación `.xlsx` —que es donde `nosniff` importa—; `x-powered-by` ya no se
   emite. Las páginas siguen renderizando.
-- **Pendiente de decisión: la CSP.** Es la parte con riesgo real de romper
-  estilos y el visor de Excel, así que no se aplicó por cuenta propia. Ver la
-  propuesta al final de este documento. Mientras tanto, `frame-ancestors` queda
-  cubierto por `X-Frame-Options: DENY`.
+- **CSP aplicada el 2026-08-27 (Opción A).** `default-src 'self'` con
+  `'unsafe-inline'` en `script-src`/`style-src`, `connect-src` hacia
+  `*.supabase.co` (más `wss:`), y `frame-ancestors 'none'`, `base-uri 'self'`,
+  `form-action 'self'`, `object-src 'none'`.
+- **Verificada en navegador**, no solo comprobando que la cabecera se sirve:
+  con Playwright y sesión real sobre dashboard, hub de proyecto, editor de
+  asentamientos, catálogo de puntos, informes y manual → **cero violaciones de
+  CSP**, estilos aplicados (fondo `rgb(248,249,250)`, el del sistema de diseño)
+  y **descarga real del `.xlsx` desde la interfaz**: 12 429 bytes. La descarga
+  no se ve afectada porque es un `<a download>`, una navegación normal.
+- Un `React #418` (hydration mismatch de texto) que apareció en una pasada
+  resultó **ajeno a la CSP**: depende del recorrido, no de la política —con la
+  misma secuencia, con y sin CSP, no aparece—. Queda como observación, no como
+  regresión de este cambio.
 
 ### H-4 — arreglado
 
@@ -237,7 +247,7 @@ Ordenados por severidad.
 
 ### H-3 · MEDIA · Sin cabeceras de seguridad en producción (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
 
-> **Estado: [ARREGLADO — sin CSP]** — ver § 0.
+> **Estado: [ARREGLADO]** — ver § 0. La CSP se aplicó el 2026-08-27 (§ 5).
 
 - **Dónde:** `next.config.ts` no define `headers()`. La respuesta de producción
   (`https://topofield-app.vercel.app/sign-in`) trae `strict-transport-security` (bien) pero
@@ -391,20 +401,15 @@ Ordenados por severidad.
 
 ---
 
-## 5. Pendiente de tu decisión — la CSP (parte de H-3)
+## 5. La CSP (parte de H-3) — decidida y aplicada
 
-Las otras cuatro cabeceras ya están puestas porque no tienen efectos
-secundarios. La CSP sí los tiene, así que va aquí en vez de aplicada.
+**Decisión: Opción A**, aplicada el 2026-08-27. Se recoge aquí el porqué.
 
-**El problema:** Next inyecta estilos y scripts *en línea* en el HTML que sirve
-(el arranque de React, los estilos críticos), y la app usa además `style={{…}}`
-en tres componentes (`settlement-chart.tsx:255` y dos en la página del sistema
-de diseño). Una CSP estricta sin más rompe eso.
+**El problema:** Next inyecta estilos y scripts *en línea* (el arranque de
+React, los estilos críticos), y la app usa `style={{…}}` en tres componentes.
+Una CSP estricta sin más rompe eso.
 
-Dos opciones reales:
-
-**Opción A — CSP con `'unsafe-inline'` en estilos (recomendada aquí).**
-Estática, se pone en `next.config.ts` junto a las demás y no toca código:
+**Lo aplicado:**
 
 ```
 default-src 'self';
@@ -412,34 +417,31 @@ script-src 'self' 'unsafe-inline';
 style-src 'self' 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self';
-connect-src 'self' https://<ref>.supabase.co https://*.supabase.co;
+connect-src 'self' https://*.supabase.co wss://*.supabase.co;
 frame-ancestors 'none';
 base-uri 'self';
 form-action 'self';
 object-src 'none'
 ```
 
-Cierra clickjacking, inyección de `<base>`, `<object>` y exfiltración a
-dominios arbitrarios. No protege frente a XSS *inline*, pero la auditoría
-verificó **cero** `dangerouslySetInnerHTML` en todo `src/`, así que hoy esa
-superficie no existe. Riesgo de rotura: **bajo**. Las fuentes son de
-`next/font/google`, que las auto-aloja en el build, así que `font-src 'self'`
-basta y no hace falta abrir `fonts.gstatic.com`.
+Cierra clickjacking, inyección de `<base>`, `<object>` y el envío de
+formularios a un tercero, y corta cualquier origen no listado. No protege
+frente a XSS *inline*, pero la auditoría verificó **cero**
+`dangerouslySetInnerHTML` en todo `src/`, así que hoy esa superficie no existe.
+`font-src 'self'` basta porque `next/font/google` auto-aloja las fuentes en el
+build; `wss:` va abierto porque el cliente de Supabase abre el socket en cuanto
+alguien llame a `.channel()`, y fallaría en silencio.
 
-**Opción B — CSP con nonce por petición.** Más estricta (elimina
-`'unsafe-inline'` en scripts), pero exige generar un nonce en `src/proxy.ts`,
-propagarlo y volver dinámicas rutas hoy estáticas — con el coste de rendimiento
-que eso implica. Es la opción correcta si algún día entra HTML de terceros;
-hoy, para una monografía sin `dangerouslySetInnerHTML`, es complejidad que no
-compra mucho.
+**La opción descartada — nonce por petición (B).** Más estricta (elimina
+`'unsafe-inline'` en scripts), pero exige generar el nonce en `src/proxy.ts`,
+propagarlo y volver dinámicas rutas hoy estáticas. Queda anotada como trabajo
+futuro en la doc técnica (§ 11): pasa a ser prioritaria si algún día se
+renderiza HTML de terceros.
 
-**Mi recomendación: la Opción A**, y dejar la B anotada como trabajo futuro.
-En cualquier caso, antes de darla por buena hay que **verificarla en el
-servidor de producción local** —no solo comprobar que el config compila—
-cargando el dashboard, un editor y una **descarga `.xlsx`**, con la consola del
-navegador abierta para cazar bloqueos de CSP.
-
-**No la he aplicado.** Dime cuál quieres y la pongo con esa verificación.
+**Verificación** (la que importaba, porque una CSP rompe en silencio): con
+Playwright y sesión real, recorriendo dashboard, hub de proyecto, editor de
+asentamientos, catálogo de puntos, informes y manual → **cero violaciones**,
+estilos aplicados y descarga real del `.xlsx` desde la interfaz (12 429 bytes).
 
 ---
 
