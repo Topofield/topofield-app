@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { Alert } from "@/components/design-system";
 import { linearScale, niceTicks } from "@/lib/design/chart-scale";
+import {
+  MAX_DISTINGUISHABLE_SERIES,
+  seriesStyle,
+  type SeriesMarker,
+} from "@/lib/design/series-markers";
 import type { PointInput, VisitResult } from "@/types/settlement";
 
 interface SettlementChartProps {
@@ -12,51 +17,6 @@ interface SettlementChartProps {
 }
 
 /** Marcadores por índice de serie. El color solo refuerza; la forma distingue. */
-const SERIES_MARKERS = [
-  "circle",
-  "square",
-  "triangle",
-  "diamond",
-  "cross",
-] as const;
-type SeriesMarker = (typeof SERIES_MARKERS)[number];
-
-/**
- * Colores de refuerzo por índice de serie (canal secundario, no el único).
- *
- * Formas y colores ciclan con longitudes COPRIMAS (5 y 4), así que la
- * combinación forma+color no se repite hasta la serie 20 (mcm(5,4)). Con
- * longitudes iguales, la serie 6 habría repetido forma y color de la
- * primera y las dos habrían sido indistinguibles por cualquiera de los dos
- * canales a la vez: un lugar con 9 puntos de control (una grilla 3×3 es
- * disposición estándar en el marco teórico de este dominio, y el caso de la
- * presa usa 10) lo habría provocado de inmediato al seleccionar todos.
- *
- * `warning-500` se dejó fuera de los 4: es un marrón-anaranjado demasiado
- * cercano a `semaphore-orange`, el color menos distinguible del resto.
- */
-const SERIES_COLORS = [
-  "#187aae", // primary-500
-  "#1e8e4e", // semaphore-green
-  "#c25e08", // semaphore-orange
-  "#c0392b", // danger-500
-] as const;
-
-/**
- * A partir de esta cantidad de series seleccionadas, alguna pareja repite
- * forma y color a la vez: mcm(longitud de formas, longitud de colores).
- */
-function lcm(a: number, b: number): number {
-  function gcd(x: number, y: number): number {
-    return y === 0 ? x : gcd(y, x % y);
-  }
-  return (a * b) / gcd(a, b);
-}
-const MAX_DISTINGUISHABLE_SERIES = lcm(
-  SERIES_MARKERS.length,
-  SERIES_COLORS.length,
-);
-
 const MARKER_SIZE = 5;
 
 const CHART_WIDTH = 720;
@@ -105,6 +65,56 @@ function Marker({
           <line x1={cx - r} y1={cy - r} x2={cx + r} y2={cy + r} />
           <line x1={cx - r} y1={cy + r} x2={cx + r} y2={cy - r} />
         </g>
+      );
+    case "triangle-down": {
+      const points = `${cx},${cy + r} ${cx + r},${cy - r} ${cx - r},${cy - r}`;
+      return <polygon points={points} fill={color} />;
+    }
+    case "plus":
+      return (
+        <g stroke={color} strokeWidth={2.5} strokeLinecap="round">
+          <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} />
+          <line x1={cx} y1={cy - r} x2={cx} y2={cy + r} />
+        </g>
+      );
+    case "star": {
+      // Estrella de cuatro puntas: rombo con los lados hundidos hacia el
+      // centro. Silueta inconfundible frente al rombo lleno.
+      const i = r * 0.4;
+      const points = [
+        `${cx},${cy - r}`,
+        `${cx + i},${cy - i}`,
+        `${cx + r},${cy}`,
+        `${cx + i},${cy + i}`,
+        `${cx},${cy + r}`,
+        `${cx - i},${cy + i}`,
+        `${cx - r},${cy}`,
+        `${cx - i},${cy - i}`,
+      ].join(" ");
+      return <polygon points={points} fill={color} />;
+    }
+    case "ring":
+      return (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r - 1}
+          fill="none"
+          stroke={color}
+          strokeWidth={2.5}
+        />
+      );
+    case "square-hollow":
+      return (
+        <rect
+          x={cx - r + 1}
+          y={cy - r + 1}
+          width={(r - 1) * 2}
+          height={(r - 1) * 2}
+          fill="none"
+          stroke={color}
+          strokeWidth={2.5}
+        />
       );
     default:
       return null;
@@ -165,8 +175,7 @@ export function SettlementChart({ points, visits }: SettlementChartProps) {
     });
     return {
       point,
-      shape: SERIES_MARKERS[index % SERIES_MARKERS.length] ?? "circle",
-      color: SERIES_COLORS[index % SERIES_COLORS.length] ?? "#187aae",
+      ...seriesStyle(index),
       values,
     };
   });
