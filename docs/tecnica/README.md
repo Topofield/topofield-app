@@ -1132,10 +1132,13 @@ muestra la tabla de la última visita, no la serie temporal. Añadirla exige que
 el SVG se renderice en el servidor con los mismos datos que el panel; es
 viable, pero no entró en la Fase 6.
 
-**El export de Excel no lleva las coordenadas del proyecto ni el datum.** Las
-tres hojas describen el proceso, y los metadatos geodésicos del proyecto
-(datum, proyección, origen) solo aparecen en el informe. Para un entregable
-que viaja suelto, convendría repetirlos en la hoja «Resumen».
+**Cerrado — el export de Excel lleva los metadatos geodésicos.** La hoja
+«Resumen» de los tres módulos abre con una sección «Proyecto» que repite
+nombre, cliente, ubicación, datum, proyección, orden de precisión y equipo.
+Un `.xlsx` viaja suelto —se adjunta a un correo y se abre meses después—, y
+sin datum una coordenada como «N=1000.000» no identifica su sistema de
+referencia. El helper es `projectPairs` en `lib/export/workbook.ts`, y el
+parámetro es opcional: sin proyecto, la sección simplemente no se escribe.
 
 ---
 

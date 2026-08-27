@@ -10,7 +10,10 @@ import {
   type PolygonalProcessRow,
   type StationRow,
 } from "@/lib/export/polygonal-workbook";
-import { safeFilename } from "@/lib/export/workbook";
+import {
+  safeFilename,
+  type ProjectMetadata,
+} from "@/lib/export/workbook";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -51,6 +54,7 @@ export async function GET(
   const workbook = buildPolygonalWorkbook(
     process as unknown as PolygonalProcessRow,
     stations as unknown as StationRow[],
+    project as unknown as ProjectMetadata,
   );
   const buffer = await workbook.xlsx.writeBuffer();
 

@@ -141,3 +141,51 @@ export function safeFilename(name: string, suffix: string): string {
     .slice(0, 60);
   return `${base || "proceso"}-${suffix}.xlsx`;
 }
+
+/**
+ * Metadatos geodésicos del proyecto, para la hoja «Resumen».
+ *
+ * Un `.xlsx` viaja suelto —se adjunta a un correo, se abre meses después— y
+ * fuera de la aplicación nada dice en qué datum están esas coordenadas. Sin
+ * estos campos, un archivo con «N=1000.000 E=1100.000» es ambiguo: la cifra
+ * sola no identifica el sistema de referencia. El informe ya los lleva en su
+ * portada; el libro debe llevarlos también.
+ */
+export interface ProjectMetadata {
+  name: string;
+  client: string | null;
+  location: string | null;
+  datum: string | null;
+  projection: string | null;
+  precision_order: string;
+  equipment_brand: string | null;
+  equipment_model: string | null;
+  equipment_serial: string | null;
+}
+
+/** Pares etiqueta/valor del proyecto, listos para `writePairs`. */
+export function projectPairs(
+  project: ProjectMetadata | null | undefined,
+  precisionOrderLabel: string,
+): [string, string | number | null][] {
+  if (!project) return [];
+  const equipo = [project.equipment_brand, project.equipment_model]
+    .filter(Boolean)
+    .join(" ");
+  return [
+    ["Proyecto", project.name],
+    ["Cliente", project.client],
+    ["Ubicación", project.location],
+    ["Datum", project.datum],
+    ["Proyección", project.projection],
+    ["Orden de precisión", precisionOrderLabel],
+    [
+      "Equipo",
+      equipo === ""
+        ? null
+        : project.equipment_serial
+          ? `${equipo} · s/n ${project.equipment_serial}`
+          : equipo,
+    ],
+  ];
+}

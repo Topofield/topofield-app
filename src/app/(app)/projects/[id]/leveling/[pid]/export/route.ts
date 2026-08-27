@@ -10,7 +10,10 @@ import {
   type LevelingProcessRow,
   type LevelingReadingRow,
 } from "@/lib/export/leveling-workbook";
-import { safeFilename } from "@/lib/export/workbook";
+import {
+  safeFilename,
+  type ProjectMetadata,
+} from "@/lib/export/workbook";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -44,6 +47,7 @@ export async function GET(
   const workbook = buildLevelingWorkbook(
     process as unknown as LevelingProcessRow,
     readings as unknown as LevelingReadingRow[],
+    project as unknown as ProjectMetadata,
   );
   const buffer = await workbook.xlsx.writeBuffer();
 

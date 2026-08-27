@@ -4,6 +4,8 @@ import type ExcelJS from "exceljs";
 import {
   DECIMALS,
   newWorkbook,
+  projectPairs,
+  type ProjectMetadata,
   setHeaders,
   setSheetTitle,
   writePairs,
@@ -11,6 +13,7 @@ import {
   writeSection,
 } from "./workbook";
 import { PROCESS_STATUS_LABELS, type ProcessStatus } from "@/types/polygonal";
+import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
 import {
   LEVELING_TYPE_LABELS,
   POINT_TYPE_LABELS,
@@ -171,14 +174,28 @@ function sheetSummary(
   wb: ExcelJS.Workbook,
   process: LevelingProcessRow,
   readings: LevelingReadingRow[],
+  project: ProjectMetadata | null,
 ): void {
   const s = wb.addWorksheet("Resumen");
   s.columns = [{ width: 32 }, { width: 34 }];
 
   setSheetTitle(s, `${process.name} — resumen`);
 
-  writeSection(s, 3, "Proceso");
-  let row = writePairs(s, 4, [
+  let row0 = 3;
+  const pares = projectPairs(
+    project,
+    project
+      ? PRECISION_ORDER_LABELS[project.precision_order as PrecisionOrder] ??
+        project.precision_order
+      : "",
+  );
+  if (pares.length > 0) {
+    writeSection(s, row0, "Proyecto");
+    row0 = writePairs(s, row0 + 1, pares) + 1;
+  }
+
+  writeSection(s, row0, "Proceso");
+  let row = writePairs(s, row0 + 1, [
     ["Nombre", process.name],
     ["Tipo", LEVELING_TYPE_LABELS[process.type as LevelingType] ?? process.type],
     ["Estado", PROCESS_STATUS_LABELS[process.status]],
@@ -221,6 +238,7 @@ function sheetSummary(
 export function buildLevelingWorkbook(
   process: LevelingProcessRow,
   readings: LevelingReadingRow[],
+  project: ProjectMetadata | null = null,
 ): ExcelJS.Workbook {
   const wb = newWorkbook();
   // Ida antes que vuelta, y dentro de cada recorrido por orden de lectura.
@@ -230,6 +248,6 @@ export function buildLevelingWorkbook(
   });
   sheetRawData(wb, process, ordered);
   sheetCalculations(wb, process, ordered);
-  sheetSummary(wb, process, ordered);
+  sheetSummary(wb, process, ordered, project);
   return wb;
 }

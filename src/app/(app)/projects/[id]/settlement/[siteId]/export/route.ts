@@ -15,7 +15,10 @@ import {
   type SiteRow,
   type VisitRow,
 } from "@/lib/export/settlement-workbook";
-import { safeFilename } from "@/lib/export/workbook";
+import {
+  safeFilename,
+  type ProjectMetadata,
+} from "@/lib/export/workbook";
 import type { PointInput, VisitInput } from "@/types/settlement";
 
 const XLSX_MIME =
@@ -80,6 +83,7 @@ export async function GET(
     visits as unknown as VisitRow[],
     history,
     thresholds,
+    project as unknown as ProjectMetadata,
   );
   const buffer = await workbook.xlsx.writeBuffer();
 

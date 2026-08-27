@@ -10,6 +10,8 @@ import type ExcelJS from "exceljs";
 import {
   DECIMALS,
   newWorkbook,
+  projectPairs,
+  type ProjectMetadata,
   setHeaders,
   setSheetTitle,
   writePairs,
@@ -22,6 +24,7 @@ import {
   type SettlementHistory,
 } from "@/types/settlement";
 import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
+import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
 import type { Thresholds } from "@/types/settlement";
 
 /**
@@ -231,6 +234,7 @@ function sheetSummary(
   visits: VisitRow[],
   history: SettlementHistory,
   thresholds: Thresholds,
+  project: ProjectMetadata | null,
 ): void {
   const s = wb.addWorksheet("Resumen");
   s.columns = [{ width: 34 }, { width: 34 }];
@@ -242,8 +246,21 @@ function sheetSummary(
     (t) => t === "accelerating",
   ).length;
 
-  writeSection(s, 3, "Lugar");
-  let row = writePairs(s, 4, [
+  let row0 = 3;
+  const pares = projectPairs(
+    project,
+    project
+      ? PRECISION_ORDER_LABELS[project.precision_order as PrecisionOrder] ??
+        project.precision_order
+      : "",
+  );
+  if (pares.length > 0) {
+    writeSection(s, row0, "Proyecto");
+    row0 = writePairs(s, row0 + 1, pares) + 1;
+  }
+
+  writeSection(s, row0, "Lugar");
+  let row = writePairs(s, row0 + 1, [
     ["Nombre", site.name],
     ["Descripción", site.description],
     [
@@ -299,11 +316,12 @@ export function buildSettlementWorkbook(
   visits: VisitRow[],
   history: SettlementHistory,
   thresholds: Thresholds,
+  project: ProjectMetadata | null = null,
 ): ExcelJS.Workbook {
   const wb = newWorkbook();
   const ordered = [...visits].sort((a, b) => a.date.localeCompare(b.date));
   sheetRawData(wb, site, points, ordered, history);
   sheetCalculations(wb, site, points, ordered, history);
-  sheetSummary(wb, site, points, ordered, history, thresholds);
+  sheetSummary(wb, site, points, ordered, history, thresholds, project);
   return wb;
 }

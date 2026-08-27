@@ -4,6 +4,8 @@ import type ExcelJS from "exceljs";
 import {
   DECIMALS,
   newWorkbook,
+  projectPairs,
+  type ProjectMetadata,
   setHeaders,
   setSheetTitle,
   writePairs,
@@ -19,6 +21,7 @@ import {
   type ProcessStatus,
 } from "@/types/polygonal";
 import { formatPrecision } from "@/lib/utils/format";
+import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
 
 /** Fila de `polygonal_stations`, tal como llega de la base. */
 export interface StationRow {
@@ -204,14 +207,25 @@ function sheetSummary(
   wb: ExcelJS.Workbook,
   process: PolygonalProcessRow,
   stations: StationRow[],
+  project: ProjectMetadata | null,
 ): void {
   const s = wb.addWorksheet("Resumen");
   s.columns = [{ width: 30 }, { width: 34 }];
 
   setSheetTitle(s, `${process.name} — resumen`);
 
-  writeSection(s, 3, "Proceso");
-  let row = writePairs(s, 4, [
+  let row0 = 3;
+  const pares = projectPairs(
+    project,
+    project ? PRECISION_ORDER_LABELS[project.precision_order as PrecisionOrder] ?? project.precision_order : "",
+  );
+  if (pares.length > 0) {
+    writeSection(s, row0, "Proyecto");
+    row0 = writePairs(s, row0 + 1, pares) + 1;
+  }
+
+  writeSection(s, row0, "Proceso");
+  let row = writePairs(s, row0 + 1, [
     ["Nombre", process.name],
     ["Tipo", POLYGONAL_TYPE_LABELS[process.type]],
     ["Estado", PROCESS_STATUS_LABELS[process.status]],
@@ -259,6 +273,7 @@ function sheetSummary(
 export function buildPolygonalWorkbook(
   process: PolygonalProcessRow,
   stations: StationRow[],
+  project: ProjectMetadata | null = null,
 ): ExcelJS.Workbook {
   const wb = newWorkbook();
   const ordered = [...stations].sort(
@@ -266,6 +281,6 @@ export function buildPolygonalWorkbook(
   );
   sheetRawData(wb, process, ordered);
   sheetCalculations(wb, process, ordered);
-  sheetSummary(wb, process, ordered);
+  sheetSummary(wb, process, ordered, project);
   return wb;
 }

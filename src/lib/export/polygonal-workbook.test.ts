@@ -175,6 +175,47 @@ describe("buildPolygonalWorkbook", () => {
     const wb = buildPolygonalWorkbook(process(), []);
     expect(wb.worksheets).toHaveLength(3);
   });
+
+  // Un .xlsx viaja suelto: se adjunta a un correo y se abre meses después,
+  // fuera de la aplicación. Sin datum, «N=1000.000» no identifica el sistema
+  // de referencia y las coordenadas son ambiguas.
+  it("incluye los metadatos geodésicos del proyecto en el resumen", () => {
+    const wb = buildPolygonalWorkbook(process(), [station()], {
+      name: "Lote catastral",
+      client: "Cliente Demo",
+      location: "Bogotá",
+      datum: "MAGNA-SIRGAS",
+      projection: "Origen Bogotá",
+      precision_order: "tercer_orden",
+      equipment_brand: "Leica",
+      equipment_model: "TS06 Plus",
+      equipment_serial: "LCS-2026-001",
+    });
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res
+      .getColumn(1)
+      .values.filter((v): v is string => typeof v === "string");
+    const valores = res
+      .getColumn(2)
+      .values.filter((v): v is string => typeof v === "string");
+
+    expect(etiquetas).toContain("Datum");
+    expect(etiquetas).toContain("Proyección");
+    expect(valores).toContain("MAGNA-SIRGAS");
+    expect(valores).toContain("Tercer orden");
+    expect(valores).toContain("Leica TS06 Plus · s/n LCS-2026-001");
+  });
+
+  // Sin proyecto el libro sigue siendo válido: la sección simplemente no sale.
+  it("omite la sección de proyecto si no se pasa", () => {
+    const wb = buildPolygonalWorkbook(process(), [station()]);
+    const etiquetas = wb
+      .getWorksheet("Resumen")!
+      .getColumn(1)
+      .values.filter((v): v is string => typeof v === "string");
+    expect(etiquetas).not.toContain("Datum");
+    expect(etiquetas).toContain("Nombre");
+  });
 });
 
 describe("safeFilename", () => {
