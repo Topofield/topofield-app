@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { dmsToDecimal } from "@/lib/calculations/angles";
+import { computeLeveling } from "@/lib/calculations/leveling";
 import { computePolygonal } from "@/lib/calculations/polygonal";
-import { PROCESOS_DEMO, PROYECTO_DEMO, type ProcesoDemo } from "./fixtures";
+import { computeHistory } from "@/lib/calculations/settlement";
+import { thresholdsFor } from "@/lib/calculations/tolerances";
+import {
+  ASENTAMIENTO_DEMO,
+  NIVELACION_DEMO,
+  PROCESOS_DEMO,
+  PROYECTO_DEMO,
+  type ProcesoDemo,
+} from "./fixtures";
 
 /** Pasa un fixture por el motor real, con el orden del proyecto demo. */
 function calcular(proceso: ProcesoDemo) {
@@ -100,5 +109,96 @@ describe("fixtures del proyecto demo", () => {
       const conAzimut = r.stations.filter((st) => st.azimuth != null);
       expect(conAzimut.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("fixture de nivelación del demo", () => {
+  it("es un circuito cerrado y conforme (alimenta su informe)", () => {
+    const result = computeLeveling({
+      type: NIVELACION_DEMO.type,
+      startElevation: NIVELACION_DEMO.startElevation,
+      endElevation: NIVELACION_DEMO.endElevation ?? null,
+      order: PROYECTO_DEMO.precisionOrder,
+      totalDistanceKm: NIVELACION_DEMO.totalDistanceKm,
+      forward: NIVELACION_DEMO.forward.map((r) => ({
+        pointCode: r.code,
+        pointType: r.type,
+        backsight: r.back ?? null,
+        foresight: r.fore ?? null,
+        distanceM: r.distanceM ?? null,
+        distanceAccumulatedKm: r.distanceAccumKm ?? null,
+      })),
+      return: null,
+    });
+
+    expect(NIVELACION_DEMO.type).toBe("closed");
+    expect(result.closureErrorMm).not.toBeNull();
+    expect(result.toleranceMm).not.toBeNull();
+    // Conforme: el error de cierre queda por debajo de la tolerancia.
+    expect(Math.abs(result.closureErrorMm as number)).toBeLessThan(
+      result.toleranceMm as number,
+    );
+    expect(result.meetsTolerance).toBe(true);
+  });
+});
+
+describe("fixture de asentamientos del demo", () => {
+  function cotaEn(code: string, initialElevation: number, i: number): number {
+    const acc = ASENTAMIENTO_DEMO.partialsMm[code]!
+      .slice(0, i + 1)
+      .reduce((a, b) => a + b, 0);
+    return initialElevation + acc / 1000;
+  }
+
+  function historia() {
+    const points = ASENTAMIENTO_DEMO.points.map((p) => ({
+      id: p.code,
+      code: p.code,
+      northing: p.northing,
+      easting: p.easting,
+      initialElevation: p.initialElevation,
+    }));
+    const visits = ASENTAMIENTO_DEMO.visitDates.map((date, i) => ({
+      id: `v-${i}`,
+      visitNumber: i,
+      date,
+      readings: ASENTAMIENTO_DEMO.points.map((p) => ({
+        pointId: p.code,
+        elevation: cotaEn(p.code, p.initialElevation, i),
+      })),
+    }));
+    return computeHistory(points, visits, thresholdsFor("edificio"));
+  }
+
+  it("cada punto tiene un parcial por cada fecha de visita", () => {
+    for (const p of ASENTAMIENTO_DEMO.points) {
+      expect(ASENTAMIENTO_DEMO.partialsMm[p.code]).toHaveLength(
+        ASENTAMIENTO_DEMO.visitDates.length,
+      );
+    }
+  });
+
+  it("el semáforo no sale todo verde: hay variedad de alertas", () => {
+    const history = historia();
+    const todas = history.visits.flatMap((v) =>
+      v.readings.map((r) => r.alertStatus),
+    );
+    expect(new Set(todas).size).toBeGreaterThan(1);
+  });
+
+  it("P-06 (esquina más cargada) llega a alarma en alguna visita", () => {
+    const history = historia();
+    const p06 = history.visits.flatMap((v) =>
+      v.readings.filter((r) => r.pointId === "P-06").map((r) => r.alertStatus),
+    );
+    expect(p06).toContain("alarm");
+  });
+});
+
+describe("material de los informes del demo", () => {
+  it("hay exactamente una poligonal cerrada, y es el «cierre conforme»", () => {
+    const cerradas = PROCESOS_DEMO.filter((p) => p.status === "closed");
+    expect(cerradas).toHaveLength(1);
+    expect(cerradas[0]!.name).toContain("cierre conforme");
   });
 });

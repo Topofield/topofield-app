@@ -1,67 +1,31 @@
 // Crea el proyecto de ejemplo de un usuario nuevo.
 //
 // Se ejecuta con el cliente del propio usuario, sujeto a RLS: las políticas de
-// inserción (`projects_insert_own`, `polygonal_processes_insert_via_project`,
-// `polygonal_stations_insert_via_project`) le permiten crear sus propios datos.
-// Así no hace falta introducir un cliente con la llave secreta en `src/`, y se
-// mantiene la garantía de que `SUPABASE_SECRET_KEY` solo vive en el seed.
+// inserción le permiten crear sus propios datos. Así no hace falta introducir
+// un cliente con la llave secreta en `src/`, y se mantiene la garantía de que
+// `SUPABASE_SECRET_KEY` solo vive en el seed.
 //
-// Los resultados que se persisten los calcula el motor real, nunca se escriben
-// a mano — misma estrategia que `scripts/seed.mjs`.
+// Este archivo solo ORQUESTA: reclama la marca, crea el proyecto y sus lugares,
+// delega cada módulo en su `insertar-*.ts`, y arma los informes. Los resultados
+// que se persisten los calcula el motor real, nunca se escriben a mano — misma
+// estrategia que `scripts/seed.mjs`.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
-import { computePolygonal } from "@/lib/calculations/polygonal";
 import type { Database } from "@/types/database";
 import type { PrecisionOrder } from "@/types/project";
-import { PROCESOS_DEMO, PROYECTO_DEMO, type ProcesoDemo } from "./fixtures";
+import type { IncludedProcess } from "@/types/report";
+import {
+  ASENTAMIENTO_DEMO,
+  NIVELACION_DEMO,
+  PROCESOS_DEMO,
+  PROYECTO_DEMO,
+} from "./fixtures";
+import { insertarAsentamiento } from "./insertar-asentamiento";
+import { insertarInforme } from "./insertar-informe";
+import { insertarNivelacion } from "./insertar-nivelacion";
+import { insertarPoligonal } from "./insertar-poligonal";
 
 type Client = SupabaseClient<Database>;
-
-/**
- * Resultado del motor y los campos de cabecera que se persisten.
- *
- * Devuelve el resultado COMPLETO, no solo los campos de cabecera, porque las
- * estaciones también persisten los suyos (ángulo corregido, azimut,
- * proyecciones y coordenadas). Antes se descartaba, y el proyecto de ejemplo
- * quedaba con las columnas de cálculo vacías: la aplicación se veía bien
- * porque el editor recalcula en vivo, pero el informe y la exportación a
- * Excel —que leen lo persistido— mostraban guiones.
- */
-function resultadosDe(proceso: ProcesoDemo, order: PrecisionOrder) {
-  const r = computePolygonal({
-    type: proceso.type,
-    startNorth: proceso.startNorth,
-    startEast: proceso.startEast,
-    startAzimuth: dmsToDecimal(...proceso.startAz),
-    endNorth: proceso.endNorth ?? null,
-    endEast: proceso.endEast ?? null,
-    endAzimuth: null,
-    order,
-    // Las poligonales sin cierre no reparten error, pero el motor exige un
-    // método: Bowditch es el que usa la aplicación por defecto.
-    method: proceso.correctionMethod ?? "bowditch",
-    stations: proceso.stations.map((st) => ({
-      pointCode: st.code,
-      angle: st.angle ? dmsToDecimal(...st.angle) : Number.NaN,
-      deflectionDirection: st.dir ?? null,
-      distance: st.distance ?? Number.NaN,
-    })),
-  });
-
-  const rel = r.relativePrecision;
-  return {
-    resultado: r,
-    campos: {
-      angular_error_seconds: r.angularError,
-      linear_error: r.linearError,
-      perimeter: r.perimeter,
-      relative_precision:
-        rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
-      meets_tolerance: r.meetsTolerance,
-    },
-  };
-}
 
 /**
  * Reclama la marca de creación de la demo.
@@ -82,97 +46,6 @@ async function reclamarMarca(supabase: Client, userId: string): Promise<boolean>
 
   if (error) throw error;
   return (data?.length ?? 0) > 0;
-}
-
-async function insertarProceso(
-  supabase: Client,
-  projectId: string,
-  siteId: string,
-  userId: string,
-  proceso: ProcesoDemo,
-  order: PrecisionOrder,
-): Promise<void> {
-  const cerrado = proceso.status === "closed";
-  const calculo = resultadosDe(proceso, order);
-
-  const { data: creado, error } = await supabase
-    .from("polygonal_processes")
-    .insert({
-      project_id: projectId,
-      site_id: siteId,
-      name: proceso.name,
-      type: proceso.type,
-      angle_type: proceso.angleType,
-      start_point_code: proceso.startPointCode,
-      start_north: proceso.startNorth,
-      start_east: proceso.startEast,
-      start_azimuth_deg: proceso.startAz[0],
-      start_azimuth_min: proceso.startAz[1],
-      start_azimuth_sec: proceso.startAz[2],
-      end_point_code: proceso.endPointCode ?? null,
-      end_north: proceso.endNorth ?? null,
-      end_east: proceso.endEast ?? null,
-      correction_method: proceso.correctionMethod ?? null,
-      // Nace abierto aunque el fixture lo quiera cerrado: los triggers de
-      // inmutabilidad rechazan escribir estaciones bajo un proceso ya cerrado.
-      // El cierre se aplica al final, igual que hace la aplicación.
-      status: cerrado ? "calculated" : proceso.status,
-      ...calculo.campos,
-      notes: proceso.notes,
-    })
-    .select("id")
-    .single();
-
-  if (error) throw error;
-
-  // Se persisten también los resultados por estación, igual que hace
-  // `savePolygonalProcessAction`: sin ellos, el informe y la exportación a
-  // Excel del proyecto de ejemplo saldrían con las coordenadas vacías.
-  const estaciones = proceso.stations.map((st, i) => {
-    const r = calculo.resultado.stations[i];
-    const azimut = r?.azimuth != null ? decimalToDms(r.azimuth) : null;
-    const corregido =
-      r?.correctedAngle != null ? decimalToDms(r.correctedAngle) : null;
-    return {
-      process_id: creado.id,
-      station_order: i + 1,
-      point_code: st.code,
-      angle_deg: st.angle?.[0] ?? null,
-      angle_min: st.angle?.[1] ?? null,
-      angle_sec: st.angle?.[2] ?? null,
-      deflection_direction: st.dir ?? null,
-      horizontal_distance: st.distance ?? null,
-      corrected_angle_deg: corregido?.deg ?? null,
-      corrected_angle_min: corregido?.min ?? null,
-      corrected_angle_sec: corregido?.sec ?? null,
-      azimuth_deg: azimut?.deg ?? null,
-      azimuth_min: azimut?.min ?? null,
-      azimuth_sec: azimut?.sec ?? null,
-      delta_north: r?.deltaNorth ?? null,
-      delta_east: r?.deltaEast ?? null,
-      corrected_delta_north: r?.correctedDeltaNorth ?? null,
-      corrected_delta_east: r?.correctedDeltaEast ?? null,
-      north: r?.north ?? null,
-      east: r?.east ?? null,
-    };
-  });
-
-  const { error: errEst } = await supabase
-    .from("polygonal_stations")
-    .insert(estaciones);
-  if (errEst) throw errEst;
-
-  if (cerrado) {
-    const { error: errCierre } = await supabase
-      .from("polygonal_processes")
-      .update({
-        status: "closed",
-        closed_at: new Date().toISOString(),
-        closed_by: userId,
-      })
-      .eq("id", creado.id);
-    if (errCierre) throw errCierre;
-  }
 }
 
 /**
@@ -198,6 +71,10 @@ export async function faltaProyectoDemo(
 
 /**
  * Crea el proyecto de ejemplo si a este usuario todavía no se le ha creado.
+ *
+ * Un proyecto con dos lugares que recorre los tres módulos: el lote levantado
+ * (poligonales + nivelación) y un edificio en monitoreo (asentamientos). Uno de
+ * cada módulo queda cerrado para poder emitir sus tres informes.
  *
  * Devuelve `true` si lo creó, `false` si ya lo tenía. Quien la llama debe
  * envolverla en try/catch: un fallo aquí no puede dejar al usuario fuera de su
@@ -235,28 +112,112 @@ export async function crearProyectoDemo(
 
   if (error) throw error;
 
-  // El lugar es obligatorio desde la Fase 5. Los procesos demo son el
-  // levantamiento de un lote (poligonales de control, sin construcción
-  // levantada todavía), así que "otro" es el tipo de estructura que le
-  // corresponde: ni edificio, ni presa, ni terraplén.
-  const { data: lugar, error: errLugar } = await supabase
+  // Lugar del levantamiento: las poligonales y la nivelación cuelgan de aquí.
+  // Es un lote de control sin construcción levantada todavía, así que "otro"
+  // es el tipo que le corresponde.
+  const { data: lote, error: errLote } = await supabase
     .from("sites")
     .insert({
       project_id: proyecto.id,
       name: "Lote de ejemplo",
-      description:
-        "Lote delimitado por el levantamiento poligonal de ejemplo.",
+      description: "Lote delimitado por el levantamiento del proyecto de ejemplo.",
       structure_type: "otro",
     })
     .select("id")
     .single();
 
-  if (errLugar) throw errLugar;
+  if (errLote) throw errLote;
 
-  // En serie y no en paralelo: son cuatro inserciones y el orden en que
-  // aparecen en el listado es el de creación.
+  // --- Poligonales. En serie: el orden del listado es el de creación. Se
+  // captura la que nace cerrada, que es la que alimenta su informe. ----------
+  let poligonalCerrada: { id: string; name: string } | null = null;
   for (const proceso of PROCESOS_DEMO) {
-    await insertarProceso(supabase, proyecto.id, lugar.id, userId, proceso, order);
+    const id = await insertarPoligonal(
+      supabase,
+      proyecto.id,
+      lote.id,
+      userId,
+      proceso,
+      order,
+    );
+    if (proceso.status === "closed") {
+      poligonalCerrada = { id, name: proceso.name };
+    }
+  }
+
+  // --- Nivelación (cerrada) sobre el mismo lote. ----------------------------
+  const nivelacionId = await insertarNivelacion(
+    supabase,
+    proyecto.id,
+    lote.id,
+    userId,
+    NIVELACION_DEMO,
+    order,
+  );
+
+  // --- Asentamientos: su propio lugar (edificio), cerrado tras las visitas. --
+  const { siteId, siteName } = await insertarAsentamiento(
+    supabase,
+    proyecto.id,
+    userId,
+    ASENTAMIENTO_DEMO,
+  );
+
+  // --- Un informe por módulo (§ 4.7): los informes se emiten por proceso. ---
+  const informes: {
+    title: string;
+    observations: string | null;
+    included: IncludedProcess[];
+  }[] = [
+    ...(poligonalCerrada
+      ? [
+          {
+            title: "Informe de cierre — Poligonal",
+            observations:
+              "Levantamiento poligonal conforme a las tolerancias de tercer orden.",
+            included: [
+              {
+                type: "polygonal" as const,
+                id: poligonalCerrada.id,
+                name: poligonalCerrada.name,
+                order: 0,
+              },
+            ],
+          },
+        ]
+      : []),
+    {
+      title: "Informe de cierre — Nivelación",
+      observations:
+        "Nivelación en circuito cerrado dentro de la tolerancia de tercer orden.",
+      included: [
+        {
+          type: "leveling" as const,
+          id: nivelacionId,
+          name: NIVELACION_DEMO.name,
+          order: 0,
+        },
+      ],
+    },
+    {
+      title: "Informe de cierre — Control de asentamientos",
+      observations:
+        "Seguimiento de asentamientos del edificio tras seis visitas mensuales.",
+      included: [
+        { type: "site" as const, id: siteId, name: siteName, order: 0 },
+      ],
+    },
+  ];
+
+  for (const informe of informes) {
+    await insertarInforme(
+      supabase,
+      proyecto.id,
+      userId,
+      informe.title,
+      informe.observations,
+      informe.included,
+    );
   }
 
   return true;
