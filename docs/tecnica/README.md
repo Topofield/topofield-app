@@ -91,6 +91,7 @@ Mailpit: `http://127.0.0.1:54324`.
 | `npm run seed` | Siembra los datos de ejemplo (`tsx --env-file=.env.local scripts/seed.mjs`) |
 | `npx supabase db reset` | Recrea la base y reaplica migraciones |
 | `npx supabase gen types typescript --local > src/types/database.ts` | Regenera tipos |
+| `npx tsx --env-file=.env.local scripts/reparar-resultados-estacion.mjs` | Detecta procesos cuyas estaciones no tienen resultados persistidos y los recalcula. Simula por defecto; escribe con `--aplicar`. Salta los cerrados y rechazados |
 
 ### Advertencia sobre el entorno local
 
@@ -1107,20 +1108,24 @@ cubierta por funciones puras (`settlement-persistence.ts`,
 puede mockear el cliente de Supabase ni montar pruebas de integración contra la
 base local. Toda esa capa depende de verificación manual contra la base.
 
-**Los datos ya creados en producción no tienen resultados de estación.** El
-generador del proyecto de ejemplo (`crear-proyecto-demo.ts`) y el seed
+**Cerrado — los datos de producción ya tienen sus resultados de estación.**
+El generador del proyecto de ejemplo (`crear-proyecto-demo.ts`) y el seed
 persistían los datos de campo pero descartaban lo que el motor calculaba por
-estación —ángulo corregido, azimut, proyecciones y coordenadas—. Ambos están
-corregidos, y un usuario nuevo obtiene su demo completa (verificado: 15
-estaciones con coordenadas, frente a 0 antes).
+estación. Ambos están corregidos, y las 15 estaciones que ya existían en
+producción se repararon con
+`scripts/reparar-resultados-estacion.mjs`, que **recalcula con
+`computePolygonal`** —nunca escribe valores a mano— y **salta los procesos
+cerrados o rechazados**, que son inmutables por trigger y deben seguir
+siéndolo.
 
-Lo que **no** se corrige solo son los proyectos que ya existen: las 15
-estaciones de la demo en producción siguen con esas columnas vacías, así que
-su exportación a Excel y su informe muestran guiones donde deberían ir
-coordenadas. Se arregla abriendo cada proceso y pulsando **Guardar**, que
-recalcula y persiste — el editor siempre mostró los valores correctos porque
-recalcula en vivo. Un `UPDATE` masivo no es viable: los procesos cerrados son
-inmutables por trigger, y es correcto que lo sean.
+Verificado en producción tras la reparación: 15/15 estaciones con coordenadas
+(antes 0), y el rectángulo de cierre conforme cierra exacto —A(1000,1000) →
+B(1100,1000) → C(1100,1100) → D(1000,1100), azimuts 0/90/180/270—, los mismos
+valores que produce el generador corregido en local.
+
+El script queda en el repositorio porque sigue siendo la herramienta correcta
+si vuelve a aparecer un proceso con resultados sin persistir. Corre en modo
+simulación por defecto; escribe solo con `--aplicar`.
 
 **El informe no incluye la gráfica de asentamientos.** La sección de un lugar
 muestra la tabla de la última visita, no la serie temporal. Añadirla exige que
