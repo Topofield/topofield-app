@@ -1020,34 +1020,25 @@ de 36 lecturas; sin él, las 36 conservan el criterio viejo. Con los umbrales en
 La decisión de qué reescribir vive en funciones puras con tests
 (`src/lib/calculations/settlement-persistence.ts`), no en el Server Action.
 
-**`validatePolygonalStation` no valida `pointCode` vacío.** El validador de
-nivelación sí lo hace (`validateReadingCapture` en `leveling.ts`, regla
-`pointCode.trim() === ""`); el de poligonal no tiene el chequeo equivalente,
-así que una estación sin código se persiste igual en cliente y servidor —
-no es un hallazgo de la Fase 5, pero se detectó al escribir el paralelo con
-nivelación y asentamientos y no se corrigió, porque tocar `polygonal.ts` no
-era alcance de esta fase.
+**Cerrado — `validatePolygonalStation` exige el código del punto.** El
+validador de nivelación lo hacía desde la Fase 4 y el de poligonal no, así que
+una estación sin código se persistía igual en cliente y servidor, contra una
+columna `point_code text not null`. La regla se añadió en la Fase 6 y es
+obligatoria **siempre**, también en la última estación de una abierta, que no
+lleva ángulo ni distancia pero sigue siendo un punto que hay que identificar.
 
-**`expectStationCapture` no tiene test propio.** Desde el retrofit de
-revalidación en servidor (Task 16), esta función pasó de ser una regla que
-solo usaba el editor a ser la fuente de verdad compartida entre cliente y
-`savePolygonalProcessAction`: si se desvía, el servidor y la pantalla podrían
-dejar de estar de acuerdo sobre qué celdas son obligatorias sin que ningún
-test lo detecte.
+Al añadirla apareció un efecto que el cambio de validador no cubría solo: la
+tabla de estaciones no pintaba `errors.pointCode`, así que un código vacío
+habría bloqueado el guardado **sin decir por qué**. El error se pasa ahora a
+los dos `Input` de código. Verificado que no invalida datos existentes: cero
+estaciones con código vacío en local y en producción.
 
-**Cerrado — `thresholdsOf` vive en un solo lugar.** Las cuatro copias
-repartidas por el módulo de asentamientos se unificaron en
-`src/lib/calculations/tolerances.ts`, junto a `thresholdsFor`, que es su
-hermana: una construye los umbrales desde el preset del tipo de estructura y
-la otra los lee de un lugar guardado. Se hizo al abrir la Fase 6, antes de que
-`resyncSiteReadings` añadiera un quinto consumidor.
-
-El parámetro se declara estructuralmente y no como `Site`, para que sirva igual
-a un `Site` completo y a los `select` parciales que solo piden las siete
-columnas de umbral. Ahora tiene test, que es lo que no tenía: el `Number()` de
-la conversión no es decorativo, porque Postgres entrega las columnas `DECIMAL`
-como cadena vía PostgREST y en JS `25 > "9"` es `false`, de modo que un
-acumulado superaría o no su umbral según cómo hubiera viajado el dato.
+**Cerrado — `expectStationCapture` tiene tests.** Es la fuente de verdad
+compartida entre el editor y `savePolygonalProcessAction` sobre qué celdas son
+obligatorias: si se desviara, el servidor y la pantalla dejarían de estar de
+acuerdo sobre qué es captura parcial legítima sin que nada lo delatara. Se
+fijan sus cuatro reglas y el caso límite de una abierta con una sola estación,
+donde el índice 0 es a la vez primero y último y gana la regla del primero.
 
 **El lugar «General» del backfill infla el conteo de procesos de proyectos
 que ya tenían trabajo.** La migración de la Fase 5 crea un lugar `General`
@@ -1060,14 +1051,15 @@ artefacto del backfill» de «lugar real sin visitas todavía» no tiene una
 señal limpia en el esquema actual (los dos son un lugar `active` sin
 visitas).
 
-**Faltan tests de `niceTicks` con rangos extremos y de `computeDifferentials`
-con un punto sin lectura.** `niceTicks` (`src/lib/design/chart-scale.ts`)
-tiene 5 tests que cubren el caso general de la gráfica de asentamientos, pero
-no un rango degenerado (`min === max`, o un rango que fuerce redondeos en el
-límite del `step`). `computeDifferentials` está cubierto para pares sin
-coordenadas, pero no para un punto que tiene coordenadas pero le falta la
-lectura de la visita actual — un caso distinto al de coordenadas ausentes, y
-sin test que fije su comportamiento.
+**Cerrado — `niceTicks` y `computeDifferentials` cubren sus casos extremos.**
+`niceTicks` tiene tests de rango degenerado (min = max dentro y fuera de cero,
+rango minúsculo, dominio negativo, cruce por cero, `count` de 1 y 0), y
+documenta un límite conocido: con el rango invertido devuelve `[]`, que no se
+defiende en el código porque el único llamante construye el dominio con
+`Math.min`/`Math.max` y no puede invertirlo. `computeDifferentials` cubre el
+punto con coordenadas pero **sin lectura en la visita** —distinto del caso de
+coordenadas ausentes— y lo importante es que no se cuente como diferencial 0,
+que se leería como distorsión infinita, es decir, como normalidad perfecta.
 
 **La propagación de lecturas ya tiene tests, aunque no de integración.** La
 decisión de qué filas hay que reescribir salió de `saveVisitAction` a
