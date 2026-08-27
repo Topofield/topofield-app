@@ -164,6 +164,14 @@ export default function ManualPage() {
         <p>
           Use <strong>+ Nuevo Proyecto</strong> para crear uno.
         </p>
+
+        <Nota titulo="Empieza con un proyecto de ejemplo">
+          La primera vez que entra, su cuenta ya trae un{" "}
+          <strong>«Proyecto de ejemplo»</strong> con poligonales, una
+          nivelación, un lugar de control de asentamientos y sus informes, para
+          que explore la aplicación con datos reales. Puede modificarlo o
+          eliminarlo cuando quiera.
+        </Nota>
       </Seccion>
 
       {/* ── 4. Proyectos ───────────────────────────────────────────────── */}
@@ -229,7 +237,9 @@ export default function ManualPage() {
             proyecto. Se detalla en el apartado siguiente.
           </li>
           <li>
-            <strong>Informes</strong> — <em>pendiente de la fase 6.</em>
+            <strong>Informes</strong> — genera los informes de cierre del
+            proyecto con los procesos ya cerrados, listos para imprimir o
+            guardar como PDF. Se detalla en «10. Informes».
           </li>
           <li>
             <strong>Configuración</strong> — edición de los datos del proyecto y

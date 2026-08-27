@@ -796,7 +796,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-392 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
+397 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -810,6 +810,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
 | `lib/export/polygonal-workbook.test.ts` | 15 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto |
 | `lib/calculations/settlement-persistence.test.ts` | 14 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena |
+| `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
 | `lib/calculations/tolerances.test.ts` | 13 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
 | `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
@@ -821,7 +822,6 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/export/settlement-workbook.test.ts` | 8 | Libro de asentamientos: catálogo, códigos en vez de UUID, `1/∞` |
 | `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
-| `lib/demo/fixtures.test.ts` | 7 | Fixtures del proyecto de ejemplo |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
 | `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |

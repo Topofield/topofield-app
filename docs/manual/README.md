@@ -105,6 +105,11 @@ Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
 
 Use **+ Nuevo Proyecto** para crear uno.
 
+> **Empieza con un proyecto de ejemplo.** La primera vez que entra, su cuenta ya
+> trae un **«Proyecto de ejemplo»** con poligonales, una nivelación, un lugar de
+> control de asentamientos y sus informes, para que explore la aplicación con
+> datos reales. Puede modificarlo o eliminarlo cuando quiera.
+
 ---
 
 ## 4. Proyectos
@@ -144,7 +149,9 @@ La ficha superior resume los datos del proyecto. Debajo, tres pestañas:
 **Procesos** — el listado de levantamientos del proyecto. Se detalla en
 [§ 4.3](#43-el-listado-de-procesos).
 
-**Informes** — *pendiente de la fase 6.*
+**Informes** — genera los informes de cierre del proyecto con los procesos ya
+cerrados, listos para imprimir o guardar como PDF. Se detalla en
+[§ 10](#10-informes).
 
 **Configuración** — edición de los datos del proyecto y gestión de los puntos de
 referencia.
