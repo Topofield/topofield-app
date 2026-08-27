@@ -25,6 +25,17 @@ ataque (debe fallar). Un arreglo sin esa doble prueba no se dio por bueno.
 | H-4 | BAJA | **Arreglado y verificado** | `supabase/migrations/20260826120100_reports_insert_check_generated_by.sql` |
 | § 4 · Redirect URLs | — | **Comprobado: no explotable** | Sin cambios; la allowlist de producción ya era exacta |
 
+**Desplegado en producción el 2026-08-27** y verificado allí: las dos
+migraciones (`20260826120000`, `20260826120100`) constan aplicadas, el trigger
+`settlement_points_reject_write_when_site_closed` existe y está habilitado, y la
+política de `INSERT` de `reports` incluye `generated_by = auth.uid()::text`.
+Probado funcionalmente **en una transacción revertida**: en un lugar abierto la
+escritura pasa; con el lugar cerrado, se rechaza con `23001`. La prueba no dejó
+rastro (conteos idénticos antes y después: 1 proyecto, 1 lugar, 0 puntos, 0
+lecturas, 0 informes). Las cabeceras se comprobaron sobre
+`https://topofield-app.vercel.app/sign-in`: las cuatro presentes y
+`x-powered-by` ya no se emite.
+
 Los datos locales quedaron restaurados: `projects` 5, `settlement_readings` 36,
 `polygonal_stations` 58, `reports` 2, `settlement_points` 6, y la `C0` del lugar
 cerrado en `100.0000`. No se escribió nada en producción (la única operación
