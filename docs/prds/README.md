@@ -11,7 +11,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 3 | Módulo Poligonal | `02-poligonal.md` | cerrada |
 | 4 | Módulo Nivelación | `03-nivelacion.md` | cerrada |
 | 5 | Control de Asentamientos | `04-asentamientos.md` | cerrada |
-| 6 | Cierre, Informes, Export | `05-cierre-informes-export.md` | en curso |
+| 6 | Cierre, Informes, Export | `05-cierre-informes-export.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

@@ -1,8 +1,8 @@
 # PRD-de-fase 6 — Cierre, Informes y Exportación
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-08-25
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-08-26
 
 ## Propósito
 

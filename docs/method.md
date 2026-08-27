@@ -15,7 +15,7 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 | 3 | Módulo Poligonal | [`prds/02-poligonal.md`](./prds/02-poligonal.md) | cerrada |
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | cerrada |
 | 5 | Control de Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | cerrada |
-| 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | en curso |
+| 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -234,6 +234,68 @@ Sección viva. Cada cierre de fase añade una entrada con:
   mockear el cliente de Supabase ni pruebas de integración contra la base
   local; sin eso, esta clase de fallo seguirá dependiendo de verificación
   manual.
+
+### Cierre Fase 6 — Cierre, Informes y Exportación (2026-08-26)
+
+Última fase del § 9. A diferencia de las Fases 3-5, no construyó motor de
+cálculo: **consume** lo que las anteriores persistieron, y eso desplazó el
+riesgo de la aritmética a la consistencia de lo guardado.
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El `§4.7` pedía ordenar las secciones con **arrastrar y soltar**. Se
+  resolvió con botones ↑ ↓: el drag & drop exigiría una librería —el proyecto
+  no usa ninguna— y es difícil de operar con teclado. Mismo control, accesible
+  sin trabajo extra.
+- El PRD-de-fase daba por buena la deuda de `formatPrecision` («cuatro copias
+  con criterios distintos»). Al implementarla resultó que las tres copias
+  reales eran **idénticas**, y que la divergencia la causaban dos consumidores
+  del mismo dato: el listado imprimía la cadena persistida en crudo y el editor
+  la formateaba. Unificar las copias no habría arreglado nada.
+- La enumeración de entradas al cálculo de asentamientos que el PRD exigía
+  encontró **una puerta más** de la que la deuda documentaba: `savePointAction`,
+  porque el acumulado es `(cota − C0) × 1000` y corregir la cota base deja
+  obsoletas las lecturas persistidas.
+
+**Aprendizajes:**
+
+- **Una deuda técnica bien escrita puede estar mal diagnosticada.** La entrada
+  de `formatPrecision` llevaba fases describiendo el síntoma correcto
+  (`1:1001` vs `1:1.001`) con la causa equivocada. Verificar el código antes de
+  actuar sobre lo que la deuda propone es tan necesario como verificar el marco
+  teórico: ambos son afirmaciones de otro momento.
+- **Una fase que consume datos persistidos destapa lo que las que los producen
+  nunca miran.** El seed llevaba tres fases sin escribir los resultados de
+  estación —solo los datos de campo— y nadie lo había notado, porque el editor
+  recalcula en vivo y la interfaz se veía correcta. Solo se vio cuando el
+  informe imprimió una tabla de coordenadas llena de guiones. Todo lo que se
+  persiste debería tener al menos un consumidor que lo lea sin recalcular.
+- **Una regla escrita en un PRD y nunca ejercida no está verificada.** El
+  `§4.6` prohibía desde la Fase 3 incluir procesos rechazados en informes. No
+  se pudo comprobar hasta que hubo informes, tres fases después. Conviene
+  anotar qué reglas quedan sin ejercer al cerrar una fase.
+- **Cuatro flujos que hacen lo mismo divergen en silencio.** De los cuatro
+  diálogos de cierre, tres pedían el checkbox del `§4.6` y el del lugar no — y
+  era precisamente el de mayor alcance, porque congela todas las visitas de
+  golpe. Nadie lo notó porque cada uno se revisó en su propia fase. Cuando una
+  regla aplica a N sitios, conviene revisarla en los N a la vez, no en cada
+  fase por separado.
+- **La prueba de accesibilidad tiene que quitar el canal, no razonarlo.** La
+  deuda del semáforo y la de los marcadores se discutieron con argumentos
+  durante dos fases. Renderizar la gráfica **en escala de grises** resolvió la
+  pregunta en una captura: sin color, las diez siluetas se distinguen o no se
+  distinguen.
+- **Escribir a mano lo que el dominio ya modela introduce errores.** Al
+  redactar las etiquetas del libro de Excel de nivelación me equivoqué en dos
+  de tres: el tipo de punto es `pc` y no `change_point`, y el proceso tiene
+  tres tipos y no dos. El `CHECK` de la base y los mapas de `types/` ya tenían
+  la respuesta. Importarlos, no copiarlos.
+- **El trigger de inmutabilidad rechazó tres intentos de manipular datos
+  cerrados durante la verificación** —reabrir una visita, reabrir un lugar,
+  rellenar estaciones de un proceso cerrado—. No estaba previsto como prueba,
+  pero es la confirmación más fuerte de que la inmutabilidad no depende del
+  código de aplicación. Es lo que permite que un informe se reconstruya en vez
+  de guardarse.
 
 ### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
 
