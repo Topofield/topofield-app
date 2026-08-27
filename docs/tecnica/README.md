@@ -378,6 +378,33 @@ visita— quedan bloqueadas con el mismo código `23001`.
 > las estaciones y se cierran al final. Insertarlos ya cerrados hace fallar la
 > carga de estaciones.
 
+**`settlement_points` cierra el modelo.** Era la única tabla del modelo de
+inmutabilidad sin trigger de base: la defensa vivía solo en `loadOpenSite`
+(`point-actions.ts`), es decir, en la capa que este mismo apartado declara
+bypasseable. Una auditoría lo explotó por REST directo (`PATCH` a
+`/rest/v1/settlement_points` de un lugar cerrado: HTTP 204) y el efecto no era
+cosmético — el asentamiento acumulado **se recalcula siempre en vivo** como
+`(cota − C0) × 1000`, así que alterar la `C0` reescribe retroactivamente todo
+el histórico de un lugar sellado. Lo cierra
+`settlement_points_reject_write_when_site_closed`
+(`20260826120000_reject_write_on_closed_site_point.sql`), con la misma forma
+que el trigger de las visitas. Borrar un lugar **abierto** sigue cascadeando
+sin problema; borrar uno cerrado ya lo impedía el trigger de `sites`.
+
+**Atribución de los informes.** La política de `INSERT` de `reports` comprueba
+también `generated_by = auth.uid()::text`
+(`20260826120100_reports_insert_check_generated_by.sql`). Sin eso, un `POST`
+directo podía crear un informe en un proyecto propio firmado por otro usuario.
+
+### Cabeceras de seguridad
+
+`next.config.ts` define `X-Frame-Options: DENY`, `X-Content-Type-Options:
+nosniff` —relevante para los `.xlsx` de exportación—, `Referrer-Policy:
+strict-origin-when-cross-origin` y `Permissions-Policy`, y desactiva
+`poweredByHeader`. **No hay CSP todavía**: Next inyecta estilos y scripts en
+línea, así que exige `'unsafe-inline'` o un nonce por petición, y la decisión
+está pendiente (ver `docs/auditoria-seguridad.md` § 5).
+
 ### Secretos
 
 `SUPABASE_SECRET_KEY` se usa **solo** en `scripts/seed.mjs`. Ningún archivo de
@@ -1142,6 +1169,34 @@ Un `.xlsx` viaja suelto —se adjunta a un correo y se abre meses después—, y
 sin datum una coordenada como «N=1000.000» no identifica su sistema de
 referencia. El helper es `projectPairs` en `lib/export/workbook.ts`, y el
 parámetro es opcional: sin proyecto, la sección simplemente no se escribe.
+
+**Sin CSP.** Tras la auditoría de seguridad (`docs/auditoria-seguridad.md`), la
+app sirve `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y
+`Permissions-Policy`, pero **no** una Content-Security-Policy. Next inyecta
+estilos y scripts en línea, así que una CSP exige `'unsafe-inline'` en
+`style-src` o un nonce por petición —que obligaría a generar el nonce en
+`src/proxy.ts` y volvería dinámicas rutas hoy estáticas—. La propuesta y las
+dos opciones están en el § 5 de la auditoría, pendientes de decisión. Mitiga
+mientras tanto que no hay **ningún** `dangerouslySetInnerHTML` en `src/`.
+
+**Cerrado — el árbol de dependencias no arrastra vulnerabilidades.** La
+auditoría dejó cinco avisos de `npm audit`; los cinco están cerrados sin perder
+nada. Cuatro (`uuid`, `tmp`, `ws`, `brace-expansion`) se resolvieron con
+`overrides` en `package.json`, que fuerza la versión parcheada de una
+dependencia transitiva sin tocar a su padre. Es el mecanismo correcto cuando el
+paquete intermedio va por detrás: `exceljs@4.4.0` es la última publicada
+(diciembre de 2024) y pide `uuid@8`, pero solo llama a `v4()` sin búfer, así
+que `uuid@11` le sirve igual.
+
+El «arreglo» que proponía `npm audit` para `exceljs` era bajar a la rama 3.x
+—publicada en **2014**, sin `writeBuffer()`—, que habría obligado a reescribir
+las tres rutas de exportación a cambio de nada. No se hizo: el override da el
+mismo resultado sin tocar código. Verificado descargando un `.xlsx` real por
+HTTP con sesión de navegador (12 KB, tres hojas, catálogo y cotas correctos).
+
+`npm audit` queda en **0 vulnerabilidades**, producción y desarrollo. Si un
+override deja de hacer falta porque el padre se actualiza, se puede quitar y
+comprobar con `npm audit` que sigue en cero.
 
 ---
 
