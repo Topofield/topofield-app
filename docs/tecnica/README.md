@@ -58,7 +58,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 3 | Poligonales | cerrada |
 | 4 | Nivelación | cerrada |
 | 5 | Asentamientos | cerrada |
-| 6 | Cierre, informes, exportación | pendiente |
+| 6 | Cierre, informes, exportación | cerrada |
 
 ---
 
@@ -122,7 +122,8 @@ src/
 │   │       ├── polygonal/[pid]/
 │   │       ├── leveling/[pid]/
 │   │       ├── sites/[siteId]/          alta y editor del lugar
-│   │       └── settlement/[siteId]/     panel de análisis y visitas
+│   │       ├── settlement/[siteId]/     panel de análisis y visitas
+│   │       └── reports/                 informes: alta, vista y ruta imprimible
 │   ├── design-system/       galería del sistema de diseño (404 en producción)
 │   ├── layout.tsx           layout raíz, carga de fuentes
 │   ├── globals.css          tokens de tema y capas base
@@ -133,11 +134,14 @@ src/
 │   ├── polygonal/           editor de poligonales
 │   ├── leveling/            editor de nivelación
 │   ├── settlement/          lugar, visitas, semáforo, gráfica
+│   ├── reports/             alta de informe y botón de impresión
 │   └── projects/            dashboard y gestión de proyectos
 ├── lib/
 │   ├── calculations/        algoritmos puros
 │   ├── validators/          reglas de validación
-│   ├── design/              escalas de gráfica y medición de contraste
+│   ├── design/              escalas de gráfica, marcadores y contraste
+│   ├── export/              libros de Excel de los tres módulos (§ 4.8)
+│   ├── reports/             elegibilidad de procesos para informes (§ 4.7)
 │   ├── process-list.ts      filtrado y orden del listado de procesos
 │   ├── supabase/            clientes y consultas
 │   └── utils/
@@ -183,12 +187,59 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction`, `closeLevelingProcessAction` |
 | `(app)/projects/[id]/sites/actions.ts` | `createSiteAction`, `saveSiteAction`, `closeSiteAction` |
 | `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction`, `saveVisitAction`, `closeVisitAction` |
+| `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction`, `deletePointAction` |
+| `(app)/projects/[id]/reports/actions.ts` | `createReportAction`, `deleteReportAction` |
+
+### Informes y exportación (§ 4.7 y § 4.8 del PRD)
+
+Son las dos salidas del producto y funcionan con criterios opuestos a
+propósito.
+
+**El informe no se guarda: se reconstruye.** `reports` almacena qué procesos
+incluye y en qué orden, nunca una copia de sus datos ni un PDF. Reabrirlo
+vuelve a leer los procesos y a componer el documento. Eso es seguro **solo
+porque un informe únicamente puede incluir trabajos cerrados**, que son
+inmutables por trigger de base: dentro de un año dará exactamente lo mismo.
+Está verificado comparando el hash del contenido en dos lecturas.
+
+La regla vive en `lib/reports/eligibility.ts` como función pura con tests, y se
+aplica **dos veces**: al pintar el selector y otra vez dentro de
+`createReportAction`, porque el cliente solo manda ids y uno manipulado podría
+enviar el de un proceso abierto. Un proceso `rejected` nunca es elegible — lo
+exige el § 4.6 desde la Fase 3, y esta es la primera fase que puede ejercerlo.
+Para asentamientos la unidad es el **lugar cerrado**, no la visita: un lugar
+activo admite visitas nuevas y su informe cambiaría.
+
+**El PDF lo produce el navegador.** No hay motor de PDF en el servidor: la ruta
+`/projects/[id]/reports/[reportId]/print` se maqueta con `@media print` y el
+usuario hace «Imprimir → Guardar como PDF». Se descartó Playwright en el
+servidor porque Chromium no cabe en una función serverless de Vercel sin
+`@sparticuz/chromium`, un riesgo de despliegue a cambio de ahorrar un clic. Las
+reglas de impresión están en `@layer components` de `globals.css`, no sueltas:
+una regla fuera de capa gana sobre las utilidades de Tailwind y las anula en
+silencio (§ 8).
+
+**La exportación a Excel sí es del servidor**, en Route Handlers
+(`.../export/route.ts` en los tres módulos) porque devuelve un binario con
+`Content-Disposition`. A diferencia del informe, está disponible en
+**cualquier estado** del proceso —lo pide el § 4.8—, y las celdas sin calcular
+quedan vacías en lugar de a cero: en topografía un `0.000` de coordenada es una
+posición, no una ausencia.
+
+Los libros se construyen en `lib/export/`, separados del Route Handler para
+poder testearlos sin levantar el servidor. Dos detalles que se rompen fácil:
+
+- Los `DECIMAL` de Postgres llegan como **cadena** vía PostgREST. Hay que
+  convertirlos a número antes de escribirlos, o Excel guarda texto y la celda
+  no se puede sumar.
+- El nombre del archivo se translitera a ASCII: viaja en una cabecera donde los
+  acentos y las comillas rompen el parseo de algunos navegadores.
 
 ---
 
 ## 4. Modelo de datos
 
-Diez tablas en `public`:
+Once tablas en `public`:
 
 ```
 profiles         perfil del usuario (1:1 con auth.users)
@@ -200,9 +251,17 @@ projects         proyecto topográfico
 │       └── settlement_readings   lectura por punto en cada visita
 ├── polygonal_processes   levantamiento poligonal — site_id NOT NULL
 │   └── polygonal_stations    estaciones del levantamiento
-└── leveling_processes    levantamiento de nivelación — site_id NOT NULL
-    └── leveling_readings     lecturas de la libreta
+├── leveling_processes    levantamiento de nivelación — site_id NOT NULL
+│   └── leveling_readings     lecturas de la libreta
+└── reports               informes emitidos (Fase 6)
 ```
+
+**`reports` no guarda los datos del informe**, solo qué trabajos incluye y en
+qué orden (`included_processes`, JSONB). Se aparta del `§3.2` del PRD principal
+en tres puntos, enmendados allí: no existe `file_url` —el PDF no se almacena,
+lo produce el navegador—, `project_id` es `NOT NULL` y cada entrada guarda su
+`order`. El `name` se congela al emitir, para que un proceso renombrado después
+conserve en el informe el nombre con el que salió.
 
 **`sites` (el lugar) es transversal a los tres módulos**, no propia del
 control de asentamientos. `polygonal_processes` y `leveling_processes` tienen
@@ -689,33 +748,40 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-296 tests en 19 archivos, Vitest, entorno `node` **sin jsdom**.
+388 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
+| `lib/calculations/settlement.test.ts` | 44 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico |
+| `lib/validators/polygonal.test.ts` | 43 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio |
 | `lib/calculations/leveling.test.ts` | 40 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
-| `lib/calculations/settlement.test.ts` | 40 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico |
-| `lib/validators/polygonal.test.ts` | 33 | Captura y cierre de poligonal |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
 | `lib/validators/leveling.test.ts` | 24 | Captura y cierre de nivelación |
+| `lib/utils/format.test.ts` | 21 | Fecha relativa y **formateo único de precisión** |
 | `lib/validators/settlement.test.ts` | 21 | Captura y cierre de asentamientos — incluye que la alarma no bloquea |
 | `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
-| `lib/utils/format.test.ts` | 13 | Fecha relativa y sus fronteras |
-| `lib/calculations/tolerances.test.ts` | 10 | Tolerancias por orden (poligonal, nivelación) y presets de asentamientos |
+| `lib/calculations/settlement-persistence.test.ts` | 14 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena |
+| `lib/calculations/tolerances.test.ts` | 13 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
+| `lib/export/polygonal-workbook.test.ts` | 13 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías |
+| `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
-| `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles, unión discriminada `status`/`level` |
+| `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
+| `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
 | `lib/calculations/angles.test.ts` | 8 | Conversiones DMS ↔ decimal |
-| `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor (`deriveLevelingCloseStatus`) |
-| `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor (`derivePolygonalCloseStatus`) |
+| `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
+| `lib/export/leveling-workbook.test.ts` | 8 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta |
+| `lib/export/settlement-workbook.test.ts` | 8 | Libro de asentamientos: catálogo, códigos en vez de UUID, `1/∞` |
+| `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
+| `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `lib/demo/fixtures.test.ts` | 7 | Fixtures del proyecto de ejemplo |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
-| `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
-| `lib/design/chart-scale.test.ts` | 5 | Escala lineal y marcas «nice» de la gráfica SVG |
+| `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |
 
-Falta cobertura propia de `expectStationCapture` (compartida cliente/servidor
-desde el retrofit de revalidación) y de `niceTicks`/`computeDifferentials` en
-sus casos extremos — ver [deuda técnica](#11-deuda-técnica-conocida).
+La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
+`niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
+lectura ya tienen cobertura. Lo que **sigue sin tests** es la E/S de los Server
+Actions; ver [deuda técnica](#11-deuda-técnica-conocida).
 
 ### Cómo se testea la interfaz
 
@@ -1018,18 +1084,38 @@ Supabase ni pruebas de integración contra la base local. Lo que se ganó es que
 la parte que **decide** —donde vivían los fallos— ya no depende de
 verificación manual; lo que se escribe sigue dependiendo de ella.
 
-**Las series de la gráfica de asentamientos repiten forma a partir de la
-sexta.** `SERIES_MARKERS` tiene 5 formas y `SERIES_COLORS` 4 colores, y al
-ser coprimos la combinación completa (forma + color) no se repite hasta la
-serie 20 — hay un aviso cuando se supera ese número. Pero la **forma sola**
-sí se repite en la serie 6, porque solo hay 5 formas distintas: con
-acromatopsia, donde el color no distingue, dos series pueden compartir
-marcador y solo diferenciarse por su posición en la gráfica. Un catálogo de
-6 o más puntos seleccionados a la vez lo provoca, y el marco teórico del
-dominio usa 9 y 10 puntos por sistema (edificio, presa, terraplén), así que
-no es un caso límite improbable. El aviso actual no cubre este rango — solo
-avisa a partir de 20 series, no entre 6 y 20. Lo correcto sería añadir formas
-de marcador hasta cubrir el catálogo típico del dominio (9-10 puntos).
+**Cerrado — la gráfica distingue diez series por forma.** `SERIES_MARKERS`
+pasó de 5 a 10 formas en la Fase 6, porque con cinco la **forma sola** se
+repetía en la serie 6 y con acromatopsia la forma es el único canal. El aviso
+existente no cubría el caso: saltaba a partir de 20 —el mcm de formas y
+colores— dejando descubierto el rango 6-19, justo donde cae el catálogo típico
+del dominio (9 puntos en el edificio, 10 en la presa).
+
+Las cinco nuevas se eligieron por **silueta** y no por relleno: triángulo
+invertido, cruz recta, estrella de cuatro puntas, anillo y cuadrado hueco. El
+catálogo vive en `lib/design/series-markers.ts` con 8 tests, incluido el que
+habría atrapado el fallo original. Verificado en la aplicación con 10 series y,
+sobre todo, **en escala de grises**: sin color, las diez siluetas se siguen
+distinguiendo.
+
+**La E/S de los Server Actions sigue sin tests.** Es la deuda de fondo que la
+Fase 6 acotó pero no eliminó. La parte que **decide** qué escribir ya está
+cubierta por funciones puras (`settlement-persistence.ts`,
+`reports/eligibility.ts`, `close-status.ts`), pero lo que **escribe** —los
+`upsert` de `saveVisitAction`, `resyncSiteReadings`, el `insert` de
+`createReportAction`— no tiene cobertura automática, porque el proyecto no
+puede mockear el cliente de Supabase ni montar pruebas de integración contra la
+base local. Toda esa capa depende de verificación manual contra la base.
+
+**El informe no incluye la gráfica de asentamientos.** La sección de un lugar
+muestra la tabla de la última visita, no la serie temporal. Añadirla exige que
+el SVG se renderice en el servidor con los mismos datos que el panel; es
+viable, pero no entró en la Fase 6.
+
+**El export de Excel no lleva las coordenadas del proyecto ni el datum.** Las
+tres hojas describen el proceso, y los metadatos geodésicos del proyecto
+(datum, proyección, origen) solo aparecen en el informe. Para un entregable
+que viaja suelto, convendría repetirlos en la hoja «Resumen».
 
 ---
 

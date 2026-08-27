@@ -128,6 +128,33 @@ await page.goto(
 );
 await capturar("16-editor-visita", { fullPage: true });
 
+// Informes (fase 6). El alta y la ruta imprimible; el informe se crea aquí
+// mismo si el seed no dejó ninguno, para que la captura no dependa del estado.
+await page.goto(`${BASE}/projects/${proyecto}/reports/new`, { waitUntil: "networkidle" });
+await capturar("18-nuevo-informe", { fullPage: true });
+
+let informe = sql(
+  `select id from public.reports where project_id='${proyecto}' order by generated_at desc limit 1;`,
+);
+if (!informe) {
+  await page.getByLabel("Título").fill("Informe de cierre — etapa 1");
+  const casillas = page.locator("fieldset input[type=checkbox]");
+  const total = await casillas.count();
+  for (let i = 0; i < total; i++) await casillas.nth(i).check();
+  await page
+    .locator("textarea")
+    .first()
+    .fill("Levantamiento conforme a las tolerancias de tercer orden.");
+  await page.getByRole("button", { name: /generar informe/i }).click();
+  await page.waitForURL(/\/reports\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  informe = page.url().split("/").pop();
+}
+
+await page.goto(`${BASE}/projects/${proyecto}/reports/${informe}/print`, {
+  waitUntil: "networkidle",
+});
+await capturar("19-informe-imprimible", { fullPage: true });
+
 // Campo
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUntil: "networkidle" });

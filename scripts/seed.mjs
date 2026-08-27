@@ -31,7 +31,7 @@ import { computePolygonal } from "../src/lib/calculations/polygonal.ts";
 import { computeLeveling } from "../src/lib/calculations/leveling.ts";
 import { computeHistory } from "../src/lib/calculations/settlement.ts";
 import { thresholdsFor } from "../src/lib/calculations/tolerances.ts";
-import { dmsToDecimal } from "../src/lib/calculations/angles.ts";
+import { decimalToDms, dmsToDecimal } from "../src/lib/calculations/angles.ts";
 
 const URL = "http://127.0.0.1:54321";
 const SECRET = process.env.SUPABASE_SECRET_KEY;
@@ -120,12 +120,15 @@ function resultFieldsFor(spec, order) {
   const r = computePolygonal(input);
   const rel = r.relativePrecision;
   return {
-    angular_error_seconds: r.angularError,
-    linear_error: r.linearError,
-    perimeter: r.perimeter,
-    relative_precision:
-      rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
-    meets_tolerance: r.meetsTolerance,
+    resultado: r,
+    campos: {
+      angular_error_seconds: r.angularError,
+      linear_error: r.linearError,
+      perimeter: r.perimeter,
+      relative_precision:
+        rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
+      meets_tolerance: r.meetsTolerance,
+    },
   };
 }
 
@@ -137,6 +140,7 @@ function isClosedStatus(status) {
 async function insertPolygonal(projectId, siteId, spec, userId, order) {
   const startAz = spec.startAz ?? [0, 0, 0];
   const endAz = spec.endAz ?? [null, null, null];
+  const resultado = resultFieldsFor(spec, order);
   const { data: proc, error } = await admin
     .from("polygonal_processes")
     .insert({
@@ -162,23 +166,46 @@ async function insertPolygonal(projectId, siteId, spec, userId, order) {
       // triggers de inmutabilidad rechazan escribir estaciones bajo un proceso
       // ya cerrado. El cierre se aplica al final, como hace la aplicación.
       status: isClosedStatus(spec.status) ? "calculated" : spec.status,
-      ...resultFieldsFor(spec, order),
+      ...resultado.campos,
       notes: spec.notes ?? null,
     })
     .select("id")
     .single();
   if (error) throw error;
 
-  const rows = spec.stations.map((st, i) => ({
-    process_id: proc.id,
-    station_order: i + 1,
-    point_code: st.code,
-    angle_deg: st.angle?.[0] ?? null,
-    angle_min: st.angle?.[1] ?? null,
-    angle_sec: st.angle?.[2] ?? null,
-    deflection_direction: st.dir ?? null,
-    horizontal_distance: st.distance ?? null,
-  }));
+  // Se persisten también los RESULTADOS por estación, igual que hace
+  // `savePolygonalProcessAction`. Sin esto, el seed dejaba procesos en estado
+  // `calculated` con las columnas de cálculo vacías: la aplicación los mostraba
+  // bien porque el editor recalcula en vivo, pero cualquier consumidor de lo
+  // persistido —el informe, la exportación a Excel— los veía sin datos.
+  const rows = spec.stations.map((st, i) => {
+    const r = resultado.resultado.stations[i];
+    const azimuth = r?.azimuth != null ? decimalToDms(r.azimuth) : null;
+    const corregido =
+      r?.correctedAngle != null ? decimalToDms(r.correctedAngle) : null;
+    return {
+      process_id: proc.id,
+      station_order: i + 1,
+      point_code: st.code,
+      angle_deg: st.angle?.[0] ?? null,
+      angle_min: st.angle?.[1] ?? null,
+      angle_sec: st.angle?.[2] ?? null,
+      deflection_direction: st.dir ?? null,
+      horizontal_distance: st.distance ?? null,
+      corrected_angle_deg: corregido?.deg ?? null,
+      corrected_angle_min: corregido?.min ?? null,
+      corrected_angle_sec: corregido?.sec ?? null,
+      azimuth_deg: azimuth?.deg ?? null,
+      azimuth_min: azimuth?.min ?? null,
+      azimuth_sec: azimuth?.sec ?? null,
+      delta_north: r?.deltaNorth ?? null,
+      delta_east: r?.deltaEast ?? null,
+      corrected_delta_north: r?.correctedDeltaNorth ?? null,
+      corrected_delta_east: r?.correctedDeltaEast ?? null,
+      north: r?.north ?? null,
+      east: r?.east ?? null,
+    };
+  });
   if (rows.length > 0) {
     const { error: stErr } = await admin
       .from("polygonal_stations")

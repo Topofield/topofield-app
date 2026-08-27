@@ -32,8 +32,9 @@ La aplicación está publicada en
 7. [Control de Asentamientos](#7-control-de-asentamientos)
 8. [Cerrar un proceso](#8-cerrar-un-proceso)
 9. [Trabajo en campo](#9-trabajo-en-campo)
-10. [Módulos pendientes](#10-módulos-pendientes)
-11. [Preguntas frecuentes](#11-preguntas-frecuentes)
+10. [Informes](#10-informes)
+11. [Exportar a Excel](#11-exportar-a-excel)
+12. [Preguntas frecuentes](#12-preguntas-frecuentes)
 
 ---
 
@@ -555,18 +556,80 @@ completa.
 
 ---
 
-## 10. Módulos pendientes
+## 10. Informes
 
-El siguiente módulo está especificado en el PRD pero **aún no implementado**:
+Un informe reúne varios trabajos ya terminados de un proyecto en un solo
+documento imprimible, con su registro de quién cerró cada cosa y cuándo.
 
-**Informes y exportación** *(fase 6)* — generación de informes en PDF, carteras
-de campo y exportación de coordenadas.
+### 10.1 Qué puede incluirse
 
-La pestaña **Informes** del proyecto está visible pero vacía hasta entonces.
+**Solo procesos cerrados.** Es la regla principal y tiene una razón práctica:
+el informe no guarda una copia de los datos, sino que los vuelve a leer cada
+vez que se abre. Como un proceso cerrado ya no puede cambiar, el informe dice
+siempre lo mismo — hoy y dentro de un año.
+
+De ahí se siguen dos consecuencias:
+
+- Un proceso **rechazado no se puede incluir**. Queda como constancia del
+  trabajo, pero no se informa.
+- En control de asentamientos, lo que se incluye es el **lugar cerrado**, no
+  una visita suelta. Un lugar todavía activo admite visitas nuevas, así que su
+  informe cambiaría solo.
+
+Si el proyecto no tiene nada cerrado, la pantalla se lo dice en vez de ofrecer
+un formulario que no llevaría a ninguna parte.
+
+### 10.2 Generar un informe
+
+En la pestaña **Informes** del proyecto, pulse **Generar Nuevo Informe**.
+
+![Nuevo informe](../../public/manual/18-nuevo-informe.png)
+
+Se pide:
+
+| Campo | Para qué |
+|---|---|
+| Título | Encabeza la portada del documento |
+| Procesos a incluir | Marque los que quiera; solo aparecen los cerrados |
+| Orden de las secciones | Con las flechas ↑ ↓ ordena cómo saldrán |
+| Observaciones | Texto libre que se imprime al final |
+
+### 10.3 Imprimir o guardar como PDF
+
+Al generar, la aplicación abre el informe. El botón **Ver e imprimir** lleva al
+documento maquetado, y allí **Imprimir o guardar como PDF** abre el diálogo del
+navegador: elija «Guardar como PDF» como destino.
+
+![Informe imprimible](../../public/manual/19-informe-imprimible.png)
+
+El documento lleva portada con los datos del proyecto y el equipo, índice,
+una sección por proceso con sus resultados, el resumen consolidado de
+precisiones, sus observaciones y el registro de cierre.
+
+> El PDF lo genera su navegador, no la aplicación. Los márgenes y los
+> encabezados de página dependen de lo que usted elija en ese diálogo.
 
 ---
 
-## 11. Preguntas frecuentes
+## 11. Exportar a Excel
+
+Cada proceso tiene un botón **Exportar a Excel** en su editor —y el control de
+asentamientos, en su panel de análisis—. Descarga un `.xlsx` con tres hojas:
+
+| Hoja | Contiene |
+|---|---|
+| Datos Crudos | Las lecturas de campo tal como se capturaron, sin modificar |
+| Cálculos | Lo que la aplicación derivó: cotas, coordenadas, correcciones |
+| Resumen | Método, precisión, tolerancia, estado y trazabilidad |
+
+A diferencia del informe, la exportación funciona **en cualquier estado**:
+también sobre un borrador. Las celdas que aún no se han calculado salen
+vacías, no en cero — en topografía un `0.000` es una posición, no un dato que
+falta.
+
+---
+
+## 12. Preguntas frecuentes
 
 **Cerré un proceso por error. ¿Puedo reabrirlo?**
 No. El cierre es definitivo por diseño: es lo que da valor probatorio al
@@ -636,10 +699,12 @@ relativa (`../../public/manual/…`), que GitHub resuelve sin problema. Guardar
 una segunda copia en `docs/` añadía 2,8 MB al historial de git en cada
 regeneración, sin ganar nada.
 
-Al implementar una fase nueva:
+**Ya no quedan módulos pendientes**: la fase 6 cerró el último y la sección
+«Módulos pendientes» desapareció con ella. Al añadir funcionalidad nueva:
 
-1. Mueva su sección de [Módulos pendientes](#8-módulos-pendientes) al cuerpo del
-   manual y añada sus capturas.
-2. Haga lo mismo en `src/app/(app)/manual/`: el texto en `manual-data.ts`, la
-   sección nueva en `page.tsx`, y quite el módulo de `MODULOS_PENDIENTES`.
-3. Regenere las capturas.
+1. Escriba su sección en el cuerpo del manual y añada sus capturas.
+2. Haga lo mismo en `src/app/(app)/manual/`: el texto en `manual-data.ts` y la
+   sección nueva en `page.tsx`. **El texto vive por duplicado en los dos
+   sitios y no hay generación automática**: al editar uno, edite el otro en el
+   mismo commit.
+3. Regenere las capturas con `node docs/manual/capturas.mjs`.

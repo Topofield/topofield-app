@@ -121,6 +121,18 @@ export const CAPTURAS = {
     width: 2560,
     height: 2184,
   },
+  nuevoInforme: {
+    src: "/manual/18-nuevo-informe.png",
+    alt: "Formulario de alta de informe con el título, la lista de procesos cerrados a incluir y el orden de las secciones.",
+    width: 2560,
+    height: 1600,
+  },
+  informeImprimible: {
+    src: "/manual/19-informe-imprimible.png",
+    alt: "Informe maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados, resumen consolidado y registro de cierre.",
+    width: 2560,
+    height: 3460,
+  },
   editorMovil: {
     src: "/manual/17-editor-movil.png",
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
@@ -149,7 +161,8 @@ export const SECCIONES: SeccionManual[] = [
   { id: "asentamientos", titulo: "Control de Asentamientos" },
   { id: "cierre", titulo: "Cerrar un proceso" },
   { id: "campo", titulo: "Trabajo en campo" },
-  { id: "pendientes", titulo: "Módulos pendientes" },
+  { id: "informes", titulo: "Informes" },
+  { id: "export", titulo: "Exportar a Excel" },
   { id: "faq", titulo: "Preguntas frecuentes" },
 ];
 
@@ -348,18 +361,35 @@ export const DESENLACES_CIERRE = [
 
 // --- § 8 Módulos pendientes ---
 
-export interface ModuloPendiente {
-  nombre: string;
-  fase: number;
-  descripcion: string;
-}
+// --- § 10 Informes y § 11 Exportar a Excel ---
 
-export const MODULOS_PENDIENTES: ModuloPendiente[] = [
+/** Campos del formulario de alta de informe. */
+export const CAMPOS_INFORME = [
+  { campo: "Título", para: "Encabeza la portada del documento" },
   {
-    nombre: "Informes y exportación",
-    fase: 6,
-    descripcion:
-      "Generación de informes en PDF, carteras de campo y exportación de coordenadas.",
+    campo: "Procesos a incluir",
+    para: "Marque los que quiera; solo aparecen los cerrados",
+  },
+  {
+    campo: "Orden de las secciones",
+    para: "Con las flechas ↑ ↓ ordena cómo saldrán",
+  },
+  { campo: "Observaciones", para: "Texto libre que se imprime al final" },
+];
+
+/** Las tres hojas del libro de Excel. */
+export const HOJAS_EXCEL = [
+  {
+    hoja: "Datos Crudos",
+    contiene: "Las lecturas de campo tal como se capturaron, sin modificar",
+  },
+  {
+    hoja: "Cálculos",
+    contiene: "Lo que la aplicación derivó: cotas, coordenadas, correcciones",
+  },
+  {
+    hoja: "Resumen",
+    contiene: "Método, precisión, tolerancia, estado y trazabilidad",
   },
 ];
 

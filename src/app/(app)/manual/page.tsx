@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
 import {
   CAPTURAS,
@@ -8,7 +7,8 @@ import {
   DESENLACES_CIERRE,
   ESTADOS_PROCESO,
   METODOS_CORRECCION,
-  MODULOS_PENDIENTES,
+  CAMPOS_INFORME,
+  HOJAS_EXCEL,
   NIVELES_SEMAFORO,
   ORDENES_PRECISION,
   PREGUNTAS,
@@ -869,45 +869,111 @@ export default function ManualPage() {
         </p>
       </Seccion>
 
-      {/* ── 9. Módulos pendientes ──────────────────────────────────────── */}
-      <Seccion id="pendientes" titulo="10. Módulos pendientes">
+      {/* ── 10. Informes ───────────────────────────────────────────────── */}
+      <Seccion id="informes" titulo="10. Informes">
         <p>
-          Los siguientes módulos están especificados en el PRD pero{" "}
-          <strong>aún no implementados</strong>. Se listan aquí para que se vea
-          el alcance completo previsto.
+          Un informe reúne varios trabajos ya terminados de un proyecto en un
+          solo documento imprimible, con su registro de quién cerró cada cosa y
+          cuándo.
         </p>
 
-        <ul className="flex flex-col gap-4">
-          {MODULOS_PENDIENTES.map((modulo) => (
-            // Sin nada accionable dentro: nadie debe creer que puede entrar a
-            // un módulo que todavía no existe.
-            <li
-              key={modulo.nombre}
-              className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 p-5"
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <h3 className="font-semibold text-neutral-800">
-                  {modulo.nombre}
-                </h3>
-                {/* El estado va escrito, no solo teñido. Tono neutral porque un
-                    módulo por construir no es un problema. */}
-                <Badge>Pendiente · fase {modulo.fase}</Badge>
-              </div>
-              <p className="mt-2 text-sm text-neutral-800">
-                {modulo.descripcion}
-              </p>
-            </li>
-          ))}
+        <h3 className="text-lg font-semibold text-neutral-900">
+          Qué puede incluirse
+        </h3>
+        <p>
+          <strong>Solo procesos cerrados.</strong> Es la regla principal y tiene
+          una razón práctica: el informe no guarda una copia de los datos, sino
+          que los vuelve a leer cada vez que se abre. Como un proceso cerrado ya
+          no puede cambiar, el informe dice siempre lo mismo — hoy y dentro de
+          un año.
+        </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            Un proceso <strong>rechazado no se puede incluir</strong>. Queda
+            como constancia del trabajo, pero no se informa.
+          </li>
+          <li>
+            En control de asentamientos se incluye el{" "}
+            <strong>lugar cerrado</strong>, no una visita suelta: un lugar
+            todavía activo admite visitas nuevas, así que su informe cambiaría
+            solo.
+          </li>
         </ul>
+        <p>
+          Si el proyecto no tiene nada cerrado, la pantalla se lo dice en vez de
+          ofrecer un formulario que no llevaría a ninguna parte.
+        </p>
+
+        <h3 className="text-lg font-semibold text-neutral-900">
+          Generar un informe
+        </h3>
+        <p>
+          En la pestaña <strong>Informes</strong> del proyecto, pulse{" "}
+          <strong>Generar Nuevo Informe</strong>.
+        </p>
+
+        <Captura {...CAPTURAS.nuevoInforme} />
+
+        <Tabla
+          caption="Campos del formulario de informe"
+          columnas={["Campo", "Para qué"]}
+        >
+          {CAMPOS_INFORME.map((c) => (
+            <Fila key={c.campo} celdas={[c.campo, c.para]} />
+          ))}
+        </Tabla>
+
+        <h3 className="text-lg font-semibold text-neutral-900">
+          Imprimir o guardar como PDF
+        </h3>
+        <p>
+          Al generar, la aplicación abre el informe. El botón{" "}
+          <strong>Ver e imprimir</strong> lleva al documento maquetado, y allí{" "}
+          <strong>Imprimir o guardar como PDF</strong> abre el diálogo del
+          navegador: elija «Guardar como PDF» como destino.
+        </p>
+
+        <Captura {...CAPTURAS.informeImprimible} />
 
         <p>
-          La pestaña <strong>Informes</strong> del proyecto está visible pero
-          vacía hasta entonces.
+          El documento lleva portada con los datos del proyecto y el equipo,
+          índice, una sección por proceso con sus resultados, el resumen
+          consolidado de precisiones, sus observaciones y el registro de cierre.
+        </p>
+        <p className="text-sm text-neutral-500">
+          El PDF lo genera su navegador, no la aplicación. Los márgenes y los
+          encabezados de página dependen de lo que usted elija en ese diálogo.
+        </p>
+      </Seccion>
+
+      {/* ── 11. Exportar a Excel ───────────────────────────────────────── */}
+      <Seccion id="export" titulo="11. Exportar a Excel">
+        <p>
+          Cada proceso tiene un botón <strong>Exportar a Excel</strong> en su
+          editor —y el control de asentamientos, en su panel de análisis—.
+          Descarga un <code>.xlsx</code> con tres hojas:
+        </p>
+
+        <Tabla
+          caption="Hojas del libro de Excel"
+          columnas={["Hoja", "Contiene"]}
+        >
+          {HOJAS_EXCEL.map((h) => (
+            <Fila key={h.hoja} celdas={[h.hoja, h.contiene]} />
+          ))}
+        </Tabla>
+
+        <p>
+          A diferencia del informe, la exportación funciona{" "}
+          <strong>en cualquier estado</strong>: también sobre un borrador. Las
+          celdas que aún no se han calculado salen vacías, no en cero — en
+          topografía un <code>0.000</code> es una posición, no un dato que
+          falta.
         </p>
       </Seccion>
 
       {/* ── 10. Preguntas frecuentes ───────────────────────────────────── */}
-      <Seccion id="faq" titulo="11. Preguntas frecuentes">
+      <Seccion id="faq" titulo="12. Preguntas frecuentes">
         <dl className="flex flex-col gap-5">
           {PREGUNTAS.map((p) => (
             <div key={p.pregunta}>
