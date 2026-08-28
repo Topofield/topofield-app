@@ -842,8 +842,11 @@ de forma manual durante el desarrollo.
 
 ### Prueba manual de extremo a extremo
 
-[`docs/testing/manual-e2e-poligonal.md`](../testing/manual-e2e-poligonal.md)
-tiene el recorrido completo del módulo poligonal.
+`docs/testing/` tiene un recorrido manual por módulo:
+[poligonal](../testing/manual-e2e-poligonal.md),
+[nivelación](../testing/manual-e2e-nivelacion.md),
+[asentamientos](../testing/manual-e2e-asentamientos.md) e
+[informes y exportación](../testing/manual-e2e-informes.md).
 
 ---
 
