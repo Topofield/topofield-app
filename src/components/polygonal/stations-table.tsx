@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   Button,
   DmsInput,
@@ -7,7 +10,10 @@ import {
   type DmsValue,
 } from "@/components/design-system";
 import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
-import type { CaptureIssues } from "@/lib/validators/polygonal";
+import {
+  validateReadings,
+  type CaptureIssues,
+} from "@/lib/validators/polygonal";
 import {
   DEFLECTION_DIRECTION_LABELS,
   type DeflectionDirection,
@@ -71,12 +77,104 @@ function formatCoord(value: number | null): string {
   return value == null ? "—" : value.toFixed(3);
 }
 
+/**
+ * Celda de ángulo con N lecturas.
+ *
+ * Fuera del despliegue se muestra promedio y dispersión, que es lo que el
+ * topógrafo quiere ver de un vistazo: tres lecturas que difieren 40" dicen
+ * algo que el promedio esconde.
+ */
+function AngleReadingsCell({
+  station,
+  issue,
+  dispersionWarning,
+  disabled,
+  onChange,
+}: {
+  station: StationDraftState;
+  issue?: CaptureIssues;
+  dispersionWarning?: string;
+  disabled?: boolean;
+  onChange: (readings: DmsValue[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const average = averageOf(station.readings);
+  const values = readingValues(station.readings);
+  const dispersion =
+    values.length > 1
+      ? (Math.max(...values) - Math.min(...values)) * 3600
+      : null;
+
+  function setReading(index: number, value: DmsValue) {
+    onChange(station.readings.map((r, i) => (i === index ? value : r)));
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-baseline gap-2 text-left tabular-nums"
+      >
+        <span className={average ? "font-medium" : "text-neutral-400"}>
+          {average
+            ? `${average.deg}°${average.min}′${average.sec}″`
+            : "Sin lecturas"}
+        </span>
+        <span className="text-xs text-neutral-500">
+          {dispersion != null ? `±${dispersion.toFixed(1)}″` : ""}
+          {` · ${values.length}/${station.readings.length}`}
+        </span>
+        <span aria-hidden className="text-xs text-neutral-400">
+          {open ? "▴" : "▾"}
+        </span>
+      </button>
+
+      {issue?.errors.angle && (
+        <p className="text-xs text-danger-500">{issue.errors.angle}</p>
+      )}
+      {dispersionWarning && (
+        <p className="text-xs text-warning-500">{dispersionWarning}</p>
+      )}
+
+      {open && (
+        <div className="mt-1 flex flex-col gap-1 rounded-md bg-neutral-50 p-2">
+          {station.readings.map((reading, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="w-4 text-xs text-neutral-500">{index + 1}</span>
+              <DmsInput
+                value={reading}
+                disabled={disabled}
+                onChange={(v) => setReading(index, v)}
+              />
+            </div>
+          ))}
+          {!disabled && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => onChange([...station.readings, { ...EMPTY_DMS }])}
+              className="mt-1 self-start"
+            >
+              + lectura
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface StationsTableProps {
   stations: StationDraftState[];
   onChange: (stations: StationDraftState[]) => void;
   result: PolygonalResult;
   issues: CaptureIssues[];
   showDeflection: boolean;
+  /** Mínimo de lecturas que exige el proceso. */
+  readingsMin: number;
+  /** Precisión angular del equipo, para la dispersión. */
+  angularPrecisionSeconds: number;
   disabled?: boolean;
 }
 
@@ -87,10 +185,22 @@ export function StationsTable({
   result,
   issues,
   showDeflection,
+  readingsMin,
+  angularPrecisionSeconds,
   disabled,
 }: StationsTableProps) {
   function update(index: number, patch: Partial<StationDraftState>) {
     onChange(stations.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  }
+
+  /** Aviso de dispersión de una estación, o `undefined` si no aplica. */
+  function dispersionWarning(station: StationDraftState): string | undefined {
+    const readings = readingValues(station.readings).map((angle, i) => ({
+      order: i + 1,
+      angle,
+    }));
+    return validateReadings(readings, readingsMin, angularPrecisionSeconds)
+      .warning;
   }
 
   return (
@@ -132,17 +242,18 @@ export function StationsTable({
                     />
                   </td>
                   <td className="py-2 pr-3">
-                    <DmsInput
-                      value={station.angle}
+                    <AngleReadingsCell
+                      station={station}
+                      issue={issue}
+                      dispersionWarning={dispersionWarning(station)}
                       disabled={disabled}
-                      error={issue?.errors.angle}
-                      onChange={(v) => update(i, { angle: v })}
+                      onChange={(readings) =>
+                        update(i, {
+                          readings,
+                          angle: averageOf(readings) ?? station.angle,
+                        })
+                      }
                     />
-                    {issue?.warnings.angle && (
-                      <p className="mt-1 text-xs text-warning-500">
-                        {issue.warnings.angle}
-                      </p>
-                    )}
                   </td>
                   {showDeflection && (
                     <td className="py-2 pr-3">
@@ -248,17 +359,18 @@ export function StationsTable({
               <div className="mt-3 flex flex-col gap-3">
                 <div>
                   <p className="mb-1 text-xs font-medium text-neutral-500">Ángulo</p>
-                  <DmsInput
-                    value={station.angle}
+                  <AngleReadingsCell
+                    station={station}
+                    issue={issue}
+                    dispersionWarning={dispersionWarning(station)}
                     disabled={disabled}
-                    error={issue?.errors.angle}
-                    onChange={(v) => update(i, { angle: v })}
+                    onChange={(readings) =>
+                      update(i, {
+                        readings,
+                        angle: averageOf(readings) ?? station.angle,
+                      })
+                    }
                   />
-                  {issue?.warnings.angle && (
-                    <p className="mt-1 text-xs text-warning-500">
-                      {issue.warnings.angle}
-                    </p>
-                  )}
                 </div>
 
                 {showDeflection && (

@@ -382,6 +382,8 @@ export function PolygonalEditor({
           stations={stations}
           result={result}
           issues={issues}
+          readingsMin={parseNumber(config.angleReadingsMin) ?? 3}
+          angularPrecisionSeconds={angularPrecisionSeconds}
           showDeflection={config.type === "open_controlled"}
           disabled={readOnly}
           onChange={(v) => {
