@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { computePolygonal } from "./polygonal";
+import { azimuthFromCoordinates, dmsToDecimal } from "./angles";
+import { CARTERA_TT4, CARTERA_VIVERO, type Cartera } from "@/lib/demo/carteras";
 import type {
   DeflectionDirection,
   PolygonalInput,
@@ -9,10 +11,52 @@ import type {
 function st(
   pointCode: string,
   angle: number,
-  distance: number,
+  distance: number | null,
   deflectionDirection: DeflectionDirection | null = null,
 ): StationInput {
-  return { pointCode, angle, deflectionDirection, distance };
+  return {
+    pointCode,
+    angle,
+    deflectionDirection,
+    distance,
+    readings: [{ order: 1, angle }],
+  };
+}
+
+/** Arma la entrada del cálculo desde una cartera real de docs/carteras/. */
+function fromCartera(
+  c: Cartera,
+  method: "bowditch" | "transit" | "crandall",
+): PolygonalInput {
+  return {
+    type: "closed",
+    method,
+    order: "tercer_orden",
+    angleType: c.angleType,
+    hasOrientation: c.hasOrientation,
+    hasClosingRow: c.hasClosingRow,
+    startNorth: c.startNorth,
+    startEast: c.startEast,
+    startAzimuth: azimuthFromCoordinates(
+      c.startNorth,
+      c.startEast,
+      c.referenceNorth,
+      c.referenceEast,
+    ),
+    endNorth: null,
+    endEast: null,
+    endAzimuth: null,
+    stations: c.stations.map((s) => ({
+      pointCode: s.pointCode,
+      angle: dmsToDecimal(...s.readings[0]!),
+      deflectionDirection: null,
+      distance: s.distance,
+      readings: s.readings.map((r, i) => ({
+        order: i + 1,
+        angle: dmsToDecimal(...r),
+      })),
+    })),
+  };
 }
 
 function sum(nums: (number | null)[]): number {
@@ -23,6 +67,9 @@ const BASE: Omit<PolygonalInput, "type" | "stations" | "method"> = {
   startNorth: 0,
   startEast: 0,
   startAzimuth: 0,
+  angleType: "interior",
+  hasOrientation: false,
+  hasClosingRow: false,
   endNorth: null,
   endEast: null,
   endAzimuth: null,
@@ -45,8 +92,11 @@ describe("computePolygonal — poligonal cerrada", () => {
     expect(square.anglesMeetTolerance).toBe(true);
   });
 
-  it("encadena azimuts del cuadrado: 0°, 90°, 180°, 270°", () => {
-    expect(square.stations.map((s) => s.azimuth)).toEqual([0, 90, 180, 270]);
+  it("encadena azimuts del cuadrado a la derecha: 0°, 270°, 180°, 90°", () => {
+    // Con ángulos a la derecha el recorrido va al revés que con la convención
+    // vieja (+180 − a), que daba [0, 90, 180, 270]. Los dos cuadrados cierran;
+    // son el mismo polígono recorrido en sentidos opuestos.
+    expect(square.stations.map((s) => s.azimuth)).toEqual([0, 270, 180, 90]);
   });
 
   it("cierra con error lineal ~0 y coordenadas correctas", () => {
@@ -55,10 +105,12 @@ describe("computePolygonal — poligonal cerrada", () => {
     expect(square.meetsTolerance).toBe(true);
     expect(square.stations[1]?.north).toBeCloseTo(100, 6);
     expect(square.stations[1]?.east).toBeCloseTo(0, 6);
+    // El cuadrado sale hacia el Este negativo: con ángulos a la derecha el
+    // recorrido es el espejo del que daba la convención vieja. Cierra igual.
     expect(square.stations[2]?.north).toBeCloseTo(100, 6);
-    expect(square.stations[2]?.east).toBeCloseTo(100, 6);
+    expect(square.stations[2]?.east).toBeCloseTo(-100, 6);
     expect(square.stations[3]?.north).toBeCloseTo(0, 6);
-    expect(square.stations[3]?.east).toBeCloseTo(100, 6);
+    expect(square.stations[3]?.east).toBeCloseTo(-100, 6);
   });
 
   it("un cierre exacto da precisión relativa 1:∞, no un número absurdo", () => {
@@ -278,5 +330,140 @@ describe("computePolygonal — datos insuficientes", () => {
     expect(r.stations).toEqual([]);
     expect(r.linearError).toBeNull();
     expect(r.meetsTolerance).toBeNull();
+  });
+});
+
+describe("computePolygonal — cartera real TT4 (docs/carteras/poligonales.xlsx)", () => {
+  const bowditch = computePolygonal(fromCartera(CARTERA_TT4, "bowditch"));
+
+  it("suma 1080°00'12\" contra una teórica de 1080° con orientación y cierre", () => {
+    expect(bowditch.theoreticalSum).toBe(1080);
+    expect(bowditch.angleSum).toBeCloseTo(1080.003333, 6);
+    expect(bowditch.angularError).toBeCloseTo(12, 3);
+  });
+
+  it("reparte el error entre los 7 ángulos medidos, no entre los 6 vértices", () => {
+    const aplicada =
+      dmsToDecimal(211, 15, 7) - (bowditch.stations[0]!.correctedAngle ?? 0);
+    expect(aplicada * 3600).toBeCloseTo(1.714286, 4);
+  });
+
+  it("encadena los azimuts de la hoja sumando el ángulo a la derecha", () => {
+    const esperados = [
+      181.850699, 126.345223, 95.039469, 6.055937, 286.517405, 211.28554,
+    ];
+    esperados.forEach((az, i) =>
+      expect(bowditch.stations[i]?.azimuth).toBeCloseTo(az, 5),
+    );
+  });
+
+  it("da el mismo error de cierre y perímetro que la hoja", () => {
+    expect(bowditch.errorNorth).toBeCloseTo(0.008417, 6);
+    expect(bowditch.errorEast).toBeCloseTo(-0.014104, 6);
+    expect(bowditch.linearError).toBeCloseTo(0.016425, 6);
+    expect(bowditch.perimeter).toBeCloseTo(115.712, 6);
+  });
+
+  it("el control de reorientación recupera el azimut de amarre", () => {
+    expect(bowditch.reorientationError).toBeCloseTo(0, 3);
+  });
+
+  it("reproduce las coordenadas de la hoja BRUJULA dentro de 0.1 mm", () => {
+    const esperadas: [number, number][] = [
+      [100135.666, 101440.525],
+      [100114.931312, 101439.857597],
+      [100108.052182, 101449.20719],
+      [100106.923797, 101461.994139],
+      [100143.699707, 101465.900541],
+      [100148.849172, 101448.533376],
+    ];
+    esperadas.forEach(([n, e], i) => {
+      expect(bowditch.stations[i]!.north!).toBeCloseTo(n, 4);
+      expect(bowditch.stations[i]!.east!).toBeCloseTo(e, 4);
+    });
+  });
+
+  it("Tránsito cierra a cero, cosa que la hoja del Excel tampoco hace", () => {
+    // La hoja TRANSITO reparte proporcional a la proyección CON SIGNO
+    // ((ΣΔN/Σ|ΔN|)·ΔNᵢ). Como ΣΔNᵢ es justamente el error de cierre, las
+    // correcciones se cancelan entre sí: suman 0.000002 en vez de −0.008417,
+    // o sea que la hoja deja el error entero sin corregir y vuelve al arranque
+    // desviada 8.42 mm en N y 14.1 mm en E.
+    //
+    // La regla de tránsito clásica reparte proporcional al VALOR ABSOLUTO
+    // |ΔNᵢ|, y así las correcciones suman exactamente −E_N. Es lo que hace
+    // correctDeltas, y por eso aquí se verifica el cierre y no la paridad con
+    // la hoja.
+    const r = computePolygonal(fromCartera(CARTERA_TT4, "transit"));
+    const sumaN = r.stations.reduce((a, s) => a + (s.correctedDeltaNorth ?? 0), 0);
+    const sumaE = r.stations.reduce((a, s) => a + (s.correctedDeltaEast ?? 0), 0);
+    expect(sumaN).toBeCloseTo(0, 9);
+    expect(sumaE).toBeCloseTo(0, 9);
+  });
+
+  it("Crandall cierra a cero, cosa que la hoja del Excel no hace", () => {
+    // La hoja CRANDALL usa (ΔN+ΔE)/d donde van el producto ΔN·ΔE/d, Σ(LDᵢ²)
+    // donde va (Σ LD)², y tiene los paréntesis mal puestos en los
+    // multiplicadores. Por eso vuelve a V10 con 0.22 mm de residuo en N y
+    // 0.09 mm en E. El nuestro cierra: no replicamos el error de la hoja.
+    const r = computePolygonal(fromCartera(CARTERA_TT4, "crandall"));
+    const sumaN = r.stations.reduce((a, s) => a + (s.correctedDeltaNorth ?? 0), 0);
+    const sumaE = r.stations.reduce((a, s) => a + (s.correctedDeltaEast ?? 0), 0);
+    expect(sumaN).toBeCloseTo(0, 9);
+    expect(sumaE).toBeCloseTo(0, 9);
+  });
+});
+
+describe("computePolygonal — cartera Vivero (cierre contra el primer lado)", () => {
+  const r = computePolygonal(fromCartera(CARTERA_VIVERO, "bowditch"));
+
+  it("excluye el ángulo de orientación de la suma: 540° sobre 5 ángulos", () => {
+    expect(r.theoreticalSum).toBe(540);
+    expect(r.angleSum).toBeCloseTo(539.998889, 6);
+    expect(r.angularError).toBeCloseTo(-4, 2);
+  });
+
+  it("el control de reorientación compara contra el azimut del primer lado", () => {
+    expect(r.reorientationError).not.toBeNull();
+    expect(Math.abs(r.reorientationError!)).toBeLessThan(1);
+  });
+
+  it("cierra: las proyecciones corregidas suman cero", () => {
+    const sumaN = r.stations.reduce((a, s) => a + (s.correctedDeltaNorth ?? 0), 0);
+    expect(sumaN).toBeCloseTo(0, 9);
+  });
+});
+
+describe("computePolygonal — ángulos exteriores", () => {
+  // No hay cartera real de ángulos exteriores, así que el caso se cubre con un
+  // cuadrado recorrido de modo que las lecturas a la derecha caigan como
+  // exteriores: 270° en cada vértice, suma (4+2)·180 = 1080.
+  //
+  // OJO: NO sirve tomar el complemento a 360° de una cartera interior. Bajo
+  // Az(i) = Az(i-1) + 180 + a, sustituir a por 360 − a devuelve exactamente la
+  // fórmula vieja (+180 − a), o sea el polígono espejo — el bug que esta fase
+  // corrige.
+  const square = computePolygonal({
+    ...BASE,
+    type: "closed",
+    angleType: "exterior",
+    method: "bowditch",
+    stations: [
+      st("A", 270, 100),
+      st("B", 270, 100),
+      st("C", 270, 100),
+      st("D", 270, 100),
+    ],
+  });
+
+  it("usa (n+2)·180 como suma teórica", () => {
+    expect(square.theoreticalSum).toBe(1080);
+    expect(square.angleSum).toBe(1080);
+    expect(square.angularError).toBeCloseTo(0, 6);
+  });
+
+  it("cierra el cuadrado con azimuts 0°, 90°, 180°, 270°", () => {
+    expect(square.stations.map((s) => s.azimuth)).toEqual([0, 90, 180, 270]);
+    expect(square.linearError).toBeCloseTo(0, 6);
   });
 });

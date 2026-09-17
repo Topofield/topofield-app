@@ -28,6 +28,12 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { computePolygonal } from "../src/lib/calculations/polygonal.ts";
+import { azimuthFromCoordinates } from "../src/lib/calculations/angles.ts";
+import {
+  CARTERAS,
+  CARTERA_TT4,
+  CARTERA_VIVERO,
+} from "../src/lib/demo/carteras.ts";
 import { computeLeveling } from "../src/lib/calculations/leveling.ts";
 import { computeHistory } from "../src/lib/calculations/settlement.ts";
 import { thresholdsFor } from "../src/lib/calculations/tolerances.ts";
@@ -75,8 +81,56 @@ async function createProject(userId, fields) {
 
 async function insertReferencePoints(projectId, points) {
   const rows = points.map((p) => ({ project_id: projectId, ...p }));
-  const { error } = await admin.from("reference_points").insert(rows);
+  const { data, error } = await admin
+    .from("reference_points")
+    .insert(rows)
+    .select("id, code");
   if (error) throw error;
+  return data;
+}
+
+/**
+ * Convierte una cartera de campo real (docs/carteras/) en un spec del seed.
+ *
+ * Los datos son los mismos que verifican los tests del motor: si el seed los
+ * replicara aparte, dejaría de comprobar lo mismo.
+ */
+function carteraToSpec(cartera, referencePointId, method, status) {
+  return {
+    name: `${cartera.name} — ${method}`,
+    type: "closed",
+    angle_type: cartera.angleType,
+    hasOrientation: cartera.hasOrientation,
+    hasClosingRow: cartera.hasClosingRow,
+    referencePointId,
+    referencePointCode: cartera.referencePointCode,
+    angleReadingsMin: 1,
+    startPointCode: cartera.startPointCode,
+    startNorth: cartera.startNorth,
+    startEast: cartera.startEast,
+    startAz: decimalToDmsTuple(
+      azimuthFromCoordinates(
+        cartera.startNorth,
+        cartera.startEast,
+        cartera.referenceNorth,
+        cartera.referenceEast,
+      ),
+    ),
+    correctionMethod: method,
+    status,
+    stations: cartera.stations.map((st) => ({
+      code: st.pointCode,
+      angle: st.readings[0],
+      distance: st.distance,
+    })),
+    notes: `Cartera de campo real transcrita de docs/carteras/. Amarre en ${cartera.referencePointCode}, azimut calculado desde sus coordenadas.`,
+  };
+}
+
+/** DMS como tupla [g, m, s], que es lo que consume el spec del seed. */
+function decimalToDmsTuple(decimal) {
+  const { deg, min, sec } = decimalToDms(decimal);
+  return [deg, min, sec];
 }
 
 /**
@@ -110,11 +164,15 @@ function resultFieldsFor(spec, order) {
     endAzimuth: spec.endAz ? dmsToDecimal(...spec.endAz) : null,
     order,
     method: spec.correctionMethod,
+    angleType: spec.angle_type,
+    hasOrientation: spec.hasOrientation ?? false,
+    hasClosingRow: spec.hasClosingRow ?? false,
     stations: spec.stations.map((st) => ({
       pointCode: st.code,
       angle: st.angle ? dmsToDecimal(...st.angle) : Number.NaN,
       deflectionDirection: st.dir ?? null,
-      distance: st.distance ?? Number.NaN,
+      distance: st.distance ?? null,
+      readings: st.angle ? [{ order: 1, angle: dmsToDecimal(...st.angle) }] : [],
     })),
   };
   const r = computePolygonal(input);
@@ -162,6 +220,12 @@ async function insertPolygonal(projectId, siteId, spec, userId, order) {
       end_azimuth_min: endAz[1],
       end_azimuth_sec: endAz[2],
       correction_method: spec.correctionMethod ?? null,
+      reference_point_id: spec.referencePointId ?? null,
+      reference_point_code: spec.referencePointCode ?? null,
+      // Los fixtures y las carteras se transcriben con UNA lectura por ángulo:
+      // es lo que hay en el papel. El mínimo de 3 es para captura nueva.
+      angle_readings_min: spec.angleReadingsMin ?? 1,
+      has_closing_row: spec.hasClosingRow ?? false,
       // El proceso nace abierto aunque el fixture lo quiera cerrado: los
       // triggers de inmutabilidad rechazan escribir estaciones bajo un proceso
       // ya cerrado. El cierre se aplica al final, como hace la aplicación.
@@ -207,10 +271,33 @@ async function insertPolygonal(projectId, siteId, spec, userId, order) {
     };
   });
   if (rows.length > 0) {
-    const { error: stErr } = await admin
+    const { data: inserted, error: stErr } = await admin
       .from("polygonal_stations")
-      .insert(rows);
+      .insert(rows)
+      .select("id, station_order");
     if (stErr) throw stErr;
+
+    // Las carteras reales traen una sola lectura por ángulo: es lo que hay en
+    // el Excel. La reiteración es capacidad de la app, no dato de esas hojas.
+    const readingRows = spec.stations.flatMap((st, i) => {
+      const stationId = inserted.find((r) => r.station_order === i + 1)?.id;
+      if (!stationId || !st.angle) return [];
+      return [
+        {
+          station_id: stationId,
+          reading_order: 1,
+          angle_deg: st.angle[0],
+          angle_min: st.angle[1],
+          angle_sec: st.angle[2],
+        },
+      ];
+    });
+    if (readingRows.length > 0) {
+      const { error: rdErr } = await admin
+        .from("polygonal_angle_readings")
+        .insert(readingRows);
+      if (rdErr) throw rdErr;
+    }
   }
 
   // Cierre al final, una vez cargadas las estaciones.
@@ -345,7 +432,7 @@ const PROCESSES = [
   {
     name: "Pentágono — Caso 1 del marco teórico",
     type: "closed",
-    angle_type: "internal",
+    angle_type: "interior",
     startPointCode: "A",
     startNorth: 1000,
     startEast: 1000,
@@ -359,7 +446,7 @@ const PROCESSES = [
   {
     name: "Cuadrado perfecto 100×4",
     type: "closed",
-    angle_type: "internal",
+    angle_type: "interior",
     startPointCode: "A",
     startNorth: 0,
     startEast: 0,
@@ -377,7 +464,7 @@ const PROCESSES = [
   {
     name: "Cuadrado con error 0.4 m (fixture clave)",
     type: "closed",
-    angle_type: "internal",
+    angle_type: "interior",
     startPointCode: "A",
     startNorth: 0,
     startEast: 0,
@@ -417,7 +504,7 @@ const PROCESSES = [
   {
     name: "Reconocimiento E1-E4 (sin cierre)",
     type: "open_uncontrolled",
-    angle_type: "internal",
+    angle_type: "interior",
     startPointCode: "E1",
     startNorth: 1000,
     startEast: 1000,
@@ -435,7 +522,7 @@ const PROCESSES = [
   {
     name: "Cuadrado oficial (cerrado)",
     type: "closed",
-    angle_type: "internal",
+    angle_type: "interior",
     startPointCode: "A",
     startNorth: 1000,
     startEast: 1000,
@@ -454,7 +541,7 @@ const PROCESSES = [
   {
     name: "Cuadrado marginal (rechazado)",
     type: "closed",
-    angle_type: "internal",
+    angle_type: "interior",
     startPointCode: "A",
     startNorth: 0,
     startEast: 0,
@@ -727,9 +814,22 @@ async function main() {
     structure_type: "otro",
   });
 
-  await insertReferencePoints(catastral, REFERENCE_POINTS);
+  // Los amarres de las carteras reales entran al catálogo como puntos de
+  // control: es lo que son, puntos de coordenadas conocidas.
+  const amarres = CARTERAS.map((c) => ({
+    code: c.referencePointCode,
+    type: "control",
+    north: c.referenceNorth,
+    east: c.referenceEast,
+    description: `Amarre de la ${c.name}`,
+  }));
+  const puntos = await insertReferencePoints(catastral, [
+    ...REFERENCE_POINTS,
+    ...amarres,
+  ]);
+  const idPorCodigo = new Map(puntos.map((p) => [p.code, p.id]));
   console.log(
-    `  ✓ ${REFERENCE_POINTS.length} puntos de referencia en "Lote catastral"`,
+    `  ✓ ${puntos.length} puntos de referencia en "Lote catastral"`,
   );
 
   // Los 7 procesos van al proyecto "Lote catastral" (tercer_orden): el mismo
@@ -737,6 +837,25 @@ async function main() {
   for (const spec of PROCESSES) {
     await insertPolygonal(catastral, catastralSite, spec, userId, "tercer_orden");
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
+  }
+
+  // Las dos carteras de campo reales. La TT4 se siembra con los tres métodos
+  // para poder compararlos lado a lado contra el Excel; la Vivero con Bowditch,
+  // porque su ajuste por mínimos cuadrados llega en la Fase 9.
+  const carteraSpecs = [
+    ...["bowditch", "transit", "crandall"].map((m) =>
+      carteraToSpec(CARTERA_TT4, idPorCodigo.get(CARTERA_TT4.referencePointCode), m, "calculated"),
+    ),
+    carteraToSpec(
+      CARTERA_VIVERO,
+      idPorCodigo.get(CARTERA_VIVERO.referencePointCode),
+      "bowditch",
+      "calculated",
+    ),
+  ];
+  for (const spec of carteraSpecs) {
+    await insertPolygonal(catastral, catastralSite, spec, userId, "tercer_orden");
+    console.log(`  ✓ Cartera real: ${spec.name}`);
   }
 
   for (const spec of LEVELING_PROCESSES) {

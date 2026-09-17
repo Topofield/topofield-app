@@ -5,6 +5,7 @@ import {
   getPolygonalProcess,
   getPolygonalStations,
   getProjectById,
+  getReferencePoints,
 } from "@/lib/supabase/queries";
 
 interface PolygonalEditorPageProps {
@@ -22,9 +23,10 @@ export default async function PolygonalEditorPage({
     notFound();
   }
 
-  const [stations, project] = await Promise.all([
+  const [stations, project, referencePoints] = await Promise.all([
     getPolygonalStations(supabase, pid),
     getProjectById(supabase, id),
+    getReferencePoints(supabase, id),
   ]);
   if (!project) {
     notFound();
@@ -37,6 +39,8 @@ export default async function PolygonalEditorPage({
       projectId={id}
       projectName={project.name}
       precisionOrder={project.precision_order}
+      referencePoints={referencePoints}
+      angularPrecisionSeconds={Number(project.angular_precision_seconds)}
     />
   );
 }

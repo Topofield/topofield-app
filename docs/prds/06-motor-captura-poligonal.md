@@ -1,8 +1,8 @@
 # PRD-de-fase 7 — Motor y captura de poligonales
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-16
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-17
 
 ## Propósito
 
@@ -76,13 +76,22 @@ Verificados numéricamente contra las carteras, no inferidos:
    entre 7 ángulos (1.714286" cada uno) y el ángulo de cierre ofrece un control
    de reorientación que hoy no existe.
 
-5. **Bowditch y Tránsito de la app ya son correctos.** Reimplementando la hoja
+5. **Bowditch de la app es correcto y reproduce la hoja.** Reimplementando
    `BRUJULA` desde cero con la convención del instrumento, la diferencia contra
    el Excel es de 0.000 mm en los 6 vértices. `brújula` y Bowditch son el mismo
-   método (compass rule); la hoja `TRANSITO` es la corrección proporcional a
-   `|proyección|`, idéntica a la nuestra.
+   método (compass rule).
 
-6. **El Crandall de la app es correcto y el del Excel no.** La hoja tiene tres
+6. **El Tránsito de la app es correcto y el del Excel no.** La hoja reparte
+   proporcional a la proyección **con signo** (`(ΣΔN/Σ|ΔN|)·ΔNᵢ`). Como `ΣΔNᵢ`
+   es justamente el error de cierre, las correcciones se cancelan entre sí:
+   suman `0.000002` en vez de `−0.008417`, de modo que la hoja deja el error
+   **entero sin corregir** y vuelve al punto de arranque desviada 8.42 mm en N
+   y 14.1 mm en E. La regla de tránsito clásica reparte proporcional al **valor
+   absoluto** `|ΔNᵢ|`, y así las correcciones suman exactamente `−E_N`. Es lo
+   que hace `correctDeltas`, y por eso el criterio de aceptación de Tránsito es
+   el cierre y no la paridad con la hoja.
+
+7. **El Crandall de la app es correcto y el del Excel no.** La hoja tiene tres
    errores: usa `(ΔN+ΔE)/d` donde las ecuaciones normales piden el producto
    `ΔN·ΔE/d`; usa `Σ(LDᵢ²)` donde el determinante pide `(Σ LD)²`; y tiene los
    paréntesis mal puestos en los multiplicadores, de modo que la división aplica
@@ -109,12 +118,12 @@ Verificados numéricamente contra las carteras, no inferidos:
 
 ### Fuera (diferido)
 
-- **Canvas de visualización** (original vs ajustada, grilla, zoom): Fase 8.
-- **Ajuste por mínimos cuadrados** como cuarto método: Fase 9. La cartera Vivero
+- **Canvas de visualización** (original vs ajustada, grilla, zoom): Fase 9.
+- **Ajuste por mínimos cuadrados** como cuarto método: Fase 10. La cartera Vivero
   se siembra en esta fase como poligonal normal, calculada con los tres métodos
   actuales.
 - **Georreferenciación en cualquier momento**, incluidos procesos cerrados:
-  Fase 10. Un levantamiento puede arrancar en sistema local arbitrario (1000,
+  Fase 11. Un levantamiento puede arrancar en sistema local arbitrario (1000,
   2000) y recibir coordenadas reales meses después, ya cerrado. Mecanismo
   acordado para esa fase: **recalcular y guardar**, con una excepción estrecha
   en el trigger de inmutabilidad — solo las columnas de coordenadas, solo por la
@@ -137,7 +146,7 @@ Verificados numéricamente contra las carteras, no inferidos:
 | 6 | Los `.xlsx` se commitean en `docs/carteras/` como fuente de los tests | Datos académicos de la Universidad Distrital, sin información de cliente |
 | 7 | El azimut de amarre se **calcula** desde las coordenadas de un `reference_points` elegido del catálogo, con los campos DMS como respaldo manual | Teclear siempre el azimut en DMS; es un derivado de datos que el proyecto ya tiene. Recoge la decisión 6 de la Fase 3, que lo dejó como «mejora futura» |
 | 8 | `angle_type` se elige explícitamente en el formulario, sin preselección | Un default; interior y exterior ocurren ambos en campo según hacia dónde se recorra el polígono, y adivinarlo reintroduce el fallo silencioso que esta fase corrige |
-| 9 | La georreferenciación completa se difiere a la Fase 10; en esta fase solo se deriva el azimut al reasignar coordenadas de un proceso no cerrado | Meterla entera llevaría la fase de 12 a ~17 tareas y mezclaría el arreglo de un bug real con funcionalidad nueva de peso |
+| 9 | La georreferenciación completa se difiere a la Fase 11; en esta fase solo se deriva el azimut al reasignar coordenadas de un proceso no cerrado | Meterla entera llevaría la fase de 12 a ~17 tareas y mezclaría el arreglo de un bug real con funcionalidad nueva de peso |
 
 ## Modelo de datos
 
@@ -299,9 +308,9 @@ No bloquea el cálculo; alimenta el panel de resultados.
 
 ## Seed y pruebas
 
-- `polygonal.test.ts`: las hojas `BRUJULA` y `TRANSITO` reproducidas con
-  tolerancia de 0.1 mm en los 6 vértices; Crandall verificado por **cierre a
-  cero**, con un test que documenta que la hoja del Excel no cierra.
+- `polygonal.test.ts`: la hoja `BRUJULA` reproducida con tolerancia de 0.1 mm
+  en los 6 vértices; Tránsito y Crandall verificados por **cierre a cero**, cada
+  uno con un test que documenta cómo falla su hoja del Excel.
 - Cartera Vivero como segundo juego de datos, con su control de reorientación.
 - `scripts/seed.mjs`: ambas carteras sembradas, sustituyendo los datos actuales.
 - `src/lib/demo/fixtures.ts`: el proyecto demo pasa a la convención nueva.
@@ -311,7 +320,7 @@ No bloquea el cálculo; alimenta el panel de resultados.
 | | Criterio |
 |---|---|
 | a | El motor reproduce `BRUJULA` con error < 0.1 mm en los 6 vértices |
-| b | El motor reproduce `TRANSITO` con error < 0.1 mm en los 6 vértices |
+| b | Tránsito cierra a cero; un test documenta que la hoja deja el error sin corregir |
 | c | Crandall cierra a cero; un test documenta el residuo de 0.22 mm de la hoja |
 | d | La suma teórica responde a `angle_type` y a la presencia de orientación |
 | e | El error angular se reparte entre `n+1` ángulos cuando hay orientación |

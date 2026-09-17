@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs, Card } from "@/components/design-system";
 import { NewPolygonalForm } from "@/components/polygonal/new-polygonal-form";
 import { createClient } from "@/lib/supabase/server";
-import { getProjectById } from "@/lib/supabase/queries";
+import { getProjectById, getReferencePoints } from "@/lib/supabase/queries";
 
 interface NewPolygonalPageProps {
   params: Promise<{ id: string }>;
@@ -18,6 +18,9 @@ export default async function NewPolygonalPage({
   if (!project) {
     notFound();
   }
+
+  // Catálogo de puntos del proyecto, para elegir el amarre.
+  const referencePoints = await getReferencePoints(supabase, id);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -35,7 +38,7 @@ export default async function NewPolygonalPage({
         Configura el proceso. Los datos de campo se capturan en el editor.
       </p>
       <Card className="mt-6">
-        <NewPolygonalForm projectId={id} />
+        <NewPolygonalForm projectId={id} referencePoints={referencePoints} />
       </Card>
     </div>
   );

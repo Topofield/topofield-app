@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { PolygonalType } from "@/types/polygonal";
+import type { AngleType, PolygonalType } from "@/types/polygonal";
 
 export interface CreatePolygonalState {
   error?: string;
@@ -24,6 +24,12 @@ export interface CreatePolygonalPayload {
   endAzimuthDeg: number | null;
   endAzimuthMin: number | null;
   endAzimuthSec: number | null;
+  /** Solo para cerradas: dónde caen las lecturas a la derecha. */
+  angleType: AngleType | null;
+  referencePointId: string | null;
+  referencePointCode: string | null;
+  angleReadingsMin: number;
+  hasClosingRow: boolean;
 }
 
 /**
@@ -65,7 +71,15 @@ export async function createPolygonalProcessAction(
       site_id: site.id,
       name,
       type: payload.type,
-      angle_type: payload.type === "open_controlled" ? "deflection" : "internal",
+      // En cerradas lo elige el usuario (interior/exterior); en abiertas queda
+      // determinado por el tipo.
+      angle_type:
+        payload.type === "open_controlled"
+          ? "deflection"
+          : (payload.angleType ?? "interior"),
+      reference_point_id: payload.referencePointId,
+      reference_point_code: payload.referencePointCode,
+      angle_readings_min: payload.angleReadingsMin,
       start_point_code: startPointCode,
       start_north: payload.startNorth,
       start_east: payload.startEast,

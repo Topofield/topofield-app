@@ -42,6 +42,13 @@ export interface StationRow {
   delta_east: number | string | null;
   corrected_delta_north: number | string | null;
   corrected_delta_east: number | string | null;
+  /** Lecturas del ángulo, si el proceso las capturó. */
+  polygonal_angle_readings?: {
+    reading_order: number;
+    angle_deg: number;
+    angle_min: number;
+    angle_sec: number | string;
+  }[];
   north: number | string | null;
   east: number | string | null;
 }
@@ -61,6 +68,7 @@ export interface PolygonalProcessRow {
   perimeter: number | string | null;
   relative_precision: string | null;
   meets_tolerance: boolean | null;
+  has_closing_row?: boolean | null;
   closed_at: string | null;
   closed_by: string | null;
   notes: string | null;
@@ -102,6 +110,12 @@ function sheetRawData(
   setSheetTitle(s, `${process.name} — datos de campo sin modificar`);
 
   const showDeflection = process.type === "open_controlled";
+  // Las lecturas van a la derecha del promedio, una columna por lectura: el
+  // Excel exportado conserva el dato de campo crudo, no solo su promedio.
+  const maxReadings = stations.reduce(
+    (max, st) => Math.max(max, st.polygonal_angle_readings?.length ?? 0),
+    0,
+  );
   const headers = [
     "Orden",
     "Punto",
@@ -110,6 +124,7 @@ function sheetRawData(
     'Áng. "',
     ...(showDeflection ? ["Deflexión"] : []),
     "Distancia (m)",
+    ...Array.from({ length: maxReadings }, (_, i) => `Lectura ${i + 1}`),
   ];
   setHeaders(s, 3, headers);
 
@@ -131,10 +146,19 @@ function sheetRawData(
       );
     }
     values.push(num(st.horizontal_distance));
+    for (let r = 0; r < maxReadings; r++) {
+      const reading = st.polygonal_angle_readings?.[r];
+      values.push(
+        reading
+          ? `${reading.angle_deg}°${reading.angle_min}'${reading.angle_sec}"`
+          : null,
+      );
+    }
 
     const formats: (number | null)[] = [null, null, null, null, null];
     if (showDeflection) formats.push(null);
     formats.push(DECIMALS.coordinate);
+    for (let r = 0; r < maxReadings; r++) formats.push(null);
 
     writeRow(s, 4 + i, values, formats);
   });
@@ -235,7 +259,12 @@ function sheetSummary(
         ? CORRECTION_METHOD_LABELS[process.correction_method]
         : null,
     ],
-    ["Estaciones", stations.length],
+    // Vértices, no filas: con fila de cierre la última no abre lado y no es un
+    // vértice del polígono.
+    [
+      "Estaciones",
+      process.has_closing_row ? stations.length - 1 : stations.length,
+    ],
     ["Punto inicial", process.start_point_code],
     ["Punto final", process.end_point_code],
   ]);

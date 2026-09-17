@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
+import {
+  azimuthFromCoordinates,
+  decimalToDms,
+  dmsToDecimal,
+} from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import {
   expectStationCapture,
@@ -11,6 +15,7 @@ import {
 } from "@/lib/validators/polygonal";
 import { derivePolygonalCloseStatus } from "./close-status";
 import type {
+  AngleType,
   CorrectionMethod,
   DeflectionDirection,
   PolygonalInput,
@@ -23,11 +28,24 @@ export interface ActionResult {
   error?: string;
 }
 
+/** Una lectura del ángulo tal como la manda el editor. */
+export interface ReadingDraft {
+  deg: number;
+  min: number;
+  sec: number;
+}
+
 export interface StationDraft {
   pointCode: string;
+  /**
+   * Promedio de las lecturas. Lo recalcula el servidor desde `readings`
+   * cuando las hay: el promedio es derivado, no un dato que el cliente pueda
+   * contradecir.
+   */
   angleDeg: number | null;
   angleMin: number | null;
   angleSec: number | null;
+  readings: ReadingDraft[];
   deflectionDirection: DeflectionDirection | null;
   horizontalDistance: number | null;
 }
@@ -49,6 +67,11 @@ export interface SavePolygonalPayload {
   endAzimuthMin: number | null;
   endAzimuthSec: number | null;
   correctionMethod: CorrectionMethod;
+  angleType: AngleType;
+  referencePointId: string | null;
+  referencePointCode: string | null;
+  angleReadingsMin: number;
+  hasClosingRow: boolean;
   notes: string | null;
   stations: StationDraft[];
 }
@@ -66,6 +89,22 @@ function angleOrNaN(
   return deg != null && min != null && sec != null
     ? dmsToDecimal(deg, min, sec)
     : Number.NaN;
+}
+
+/**
+ * Promedio de las lecturas de una estación, en grados decimales. Sin lecturas
+ * cae al ángulo que venga en el draft, que es el camino de los datos sin
+ * reiteración.
+ */
+function averageAngle(st: StationDraft): number {
+  if (st.readings.length === 0) {
+    return angleOrNaN(st.angleDeg, st.angleMin, st.angleSec);
+  }
+  const total = st.readings.reduce(
+    (a, r) => a + dmsToDecimal(r.deg, r.min, r.sec),
+    0,
+  );
+  return total / st.readings.length;
 }
 
 function buildInput(
@@ -93,13 +132,65 @@ function buildInput(
         : null,
     order,
     method: payload.correctionMethod,
+    angleType: payload.angleType,
+    // Hay orientación cuando el proceso está amarrado a un punto conocido:
+    // entonces startAzimuth apunta del arranque HACIA la referencia y la
+    // primera estación lleva el ángulo de orientación.
+    hasOrientation:
+      payload.referencePointId != null || payload.referencePointCode != null,
+    hasClosingRow: payload.hasClosingRow,
     stations: payload.stations.map((st) => ({
       pointCode: st.pointCode,
-      angle: angleOrNaN(st.angleDeg, st.angleMin, st.angleSec),
+      angle: averageAngle(st),
       deflectionDirection: st.deflectionDirection,
-      distance: st.horizontalDistance ?? Number.NaN,
+      distance: st.horizontalDistance,
+      readings: st.readings.map((r, i) => ({
+        order: i + 1,
+        angle: dmsToDecimal(r.deg, r.min, r.sec),
+      })),
     })),
   };
+}
+
+/**
+ * Resuelve el azimut de partida que se persiste.
+ *
+ * Con punto de amarre del catálogo, se calcula desde sus coordenadas y las del
+ * arranque. El valor resuelto se GUARDA en vez de releerse del catálogo al
+ * calcular: el CRUD de `reference_points` permite mover un punto ya usado, y el
+ * proceso debe conservar el azimut con el que realmente se calculó.
+ */
+async function resolveStartAzimuth(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  payload: SavePolygonalPayload,
+): Promise<{ deg: number | null; min: number | null; sec: number | null } | { error: string }> {
+  if (payload.referencePointId == null) {
+    return {
+      deg: payload.startAzimuthDeg,
+      min: payload.startAzimuthMin,
+      sec: payload.startAzimuthSec,
+    };
+  }
+
+  const { data: refPoint } = await supabase
+    .from("reference_points")
+    .select("north, east")
+    .eq("id", payload.referencePointId)
+    .maybeSingle();
+
+  if (refPoint?.north == null || refPoint?.east == null) {
+    return { error: "El punto de amarre no tiene coordenadas." };
+  }
+
+  const dms = decimalToDms(
+    azimuthFromCoordinates(
+      payload.startNorth,
+      payload.startEast,
+      Number(refPoint.north),
+      Number(refPoint.east),
+    ),
+  );
+  return dms;
 }
 
 /**
@@ -174,19 +265,24 @@ export async function savePolygonalProcessAction(
       ? "in_progress"
       : "draft";
 
+  const azimuth = await resolveStartAzimuth(supabase, payload);
+  if ("error" in azimuth) return { ok: false, error: azimuth.error };
+
   const { error: updateError } = await supabase
     .from("polygonal_processes")
     .update({
       name: payload.name,
       type: payload.type,
-      angle_type:
-        payload.type === "open_controlled" ? "deflection" : "internal",
+      angle_type: payload.angleType,
+      reference_point_id: payload.referencePointId,
+      reference_point_code: payload.referencePointCode,
+      angle_readings_min: payload.angleReadingsMin,
       start_point_code: payload.startPointCode,
       start_north: payload.startNorth,
       start_east: payload.startEast,
-      start_azimuth_deg: payload.startAzimuthDeg,
-      start_azimuth_min: payload.startAzimuthMin,
-      start_azimuth_sec: payload.startAzimuthSec,
+      start_azimuth_deg: azimuth.deg,
+      start_azimuth_min: azimuth.min,
+      start_azimuth_sec: azimuth.sec,
       end_point_code: payload.endPointCode,
       end_north: payload.endNorth,
       end_east: payload.endEast,
@@ -223,9 +319,17 @@ export async function savePolygonalProcessAction(
         process_id: payload.processId,
         station_order: i + 1,
         point_code: st.pointCode,
-        angle_deg: st.angleDeg,
-        angle_min: st.angleMin,
-        angle_sec: st.angleSec,
+        // El ángulo de la estación es el PROMEDIO de las lecturas, recalculado
+        // por el servidor. Las lecturas individuales van a su propia tabla.
+        ...(() => {
+          const avg = averageAngle(st);
+          const dms = Number.isFinite(avg) ? decimalToDms(avg) : null;
+          return {
+            angle_deg: dms?.deg ?? st.angleDeg,
+            angle_min: dms?.min ?? st.angleMin,
+            angle_sec: dms?.sec ?? st.angleSec,
+          };
+        })(),
         deflection_direction: st.deflectionDirection,
         horizontal_distance: st.horizontalDistance,
         corrected_angle_deg: corrected?.deg ?? null,
@@ -242,11 +346,37 @@ export async function savePolygonalProcessAction(
         east: r?.east ?? null,
       };
     });
-    const { error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from("polygonal_stations")
-      .insert(rows);
-    if (insertError) {
+      .insert(rows)
+      .select("id, station_order");
+    if (insertError || !inserted) {
       return { ok: false, error: "No se pudieron guardar las estaciones." };
+    }
+
+    // Las lecturas cuelgan de la estación recién insertada. No hace falta
+    // borrarlas: las estaciones se reemplazan por completo en cada guardado y
+    // las lecturas caen por ON DELETE CASCADE.
+    const byOrder = new Map(inserted.map((r) => [r.station_order, r.id]));
+    const readingRows = payload.stations.flatMap((st, i) => {
+      const stationId = byOrder.get(i + 1);
+      if (stationId == null) return [];
+      return st.readings.map((r, order) => ({
+        station_id: stationId,
+        reading_order: order + 1,
+        angle_deg: r.deg,
+        angle_min: r.min,
+        angle_sec: r.sec,
+      }));
+    });
+
+    if (readingRows.length > 0) {
+      const { error: readingsError } = await supabase
+        .from("polygonal_angle_readings")
+        .insert(readingRows);
+      if (readingsError) {
+        return { ok: false, error: "No se pudieron guardar las lecturas." };
+      }
     }
   }
 

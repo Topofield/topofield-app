@@ -11,6 +11,7 @@ import {
   expectStationCapture,
   hasCaptureErrors,
   validatePolygonalStation,
+  validateReadings,
   type CaptureIssues,
 } from "./polygonal";
 import type { PolygonalResult, StationResult } from "@/types/polygonal";
@@ -45,6 +46,7 @@ function resultWith(over: Partial<PolygonalResult> = {}): PolygonalResult {
     perimeter: 0,
     relativePrecision: null,
     meetsLinearTolerance: null,
+    reorientationError: null,
     meetsTolerance: null,
     stations: [],
     ...over,
@@ -56,6 +58,7 @@ function computedStation(north: number | null): StationResult {
   return {
     pointCode: "E1",
     correctedAngle: null,
+    readingDispersion: null,
     azimuth: null,
     deltaNorth: null,
     deltaEast: null,
@@ -451,5 +454,55 @@ describe("evaluatePolygonalClosure — abierta sin control", () => {
     );
     expect(r.mustReject).toBe(false);
     expect(r.canClose).toBe(true);
+  });
+});
+
+describe("validateReadings", () => {
+  it("exige el mínimo de lecturas configurado", () => {
+    const r = validateReadings([{ order: 1, angle: 90 }], 3, 5);
+    expect(r.error).toBe("Faltan lecturas: se exigen 3 y hay 1.");
+  });
+
+  it("acepta cuando se alcanza el mínimo", () => {
+    const readings = [90, 90.0001, 90.0002].map((angle, i) => ({
+      order: i + 1,
+      angle,
+    }));
+    expect(validateReadings(readings, 3, 5).error).toBeUndefined();
+  });
+
+  it("avisa cuando la dispersión supera lo que el equipo resuelve", () => {
+    // Equipo de 5": tres lecturas con 36" de separación no son repetibilidad,
+    // son un error de puntería o de transcripción.
+    const readings = [90, 90.005, 90.01].map((angle, i) => ({
+      order: i + 1,
+      angle,
+    }));
+    expect(validateReadings(readings, 3, 5).warning).toMatch(/dispersión/i);
+  });
+
+  it("no avisa con lecturas dentro de la precisión del equipo", () => {
+    // 5" de separación total con un equipo de 5": dentro del margen (2x).
+    const readings = [90, 90.0007, 90.0014].map((angle, i) => ({
+      order: i + 1,
+      angle,
+    }));
+    expect(validateReadings(readings, 3, 5).warning).toBeUndefined();
+  });
+});
+
+describe("expectStationCapture — fila de cierre", () => {
+  it("la fila de cierre pide ángulo y no distancia", () => {
+    expect(expectStationCapture("closed", 6, 7, true)).toEqual({
+      angle: true,
+      distance: false,
+    });
+  });
+
+  it("sin fila de cierre, la última sigue pidiendo distancia", () => {
+    expect(expectStationCapture("closed", 5, 6, false)).toEqual({
+      angle: true,
+      distance: true,
+    });
   });
 });

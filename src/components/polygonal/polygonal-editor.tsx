@@ -24,10 +24,10 @@ import {
   type CorrectionMethod,
   type PolygonalInput,
   type PolygonalProcess,
-  type PolygonalStation,
+  type PolygonalStationWithReadings,
   type ProcessStatus,
 } from "@/types/polygonal";
-import type { PrecisionOrder } from "@/types/project";
+import type { PrecisionOrder, ReferencePoint } from "@/types/project";
 import {
   PolygonalConfigFields,
   type PolygonalConfigState,
@@ -36,7 +36,12 @@ import { CloseProcessDialog } from "./close-process-dialog";
 import { ClosureVerdict } from "./closure-verdict";
 import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
-import { StationsTable, type StationDraftState } from "./stations-table";
+import {
+  StationsTable,
+  averageOf,
+  readingValues,
+  type StationDraftState,
+} from "./stations-table";
 
 function dmsRow(
   deg: number | null,
@@ -54,6 +59,11 @@ function processToConfig(p: PolygonalProcess): PolygonalConfigState {
   return {
     name: p.name,
     type: p.type,
+    angleType: p.angle_type,
+    referencePointId: p.reference_point_id ?? "",
+    referencePointCode: p.reference_point_code ?? "",
+    hasClosingRow: p.has_closing_row ?? false,
+    angleReadingsMin: String(p.angle_readings_min),
     startPointCode: p.start_point_code,
     startNorth: String(p.start_north),
     startEast: String(p.start_east),
@@ -69,11 +79,31 @@ function processToConfig(p: PolygonalProcess): PolygonalConfigState {
   };
 }
 
-function stationToDraft(st: PolygonalStation): StationDraftState {
+function stationToDraft(
+  st: PolygonalStationWithReadings,
+  readingsMin: number,
+): StationDraftState {
+  const stored = (st.polygonal_angle_readings ?? []).map((r) =>
+    dmsRow(r.angle_deg, r.angle_min, r.angle_sec),
+  );
+  // Siempre se muestran al menos `readingsMin` filas: las que falten van
+  // vacías, para que el capturador vea cuántas le exige el proceso.
+  const readings =
+    stored.length >= readingsMin
+      ? stored
+      : [
+          ...stored,
+          ...Array.from({ length: readingsMin - stored.length }, () => ({
+            deg: "",
+            min: "",
+            sec: "",
+          })),
+        ];
   return {
     id: crypto.randomUUID(),
     pointCode: st.point_code,
     angle: dmsRow(st.angle_deg, st.angle_min, st.angle_sec),
+    readings,
     deflectionDirection: st.deflection_direction,
     distance:
       st.horizontal_distance != null ? String(st.horizontal_distance) : "",
@@ -109,11 +139,19 @@ function buildInput(
         : null,
     order,
     method,
+    angleType: config.angleType === "" ? "interior" : config.angleType,
+    hasOrientation:
+      config.referencePointId !== "" || config.referencePointCode !== "",
+    hasClosingRow: config.hasClosingRow,
     stations: stations.map((st) => ({
       pointCode: st.pointCode,
-      angle: dmsToDecimalOrNaN(st.angle),
+      angle: dmsToDecimalOrNaN(averageOf(st.readings) ?? st.angle),
       deflectionDirection: st.deflectionDirection,
-      distance: parseNumber(st.distance) ?? Number.NaN,
+      distance: parseNumber(st.distance),
+      readings: readingValues(st.readings).map((angle, i) => ({
+        order: i + 1,
+        angle,
+      })),
     })),
   };
 }
@@ -131,10 +169,14 @@ const STATUS_TONE: Record<
 
 interface PolygonalEditorProps {
   process: PolygonalProcess;
-  stations: PolygonalStation[];
+  stations: PolygonalStationWithReadings[];
   projectId: string;
   projectName: string;
   precisionOrder: PrecisionOrder;
+  /** Catálogo del proyecto, para elegir y georreferenciar el amarre. */
+  referencePoints?: ReferencePoint[];
+  /** Precisión angular del equipo, para la dispersión entre lecturas. */
+  angularPrecisionSeconds: number;
 }
 
 export function PolygonalEditor({
@@ -143,12 +185,19 @@ export function PolygonalEditor({
   projectId,
   projectName,
   precisionOrder,
+  referencePoints = [],
+  angularPrecisionSeconds,
 }: PolygonalEditorProps) {
   const readOnly = process.status === "closed" || process.status === "rejected";
+  const amarre = referencePoints.find(
+    (p) => p.id === process.reference_point_id,
+  );
 
   const [config, setConfig] = useState(() => processToConfig(process));
   const [stations, setStations] = useState(() =>
-    initialStations.map(stationToDraft),
+    initialStations.map((st) =>
+      stationToDraft(st, process.angle_readings_min),
+    ),
   );
   const [method, setMethod] = useState<CorrectionMethod>(
     process.correction_method ?? "bowditch",
@@ -175,10 +224,15 @@ export function PolygonalEditor({
             angleSec: parseNumber(st.angle.sec),
             distance: parseNumber(st.distance),
           },
-          expectStationCapture(config.type, i, stations.length),
+          expectStationCapture(
+            config.type,
+            i,
+            stations.length,
+            config.hasClosingRow,
+          ),
         ),
       ),
-    [stations, config.type],
+    [stations, config.type, config.hasClosingRow],
   );
 
   const captureBlocked = issues.some((i) => Object.keys(i.errors).length > 0);
@@ -204,12 +258,25 @@ export function PolygonalEditor({
         endAzimuthMin: controlled ? parseNumber(config.endAzimuth.min) : null,
         endAzimuthSec: controlled ? parseNumber(config.endAzimuth.sec) : null,
         correctionMethod: method,
+        angleType:
+          config.angleType === "" ? "interior" : config.angleType,
+        referencePointId: config.referencePointId || null,
+        referencePointCode: config.referencePointCode.trim() || null,
+        angleReadingsMin: parseNumber(config.angleReadingsMin) ?? 3,
+        hasClosingRow: config.hasClosingRow,
         notes: process.notes,
         stations: stations.map((st) => ({
           pointCode: st.pointCode,
           angleDeg: parseNumber(st.angle.deg),
           angleMin: parseNumber(st.angle.min),
           angleSec: parseNumber(st.angle.sec),
+          readings: st.readings
+            .filter((r) => r.deg.trim() !== "")
+            .map((r) => ({
+              deg: parseNumber(r.deg) ?? 0,
+              min: parseNumber(r.min) ?? 0,
+              sec: parseNumber(r.sec) ?? 0,
+            })),
           deflectionDirection: st.deflectionDirection,
           horizontalDistance: parseNumber(st.distance),
         })),
@@ -320,6 +387,8 @@ export function PolygonalEditor({
           stations={stations}
           result={result}
           issues={issues}
+          readingsMin={parseNumber(config.angleReadingsMin) ?? 3}
+          angularPrecisionSeconds={angularPrecisionSeconds}
           showDeflection={config.type === "open_controlled"}
           disabled={readOnly}
           onChange={(v) => {
@@ -350,6 +419,9 @@ export function PolygonalEditor({
             startNorth={config.startNorth}
             startEast={config.startEast}
             startAzimuth={config.startAzimuth}
+            referenceNorth={amarre?.north != null ? String(amarre.north) : undefined}
+            referenceEast={amarre?.east != null ? String(amarre.east) : undefined}
+            referencePointCode={amarre?.code ?? config.referencePointCode}
             onApply={(north, east, azimuth) => {
               setConfig({
                 ...config,

@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-08-26 · Las 6 fases del PRD implementadas · 392 tests ·
+**Última actualización:** 2026-09-17 · Fase 7 cerrada · 417 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -59,6 +59,14 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 4 | Nivelación | cerrada |
 | 5 | Asentamientos | cerrada |
 | 6 | Cierre, informes, exportación | cerrada |
+| 7 | Motor y captura de poligonales | cerrada |
+| 8 | Precisión y equipo por proceso | pendiente |
+| 9 | Canvas de poligonal | pendiente |
+| 10 | Ajuste por mínimos cuadrados | pendiente |
+| 11 | Georreferenciación de levantamientos | pendiente |
+
+Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
+motor contra carteras de campo reales (`docs/carteras/`).
 
 ---
 
@@ -506,10 +514,78 @@ Ramas por tipo:
 | `open_controlled` | Cierre contra el punto de llegada conocido |
 | `open_uncontrolled` | Ninguna: `relativePrecision` y `meetsTolerance` quedan en `null` |
 
+### Convención de azimut (Fase 7)
+
+El instrumento pone cero en la vista atrás y gira a la derecha, así que la
+lectura es siempre un **ángulo a la derecha** y el azimut avanza sumándolo:
+
+```
+Az(0) = normalizar(azimut_de_amarre + ángulo_de_orientación)
+Az(i) = normalizar(Az(i-1) + 180 + a(i))
+```
+
+Hasta la Fase 6 el motor restaba el ángulo (`+180 − a`), que produce el polígono
+**espejo**. El fallo era invisible: el error de cierre y la precisión relativa
+salen prácticamente iguales en las dos convenciones, así que la aplicación
+informaba «cumple 1:7036» sobre coordenadas espejadas. Con la cartera real, el
+primer lado coincidía a 0.2 mm y el segundo vértice se iba 19 m en el Este.
+
+`angle_type` decide la suma teórica, no el signo: si el polígono se recorre en
+antihorario las lecturas caen como interiores (`(n−2)·180`) y en horario como
+exteriores (`(n+2)·180`). Ambos casos ocurren en campo, así que el formulario
+**no preselecciona**.
+
+### Amarre y esquemas de cierre
+
+Una cartera real se orienta sobre un punto de coordenadas conocidas, así que el
+azimut de amarre **se calcula** (`azimuthFromCoordinates`) en vez de teclearse,
+y se persiste resuelto: el CRUD de `reference_points` permite mover un punto ya
+usado, y el proceso debe conservar el azimut con el que se calculó.
+
+Hay dos esquemas de cierre, y `has_closing_row` los distingue:
+
+| Esquema | Última fila | Suma teórica | Ejemplo |
+|---|---|---|---|
+| Contra el amarre | Ángulo del último lado de vuelta a la referencia, sin distancia | `(n−2)·180 + 360` sobre n+1 ángulos | cartera TT4 |
+| Contra el primer lado | Ángulo interior del vértice de arranque | `(n−2)·180` sobre n ángulos; la orientación solo fija el datum | cartera Vivero |
+
+En ambos, el **control de reorientación** compara el último azimut de la cadena
+contra su objetivo y expone la discrepancia en segundos. Avisa, no bloquea: es
+control de calidad del levantamiento, no criterio de tolerancia.
+
+### Las hojas de Excel de referencia
+
+`docs/carteras/poligonales.xlsx` trae la misma cartera resuelta por tres
+métodos. Solo una está bien, y los tests lo dejan escrito:
+
+| Hoja | Estado | Qué le pasa |
+|---|---|---|
+| `BRUJULA` | correcta | Es Bowditch. Nuestro motor la reproduce con 0.000 mm de diferencia |
+| `TRANSITO` | **no cierra** | Reparte proporcional a la proyección **con signo**; como `ΣΔN` es el propio error de cierre, las correcciones se cancelan (suman `0.000002` en vez de `−0.008417`) y deja el error entero sin corregir |
+| `CRANDALL` | **no cierra** | Usa `(ΔN+ΔE)/d` donde va el producto `ΔN·ΔE/d`, `Σ(LDᵢ²)` donde va `(Σ LD)²`, y tiene los paréntesis mal puestos en los multiplicadores. Vuelve al arranque con 0.22 mm de residuo |
+
+Por eso Tránsito y Crandall se verifican por **cierre a cero** y no por paridad
+con la hoja: replicar el error del Excel sería replicar un error.
+
+### Lecturas múltiples
+
+Cada ángulo guarda N lecturas en `polygonal_angle_readings` (mínimo
+configurable por proceso, 3 por defecto) y la estación guarda el **promedio**,
+recalculado por el servidor: es derivado, no un dato que el cliente pueda
+contradecir.
+
+La dispersión (máx − mín) se contrasta con `projects.angular_precision_seconds`
+—la precisión del equipo— y no con la tolerancia del orden. El orden gobierna el
+cierre de la poligonal; repetir una lectura mide repetibilidad. El factor
+admitido vive en `READING_DISPERSION_FACTOR`.
+
 ### Métodos de corrección
 
-`bowditch` (proporcional a la longitud), `transit` (proporcional a las
-proyecciones) y `crandall` (mínimos cuadrados sobre distancias).
+`bowditch` (proporcional a la longitud), `transit` (proporcional al **valor
+absoluto** de las proyecciones) y `crandall` (mínimos cuadrados sobre
+distancias). El valor absoluto en Tránsito no es un detalle: repartir sobre la
+proyección con signo hace que las correcciones se cancelen y la poligonal no
+cierre. Ver «Las hojas de Excel de referencia».
 
 ### Tolerancias
 
@@ -922,6 +998,18 @@ El problema de ordenamiento que esto causaba ya está sorteado: `parsePrecision`
 presentación. Lo que corresponde es extraer un formateador único a
 `src/lib/utils/format.ts` y evaluar guardar el número en vez de la cadena.
 
+**El rechazo de un amarre sin coordenadas no tiene test automatizado.** El
+selector de punto de amarre excluye los `reference_points` sin `north`/`east`
+—verificado en la app— y `resolveStartAzimuth` en la Server Action los rechaza,
+pero esa guarda solo está cubierta por inspección de código. Importa porque la
+acción es alcanzable con un payload construido a mano, sin pasar por el
+selector.
+
+**El campo de código de punto trunca los códigos largos.** El input de la tabla
+de estaciones mide `w-24` y «Famarena_5» se ve como «Famaren». El valor está
+intacto —la tabla de resultados lo muestra completo—, es solo el ancho. Previo a
+la Fase 7; se arregla cuando se toque el sistema de diseño de la tabla.
+
 **`getProcessCountsByProject` no distingue el estado del proceso.** La tarjeta
 dice «7 procesos» contando borradores, calculados, cerrados y rechazados por
 igual. Desde la Fase 5 cuenta los tres módulos (poligonales, nivelaciones y
@@ -1161,6 +1249,11 @@ Verificado en producción tras la reparación: 15/15 estaciones con coordenadas
 (antes 0), y el rectángulo de cierre conforme cierra exacto —A(1000,1000) →
 B(1100,1000) → C(1100,1100) → D(1000,1100), azimuts 0/90/180/270—, los mismos
 valores que produce el generador corregido en local.
+
+> Nota de la Fase 7: esos azimuts 0/90/180/270 corresponden a la convención
+> anterior (`+180 − a`). Con la convención del instrumento, el mismo rectángulo
+> da 0/270/180/90 — es el polígono espejo, y cierra igual. El registro se deja
+> como quedó porque documenta una reparación histórica en producción.
 
 El script queda en el repositorio porque sigue siendo la herramienta correcta
 si vuelve a aparecer un proceso con resultados sin persistir. Corre en modo

@@ -79,7 +79,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
   {
     name: "Lote rectangular — cierre conforme",
     type: "closed",
-    angleType: "internal",
+    angleType: "interior",
     startPointCode: "A",
     startNorth: 1000,
     startEast: 1000,
@@ -98,7 +98,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
   {
     name: "Lote rectangular — error de cierre",
     type: "closed",
-    angleType: "internal",
+    angleType: "interior",
     startPointCode: "A",
     startNorth: 1000,
     startEast: 1000,
@@ -141,7 +141,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
   {
     name: "Levantamiento de reconocimiento",
     type: "open_uncontrolled",
-    angleType: "internal",
+    angleType: "interior",
     startPointCode: "E1",
     startNorth: 1000,
     startEast: 1000,

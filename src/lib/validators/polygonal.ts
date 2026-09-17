@@ -1,7 +1,13 @@
 // Validación del proceso poligonal — funciones puras (PRD § 5.1 capa de
 // captura, § 5.2 capa de cierre). Sin React, sin Supabase.
 
-import type { PolygonalResult, PolygonalType } from "@/types/polygonal";
+import { degreesToSeconds } from "@/lib/calculations/angles";
+import { readingDispersionTolerance } from "@/lib/calculations/tolerances";
+import type {
+  PolygonalResult,
+  PolygonalType,
+  ReadingInput,
+} from "@/types/polygonal";
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
@@ -33,8 +39,16 @@ export function expectStationCapture(
   type: PolygonalType,
   index: number,
   total: number,
+  hasClosingRow = false,
 ): { angle: boolean; distance: boolean } {
-  if (type === "closed") return { angle: true, distance: true };
+  if (type === "closed") {
+    // La fila de cierre es de control: lleva el ángulo contra el amarre y no
+    // abre ningún lado, así que no pide distancia.
+    if (hasClosingRow && index === total - 1) {
+      return { angle: true, distance: false };
+    }
+    return { angle: true, distance: true };
+  }
   if (index === 0) return { angle: false, distance: true };
   if (index === total - 1) return { angle: false, distance: false };
   return { angle: true, distance: true };
@@ -193,4 +207,37 @@ export function evaluatePolygonalClosure(
     };
   }
   return { canClose: true, mustReject: false, blocked: false, messages: [] };
+}
+
+/**
+ * Valida las lecturas de un ángulo.
+ *
+ * La dispersión (máx − mín) es control de calidad de la captura: tres lecturas
+ * que difieren 40" dicen algo que el promedio esconde. Se contrasta con la
+ * precisión angular del equipo del proyecto
+ * (`projects.angular_precision_seconds`), no con la tolerancia del orden: el
+ * orden gobierna el cierre de la poligonal, mientras que repetir una lectura
+ * mide repetibilidad.
+ *
+ * Avisa, no bloquea — misma política que el resto del editor.
+ */
+export function validateReadings(
+  readings: ReadingInput[],
+  min: number,
+  instrumentSeconds: number,
+): { error?: string; warning?: string } {
+  if (readings.length < min) {
+    return { error: `Faltan lecturas: se exigen ${min} y hay ${readings.length}.` };
+  }
+  if (readings.length < 2) return {};
+
+  const values = readings.map((r) => r.angle);
+  const dispersion = degreesToSeconds(Math.max(...values) - Math.min(...values));
+  const limit = readingDispersionTolerance(instrumentSeconds);
+  if (dispersion > limit) {
+    return {
+      warning: `Dispersión de ${dispersion.toFixed(1)}" entre lecturas, sobre los ${limit.toFixed(1)}" que admite un equipo de ${instrumentSeconds}".`,
+    };
+  }
+  return {};
 }
