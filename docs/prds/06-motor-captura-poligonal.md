@@ -91,7 +91,10 @@ Verificados numéricamente contra las carteras, no inferidos:
    cartera (n+1 filas).
 4. N lecturas por ángulo, con mínimo configurable por proceso (3 por defecto),
    promedio automático y dispersión como control de calidad.
-5. Reseed con las dos carteras reales y pruebas contra los valores del Excel.
+5. Azimut derivado en `reassign-coordinates-dialog`: al reasignar las
+   coordenadas reales del arranque y del amarre, el azimut se recalcula desde
+   las coordenadas en vez de reteclearse. Solo para procesos no cerrados.
+6. Reseed con las dos carteras reales y pruebas contra los valores del Excel.
 
 ### Fuera (diferido)
 
@@ -99,6 +102,16 @@ Verificados numéricamente contra las carteras, no inferidos:
 - **Ajuste por mínimos cuadrados** como cuarto método: Fase 9. La cartera Vivero
   se siembra en esta fase como poligonal normal, calculada con los tres métodos
   actuales.
+- **Georreferenciación en cualquier momento**, incluidos procesos cerrados:
+  Fase 10. Un levantamiento puede arrancar en sistema local arbitrario (1000,
+  2000) y recibir coordenadas reales meses después, ya cerrado. Mecanismo
+  acordado para esa fase: **recalcular y guardar**, con una excepción estrecha
+  en el trigger de inmutabilidad — solo las columnas de coordenadas, solo por la
+  acción de georreferenciar, con fecha y autor, y conservando las coordenadas
+  locales en columnas propias para no perder el rastro del sistema original.
+  Lo que habilita la excepción: una rotación más traslación deja invariantes el
+  error angular, el error lineal, la precisión relativa y el perímetro, así que
+  el datum no altera nada de lo que el cierre certifica.
 - Nivelación y asentamientos: sus convenciones no se tocan.
 
 ## Decisiones cerradas
@@ -113,6 +126,7 @@ Verificados numéricamente contra las carteras, no inferidos:
 | 6 | Los `.xlsx` se commitean en `docs/carteras/` como fuente de los tests | Datos académicos de la Universidad Distrital, sin información de cliente |
 | 7 | El azimut de amarre se **calcula** desde las coordenadas de un `reference_points` elegido del catálogo, con los campos DMS como respaldo manual | Teclear siempre el azimut en DMS; es un derivado de datos que el proyecto ya tiene. Recoge la decisión 6 de la Fase 3, que lo dejó como «mejora futura» |
 | 8 | `angle_type` se elige explícitamente en el formulario, sin preselección | Un default; interior y exterior ocurren ambos en campo según hacia dónde se recorra el polígono, y adivinarlo reintroduce el fallo silencioso que esta fase corrige |
+| 9 | La georreferenciación completa se difiere a la Fase 10; en esta fase solo se deriva el azimut al reasignar coordenadas de un proceso no cerrado | Meterla entera llevaría la fase de 12 a ~17 tareas y mezclaría el arreglo de un bug real con funcionalidad nueva de peso |
 
 ## Modelo de datos
 
@@ -291,6 +305,7 @@ No bloquea el cálculo; alimenta el panel de resultados.
 | n | Elegido TT4 del catálogo, el azimut calculado da 330°35'57.23" |
 | o | El selector de amarre excluye los puntos sin coordenadas y la acción los rechaza |
 | p | El formulario exige elegir `angle_type` explícitamente, sin preselección |
+| q | Reasignar coordenadas del arranque y del amarre recalcula el azimut y recoordena las estaciones manteniendo ángulos, distancias y error de cierre |
 
 ## Riesgos conocidos
 
@@ -323,16 +338,20 @@ No bloquea el cálculo; alimenta el panel de resultados.
 6. `angles.ts`: azimut desde coordenadas + tests contra la cartera real.
 7. `polygonal-config-fields`: tipo de ángulo sin preselección, selector de
    amarre desde el catálogo con azimut calculado, mínimo de lecturas.
-8. `stations-table`: celda de ángulo con N lecturas, promedio y dispersión.
-9. `results-panel`: suma teórica, reparto y control de reorientación.
-10. Export: revisar que `n+1` filas no rompan el workbook.
-11. Seed y fixtures con las dos carteras.
-12. Verificación end-to-end (criterios a-p). Regenerar capturas. Cierre de fase.
+8. `reassign-coordinates-dialog`: azimut derivado de las coordenadas del
+   arranque y del amarre, en lugar de entrada manual en DMS.
+9. `stations-table`: celda de ángulo con N lecturas, promedio y dispersión.
+10. `results-panel`: suma teórica, reparto y control de reorientación.
+11. Export: revisar que `n+1` filas no rompan el workbook.
+12. Seed y fixtures con las dos carteras.
+13. Verificación end-to-end (criterios a-q). Regenerar capturas. Cierre de fase.
 
 ## Anti-alcance explícito
 
 No se implementa: el canvas de visualización (Fase 8); el ajuste por mínimos
-cuadrados ni su cuarto valor en `correction_method` (Fase 9); cambios en
+cuadrados ni su cuarto valor en `correction_method` (Fase 9); la
+georreferenciación de procesos cerrados, la excepción en el trigger de
+inmutabilidad ni las columnas de coordenadas locales (Fase 10); cambios en
 nivelación o asentamientos; `calc_version` ni ninguna preservación de datos
 calculados con la convención anterior. No se refactoriza `correctDeltas`: los
 tres métodos de compensación quedan como están.

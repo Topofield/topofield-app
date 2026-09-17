@@ -19,6 +19,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | en curso |
 | 8 | Canvas de poligonal | — | pendiente |
 | 9 | Ajuste por mínimos cuadrados | — | pendiente |
+| 10 | Georreferenciación de levantamientos | — | pendiente |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
