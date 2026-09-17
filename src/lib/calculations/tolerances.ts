@@ -22,6 +22,24 @@ export const MIN_RELATIVE_PRECISION: Record<PrecisionOrder, number> = {
 };
 
 /**
+ * Factor sobre la precisión angular del equipo que se admite como dispersión
+ * entre lecturas de un mismo ángulo.
+ *
+ * La vara correcta aquí es el instrumento y no el orden de precisión: el orden
+ * gobierna el cierre de la poligonal, mientras que repetir una lectura mide
+ * repetibilidad. Un equipo de 5" no distingue dos punterías que difieren 4",
+ * pero 36" de separación no es repetibilidad, es un error de puntería o de
+ * transcripción. El 2 es criterio, no norma citada: es el umbral a partir del
+ * cual vale la pena que el capturador mire otra vez.
+ */
+export const READING_DISPERSION_FACTOR = 2;
+
+/** Dispersión máxima admitida entre lecturas de un ángulo, en segundos. */
+export function readingDispersionTolerance(instrumentSeconds: number): number {
+  return READING_DISPERSION_FACTOR * instrumentSeconds;
+}
+
+/**
  * Tolerancia angular en segundos de arco: K·√n, donde n es el número de
  * ángulos medidos (= número de estaciones de la poligonal).
  */

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { angularTolerance, minRelativePrecision, levelingTolerance, LEVELING_TOLERANCE_K } from "./tolerances";
+import {
+  angularTolerance,
+  minRelativePrecision,
+  levelingTolerance,
+  LEVELING_TOLERANCE_K,
+  readingDispersionTolerance,
+} from "./tolerances";
 
 describe("angularTolerance", () => {
   it("aplica K·√n en segundos de arco", () => {
@@ -143,5 +149,12 @@ describe("thresholdsOf", () => {
       angular_distortion_limit: preset.angularDistortionLimit,
     });
     expect(leido).toEqual(preset);
+  });
+});
+
+describe("readingDispersionTolerance", () => {
+  it("admite el doble de la precisión angular del equipo", () => {
+    expect(readingDispersionTolerance(5)).toBe(10);
+    expect(readingDispersionTolerance(2)).toBe(4);
   });
 });
