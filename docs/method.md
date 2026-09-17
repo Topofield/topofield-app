@@ -6,7 +6,7 @@ Este documento describe **cómo se planifica e implementa TopoField**. No es un 
 
 El PRD principal define qué se construye. Pero entrar a codificar directamente desde un PRD de 37 KB invita a saltarse decisiones, a olvidar validaciones y a mezclar fases. Por eso, **el desarrollo se hace fase por fase, y cada fase tiene su propio PRD detallado** que se redacta **justo antes** de comenzar a implementarla — no antes, no después.
 
-El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-fase en `docs/prds/NN-<slug>.md`:
+El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estaban en ese plan: nacen del contraste del motor de cálculo contra carteras de campo reales (`docs/carteras/`), que dejó al descubierto una convención de azimut equivocada y funcionalidad que el PRD original no contemplaba. El método no cambia — cada fase, venga del § 9 o de un hallazgo posterior, recibe su propio PRD-de-fase en `docs/prds/NN-<slug>.md`:
 
 | # | Fase | PRD de fase | Estado |
 |---|---|---|---|
@@ -16,6 +16,9 @@ El PRD principal tiene 6 fases (§ 9 del PRD). Cada una recibe su propio PRD-de-
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | cerrada |
 | 5 | Control de Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | cerrada |
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | cerrada |
+| 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | en curso |
+| 8 | Canvas de poligonal | — | pendiente |
+| 9 | Ajuste por mínimos cuadrados | — | pendiente |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
