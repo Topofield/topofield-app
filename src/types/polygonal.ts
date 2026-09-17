@@ -14,7 +14,12 @@ export const POLYGONAL_TYPES = [
 ] as const;
 export type PolygonalType = (typeof POLYGONAL_TYPES)[number];
 
-export const ANGLE_TYPES = ["internal", "deflection", "azimuth"] as const;
+export const ANGLE_TYPES = [
+  "interior",
+  "exterior",
+  "deflection",
+  "azimuth",
+] as const;
 export type AngleType = (typeof ANGLE_TYPES)[number];
 
 export const CORRECTION_METHODS = ["bowditch", "transit", "crandall"] as const;
@@ -43,6 +48,8 @@ export type PolygonalProcess = Omit<
   correction_method: CorrectionMethod | null;
   status: ProcessStatus;
 };
+
+export type AngleReading = Tables<"polygonal_angle_readings">;
 
 export type PolygonalStation = Omit<
   Tables<"polygonal_stations">,
@@ -73,6 +80,13 @@ export const PROCESS_STATUS_LABELS: Record<ProcessStatus, string> = {
   rejected: "Rechazado",
 };
 
+export const ANGLE_TYPE_LABELS: Record<AngleType, string> = {
+  interior: "Interiores",
+  exterior: "Exteriores",
+  deflection: "Deflexiones",
+  azimuth: "Azimuts",
+};
+
 export const DEFLECTION_DIRECTION_LABELS: Record<DeflectionDirection, string> =
   {
     right: "Derecha",
@@ -91,17 +105,40 @@ export const CORRECTION_METHOD_OPTIONS = CORRECTION_METHODS.map((value) => ({
   label: CORRECTION_METHOD_LABELS[value],
 }));
 
+/**
+ * Opciones del selector de una poligonal cerrada. Interior y exterior son los
+ * dos casos reales según el sentido en que se recorra el polígono, y el
+ * formulario NO preselecciona: adivinar la convención es el fallo que la Fase 7
+ * corrige (decisión 8 del PRD de fase).
+ */
+export const CLOSED_ANGLE_TYPE_OPTIONS = (["interior", "exterior"] as const).map(
+  (value) => ({ value, label: ANGLE_TYPE_LABELS[value] }),
+);
+
 // --- Contratos del cálculo (src/lib/calculations/polygonal.ts) ---
+
+/** Una lectura individual del ángulo, tal como la consume el cálculo. */
+export interface ReadingInput {
+  order: number;
+  /** Ángulo leído, en grados decimales. */
+  angle: number;
+}
 
 /** Una estación tal como la consume el cálculo: ángulos ya en grados decimales. */
 export interface StationInput {
   pointCode: string;
-  /** Ángulo interno / horizontal o magnitud de la deflexión, en grados decimales. */
+  /**
+   * Promedio de las lecturas, en grados decimales. Es el ángulo a la derecha
+   * medido en la estación (cero en la vista atrás, giro horario), o la magnitud
+   * de la deflexión en una abierta con control.
+   */
   angle: number;
   /** Sentido de la deflexión (solo poligonal abierta con control). */
   deflectionDirection: DeflectionDirection | null;
-  /** Distancia horizontal del lado, en metros. */
-  distance: number;
+  /** Distancia horizontal del lado, en metros. `null` en la fila de cierre. */
+  distance: number | null;
+  /** Lecturas que produjeron el promedio. Vacío en datos sin reiteración. */
+  readings: ReadingInput[];
 }
 
 export interface PolygonalInput {
@@ -116,6 +153,20 @@ export interface PolygonalInput {
   endAzimuth: number | null;
   /** Orden de precisión del proyecto, para la tolerancia. */
   order: PrecisionOrder;
+  /** Dónde caen las lecturas a la derecha. Fija la suma teórica. */
+  angleType: AngleType;
+  /**
+   * La primera estación lleva el ángulo de orientación contra el amarre, y
+   * `startAzimuth` es el azimut del arranque hacia la referencia.
+   */
+  hasOrientation: boolean;
+  /**
+   * La última estación es la fila de cierre contra el amarre (sin distancia).
+   * Si es `false` con orientación, la última fila lleva el ángulo del vértice
+   * de arranque y el de orientación solo fija el datum — esquema de la cartera
+   * Vivero. Ver hallazgo 4 del PRD de fase.
+   */
+  hasClosingRow: boolean;
   method: CorrectionMethod;
   stations: StationInput[];
 }
@@ -131,6 +182,8 @@ export interface StationResult {
   correctedDeltaEast: number | null;
   north: number | null;
   east: number | null;
+  /** Dispersión entre lecturas (máx − mín), en segundos. `null` si hay < 2. */
+  readingDispersion: number | null;
 }
 
 export interface PolygonalResult {
@@ -147,6 +200,12 @@ export interface PolygonalResult {
   perimeter: number;
   relativePrecision: number | null; // el X de 1:X
   meetsLinearTolerance: boolean | null;
+  /**
+   * Discrepancia del control de reorientación, en segundos de arco. Con fila de
+   * cierre, contra el azimut de amarre; sin ella, contra el azimut del primer
+   * lado. `null` cuando no hay orientación.
+   */
+  reorientationError: number | null;
   // Global
   meetsTolerance: boolean | null;
   stations: StationResult[];
