@@ -5,12 +5,31 @@ import {
   Select,
   type DmsValue,
 } from "@/components/design-system";
-import { POLYGONAL_TYPE_OPTIONS, type PolygonalType } from "@/types/polygonal";
+import {
+  azimuthFromCoordinates,
+  decimalToDms,
+} from "@/lib/calculations/angles";
+import {
+  CLOSED_ANGLE_TYPE_OPTIONS,
+  POLYGONAL_TYPE_OPTIONS,
+  type AngleType,
+  type PolygonalType,
+} from "@/types/polygonal";
+import type { ReferencePoint } from "@/types/project";
 
 /** Estado de UI de la configuración de un proceso poligonal (todo texto). */
 export interface PolygonalConfigState {
   name: string;
   type: PolygonalType;
+  /** "" mientras el usuario no elige: el selector no preselecciona. */
+  angleType: AngleType | "";
+  /** Punto de amarre del catálogo. "" = amarre manual o sin amarre. */
+  referencePointId: string;
+  /** Código del amarre cuando no está en el catálogo. */
+  referencePointCode: string;
+  /** La cartera cierra contra el amarre: última fila sin distancia. */
+  hasClosingRow: boolean;
+  angleReadingsMin: string;
   startPointCode: string;
   startNorth: string;
   startEast: string;
@@ -24,6 +43,11 @@ export interface PolygonalConfigState {
 export const EMPTY_POLYGONAL_CONFIG: PolygonalConfigState = {
   name: "",
   type: "closed",
+  angleType: "",
+  referencePointId: "",
+  referencePointCode: "",
+  hasClosingRow: false,
+  angleReadingsMin: "3",
   startPointCode: "",
   startNorth: "1000",
   startEast: "1000",
@@ -37,15 +61,50 @@ export const EMPTY_POLYGONAL_CONFIG: PolygonalConfigState = {
 interface PolygonalConfigFieldsProps {
   value: PolygonalConfigState;
   onChange: (value: PolygonalConfigState) => void;
+  /** Catálogo del proyecto, para elegir el punto de amarre. */
+  referencePoints?: ReferencePoint[];
   disabled?: boolean;
+}
+
+/**
+ * Azimut calculado del arranque hacia el punto de amarre elegido, o `null` si
+ * no hay amarre del catálogo o faltan coordenadas.
+ *
+ * El amarre es un punto de coordenadas conocidas, así que su azimut es un
+ * derivado, no un dato de campo que haya que teclear.
+ */
+function derivedAzimuth(
+  value: PolygonalConfigState,
+  referencePoints: ReferencePoint[],
+): DmsValue | null {
+  const point = referencePoints.find((p) => p.id === value.referencePointId);
+  if (point?.north == null || point?.east == null) return null;
+
+  const north = Number(value.startNorth);
+  const east = Number(value.startEast);
+  if (!Number.isFinite(north) || !Number.isFinite(east)) return null;
+
+  const dms = decimalToDms(
+    azimuthFromCoordinates(north, east, Number(point.north), Number(point.east)),
+  );
+  return { deg: String(dms.deg), min: String(dms.min), sec: String(dms.sec) };
 }
 
 /** Campos de configuración del proceso, compartidos por /new y el editor. */
 export function PolygonalConfigFields({
   value,
   onChange,
+  referencePoints = [],
   disabled,
 }: PolygonalConfigFieldsProps) {
+  // Solo sirven de amarre los puntos que tienen las dos coordenadas.
+  const amarreOptions = [
+    { value: "", label: "Sin amarre / manual" },
+    ...referencePoints
+      .filter((p) => p.north != null && p.east != null)
+      .map((p) => ({ value: p.id, label: `${p.code} (${p.north}, ${p.east})` })),
+  ];
+  const azimutCalculado = derivedAzimuth(value, referencePoints);
   function set<K extends keyof PolygonalConfigState>(
     key: K,
     fieldValue: PolygonalConfigState[K],
@@ -70,6 +129,32 @@ export function PolygonalConfigFields({
           onChange={(e) => set("type", e.target.value as PolygonalType)}
         />
       </div>
+
+      {value.type === "closed" && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="Tipo de ángulo"
+            options={[
+              { value: "", label: "Elegir…" },
+              ...CLOSED_ANGLE_TYPE_OPTIONS,
+            ]}
+            value={value.angleType}
+            disabled={disabled}
+            onChange={(e) =>
+              set("angleType", e.target.value as AngleType | "")
+            }
+          />
+          <Input
+            label="Lecturas mínimas por ángulo"
+            type="number"
+            min="1"
+            step="1"
+            value={value.angleReadingsMin}
+            disabled={disabled}
+            onChange={(e) => set("angleReadingsMin", e.target.value)}
+          />
+        </div>
+      )}
 
       <fieldset className="flex flex-col gap-4 rounded-md border border-neutral-200 p-4">
         <legend className="px-1 text-sm font-medium text-neutral-800">
@@ -99,12 +184,43 @@ export function PolygonalConfigFields({
             onChange={(e) => set("startEast", e.target.value)}
           />
         </div>
-        <DmsInput
-          label="Azimut de partida"
-          value={value.startAzimuth}
+        <Select
+          label="Punto de amarre"
+          options={amarreOptions}
+          value={value.referencePointId}
           disabled={disabled}
+          onChange={(e) => set("referencePointId", e.target.value)}
+        />
+
+        <DmsInput
+          label={
+            azimutCalculado
+              ? "Azimut hacia el amarre (calculado)"
+              : "Azimut de partida"
+          }
+          value={azimutCalculado ?? value.startAzimuth}
+          disabled={disabled || azimutCalculado != null}
           onChange={(v) => set("startAzimuth", v)}
         />
+
+        {azimutCalculado != null && (
+          <label className="flex items-start gap-2 text-sm text-neutral-700">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4"
+              checked={value.hasClosingRow}
+              disabled={disabled}
+              onChange={(e) => set("hasClosingRow", e.target.checked)}
+            />
+            <span>
+              La cartera cierra contra el punto de amarre
+              <span className="block text-neutral-500">
+                La última fila es el ángulo del último lado de vuelta al amarre
+                y no lleva distancia.
+              </span>
+            </span>
+          </label>
+        )}
       </fieldset>
 
       {value.type === "open_controlled" && (

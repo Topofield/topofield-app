@@ -9,8 +9,15 @@ import {
   PolygonalConfigFields,
   type PolygonalConfigState,
 } from "./polygonal-config-fields";
+import type { ReferencePoint } from "@/types/project";
 
-export function NewPolygonalForm({ projectId }: { projectId: string }) {
+export function NewPolygonalForm({
+  projectId,
+  referencePoints = [],
+}: {
+  projectId: string;
+  referencePoints?: ReferencePoint[];
+}) {
   const [config, setConfig] = useState<PolygonalConfigState>(
     EMPTY_POLYGONAL_CONFIG,
   );
@@ -25,6 +32,11 @@ export function NewPolygonalForm({ projectId }: { projectId: string }) {
         projectId,
         name: config.name,
         type: config.type,
+        angleType: config.angleType === "" ? null : config.angleType,
+        referencePointId: config.referencePointId || null,
+        referencePointCode: config.referencePointCode.trim() || null,
+        angleReadingsMin: parseNumber(config.angleReadingsMin) ?? 3,
+        hasClosingRow: config.hasClosingRow,
         startPointCode: config.startPointCode,
         startNorth: parseNumber(config.startNorth),
         startEast: parseNumber(config.startEast),
@@ -54,7 +66,8 @@ export function NewPolygonalForm({ projectId }: { projectId: string }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && <Alert variant="error">{error}</Alert>}
-      <PolygonalConfigFields value={config} onChange={setConfig} />
+      <PolygonalConfigFields
+        referencePoints={referencePoints} value={config} onChange={setConfig} />
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Creando…" : "Crear proceso"}
