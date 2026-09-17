@@ -5,7 +5,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Project, ProjectStatus, ReferencePoint } from "@/types/project";
-import type { PolygonalProcess, PolygonalStation } from "@/types/polygonal";
+import type {
+  PolygonalProcess,
+  PolygonalStationWithReadings,
+} from "@/types/polygonal";
 import type { LevelingProcess, LevelingReading } from "@/types/leveling";
 import type { Site } from "@/types/site";
 import type {
@@ -277,19 +280,31 @@ export async function getPolygonalProcess(
   return (data as PolygonalProcess | null) ?? null;
 }
 
-/** Estaciones de un proceso poligonal, ordenadas por station_order. */
+/**
+ * Estaciones de un proceso poligonal, ordenadas por station_order, con sus
+ * lecturas de ángulo anidadas.
+ *
+ * PostgREST no garantiza el orden dentro del anidado, así que las lecturas se
+ * ordenan aquí por `reading_order`: la posición de una lectura es dato, no
+ * detalle de presentación.
+ */
 export async function getPolygonalStations(
   supabase: Client,
   processId: string,
-): Promise<PolygonalStation[]> {
+): Promise<PolygonalStationWithReadings[]> {
   const { data, error } = await supabase
     .from("polygonal_stations")
-    .select("*")
+    .select("*, polygonal_angle_readings(*)")
     .eq("process_id", processId)
     .order("station_order", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as PolygonalStation[];
+  return ((data ?? []) as PolygonalStationWithReadings[]).map((station) => ({
+    ...station,
+    polygonal_angle_readings: [...(station.polygonal_angle_readings ?? [])].sort(
+      (a, b) => a.reading_order - b.reading_order,
+    ),
+  }));
 }
 
 /** Procesos de nivelación de un proyecto, del más reciente al más antiguo. */

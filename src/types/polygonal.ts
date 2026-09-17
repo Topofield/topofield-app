@@ -51,6 +51,11 @@ export type PolygonalProcess = Omit<
 
 export type AngleReading = Tables<"polygonal_angle_readings">;
 
+/** Estación con sus lecturas anidadas, tal como la devuelve la query. */
+export type PolygonalStationWithReadings = PolygonalStation & {
+  polygonal_angle_readings: AngleReading[];
+};
+
 export type PolygonalStation = Omit<
   Tables<"polygonal_stations">,
   "deflection_direction"
