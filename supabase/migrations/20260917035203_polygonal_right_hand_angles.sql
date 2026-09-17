@@ -105,7 +105,13 @@ create policy "polygonal_angle_readings_delete_via_project" on public.polygonal_
 
 -- Inmutabilidad: las lecturas son el dato de campo más crudo que existe. Si el
 -- proceso está cerrado, no se tocan.
-create or replace function public.reject_write_on_closed_process_reading()
+--
+-- OJO con el nombre: `reject_write_on_closed_process_reading` ya existe desde
+-- 20260812020455_leveling.sql para las lecturas de nivelación, y un
+-- `create or replace` con la misma firma la habría reemplazado en silencio,
+-- dejando el trigger de nivelación ejecutando este cuerpo y buscando un
+-- `station_id` que `leveling_readings` no tiene. De ahí el `_polygonal_`.
+create or replace function public.reject_write_on_closed_polygonal_reading()
 returns trigger
 language plpgsql
 as $$
@@ -131,4 +137,4 @@ $$;
 
 create trigger polygonal_angle_readings_reject_write_when_closed
   before insert or update or delete on public.polygonal_angle_readings
-  for each row execute function public.reject_write_on_closed_process_reading();
+  for each row execute function public.reject_write_on_closed_polygonal_reading();

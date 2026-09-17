@@ -41,11 +41,17 @@ function resultadosDe(proceso: ProcesoDemo, order: PrecisionOrder) {
     // Las poligonales sin cierre no reparten error, pero el motor exige un
     // método: Bowditch es el que usa la aplicación por defecto.
     method: proceso.correctionMethod ?? "bowditch",
+    angleType: proceso.angleType,
+    hasOrientation: false,
+    hasClosingRow: false,
     stations: proceso.stations.map((st) => ({
       pointCode: st.code,
       angle: st.angle ? dmsToDecimal(...st.angle) : Number.NaN,
       deflectionDirection: st.dir ?? null,
-      distance: st.distance ?? Number.NaN,
+      distance: st.distance ?? null,
+      readings: st.angle
+        ? [{ order: 1, angle: dmsToDecimal(...st.angle) }]
+        : [],
     })),
   });
 
