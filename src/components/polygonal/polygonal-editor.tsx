@@ -224,10 +224,15 @@ export function PolygonalEditor({
             angleSec: parseNumber(st.angle.sec),
             distance: parseNumber(st.distance),
           },
-          expectStationCapture(config.type, i, stations.length),
+          expectStationCapture(
+            config.type,
+            i,
+            stations.length,
+            config.hasClosingRow,
+          ),
         ),
       ),
-    [stations, config.type],
+    [stations, config.type, config.hasClosingRow],
   );
 
   const captureBlocked = issues.some((i) => Object.keys(i.errors).length > 0);
