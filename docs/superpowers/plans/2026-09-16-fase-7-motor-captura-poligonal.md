@@ -534,8 +534,8 @@ export const CARTERA_VIVERO: Cartera = {
   startNorth: 100139.844,
   startEast: 101491.444,
   referencePointCode: "14_IS1",
-  referenceNorth: 100160.309,
-  referenceEast: 101505.777,
+  referenceNorth: 100160.322,
+  referenceEast: 101505.784,
   stations: [
     { pointCode: "Famarena_5", readings: [[97, 46, 32]], distance: 32.957 },
     { pointCode: "D1", readings: [[155, 23, 13]], distance: 13.76 },
@@ -549,7 +549,7 @@ export const CARTERA_VIVERO: Cartera = {
 export const CARTERAS: Cartera[] = [CARTERA_TT4, CARTERA_VIVERO];
 ```
 
-Las coordenadas de `14_IS1` de la cartera Vivero no vienen en la hoja: se derivan del azimut tecleado `35°00'08.02"` sobre una distancia arbitraria de 25 m desde el arranque, que es lo único que necesita el datum. Verificarlo en el Step 3 con el test de azimut.
+Las coordenadas de `14_IS1` no vienen en la hoja Vivero: solo trae el azimut `35°00'08.02"`. Se derivan proyectando ese azimut 25 m desde el arranque, que es lo único que el datum necesita — al amarre se le visa, no se le mide distancia, así que la distancia elegida es arbitraria y no entra en ningún cálculo. Ya verificado: `azimuthFromCoordinates(100139.844, 101491.444, 100160.322, 101505.784)` devuelve exactamente `35°00'08.02"`.
 
 - [ ] **Step 2: Escribir los tests que fallan**
 
