@@ -52,7 +52,13 @@ Verificados numéricamente contra las carteras, no inferidos:
    exteriores y suman `(n+2)·180`. La cartera confirma el caso interior:
    720.0033 sobre 720.
 
-3. **Una cartera real tiene n+1 ángulos para n vértices.** El vértice de
+3. **Una cartera real tiene n+1 ángulos para n vértices.** Ver el croquis de
+   campo en [`docs/carteras/croquis-amarre-y-cierre.jpg`](../carteras/croquis-amarre-y-cierre.jpg):
+   en el vértice de arranque se miden dos ángulos contra la misma visual de
+   amarre — en rojo el de apertura (del punto conocido al primer lado) y en azul
+   el de cierre (del último lado de vuelta al punto conocido). Las dos figuras
+   son los dos casos: arriba el polígono se recorre en un sentido y las lecturas
+   caen como exteriores, abajo en el contrario y caen como interiores. El vértice de
    arranque se mide en dos tiempos contra un punto de referencia externo
    (211°15'07" de TT4 a D1 al abrir, 299°18'51" de D5 a TT4 al cerrar). La suma
    teórica pasa a `(n-2)·180 + 360` = 1080, el error angular de 12" se reparte
@@ -105,6 +111,8 @@ Verificados numéricamente contra las carteras, no inferidos:
 | 4 | Tabla propia `polygonal_angle_readings` | Columna JSONB en `polygonal_stations`; rompe la regla de ángulos como 3 campos y deja la validación solo en la app |
 | 5 | Reset de datos y reseed | Columna `calc_version` con las cerradas congeladas; hoy solo hay datos de seed y demo, así que no hay historia que preservar |
 | 6 | Los `.xlsx` se commitean en `docs/carteras/` como fuente de los tests | Datos académicos de la Universidad Distrital, sin información de cliente |
+| 7 | El azimut de amarre se **calcula** desde las coordenadas de un `reference_points` elegido del catálogo, con los campos DMS como respaldo manual | Teclear siempre el azimut en DMS; es un derivado de datos que el proyecto ya tiene. Recoge la decisión 6 de la Fase 3, que lo dejó como «mejora futura» |
+| 8 | `angle_type` se elige explícitamente en el formulario, sin preselección | Un default; interior y exterior ocurren ambos en campo según hacia dónde se recorra el polígono, y adivinarlo reintroduce el fallo silencioso que esta fase corrige |
 
 ## Modelo de datos
 
@@ -127,9 +135,20 @@ y `scripts/seed.mjs` se actualizan con el reseed.
 angle_type text not null default 'interior'
   check (angle_type in ('interior','exterior','deflection','azimuth'))
 
-reference_point_code text            -- punto de referencia externo (TT4, 14_IS1)
+reference_point_id   uuid references public.reference_points(id)
+reference_point_code text            -- respaldo: amarre fuera del catálogo (TT4, 14_IS1)
 angle_readings_min   int not null default 3
 ```
+
+El amarre se resuelve en dos modos. Con `reference_point_id`, el azimut se
+calcula desde las coordenadas del punto y los campos DMS quedan de solo lectura.
+Sin él, se teclea `reference_point_code` y el azimut en DMS, para amarres que no
+estén en el catálogo del proyecto.
+
+`angle_type` conserva un default en la base por la restricción `not null`, pero
+el formulario **no preselecciona**: interior y exterior ocurren ambos según el
+sentido en que se recorra el polígono, y elegir por el usuario reintroduce
+exactamente el fallo silencioso que esta fase corrige.
 
 Los `start_azimuth_deg/min/sec` **cambian de significado**: pasan de «azimut del
 primer lado» a «azimut del punto de arranque hacia la referencia» (la vista
@@ -175,6 +194,20 @@ Az(i) = normalizar(Az(i-1) + 180 + a(i))         ← todos los demás
 Sin punto de referencia, `Az(0) = startAzimuth` y la cadena arranca en `i = 1`,
 como hoy.
 
+### Azimut de amarre desde coordenadas (`angles.ts`)
+
+```
+azimutAmarre = normalizar( atan2(E_ref - E_arranque, N_ref - N_arranque) )
+```
+
+Verificado contra la cartera real: con el arranque V10 en
+`100135.666 / 101440.525` y TT4 en `100142.809 / 101436.5` (coordenadas que la
+propia hoja `BRUJULA` trae en su bloque X23:Z25), da 330°35'57.23", idéntico al
+azimut tecleado en la hoja, con 0.0 segundos de diferencia.
+
+Va en `angles.ts` y no en `polygonal.ts`: es geometría de coordenadas, sin
+relación con el tipo de poligonal, y la van a querer nivelación y asentamientos.
+
 ### Suma teórica y reparto
 
 Con `n = estaciones - 1` (vértices) cuando hay orientación:
@@ -209,14 +242,19 @@ No bloquea el cálculo; alimenta el panel de resultados.
 
 - **Mínimo de lecturas:** una estación con menos de `angle_readings_min`
   lecturas queda incompleta y no entra al cálculo.
+- **Punto de amarre sin coordenadas:** `reference_points.north` y `east` son
+  nullable. Un punto sin ambas coordenadas no puede usarse como amarre; el
+  selector lo excluye y la Server Action lo rechaza.
 - **Dispersión entre lecturas:** se calcula `máx - mín` por ángulo y se avisa
   cuando supera la tolerancia angular del orden del proyecto. Aviso, no bloqueo
   — misma política que el resto del editor.
 
 ## Componentes
 
-- `polygonal-config-fields.tsx`: selector interior/exterior, punto de referencia
-  y su azimut en DMS, mínimo de lecturas.
+- `polygonal-config-fields.tsx`: selector interior/exterior sin preselección;
+  selector de punto de amarre desde el catálogo del proyecto (solo los que
+  tienen N y E), con el azimut calculado mostrado en DMS de solo lectura y un
+  modo manual para amarres fuera del catálogo; mínimo de lecturas.
 - `stations-table.tsx`: cada celda de ángulo se expande a N lecturas en DMS y
   muestra promedio y dispersión. Primera y última fila son el mismo punto de
   arranque; la última sin celda de distancia.
@@ -250,6 +288,9 @@ No bloquea el cálculo; alimenta el panel de resultados.
 | k | Las lecturas de un proceso cerrado son inmutables (verificado vía REST) |
 | l | `npm run typecheck`, `npm run lint` y `npm test` pasan |
 | m | El seed siembra las dos carteras y la app las calcula correctamente |
+| n | Elegido TT4 del catálogo, el azimut calculado da 330°35'57.23" |
+| o | El selector de amarre excluye los puntos sin coordenadas y la acción los rechaza |
+| p | El formulario exige elegir `angle_type` explícitamente, sin preselección |
 
 ## Riesgos conocidos
 
@@ -261,6 +302,11 @@ No bloquea el cálculo; alimenta el panel de resultados.
   Afecta cálculo, tabla y export. Mitigación: derivar siempre el número de
   vértices del contrato del cálculo, nunca de `stations.length` directamente,
   y cubrirlo con tests del export.
+- **Un punto de amarre puede editarse después de calcular.** El CRUD de
+  `reference_points` ya existe y nada impide mover un punto ya usado como
+  amarre, lo que dejaría el azimut calculado desfasado del que se usó. En esta
+  fase se persiste el azimut resuelto junto al proceso, de modo que el cálculo
+  no dependa de leer el catálogo otra vez.
 - **El reseed borra las capturas del manual.** Hay que regenerar
   `public/manual/` con `node docs/manual/capturas.mjs` al cerrar la fase.
 
@@ -274,12 +320,14 @@ No bloquea el cálculo; alimenta el panel de resultados.
    reorientación. Tests contra las dos carteras primero (TDD).
 4. `validators/polygonal.ts`: mínimo de lecturas y dispersión.
 5. Queries y Server Actions: persistencia de lecturas y promedio.
-6. `polygonal-config-fields`: tipo de ángulo, referencia, mínimo de lecturas.
-7. `stations-table`: celda de ángulo con N lecturas, promedio y dispersión.
-8. `results-panel`: suma teórica, reparto y control de reorientación.
-9. Export: revisar que `n+1` filas no rompan el workbook.
-10. Seed y fixtures con las dos carteras.
-11. Verificación end-to-end (criterios a-m). Regenerar capturas. Cierre de fase.
+6. `angles.ts`: azimut desde coordenadas + tests contra la cartera real.
+7. `polygonal-config-fields`: tipo de ángulo sin preselección, selector de
+   amarre desde el catálogo con azimut calculado, mínimo de lecturas.
+8. `stations-table`: celda de ángulo con N lecturas, promedio y dispersión.
+9. `results-panel`: suma teórica, reparto y control de reorientación.
+10. Export: revisar que `n+1` filas no rompan el workbook.
+11. Seed y fixtures con las dos carteras.
+12. Verificación end-to-end (criterios a-p). Regenerar capturas. Cierre de fase.
 
 ## Anti-alcance explícito
 
