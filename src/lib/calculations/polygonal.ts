@@ -12,6 +12,7 @@ import { cosDeg, degreesToSeconds, normalizeAzimuth, sinDeg } from "./angles";
 import { angularTolerance, minRelativePrecision } from "./tolerances";
 import type {
   CorrectionMethod,
+  ReadingInput,
   PolygonalInput,
   PolygonalResult,
   StationInput,
@@ -30,6 +31,13 @@ function sumDistances(stations: StationInput[]): number {
   );
 }
 
+/** Dispersión entre lecturas de un mismo ángulo, en segundos de arco. */
+function dispersionSeconds(readings: ReadingInput[]): number | null {
+  if (readings.length < 2) return null;
+  const values = readings.map((r) => r.angle);
+  return degreesToSeconds(Math.max(...values) - Math.min(...values));
+}
+
 /** Resultado por estación vacío (datos insuficientes para calcular). */
 function blankStations(stations: StationInput[]): StationResult[] {
   return stations.map((s) => ({
@@ -42,6 +50,7 @@ function blankStations(stations: StationInput[]): StationResult[] {
     correctedDeltaEast: null,
     north: null,
     east: null,
+    readingDispersion: dispersionSeconds(s.readings),
   }));
 }
 
@@ -135,17 +144,46 @@ function chainCoordinates(
 function computeClosed(input: PolygonalInput): PolygonalResult {
   const { stations } = input;
   const n = stations.length;
-  const perimeter = sumDistances(stations);
   const angles = stations.map((s) => s.angle);
   const distances = stations.map((s) => s.distance);
 
+  // Con orientación, la última fila es de control y no abre lado: los vértices
+  // son stations.length - 1. Sin orientación, cada fila es un vértice.
+  const vertexCount = input.hasOrientation ? n - 1 : n;
+  // Solo las filas de vértice aportan lado; la de control no. Sin fila de
+  // cierre esa última fila repite el primer lado a modo de chequeo (cartera
+  // Vivero), así que su distancia NO puede entrar al perímetro: si entra,
+  // Bowditch reparte sobre un perímetro inflado y la poligonal deja de cerrar.
+  const sideCount = vertexCount;
+  const perimeter = distances
+    .slice(0, sideCount)
+    .reduce<number>((a, d) => (isNum(d) ? a + d : a), 0);
+
+  // Qué ángulos entran en la condición de cierre angular. Con fila de cierre
+  // entran todos, incluido el de orientación, y el vértice de arranque aporta
+  // sus dos lecturas: de ahí el +360 de la suma teórica. Sin fila de cierre el
+  // de orientación solo fija el datum y queda fuera de la suma — es el esquema
+  // de la cartera Vivero (hallazgo 4 del PRD de fase).
+  const firstParticipating =
+    input.hasOrientation && !input.hasClosingRow ? 1 : 0;
+
+  const theoreticalSumFor = (vertices: number): number => {
+    const base =
+      input.angleType === "exterior"
+        ? (vertices + 2) * 180
+        : (vertices - 2) * 180;
+    return base + (input.hasOrientation && input.hasClosingRow ? 360 : 0);
+  };
+
   const hasAllData =
-    n >= 3 && angles.every(isNum) && distances.every(isNum);
+    vertexCount >= 3 &&
+    angles.every(isNum) &&
+    distances.slice(0, sideCount).every(isNum);
 
   if (!hasAllData) {
     return {
       angleSum: null,
-      theoreticalSum: n >= 3 ? (n - 2) * 180 : null,
+      theoreticalSum: vertexCount >= 3 ? theoreticalSumFor(vertexCount) : null,
       angularError: null,
       angularTolerance: null,
       anglesMeetTolerance: null,
@@ -155,30 +193,59 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
       perimeter,
       relativePrecision: null,
       meetsLinearTolerance: null,
+      reorientationError: null,
       meetsTolerance: null,
       stations: blankStations(stations),
     };
   }
 
   // Verificación angular
-  const angleSum = angles.reduce((a, b) => a + b, 0);
-  const theoreticalSum = (n - 2) * 180;
+  const participating = angles.slice(firstParticipating);
+  const angleSum = participating.reduce((a, b) => a + b, 0);
+  const theoreticalSum = theoreticalSumFor(vertexCount);
   const angularErrorDeg = angleSum - theoreticalSum;
   const angularError = degreesToSeconds(angularErrorDeg);
-  const tolerance = angularTolerance(input.order, n);
+  const tolerance = angularTolerance(input.order, participating.length);
   const anglesMeetTolerance = Math.abs(angularError) <= tolerance;
-  const correctionPerAngle = -angularErrorDeg / n;
-  const correctedAngles = angles.map((a) => a + correctionPerAngle);
+  const correctionPerAngle = -angularErrorDeg / participating.length;
+  const correctedAngles = angles.map((a, i) =>
+    i >= firstParticipating ? a + correctionPerAngle : a,
+  );
 
-  // Azimuts: Az_i = Az_{i-1} + 180° − ángulo interno_i, normalizado.
-  const azimuths: number[] = [input.startAzimuth];
+  // Azimuts. El instrumento pone cero en la vista atrás y gira a la derecha,
+  // así que el ángulo SE SUMA. Con orientación el primer azimut sale del azimut
+  // de amarre más el ángulo de orientación, sin el ±180: `startAzimuth` ya
+  // apunta del arranque HACIA la referencia.
+  const azimuths: number[] = [
+    input.hasOrientation
+      ? normalizeAzimuth(input.startAzimuth + (correctedAngles[0] ?? 0))
+      : input.startAzimuth,
+  ];
   for (let i = 1; i < n; i++) {
     azimuths.push(
-      normalizeAzimuth((azimuths[i - 1] ?? 0) + 180 - (correctedAngles[i] ?? 0)),
+      normalizeAzimuth((azimuths[i - 1] ?? 0) + 180 + (correctedAngles[i] ?? 0)),
     );
   }
-  const deltaN = azimuths.map((az, i) => (distances[i] ?? 0) * cosDeg(az));
-  const deltaE = azimuths.map((az, i) => (distances[i] ?? 0) * sinDeg(az));
+
+  // Control de reorientación: el último azimut de la cadena debe volver al
+  // azimut de amarre (con fila de cierre) o al del primer lado (sin ella).
+  // No condiciona el veredicto de cierre: es control de calidad del
+  // levantamiento, no criterio de tolerancia.
+  let reorientationError: number | null = null;
+  if (input.hasOrientation) {
+    const target = input.hasClosingRow
+      ? normalizeAzimuth(input.startAzimuth)
+      : (azimuths[0] ?? 0);
+    const diff = normalizeAzimuth((azimuths[n - 1] ?? 0) - target);
+    reorientationError = degreesToSeconds(diff > 180 ? diff - 360 : diff);
+  }
+
+  const sideAzimuths = azimuths.slice(0, sideCount);
+  const sideDistances = distances
+    .slice(0, sideCount)
+    .map((d) => (isNum(d) ? d : 0));
+  const deltaN = sideAzimuths.map((az, i) => (sideDistances[i] ?? 0) * cosDeg(az));
+  const deltaE = sideAzimuths.map((az, i) => (sideDistances[i] ?? 0) * sinDeg(az));
   const errorN = deltaN.reduce((a, b) => a + b, 0);
   const errorE = deltaE.reduce((a, b) => a + b, 0);
   const base = {
@@ -194,15 +261,15 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     input.method,
     base.deltaN,
     base.deltaE,
-    distances,
-    base.azimuths,
+    sideDistances,
+    sideAzimuths,
     base.errorN,
     base.errorE,
     perimeter,
   );
 
   // Coordenadas: la última estación cierra sobre el punto de partida, así que
-  // solo se conservan las n primeras coordenadas encadenadas.
+  // solo se conservan las primeras coordenadas encadenadas.
   const coords = chainCoordinates(
     input.startNorth,
     input.startEast,
@@ -232,6 +299,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     correctedDeltaEast: correctedDeltaE[i] ?? null,
     north: coords.north[i] ?? null,
     east: coords.east[i] ?? null,
+    readingDispersion: dispersionSeconds(s.readings),
   }));
 
   return {
@@ -246,6 +314,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     perimeter,
     relativePrecision,
     meetsLinearTolerance,
+    reorientationError,
     meetsTolerance: anglesMeetTolerance && meetsLinearTolerance,
     stations: stationResults,
   };
@@ -261,7 +330,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   // n estaciones, n-1 lados; el último lado llega al punto conocido.
   const sideCount = n - 1;
   const distances = stations.slice(0, sideCount).map((s) => s.distance);
-  const perimeter = distances.reduce((a, d) => (isNum(d) ? a + d : a), 0);
+  const perimeter = distances.reduce<number>((a, d) => (isNum(d) ? a + d : a), 0);
   const hasEnd = isNum(input.endNorth) && isNum(input.endEast);
 
   // Cierre angular (§6.6 Paso 2): requiere azimut de llegada conocido + la
@@ -292,6 +361,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
       perimeter,
       relativePrecision: null,
       meetsLinearTolerance: null,
+      reorientationError: null,
       meetsTolerance: null,
       stations: blankStations(stations),
     };
@@ -367,6 +437,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
 
   const stationResults: StationResult[] = stations.map((s, i) => ({
     pointCode: s.pointCode,
+    readingDispersion: dispersionSeconds(s.readings),
     correctedAngle: null,
     azimuth: azimuths[i] ?? null,
     deltaNorth: deltaN[i] ?? null,
@@ -389,6 +460,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
     perimeter,
     relativePrecision,
     meetsLinearTolerance,
+    reorientationError: null,
     meetsTolerance:
       (anglesMeetTolerance ?? true) && meetsLinearTolerance,
     stations: stationResults,
@@ -404,7 +476,7 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
   const n = stations.length;
   const sideCount = n - 1;
   const distances = stations.slice(0, sideCount).map((s) => s.distance);
-  const perimeter = distances.reduce((a, d) => (isNum(d) ? a + d : a), 0);
+  const perimeter = distances.reduce<number>((a, d) => (isNum(d) ? a + d : a), 0);
   const hasData =
     n >= 2 &&
     distances.every(isNum) &&
@@ -423,6 +495,7 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
       perimeter,
       relativePrecision: null,
       meetsLinearTolerance: null,
+      reorientationError: null,
       meetsTolerance: null,
       stations: blankStations(stations),
     };
@@ -445,6 +518,7 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
 
   const stationResults: StationResult[] = stations.map((s, i) => ({
     pointCode: s.pointCode,
+    readingDispersion: dispersionSeconds(s.readings),
     correctedAngle: null,
     azimuth: azimuths[i] ?? null,
     deltaNorth: deltaN[i] ?? null,
@@ -468,6 +542,7 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
     perimeter,
     relativePrecision: null,
     meetsLinearTolerance: null,
+    reorientationError: null,
     meetsTolerance: null,
     stations: stationResults,
   };
