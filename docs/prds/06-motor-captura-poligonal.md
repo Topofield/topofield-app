@@ -278,8 +278,12 @@ No bloquea el cálculo; alimenta el panel de resultados.
   nullable. Un punto sin ambas coordenadas no puede usarse como amarre; el
   selector lo excluye y la Server Action lo rechaza.
 - **Dispersión entre lecturas:** se calcula `máx - mín` por ángulo y se avisa
-  cuando supera la tolerancia angular del orden del proyecto. Aviso, no bloqueo
-  — misma política que el resto del editor.
+  cuando supera lo que el equipo del proyecto resuelve
+  (`projects.angular_precision_seconds`, hoy un campo que solo se muestra y
+  nunca entra en ningún cálculo). La vara es el instrumento y no el orden de
+  precisión: el orden gobierna el cierre de la poligonal, mientras que repetir
+  una lectura mide repetibilidad. Aviso, no bloqueo — misma política que el
+  resto del editor.
 
 ## Componentes
 
@@ -315,7 +319,7 @@ No bloquea el cálculo; alimenta el panel de resultados.
 | f2 | Test sintético de `exterior`: cuadrado de ángulos a la derecha de 270°, suma teórica 1080 y cierre exacto |
 | g | Una poligonal cerrada sin punto de referencia sigue calculando como antes |
 | h | La captura exige el mínimo de lecturas y promedia automáticamente |
-| i | La dispersión se muestra y avisa al superar la tolerancia del orden |
+| i | La dispersión se muestra y avisa al superar la precisión angular del equipo |
 | j | La tabla de estaciones espeja la cartera: n+1 filas, la última sin distancia |
 | k | Las lecturas de un proceso cerrado son inmutables (verificado vía REST) |
 | l | `npm run typecheck`, `npm run lint` y `npm test` pasan |

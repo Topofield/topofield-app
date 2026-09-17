@@ -229,29 +229,40 @@ create index polygonal_angle_readings_station_id_idx
 
 alter table public.polygonal_angle_readings enable row level security;
 
--- Propiedad vía join hasta projects, mismo patrón que polygonal_stations.
-create policy polygonal_angle_readings_owner on public.polygonal_angle_readings
-  for all
-  using (
-    exists (
-      select 1
-      from public.polygonal_stations s
-      join public.polygonal_processes p on p.id = s.process_id
-      join public.projects pr on pr.id = p.project_id
-      where s.id = polygonal_angle_readings.station_id
-        and pr.user_id = (select auth.uid())
-    )
-  )
-  with check (
-    exists (
-      select 1
-      from public.polygonal_stations s
-      join public.polygonal_processes p on p.id = s.process_id
-      join public.projects pr on pr.id = p.project_id
-      where s.id = polygonal_angle_readings.station_id
-        and pr.user_id = (select auth.uid())
-    )
+-- El join de propiedad se repite en las 4 políticas; se extrae para no
+-- duplicarlo. `security definer` con search_path fijo, como cualquier helper
+-- que se invoca desde una política.
+create or replace function public.owns_reading_station(target_station uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.polygonal_stations s
+    join public.polygonal_processes p on p.id = s.process_id
+    join public.projects pr on pr.id = p.project_id
+    where s.id = target_station
+      and pr.user_id = (select auth.uid())
   );
+$$;
+
+-- Propiedad vía join hasta projects. Cuatro políticas separadas, que es el
+-- patrón del resto del schema (ver 20260522053657_polygonal.sql:151-195).
+create policy "polygonal_angle_readings_select_via_project" on public.polygonal_angle_readings
+  for select using (public.owns_reading_station(station_id));
+
+create policy "polygonal_angle_readings_insert_via_project" on public.polygonal_angle_readings
+  for insert with check (public.owns_reading_station(station_id));
+
+create policy "polygonal_angle_readings_update_via_project" on public.polygonal_angle_readings
+  for update using (public.owns_reading_station(station_id))
+  with check (public.owns_reading_station(station_id));
+
+create policy "polygonal_angle_readings_delete_via_project" on public.polygonal_angle_readings
+  for delete using (public.owns_reading_station(station_id));
 
 -- Inmutabilidad: las lecturas son el dato de campo más crudo que existe. Si el
 -- proceso está cerrado, no se tocan.
@@ -284,7 +295,9 @@ create trigger polygonal_angle_readings_reject_write_when_closed
   for each row execute function public.reject_write_on_closed_process_reading();
 ```
 
-Verificar contra `supabase/migrations/20260522053657_polygonal.sql` que el nombre de la columna de propiedad en `projects` es `user_id`; si allí se llama distinto, usar ese nombre en las dos políticas.
+Ya verificado: `projects.user_id` es la columna de propiedad
+(`20260430010354_init.sql`), y las 4 políticas por operación son el patrón de
+`20260522053657_polygonal.sql:151-195`.
 
 - [ ] **Step 3: Aplicar y regenerar tipos**
 
@@ -854,36 +867,41 @@ y verifica que Crandall cierra, cosa que la hoja del Excel no hace."
 ### Task 5: Validación de captura
 
 **Files:**
+- Modify: `src/lib/calculations/tolerances.ts`
 - Modify: `src/lib/validators/polygonal.ts`
+- Test: `src/lib/calculations/tolerances.test.ts`
 - Test: `src/lib/validators/polygonal.test.ts`
 
 **Interfaces:**
-- Consumes: `angularTolerance` de `tolerances.ts`, `PrecisionOrder`.
-- Produces: `validateReadings(readings: ReadingInput[], min: number, order: PrecisionOrder): { error?: string; warning?: string }`; `expectStationCapture(type, index, total, hasClosingRow?)`. Los consumen las tareas 6 y 9.
+- Consumes: `readingDispersionTolerance` de `tolerances.ts` (nuevo en esta tarea).
+- Produces: `readingDispersionTolerance(instrumentSeconds: number): number` en `tolerances.ts`; `validateReadings(readings: ReadingInput[], min: number, instrumentSeconds: number): { error?: string; warning?: string }`; `expectStationCapture(type, index, total, hasClosingRow?)`. Los consumen las tareas 6 y 9.
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
 ```ts
 describe("validateReadings", () => {
   it("exige el mínimo de lecturas configurado", () => {
-    const r = validateReadings([{ order: 1, angle: 90 }], 3, "tercer_orden");
+    const r = validateReadings([{ order: 1, angle: 90 }], 3, 5);
     expect(r.error).toBe("Faltan lecturas: se exigen 3 y hay 1.");
   });
 
   it("acepta cuando se alcanza el mínimo", () => {
     const readings = [90, 90.0001, 90.0002].map((angle, i) => ({ order: i + 1, angle }));
-    expect(validateReadings(readings, 3, "tercer_orden").error).toBeUndefined();
+    expect(validateReadings(readings, 3, 5).error).toBeUndefined();
   });
 
-  it("avisa cuando la dispersión supera la tolerancia del orden", () => {
-    const readings = [90, 90.02, 90.04].map((angle, i) => ({ order: i + 1, angle }));
-    const r = validateReadings(readings, 3, "primer_orden");
+  it("avisa cuando la dispersión supera lo que el equipo resuelve", () => {
+    // Equipo de 5": tres lecturas con 36" de separación no son repetibilidad,
+    // son un error de puntería o de transcripción.
+    const readings = [90, 90.005, 90.01].map((angle, i) => ({ order: i + 1, angle }));
+    const r = validateReadings(readings, 3, 5);
     expect(r.warning).toMatch(/dispersión/i);
   });
 
-  it("no avisa con lecturas consistentes", () => {
-    const readings = [90, 90.0001, 90.0002].map((angle, i) => ({ order: i + 1, angle }));
-    expect(validateReadings(readings, 3, "tercer_orden").warning).toBeUndefined();
+  it("no avisa con lecturas dentro de la precisión del equipo", () => {
+    // 5" de separación con un equipo de 5": dentro del margen (2x).
+    const readings = [90, 90.0007, 90.0014].map((angle, i) => ({ order: i + 1, angle }));
+    expect(validateReadings(readings, 3, 5).warning).toBeUndefined();
   });
 });
 
@@ -905,21 +923,46 @@ Expected: FAIL — `validateReadings is not a function`.
 
 - [ ] **Step 3: Implementar**
 
+Primero, la tolerancia. En `src/lib/calculations/tolerances.ts`:
+
 ```ts
-import { angularTolerance } from "@/lib/calculations/tolerances";
+/**
+ * Factor sobre la precisión angular del equipo que se admite como dispersión
+ * entre lecturas de un mismo ángulo.
+ *
+ * La vara correcta aquí es el instrumento, no el orden de precisión: el orden
+ * gobierna el cierre de la poligonal, mientras que repetir una lectura mide
+ * repetibilidad. Un equipo de 5" no distingue dos punterías que difieren 4",
+ * pero 36" de separación no es repetibilidad, es un error de puntería o de
+ * transcripción. El 2 es criterio, no norma citada: es el umbral a partir del
+ * cual vale la pena que el capturador mire otra vez.
+ */
+export const READING_DISPERSION_FACTOR = 2;
+
+/** Dispersión máxima admitida entre lecturas, en segundos de arco. */
+export function readingDispersionTolerance(instrumentSeconds: number): number {
+  return READING_DISPERSION_FACTOR * instrumentSeconds;
+}
+```
+
+Y en `src/lib/validators/polygonal.ts`:
+
+```ts
+import { readingDispersionTolerance } from "@/lib/calculations/tolerances";
 import { degreesToSeconds } from "@/lib/calculations/angles";
 import type { ReadingInput } from "@/types/polygonal";
-import type { PrecisionOrder } from "@/types/project";
 
 /**
  * Valida las lecturas de un ángulo. La dispersión (máx − mín) es control de
  * calidad de la captura: tres lecturas que difieren 40" dicen algo que el
- * promedio esconde. Avisa, no bloquea — misma política que el resto del editor.
+ * promedio esconde. Se contrasta con la precisión angular del equipo del
+ * proyecto (`projects.angular_precision_seconds`), no con la tolerancia del
+ * orden. Avisa, no bloquea — misma política que el resto del editor.
  */
 export function validateReadings(
   readings: ReadingInput[],
   min: number,
-  order: PrecisionOrder,
+  instrumentSeconds: number,
 ): { error?: string; warning?: string } {
   if (readings.length < min) {
     return {
@@ -930,11 +973,10 @@ export function validateReadings(
 
   const values = readings.map((r) => r.angle);
   const dispersion = degreesToSeconds(Math.max(...values) - Math.min(...values));
-  // La tolerancia de un solo ángulo es K·√1 = K.
-  const limit = angularTolerance(order, 1);
+  const limit = readingDispersionTolerance(instrumentSeconds);
   if (dispersion > limit) {
     return {
-      warning: `Dispersión de ${dispersion.toFixed(1)}" entre lecturas, sobre la tolerancia de ${limit.toFixed(1)}".`,
+      warning: `Dispersión de ${dispersion.toFixed(1)}" entre lecturas, sobre los ${limit.toFixed(1)}" que admite un equipo de ${instrumentSeconds}".`,
     };
   }
   return {};
@@ -970,8 +1012,8 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/lib/validators/polygonal.ts src/lib/validators/polygonal.test.ts
-git commit -m "feat: validación de lecturas múltiples y fila de cierre"
+git add src/lib/calculations/tolerances.ts src/lib/validators/polygonal.ts src/lib/validators/polygonal.test.ts
+git commit -m "feat: validación de lecturas contra la precisión del equipo"
 ```
 
 ---
@@ -1203,7 +1245,7 @@ git commit -m "feat: azimut derivado de coordenadas al reasignar"
 - Modify: `src/components/polygonal/stations-table.tsx`
 
 **Interfaces:**
-- Consumes: `validateReadings`, `expectStationCapture` (Task 5); `PolygonalConfigState` (Task 7).
+- Consumes: `validateReadings`, `expectStationCapture` (Task 5); `PolygonalConfigState` (Task 7). La tabla recibe además `angularPrecisionSeconds: number`, que el editor toma de `project.angular_precision_seconds` y pasa a `validateReadings`.
 - Produces: la tabla emite estaciones con `readings: DmsValue[]`.
 
 - [ ] **Step 1: Celda de ángulo expandible**
