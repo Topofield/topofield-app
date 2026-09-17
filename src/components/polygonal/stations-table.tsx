@@ -6,7 +6,7 @@ import {
   Select,
   type DmsValue,
 } from "@/components/design-system";
-import { decimalToDms } from "@/lib/calculations/angles";
+import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
 import type { CaptureIssues } from "@/lib/validators/polygonal";
 import {
   DEFLECTION_DIRECTION_LABELS,
@@ -18,19 +18,42 @@ export interface StationDraftState {
   /** Clave estable para React (no se persiste). */
   id: string;
   pointCode: string;
+  /**
+   * Promedio de las lecturas. Derivado: lo recalcula `averageOf` en cada
+   * cambio y el servidor lo vuelve a calcular al guardar.
+   */
   angle: DmsValue;
+  /** Lecturas del ángulo. El mínimo lo fija el proceso. */
+  readings: DmsValue[];
   deflectionDirection: DeflectionDirection | null;
   distance: string;
 }
 
-export function emptyStation(): StationDraftState {
+export function emptyStation(readingsMin = 3): StationDraftState {
   return {
     id: crypto.randomUUID(),
     pointCode: "",
     angle: { ...EMPTY_DMS },
+    readings: Array.from({ length: readingsMin }, () => ({ ...EMPTY_DMS })),
     deflectionDirection: null,
     distance: "",
   };
+}
+
+/** Lecturas completas de una estación, en grados decimales. */
+export function readingValues(readings: DmsValue[]): number[] {
+  return readings
+    .map((r) => dmsToDecimal(Number(r.deg), Number(r.min), Number(r.sec)))
+    .filter((v) => Number.isFinite(v));
+}
+
+/** Promedio de las lecturas completas, en DMS. `null` si no hay ninguna. */
+export function averageOf(readings: DmsValue[]): DmsValue | null {
+  const values = readingValues(readings);
+  if (values.length === 0) return null;
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  const dms = decimalToDms(avg);
+  return { deg: String(dms.deg), min: String(dms.min), sec: String(dms.sec) };
 }
 
 const DEFLECTION_OPTIONS = [

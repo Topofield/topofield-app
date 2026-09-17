@@ -251,6 +251,7 @@ export type Database = {
           end_east: number | null
           end_north: number | null
           end_point_code: string | null
+          has_closing_row: boolean
           id: string
           linear_error: number | null
           meets_tolerance: boolean | null
@@ -286,6 +287,7 @@ export type Database = {
           end_east?: number | null
           end_north?: number | null
           end_point_code?: string | null
+          has_closing_row?: boolean
           id?: string
           linear_error?: number | null
           meets_tolerance?: boolean | null
@@ -321,6 +323,7 @@ export type Database = {
           end_east?: number | null
           end_north?: number | null
           end_point_code?: string | null
+          has_closing_row?: boolean
           id?: string
           linear_error?: number | null
           meets_tolerance?: boolean | null

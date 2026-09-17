@@ -38,12 +38,15 @@ alter table public.polygonal_processes
   add column reference_point_id   uuid references public.reference_points(id) on delete set null,
   add column reference_point_code text,
   add column angle_readings_min   int not null default 3
-    check (angle_readings_min >= 1);
+    check (angle_readings_min >= 1),
+  add column has_closing_row      boolean not null default false;
 
 comment on column public.polygonal_processes.reference_point_id is
   'Punto de amarre del catálogo del proyecto. Si está, el azimut se calcula desde sus coordenadas.';
 comment on column public.polygonal_processes.reference_point_code is
   'Amarre fuera del catálogo: código tecleado a mano, con el azimut en start_azimuth_*.';
+comment on column public.polygonal_processes.has_closing_row is
+  'La cartera cierra contra el amarre: la última fila es el ángulo del último lado de vuelta a la referencia y no lleva distancia.';
 comment on column public.polygonal_processes.start_azimuth_deg is
   'Azimut de partida. Con amarre, es el azimut del arranque HACIA la referencia; sin amarre, el del primer lado.';
 
