@@ -252,9 +252,30 @@ perímetro. El color lo resume: verde cumple, rojo no cumple.
 **Configuración.** Plegada cuando el proceso ya está calculado. Ábrala para
 cambiar el nombre, el tipo o el punto de partida.
 
+Ahí elige también el **tipo de ángulo** y el **punto de amarre**. TopoField no
+preselecciona el tipo de ángulo a propósito: si recorre el polígono en un
+sentido sus lecturas caen como interiores y en el otro como exteriores, y elegir
+por usted produciría un levantamiento espejado sin ningún aviso.
+
+El punto de amarre sale del catálogo de puntos del proyecto —solo aparecen los
+que tienen coordenadas—, y con él **el azimut se calcula solo** desde las
+coordenadas del arranque y las de la referencia. Si su cartera cierra visando de
+vuelta al amarre, marque la casilla correspondiente: la última fila será ese
+ángulo de cierre y no llevará distancia.
+
 **Estaciones.** La tabla de captura. Por cada estación registra el código, el
-ángulo en grados-minutos-segundos y la distancia horizontal. A la derecha, la
-aplicación calcula en vivo el azimut, ΔN y ΔE.
+ángulo y la distancia horizontal. A la derecha, la aplicación calcula en vivo el
+azimut, ΔN y ΔE.
+
+El ángulo se captura con **varias lecturas**. La celda muestra el promedio, la
+dispersión entre lecturas y cuántas lleva de las exigidas —por ejemplo
+`211°15'7″ · ±3.0″ · 3/3`—; al pulsarla se despliegan las lecturas individuales
+y un botón para añadir más. El proceso exige un mínimo configurable, 3 por
+defecto, y el promedio es el que alimenta el cálculo.
+
+La dispersión avisa cuando supera lo que su equipo resuelve. Tres lecturas que
+difieren 40″ con un teodolito de 5″ no son repetibilidad: son un error de
+puntería o de tecleo. Es un aviso, no un bloqueo.
 
 Los errores de captura se marcan al momento: una distancia de cero o mayor a
 1000 m, minutos o segundos fuera del rango 0-59. Un ángulo de 0° o 360° genera
@@ -264,6 +285,11 @@ tecleo.
 **Resultados.** El detalle completo: verificación angular (suma medida contra
 suma teórica, error y tolerancia), cierre lineal (error, perímetro, precisión
 relativa) y la tabla de coordenadas corregidas.
+
+Si su poligonal está amarrada aparece además el **control de reorientación**:
+el último azimut de la cadena debe volver al azimut de amarre. Es un control de
+calidad de su levantamiento, no un criterio de tolerancia, así que no impide
+cerrar el proceso.
 
 Aquí elige el **método de corrección**:
 
@@ -279,8 +305,16 @@ Cambiar el método recalcula las coordenadas al instante.
 
 El botón **Asignar coordenadas reales** permite recalcular toda la poligonal
 desde un punto de partida distinto, conservando las mediciones. Es útil cuando
-levantó en un sistema local y después obtuvo las coordenadas oficiales del
-punto de arranque.
+levantó en un sistema local —1000, 1000— y después obtuvo las coordenadas
+oficiales.
+
+Si el proceso está amarrado, el diálogo pide también las coordenadas reales del
+punto de amarre y **recalcula el azimut** a partir de las dos: no hay que
+teclearlo.
+
+Lo que no cambia al reasignar: el error angular, el error de cierre y la
+precisión relativa. Girar y trasladar la poligonal no altera nada de lo que el
+cierre certifica; solo se mueven las coordenadas.
 
 ---
 

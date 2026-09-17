@@ -401,10 +401,42 @@ export default function ManualPage() {
         </p>
 
         <p>
+          Ahí elige también el <strong>tipo de ángulo</strong> y el{" "}
+          <strong>punto de amarre</strong>. TopoField no preselecciona el tipo
+          de ángulo a propósito: si recorre el polígono en un sentido sus
+          lecturas caen como interiores y en el otro como exteriores, y elegir
+          por usted produciría un levantamiento espejado sin ningún aviso.
+        </p>
+
+        <p>
+          El punto de amarre sale del catálogo de puntos del proyecto —solo
+          aparecen los que tienen coordenadas—, y con él{" "}
+          <strong>el azimut se calcula solo</strong> desde las coordenadas del
+          arranque y las de la referencia. Si su cartera cierra visando de
+          vuelta al amarre, marque la casilla correspondiente: la última fila
+          será ese ángulo de cierre y no llevará distancia.
+        </p>
+
+        <p>
           <strong>Estaciones.</strong> La tabla de captura. Por cada estación
-          registra el código, el ángulo en grados-minutos-segundos y la
-          distancia horizontal. A la derecha, la aplicación calcula en vivo el
-          azimut, ΔN y ΔE.
+          registra el código, el ángulo y la distancia horizontal. A la derecha,
+          la aplicación calcula en vivo el azimut, ΔN y ΔE.
+        </p>
+
+        <p>
+          El ángulo se captura con <strong>varias lecturas</strong>. La celda
+          muestra el promedio, la dispersión entre lecturas y cuántas lleva de
+          las exigidas —por ejemplo <code>211°15&#39;7″ · ±3.0″ · 3/3</code>—; al
+          pulsarla se despliegan las lecturas individuales y un botón para
+          añadir más. El proceso exige un mínimo configurable, 3 por defecto, y
+          el promedio es el que alimenta el cálculo.
+        </p>
+
+        <p>
+          La dispersión avisa cuando supera lo que su equipo resuelve. Tres
+          lecturas que difieren 40″ con un teodolito de 5″ no son
+          repetibilidad: son un error de puntería o de tecleo. Es un aviso, no
+          un bloqueo.
         </p>
 
         <p>
@@ -419,6 +451,14 @@ export default function ManualPage() {
           (suma medida contra suma teórica, error y tolerancia), cierre lineal
           (error, perímetro, precisión relativa) y la tabla de coordenadas
           corregidas.
+        </p>
+
+        <p>
+          Si su poligonal está amarrada aparece además el{" "}
+          <strong>control de reorientación</strong>: el último azimut de la
+          cadena debe volver al azimut de amarre. Es un control de calidad de su
+          levantamiento, no un criterio de tolerancia, así que no impide cerrar
+          el proceso.
         </p>
 
         <p>
@@ -442,7 +482,19 @@ export default function ManualPage() {
           El botón <strong>Asignar coordenadas reales</strong> permite
           recalcular toda la poligonal desde un punto de partida distinto,
           conservando las mediciones. Es útil cuando levantó en un sistema local
-          y después obtuvo las coordenadas oficiales del punto de arranque.
+          —1000, 1000— y después obtuvo las coordenadas oficiales.
+        </p>
+
+        <p>
+          Si el proceso está amarrado, el diálogo pide también las coordenadas
+          reales del punto de amarre y <strong>recalcula el azimut</strong> a
+          partir de las dos: no hay que teclearlo.
+        </p>
+
+        <p>
+          Lo que no cambia al reasignar: el error angular, el error de cierre y
+          la precisión relativa. Girar y trasladar la poligonal no altera nada
+          de lo que el cierre certifica; solo se mueven las coordenadas.
         </p>
 
         <VolverArriba />

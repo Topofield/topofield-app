@@ -16,10 +16,11 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 4 | Módulo Nivelación | [`prds/03-nivelacion.md`](./prds/03-nivelacion.md) | cerrada |
 | 5 | Control de Asentamientos | [`prds/04-asentamientos.md`](./prds/04-asentamientos.md) | cerrada |
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | cerrada |
-| 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | en curso |
-| 8 | Canvas de poligonal | — | pendiente |
-| 9 | Ajuste por mínimos cuadrados | — | pendiente |
-| 10 | Georreferenciación de levantamientos | — | pendiente |
+| 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | cerrada |
+| 8 | Precisión y equipo por proceso | — | pendiente |
+| 9 | Canvas de poligonal | — | pendiente |
+| 10 | Ajuste por mínimos cuadrados | — | pendiente |
+| 11 | Georreferenciación de levantamientos | — | pendiente |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -441,3 +442,19 @@ proyecto de ejemplo automático (ver `docs/prds/00-setup.md` y
 - **El problema de permisos tras `db reset` es solo local.** En la nube los
   `GRANT` vienen bien de fábrica; el `permission denied for table profiles` que
   apareció en local no se reprodujo en producción.
+
+### Cierre Fase 7 — Motor y captura de poligonales (2026-09-17)
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El PRD daba por bueno el Tránsito de la hoja `TRANSITO` comparando la forma de la fórmula sin verificar el cierre. La hoja reparte proporcional a la proyección **con signo**, y como `ΣΔN` es el propio error de cierre las correcciones se cancelan: deja el error entero sin corregir. De las tres hojas del Excel solo `BRUJULA` está bien. El criterio de aceptación pasó de «reproduce la hoja» a «cierra a cero».
+- El PRD modelaba un solo esquema de cierre. Al transcribir la segunda cartera apareció otro: la Vivero cierra contra el **primer lado**, no contra el amarre. Se cubrieron ambos haciendo opcional la fila de cierre, sin enum adicional.
+- Faltaba la columna `has_closing_row`. Se añadió editando la migración en sitio, viable porque nunca salió de local.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **`create or replace function` pisa en silencio una función homónima de otro módulo.** La migración definió `reject_write_on_closed_process_reading()`, nombre que ya existía desde `20260812020455_leveling.sql` con la misma firma. El trigger de nivelación quedó ejecutando el cuerpo de poligonal y buscando un `station_id` que `leveling_readings` no tiene. Ningún test lo vio; lo destapó el seed al llegar al circuito de nivelación. **Antes de crear una función en una migración, hacer `grep` del nombre en `supabase/migrations/`.**
+- **Correr la app encuentra lo que los tests no.** `expectStationCapture` recibió el parámetro `hasClosingRow` en la tarea 5 y el editor nunca se lo pasó: la fila de cierre marcaba error y dejaba Guardar deshabilitado, o sea que una cartera amarrada no se podía guardar. Los 417 tests pasaban porque el validador se prueba directamente, con el parámetro puesto a mano. Solo apareció al abrir la pantalla y mirarla. **Una fase que toca UI no se cierra sin levantarla y capturar.**
+- **Un fallo silencioso es peor que uno ruidoso.** El bug de convención que originó la fase no rompía nada: el error de cierre y la precisión relativa salían casi iguales en las dos convenciones, así que la app informaba «cumple 1:7036» sobre coordenadas espejadas. Cuando un indicador no distingue dos situaciones que sí difieren, el indicador está incompleto. De ahí que `angle_type` se elija sin preselección: adivinar reintroduce el mismo fallo.
+- **Los datos reales valen más que los sintéticos.** Los fixtures de las fases 3 a 6 —cuadrados perfectos, pentágonos del marco teórico— cierran bajo cualquiera de las dos convenciones, por eso el bug sobrevivió cuatro fases. Dos carteras de campo con esquemas distintos lo destaparon en una tarde, y la segunda encontró además un bug de perímetro que la primera no podía encontrar.
+- **Un campo capturado que nadie lee es una pregunta sin responder.** `projects.angular_precision_seconds` se captura desde la Fase 2 y hasta ahora solo se mostraba en la ficha. Ahora gobierna la dispersión entre lecturas. Conviene revisar qué otros campos están en ese estado.

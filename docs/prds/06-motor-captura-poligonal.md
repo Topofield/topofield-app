@@ -1,8 +1,8 @@
 # PRD-de-fase 7 — Motor y captura de poligonales
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-16
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-17
 
 ## Propósito
 
@@ -118,12 +118,12 @@ Verificados numéricamente contra las carteras, no inferidos:
 
 ### Fuera (diferido)
 
-- **Canvas de visualización** (original vs ajustada, grilla, zoom): Fase 8.
-- **Ajuste por mínimos cuadrados** como cuarto método: Fase 9. La cartera Vivero
+- **Canvas de visualización** (original vs ajustada, grilla, zoom): Fase 9.
+- **Ajuste por mínimos cuadrados** como cuarto método: Fase 10. La cartera Vivero
   se siembra en esta fase como poligonal normal, calculada con los tres métodos
   actuales.
 - **Georreferenciación en cualquier momento**, incluidos procesos cerrados:
-  Fase 10. Un levantamiento puede arrancar en sistema local arbitrario (1000,
+  Fase 11. Un levantamiento puede arrancar en sistema local arbitrario (1000,
   2000) y recibir coordenadas reales meses después, ya cerrado. Mecanismo
   acordado para esa fase: **recalcular y guardar**, con una excepción estrecha
   en el trigger de inmutabilidad — solo las columnas de coordenadas, solo por la
@@ -146,7 +146,7 @@ Verificados numéricamente contra las carteras, no inferidos:
 | 6 | Los `.xlsx` se commitean en `docs/carteras/` como fuente de los tests | Datos académicos de la Universidad Distrital, sin información de cliente |
 | 7 | El azimut de amarre se **calcula** desde las coordenadas de un `reference_points` elegido del catálogo, con los campos DMS como respaldo manual | Teclear siempre el azimut en DMS; es un derivado de datos que el proyecto ya tiene. Recoge la decisión 6 de la Fase 3, que lo dejó como «mejora futura» |
 | 8 | `angle_type` se elige explícitamente en el formulario, sin preselección | Un default; interior y exterior ocurren ambos en campo según hacia dónde se recorra el polígono, y adivinarlo reintroduce el fallo silencioso que esta fase corrige |
-| 9 | La georreferenciación completa se difiere a la Fase 10; en esta fase solo se deriva el azimut al reasignar coordenadas de un proceso no cerrado | Meterla entera llevaría la fase de 12 a ~17 tareas y mezclaría el arreglo de un bug real con funcionalidad nueva de peso |
+| 9 | La georreferenciación completa se difiere a la Fase 11; en esta fase solo se deriva el azimut al reasignar coordenadas de un proceso no cerrado | Meterla entera llevaría la fase de 12 a ~17 tareas y mezclaría el arreglo de un bug real con funcionalidad nueva de peso |
 
 ## Modelo de datos
 
