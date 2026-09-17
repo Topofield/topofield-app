@@ -222,7 +222,9 @@ async function insertPolygonal(projectId, siteId, spec, userId, order) {
       correction_method: spec.correctionMethod ?? null,
       reference_point_id: spec.referencePointId ?? null,
       reference_point_code: spec.referencePointCode ?? null,
-      angle_readings_min: spec.angleReadingsMin ?? 3,
+      // Los fixtures y las carteras se transcriben con UNA lectura por ángulo:
+      // es lo que hay en el papel. El mínimo de 3 es para captura nueva.
+      angle_readings_min: spec.angleReadingsMin ?? 1,
       has_closing_row: spec.hasClosingRow ?? false,
       // El proceso nace abierto aunque el fixture lo quiera cerrado: los
       // triggers de inmutabilidad rechazan escribir estaciones bajo un proceso
