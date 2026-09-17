@@ -23,14 +23,6 @@ function isNum(x: number | null | undefined): x is number {
   return typeof x === "number" && Number.isFinite(x);
 }
 
-/** Suma de las distancias finitas de las estaciones (perímetro / longitud). */
-function sumDistances(stations: StationInput[]): number {
-  return stations.reduce(
-    (acc, s) => (isNum(s.distance) ? acc + s.distance : acc),
-    0,
-  );
-}
-
 /** Dispersión entre lecturas de un mismo ángulo, en segundos de arco. */
 function dispersionSeconds(readings: ReadingInput[]): number | null {
   if (readings.length < 2) return null;
