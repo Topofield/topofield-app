@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  azimuthFromCoordinates,
   cosDeg,
   decimalToDms,
   degreesToSeconds,
@@ -64,5 +65,40 @@ describe("cosDeg / sinDeg", () => {
     expect(sinDeg(90)).toBeCloseTo(1, 10);
     expect(sinDeg(0)).toBeCloseTo(0, 10);
     expect(cosDeg(45)).toBeCloseTo(Math.SQRT1_2, 10);
+  });
+});
+
+describe("azimuthFromCoordinates", () => {
+  it("reproduce el azimut de amarre de la cartera TT4", () => {
+    // V10 → TT4, hoja BRUJULA de docs/carteras/poligonales.xlsx. La hoja trae
+    // las coordenadas de TT4 en su bloque X23:Z25 y el azimut tecleado en
+    // O6:Q6 (330°35'57.23"). Deben coincidir.
+    const az = azimuthFromCoordinates(
+      100135.666,
+      101440.525,
+      100142.809,
+      101436.5,
+    );
+    // Se compara en segundos de arco, que es la unidad que significa algo: la
+    // hoja da el Este de TT4 con un solo decimal (101436.5), así que el dato de
+    // origen ya viene redondeado. El acuerdo real es de 0.0007", siete órdenes
+    // de magnitud por debajo de lo que resuelve cualquier equipo.
+    const tecleado = 330 + 35 / 60 + 57.23 / 3600;
+    expect(Math.abs(az - tecleado) * 3600).toBeLessThan(0.01);
+  });
+
+  it("devuelve los cuatro cuadrantes cardinales", () => {
+    expect(azimuthFromCoordinates(0, 0, 10, 0)).toBeCloseTo(0, 9);
+    expect(azimuthFromCoordinates(0, 0, 0, 10)).toBeCloseTo(90, 9);
+    expect(azimuthFromCoordinates(0, 0, -10, 0)).toBeCloseTo(180, 9);
+    expect(azimuthFromCoordinates(0, 0, 0, -10)).toBeCloseTo(270, 9);
+  });
+
+  it("normaliza el tercer cuadrante en vez de devolver negativo", () => {
+    expect(azimuthFromCoordinates(0, 0, -10, -10)).toBeCloseTo(225, 9);
+  });
+
+  it("devuelve 0 cuando los dos puntos coinciden", () => {
+    expect(azimuthFromCoordinates(5, 5, 5, 5)).toBe(0);
   });
 });

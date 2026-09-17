@@ -56,3 +56,26 @@ export function cosDeg(deg: number): number {
 export function sinDeg(deg: number): number {
   return Math.sin((deg * Math.PI) / 180);
 }
+
+/**
+ * Azimut de la dirección `from → to` a partir de coordenadas planas, en grados
+ * decimales normalizados a [0, 360).
+ *
+ * El azimut se mide desde el Norte en sentido horario, así que el ángulo es
+ * `atan2(ΔE, ΔN)` y no `atan2(ΔN, ΔE)`: el Norte hace de eje de referencia y el
+ * Este de eje que crece hacia la derecha.
+ *
+ * Dos puntos coincidentes no definen dirección; se devuelve 0 en vez de
+ * propagar el 0 arbitrario de `atan2(0, 0)` como si fuera un dato.
+ */
+export function azimuthFromCoordinates(
+  fromNorth: number,
+  fromEast: number,
+  toNorth: number,
+  toEast: number,
+): number {
+  const deltaNorth = toNorth - fromNorth;
+  const deltaEast = toEast - fromEast;
+  if (deltaNorth === 0 && deltaEast === 0) return 0;
+  return normalizeAzimuth((Math.atan2(deltaEast, deltaNorth) * 180) / Math.PI);
+}
