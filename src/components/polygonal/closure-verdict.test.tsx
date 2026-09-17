@@ -15,6 +15,7 @@ function resultWith(over: Partial<PolygonalResult>): PolygonalResult {
     perimeter: 0,
     relativePrecision: null,
     meetsLinearTolerance: null,
+    reorientationError: null,
     meetsTolerance: null,
     stations: [],
     ...over,
@@ -70,5 +71,27 @@ describe("verdictFor", () => {
     expect(v.title).toBe("Datos incompletos");
     expect(v.achieved).toBeNull();
     expect(v.required).toBeNull();
+  });
+});
+
+describe("verdictFor — control de reorientación", () => {
+  it("una reorientación mala no cambia el veredicto de cierre", () => {
+    // La reorientación es control de calidad del levantamiento, no criterio de
+    // tolerancia: un proceso que cumple ángulo y cierre sigue siendo apto.
+    const bueno = resultWith({
+      anglesMeetTolerance: true,
+      meetsLinearTolerance: true,
+      meetsTolerance: true,
+      reorientationError: 0.2,
+    });
+    const conDeriva = resultWith({
+      anglesMeetTolerance: true,
+      meetsLinearTolerance: true,
+      meetsTolerance: true,
+      reorientationError: 45,
+    });
+    expect(verdictFor(conDeriva, "closed", "tercer_orden")).toEqual(
+      verdictFor(bueno, "closed", "tercer_orden"),
+    );
   });
 });

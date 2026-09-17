@@ -79,6 +79,18 @@ export function ResultsPanel({
               label="Tolerancia angular"
               value={formatSeconds(result.angularTolerance)}
             />
+            {result.reorientationError != null && (
+              <>
+                <Row
+                  label="Control de reorientación"
+                  value={formatSeconds(result.reorientationError)}
+                />
+                <p className="mt-1 text-xs text-neutral-500">
+                  El último azimut debe volver al azimut de amarre. Es control
+                  de calidad del levantamiento, no criterio de tolerancia.
+                </p>
+              </>
+            )}
           </div>
         )}
         <div>
