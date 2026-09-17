@@ -58,20 +58,31 @@ Verificados numéricamente contra las carteras, no inferidos:
    amarre — en rojo el de apertura (del punto conocido al primer lado) y en azul
    el de cierre (del último lado de vuelta al punto conocido). Las dos figuras
    son los dos casos: arriba el polígono se recorre en un sentido y las lecturas
-   caen como exteriores, abajo en el contrario y caen como interiores. El vértice de
+   caen como exteriores, abajo en el contrario y caen como interiores.
+
+4. **Hay dos esquemas de cierre y el modelo debe cubrir ambos.** La cartera TT4
+   cierra **contra el amarre**: el último ángulo en el vértice de arranque va del
+   último lado de vuelta al punto conocido (299°18'51"), el ángulo del vértice
+   sale de `orientación + cierre - 360` y la suma teórica es `(n-2)·180 + 360`
+   sobre n+1 ángulos. La cartera Vivero cierra **contra el primer lado**: su
+   último ángulo (81°33'47") es directamente el ángulo interior del vértice de
+   arranque, la suma teórica es `(n-2)·180` sobre n ángulos y el de orientación
+   solo fija el datum; el chequeo es la discrepancia del azimut del primer lado,
+   que la hoja calcula en `G22` y da 4". Se cubren ambos **haciendo opcional la
+   fila de cierre**, sin enum adicional. El vértice de
    arranque se mide en dos tiempos contra un punto de referencia externo
    (211°15'07" de TT4 a D1 al abrir, 299°18'51" de D5 a TT4 al cerrar). La suma
    teórica pasa a `(n-2)·180 + 360` = 1080, el error angular de 12" se reparte
    entre 7 ángulos (1.714286" cada uno) y el ángulo de cierre ofrece un control
    de reorientación que hoy no existe.
 
-4. **Bowditch y Tránsito de la app ya son correctos.** Reimplementando la hoja
+5. **Bowditch y Tránsito de la app ya son correctos.** Reimplementando la hoja
    `BRUJULA` desde cero con la convención del instrumento, la diferencia contra
    el Excel es de 0.000 mm en los 6 vértices. `brújula` y Bowditch son el mismo
    método (compass rule); la hoja `TRANSITO` es la corrección proporcional a
    `|proyección|`, idéntica a la nuestra.
 
-5. **El Crandall de la app es correcto y el del Excel no.** La hoja tiene tres
+6. **El Crandall de la app es correcto y el del Excel no.** La hoja tiene tres
    errores: usa `(ΔN+ΔE)/d` donde las ecuaciones normales piden el producto
    `ΔN·ΔE/d`; usa `Σ(LDᵢ²)` donde el determinante pide `(Σ LD)²`; y tiene los
    paréntesis mal puestos en los multiplicadores, de modo que la división aplica
@@ -230,6 +241,11 @@ Con `n = estaciones - 1` (vértices) cuando hay orientación:
 |---|---|---|
 | `interior` | `(n-2)·180 + 360` | `(n-2)·180` |
 | `exterior` | `(n+2)·180 + 360` | `(n+2)·180` |
+
+La columna «con orientación» aplica cuando existe **fila de cierre** (la cartera
+cierra contra el amarre). Sin fila de cierre, el último ángulo capturado es el
+del vértice de arranque, la suma va sobre los n ángulos y el de orientación solo
+fija el datum — es el esquema de la cartera Vivero.
 
 El caso `exterior` no está cubierto por ninguna cartera real de las dos
 analizadas (ambas son interiores). Se deriva del mismo razonamiento que el caso
