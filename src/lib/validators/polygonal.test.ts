@@ -46,6 +46,7 @@ function resultWith(over: Partial<PolygonalResult> = {}): PolygonalResult {
     perimeter: 0,
     relativePrecision: null,
     meetsLinearTolerance: null,
+    reorientationError: null,
     meetsTolerance: null,
     stations: [],
     ...over,
@@ -57,6 +58,7 @@ function computedStation(north: number | null): StationResult {
   return {
     pointCode: "E1",
     correctedAngle: null,
+    readingDispersion: null,
     azimuth: null,
     deltaNorth: null,
     deltaEast: null,
