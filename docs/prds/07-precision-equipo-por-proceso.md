@@ -74,7 +74,7 @@ Verificados sobre el código, no inferidos:
 2. `polygonal_processes` y `leveling_processes` capturan orden y equipo con los
    campos de su tipo de instrumento.
 3. `settlement_visits` estructura su `equipment` de texto libre con los campos
-   de nivel.
+   de nivel, y declara además su orden de precisión.
 4. `linear_precision` deja de ser texto y pasa a dos números.
 5. Aviso de equipo insuficiente para el orden declarado, en los dos módulos que
    tienen orden.
@@ -99,7 +99,8 @@ Verificados sobre el código, no inferidos:
 | 3 | El congelado sale gratis del modelo | Copiar al cerrar, o bloquear la fila del catálogo con un trigger: innecesarios si el dato ya vive en el proceso, que es inmutable al cerrarse |
 | 4 | Campos de precisión **según el tipo de instrumento** | Un juego único de campos para los tres módulos: es lo que hay hoy y es la causa del desajuste |
 | 5 | `linear_precision` se parte en `distance_precision_mm` + `distance_precision_ppm` | Seguir con el texto `"2+2ppm"`, que nadie puede calcular |
-| 6 | Asentamientos no lleva `precision_order` | Trabaja con umbrales de velocidad (`sites.velocity_*`), no con orden |
+| 6 | Las visitas de asentamiento **sí** declaran `precision_order` | Se pensó primero que no, razonando sobre los umbrales de velocidad. Pero el umbral y el orden miden cosas distintas: el orden dice con qué exactitud se obtiene la cota, el umbral dice qué significa el movimiento medido. Una visita se levanta nivelando, y ese trabajo tiene exactitud exigible |
+| 8 | El orden lo declara la **visita**, no el lugar | `sites` lleva los umbrales porque son del programa de monitoreo; el orden acompaña a la medición, y una campaña puede hacerse con más o menos exigencia que la anterior |
 | 7 | El aviso de equipo insuficiente avisa, no bloquea | Bloquear el cierre: misma política que el resto del editor |
 
 ## Modelo de datos
@@ -135,8 +136,15 @@ km_precision_mm            decimal(4,2)   -- ISO 17123-2, mm/km doble nivelació
 
 ### `settlement_visits` — nivel, por visita
 
-Los mismos campos de nivel. `equipment` (texto libre) se migra a
-`equipment_model` y se elimina. `operator` se conserva: es otra cosa.
+`precision_order` más los mismos campos de nivel que `leveling_processes`.
+`equipment` (texto libre) se migra a `equipment_model` y se elimina.
+`operator` se conserva: es otra cosa.
+
+El orden aquí no compite con los umbrales de `sites`: el orden gobierna con qué
+exactitud se obtiene la cota, y el umbral qué significa el movimiento que esa
+cota revela. Sin orden declarado no hay contra qué contrastar el equipo, y es
+justo donde más importa — buscar asentamientos de 2 mm/mes con un nivel de
+2.5 mm/km es medir el ruido del instrumento.
 
 ### `projects`
 
@@ -173,6 +181,7 @@ export function levelMeetsOrder(
 |---|---|---|---|
 | Poligonal | `σ_angular > ANGULAR_TOLERANCE_K[orden]` | 5″ con primer orden (K = 1″) | 1″ con primer orden |
 | Nivelación | `σ_km > LEVELING_TOLERANCE_K[orden]` | 5.0 mm/km con primer orden (K = 3) | 2.5 mm/km con primer orden |
+| Asentamientos | `σ_km > LEVELING_TOLERANCE_K[orden]` de la visita | igual que nivelación | igual que nivelación |
 
 La regla es **estrictamente mayor**, o sea «el instrumento no llega ni en el
 mejor caso». Un emparejamiento ajustado —2.5 mm/km contra K = 3— no avisa: es
@@ -187,6 +196,7 @@ al orden.
 - `leveling-config-fields.tsx`: gana orden + bloque de nivel.
 - El editor de visitas de asentamientos: bloque de nivel.
 - Los tres muestran el aviso de equipo insuficiente junto al selector de orden.
+- El editor de visitas de asentamientos incluye el selector de orden, que hoy no existe en ese módulo.
 
 ## Informes y exportación
 
@@ -219,17 +229,18 @@ proyecto, no cambiando una medición.
 | a | `projects` no tiene ninguna de las siete columnas |
 | b | Poligonal captura orden, equipo de estación total y las dos precisiones de distancia |
 | c | Nivelación captura orden, tipo de nivel y mm/km |
-| d | Las visitas de asentamiento capturan equipo de nivel; `equipment` migró a `equipment_model` |
+| d | Las visitas de asentamiento capturan orden y equipo de nivel; `equipment` migró a `equipment_model` |
 | e | El backfill preserva `1+1ppm/1.0″/primer_orden` y `3+2ppm/5.0″/tercer_orden` en sus procesos |
 | f | El backfill llega también a los procesos cerrados, y el trigger queda reactivado |
 | g | Avisa con estación de 5″ y primer orden; no avisa con 1″ y primer orden ni con 5″ y tercer orden (K = 15″) |
 | h | Avisa con nivel de 5.0 mm/km y primer orden (K = 3); no avisa con 2.5 mm/km, que es ajustado pero posible |
+| h2 | El aviso aparece también en una visita de asentamiento con equipo insuficiente para su orden |
 | i | La dispersión entre lecturas usa la precisión angular **del proceso** |
 | j | El informe imprime equipo por proceso, no por proyecto |
 | k | Editar un proyecto no altera el informe de un proceso cerrado |
 | l | Los cuatro workbooks exportan el equipo del proceso |
 | m | `npm run typecheck`, `npm run lint` y `npm test` pasan |
-| n | El seed siembra equipos coherentes con el orden de cada proceso |
+| n | El seed siembra equipos coherentes con el orden de cada proceso y visita |
 
 ## Riesgos conocidos
 
@@ -255,7 +266,7 @@ proyecto, no cambiando una medición.
 6. `project-fields`: quitar los siete campos y revisar la pantalla.
 7. `polygonal-config-fields`: orden + bloque de estación total + aviso.
 8. `leveling-config-fields`: orden + bloque de nivel + aviso.
-9. Editor de visitas: bloque de nivel.
+9. Editor de visitas: orden + bloque de nivel + aviso.
 10. Informe: equipo por proceso y columna en el resumen consolidado.
 11. Los cuatro workbooks de export.
 12. Seed y fixtures con equipos coherentes.
