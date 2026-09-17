@@ -249,9 +249,11 @@ fija el datum — es el esquema de la cartera Vivero.
 
 El caso `exterior` no está cubierto por ninguna cartera real de las dos
 analizadas (ambas son interiores). Se deriva del mismo razonamiento que el caso
-interior, verificado, y se cubre con un test sintético: tomar la cartera real y
-reemplazar cada ángulo por su complemento a 360° debe dar las mismas
-coordenadas declarando `exterior`.
+interior, verificado, y se cubre con un test sintético: un cuadrado cuyas
+lecturas a la derecha son de 270° tiene suma `(4+2)·180 = 1080` y cierra exacto.
+No sirve tomar el complemento a 360° de una cartera interior: bajo
+`Az(i) = Az(i-1) + 180 + a`, sustituir `a` por `360 - a` devuelve la fórmula
+vieja y con ella el polígono espejo — el bug que esta fase corrige.
 
 El error angular se reparte **por igual** entre todos los ángulos medidos, y
 `angularTolerance(order, m)` recibe `m` = número de ángulos medidos (`n+1` con
@@ -310,7 +312,7 @@ No bloquea el cálculo; alimenta el panel de resultados.
 | d | La suma teórica responde a `angle_type` y a la presencia de orientación |
 | e | El error angular se reparte entre `n+1` ángulos cuando hay orientación |
 | f | El control de reorientación recupera el azimut de referencia |
-| f2 | Test sintético: la cartera con ángulos complementarios y `exterior` da las mismas coordenadas |
+| f2 | Test sintético de `exterior`: cuadrado de ángulos a la derecha de 270°, suma teórica 1080 y cierre exacto |
 | g | Una poligonal cerrada sin punto de referencia sigue calculando como antes |
 | h | La captura exige el mínimo de lecturas y promedia automáticamente |
 | i | La dispersión se muestra y avisa al superar la tolerancia del orden |
