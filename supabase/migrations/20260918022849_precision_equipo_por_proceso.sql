@@ -73,27 +73,32 @@ alter table public.settlement_visits
   add column km_precision_mm            decimal(4,2);
 
 -- --- 4. Backfill desde el proyecto -----------------------------------------
--- ATENCIÓN: esto toca procesos CERRADOS, que son inmutables por trigger. Se
--- desactivan y se reactivan aquí mismo, solo para esta operación.
+-- ATENCIÓN: esto toca procesos y visitas CERRADAS, que son inmutables por
+-- trigger. Se desactivan y se reactivan aquí mismo, solo para esta operación.
 --
--- Por qué es legítimo: se está rellenando un dato que el proceso SIEMPRE tuvo
--- de forma implícita, heredado del proyecto, y que ahora pasa a ser explícito.
--- No se altera ninguna medición ni ningún resultado de cierre.
+-- Por qué es legítimo: se está rellenando un dato que el proceso (o la
+-- visita) SIEMPRE tuvo de forma implícita, heredado del proyecto, y que ahora
+-- pasa a ser explícito. No se altera ninguna medición ni ningún resultado de
+-- cierre.
 --
 -- Por qué esto NO es un permiso general: cualquier otra migración que quiera
--- escribir sobre procesos cerrados tiene que justificarse por su cuenta. La
--- excepción es este backfill, no el patrón.
+-- escribir sobre procesos o visitas cerradas tiene que justificarse por su
+-- cuenta. La excepción es este backfill, no el patrón.
 --
 -- Nombres de trigger confirmados contra pg_trigger en la base local antes de
 -- escribir esto (no se asumieron del PRD): `polygonal_processes` usa el
 -- patrón "_when_closed"; `leveling_processes` usa "_on_closed". Son distintos
 -- a propósito, cada uno data de la migración que lo creó.
 --
--- `settlement_visits` no se toca aquí: en los datos actuales ninguna visita
--- ni ningún lugar está cerrado, así que su propio trigger
--- (`settlement_visits_reject_update_on_closed`) y el de su lugar
--- (`settlement_visits_reject_write_when_site_closed`) no se disparan. El
--- alcance de esta excepción son los dos triggers de proceso.
+-- `settlement_visits` tiene DOS triggers que disparan en UPDATE y hay que
+-- desactivar ambos, no solo uno: `settlement_visits_reject_update_on_closed`
+-- (la visita cerrada) y `settlement_visits_reject_write_when_site_closed`
+-- (el LUGAR cerrado, aunque la visita en sí siga abierta). Verificado con una
+-- visita cerrada y, por separado, con un lugar cerrado: ambos casos abortan
+-- el UPDATE si el trigger correspondiente sigue activo (ver task-2-report.md,
+-- sección de fix). `settlement_visits_reject_delete_when_closed` es BEFORE
+-- DELETE, no dispara en UPDATE, así que no se toca. `settlement_visits_set_updated_at`
+-- tampoco se toca: es inofensivo y debe seguir actualizando `updated_at`.
 
 alter table public.polygonal_processes disable trigger polygonal_processes_reject_update_when_closed;
 alter table public.leveling_processes  disable trigger leveling_processes_reject_update_on_closed;
@@ -129,6 +134,9 @@ alter table public.leveling_processes  enable trigger leveling_processes_reject_
 
 -- Las visitas heredan el orden y el equipo a través del lugar. El texto libre
 -- de `equipment` pasa a `equipment_model`, que es lo que suele contener.
+alter table public.settlement_visits disable trigger settlement_visits_reject_update_on_closed;
+alter table public.settlement_visits disable trigger settlement_visits_reject_write_when_site_closed;
+
 update public.settlement_visits v
    set precision_order = pr.precision_order,
        equipment_brand = pr.equipment_brand,
@@ -138,6 +146,9 @@ update public.settlement_visits v
   from public.sites s
   join public.projects pr on pr.id = s.project_id
  where s.id = v.site_id;
+
+alter table public.settlement_visits enable trigger settlement_visits_reject_update_on_closed;
+alter table public.settlement_visits enable trigger settlement_visits_reject_write_when_site_closed;
 
 alter table public.settlement_visits drop column equipment;
 
