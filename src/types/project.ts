@@ -73,11 +73,6 @@ export const REFERENCE_POINT_TYPE_LABELS: Record<ReferencePointType, string> = {
 
 // --- Opciones para <Select> (value + label) ---
 
-export const PRECISION_ORDER_OPTIONS = PRECISION_ORDERS.map((value) => ({
-  value,
-  label: PRECISION_ORDER_LABELS[value],
-}));
-
 export const REFERENCE_POINT_TYPE_OPTIONS = REFERENCE_POINT_TYPES.map(
   (value) => ({ value, label: REFERENCE_POINT_TYPE_LABELS[value] }),
 );

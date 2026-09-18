@@ -79,9 +79,10 @@ export function BasicFields({ values, errors }: FieldsProps) {
  * Datum y proyección del proyecto (paso 2 del wizard).
  *
  * Desde la Fase 8 el equipo y la precisión ya no se capturan aquí: cada
- * proceso (poligonal, nivelación, asentamiento) los define por su cuenta.
+ * proceso (poligonal, nivelación, asentamiento) los define por su cuenta. Por
+ * eso el nombre ya no es `EquipmentFields`: no queda ni un campo de equipo.
  */
-export function EquipmentFields({ values, errors }: FieldsProps) {
+export function GeodeticFields({ values, errors }: FieldsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Input

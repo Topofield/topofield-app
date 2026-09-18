@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Alert, Button } from "@/components/design-system";
 import {
   BasicFields,
-  EquipmentFields,
+  GeodeticFields,
   type ProjectFormValues,
 } from "./project-fields";
 import {
@@ -42,7 +42,7 @@ export function ProjectEditForm({ project }: { project: Project }) {
       {state.error && <Alert variant="error">{state.error}</Alert>}
       {state.ok && <Alert variant="success">Cambios guardados.</Alert>}
       <BasicFields values={values} errors={errors} />
-      <EquipmentFields values={values} errors={errors} />
+      <GeodeticFields values={values} errors={errors} />
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Guardando…" : "Guardar cambios"}
