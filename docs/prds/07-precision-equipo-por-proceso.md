@@ -118,7 +118,7 @@ equipment_brand            text
 equipment_model            text
 equipment_serial           text
 equipment_calibration_date date
-angular_precision_seconds  decimal(4,1)   -- ISO 17123-3
+angular_precision_seconds  decimal(5,1)   -- ISO 17123-3
 distance_precision_mm      decimal(4,1)   -- el «2 mm» de 2 mm + 2 ppm
 distance_precision_ppm     decimal(4,1)   -- el «2 ppm»
 ```

@@ -227,7 +227,7 @@ alter table public.polygonal_processes
   add column equipment_model            text,
   add column equipment_serial           text,
   add column equipment_calibration_date date,
-  add column angular_precision_seconds  decimal(4,1),
+  add column angular_precision_seconds  decimal(5,1),
   add column distance_precision_mm      decimal(4,1),
   add column distance_precision_ppm     decimal(4,1);
 
