@@ -116,6 +116,10 @@ describe("buildLevelingWorkbook", () => {
     const fila = res
       .getColumn(1)
       .values.findIndex((v) => v === "Discrepancia ida/vuelta (mm)");
+    // Mismo motivo que en `polygonal-workbook.test.ts`: con la etiqueta
+    // ausente, `findIndex` da -1 y `getCell(-1, 2).value` da null, que es lo
+    // que se afirma. Sin esta guarda el test pasaría sin probar nada.
+    expect(fila).toBeGreaterThan(0);
     expect(res.getCell(fila, 2).value).toBeNull();
   });
 

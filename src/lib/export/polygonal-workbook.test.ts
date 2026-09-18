@@ -266,6 +266,11 @@ describe("buildPolygonalWorkbook", () => {
     const res = wb.getWorksheet("Resumen")!;
     const etiquetas = res.getColumn(1).values;
     const fila = etiquetas.findIndex((v) => v === "Equipo");
+    // Sin esto el test no probaría nada: `findIndex` devuelve -1 si la
+    // etiqueta no está, y `getCell(-1, 2).value` de ExcelJS devuelve null,
+    // que es justo lo que se afirma abajo. Renombrar «Equipo» dejaría el
+    // test en verde.
+    expect(fila).toBeGreaterThan(0);
     expect(res.getCell(fila, 2).value).toBeNull();
   });
 

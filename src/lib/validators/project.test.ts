@@ -40,10 +40,21 @@ describe("validateProjectInput", () => {
       }),
     );
     expect(r.ok).toBe(true);
-    if (!r.ok) {
-      expect(r.errors.equipment_brand).toBeUndefined();
-      expect(r.errors.angular_precision_seconds).toBeUndefined();
-      expect(r.errors.precision_order).toBeUndefined();
+    // La guarda iba invertida (`if (!r.ok)`) y estas afirmaciones no llegaban
+    // a ejecutarse nunca. En la rama buena no hay `errors` que inspeccionar,
+    // así que lo que fija la intención de la fase es el dato devuelto: los
+    // tres campos entran en el formulario y NO salen en `ProjectInput`.
+    if (r.ok) {
+      expect(Object.keys(r.data).sort()).toEqual([
+        "client",
+        "datum",
+        "description",
+        "latitude",
+        "location",
+        "longitude",
+        "name",
+        "projection",
+      ]);
     }
   });
 
