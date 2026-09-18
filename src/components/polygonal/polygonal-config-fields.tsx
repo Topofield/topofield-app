@@ -3,8 +3,10 @@ import {
   EMPTY_DMS,
   Input,
   Select,
+  TotalStationFieldset,
   type DmsValue,
 } from "@/components/design-system";
+import { PrecisionOrderSelect } from "@/components/projects/precision-order-select";
 import {
   azimuthFromCoordinates,
   decimalToDms,
@@ -15,7 +17,12 @@ import {
   type AngleType,
   type PolygonalType,
 } from "@/types/polygonal";
-import type { ReferencePoint } from "@/types/project";
+import {
+  EMPTY_TOTAL_STATION,
+  type PrecisionOrder,
+  type ReferencePoint,
+  type TotalStationFields,
+} from "@/types/project";
 
 /** Estado de UI de la configuración de un proceso poligonal (todo texto). */
 export interface PolygonalConfigState {
@@ -38,6 +45,9 @@ export interface PolygonalConfigState {
   endNorth: string;
   endEast: string;
   endAzimuth: DmsValue;
+  /** Orden de precisión del proceso (ISO 17123-3 y -4 para el equipo). */
+  precisionOrder: PrecisionOrder;
+  totalStation: TotalStationFields;
 }
 
 export const EMPTY_POLYGONAL_CONFIG: PolygonalConfigState = {
@@ -56,6 +66,9 @@ export const EMPTY_POLYGONAL_CONFIG: PolygonalConfigState = {
   endNorth: "",
   endEast: "",
   endAzimuth: EMPTY_DMS,
+  // Mismo valor por defecto que la columna en la base (§ Task 2).
+  precisionOrder: "tercer_orden",
+  totalStation: EMPTY_TOTAL_STATION,
 };
 
 interface PolygonalConfigFieldsProps {
@@ -129,6 +142,18 @@ export function PolygonalConfigFields({
           onChange={(e) => set("type", e.target.value as PolygonalType)}
         />
       </div>
+
+      <PrecisionOrderSelect
+        value={value.precisionOrder}
+        disabled={disabled}
+        onChange={(v) => set("precisionOrder", v)}
+      />
+      <TotalStationFieldset
+        value={value.totalStation}
+        onChange={(v) => set("totalStation", v)}
+        order={value.precisionOrder}
+        disabled={disabled}
+      />
 
       {value.type === "closed" && (
         <div className="grid gap-4 sm:grid-cols-2">

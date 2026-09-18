@@ -40,7 +40,7 @@ export default async function PolygonalEditorPage({
       projectName={project.name}
       precisionOrder={process.precision_order}
       referencePoints={referencePoints}
-      angularPrecisionSeconds={Number(project.angular_precision_seconds)}
+      angularPrecisionSeconds={Number(process.angular_precision_seconds)}
     />
   );
 }

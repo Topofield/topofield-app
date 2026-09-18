@@ -57,6 +57,21 @@ export function NewPolygonalForm({
         endAzimuthSec: controlled
           ? parseNumber(config.endAzimuth.sec)
           : null,
+        precisionOrder: config.precisionOrder,
+        equipmentBrand: config.totalStation.equipmentBrand.trim() || null,
+        equipmentModel: config.totalStation.equipmentModel.trim() || null,
+        equipmentSerial: config.totalStation.equipmentSerial.trim() || null,
+        equipmentCalibrationDate:
+          config.totalStation.equipmentCalibrationDate.trim() || null,
+        angularPrecisionSeconds: parseNumber(
+          config.totalStation.angularPrecisionSeconds,
+        ),
+        distancePrecisionMm: parseNumber(
+          config.totalStation.distancePrecisionMm,
+        ),
+        distancePrecisionPpm: parseNumber(
+          config.totalStation.distancePrecisionPpm,
+        ),
       });
       // En éxito la acción redirige al editor; solo llega aquí si hubo error.
       if (result.error) setError(result.error);

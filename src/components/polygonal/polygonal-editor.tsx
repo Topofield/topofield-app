@@ -76,6 +76,23 @@ function processToConfig(p: PolygonalProcess): PolygonalConfigState {
     endNorth: p.end_north != null ? String(p.end_north) : "",
     endEast: p.end_east != null ? String(p.end_east) : "",
     endAzimuth: dmsRow(p.end_azimuth_deg, p.end_azimuth_min, p.end_azimuth_sec),
+    precisionOrder: p.precision_order,
+    totalStation: {
+      equipmentBrand: p.equipment_brand ?? "",
+      equipmentModel: p.equipment_model ?? "",
+      equipmentSerial: p.equipment_serial ?? "",
+      equipmentCalibrationDate: p.equipment_calibration_date ?? "",
+      angularPrecisionSeconds:
+        p.angular_precision_seconds != null
+          ? String(p.angular_precision_seconds)
+          : "",
+      distancePrecisionMm:
+        p.distance_precision_mm != null ? String(p.distance_precision_mm) : "",
+      distancePrecisionPpm:
+        p.distance_precision_ppm != null
+          ? String(p.distance_precision_ppm)
+          : "",
+    },
   };
 }
 
@@ -265,6 +282,21 @@ export function PolygonalEditor({
         angleReadingsMin: parseNumber(config.angleReadingsMin) ?? 3,
         hasClosingRow: config.hasClosingRow,
         notes: process.notes,
+        precisionOrder: config.precisionOrder,
+        equipmentBrand: config.totalStation.equipmentBrand.trim() || null,
+        equipmentModel: config.totalStation.equipmentModel.trim() || null,
+        equipmentSerial: config.totalStation.equipmentSerial.trim() || null,
+        equipmentCalibrationDate:
+          config.totalStation.equipmentCalibrationDate.trim() || null,
+        angularPrecisionSeconds: parseNumber(
+          config.totalStation.angularPrecisionSeconds,
+        ),
+        distancePrecisionMm: parseNumber(
+          config.totalStation.distancePrecisionMm,
+        ),
+        distancePrecisionPpm: parseNumber(
+          config.totalStation.distancePrecisionPpm,
+        ),
         stations: stations.map((st) => ({
           pointCode: st.pointCode,
           angleDeg: parseNumber(st.angle.deg),
@@ -388,7 +420,10 @@ export function PolygonalEditor({
           result={result}
           issues={issues}
           readingsMin={parseNumber(config.angleReadingsMin) ?? 3}
-          angularPrecisionSeconds={angularPrecisionSeconds}
+          angularPrecisionSeconds={
+            parseNumber(config.totalStation.angularPrecisionSeconds) ??
+            angularPrecisionSeconds
+          }
           showDeflection={config.type === "open_controlled"}
           disabled={readOnly}
           onChange={(v) => {

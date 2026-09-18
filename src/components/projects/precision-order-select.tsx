@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Select, type SelectOption } from "@/components/design-system";
 import {
   ANGULAR_TOLERANCE_K,
@@ -39,46 +38,43 @@ const OPTIONS: SelectOption[] = PRECISION_ORDERS.map((value) => ({
   label: dropdownLabel(value),
 }));
 
-const PLACEHOLDER_HELPER =
-  "Define las tolerancias angular y de precisión relativa que la app aplicará a cada poligonal del proyecto.";
-
 interface PrecisionOrderSelectProps {
-  defaultValue?: string;
+  value: PrecisionOrder;
+  onChange: (value: PrecisionOrder) => void;
   required?: boolean;
   disabled?: boolean;
   error?: string;
 }
 
 /**
- * Select reactivo de `precision_order`: al elegir un orden, el helperText
- * muestra la tolerancia angular (K·√n) y la precisión relativa mínima del PRD
- * § 5.4, de modo que el usuario entienda el impacto antes de crear el proyecto.
+ * Select controlado de `precision_order`: el helperText muestra la tolerancia
+ * angular (K·√n) y la precisión relativa mínima del PRD § 5.4 del orden
+ * elegido, de modo que el usuario entienda el impacto antes de guardar el
+ * proceso.
+ *
+ * Controlado (`value`/`onChange`) y no con estado propio: cada proceso trae un
+ * orden por defecto (`tercer_orden`, el de la columna en la base) y quien lo
+ * usa necesita leerlo en vivo, por ejemplo para el aviso de equipo
+ * insuficiente.
  */
 export function PrecisionOrderSelect({
-  defaultValue,
+  value,
+  onChange,
   required,
   disabled,
   error,
 }: PrecisionOrderSelectProps) {
-  const [value, setValue] = useState<string>(defaultValue ?? "");
-
-  const helperText =
-    value && (PRECISION_ORDERS as readonly string[]).includes(value)
-      ? helperFor(value as PrecisionOrder)
-      : PLACEHOLDER_HELPER;
-
   return (
     <Select
       label="Orden de precisión"
       name="precision_order"
       options={OPTIONS}
-      placeholder="Selecciona…"
       required={required}
       disabled={disabled}
       error={error}
       value={value}
-      onChange={(e) => setValue(e.target.value)}
-      helperText={helperText}
+      onChange={(e) => onChange(e.target.value as PrecisionOrder)}
+      helperText={helperFor(value)}
     />
   );
 }
