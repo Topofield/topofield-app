@@ -25,13 +25,6 @@ function toFormValues(project: Project): ProjectFormValues {
     longitude: project.longitude?.toString() ?? "",
     datum: project.datum,
     projection: project.projection ?? "",
-    equipment_brand: project.equipment_brand,
-    equipment_model: project.equipment_model,
-    equipment_serial: project.equipment_serial,
-    angular_precision_seconds: project.angular_precision_seconds.toString(),
-    linear_precision: project.linear_precision,
-    equipment_calibration_date: project.equipment_calibration_date,
-    precision_order: project.precision_order,
   };
 }
 
