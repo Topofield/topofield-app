@@ -38,7 +38,7 @@ export default async function PolygonalEditorPage({
       stations={stations}
       projectId={id}
       projectName={project.name}
-      precisionOrder={project.precision_order}
+      precisionOrder={process.precision_order}
       referencePoints={referencePoints}
       angularPrecisionSeconds={Number(project.angular_precision_seconds)}
     />

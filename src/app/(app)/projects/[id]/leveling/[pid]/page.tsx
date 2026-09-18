@@ -39,7 +39,7 @@ export default async function LevelingEditorPage({
       projectId={id}
       projectName={project.name}
       points={points}
-      precisionOrder={project.precision_order}
+      precisionOrder={process.precision_order}
     />
   );
 }

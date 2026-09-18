@@ -74,6 +74,15 @@ export interface SavePolygonalPayload {
   hasClosingRow: boolean;
   notes: string | null;
   stations: StationDraft[];
+  /** Orden de precisión y equipo (estación total, ISO 17123-3 y -4). */
+  precisionOrder: PrecisionOrder;
+  equipmentBrand: string | null;
+  equipmentModel: string | null;
+  equipmentSerial: string | null;
+  equipmentCalibrationDate: string | null;
+  angularPrecisionSeconds: number | null;
+  distancePrecisionMm: number | null;
+  distancePrecisionPpm: number | null;
 }
 
 export interface ClosePolygonalPayload {
@@ -107,10 +116,7 @@ function averageAngle(st: StationDraft): number {
   return total / st.readings.length;
 }
 
-function buildInput(
-  payload: SavePolygonalPayload,
-  order: PrecisionOrder,
-): PolygonalInput {
+function buildInput(payload: SavePolygonalPayload): PolygonalInput {
   return {
     type: payload.type,
     startNorth: payload.startNorth,
@@ -130,7 +136,7 @@ function buildInput(
             payload.endAzimuthSec ?? 0,
           )
         : null,
-    order,
+    order: payload.precisionOrder,
     method: payload.correctionMethod,
     angleType: payload.angleType,
     // Hay orientación cuando el proceso está amarrado a un punto conocido:
@@ -213,13 +219,6 @@ export async function savePolygonalProcessAction(
     return { ok: false, error: "El proceso está cerrado; no admite cambios." };
   }
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("precision_order")
-    .eq("id", process.project_id)
-    .maybeSingle();
-  const order = (project?.precision_order ?? "ordinario") as PrecisionOrder;
-
   // --- Revalidación en el servidor -----------------------------------------
   // La clave publicable de Supabase es pública por diseño: una llamada
   // directa a esta acción podría guardar una libreta que la interfaz habría
@@ -247,7 +246,7 @@ export async function savePolygonalProcessAction(
     };
   }
 
-  const result = computePolygonal(buildInput(payload, order));
+  const result = computePolygonal(buildInput(payload));
 
   const relPrec = result.relativePrecision;
   const relativePrecision =
@@ -290,6 +289,14 @@ export async function savePolygonalProcessAction(
       end_azimuth_min: payload.endAzimuthMin,
       end_azimuth_sec: payload.endAzimuthSec,
       correction_method: payload.correctionMethod,
+      precision_order: payload.precisionOrder,
+      equipment_brand: payload.equipmentBrand,
+      equipment_model: payload.equipmentModel,
+      equipment_serial: payload.equipmentSerial,
+      equipment_calibration_date: payload.equipmentCalibrationDate,
+      angular_precision_seconds: payload.angularPrecisionSeconds,
+      distance_precision_mm: payload.distancePrecisionMm,
+      distance_precision_ppm: payload.distancePrecisionPpm,
       angular_error_seconds: result.angularError,
       linear_error: result.linearError,
       perimeter: result.perimeter,

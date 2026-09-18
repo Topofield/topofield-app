@@ -18,6 +18,7 @@ import type {
 } from "@/types/settlement";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import type { Site } from "@/types/site";
+import type { LevelType, PrecisionOrder } from "@/types/project";
 
 export interface ActionResult {
   ok: boolean;
@@ -30,11 +31,18 @@ export interface VisitPayload {
   visitId: string;
   date: string;
   operator: string | null;
-  equipment: string | null;
   weatherConditions: string | null;
   closureErrorMm: number | null;
   notes: string | null;
   readings: { pointId: string; elevation: number }[];
+  /** Orden de precisión y equipo (nivel, ISO 17123-2). */
+  precisionOrder: PrecisionOrder;
+  equipmentBrand: string | null;
+  equipmentModel: string | null;
+  equipmentSerial: string | null;
+  equipmentCalibrationDate: string | null;
+  levelType: LevelType | null;
+  kmPrecisionMm: number | null;
 }
 
 /**
@@ -263,10 +271,16 @@ export async function saveVisitAction(
     .update({
       date: payload.date,
       operator: payload.operator,
-      equipment: payload.equipment,
       weather_conditions: payload.weatherConditions,
       closure_error_mm: payload.closureErrorMm,
       notes: payload.notes,
+      precision_order: payload.precisionOrder,
+      equipment_brand: payload.equipmentBrand,
+      equipment_model: payload.equipmentModel,
+      equipment_serial: payload.equipmentSerial,
+      equipment_calibration_date: payload.equipmentCalibrationDate,
+      level_type: payload.levelType,
+      km_precision_mm: payload.kmPrecisionMm,
       status: payload.readings.length > 0 ? "calculated" : "draft",
     })
     .eq("id", payload.visitId);

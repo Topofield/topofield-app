@@ -11,7 +11,7 @@ import type {
   PointType,
   ReadingInput,
 } from "@/types/leveling";
-import type { PrecisionOrder } from "@/types/project";
+import type { LevelType, PrecisionOrder } from "@/types/project";
 
 export interface ActionResult {
   ok: boolean;
@@ -40,6 +40,14 @@ export interface SaveLevelingPayload {
   notes: string | null;
   forward: ReadingDraft[];
   return: ReadingDraft[];
+  /** Orden de precisión y equipo (nivel, ISO 17123-2). */
+  precisionOrder: PrecisionOrder;
+  equipmentBrand: string | null;
+  equipmentModel: string | null;
+  equipmentSerial: string | null;
+  equipmentCalibrationDate: string | null;
+  levelType: LevelType | null;
+  kmPrecisionMm: number | null;
 }
 
 export interface CloseLevelingPayload {
@@ -58,15 +66,12 @@ function toReadingInput(draft: ReadingDraft): ReadingInput {
   };
 }
 
-function buildInput(
-  payload: SaveLevelingPayload,
-  order: PrecisionOrder,
-): LevelingInput {
+function buildInput(payload: SaveLevelingPayload): LevelingInput {
   return {
     type: payload.type,
     startElevation: payload.startBmElevation,
     endElevation: payload.type === "link" ? payload.endBmElevation : null,
-    order,
+    order: payload.precisionOrder,
     totalDistanceKm: payload.totalDistanceKm,
     forward: payload.forward.map(toReadingInput),
     return: payload.hasReturnRun ? payload.return.map(toReadingInput) : null,
@@ -94,14 +99,7 @@ export async function saveLevelingProcessAction(
     return { ok: false, error: "El proceso está cerrado; no admite cambios." };
   }
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("precision_order")
-    .eq("id", process.project_id)
-    .maybeSingle();
-  const order = (project?.precision_order ?? "ordinario") as PrecisionOrder;
-
-  const input = buildInput(payload, order);
+  const input = buildInput(payload);
 
   // --- Revalidación en el servidor -----------------------------------------
   // La clave publicable de Supabase es pública por diseño: una llamada
@@ -145,6 +143,13 @@ export async function saveLevelingProcessAction(
       end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
       has_return_run: payload.hasReturnRun,
       total_distance_km: payload.totalDistanceKm,
+      precision_order: payload.precisionOrder,
+      equipment_brand: payload.equipmentBrand,
+      equipment_model: payload.equipmentModel,
+      equipment_serial: payload.equipmentSerial,
+      equipment_calibration_date: payload.equipmentCalibrationDate,
+      level_type: payload.levelType,
+      km_precision_mm: payload.kmPrecisionMm,
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
       meets_tolerance: result.meetsTolerance,
