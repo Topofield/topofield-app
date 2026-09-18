@@ -13,7 +13,11 @@ import {
   getVisits,
 } from "@/lib/supabase/queries";
 import { computeHistory } from "@/lib/calculations/settlement";
-import { thresholdsOf } from "@/lib/calculations/tolerances";
+import {
+  levelMeetsOrder,
+  thresholdsOf,
+  totalStationMeetsOrder,
+} from "@/lib/calculations/tolerances";
 import {
   formatAngularPrecision,
   formatDate,
@@ -174,6 +178,78 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
       };
     }),
   );
+
+  // ---- Resumen consolidado de precisiones -----------------------------------
+  // Se calcula aquí y no dentro del JSX porque la nota al pie depende de si
+  // alguna fila quedó marcada, y eso hay que saberlo antes de pintar la tabla.
+  const filasResumen = sections.map((s) => {
+    let precision = "—";
+    let equipo = "—";
+    let cumple: boolean | null = null;
+    // ¿El equipo declarado da para el orden declarado? No entra en
+    // `meets_tolerance` —capacidad del instrumento y conformidad de las
+    // medidas son cantidades distintas, y el aviso de equipo es informativo,
+    // no bloqueante—, pero un «Sí» junto a una columna de equipo que no lo
+    // alcanza, sin nada que los relacione, se lee como una conformidad que el
+    // instrumento no respalda. Marca y nota al pie, no cambio de resultado.
+    let equipoAlcanza = true;
+
+    if (s.kind === "polygonal" && s.data.process) {
+      precision = formatPrecision(s.data.process.relative_precision);
+      cumple = s.data.process.meets_tolerance;
+      equipo = formatEquipmentLine(
+        s.data.process.equipment_brand,
+        s.data.process.equipment_model,
+        s.data.process.equipment_serial,
+      );
+      equipoAlcanza = totalStationMeetsOrder(
+        s.data.process.precision_order,
+        n(s.data.process.angular_precision_seconds) ?? Number.NaN,
+      );
+    } else if (s.kind === "leveling" && s.data.process) {
+      precision = `${fixed(s.data.process.closure_error_mm, 1)} mm (tol. ${fixed(s.data.process.tolerance_mm, 1)})`;
+      cumple = s.data.process.meets_tolerance;
+      equipo = formatEquipmentLine(
+        s.data.process.equipment_brand,
+        s.data.process.equipment_model,
+        s.data.process.equipment_serial,
+      );
+      equipoAlcanza = levelMeetsOrder(
+        s.data.process.precision_order,
+        n(s.data.process.km_precision_mm) ?? Number.NaN,
+      );
+    } else if (s.kind === "site") {
+      const last = s.data.history.visits[s.data.history.visits.length - 1];
+      precision = last
+        ? `Peor alerta: ${ALERT_LEVEL_LABELS[last.worstAlert]}`
+        : "Sin visitas";
+      const lastVisit = s.data.visits[s.data.visits.length - 1];
+      if (lastVisit) {
+        equipo = formatEquipmentLine(
+          lastVisit.equipment_brand,
+          lastVisit.equipment_model,
+          lastVisit.equipment_serial,
+        );
+        equipoAlcanza = levelMeetsOrder(
+          lastVisit.precision_order,
+          n(lastVisit.km_precision_mm) ?? Number.NaN,
+        );
+      }
+    }
+
+    return {
+      key: `${s.entry.type}:${s.entry.id}`,
+      nombre: s.entry.name,
+      tipo: CANDIDATE_KIND_LABELS[s.entry.type],
+      precision,
+      equipo,
+      cumple,
+      // La marca solo tiene sentido sobre un «Sí»: si el cierre no cumple, no
+      // hay conformidad que acotar.
+      marcar: cumple === true && !equipoAlcanza,
+    };
+  });
+  const hayEquipoInsuficiente = filasResumen.some((f) => f.marcar);
 
   return (
     <div className="report">
@@ -508,56 +584,27 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
             </tr>
           </thead>
           <tbody>
-            {sections.map((s) => {
-              let precision = "—";
-              let equipo = "—";
-              let cumple: boolean | null = null;
-              if (s.kind === "polygonal" && s.data.process) {
-                precision = formatPrecision(s.data.process.relative_precision);
-                cumple = s.data.process.meets_tolerance;
-                equipo = formatEquipmentLine(
-                  s.data.process.equipment_brand,
-                  s.data.process.equipment_model,
-                  s.data.process.equipment_serial,
-                );
-              } else if (s.kind === "leveling" && s.data.process) {
-                precision = `${fixed(s.data.process.closure_error_mm, 1)} mm (tol. ${fixed(s.data.process.tolerance_mm, 1)})`;
-                cumple = s.data.process.meets_tolerance;
-                equipo = formatEquipmentLine(
-                  s.data.process.equipment_brand,
-                  s.data.process.equipment_model,
-                  s.data.process.equipment_serial,
-                );
-              } else if (s.kind === "site") {
-                const last =
-                  s.data.history.visits[s.data.history.visits.length - 1];
-                precision = last
-                  ? `Peor alerta: ${ALERT_LEVEL_LABELS[last.worstAlert]}`
-                  : "Sin visitas";
-                const lastVisit =
-                  s.data.visits[s.data.visits.length - 1];
-                if (lastVisit) {
-                  equipo = formatEquipmentLine(
-                    lastVisit.equipment_brand,
-                    lastVisit.equipment_model,
-                    lastVisit.equipment_serial,
-                  );
-                }
-              }
-              return (
-                <tr key={`${s.entry.type}:${s.entry.id}`}>
-                  <td>{s.entry.name}</td>
-                  <td>{CANDIDATE_KIND_LABELS[s.entry.type]}</td>
-                  <td>{precision}</td>
-                  <td>{equipo}</td>
-                  <td>
-                    {cumple === null ? "—" : cumple ? "Sí" : "No"}
-                  </td>
-                </tr>
-              );
-            })}
+            {filasResumen.map((f) => (
+              <tr key={f.key}>
+                <td>{f.nombre}</td>
+                <td>{f.tipo}</td>
+                <td>{f.precision}</td>
+                <td>{f.equipo}</td>
+                <td>
+                  {f.cumple === null ? "—" : f.cumple ? "Sí" : "No"}
+                  {f.marcar && <sup> (*)</sup>}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+        {hayEquipoInsuficiente && (
+          <p className="report-footnote">
+            (*) El cierre cumple la tolerancia de su orden, pero la precisión
+            del equipo declarado no alcanza el coeficiente K de ese orden. El
+            «Sí» es sobre las medidas, no sobre la capacidad del instrumento.
+          </p>
+        )}
       </section>
 
       {/* ---------- Observaciones ---------- */}
