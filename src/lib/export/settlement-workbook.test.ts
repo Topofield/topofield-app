@@ -234,4 +234,73 @@ describe("buildSettlementWorkbook", () => {
     );
     expect(res.getCell(fila("Tipo de nivel"), 2).value).toBe("Automático");
   });
+
+  // El Resumen puede colapsar a la última visita (es un resumen); «Datos
+  // Crudos» no puede: es el artefacto archivable, y ahí el equipo de una
+  // visita cerrada antigua tiene que seguir leyéndose aunque exista una
+  // visita más nueva con otro instrumento. Con una sola visita este test
+  // pasaría aunque el colapso volviera — por eso son dos, con equipos
+  // distintos, y se comprueba que CADA una conserva el suyo.
+  it("Datos Crudos conserva el equipo de cada visita, no solo el de la más reciente", () => {
+    const visitas = [
+      visit({
+        id: "v0",
+        visit_number: 0,
+        date: "2026-01-01",
+        status: "closed",
+        equipment_brand: "Sokkia",
+        equipment_model: "B40",
+        level_type: "digital",
+        km_precision_mm: "1.50",
+      }),
+      visit({
+        id: "v1",
+        visit_number: 1,
+        date: "2026-02-01",
+        status: "closed",
+        equipment_brand: "Leica",
+        equipment_model: "NA2",
+        equipment_serial: "LC-7",
+        level_type: "automatico",
+        km_precision_mm: "0.70",
+      }),
+    ];
+    const history = computeHistory(POINTS, VISIT_INPUTS, THRESHOLDS);
+    const wb = buildSettlementWorkbook(
+      SITE,
+      POINT_ROWS,
+      visitas,
+      history,
+      THRESHOLDS,
+    );
+    const raw = wb.getWorksheet("Datos Crudos")!;
+
+    // Fila → (equipo, tipo de nivel, mm/km), indexadas por el número de
+    // visita de esa misma fila (columna 1 de la tabla «Cotas medidas por
+    // visita»).
+    const porVisita = new Map<
+      number,
+      { equipo: unknown; tipo: unknown; mmKm: unknown }
+    >();
+    raw.eachRow((row) => {
+      const visitNumber = row.getCell(1).value;
+      if (typeof visitNumber !== "number") return;
+      porVisita.set(visitNumber, {
+        equipo: row.getCell(6).value,
+        tipo: row.getCell(7).value,
+        mmKm: row.getCell(8).value,
+      });
+    });
+
+    expect(porVisita.get(0)).toEqual({
+      equipo: "Sokkia B40",
+      tipo: "Digital / electrónico",
+      mmKm: 1.5,
+    });
+    expect(porVisita.get(1)).toEqual({
+      equipo: "Leica NA2 · s/n LC-7",
+      tipo: "Automático",
+      mmKm: 0.7,
+    });
+  });
 });

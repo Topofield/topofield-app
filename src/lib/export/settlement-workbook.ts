@@ -99,7 +99,7 @@ function sheetRawData(
   const s = wb.addWorksheet("Datos Crudos");
   s.columns = [
     { width: 9 }, { width: 13 }, { width: 12 }, { width: 14 },
-    { width: 13 }, { width: 13 }, { width: 13 },
+    { width: 13 }, { width: 22 }, { width: 14 }, { width: 18 },
   ];
 
   setSheetTitle(s, `${site.name} — catálogo y cotas medidas`);
@@ -130,18 +130,36 @@ function sheetRawData(
   let row = 5 + points.length + 1;
   writeSection(s, row, "Cotas medidas por visita");
   row += 1;
+  // El equipo va en ESTA tabla, a su propio grano (una fila por lectura,
+  // repetido como ya se repite Visita/Fecha/Estado), y no se colapsa a la
+  // visita más reciente como en el Resumen: el instrumento puede cambiar
+  // entre campañas, y este es el único artefacto que conserva sin pérdida
+  // qué equipo midió cada visita cerrada, incluidas las que ya no son la
+  // última (§ Fase 8 — es justo la pérdida de trazabilidad que la fase existe
+  // para cerrar).
   setHeaders(s, row, [
     "Visita",
     "Fecha",
     "Estado",
     "Punto",
     "Cota (m)",
+    "Equipo",
+    "Tipo de nivel",
+    "Desv. típica (mm/km)",
   ]);
   row += 1;
 
   const codeById = new Map(points.map((p) => [p.id, p.code]));
   for (const visit of visits) {
     const computed = history.visits.find((v) => v.visitId === visit.id);
+    const equipoVisita = equipmentLine(
+      visit.equipment_brand,
+      visit.equipment_model,
+      visit.equipment_serial,
+    );
+    const tipoNivelVisita = visit.level_type
+      ? LEVEL_TYPE_LABELS[visit.level_type]
+      : null;
     for (const reading of computed?.readings ?? []) {
       writeRow(
         s,
@@ -152,8 +170,11 @@ function sheetRawData(
           visit.status === "closed" ? "Cerrada" : "Abierta",
           codeById.get(reading.pointId) ?? reading.pointId,
           reading.elevation,
+          equipoVisita,
+          tipoNivelVisita,
+          num(visit.km_precision_mm),
         ],
-        [null, null, null, null, DECIMALS.elevation],
+        [null, null, null, null, DECIMALS.elevation, null, null, DECIMALS.mm],
       );
       row += 1;
     }
