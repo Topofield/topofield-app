@@ -5,6 +5,8 @@ import {
   levelingTolerance,
   LEVELING_TOLERANCE_K,
   readingDispersionTolerance,
+  totalStationMeetsOrder,
+  levelMeetsOrder,
 } from "./tolerances";
 
 describe("angularTolerance", () => {
@@ -156,5 +158,41 @@ describe("readingDispersionTolerance", () => {
   it("admite el doble de la precisión angular del equipo", () => {
     expect(readingDispersionTolerance(5)).toBe(10);
     expect(readingDispersionTolerance(2)).toBe(4);
+  });
+});
+
+describe("totalStationMeetsOrder", () => {
+  it("rechaza una estación de 5″ para primer orden (K = 1″)", () => {
+    expect(totalStationMeetsOrder("primer_orden", 5)).toBe(false);
+  });
+
+  it("acepta una estación de 1″ para primer orden: σ = K es el equipo que corresponde", () => {
+    expect(totalStationMeetsOrder("primer_orden", 1)).toBe(true);
+  });
+
+  it("acepta una estación de 5″ para tercer orden (K = 15″)", () => {
+    expect(totalStationMeetsOrder("tercer_orden", 5)).toBe(true);
+  });
+
+  it("sin dato de precisión no opina: devuelve true", () => {
+    expect(totalStationMeetsOrder("primer_orden", Number.NaN)).toBe(true);
+  });
+});
+
+describe("levelMeetsOrder", () => {
+  it("rechaza un nivel de obra de 5.0 mm/km para primer orden (K = 3)", () => {
+    expect(levelMeetsOrder("primer_orden", 5)).toBe(false);
+  });
+
+  it("acepta 2.5 mm/km para primer orden: ajustado, no imposible", () => {
+    expect(levelMeetsOrder("primer_orden", 2.5)).toBe(true);
+  });
+
+  it("acepta 2.5 mm/km para tercer orden (K = 12)", () => {
+    expect(levelMeetsOrder("tercer_orden", 2.5)).toBe(true);
+  });
+
+  it("sin dato de precisión no opina: devuelve true", () => {
+    expect(levelMeetsOrder("primer_orden", Number.NaN)).toBe(true);
   });
 });

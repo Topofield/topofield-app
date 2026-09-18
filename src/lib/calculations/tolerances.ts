@@ -192,3 +192,45 @@ export function thresholdsOf(site: SiteThresholdColumns): Thresholds {
     angularDistortionLimit: Number(site.angular_distortion_limit),
   };
 }
+
+// ============================================================================
+// Validación de suficiencia del equipo (Fase 8).
+// ============================================================================
+
+/**
+ * ¿La estación total declarada puede entregar el orden exigido?
+ *
+ * La comparación es directa entre coeficientes, y no con un margen, porque la
+ * tolerancia angular escala como `K·√n` y la desviación del instrumento escala
+ * igual, como `σ·√n`: el `√n` se cancela. Un umbral con margen —«avisa si σ
+ * pasa de la mitad de K»— sería un criterio estadístico inventado, y haría
+ * saltar el aviso en el emparejamiento correcto de 1″ con primer orden.
+ *
+ * Es estrictamente mayor: `σ = K` es justo el instrumento que corresponde al
+ * orden, no un problema.
+ *
+ * Sin dato de precisión devuelve `true`: la función no opina sobre lo que no
+ * sabe, y quien llama no debe pintar un aviso por un campo vacío.
+ */
+export function totalStationMeetsOrder(
+  order: PrecisionOrder,
+  angularPrecisionSeconds: number,
+): boolean {
+  if (!Number.isFinite(angularPrecisionSeconds)) return true;
+  return angularPrecisionSeconds <= ANGULAR_TOLERANCE_K[order];
+}
+
+/**
+ * ¿El nivel declarado puede entregar el orden exigido?
+ *
+ * Mismo razonamiento que `totalStationMeetsOrder`: la tolerancia de nivelación
+ * es `K·√D` y la desviación típica del instrumento (ISO 17123-2, en mm por km
+ * de doble nivelación) escala como `σ·√D`.
+ */
+export function levelMeetsOrder(
+  order: PrecisionOrder,
+  kmPrecisionMm: number,
+): boolean {
+  if (!Number.isFinite(kmPrecisionMm)) return true;
+  return kmPrecisionMm <= LEVELING_TOLERANCE_K[order];
+}
