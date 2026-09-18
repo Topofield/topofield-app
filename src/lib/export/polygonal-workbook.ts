@@ -3,6 +3,7 @@
 import type ExcelJS from "exceljs";
 import {
   DECIMALS,
+  equipmentLine,
   newWorkbook,
   projectPairs,
   type ProjectMetadata,
@@ -73,6 +74,17 @@ export interface PolygonalProcessRow {
   closed_by: string | null;
   notes: string | null;
   created_at: string | null;
+  /** Orden de precisión y equipo de estación total, propios del proceso (§ Fase 8). */
+  precision_order: PrecisionOrder;
+  equipment_brand: string | null;
+  equipment_model: string | null;
+  equipment_serial: string | null;
+  equipment_calibration_date: string | null;
+  /** ISO 17123-3, en segundos. */
+  angular_precision_seconds: number | string | null;
+  /** ISO 17123-4: término constante (mm) y proporcional (ppm) de la distancia. */
+  distance_precision_mm: number | string | null;
+  distance_precision_ppm: number | string | null;
 }
 
 /**
@@ -239,10 +251,7 @@ function sheetSummary(
   setSheetTitle(s, `${process.name} — resumen`);
 
   let row0 = 3;
-  const pares = projectPairs(
-    project,
-    project ? PRECISION_ORDER_LABELS[project.precision_order as PrecisionOrder] ?? project.precision_order : "",
-  );
+  const pares = projectPairs(project);
   if (pares.length > 0) {
     writeSection(s, row0, "Proyecto");
     row0 = writePairs(s, row0 + 1, pares) + 1;
@@ -267,6 +276,32 @@ function sheetSummary(
     ],
     ["Punto inicial", process.start_point_code],
     ["Punto final", process.end_point_code],
+  ]);
+
+  // El equipo es del PROCESO, no del proyecto: dos poligonales del mismo
+  // proyecto pueden llevar estaciones totales distintas (§ Fase 8).
+  row += 1;
+  writeSection(s, row, "Equipo: estación total");
+  row = writePairs(s, row + 1, [
+    ["Orden de precisión", PRECISION_ORDER_LABELS[process.precision_order]],
+    [
+      "Equipo",
+      equipmentLine(
+        process.equipment_brand,
+        process.equipment_model,
+        process.equipment_serial,
+      ),
+    ],
+    ["Fecha de calibración", process.equipment_calibration_date],
+    ["Precisión angular (\")", num(process.angular_precision_seconds)],
+    [
+      "Precisión de distancia — término constante (mm)",
+      num(process.distance_precision_mm),
+    ],
+    [
+      "Precisión de distancia — término proporcional (ppm)",
+      num(process.distance_precision_ppm),
+    ],
   ]);
 
   row += 1;

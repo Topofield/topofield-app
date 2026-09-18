@@ -50,6 +50,14 @@ function process(over: Partial<PolygonalProcessRow> = {}): PolygonalProcessRow {
     closed_by: null,
     notes: null,
     created_at: "2026-08-26T00:00:00Z",
+    precision_order: "tercer_orden",
+    equipment_brand: null,
+    equipment_model: null,
+    equipment_serial: null,
+    equipment_calibration_date: null,
+    angular_precision_seconds: null,
+    distance_precision_mm: null,
+    distance_precision_ppm: null,
     ...over,
   };
 }
@@ -186,10 +194,6 @@ describe("buildPolygonalWorkbook", () => {
       location: "Bogotá",
       datum: "MAGNA-SIRGAS",
       projection: "Origen Bogotá",
-      precision_order: "tercer_orden",
-      equipment_brand: "Leica",
-      equipment_model: "TS06 Plus",
-      equipment_serial: "LCS-2026-001",
     });
     const res = wb.getWorksheet("Resumen")!;
     const etiquetas = res
@@ -202,8 +206,67 @@ describe("buildPolygonalWorkbook", () => {
     expect(etiquetas).toContain("Datum");
     expect(etiquetas).toContain("Proyección");
     expect(valores).toContain("MAGNA-SIRGAS");
-    expect(valores).toContain("Tercer orden");
-    expect(valores).toContain("Leica TS06 Plus · s/n LCS-2026-001");
+  });
+
+  // El agujero que abrió la Fase 8: `reports` solo guarda ids y la impresión
+  // leía `project.*` en vivo, así que reeditar el equipo del proyecto
+  // reescribía el Excel de un proceso ya cerrado e inmutable. El orden y el
+  // equipo viven ahora en el PROCESO, no en el proyecto — el libro debe
+  // leerlos de ahí aunque el proyecto pasado no los tenga (ya no puede
+  // tenerlos: `projects` perdió esas columnas).
+  it("el resumen lleva el equipo y el orden del proceso, no los del proyecto", () => {
+    const wb = buildPolygonalWorkbook(
+      process({
+        status: "closed",
+        closed_at: "2026-08-26T00:00:00Z",
+        closed_by: "user-1",
+        precision_order: "primer_orden",
+        equipment_brand: "Sokkia",
+        equipment_model: "CX-52",
+        equipment_serial: "SK-9",
+        equipment_calibration_date: "2026-01-15",
+        angular_precision_seconds: 2,
+        distance_precision_mm: 3,
+        distance_precision_ppm: 2,
+      }),
+      [station()],
+      {
+        name: "Lote catastral",
+        client: "Cliente Demo",
+        location: "Bogotá",
+        datum: "MAGNA-SIRGAS",
+        projection: "Origen Bogotá",
+      },
+    );
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res.getColumn(1).values;
+    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
+
+    expect(res.getCell(fila("Equipo"), 2).value).toBe("Sokkia CX-52 · s/n SK-9");
+    expect(res.getCell(fila("Orden de precisión"), 2).value).toBe(
+      "Primer orden",
+    );
+    expect(res.getCell(fila('Precisión angular (")'), 2).value).toBe(2);
+    expect(
+      res.getCell(fila("Precisión de distancia — término constante (mm)"), 2)
+        .value,
+    ).toBe(3);
+    expect(
+      res.getCell(
+        fila("Precisión de distancia — término proporcional (ppm)"),
+        2,
+      ).value,
+    ).toBe(2);
+  });
+
+  // Un proceso sin equipo capturado deja la celda vacía: un guion ahí sería un
+  // dato inventado, y un 0 se leería como una precisión real de cero.
+  it("deja vacío el equipo si el proceso no lo capturó", () => {
+    const wb = buildPolygonalWorkbook(process(), [station()]);
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res.getColumn(1).values;
+    const fila = etiquetas.findIndex((v) => v === "Equipo");
+    expect(res.getCell(fila, 2).value).toBeNull();
   });
 
   // Sin proyecto el libro sigue siendo válido: la sección simplemente no sale.

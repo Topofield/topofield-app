@@ -47,9 +47,28 @@ const POINTS: PointInput[] = POINT_ROWS.map((p) => ({
   initialElevation: Number(p.initial_elevation),
 }));
 
+function visit(over: Partial<VisitRow> = {}): VisitRow {
+  return {
+    id: "v0",
+    visit_number: 0,
+    date: "2026-01-01",
+    status: "closed",
+    operator: null,
+    weather_conditions: null,
+    precision_order: "tercer_orden",
+    equipment_brand: null,
+    equipment_model: null,
+    equipment_serial: null,
+    equipment_calibration_date: null,
+    level_type: null,
+    km_precision_mm: null,
+    ...over,
+  };
+}
+
 const VISIT_ROWS: VisitRow[] = [
-  { id: "v0", visit_number: 0, date: "2026-01-01", status: "closed", operator: null, equipment: null, weather_conditions: null },
-  { id: "v1", visit_number: 1, date: "2026-02-01", status: "draft", operator: null, equipment: null, weather_conditions: null },
+  visit({ id: "v0", visit_number: 0, date: "2026-01-01", status: "closed" }),
+  visit({ id: "v1", visit_number: 1, date: "2026-02-01", status: "draft" }),
 ];
 
 const VISIT_INPUTS: VisitInput[] = [
@@ -176,5 +195,43 @@ describe("buildSettlementWorkbook", () => {
     const history = computeHistory([], [], THRESHOLDS);
     const wb = buildSettlementWorkbook(SITE, [], [], history, THRESHOLDS);
     expect(wb.worksheets).toHaveLength(3);
+  });
+
+  // El equipo es de la VISITA, no del lugar (§ Fase 8): el instrumento puede
+  // cambiar entre campañas. El resumen muestra el de la más reciente, no el
+  // de la primera ni un valor fijo del lugar.
+  it("el resumen lleva el equipo de la visita más reciente", () => {
+    const visitas = [
+      visit({
+        id: "v0",
+        date: "2026-01-01",
+        precision_order: "tercer_orden",
+        equipment_brand: "Sokkia",
+        equipment_model: "B40",
+        level_type: "digital",
+        km_precision_mm: "1.5",
+      }),
+      visit({
+        id: "v1",
+        date: "2026-02-01",
+        precision_order: "primer_orden",
+        equipment_brand: "Leica",
+        equipment_model: "NA2",
+        equipment_serial: "LC-7",
+        level_type: "automatico",
+        km_precision_mm: "0.7",
+      }),
+    ];
+    const history = computeHistory(POINTS, VISIT_INPUTS, THRESHOLDS);
+    const wb = buildSettlementWorkbook(SITE, POINT_ROWS, visitas, history, THRESHOLDS);
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res.getColumn(1).values;
+    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
+
+    expect(res.getCell(fila("Equipo"), 2).value).toBe("Leica NA2 · s/n LC-7");
+    expect(res.getCell(fila("Orden de precisión"), 2).value).toBe(
+      "Primer orden",
+    );
+    expect(res.getCell(fila("Tipo de nivel"), 2).value).toBe("Automático");
   });
 });

@@ -14,8 +14,15 @@ import {
 } from "@/lib/supabase/queries";
 import { computeHistory } from "@/lib/calculations/settlement";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
-import { formatDate, formatPrecision } from "@/lib/utils/format";
-import { PRECISION_ORDER_LABELS } from "@/types/project";
+import {
+  formatAngularPrecision,
+  formatDate,
+  formatDistancePrecision,
+  formatEquipmentLine,
+  formatKmPrecision,
+  formatPrecision,
+} from "@/lib/utils/format";
+import { LEVEL_TYPE_LABELS, PRECISION_ORDER_LABELS } from "@/types/project";
 import {
   CORRECTION_METHOD_LABELS,
   POLYGONAL_TYPE_LABELS,
@@ -191,25 +198,12 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
               <dd>{project.location}</dd>
             </>
           )}
-          <dt>Orden de precisión</dt>
-          <dd>{PRECISION_ORDER_LABELS[project.precision_order]}</dd>
           {project.datum && (
             <>
               <dt>Datum / proyección</dt>
               <dd>
                 {project.datum}
                 {project.projection ? ` · ${project.projection}` : ""}
-              </dd>
-            </>
-          )}
-          {(project.equipment_brand || project.equipment_model) && (
-            <>
-              <dt>Equipo</dt>
-              <dd>
-                {[project.equipment_brand, project.equipment_model]
-                  .filter(Boolean)
-                  .join(" ")}
-                {project.equipment_serial ? ` · s/n ${project.equipment_serial}` : ""}
               </dd>
             </>
           )}
@@ -277,6 +271,31 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                 <dd>{fixed(section.data.process.perimeter, 3)} m</dd>
                 <dt>Precisión relativa</dt>
                 <dd>{formatPrecision(section.data.process.relative_precision)}</dd>
+                <dt>Orden de precisión</dt>
+                <dd>
+                  {PRECISION_ORDER_LABELS[section.data.process.precision_order]}
+                </dd>
+                <dt>Equipo</dt>
+                <dd>
+                  {formatEquipmentLine(
+                    section.data.process.equipment_brand,
+                    section.data.process.equipment_model,
+                    section.data.process.equipment_serial,
+                  )}
+                </dd>
+                <dt>Precisión angular</dt>
+                <dd>
+                  {formatAngularPrecision(
+                    section.data.process.angular_precision_seconds,
+                  )}
+                </dd>
+                <dt>Precisión de distancia</dt>
+                <dd>
+                  {formatDistancePrecision(
+                    section.data.process.distance_precision_mm,
+                    section.data.process.distance_precision_ppm,
+                  )}
+                </dd>
               </dl>
               <table className="report-table">
                 <thead>
@@ -326,6 +345,26 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                 <dd>{fixed(section.data.process.tolerance_mm, 1)} mm</dd>
                 <dt>Distancia total</dt>
                 <dd>{fixed(section.data.process.total_distance_km, 3)} km</dd>
+                <dt>Orden de precisión</dt>
+                <dd>
+                  {PRECISION_ORDER_LABELS[section.data.process.precision_order]}
+                </dd>
+                <dt>Equipo</dt>
+                <dd>
+                  {formatEquipmentLine(
+                    section.data.process.equipment_brand,
+                    section.data.process.equipment_model,
+                    section.data.process.equipment_serial,
+                  )}
+                </dd>
+                <dt>Tipo de nivel</dt>
+                <dd>
+                  {section.data.process.level_type
+                    ? LEVEL_TYPE_LABELS[section.data.process.level_type]
+                    : "—"}
+                </dd>
+                <dt>Desviación típica</dt>
+                <dd>{formatKmPrecision(section.data.process.km_precision_mm)}</dd>
               </dl>
               <table className="report-table">
                 <thead>
@@ -378,6 +417,38 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                     return last ? ALERT_LEVEL_LABELS[last.worstAlert] : "—";
                   })()}
                 </dd>
+                {/* El equipo es de la VISITA, no del lugar: el instrumento puede
+                    cambiar entre campañas (§ Fase 8). Se muestra el de la más
+                    reciente, la misma que informa la peor alerta de arriba. */}
+                {(() => {
+                  const lastVisit =
+                    section.data.visits[section.data.visits.length - 1];
+                  if (!lastVisit) return null;
+                  return (
+                    <>
+                      <dt>Orden de precisión (última visita)</dt>
+                      <dd>
+                        {PRECISION_ORDER_LABELS[lastVisit.precision_order]}
+                      </dd>
+                      <dt>Equipo (última visita)</dt>
+                      <dd>
+                        {formatEquipmentLine(
+                          lastVisit.equipment_brand,
+                          lastVisit.equipment_model,
+                          lastVisit.equipment_serial,
+                        )}
+                      </dd>
+                      <dt>Tipo de nivel</dt>
+                      <dd>
+                        {lastVisit.level_type
+                          ? LEVEL_TYPE_LABELS[lastVisit.level_type]
+                          : "—"}
+                      </dd>
+                      <dt>Desviación típica</dt>
+                      <dd>{formatKmPrecision(lastVisit.km_precision_mm)}</dd>
+                    </>
+                  );
+                })()}
               </dl>
               <SettlementPlot
                 points={section.data.pointInputs}
@@ -432,31 +503,53 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
               <th>Proceso</th>
               <th>Tipo</th>
               <th>Precisión / cierre</th>
+              <th>Equipo</th>
               <th>¿Cumple?</th>
             </tr>
           </thead>
           <tbody>
             {sections.map((s) => {
               let precision = "—";
+              let equipo = "—";
               let cumple: boolean | null = null;
               if (s.kind === "polygonal" && s.data.process) {
                 precision = formatPrecision(s.data.process.relative_precision);
                 cumple = s.data.process.meets_tolerance;
+                equipo = formatEquipmentLine(
+                  s.data.process.equipment_brand,
+                  s.data.process.equipment_model,
+                  s.data.process.equipment_serial,
+                );
               } else if (s.kind === "leveling" && s.data.process) {
                 precision = `${fixed(s.data.process.closure_error_mm, 1)} mm (tol. ${fixed(s.data.process.tolerance_mm, 1)})`;
                 cumple = s.data.process.meets_tolerance;
+                equipo = formatEquipmentLine(
+                  s.data.process.equipment_brand,
+                  s.data.process.equipment_model,
+                  s.data.process.equipment_serial,
+                );
               } else if (s.kind === "site") {
                 const last =
                   s.data.history.visits[s.data.history.visits.length - 1];
                 precision = last
                   ? `Peor alerta: ${ALERT_LEVEL_LABELS[last.worstAlert]}`
                   : "Sin visitas";
+                const lastVisit =
+                  s.data.visits[s.data.visits.length - 1];
+                if (lastVisit) {
+                  equipo = formatEquipmentLine(
+                    lastVisit.equipment_brand,
+                    lastVisit.equipment_model,
+                    lastVisit.equipment_serial,
+                  );
+                }
               }
               return (
                 <tr key={`${s.entry.type}:${s.entry.id}`}>
                   <td>{s.entry.name}</td>
                   <td>{CANDIDATE_KIND_LABELS[s.entry.type]}</td>
                   <td>{precision}</td>
+                  <td>{equipo}</td>
                   <td>
                     {cumple === null ? "—" : cumple ? "Sí" : "No"}
                   </td>

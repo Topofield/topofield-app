@@ -9,16 +9,8 @@ import {
 } from "@/lib/supabase/queries";
 import { computeHistory } from "@/lib/calculations/settlement";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
-import {
-  buildSettlementWorkbook,
-  type PointRow,
-  type SiteRow,
-  type VisitRow,
-} from "@/lib/export/settlement-workbook";
-import {
-  safeFilename,
-  type ProjectMetadata,
-} from "@/lib/export/workbook";
+import { buildSettlementWorkbook } from "@/lib/export/settlement-workbook";
+import { safeFilename } from "@/lib/export/workbook";
 import type { PointInput, VisitInput } from "@/types/settlement";
 
 const XLSX_MIME =
@@ -78,12 +70,12 @@ export async function GET(
   const history = computeHistory(points, visitInputs, thresholds);
 
   const workbook = buildSettlementWorkbook(
-    site as unknown as SiteRow,
-    sitePoints as unknown as PointRow[],
-    visits as unknown as VisitRow[],
+    site,
+    sitePoints,
+    visits,
     history,
     thresholds,
-    project as unknown as ProjectMetadata,
+    project,
   );
   const buffer = await workbook.xlsx.writeBuffer();
 

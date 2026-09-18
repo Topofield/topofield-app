@@ -9,6 +9,7 @@
 import type ExcelJS from "exceljs";
 import {
   DECIMALS,
+  equipmentLine,
   newWorkbook,
   projectPairs,
   type ProjectMetadata,
@@ -24,7 +25,12 @@ import {
   type SettlementHistory,
 } from "@/types/settlement";
 import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
-import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
+import {
+  LEVEL_TYPE_LABELS,
+  PRECISION_ORDER_LABELS,
+  type LevelType,
+  type PrecisionOrder,
+} from "@/types/project";
 import type { Thresholds } from "@/types/settlement";
 
 /**
@@ -60,8 +66,16 @@ export interface VisitRow {
   date: string;
   status: string;
   operator: string | null;
-  equipment: string | null;
   weather_conditions: string | null;
+  /** Orden de precisión y equipo de nivel, propios de la visita (§ Fase 8). */
+  precision_order: PrecisionOrder;
+  equipment_brand: string | null;
+  equipment_model: string | null;
+  equipment_serial: string | null;
+  equipment_calibration_date: string | null;
+  level_type: LevelType | null;
+  /** ISO 17123-2: desviación típica en mm por km de doble nivelación. */
+  km_precision_mm: number | string | null;
 }
 
 function num(value: number | string | null | undefined): number | null {
@@ -247,13 +261,7 @@ function sheetSummary(
   ).length;
 
   let row0 = 3;
-  const pares = projectPairs(
-    project,
-    project
-      ? PRECISION_ORDER_LABELS[project.precision_order as PrecisionOrder] ??
-        project.precision_order
-      : "",
-  );
+  const pares = projectPairs(project);
   if (pares.length > 0) {
     writeSection(s, row0, "Proyecto");
     row0 = writePairs(s, row0 + 1, pares) + 1;
@@ -272,6 +280,38 @@ function sheetSummary(
     ["Puntos del catálogo", points.length],
     ["Visitas registradas", visits.length],
   ]);
+
+  // El equipo es de la VISITA, no del lugar ni del proyecto: el instrumento
+  // puede cambiar entre campañas (§ Fase 8). Se muestra el de la más
+  // reciente, la misma que informa «peor alerta» más abajo.
+  const lastVisit = visits[visits.length - 1];
+  if (lastVisit) {
+    row += 1;
+    writeSection(s, row, "Equipo: nivel (última visita)");
+    row = writePairs(s, row + 1, [
+      [
+        "Orden de precisión",
+        PRECISION_ORDER_LABELS[lastVisit.precision_order],
+      ],
+      [
+        "Equipo",
+        equipmentLine(
+          lastVisit.equipment_brand,
+          lastVisit.equipment_model,
+          lastVisit.equipment_serial,
+        ),
+      ],
+      ["Fecha de calibración", lastVisit.equipment_calibration_date],
+      [
+        "Tipo de nivel",
+        lastVisit.level_type ? LEVEL_TYPE_LABELS[lastVisit.level_type] : null,
+      ],
+      [
+        "Desviación típica (mm/km, doble nivelación)",
+        num(lastVisit.km_precision_mm),
+      ],
+    ]);
+  }
 
   row += 1;
   writeSection(s, row, "Umbrales vigentes");

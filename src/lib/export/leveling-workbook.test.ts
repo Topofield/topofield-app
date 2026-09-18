@@ -44,6 +44,13 @@ function process(over: Partial<LevelingProcessRow> = {}): LevelingProcessRow {
     closed_by: "user-1",
     notes: null,
     created_at: "2026-08-01T00:00:00Z",
+    precision_order: "tercer_orden",
+    equipment_brand: null,
+    equipment_model: null,
+    equipment_serial: null,
+    equipment_calibration_date: null,
+    level_type: null,
+    km_precision_mm: null,
     ...over,
   };
 }
@@ -125,5 +132,36 @@ describe("buildLevelingWorkbook", () => {
 
   it("exporta un proceso sin lecturas sin romperse", () => {
     expect(buildLevelingWorkbook(process(), []).worksheets).toHaveLength(3);
+  });
+
+  // Mismo agujero que en poligonal (§ Fase 8): el orden y el equipo del nivel
+  // viven en el PROCESO, no en el proyecto, para que reeditar el equipo del
+  // proyecto no reescriba el Excel de una nivelación ya cerrada.
+  it("el resumen lleva el equipo y el orden del proceso, no los del proyecto", () => {
+    const wb = buildLevelingWorkbook(
+      process({
+        precision_order: "primer_orden",
+        equipment_brand: "Leica",
+        equipment_model: "NA2",
+        equipment_serial: "LC-7",
+        level_type: "automatico",
+        km_precision_mm: "0.7",
+      }),
+      [reading()],
+      { name: "Lote catastral", client: null, location: null, datum: null, projection: null },
+    );
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res.getColumn(1).values;
+    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
+
+    expect(res.getCell(fila("Equipo"), 2).value).toBe("Leica NA2 · s/n LC-7");
+    expect(res.getCell(fila("Orden de precisión"), 2).value).toBe(
+      "Primer orden",
+    );
+    expect(res.getCell(fila("Tipo de nivel"), 2).value).toBe("Automático");
+    expect(
+      res.getCell(fila("Desviación típica (mm/km, doble nivelación)"), 2)
+        .value,
+    ).toBe(0.7);
   });
 });

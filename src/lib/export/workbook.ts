@@ -150,6 +150,11 @@ export function safeFilename(name: string, suffix: string): string {
  * estos campos, un archivo con «N=1000.000 E=1100.000» es ambiguo: la cifra
  * sola no identifica el sistema de referencia. El informe ya los lleva en su
  * portada; el libro debe llevarlos también.
+ *
+ * Desde la Fase 8 el orden de precisión y el equipo NO están aquí: viven en
+ * cada proceso, no en el proyecto (§ precisión y equipo por proceso), así que
+ * cada libro los lee de su propia fila de proceso — ver `equipmentLine` más
+ * abajo — y no del proyecto.
  */
 export interface ProjectMetadata {
   name: string;
@@ -157,35 +162,37 @@ export interface ProjectMetadata {
   location: string | null;
   datum: string | null;
   projection: string | null;
-  precision_order: string;
-  equipment_brand: string | null;
-  equipment_model: string | null;
-  equipment_serial: string | null;
 }
 
 /** Pares etiqueta/valor del proyecto, listos para `writePairs`. */
 export function projectPairs(
   project: ProjectMetadata | null | undefined,
-  precisionOrderLabel: string,
 ): [string, string | number | null][] {
   if (!project) return [];
-  const equipo = [project.equipment_brand, project.equipment_model]
-    .filter(Boolean)
-    .join(" ");
   return [
     ["Proyecto", project.name],
     ["Cliente", project.client],
     ["Ubicación", project.location],
     ["Datum", project.datum],
     ["Proyección", project.projection],
-    ["Orden de precisión", precisionOrderLabel],
-    [
-      "Equipo",
-      equipo === ""
-        ? null
-        : project.equipment_serial
-          ? `${equipo} · s/n ${project.equipment_serial}`
-          : equipo,
-    ],
   ];
+}
+
+/**
+ * «Marca Modelo», con «· s/n Serie» si hay número de serie; `null` si no hay
+ * marca ni modelo — para que `writePairs` deje la celda vacía en vez de
+ * escribir un guion, que en una hoja de cálculo se leería como un dato.
+ *
+ * Compartida entre los tres libros que llevan equipo (poligonal: estación
+ * total; nivelación y asentamientos: nivel), para no componer el mismo texto
+ * tres veces.
+ */
+export function equipmentLine(
+  brand: string | null | undefined,
+  model: string | null | undefined,
+  serial: string | null | undefined,
+): string | null {
+  const combo = [brand, model].filter(Boolean).join(" ");
+  if (combo === "") return null;
+  return serial ? `${combo} · s/n ${serial}` : combo;
 }
