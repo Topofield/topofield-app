@@ -70,8 +70,10 @@ export const PROYECTO_DEMO = {
 // Tercer orden (1:5.000) es el caso didáctico habitual: exige lo suficiente
 // para que se vea la diferencia entre un cierre conforme y uno que no lo es.
 // El equipo (Fase 8) vive en cada proceso, no en el proyecto, pero los cuatro
-// procesos demo comparten el mismo instrumento: una estación total real,
-// coherente con el orden declarado (5″ ≤ K=15″ de tercer orden).
+// procesos demo comparten el mismo instrumento: una Leica FlexLine TS06plus,
+// coherente con el orden declarado (5″ ≤ K=15″ de tercer orden). 5″ es una de
+// sus clases de precisión angular de catálogo (2″/3″/5″); 1.5 mm + 2 ppm es
+// su EDM con prisma publicada — mismas cifras que `scripts/seed.mjs`.
 const EQUIPO_DEMO = {
   precisionOrder: "tercer_orden",
   equipmentBrand: "Leica",
@@ -79,7 +81,7 @@ const EQUIPO_DEMO = {
   equipmentSerial: "DEMO-0001",
   equipmentCalibrationDate: "2026-02-10",
   angularPrecisionSeconds: 5,
-  distancePrecisionMm: 3,
+  distancePrecisionMm: 1.5,
   distancePrecisionPpm: 2,
 } as const;
 

@@ -428,14 +428,18 @@ async function insertLeveling(projectId, siteId, spec, userId, equipo) {
 // El orden y el equipo dejaron de vivir en `projects` y ahora los declara
 // cada proceso. Este seed conserva el emparejamiento que el proyecto ya
 // tenía: "Lote catastral" con estación de 5″ y tercer orden, "Red geodésica"
-// con estación de 1″ y primer orden. Cifras de catálogo reales (PRD § 8,
-// fuentes ISO 17123-3/-4/-2):
-//  - Estación total 5″: Leica TS06 Plus, 3 mm + 2 ppm sin reflector.
-//  - Estación total 1″: Trimble S9 (robótica, grado geodésico), 1 mm + 1 ppm
-//    con prisma.
-//  - Nivel digital: Trimble DiNi 12, σ = 1.5 mm/km en doble nivelación, mira
-//    de ínvar — dentro del rango 0.7-1.5 mm/km de los niveles digitales, y
-//    sobrado para tercer orden (K = 12 mm/km).
+// con estación de 1″ y primer orden. Cifras verificadas contra la ficha
+// técnica publicada de cada modelo (no contra el rango genérico de la ISO):
+//  - Estación total 5″: Leica FlexLine TS06plus — 5″ es una de sus clases de
+//    precisión angular de catálogo (2″/3″/5″); EDM con prisma 1.5 mm + 2 ppm.
+//  - Estación total 1″: Trimble S9 — 1″ es una de sus dos clases angulares
+//    (0.5″/1″); EDM con prisma 1.0 mm + 2 ppm.
+//  - Nivel digital: Trimble/Zeiss DiNi 12 — σ = 0.3 mm/km en doble
+//    nivelación con mira de ínvar de código de barras, y 1.0 mm/km con mira
+//    ordinaria (no ínvar). Se usa la cifra de mira ordinaria (1.0 mm/km): es
+//    el emparejamiento de campo realista para trabajo de tercer orden, y deja
+//    el equipo cómodamente dentro del coeficiente de tercer orden (K = 12
+//    mm/km) sin que el margen sea tan ancho que la coherencia deje de verse.
 // ----------------------------------------------------------------------------
 
 const TOTAL_STATION_TERCER_ORDEN = {
@@ -445,7 +449,7 @@ const TOTAL_STATION_TERCER_ORDEN = {
   equipment_serial: "LCS-2026-001",
   equipment_calibration_date: "2026-02-10",
   angular_precision_seconds: 5,
-  distance_precision_mm: 3,
+  distance_precision_mm: 1.5,
   distance_precision_ppm: 2,
 };
 
@@ -457,7 +461,7 @@ const TOTAL_STATION_PRIMER_ORDEN = {
   equipment_calibration_date: "2026-03-15",
   angular_precision_seconds: 1,
   distance_precision_mm: 1,
-  distance_precision_ppm: 1,
+  distance_precision_ppm: 2,
 };
 
 // Fixture deliberada del aviso de equipo insuficiente: primer orden
@@ -475,6 +479,8 @@ const TOTAL_STATION_INSUFICIENTE = {
   distance_precision_ppm: 5,
 };
 
+// 1.0 mm/km es la cifra ISO 17123-2 del DiNi 12 con mira ordinaria (no
+// ínvar) — ver el comentario de cabecera de este bloque.
 const LEVEL_DIGITAL_TERCER_ORDEN = {
   precision_order: "tercer_orden",
   equipment_brand: "Trimble",
@@ -482,7 +488,7 @@ const LEVEL_DIGITAL_TERCER_ORDEN = {
   equipment_serial: "TDN-2026-011",
   equipment_calibration_date: "2026-01-05",
   level_type: "digital",
-  km_precision_mm: 1.5,
+  km_precision_mm: 1.0,
 };
 
 // Mismo modelo que el de nivelación pero otra unidad física: es el nivel del
@@ -494,7 +500,7 @@ const LEVEL_DIGITAL_MONITOREO = {
   equipment_serial: "TDN-2025-014",
   equipment_calibration_date: "2024-12-20",
   level_type: "digital",
-  km_precision_mm: 1.5,
+  km_precision_mm: 1.0,
 };
 
 // ----------------------------------------------------------------------------
