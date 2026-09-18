@@ -1,8 +1,8 @@
 # PRD-de-fase 8 — Precisión y equipo por proceso
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-17
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-18
 
 ## Propósito
 

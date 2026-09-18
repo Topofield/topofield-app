@@ -13,7 +13,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 5 | Control de Asentamientos | `04-asentamientos.md` | cerrada |
 | 6 | Cierre, Informes, Export | `05-cierre-informes-export.md` | cerrada |
 | 7 | Motor y captura de poligonales | `06-motor-captura-poligonal.md` | cerrada |
-| 8 | Precisión y equipo por proceso | — | pendiente |
+| 8 | Precisión y equipo por proceso | `07-precision-equipo-por-proceso.md` | cerrada |
 | 9 | Canvas de poligonal | — | pendiente |
 | 10 | Ajuste por mínimos cuadrados | — | pendiente |
 | 11 | Georreferenciación de levantamientos | — | pendiente |
