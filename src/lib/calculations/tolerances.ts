@@ -56,8 +56,10 @@ export function minRelativePrecision(order: PrecisionOrder): number {
  * Coeficiente K de la tolerancia de nivelación K·√D, en milímetros
  * (PRD § 5.4). Coinciden con la tabla del marco teórico § 8; su «Segundo
  * Orden Clase II» es nuestro `segundo_orden`. Los niveles «Clase I» (K=4) y
- * «Expedita» (K=50) del marco teórico no están modelados en
- * `projects.precision_order` (decisión #4 del PRD de fase).
+ * «Expedita» (K=50) del marco teórico no están modelados en el tipo
+ * `PrecisionOrder` (decisión #4 del PRD de la Fase 4). Desde la Fase 8 el
+ * orden lo declara cada proceso —`leveling_processes.precision_order` y
+ * `settlement_visits.precision_order`—, no el proyecto.
  */
 export const LEVELING_TOLERANCE_K: Record<PrecisionOrder, number> = {
   primer_orden: 3,

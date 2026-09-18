@@ -157,7 +157,7 @@ export interface PolygonalInput {
   endNorth: number | null;
   endEast: number | null;
   endAzimuth: number | null;
-  /** Orden de precisión del proyecto, para la tolerancia. */
+  /** Orden de precisión del PROCESO, para la tolerancia (Fase 8). */
   order: PrecisionOrder;
   /** Dónde caen las lecturas a la derecha. Fija la suma teórica. */
   angleType: AngleType;
