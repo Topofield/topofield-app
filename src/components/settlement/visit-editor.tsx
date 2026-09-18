@@ -7,9 +7,9 @@ import {
   Card,
   Input,
   LevelFieldset,
+  PrecisionOrderSelect,
   Textarea,
 } from "@/components/design-system";
-import { PrecisionOrderSelect } from "@/components/projects/precision-order-select";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { ReadingsTable } from "@/components/settlement/readings-table";
 import { computeHistory } from "@/lib/calculations/settlement";
@@ -350,6 +350,7 @@ export function VisitEditor({
         </div>
         <div className="mt-4">
           <PrecisionOrderSelect
+            kind="leveling"
             value={header.precisionOrder}
             disabled={disabled}
             onChange={(v) => updateHeader("precisionOrder", v)}

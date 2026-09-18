@@ -2,11 +2,11 @@ import {
   DmsInput,
   EMPTY_DMS,
   Input,
+  PrecisionOrderSelect,
   Select,
   TotalStationFieldset,
   type DmsValue,
 } from "@/components/design-system";
-import { PrecisionOrderSelect } from "@/components/projects/precision-order-select";
 import {
   azimuthFromCoordinates,
   decimalToDms,
@@ -144,6 +144,7 @@ export function PolygonalConfigFields({
       </div>
 
       <PrecisionOrderSelect
+        kind="angular"
         value={value.precisionOrder}
         disabled={disabled}
         onChange={(v) => set("precisionOrder", v)}

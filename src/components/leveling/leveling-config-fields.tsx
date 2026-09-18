@@ -1,5 +1,9 @@
-import { Input, LevelFieldset, Select } from "@/components/design-system";
-import { PrecisionOrderSelect } from "@/components/projects/precision-order-select";
+import {
+  Input,
+  LevelFieldset,
+  PrecisionOrderSelect,
+  Select,
+} from "@/components/design-system";
 import {
   EMPTY_LEVEL,
   type LevelFields,
@@ -96,6 +100,7 @@ export function LevelingConfigFields({
       </div>
 
       <PrecisionOrderSelect
+        kind="leveling"
         value={value.precisionOrder}
         disabled={disabled}
         onChange={(v) => set("precisionOrder", v)}
