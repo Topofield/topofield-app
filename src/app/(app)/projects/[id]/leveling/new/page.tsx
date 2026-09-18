@@ -36,11 +36,7 @@ export default async function NewLevelingPage({
         Configura el proceso. Las lecturas de campo se capturan en el editor.
       </p>
       <Card className="mt-6">
-        <NewLevelingForm
-          projectId={id}
-          points={bmPoints}
-          precisionOrder={project.precision_order}
-        />
+        <NewLevelingForm projectId={id} points={bmPoints} />
       </Card>
     </div>
   );

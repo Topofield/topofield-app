@@ -3,7 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { Alert, Button } from "@/components/design-system";
 import { parseNumber } from "@/lib/utils/parse";
-import type { PrecisionOrder, ReferencePoint } from "@/types/project";
+import type { ReferencePoint } from "@/types/project";
 import { createLevelingProcessAction } from "@/app/(app)/projects/[id]/leveling/new/actions";
 import {
   EMPTY_LEVELING_CONFIG,
@@ -14,13 +14,11 @@ import {
 interface NewLevelingFormProps {
   projectId: string;
   points: ReferencePoint[];
-  precisionOrder: PrecisionOrder;
 }
 
 export function NewLevelingForm({
   projectId,
   points,
-  precisionOrder,
 }: NewLevelingFormProps) {
   const [config, setConfig] = useState<LevelingConfigState>(
     EMPTY_LEVELING_CONFIG,
@@ -41,6 +39,14 @@ export function NewLevelingForm({
         endBmCode: isLink ? config.endBm.code.trim() || null : null,
         endBmElevation: isLink ? parseNumber(config.endBm.elevation) : null,
         hasReturnRun: config.hasReturnRun,
+        precisionOrder: config.precisionOrder,
+        equipmentBrand: config.level.equipmentBrand.trim() || null,
+        equipmentModel: config.level.equipmentModel.trim() || null,
+        equipmentSerial: config.level.equipmentSerial.trim() || null,
+        equipmentCalibrationDate:
+          config.level.equipmentCalibrationDate.trim() || null,
+        levelType: config.level.levelType === "" ? null : config.level.levelType,
+        kmPrecisionMm: parseNumber(config.level.kmPrecisionMm),
       });
       // En éxito la acción redirige al editor; solo llega aquí si hubo error.
       if (result.error) setError(result.error);
@@ -54,7 +60,6 @@ export function NewLevelingForm({
         value={config}
         onChange={setConfig}
         points={points}
-        precisionOrder={precisionOrder}
       />
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>

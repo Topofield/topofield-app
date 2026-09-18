@@ -1,5 +1,10 @@
-import { Input, Select } from "@/components/design-system";
-import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
+import { Input, LevelFieldset, Select } from "@/components/design-system";
+import { PrecisionOrderSelect } from "@/components/projects/precision-order-select";
+import {
+  EMPTY_LEVEL,
+  type LevelFields,
+  type PrecisionOrder,
+} from "@/types/project";
 import {
   LEVELING_TYPE_LABELS,
   LEVELING_TYPES,
@@ -20,6 +25,9 @@ export interface LevelingConfigState {
   startBm: BmValue;
   endBm: BmValue;
   hasReturnRun: boolean;
+  /** Orden de precisión del proceso (ISO 17123-2 para el equipo). */
+  precisionOrder: PrecisionOrder;
+  level: LevelFields;
 }
 
 export const EMPTY_LEVELING_CONFIG: LevelingConfigState = {
@@ -28,14 +36,15 @@ export const EMPTY_LEVELING_CONFIG: LevelingConfigState = {
   startBm: EMPTY_BM_VALUE,
   endBm: EMPTY_BM_VALUE,
   hasReturnRun: false,
+  // Mismo valor por defecto que la columna en la base (§ Task 2).
+  precisionOrder: "tercer_orden",
+  level: EMPTY_LEVEL,
 };
 
 interface LevelingConfigFieldsProps {
   value: LevelingConfigState;
   onChange: (value: LevelingConfigState) => void;
   points: ReferencePoint[];
-  /** Orden de precisión del proyecto: se muestra como dato, no es editable aquí. */
-  precisionOrder: PrecisionOrder;
   disabled?: boolean;
 }
 
@@ -44,7 +53,6 @@ export function LevelingConfigFields({
   value,
   onChange,
   points,
-  precisionOrder,
   disabled,
 }: LevelingConfigFieldsProps) {
   function set<K extends keyof LevelingConfigState>(
@@ -87,13 +95,17 @@ export function LevelingConfigFields({
         />
       </div>
 
-      <p className="text-sm text-neutral-500">
-        Orden de precisión del proyecto:{" "}
-        <span className="font-medium text-neutral-800">
-          {PRECISION_ORDER_LABELS[precisionOrder]}
-        </span>
-        . Define las tolerancias de cierre y se hereda del proyecto.
-      </p>
+      <PrecisionOrderSelect
+        value={value.precisionOrder}
+        disabled={disabled}
+        onChange={(v) => set("precisionOrder", v)}
+      />
+      <LevelFieldset
+        value={value.level}
+        onChange={(v) => set("level", v)}
+        order={value.precisionOrder}
+        disabled={disabled}
+      />
 
       <BmSelector
         label="BM de partida"
