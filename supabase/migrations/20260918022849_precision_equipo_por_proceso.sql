@@ -29,7 +29,13 @@ alter table public.polygonal_processes
   add column equipment_model            text,
   add column equipment_serial           text,
   add column equipment_calibration_date date,
-  add column angular_precision_seconds  decimal(4,1),
+  -- decimal(5,1), no (4,1): el origen `projects.angular_precision_seconds`
+  -- ya era decimal(5,1) y el validador del formulario viejo aceptaba hasta
+  -- 9999.9. Un proyecto con un valor así (sin sentido como especificación de
+  -- instrumento, pero alcanzable por el formulario) haría desbordar el
+  -- UPDATE del backfill y abortar toda la migración. Ensanchar el dominio no
+  -- cuesta nada y elimina esa ruta de fallo.
+  add column angular_precision_seconds  decimal(5,1),
   add column distance_precision_mm      decimal(4,1),
   add column distance_precision_ppm     decimal(4,1);
 
