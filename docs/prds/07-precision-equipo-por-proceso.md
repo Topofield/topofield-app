@@ -100,9 +100,9 @@ Verificados sobre el código, no inferidos:
 | 4 | Campos de precisión **según el tipo de instrumento** | Un juego único de campos para los tres módulos: es lo que hay hoy y es la causa del desajuste |
 | 5 | `linear_precision` se parte en `distance_precision_mm` + `distance_precision_ppm` | Seguir con el texto `"2+2ppm"`, que nadie puede calcular |
 | 6 | Las visitas de asentamiento **sí** declaran `precision_order` | Se pensó primero que no, razonando sobre los umbrales de velocidad. Pero el umbral y el orden miden cosas distintas: el orden dice con qué exactitud se obtiene la cota, el umbral dice qué significa el movimiento medido. Una visita se levanta nivelando, y ese trabajo tiene exactitud exigible |
+| 7 | El aviso de equipo insuficiente avisa, no bloquea | Bloquear el cierre: misma política que el resto del editor |
 | 8 | El orden lo declara la **visita**, no el lugar | `sites` lleva los umbrales porque son del programa de monitoreo; el orden acompaña a la medición, y una campaña puede hacerse con más o menos exigencia que la anterior |
 | 9 | El parseo de `"2+2ppm"` se queda en el SQL del backfill, sin función TypeScript | Extraerlo a `parse.ts` no tendría consumidor en la aplicación, y un test en TS de la misma lógica no verifica el SQL. Se verifica leyendo el resultado en la base |
-| 7 | El aviso de equipo insuficiente avisa, no bloquea | Bloquear el cierre: misma política que el resto del editor |
 
 ## Modelo de datos
 
