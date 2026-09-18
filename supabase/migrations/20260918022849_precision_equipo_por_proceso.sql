@@ -106,9 +106,81 @@ alter table public.settlement_visits
 -- DELETE, no dispara en UPDATE, así que no se toca. `settlement_visits_set_updated_at`
 -- tampoco se toca: es inofensivo y debe seguir actualizando `updated_at`.
 
+-- --- 4a. Guarda: `linear_precision` tiene que parsear ENTERA ---------------
+-- `linear_precision` era texto libre sin validación de formato, así que un
+-- proyecto puede traer cualquier cosa. Antes esto se parseaba con dos
+-- `substring()` independientes y sin anclar, y el fallo era silencioso y
+-- peor que no migrar:
+--
+--   '2,5+2ppm'   -> mm = 5, ppm = 2. La coma es el separador decimal en
+--                   es-CO, y el patrón viejo tomaba el «5» de después de la
+--                   coma: el doble del 2.5 real, escrito sin avisar.
+--   '(3 + 2) ppm'-> mm = 3, ppm = NULL. Medio registro.
+--   '1000+2ppm'  -> desbordaba decimal(4,1) DENTRO de la ventana con los
+--                   triggers de inmutabilidad desactivados.
+--
+-- Y la columna origen se borra al final de esta misma migración (§ 5), así
+-- que un número mal parseado queda sin auditoría posible ni forma de
+-- recuperarlo.
+--
+-- Por eso el criterio es: o la cadena parsea entera, o la migración aborta
+-- nombrando el valor. Un formato sorpresa —incluido el decimal con coma, que
+-- NO se adivina— merece atención humana, no un número inventado. Abortar
+-- aquí, además, saca la ruta de desbordamiento fuera de la ventana en la que
+-- los triggers están desactivados.
+
+do $guard$
+declare
+  ofensivos text;
+begin
+  select string_agg(format('%s -> %L', id, linear_precision), ', ' order by id)
+    into ofensivos
+    from public.projects
+   where linear_precision is not null
+     and (
+       -- No casa el patrón completo y anclado.
+       linear_precision !~* '^\s*\d+(\.\d+)?\s*(mm)?\s*\+\s*\d+(\.\d+)?\s*ppm\s*$'
+       -- O casa, pero no cabe en decimal(4,1) (máximo 999.9). El OR no
+       -- cortocircuita en SQL, pero si no casa `regexp_match` devuelve NULL
+       -- y el subíndice de un array nulo es NULL, no un error.
+       or (regexp_match(linear_precision, '^\s*(\d+(?:\.\d+)?)\s*(?:mm)?\s*\+\s*(\d+(?:\.\d+)?)\s*ppm\s*$', 'i'))[1]::numeric >= 1000
+       or (regexp_match(linear_precision, '^\s*(\d+(?:\.\d+)?)\s*(?:mm)?\s*\+\s*(\d+(?:\.\d+)?)\s*ppm\s*$', 'i'))[2]::numeric >= 1000
+     );
+
+  if ofensivos is not null then
+    raise exception
+      'projects.linear_precision con formato no reconocido o fuera de rango: %',
+      ofensivos
+      using hint =
+        'Se esperaba «<mm>+<ppm>ppm», p. ej. "2+2ppm" o "2.5 mm + 2 ppm", con punto decimal y ambos términos por debajo de 1000. '
+        'Corrija el valor en projects.linear_precision y vuelva a aplicar la migración: no se adivina el número.';
+  end if;
+end
+$guard$;
+
 alter table public.polygonal_processes disable trigger polygonal_processes_reject_update_when_closed;
 alter table public.leveling_processes  disable trigger leveling_processes_reject_update_on_closed;
 
+-- "2+2ppm" -> 2 y 2. UN solo `regexp_match` anclado con las DOS capturas,
+-- no dos `substring()` sueltos: así los dos números salen por fuerza del
+-- mismo emparejamiento de la misma cadena, y no pueden venir de sitios
+-- distintos. Lo que no case ya abortó en la guarda de arriba, así que aquí
+-- `lp` solo es nulo cuando `linear_precision` era nulo.
+with proyecto as (
+  select id,
+         precision_order,
+         equipment_brand,
+         equipment_model,
+         equipment_serial,
+         equipment_calibration_date,
+         angular_precision_seconds,
+         regexp_match(
+           linear_precision,
+           '^\s*(\d+(?:\.\d+)?)\s*(?:mm)?\s*\+\s*(\d+(?:\.\d+)?)\s*ppm\s*$',
+           'i'
+         ) as lp
+    from public.projects
+)
 update public.polygonal_processes p
    set precision_order            = pr.precision_order,
        equipment_brand            = pr.equipment_brand,
@@ -116,12 +188,9 @@ update public.polygonal_processes p
        equipment_serial           = pr.equipment_serial,
        equipment_calibration_date = pr.equipment_calibration_date,
        angular_precision_seconds  = pr.angular_precision_seconds,
-       -- "2+2ppm" -> 2 y 2. Si no casa, quedan nulos y el proceso los pide.
-       -- Patrones verificados con psql antes de aplicarlos (ver task-2-report.md):
-       -- substring('3+2ppm', patrón mm) = '3', substring('3+2ppm', patrón ppm) = '2'.
-       distance_precision_mm      = nullif(substring(pr.linear_precision from '(\d+(?:\.\d+)?)\s*(?:mm)?\s*\+'), '')::decimal,
-       distance_precision_ppm     = nullif(substring(pr.linear_precision from '\+\s*(\d+(?:\.\d+)?)\s*[Pp][Pp][Mm]'), '')::decimal
-  from public.projects pr
+       distance_precision_mm      = (pr.lp)[1]::decimal,
+       distance_precision_ppm     = (pr.lp)[2]::decimal
+  from proyecto pr
  where pr.id = p.project_id;
 
 update public.leveling_processes l
