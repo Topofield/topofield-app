@@ -41,12 +41,13 @@ export type ProcessStatus = (typeof PROCESS_STATUSES)[number];
 
 export type PolygonalProcess = Omit<
   Tables<"polygonal_processes">,
-  "type" | "angle_type" | "correction_method" | "status"
+  "type" | "angle_type" | "correction_method" | "status" | "precision_order"
 > & {
   type: PolygonalType;
   angle_type: AngleType;
   correction_method: CorrectionMethod | null;
   status: ProcessStatus;
+  precision_order: PrecisionOrder;
 };
 
 export type AngleReading = Tables<"polygonal_angle_readings">;

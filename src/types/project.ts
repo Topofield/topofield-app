@@ -16,6 +16,19 @@ export const PRECISION_ORDERS = [
 ] as const;
 export type PrecisionOrder = (typeof PRECISION_ORDERS)[number];
 
+export const LEVEL_TYPES = ["automatico", "digital"] as const;
+export type LevelType = (typeof LEVEL_TYPES)[number];
+
+export const LEVEL_TYPE_LABELS: Record<LevelType, string> = {
+  automatico: "Automático",
+  digital: "Digital / electrónico",
+};
+
+export const LEVEL_TYPE_OPTIONS = LEVEL_TYPES.map((value) => ({
+  value,
+  label: LEVEL_TYPE_LABELS[value],
+}));
+
 export const PROJECT_STATUSES = ["active", "archived"] as const;
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
@@ -72,3 +85,51 @@ export const PRECISION_ORDER_OPTIONS = PRECISION_ORDERS.map((value) => ({
 export const REFERENCE_POINT_TYPE_OPTIONS = REFERENCE_POINT_TYPES.map(
   (value) => ({ value, label: REFERENCE_POINT_TYPE_LABELS[value] }),
 );
+
+// --- Estado de UI del equipo, compartido por poligonal, nivelación y
+// asentamientos (el informe y el export lo leen sin depender de esos
+// módulos) ---
+
+/**
+ * Equipo de estación total tal como lo captura el formulario (todo texto).
+ * Vive aquí y no en `polygonal.ts` porque el informe y el export lo leen sin
+ * depender del módulo.
+ */
+export interface TotalStationFields {
+  equipmentBrand: string;
+  equipmentModel: string;
+  equipmentSerial: string;
+  equipmentCalibrationDate: string;
+  angularPrecisionSeconds: string;
+  distancePrecisionMm: string;
+  distancePrecisionPpm: string;
+}
+
+export const EMPTY_TOTAL_STATION: TotalStationFields = {
+  equipmentBrand: "",
+  equipmentModel: "",
+  equipmentSerial: "",
+  equipmentCalibrationDate: "",
+  angularPrecisionSeconds: "",
+  distancePrecisionMm: "",
+  distancePrecisionPpm: "",
+};
+
+/** Equipo de nivel, para nivelación y para visitas de asentamiento. */
+export interface LevelFields {
+  equipmentBrand: string;
+  equipmentModel: string;
+  equipmentSerial: string;
+  equipmentCalibrationDate: string;
+  levelType: LevelType | "";
+  kmPrecisionMm: string;
+}
+
+export const EMPTY_LEVEL: LevelFields = {
+  equipmentBrand: "",
+  equipmentModel: "",
+  equipmentSerial: "",
+  equipmentCalibrationDate: "",
+  levelType: "",
+  kmPrecisionMm: "",
+};

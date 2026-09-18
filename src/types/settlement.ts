@@ -3,6 +3,7 @@
 // src/lib/calculations/settlement.ts.
 
 import type { Tables } from "./database";
+import type { LevelType, PrecisionOrder } from "./project";
 
 export const VISIT_STATUSES = ["draft", "calculated", "closed"] as const;
 export type VisitStatus = (typeof VISIT_STATUSES)[number];
@@ -15,8 +16,13 @@ export type AlertLevel = (typeof ALERT_LEVELS)[number];
 
 export type SettlementPoint = Tables<"settlement_points">;
 
-export type SettlementVisit = Omit<Tables<"settlement_visits">, "status"> & {
+export type SettlementVisit = Omit<
+  Tables<"settlement_visits">,
+  "status" | "level_type" | "precision_order"
+> & {
   status: VisitStatus;
+  level_type: LevelType | null;
+  precision_order: PrecisionOrder;
 };
 
 export type SettlementReading = Omit<
