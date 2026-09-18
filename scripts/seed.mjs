@@ -127,6 +127,41 @@ function carteraToSpec(cartera, referencePointId, method, status) {
   };
 }
 
+/**
+ * Columnas de equipo y precisión que un spec de proceso o de visita lleva
+ * incorporadas (Fase 8). Se listan por nombre para que `...spec` en el INSERT
+ * no arrastre las claves del fixture (`stations`, `notes`, `startNorth`…).
+ */
+const EQUIPMENT_COLUMNS = [
+  "precision_order",
+  "equipment_brand",
+  "equipment_model",
+  "equipment_serial",
+  "equipment_calibration_date",
+  "angular_precision_seconds",
+  "distance_precision_mm",
+  "distance_precision_ppm",
+  "level_type",
+  "km_precision_mm",
+];
+
+/**
+ * Extrae del spec el equipo que lleva encima.
+ *
+ * El equipo viaja SOBRE el spec —el mismo patrón de `src/lib/demo/fixtures.ts`,
+ * que lo esparce con `...EQUIPO_DEMO`— y nunca emparejado por posición con un
+ * array paralelo de equipos: con `equipos[i]` basta reordenar o insertar un
+ * proceso para que un instrumento acabe en el proceso equivocado, sin que nada
+ * falle ni avise.
+ */
+function equipmentOf(spec) {
+  const campos = {};
+  for (const k of EQUIPMENT_COLUMNS) {
+    if (spec[k] !== undefined) campos[k] = spec[k];
+  }
+  return campos;
+}
+
 /** DMS como tupla [g, m, s], que es lo que consume el spec del seed. */
 function decimalToDmsTuple(decimal) {
   const { deg, min, sec } = decimalToDms(decimal);
@@ -195,7 +230,8 @@ function isClosedStatus(status) {
   return status === "closed" || status === "rejected";
 }
 
-async function insertPolygonal(projectId, siteId, spec, userId, equipo) {
+async function insertPolygonal(projectId, siteId, spec, userId) {
+  const equipo = equipmentOf(spec);
   const startAz = spec.startAz ?? [0, 0, 0];
   const endAz = spec.endAz ?? [null, null, null];
   // El orden que evalúa el motor es el mismo que declara el equipo del
@@ -325,7 +361,10 @@ async function insertPolygonal(projectId, siteId, spec, userId, equipo) {
  * `computePolygonal`: el seed nunca queda desincronizado con lo que
  * produciría `saveLevelingProcessAction` en un guardado real.
  */
-async function insertLeveling(projectId, siteId, spec, userId, equipo) {
+// `userId` no hace falta: `leveling_processes` no lo lleva y el cierre de
+// estos fixtures no pasa por `closed_by`.
+async function insertLeveling(projectId, siteId, spec) {
+  const equipo = equipmentOf(spec);
   const input = {
     type: spec.type,
     startElevation: spec.startElevation,
@@ -503,6 +542,23 @@ const LEVEL_DIGITAL_MONITOREO = {
   km_precision_mm: 1.0,
 };
 
+// El nivel de respaldo del programa de monitoreo, para la campaña de abril.
+// Un automático Leica NA720: 2.5 mm/km de catálogo (ISO 17123-2), holgado
+// dentro del K = 12 mm de tercer orden, así que la visita sigue siendo
+// coherente y no dispara el aviso de equipo insuficiente. Existe porque
+// entre una campaña y la siguiente pueden pasar meses y cambiar el
+// instrumento — que es la razón de ser de esta fase— y el seed no lo
+// demostraba en ninguna parte.
+const LEVEL_AUTOMATICO_RESPALDO = {
+  precision_order: "tercer_orden",
+  equipment_brand: "Leica",
+  equipment_model: "NA720",
+  equipment_serial: "LNA-2023-047",
+  equipment_calibration_date: "2024-11-08",
+  level_type: "automatico",
+  km_precision_mm: 2.5,
+};
+
 // ----------------------------------------------------------------------------
 // Definiciones de los procesos
 // ----------------------------------------------------------------------------
@@ -661,6 +717,7 @@ const GEODESICA_PROCESSES = [
     startAz: [0, 0, 0],
     correctionMethod: "bowditch",
     status: "calculated",
+    ...TOTAL_STATION_PRIMER_ORDEN,
     stations: [
       { code: "G1", angle: [90, 0, 0], distance: 200 },
       { code: "G2", angle: [90, 0, 0], distance: 200 },
@@ -680,6 +737,7 @@ const GEODESICA_PROCESSES = [
     startAz: [0, 0, 0],
     correctionMethod: "bowditch",
     status: "calculated",
+    ...TOTAL_STATION_INSUFICIENTE,
     stations: [
       { code: "H1", angle: [90, 0, 0], distance: 150 },
       { code: "H2", angle: [90, 0, 0], distance: 150 },
@@ -795,13 +853,17 @@ const PARTIALS_MM = {
   "P-06": [0, -24.0, -13.0, -7.0, -4.0, -2.5],
 };
 
-const VISIT_DATES = [
-  "2025-01-15",
-  "2025-02-15",
-  "2025-03-15",
-  "2025-04-15",
-  "2025-05-15",
-  "2025-06-15",
+// Las seis campañas. El equipo va SOBRE cada visita, no compartido por el
+// lugar: el instrumento puede cambiar entre campañas —de eso trata la Fase
+// 8— y la de abril se levantó con el nivel de respaldo porque el digital
+// estaba en calibración. Las otras cinco usan el nivel habitual.
+const VISIT_SPECS = [
+  { date: "2025-01-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-02-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-03-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-04-15", ...LEVEL_AUTOMATICO_RESPALDO },
+  { date: "2025-05-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-06-15", ...LEVEL_DIGITAL_MONITOREO },
 ];
 
 /** Cota de un punto en una visita: cota base 100.0000 menos el acumulado. */
@@ -816,7 +878,7 @@ function cotaEn(code, visitIndex) {
  * Crea el lugar de monitoreo, su catálogo de puntos y sus 6 visitas, con los
  * resultados calculados por `computeHistory` — nunca escritos a mano.
  */
-async function insertSettlementSite(projectId, equipo) {
+async function insertSettlementSite(projectId) {
   // Los umbrales no se envían: los DEFAULT de la tabla `sites` son los mismos
   // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75,
   // distorsión 1/500), así que el lugar queda coherente con el preset del
@@ -846,10 +908,10 @@ async function insertSettlementSite(projectId, equipo) {
     initialElevation: p.initial_elevation,
   }));
 
-  const visits = VISIT_DATES.map((date, i) => ({
+  const visits = VISIT_SPECS.map((spec, i) => ({
     id: `visita-${i}`, // id provisional, solo para casar con el resultado de computeHistory
     visitNumber: i,
-    date,
+    date: spec.date,
     readings: SETTLEMENT_POINTS.map((p) => ({
       pointId: pointIdByCode.get(p.code),
       elevation: cotaEn(p.code, i),
@@ -858,7 +920,14 @@ async function insertSettlementSite(projectId, equipo) {
 
   const history = computeHistory(points, visits, thresholdsFor("edificio"));
 
+  // El equipo se recupera por FECHA, no por posición en el array: la fecha es
+  // la identidad de la campaña, y así reordenar `VISIT_SPECS` no puede mover
+  // un instrumento a otra visita.
+  const specPorFecha = new Map(VISIT_SPECS.map((v) => [v.date, v]));
+
   for (const visitResult of history.visits) {
+    const visitSpec = specPorFecha.get(visitResult.date);
+    if (!visitSpec) throw new Error(`Visita sin spec: ${visitResult.date}`);
     const { data: visitRow, error: visitErr } = await admin
       .from("settlement_visits")
       .insert({
@@ -866,7 +935,7 @@ async function insertSettlementSite(projectId, equipo) {
         visit_number: visitResult.visitNumber,
         date: visitResult.date,
         operator: "Seed TopoField",
-        ...equipo,
+        ...equipmentOf(visitSpec),
         status: "calculated",
       })
       .select("id")
@@ -951,12 +1020,14 @@ async function main() {
   // Los 7 procesos van al proyecto "Lote catastral", con la estación de 5″
   // que ya traía el proyecto (tercer orden, 3 mm + 2 ppm).
   for (const spec of PROCESSES) {
+    // El equipo se esparce sobre el spec, no se pasa aparte: los siete
+    // comparten instrumento, así que se aplica de una vez, y un spec podría
+    // sobrescribirlo declarando el suyo (`...spec` va después).
     await insertPolygonal(
       catastral,
       catastralSite,
-      spec,
+      { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
       userId,
-      TOTAL_STATION_TERCER_ORDEN,
     );
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
@@ -979,40 +1050,28 @@ async function main() {
     await insertPolygonal(
       catastral,
       catastralSite,
-      spec,
+      { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
       userId,
-      TOTAL_STATION_TERCER_ORDEN,
     );
     console.log(`  ✓ Cartera real: ${spec.name}`);
   }
 
   for (const spec of LEVELING_PROCESSES) {
-    await insertLeveling(
-      catastral,
-      catastralSite,
-      spec,
-      userId,
-      LEVEL_DIGITAL_TERCER_ORDEN,
-    );
+    await insertLeveling(catastral, catastralSite, {
+      ...LEVEL_DIGITAL_TERCER_ORDEN,
+      ...spec,
+    });
     console.log(`  ✓ Proceso de nivelación: ${spec.name}`);
   }
 
   // "Red geodésica": el emparejamiento primer orden + estación de 1″ que el
   // proyecto ya tenía, más la fixture deliberada del aviso de equipo
-  // insuficiente (mismo primer orden, estación de 5″).
-  const geodesicaEquipos = [
-    TOTAL_STATION_PRIMER_ORDEN,
-    TOTAL_STATION_INSUFICIENTE,
-  ];
-  for (let i = 0; i < GEODESICA_PROCESSES.length; i++) {
-    const spec = GEODESICA_PROCESSES[i];
-    await insertPolygonal(
-      geodesica,
-      geodesicaSite,
-      spec,
-      userId,
-      geodesicaEquipos[i],
-    );
+  // insuficiente (mismo primer orden, estación de 5″). Aquí cada proceso
+  // lleva SU equipo declarado en su propio literal: son distintos, y un array
+  // paralelo emparejado por índice era exactamente lo frágil que había que
+  // quitar.
+  for (const spec of GEODESICA_PROCESSES) {
+    await insertPolygonal(geodesica, geodesicaSite, spec, userId);
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 
@@ -1025,12 +1084,9 @@ async function main() {
   });
   console.log(`  ✓ Proyecto "Edificio en monitoreo" — ${monitoreo}`);
 
-  const settlementSiteId = await insertSettlementSite(
-    monitoreo,
-    LEVEL_DIGITAL_MONITOREO,
-  );
+  const settlementSiteId = await insertSettlementSite(monitoreo);
   console.log(
-    `  ✓ Lugar "Edificio Torre Central" con ${SETTLEMENT_POINTS.length} puntos y ${VISIT_DATES.length} visitas — ${settlementSiteId}`,
+    `  ✓ Lugar "Edificio Torre Central" con ${SETTLEMENT_POINTS.length} puntos y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
   );
 
   console.log("");
