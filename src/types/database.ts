@@ -44,12 +44,19 @@ export type Database = {
           discrepancy_mm: number | null
           end_bm_code: string | null
           end_bm_elevation: number | null
+          equipment_brand: string | null
+          equipment_calibration_date: string | null
+          equipment_model: string | null
+          equipment_serial: string | null
           forward_error_mm: number | null
           has_return_run: boolean
           id: string
+          km_precision_mm: number | null
+          level_type: string | null
           meets_tolerance: boolean | null
           name: string
           notes: string | null
+          precision_order: string
           project_id: string
           return_error_mm: number | null
           site_id: string
@@ -70,12 +77,19 @@ export type Database = {
           discrepancy_mm?: number | null
           end_bm_code?: string | null
           end_bm_elevation?: number | null
+          equipment_brand?: string | null
+          equipment_calibration_date?: string | null
+          equipment_model?: string | null
+          equipment_serial?: string | null
           forward_error_mm?: number | null
           has_return_run?: boolean
           id?: string
+          km_precision_mm?: number | null
+          level_type?: string | null
           meets_tolerance?: boolean | null
           name: string
           notes?: string | null
+          precision_order?: string
           project_id: string
           return_error_mm?: number | null
           site_id: string
@@ -96,12 +110,19 @@ export type Database = {
           discrepancy_mm?: number | null
           end_bm_code?: string | null
           end_bm_elevation?: number | null
+          equipment_brand?: string | null
+          equipment_calibration_date?: string | null
+          equipment_model?: string | null
+          equipment_serial?: string | null
           forward_error_mm?: number | null
           has_return_run?: boolean
           id?: string
+          km_precision_mm?: number | null
+          level_type?: string | null
           meets_tolerance?: boolean | null
           name?: string
           notes?: string | null
+          precision_order?: string
           project_id?: string
           return_error_mm?: number | null
           site_id?: string
@@ -241,16 +262,23 @@ export type Database = {
           angle_readings_min: number
           angle_type: string
           angular_error_seconds: number | null
+          angular_precision_seconds: number | null
           closed_at: string | null
           closed_by: string | null
           correction_method: string | null
           created_at: string
+          distance_precision_mm: number | null
+          distance_precision_ppm: number | null
           end_azimuth_deg: number | null
           end_azimuth_min: number | null
           end_azimuth_sec: number | null
           end_east: number | null
           end_north: number | null
           end_point_code: string | null
+          equipment_brand: string | null
+          equipment_calibration_date: string | null
+          equipment_model: string | null
+          equipment_serial: string | null
           has_closing_row: boolean
           id: string
           linear_error: number | null
@@ -258,6 +286,7 @@ export type Database = {
           name: string
           notes: string | null
           perimeter: number | null
+          precision_order: string
           project_id: string
           reference_point_code: string | null
           reference_point_id: string | null
@@ -277,16 +306,23 @@ export type Database = {
           angle_readings_min?: number
           angle_type?: string
           angular_error_seconds?: number | null
+          angular_precision_seconds?: number | null
           closed_at?: string | null
           closed_by?: string | null
           correction_method?: string | null
           created_at?: string
+          distance_precision_mm?: number | null
+          distance_precision_ppm?: number | null
           end_azimuth_deg?: number | null
           end_azimuth_min?: number | null
           end_azimuth_sec?: number | null
           end_east?: number | null
           end_north?: number | null
           end_point_code?: string | null
+          equipment_brand?: string | null
+          equipment_calibration_date?: string | null
+          equipment_model?: string | null
+          equipment_serial?: string | null
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null
@@ -294,6 +330,7 @@ export type Database = {
           name: string
           notes?: string | null
           perimeter?: number | null
+          precision_order?: string
           project_id: string
           reference_point_code?: string | null
           reference_point_id?: string | null
@@ -313,16 +350,23 @@ export type Database = {
           angle_readings_min?: number
           angle_type?: string
           angular_error_seconds?: number | null
+          angular_precision_seconds?: number | null
           closed_at?: string | null
           closed_by?: string | null
           correction_method?: string | null
           created_at?: string
+          distance_precision_mm?: number | null
+          distance_precision_ppm?: number | null
           end_azimuth_deg?: number | null
           end_azimuth_min?: number | null
           end_azimuth_sec?: number | null
           end_east?: number | null
           end_north?: number | null
           end_point_code?: string | null
+          equipment_brand?: string | null
+          equipment_calibration_date?: string | null
+          equipment_model?: string | null
+          equipment_serial?: string | null
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null
@@ -330,6 +374,7 @@ export type Database = {
           name?: string
           notes?: string | null
           perimeter?: number | null
+          precision_order?: string
           project_id?: string
           reference_point_code?: string | null
           reference_point_id?: string | null
@@ -502,66 +547,45 @@ export type Database = {
       }
       projects: {
         Row: {
-          angular_precision_seconds: number
           client: string
           created_at: string
           datum: string
           description: string | null
-          equipment_brand: string
-          equipment_calibration_date: string
-          equipment_model: string
-          equipment_serial: string
           id: string
           latitude: number | null
-          linear_precision: string
           location: string
           longitude: number | null
           name: string
-          precision_order: string
           projection: string | null
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          angular_precision_seconds: number
           client: string
           created_at?: string
           datum?: string
           description?: string | null
-          equipment_brand: string
-          equipment_calibration_date: string
-          equipment_model: string
-          equipment_serial: string
           id?: string
           latitude?: number | null
-          linear_precision: string
           location: string
           longitude?: number | null
           name: string
-          precision_order: string
           projection?: string | null
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          angular_precision_seconds?: number
           client?: string
           created_at?: string
           datum?: string
           description?: string | null
-          equipment_brand?: string
-          equipment_calibration_date?: string
-          equipment_model?: string
-          equipment_serial?: string
           id?: string
           latitude?: number | null
-          linear_precision?: string
           location?: string
           longitude?: number | null
           name?: string
-          precision_order?: string
           projection?: string | null
           status?: string
           updated_at?: string
@@ -750,10 +774,16 @@ export type Database = {
           closure_error_mm: number | null
           created_at: string
           date: string
-          equipment: string | null
+          equipment_brand: string | null
+          equipment_calibration_date: string | null
+          equipment_model: string | null
+          equipment_serial: string | null
           id: string
+          km_precision_mm: number | null
+          level_type: string | null
           notes: string | null
           operator: string | null
+          precision_order: string
           site_id: string
           status: string
           updated_at: string
@@ -766,10 +796,16 @@ export type Database = {
           closure_error_mm?: number | null
           created_at?: string
           date: string
-          equipment?: string | null
+          equipment_brand?: string | null
+          equipment_calibration_date?: string | null
+          equipment_model?: string | null
+          equipment_serial?: string | null
           id?: string
+          km_precision_mm?: number | null
+          level_type?: string | null
           notes?: string | null
           operator?: string | null
+          precision_order?: string
           site_id: string
           status?: string
           updated_at?: string
@@ -782,10 +818,16 @@ export type Database = {
           closure_error_mm?: number | null
           created_at?: string
           date?: string
-          equipment?: string | null
+          equipment_brand?: string | null
+          equipment_calibration_date?: string | null
+          equipment_model?: string | null
+          equipment_serial?: string | null
           id?: string
+          km_precision_mm?: number | null
+          level_type?: string | null
           notes?: string | null
           operator?: string | null
+          precision_order?: string
           site_id?: string
           status?: string
           updated_at?: string
