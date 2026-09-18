@@ -23,6 +23,9 @@ Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación
 Al cerrar una fase se actualizan también los documentos de handoff:
 [`docs/tecnica/`](../tecnica/README.md) y [`docs/manual/`](../manual/README.md).
 
+Las peticiones recogidas que **todavía no tienen fase** viven en
+[`../pendientes.md`](../pendientes.md).
+
 ## Cómo leer esto
 
 - ¿Vas a empezar a trabajar en algo? Lee primero [`../method.md`](../method.md) y luego el PRD de la fase actual.
