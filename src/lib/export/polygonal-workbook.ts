@@ -3,6 +3,7 @@
 import type ExcelJS from "exceljs";
 import {
   DECIMALS,
+  distancePrecisionPair,
   equipmentLine,
   newWorkbook,
   projectPairs,
@@ -282,6 +283,13 @@ function sheetSummary(
   // proyecto pueden llevar estaciones totales distintas (§ Fase 8).
   row += 1;
   writeSection(s, row, "Equipo: estación total");
+  // Los dos términos de la precisión de distancia van juntos o no van: un
+  // par a medias se lee "—" en el informe impreso (`formatDistancePrecision`)
+  // y no puede leerse como un número suelto aquí.
+  const [distMm, distPpm] = distancePrecisionPair(
+    process.distance_precision_mm,
+    process.distance_precision_ppm,
+  );
   row = writePairs(s, row + 1, [
     ["Orden de precisión", PRECISION_ORDER_LABELS[process.precision_order]],
     [
@@ -294,14 +302,8 @@ function sheetSummary(
     ],
     ["Fecha de calibración", process.equipment_calibration_date],
     ["Precisión angular (\")", num(process.angular_precision_seconds)],
-    [
-      "Precisión de distancia — término constante (mm)",
-      num(process.distance_precision_mm),
-    ],
-    [
-      "Precisión de distancia — término proporcional (ppm)",
-      num(process.distance_precision_ppm),
-    ],
+    ["Precisión de distancia — término constante (mm)", distMm],
+    ["Precisión de distancia — término proporcional (ppm)", distPpm],
   ]);
 
   row += 1;

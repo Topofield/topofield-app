@@ -11,6 +11,8 @@
 
 import ExcelJS from "exceljs";
 
+import { formatEquipmentLine } from "@/lib/utils/format";
+
 const ACCENT = "FF0B3D5C";
 const HEADER_FILL: ExcelJS.Fill = {
   type: "pattern",
@@ -186,13 +188,49 @@ export function projectPairs(
  * Compartida entre los tres libros que llevan equipo (poligonal: estación
  * total; nivelación y asentamientos: nivel), para no componer el mismo texto
  * tres veces.
+ *
+ * Delega en `formatEquipmentLine` en vez de repetir la composición: el caso
+ * vacío SÍ difiere a propósito —"—" en el informe impreso, `null` en la hoja
+ * de cálculo, donde un guion se leería como dato—, pero el separador y el
+ * orden de los tres campos no deben poder divergir.
  */
 export function equipmentLine(
   brand: string | null | undefined,
   model: string | null | undefined,
   serial: string | null | undefined,
 ): string | null {
-  const combo = [brand, model].filter(Boolean).join(" ");
-  if (combo === "") return null;
-  return serial ? `${combo} · s/n ${serial}` : combo;
+  const linea = formatEquipmentLine(brand, model, serial);
+  return linea === "—" ? null : linea;
+}
+
+/**
+ * Los dos términos de la precisión de distancia (ISO 17123-4) para una hoja
+ * de cálculo: `[mm, ppm]`, o `[null, null]` si falta cualquiera de los dos.
+ *
+ * Todo o nada, igual que `formatDistancePrecision`, que devuelve "—" ante un
+ * par a medias. Antes cada libro escribía los dos términos como filas
+ * independientes, así que un proceso con solo uno de los dos capturado se
+ * leía "—" en el informe impreso y como un número suelto en el Excel: dos
+ * respuestas distintas del mismo dato. Una precisión de distancia a medias no
+ * es un dato usable en ninguno de los dos sitios.
+ *
+ * Se devuelven como números y no como la cadena «3 mm + 2 ppm» porque en una
+ * hoja de cálculo el valor tiene que seguir siendo calculable.
+ */
+export function distancePrecisionPair(
+  mm: number | string | null | undefined,
+  ppm: number | string | null | undefined,
+): [number | null, number | null] {
+  const m = toFiniteNumber(mm);
+  const p = toFiniteNumber(ppm);
+  if (m === null || p === null) return [null, null];
+  return [m, p];
+}
+
+function toFiniteNumber(
+  value: number | string | null | undefined,
+): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const v = Number(value);
+  return Number.isFinite(v) ? v : null;
 }

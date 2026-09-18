@@ -274,6 +274,27 @@ describe("buildPolygonalWorkbook", () => {
     expect(res.getCell(fila, 2).value).toBeNull();
   });
 
+  // `formatDistancePrecision` devuelve "—" ante un par a medias, porque una
+  // precisión de distancia con un solo término no es un dato usable. El libro
+  // escribía los dos términos como filas independientes, así que el mismo
+  // proceso se leía "—" en el informe y como un número suelto en el Excel.
+  it("deja vacíos los dos términos de distancia si solo se capturó uno", () => {
+    const wb = buildPolygonalWorkbook(
+      process({ distance_precision_mm: 3, distance_precision_ppm: null }),
+      [station()],
+    );
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res.getColumn(1).values;
+    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
+
+    const filaMm = fila("Precisión de distancia — término constante (mm)");
+    const filaPpm = fila("Precisión de distancia — término proporcional (ppm)");
+    expect(filaMm).toBeGreaterThan(0);
+    expect(filaPpm).toBeGreaterThan(0);
+    expect(res.getCell(filaMm, 2).value).toBeNull();
+    expect(res.getCell(filaPpm, 2).value).toBeNull();
+  });
+
   // Sin proyecto el libro sigue siendo válido: la sección simplemente no sale.
   it("omite la sección de proyecto si no se pasa", () => {
     const wb = buildPolygonalWorkbook(process(), [station()]);
