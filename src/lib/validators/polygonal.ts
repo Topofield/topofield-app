@@ -214,10 +214,18 @@ export function evaluatePolygonalClosure(
  *
  * La dispersión (máx − mín) es control de calidad de la captura: tres lecturas
  * que difieren 40" dicen algo que el promedio esconde. Se contrasta con la
- * precisión angular del equipo del proyecto
- * (`projects.angular_precision_seconds`), no con la tolerancia del orden: el
- * orden gobierna el cierre de la poligonal, mientras que repetir una lectura
- * mide repetibilidad.
+ * precisión angular del equipo DEL PROCESO
+ * (`polygonal_processes.angular_precision_seconds`, desde la Fase 8), no con
+ * la tolerancia del orden: el orden gobierna el cierre de la poligonal,
+ * mientras que repetir una lectura mide repetibilidad.
+ *
+ * `instrumentSeconds` no finito significa «el proceso no declaró equipo», y
+ * entonces la dispersión NO se evalúa: sin vara no hay comparación. Misma
+ * política que `totalStationMeetsOrder` en `tolerances.ts` — la función no
+ * opina sobre lo que no sabe. Es deliberado que la ausencia llegue como
+ * `NaN` y no como `0`: `Number(null)` es `0`, y un 0 aquí daba una tolerancia
+ * de 0" contra la que cualquier par de lecturas distintas dispara el aviso
+ * «…sobre los 0.0" que admite un equipo de 0"», que es falso y absurdo.
  *
  * Avisa, no bloquea — misma política que el resto del editor.
  */
@@ -230,6 +238,7 @@ export function validateReadings(
     return { error: `Faltan lecturas: se exigen ${min} y hay ${readings.length}.` };
   }
   if (readings.length < 2) return {};
+  if (!Number.isFinite(instrumentSeconds)) return {};
 
   const values = readings.map((r) => r.angle);
   const dispersion = degreesToSeconds(Math.max(...values) - Math.min(...values));

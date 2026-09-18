@@ -489,6 +489,38 @@ describe("validateReadings", () => {
     }));
     expect(validateReadings(readings, 3, 5).warning).toBeUndefined();
   });
+
+  // El proceso puede no haber declarado equipo: la columna es nullable. La
+  // ausencia llega como NaN, y sin vara no hay comparación posible. Un 0
+  // —lo que devuelve `Number(null)`— daba tolerancia 0" y hacía saltar el
+  // aviso en cualquier par de lecturas distintas, con el texto imposible
+  // «sobre los 0.0" que admite un equipo de 0"».
+  it("no evalúa la dispersión si el proceso no declaró precisión angular", () => {
+    const readings = [90, 90.005, 90.01].map((angle, i) => ({
+      order: i + 1,
+      angle,
+    }));
+    expect(validateReadings(readings, 3, Number.NaN)).toEqual({});
+  });
+
+  it("sigue exigiendo el mínimo de lecturas aunque no haya equipo declarado", () => {
+    const r = validateReadings([{ order: 1, angle: 90 }], 3, Number.NaN);
+    expect(r.error).toBe("Faltan lecturas: se exigen 3 y hay 1.");
+  });
+
+  // Regresión de la coerción concreta: es la tercera vez en este código que
+  // `Number()` convierte un ausente en 0 y produce una lectura falsa.
+  it("Number(null) es 0 y por eso la página pasa NaN, no el Number() a secas", () => {
+    const readings = [90, 90.005, 90.01].map((angle, i) => ({
+      order: i + 1,
+      angle,
+    }));
+    expect(Number(null)).toBe(0);
+    expect(validateReadings(readings, 3, Number(null)).warning).toMatch(
+      /equipo de 0"/,
+    );
+    expect(validateReadings(readings, 3, Number.NaN).warning).toBeUndefined();
+  });
 });
 
 describe("expectStationCapture — fila de cierre", () => {

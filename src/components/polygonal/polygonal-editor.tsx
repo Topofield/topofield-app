@@ -191,7 +191,11 @@ interface PolygonalEditorProps {
   projectName: string;
   /** Catálogo del proyecto, para elegir y georreferenciar el amarre. */
   referencePoints?: ReferencePoint[];
-  /** Precisión angular del equipo, para la dispersión entre lecturas. */
+  /**
+   * Precisión angular del equipo del proceso, para la dispersión entre
+   * lecturas. `NaN` cuando el proceso no la declaró: `validateReadings` salta
+   * el control en ese caso en vez de comparar contra una tolerancia de 0".
+   */
   angularPrecisionSeconds: number;
 }
 
