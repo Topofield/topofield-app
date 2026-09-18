@@ -189,7 +189,6 @@ interface PolygonalEditorProps {
   stations: PolygonalStationWithReadings[];
   projectId: string;
   projectName: string;
-  precisionOrder: PrecisionOrder;
   /** Catálogo del proyecto, para elegir y georreferenciar el amarre. */
   referencePoints?: ReferencePoint[];
   /** Precisión angular del equipo, para la dispersión entre lecturas. */
@@ -201,7 +200,6 @@ export function PolygonalEditor({
   stations: initialStations,
   projectId,
   projectName,
-  precisionOrder,
   referencePoints = [],
   angularPrecisionSeconds,
 }: PolygonalEditorProps) {
@@ -224,10 +222,17 @@ export function PolygonalEditor({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // El orden sale de `config.precisionOrder`, no de un prop aparte: el
+  // selector de orden vive dentro de `PolygonalConfigFields` y edita
+  // `config` en vivo, así que el veredicto de cierre debe recalcular con el
+  // mismo valor que ve el usuario, no con el que tenía el proceso al cargar
+  // la página.
   const result = useMemo(
     () =>
-      computePolygonal(buildInput(config, stations, method, precisionOrder)),
-    [config, stations, method, precisionOrder],
+      computePolygonal(
+        buildInput(config, stations, method, config.precisionOrder),
+      ),
+    [config, stations, method],
   );
 
   const issues = useMemo<CaptureIssues[]>(
@@ -375,7 +380,7 @@ export function PolygonalEditor({
       <ClosureVerdict
         result={result}
         type={config.type}
-        order={precisionOrder}
+        order={config.precisionOrder}
       />
 
       <details
