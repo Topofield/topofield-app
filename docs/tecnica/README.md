@@ -1411,6 +1411,29 @@ nativa por paso. Queda pendiente de una revisión visual (no hecha desde este
 cierre documental, que no levantó la app) para confirmar que el paso corto
 sigue teniendo sentido en pantalla y no se lee como un `fieldset` vacío.
 
+**La portada del informe emitido sigue leyendo el proyecto en vivo, y
+`reports` no tiene trigger de inmutabilidad.** El pie del informe imprimible
+afirma que el contenido procede de procesos cerrados e inmutables, y desde la
+Fase 8 eso es cierto para el equipo, la precisión y las medidas de cada
+proceso. No lo es para el resto de lo que sale impreso:
+
+- El bloque de portada lee `project.name`, `client`, `location`, `datum` y
+  `projection` de una fila de `projects`, que no tiene ningún trigger que la
+  congele. Editar el proyecto reescribe la portada de todos los informes ya
+  emitidos.
+- `reports` tampoco lo tiene: `title`, `observations` e `included_processes`
+  siguen siendo modificables después de emitir el informe, así que un informe
+  puede cambiar de título, de observaciones y hasta de procesos incluidos sin
+  dejar rastro.
+
+Es el mismo agujero de trazabilidad que motivó la Fase 8, en la parte del
+informe que la fase no tocó: preexistente y fuera de su alcance
+(`docs/prds/07-precision-equipo-por-proceso.md`, anti-alcance: «snapshot del
+equipo en `reports`»). Las dos salidas razonables —congelar `reports` con un
+trigger al emitir, o guardar en la fila un snapshot de la portada— son
+candidatas a una fase posterior, no un parche suelto: hay que decidir antes si
+un informe emitido se puede reeditar o solo reemitir.
+
 ---
 
 ## 12. Manual de usuario en la app
