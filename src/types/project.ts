@@ -42,11 +42,7 @@ export type ReferencePointType = (typeof REFERENCE_POINT_TYPES)[number];
 
 // --- Filas tipadas: estrechan los campos string de la DB a sus literales ---
 
-export type Project = Omit<
-  Tables<"projects">,
-  "precision_order" | "status"
-> & {
-  precision_order: PrecisionOrder;
+export type Project = Omit<Tables<"projects">, "status"> & {
   status: ProjectStatus;
 };
 

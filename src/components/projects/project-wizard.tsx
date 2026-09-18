@@ -55,7 +55,7 @@ export function ProjectWizard() {
             step === 2 ? "font-semibold text-primary-600" : "text-neutral-500"
           }
         >
-          2. Equipo y precisión
+          2. Datum y proyección
         </li>
       </ol>
 
