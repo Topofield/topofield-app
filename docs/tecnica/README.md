@@ -84,7 +84,7 @@ Credenciales de los datos de ejemplo: `seed@topofield.local` / `seed1234`.
 **El registro exige un código de invitación.** Defina `SIGNUP_INVITE_CODE` en
 `.env.local` (ver `.env.example`); sin esa variable nadie puede registrarse, ni
 en local. Y como la confirmación de correo está activa, el mensaje se lee en
-Mailpit: `http://127.0.0.1:54324`.
+Mailpit: `http://127.0.0.1:55324`.
 
 ### Comandos
 
@@ -947,7 +947,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-435 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
+448 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -961,7 +961,8 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
 | `lib/export/polygonal-workbook.test.ts` | 17 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8) |
 | `lib/calculations/settlement-persistence.test.ts` | 14 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena |
-| `lib/calculations/tolerances.test.ts` | 21 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
+| `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
+| `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
 | `lib/export/settlement-workbook.test.ts` | 10 | Libro de asentamientos: catálogo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8) |
@@ -972,7 +973,6 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
 | `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
-| `lib/demo/fixtures.test.ts` | 7 | Fixtures del proyecto de ejemplo |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `lib/validators/project.test.ts` | 5 | El proyecto ya no valida equipo ni orden de precisión (Fase 8) |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
@@ -994,8 +994,11 @@ de forma manual durante el desarrollo.
 
 ### Prueba manual de extremo a extremo
 
-[`docs/testing/manual-e2e-poligonal.md`](../testing/manual-e2e-poligonal.md)
-tiene el recorrido completo del módulo poligonal.
+`docs/testing/` tiene un recorrido manual por módulo:
+[poligonal](../testing/manual-e2e-poligonal.md),
+[nivelación](../testing/manual-e2e-nivelacion.md),
+[asentamientos](../testing/manual-e2e-asentamientos.md) e
+[informes y exportación](../testing/manual-e2e-informes.md).
 
 ---
 

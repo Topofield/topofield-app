@@ -28,10 +28,10 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 ### 1. Dashboard
 
 - Tras iniciar sesión llegas a `/dashboard`.
-- ✓ Aparecen 2 tarjetas de proyecto: **Lote catastral** y **Red geodésica**
-  (desde la Fase 8 la tarjeta no muestra orden de precisión: es un dato por
-  proceso, no del proyecto).
-- ✓ El KPI "Proyectos activos" muestra 2.
+- ✓ Aparecen 3 tarjetas de proyecto: **Lote catastral**, **Red geodésica** y
+  **Edificio en monitoreo**. Desde la Fase 8 la tarjeta no muestra el orden de
+  precisión: es un dato por proceso, no del proyecto.
+- ✓ El KPI "Proyectos activos" muestra 3.
 
 ### 2. Hub del proyecto
 
@@ -135,9 +135,8 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 ### 13. Crear un proceso nuevo
 
 - En la tab Procesos del hub, clic **+ Nuevo Proceso**.
-- ✓ Modal con tres opciones; **Poligonal** activo, las otras dos
-  ("Nivelación", "Asentamiento") deshabilitadas con tooltip "Disponible en una
-  fase futura".
+- ✓ Modal con tres opciones —**Poligonal**, **Nivelación** y
+  **Asentamiento**—, todas habilitadas (los tres módulos están implementados).
 - Clic **Poligonal**. Llega a `/projects/[id]/polygonal/new`.
 - Llenar: Nombre "Prueba manual", Tipo "Cerrada", Código "X", Norte `0`,
   Este `0`, Az `0°0'0"`.

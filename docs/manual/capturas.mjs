@@ -24,13 +24,16 @@ const OUT = join(AQUI, "..", "..", "public", "manual");
 // Puerto del dev server. Next usa 3001 si el 3000 está ocupado; ajústalo con
 // `PORT=3001 node docs/manual/capturas.mjs` si hace falta.
 const BASE = `http://localhost:${process.env.PORT ?? 3000}`;
+// Puerto de la base local (config.toml → [db].port). Overridable con
+// SUPABASE_DB_PORT por si se vuelve a cambiar el esquema de puertos.
+const DB_PORT = process.env.SUPABASE_DB_PORT ?? "55322";
 const CREDENCIALES = { email: "seed@topofield.local", password: "seed1234" };
 
 /** Consulta un único valor en la base local. */
 function sql(query) {
   return execFileSync(
     "psql",
-    ["-h", "127.0.0.1", "-p", "54322", "-U", "postgres", "-d", "postgres", "-tAc", query],
+    ["-h", "127.0.0.1", "-p", DB_PORT, "-U", "postgres", "-d", "postgres", "-tAc", query],
     { env: { ...process.env, PGPASSWORD: "postgres" }, encoding: "utf8" },
   ).trim();
 }

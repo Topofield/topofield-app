@@ -9,9 +9,13 @@
 //    Fase 5 para los procesos de poligonal y nivelación.
 //  - 7 procesos poligonales precargados que cubren los 3 tipos, los 3 métodos
 //    y los estados closed / rejected.
-//  - 1 proceso de nivelación cerrada calculado, para las capturas del manual.
-//  - 1 lugar de monitoreo (`edificio`, 6 puntos) con 6 visitas mensuales y su
-//    serie de asentamientos calculada por `computeHistory`.
+//  - 2 procesos de nivelación: uno calculado (editable, para la captura del
+//    editor del manual) y uno cerrado (alimenta el informe de nivelación).
+//  - 2 lugares de monitoreo (`edificio`) en "Edificio en monitoreo": "Torre
+//    Central" (6 puntos × 6 visitas, ABIERTO/editable para las capturas) y
+//    "Edificio Norte" (4 × 3, CERRADO, para el informe de asentamientos).
+//  - 3 informes por proceso: poligonal y nivelación en "Lote catastral",
+//    asentamientos en "Edificio en monitoreo".
 //  - Algunos reference_points para probar el CRUD de la tab Configuración.
 //
 // Uso: con `npx supabase start` activo, ejecutar
@@ -39,7 +43,13 @@ import { computeHistory } from "../src/lib/calculations/settlement.ts";
 import { thresholdsFor } from "../src/lib/calculations/tolerances.ts";
 import { decimalToDms, dmsToDecimal } from "../src/lib/calculations/angles.ts";
 
-const URL = "http://127.0.0.1:54321";
+// El puerto se lee de .env.local (que `npm run seed` carga con --env-file), no
+// se hardcodea, para que un cambio de puertos en config.toml no exija tocar
+// este script. El fallback es el puerto local actual del proyecto.
+const URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  process.env.SUPABASE_URL ??
+  "http://127.0.0.1:55321";
 const SECRET = process.env.SUPABASE_SECRET_KEY;
 if (!SECRET) {
   console.error(
@@ -166,6 +176,22 @@ function equipmentOf(spec) {
 function decimalToDmsTuple(decimal) {
   const { deg, min, sec } = decimalToDms(decimal);
   return [deg, min, sec];
+}
+
+/**
+ * Inserta un informe (§ 4.7) con la misma forma que arma `createReportAction`.
+ * `included` es la lista `[{ type, id, name, order }]`, con type 'polygonal' |
+ * 'leveling' | 'site'. Solo debe apuntar a trabajos ya cerrados.
+ */
+async function insertReport(projectId, userId, { title, observations, included }) {
+  const { error } = await admin.from("reports").insert({
+    project_id: projectId,
+    title,
+    included_processes: included,
+    observations: observations ?? null,
+    generated_by: userId,
+  });
+  if (error) throw error;
 }
 
 /**
@@ -363,7 +389,7 @@ async function insertPolygonal(projectId, siteId, spec, userId) {
  */
 // `userId` no hace falta: `leveling_processes` no lo lleva y el cierre de
 // estos fixtures no pasa por `closed_by`.
-async function insertLeveling(projectId, siteId, spec) {
+async function insertLeveling(projectId, siteId, spec, userId) {
   const equipo = equipmentOf(spec);
   const input = {
     type: spec.type,
@@ -407,9 +433,9 @@ async function insertLeveling(projectId, siteId, spec) {
       end_bm_elevation: spec.endElevation ?? null,
       has_return_run: spec.return != null,
       total_distance_km: spec.totalDistanceKm,
-      // Nace calculado, no cerrado: los triggers de inmutabilidad rechazan
-      // escribir lecturas bajo un proceso ya cerrado (mismo motivo que en
-      // insertPolygonal). Este fixture se deja "calculated" a propósito.
+      // Nace calculado aunque el fixture lo quiera cerrado: los triggers de
+      // inmutabilidad rechazan escribir lecturas bajo un proceso ya cerrado
+      // (mismo motivo que en insertPolygonal). El cierre se aplica al final.
       status: "calculated",
       ...equipo,
       closure_error_mm: result.closureErrorMm,
@@ -456,6 +482,19 @@ async function insertLeveling(projectId, siteId, spec) {
       .from("leveling_readings")
       .insert(rows);
     if (readingsErr) throw readingsErr;
+  }
+
+  // Cierre diferido, una vez cargadas las lecturas (igual que insertPolygonal).
+  if (spec.status === "closed") {
+    const { error: closeErr } = await admin
+      .from("leveling_processes")
+      .update({
+        status: "closed",
+        closed_at: new Date().toISOString(),
+        closed_by: userId,
+      })
+      .eq("id", proc.id);
+    if (closeErr) throw closeErr;
   }
 
   return proc.id;
@@ -780,6 +819,25 @@ const LEVELING_PROCESSES = [
     notes:
       "Circuito cerrado de verificación: sale y vuelve a BM-1. Error de cierre −8.0 mm contra tolerancia 11.4 mm (K=12 · √0.9 km). Cumple tercer orden.",
   },
+  // Segunda nivelación, cerrada oficialmente: es la que alimenta el informe de
+  // nivelación. La de arriba se deja calculada (editable) para la captura del
+  // editor de nivelación del manual. Mismos números verificados que BM-1.
+  {
+    name: "Circuito BM-2 (cerrado oficialmente)",
+    type: "closed",
+    startBmCode: "BM-2",
+    startElevation: 100.0,
+    totalDistanceKm: 0.9,
+    status: "closed",
+    forward: [
+      { code: "BM-2", type: "bm", back: 1.5, distanceAccumKm: 0.0 },
+      { code: "PC-1", type: "pc", fore: 1.2, back: 2.0, distanceAccumKm: 0.3 },
+      { code: "PC-2", type: "pc", fore: 2.5, back: 1.0, distanceAccumKm: 0.6 },
+      { code: "BM-2", type: "bm", fore: 0.808, distanceAccumKm: 0.9 },
+    ],
+    notes:
+      "Mismo circuito de verificación, cerrado oficialmente para el informe de nivelación. El editor lo abre en solo lectura.",
+  },
 ];
 
 const REFERENCE_POINTS = [
@@ -866,33 +924,56 @@ const VISIT_SPECS = [
   { date: "2025-06-15", ...LEVEL_DIGITAL_MONITOREO },
 ];
 
-/** Cota de un punto en una visita: cota base 100.0000 menos el acumulado. */
-function cotaEn(code, visitIndex) {
-  const acumuladoMm = PARTIALS_MM[code]
+// Segundo lugar de monitoreo, compacto (4 puntos × 3 visitas) y cerrado, cuyo
+// único fin es alimentar el informe de asentamientos. Se deja aparte de "Torre
+// Central" —que queda ABIERTO y editable para las capturas del editor de lugar
+// y de visita del manual— para no volver esas capturas de solo lectura.
+const NORTE_POINTS = [
+  { code: "N-01", location_description: "Esquina NW", northing: 3000.0, easting: 2000.0, initial_elevation: 100.0 },
+  { code: "N-02", location_description: "Esquina NE", northing: 3000.0, easting: 2020.0, initial_elevation: 100.0 },
+  { code: "N-03", location_description: "Esquina SW", northing: 2985.0, easting: 2000.0, initial_elevation: 100.0 },
+  { code: "N-04", location_description: "Esquina SE (mayor carga)", northing: 2985.0, easting: 2020.0, initial_elevation: 100.0 },
+];
+
+const NORTE_PARTIALS_MM = {
+  "N-01": [0, -2.0, -1.2],
+  "N-02": [0, -2.4, -1.4],
+  "N-03": [0, -2.8, -1.6],
+  "N-04": [0, -6.0, -3.2],
+};
+
+const NORTE_VISIT_DATES = ["2025-01-20", "2025-02-20", "2025-03-20"];
+
+/** Cota de un punto en una visita: su cota inicial menos el acumulado. */
+function cotaEn(partialsMm, code, initialElevation, visitIndex) {
+  const acumuladoMm = partialsMm[code]
     .slice(0, visitIndex + 1)
     .reduce((a, b) => a + b, 0);
-  return 100.0 + acumuladoMm / 1000;
+  return initialElevation + acumuladoMm / 1000;
 }
 
 /**
- * Crea el lugar de monitoreo, su catálogo de puntos y sus 6 visitas, con los
- * resultados calculados por `computeHistory` — nunca escritos a mano.
+ * Crea un lugar de monitoreo, su catálogo de puntos y sus visitas, con los
+ * resultados calculados por `computeHistory` — nunca escritos a mano. Cierra el
+ * lugar al final si `cfg.close` es true.
+ *
+ * `cfg`: { name, description, points, partialsMm, visitDates, operator?,
+ * equipment?, close? }. `points` usa nombres de columna (`initial_elevation`).
  */
-async function insertSettlementSite(projectId) {
+async function insertSettlementSite(projectId, userId, cfg) {
   // Los umbrales no se envían: los DEFAULT de la tabla `sites` son los mismos
   // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75,
   // distorsión 1/500), así que el lugar queda coherente con el preset del
   // motor sin duplicar las constantes aquí.
   const siteId = await createSite(projectId, {
-    name: "Edificio Torre Central",
-    description:
-      "Edificio de 6 niveles sobre arcilla blanda, con 6 puntos de control en grilla.",
+    name: cfg.name,
+    description: cfg.description,
     structure_type: "edificio",
   });
 
   const { data: pointRows, error: pointsErr } = await admin
     .from("settlement_points")
-    .insert(SETTLEMENT_POINTS.map((p) => ({ site_id: siteId, ...p })))
+    .insert(cfg.points.map((p) => ({ site_id: siteId, ...p })))
     .select("id, code");
   if (pointsErr) throw pointsErr;
 
@@ -900,7 +981,7 @@ async function insertSettlementSite(projectId) {
 
   // --- Motor real: computeHistory calcula parciales, acumulados, velocidad
   // y nivel de alerta a partir únicamente de las cotas medidas. ------------
-  const points = SETTLEMENT_POINTS.map((p) => ({
+  const points = cfg.points.map((p) => ({
     id: pointIdByCode.get(p.code),
     code: p.code,
     northing: p.northing,
@@ -908,22 +989,23 @@ async function insertSettlementSite(projectId) {
     initialElevation: p.initial_elevation,
   }));
 
-  const visits = VISIT_SPECS.map((spec, i) => ({
+  const visits = cfg.visitSpecs.map((spec, i) => ({
     id: `visita-${i}`, // id provisional, solo para casar con el resultado de computeHistory
     visitNumber: i,
     date: spec.date,
-    readings: SETTLEMENT_POINTS.map((p) => ({
+    readings: cfg.points.map((p) => ({
       pointId: pointIdByCode.get(p.code),
-      elevation: cotaEn(p.code, i),
+      elevation: cotaEn(cfg.partialsMm, p.code, p.initial_elevation, i),
     })),
   }));
 
   const history = computeHistory(points, visits, thresholdsFor("edificio"));
 
   // El equipo se recupera por FECHA, no por posición en el array: la fecha es
-  // la identidad de la campaña, y así reordenar `VISIT_SPECS` no puede mover
-  // un instrumento a otra visita.
-  const specPorFecha = new Map(VISIT_SPECS.map((v) => [v.date, v]));
+  // la identidad de la campaña, y así reordenar las visitas no puede mover un
+  // instrumento a otra. Sale de `cfg`, no del array global: la función sirve a
+  // los dos lugares que siembra el seed.
+  const specPorFecha = new Map(cfg.visitSpecs.map((v) => [v.date, v]));
 
   for (const visitResult of history.visits) {
     const visitSpec = specPorFecha.get(visitResult.date);
@@ -934,7 +1016,7 @@ async function insertSettlementSite(projectId) {
         site_id: siteId,
         visit_number: visitResult.visitNumber,
         date: visitResult.date,
-        operator: "Seed TopoField",
+        operator: cfg.operator ?? "Seed TopoField",
         ...equipmentOf(visitSpec),
         status: "calculated",
       })
@@ -955,6 +1037,20 @@ async function insertSettlementSite(projectId) {
       .from("settlement_readings")
       .insert(readingRows);
     if (readingsErr) throw readingsErr;
+  }
+
+  // Cierre diferido: cerrar el lugar bloquea por trigger toda escritura sobre
+  // sus visitas y lecturas, así que va al final, una vez cargado todo.
+  if (cfg.close) {
+    const { error: closeErr } = await admin
+      .from("sites")
+      .update({
+        status: "closed",
+        closed_at: new Date().toISOString(),
+        closed_by: userId,
+      })
+      .eq("id", siteId);
+    if (closeErr) throw closeErr;
   }
 
   return siteId;
@@ -1017,24 +1113,26 @@ async function main() {
     `  ✓ ${puntos.length} puntos de referencia en "Lote catastral"`,
   );
 
-  // Los 7 procesos van al proyecto "Lote catastral", con la estación de 5″
-  // que ya traía el proyecto (tercer orden, 3 mm + 2 ppm).
+  // Los procesos van al proyecto "Lote catastral" (tercer orden), con la
+  // estación de 5″ que le corresponde. El equipo se esparce sobre el spec, no
+  // se pasa aparte: los siete comparten instrumento, así que se aplica de una
+  // vez, y un spec podría sobrescribirlo declarando el suyo (`...spec` va
+  // después). Se captura cuál quedó cerrada: alimenta su informe.
+  let poligonalCerrada = null;
   for (const spec of PROCESSES) {
-    // El equipo se esparce sobre el spec, no se pasa aparte: los siete
-    // comparten instrumento, así que se aplica de una vez, y un spec podría
-    // sobrescribirlo declarando el suyo (`...spec` va después).
-    await insertPolygonal(
+    const id = await insertPolygonal(
       catastral,
       catastralSite,
       { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
       userId,
     );
+    if (spec.status === "closed") poligonalCerrada = { id, name: spec.name };
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 
   // Las dos carteras de campo reales. La TT4 se siembra con los tres métodos
   // para poder compararlos lado a lado contra el Excel; la Vivero con Bowditch,
-  // porque su ajuste por mínimos cuadrados llega en la Fase 9.
+  // porque su ajuste por mínimos cuadrados llega en la Fase 10.
   const carteraSpecs = [
     ...["bowditch", "transit", "crandall"].map((m) =>
       carteraToSpec(CARTERA_TT4, idPorCodigo.get(CARTERA_TT4.referencePointCode), m, "calculated"),
@@ -1056,12 +1154,18 @@ async function main() {
     console.log(`  ✓ Cartera real: ${spec.name}`);
   }
 
+  let nivelacionCerrada = null;
   for (const spec of LEVELING_PROCESSES) {
-    await insertLeveling(catastral, catastralSite, {
-      ...LEVEL_DIGITAL_TERCER_ORDEN,
-      ...spec,
-    });
-    console.log(`  ✓ Proceso de nivelación: ${spec.name}`);
+    const id = await insertLeveling(
+      catastral,
+      catastralSite,
+      { ...LEVEL_DIGITAL_TERCER_ORDEN, ...spec },
+      userId,
+    );
+    if (spec.status === "closed") nivelacionCerrada = { id, name: spec.name };
+    console.log(
+      `  ✓ Proceso de nivelación: ${spec.name}${spec.status === "closed" ? " (cerrado)" : ""}`,
+    );
   }
 
   // "Red geodésica": el emparejamiento primer orden + estación de 1″ que el
@@ -1084,10 +1188,63 @@ async function main() {
   });
   console.log(`  ✓ Proyecto "Edificio en monitoreo" — ${monitoreo}`);
 
-  const settlementSiteId = await insertSettlementSite(monitoreo);
+  const settlementSiteId = await insertSettlementSite(monitoreo, userId, {
+    name: "Edificio Torre Central",
+    description:
+      "Edificio de 6 niveles sobre arcilla blanda, con 6 puntos de control en grilla.",
+    points: SETTLEMENT_POINTS,
+    partialsMm: PARTIALS_MM,
+    visitSpecs: VISIT_SPECS,
+    close: false,
+  });
   console.log(
-    `  ✓ Lugar "Edificio Torre Central" con ${SETTLEMENT_POINTS.length} puntos y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
+    `  ✓ Lugar "Edificio Torre Central" (abierto) con ${SETTLEMENT_POINTS.length} puntos y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
   );
+
+  // Segundo lugar, cerrado, cuyo único fin es el informe de asentamientos.
+  const norteId = await insertSettlementSite(monitoreo, userId, {
+    name: "Edificio Norte",
+    description:
+      "Edificio de monitoreo cerrado tras 3 visitas: alimenta el informe de asentamientos.",
+    points: NORTE_POINTS,
+    partialsMm: NORTE_PARTIALS_MM,
+    visitSpecs: NORTE_VISIT_DATES.map((date) => ({ date, ...LEVEL_DIGITAL_MONITOREO })),
+    close: true,
+  });
+  console.log(`  ✓ Lugar "Edificio Norte" (cerrado) — ${norteId}`);
+
+  // --- Informes por proceso (§ 4.7): uno de poligonal y uno de nivelación en
+  // el lote, y uno de asentamientos en el proyecto de monitoreo. Cada informe
+  // solo puede incluir trabajos cerrados. ------------------------------------
+  if (poligonalCerrada) {
+    await insertReport(catastral, userId, {
+      title: "Informe de cierre — Poligonal",
+      observations:
+        "Levantamiento poligonal conforme a las tolerancias de tercer orden.",
+      included: [
+        { type: "polygonal", id: poligonalCerrada.id, name: poligonalCerrada.name, order: 0 },
+      ],
+    });
+    console.log('  ✓ Informe de poligonal en "Lote catastral"');
+  }
+  if (nivelacionCerrada) {
+    await insertReport(catastral, userId, {
+      title: "Informe de cierre — Nivelación",
+      observations:
+        "Nivelación en circuito cerrado dentro de la tolerancia de tercer orden.",
+      included: [
+        { type: "leveling", id: nivelacionCerrada.id, name: nivelacionCerrada.name, order: 0 },
+      ],
+    });
+    console.log('  ✓ Informe de nivelación en "Lote catastral"');
+  }
+  await insertReport(monitoreo, userId, {
+    title: "Informe de cierre — Control de asentamientos",
+    observations:
+      "Seguimiento de asentamientos del edificio tras las visitas mensuales.",
+    included: [{ type: "site", id: norteId, name: "Edificio Norte", order: 0 }],
+  });
+  console.log('  ✓ Informe de asentamientos en "Edificio en monitoreo"');
 
   console.log("");
   console.log("Seed listo. Para verificar:");
