@@ -90,6 +90,37 @@ Regresa al punto de partida exacto.
 - Criterio de aceptación del ajuste: **las tres condiciones en cero**, no la
   paridad con la hoja.
 
+## Versiones corregidas
+
+- `poligonales-corregido.xlsx` — las tres hojas con las fórmulas parcheadas en
+  sitio. El cambio es mínimo y auditable: se ve exactamente qué celda se tocó.
+  62 fórmulas, de cuatro tipos:
+
+  | Hoja | Celdas | Qué cambia |
+  |---|---|---|
+  | `TRANSITO` | `Y`, `Z` | `ABS(U)` en vez de `U`: reparte sobre el valor absoluto |
+  | `CRANDALL` | `Y` | `(U*V)/T`: el producto, no la suma |
+  | `CRANDALL` | `AA4`, `AB4` | numerador entero sobre el determinante, y `(ΣLD)²` en vez de `Σ(LDᵢ²)` |
+  | las tres | `R`, `I` | `MOD(S,360)` en vez de restar 360 una sola vez; `INT((G-H)*60)` con los paréntesis dentro |
+
+  Verificado: Tránsito y Crandall cierran a 1e-15 y ambos regresan a V10 en
+  `100135.6660 / 101440.5250`.
+
+- `Ajuste_Poligonal_Minimos_Cuadrados-corregido.xlsx` — hoja nueva
+  «AJUSTE CORREGIDO», con la original intacta al lado para comparar. Aquí el
+  defecto es estructural y no se parchea con fórmulas: se rehace el modelo con
+  5 ángulos interiores y 5 distancias, y el sistema 3×3 resuelto por Cramer en
+  celdas visibles en vez de `MINVERSE`, para que el álgebra quede a la vista.
+
+  Un matiz de la geometría que conviene no perder: **el ángulo interior de un
+  vértice fija el azimut del lado siguiente**, así que el del último vértice no
+  arrastra ningún lado de esa vuelta y entra solo en la condición angular. Sus
+  coeficientes en las dos condiciones lineales son cero, legítimamente — a
+  diferencia de la séptima columna espuria del original.
+
+Los archivos guardan fórmulas, no valores: al abrirlos, Excel o LibreOffice
+recalculan todo.
+
 ## Estado de las cuatro hojas analizadas
 
 De las dos carteras del proyecto, una sola hoja está bien:
