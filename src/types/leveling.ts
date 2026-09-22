@@ -3,7 +3,7 @@
 // resultado de src/lib/calculations/leveling.ts.
 
 import type { Tables } from "./database";
-import type { PrecisionOrder } from "./project";
+import type { LevelType, PrecisionOrder } from "./project";
 
 // El ciclo de estados es común a todos los procesos; vive en polygonal.ts
 // desde la Fase 3 y se reutiliza tal cual.
@@ -37,11 +37,13 @@ export type LevelingCorrectionMethod = (typeof CORRECTION_METHODS)[number];
 
 export type LevelingProcess = Omit<
   Tables<"leveling_processes">,
-  "type" | "correction_method" | "status"
+  "type" | "correction_method" | "status" | "level_type" | "precision_order"
 > & {
   type: LevelingType;
   correction_method: LevelingCorrectionMethod;
   status: import("./polygonal").ProcessStatus;
+  level_type: LevelType | null;
+  precision_order: PrecisionOrder;
 };
 
 export type LevelingReading = Omit<

@@ -28,15 +28,18 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 ### 1. Dashboard
 
 - Tras iniciar sesión llegas a `/dashboard`.
-- ✓ Aparecen 2 tarjetas de proyecto: **Lote catastral** (tercer_orden) y
-  **Red geodésica** (primer_orden).
+- ✓ Aparecen 2 tarjetas de proyecto: **Lote catastral** y **Red geodésica**
+  (desde la Fase 8 la tarjeta no muestra orden de precisión: es un dato por
+  proceso, no del proyecto).
 - ✓ El KPI "Proyectos activos" muestra 2.
 
 ### 2. Hub del proyecto
 
 - Hacer clic en **Lote catastral**.
-- ✓ El hub muestra el header con datos del proyecto y equipo (Leica TS06 Plus,
-  precisión 5″/3+2ppm).
+- ✓ El hub muestra el header con ubicación, coordenadas, fecha de creación,
+  datum y proyección del proyecto. Desde la Fase 8 ya no muestra equipo ni
+  precisión: cada proceso poligonal declara los suyos (Leica TS06 Plus,
+  5″, 1.5 mm + 2 ppm en los procesos de este proyecto).
 - ✓ Las tres tabs aparecen: **Procesos**, **Informes**, **Configuración**.
 
 ### 3. Tab Procesos

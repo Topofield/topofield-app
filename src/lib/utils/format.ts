@@ -32,6 +32,59 @@ export function formatPrecision(
   return `1:${Math.round(value).toLocaleString("es-CO")}`;
 }
 
+/**
+ * «Marca Modelo · s/n Serie», o "—" si no hay marca ni modelo.
+ *
+ * Compone el equipo tal como lo mostraba antes la portada del informe con
+ * `project.equipment_*`. Desde la Fase 8 el equipo vive en cada proceso, no en
+ * el proyecto, así que esto lo usan las secciones del informe y los libros de
+ * `src/lib/export/` — sin introducir una segunda forma de combinar los tres
+ * campos.
+ */
+export function formatEquipmentLine(
+  brand: string | null | undefined,
+  model: string | null | undefined,
+  serial?: string | null,
+): string {
+  const combo = [brand, model].filter(Boolean).join(" ");
+  if (combo === "") return "—";
+  return serial ? `${combo} · s/n ${serial}` : combo;
+}
+
+/** «2.0″» (ISO 17123-3), o "—" si la estación total no tiene precisión angular registrada. */
+export function formatAngularPrecision(
+  seconds: number | string | null | undefined,
+): string {
+  if (seconds === null || seconds === undefined || seconds === "") return "—";
+  const v = Number(seconds);
+  return Number.isFinite(v) ? `${v}″` : "—";
+}
+
+/**
+ * «3 mm + 2 ppm», los dos términos de la ISO 17123-4. "—" si falta cualquiera
+ * de los dos: una precisión de distancia a medias no es un dato usable.
+ */
+export function formatDistancePrecision(
+  mm: number | string | null | undefined,
+  ppm: number | string | null | undefined,
+): string {
+  const m = mm === null || mm === undefined || mm === "" ? null : Number(mm);
+  const p = ppm === null || ppm === undefined || ppm === "" ? null : Number(ppm);
+  if (m === null || p === null || !Number.isFinite(m) || !Number.isFinite(p)) {
+    return "—";
+  }
+  return `${m} mm + ${p} ppm`;
+}
+
+/** «1.5 mm/km» (ISO 17123-2, doble nivelación), o "—" si el nivel no la tiene registrada. */
+export function formatKmPrecision(
+  mmPerKm: number | string | null | undefined,
+): string {
+  if (mmPerKm === null || mmPerKm === undefined || mmPerKm === "") return "—";
+  const v = Number(mmPerKm);
+  return Number.isFinite(v) ? `${v} mm/km` : "—";
+}
+
 /** Formatea un timestamp ISO (timestamptz) como "21 de mayo de 2026". */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("es-CO", {

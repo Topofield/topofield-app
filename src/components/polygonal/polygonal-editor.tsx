@@ -12,6 +12,7 @@ import {
 import type { DmsValue } from "@/components/design-system";
 import { dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
+import { totalStationMeetsOrder } from "@/lib/calculations/tolerances";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   expectStationCapture,
@@ -76,6 +77,23 @@ function processToConfig(p: PolygonalProcess): PolygonalConfigState {
     endNorth: p.end_north != null ? String(p.end_north) : "",
     endEast: p.end_east != null ? String(p.end_east) : "",
     endAzimuth: dmsRow(p.end_azimuth_deg, p.end_azimuth_min, p.end_azimuth_sec),
+    precisionOrder: p.precision_order,
+    totalStation: {
+      equipmentBrand: p.equipment_brand ?? "",
+      equipmentModel: p.equipment_model ?? "",
+      equipmentSerial: p.equipment_serial ?? "",
+      equipmentCalibrationDate: p.equipment_calibration_date ?? "",
+      angularPrecisionSeconds:
+        p.angular_precision_seconds != null
+          ? String(p.angular_precision_seconds)
+          : "",
+      distancePrecisionMm:
+        p.distance_precision_mm != null ? String(p.distance_precision_mm) : "",
+      distancePrecisionPpm:
+        p.distance_precision_ppm != null
+          ? String(p.distance_precision_ppm)
+          : "",
+    },
   };
 }
 
@@ -172,10 +190,13 @@ interface PolygonalEditorProps {
   stations: PolygonalStationWithReadings[];
   projectId: string;
   projectName: string;
-  precisionOrder: PrecisionOrder;
   /** Catálogo del proyecto, para elegir y georreferenciar el amarre. */
   referencePoints?: ReferencePoint[];
-  /** Precisión angular del equipo, para la dispersión entre lecturas. */
+  /**
+   * Precisión angular del equipo del proceso, para la dispersión entre
+   * lecturas. `NaN` cuando el proceso no la declaró: `validateReadings` salta
+   * el control en ese caso en vez de comparar contra una tolerancia de 0".
+   */
   angularPrecisionSeconds: number;
 }
 
@@ -184,7 +205,6 @@ export function PolygonalEditor({
   stations: initialStations,
   projectId,
   projectName,
-  precisionOrder,
   referencePoints = [],
   angularPrecisionSeconds,
 }: PolygonalEditorProps) {
@@ -207,10 +227,17 @@ export function PolygonalEditor({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // El orden sale de `config.precisionOrder`, no de un prop aparte: el
+  // selector de orden vive dentro de `PolygonalConfigFields` y edita
+  // `config` en vivo, así que el veredicto de cierre debe recalcular con el
+  // mismo valor que ve el usuario, no con el que tenía el proceso al cargar
+  // la página.
   const result = useMemo(
     () =>
-      computePolygonal(buildInput(config, stations, method, precisionOrder)),
-    [config, stations, method, precisionOrder],
+      computePolygonal(
+        buildInput(config, stations, method, config.precisionOrder),
+      ),
+    [config, stations, method],
   );
 
   const issues = useMemo<CaptureIssues[]>(
@@ -265,6 +292,21 @@ export function PolygonalEditor({
         angleReadingsMin: parseNumber(config.angleReadingsMin) ?? 3,
         hasClosingRow: config.hasClosingRow,
         notes: process.notes,
+        precisionOrder: config.precisionOrder,
+        equipmentBrand: config.totalStation.equipmentBrand.trim() || null,
+        equipmentModel: config.totalStation.equipmentModel.trim() || null,
+        equipmentSerial: config.totalStation.equipmentSerial.trim() || null,
+        equipmentCalibrationDate:
+          config.totalStation.equipmentCalibrationDate.trim() || null,
+        angularPrecisionSeconds: parseNumber(
+          config.totalStation.angularPrecisionSeconds,
+        ),
+        distancePrecisionMm: parseNumber(
+          config.totalStation.distancePrecisionMm,
+        ),
+        distancePrecisionPpm: parseNumber(
+          config.totalStation.distancePrecisionPpm,
+        ),
         stations: stations.map((st) => ({
           pointCode: st.pointCode,
           angleDeg: parseNumber(st.angle.deg),
@@ -343,7 +385,15 @@ export function PolygonalEditor({
       <ClosureVerdict
         result={result}
         type={config.type}
-        order={precisionOrder}
+        order={config.precisionOrder}
+        // Solo matiza el texto del veredicto verde: no entra en `meets_tolerance`
+        // ni en el cálculo. Sin precisión declarada devuelve `true` y no hay
+        // matiz, que es lo correcto — no se opina sobre lo que no se sabe.
+        instrumentMeetsOrder={totalStationMeetsOrder(
+          config.precisionOrder,
+          parseNumber(config.totalStation.angularPrecisionSeconds) ??
+            Number.NaN,
+        )}
       />
 
       <details
@@ -388,7 +438,10 @@ export function PolygonalEditor({
           result={result}
           issues={issues}
           readingsMin={parseNumber(config.angleReadingsMin) ?? 3}
-          angularPrecisionSeconds={angularPrecisionSeconds}
+          angularPrecisionSeconds={
+            parseNumber(config.totalStation.angularPrecisionSeconds) ??
+            angularPrecisionSeconds
+          }
           showDeflection={config.type === "open_controlled"}
           disabled={readOnly}
           onChange={(v) => {

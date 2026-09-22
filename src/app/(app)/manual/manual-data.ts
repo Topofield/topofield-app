@@ -185,7 +185,7 @@ export const ESTADOS_PROCESO = [
   },
 ];
 
-// --- § 4.1 Órdenes de precisión ---
+// --- § 5.2 Órdenes de precisión (se declaran por proceso desde la Fase 8) ---
 
 export const ORDENES_PRECISION = [
   {
@@ -222,7 +222,7 @@ export const COLUMNAS_LISTADO = [
   { columna: "Precisión", muestra: "La precisión relativa alcanzada" },
   {
     columna: "Cumple",
-    muestra: "✓ si alcanza el orden del proyecto, ✕ si no, — si no aplica",
+    muestra: "✓ si alcanza su orden de precisión, ✕ si no, — si no aplica",
   },
   { columna: "Última actividad", muestra: "Cuándo se modificó por última vez" },
 ];
@@ -389,7 +389,7 @@ export const HOJAS_EXCEL = [
   },
   {
     hoja: "Resumen",
-    contiene: "Método, precisión, tolerancia, estado y trazabilidad",
+    contiene: "Equipo, método, precisión, tolerancia, estado y trazabilidad",
   },
 ];
 
@@ -422,10 +422,19 @@ export const PREGUNTAS: Pregunta[] = [
       "Que el cierre fue exacto: el error lineal es cero o despreciable. Ocurre con datos teóricos o levantamientos muy precisos.",
   },
   {
-    pregunta:
-      "Cambié el orden de precisión del proyecto. ¿Se recalculan los procesos?",
+    pregunta: "¿Dónde declaro el equipo y el orden de precisión que usé?",
     respuesta:
-      "Los procesos abiertos se reevalúan contra el orden nuevo al recalcularlos. Los cerrados conservan su veredicto original, porque son inmutables.",
+      "En cada proceso, no en el proyecto: cada poligonal, cada nivelación y cada visita de asentamiento declara los suyos, en su propia configuración. Un mismo proyecto puede así tener una poligonal de tercer orden medida con una estación total y, meses después, una red de control de primer orden medida con otra — cada una con el instrumento con que realmente se trabajó.",
+  },
+  {
+    pregunta: "Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?",
+    respuesta:
+      "Sí, al recalcularlo. Uno cerrado conserva su veredicto original, porque es inmutable.",
+  },
+  {
+    pregunta: "¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?",
+    respuesta:
+      "La aplicación se lo advierte junto al campo de precisión del equipo, comparando la precisión que declaró con la tolerancia del orden. Es un aviso, no un bloqueo: puede seguir capturando y cerrando con normalidad. La decisión de si el equipo basta para el trabajo es suya, no de la aplicación.",
   },
   {
     pregunta:

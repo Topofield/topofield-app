@@ -17,6 +17,7 @@ import type {
   CorrectionMethod,
   PolygonalType,
 } from "@/types/polygonal";
+import type { PrecisionOrder } from "@/types/project";
 
 /** Una estación del levantamiento. El ángulo va en grados, minutos y segundos. */
 export interface EstacionDemo {
@@ -44,6 +45,16 @@ export interface ProcesoDemo {
   status: "calculated" | "closed";
   stations: EstacionDemo[];
   notes: string;
+  // Orden de precisión y equipo (Fase 8): antes vivían en `PROYECTO_DEMO`,
+  // ahora los declara cada proceso, igual que en la aplicación real.
+  precisionOrder: PrecisionOrder;
+  equipmentBrand: string;
+  equipmentModel: string;
+  equipmentSerial: string;
+  equipmentCalibrationDate: string;
+  angularPrecisionSeconds: number;
+  distancePrecisionMm: number;
+  distancePrecisionPpm: number;
 }
 
 export const PROYECTO_DEMO = {
@@ -52,19 +63,26 @@ export const PROYECTO_DEMO = {
   location: "Bogotá",
   description:
     "Proyecto de muestra creado automáticamente para que pueda explorar TopoField. Puede modificarlo o eliminarlo cuando quiera.",
-  // Tercer orden (1:5.000) es el caso didáctico habitual: exige lo suficiente
-  // para que se vea la diferencia entre un cierre conforme y uno que no lo es.
-  precisionOrder: "tercer_orden",
   datum: "MAGNA-SIRGAS",
   projection: "Origen Bogotá",
-  // El proyecto exige los datos del equipo: son obligatorios en el esquema
-  // porque un levantamiento sin instrumento identificado no es trazable.
+} as const;
+
+// Tercer orden (1:5.000) es el caso didáctico habitual: exige lo suficiente
+// para que se vea la diferencia entre un cierre conforme y uno que no lo es.
+// El equipo (Fase 8) vive en cada proceso, no en el proyecto, pero los cuatro
+// procesos demo comparten el mismo instrumento: una Leica FlexLine TS06plus,
+// coherente con el orden declarado (5″ ≤ K=15″ de tercer orden). 5″ es una de
+// sus clases de precisión angular de catálogo (2″/3″/5″); 1.5 mm + 2 ppm es
+// su EDM con prisma publicada — mismas cifras que `scripts/seed.mjs`.
+const EQUIPO_DEMO = {
+  precisionOrder: "tercer_orden",
   equipmentBrand: "Leica",
   equipmentModel: "TS06 Plus",
   equipmentSerial: "DEMO-0001",
-  angularPrecisionSeconds: 5,
-  linearPrecision: "3+2ppm",
   equipmentCalibrationDate: "2026-02-10",
+  angularPrecisionSeconds: 5,
+  distancePrecisionMm: 1.5,
+  distancePrecisionPpm: 2,
 } as const;
 
 /**
@@ -86,6 +104,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     startAz: [0, 0, 0],
     correctionMethod: "bowditch",
     status: "calculated",
+    ...EQUIPO_DEMO,
     stations: [
       { code: "A", angle: [90, 0, 0], distance: 100 },
       { code: "B", angle: [90, 0, 0], distance: 100 },
@@ -105,6 +124,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     startAz: [0, 0, 0],
     correctionMethod: "bowditch",
     status: "calculated",
+    ...EQUIPO_DEMO,
     stations: [
       { code: "A", angle: [90, 0, 0], distance: 100.4 },
       { code: "B", angle: [90, 0, 0], distance: 100 },
@@ -130,6 +150,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     endEast: 1186.603,
     correctionMethod: "bowditch",
     status: "calculated",
+    ...EQUIPO_DEMO,
     stations: [
       { code: "P1", distance: 100 },
       { code: "P2", angle: [30, 0, 0], dir: "right", distance: 100 },
@@ -147,6 +168,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     startEast: 1000,
     startAz: [150, 0, 0],
     status: "calculated",
+    ...EQUIPO_DEMO,
     stations: [
       { code: "E1", distance: 45.8 },
       { code: "E2", angle: [175, 30, 0], distance: 62.3 },

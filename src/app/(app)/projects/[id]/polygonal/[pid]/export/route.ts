@@ -5,15 +5,8 @@ import {
   getPolygonalStations,
   getProjectById,
 } from "@/lib/supabase/queries";
-import {
-  buildPolygonalWorkbook,
-  type PolygonalProcessRow,
-  type StationRow,
-} from "@/lib/export/polygonal-workbook";
-import {
-  safeFilename,
-  type ProjectMetadata,
-} from "@/lib/export/workbook";
+import { buildPolygonalWorkbook } from "@/lib/export/polygonal-workbook";
+import { safeFilename } from "@/lib/export/workbook";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -51,11 +44,7 @@ export async function GET(
 
   const stations = await getPolygonalStations(supabase, process.id);
 
-  const workbook = buildPolygonalWorkbook(
-    process as unknown as PolygonalProcessRow,
-    stations as unknown as StationRow[],
-    project as unknown as ProjectMetadata,
-  );
+  const workbook = buildPolygonalWorkbook(process, stations, project);
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

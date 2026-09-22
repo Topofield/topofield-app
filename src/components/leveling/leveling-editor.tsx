@@ -63,6 +63,15 @@ function processToConfig(p: LevelingProcess): LevelingConfigState {
     startBm: bmValue(p.start_bm_code, p.start_bm_elevation),
     endBm: bmValue(p.end_bm_code, p.end_bm_elevation),
     hasReturnRun: p.has_return_run,
+    precisionOrder: p.precision_order,
+    level: {
+      equipmentBrand: p.equipment_brand ?? "",
+      equipmentModel: p.equipment_model ?? "",
+      equipmentSerial: p.equipment_serial ?? "",
+      equipmentCalibrationDate: p.equipment_calibration_date ?? "",
+      levelType: p.level_type ?? "",
+      kmPrecisionMm: p.km_precision_mm != null ? String(p.km_precision_mm) : "",
+    },
   };
 }
 
@@ -126,7 +135,6 @@ interface LevelingEditorProps {
   projectId: string;
   projectName: string;
   points: ReferencePoint[];
-  precisionOrder: PrecisionOrder;
 }
 
 /** Editor de un proceso de nivelación: libreta de campo y cálculo en vivo. */
@@ -136,7 +144,6 @@ export function LevelingEditor({
   projectId,
   projectName,
   points,
-  precisionOrder,
 }: LevelingEditorProps) {
   const readOnly = process.status === "closed" || process.status === "rejected";
 
@@ -156,13 +163,17 @@ export function LevelingEditor({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Cálculo en vivo: se deriva en cada render, sin useEffect.
+  // El orden sale de `config.precisionOrder`, no de un prop aparte: el
+  // selector de orden vive dentro de `LevelingConfigFields` y edita `config`
+  // en vivo, así que el cierre y la tolerancia deben recalcular con el mismo
+  // valor que ve el usuario, no con el que tenía el proceso al cargar la
+  // página (mismo problema que se corrigió en polygonal-editor.tsx).
   const result = useMemo(
     () =>
       computeLeveling(
-        buildInput(config, totalDistanceKm, forward, back, precisionOrder),
+        buildInput(config, totalDistanceKm, forward, back, config.precisionOrder),
       ),
-    [config, totalDistanceKm, forward, back, precisionOrder],
+    [config, totalDistanceKm, forward, back],
   );
 
   // validateRunCapture (no validateReadingCapture fila a fila) porque el
@@ -223,6 +234,14 @@ export function LevelingEditor({
         hasReturnRun: config.hasReturnRun,
         totalDistanceKm: parseNumber(totalDistanceKm) ?? 0,
         notes: process.notes,
+        precisionOrder: config.precisionOrder,
+        equipmentBrand: config.level.equipmentBrand.trim() || null,
+        equipmentModel: config.level.equipmentModel.trim() || null,
+        equipmentSerial: config.level.equipmentSerial.trim() || null,
+        equipmentCalibrationDate:
+          config.level.equipmentCalibrationDate.trim() || null,
+        levelType: config.level.levelType === "" ? null : config.level.levelType,
+        kmPrecisionMm: parseNumber(config.level.kmPrecisionMm),
         forward: forward.map(draftToReadingDraft),
         return: config.hasReturnRun ? back.map(draftToReadingDraft) : [],
       });
@@ -319,7 +338,6 @@ export function LevelingEditor({
             value={config}
             disabled={readOnly}
             points={points}
-            precisionOrder={precisionOrder}
             onChange={handleConfigChange}
           />
           <div className="max-w-xs">

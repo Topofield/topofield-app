@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { LevelingType } from "@/types/leveling";
+import type { LevelType, PrecisionOrder } from "@/types/project";
 
 export interface CreateLevelingState {
   error?: string;
@@ -17,6 +18,14 @@ export interface CreateLevelingPayload {
   endBmCode: string | null;
   endBmElevation: number | null;
   hasReturnRun: boolean;
+  /** Orden de precisión y equipo (nivel, ISO 17123-2). */
+  precisionOrder: PrecisionOrder;
+  equipmentBrand: string | null;
+  equipmentModel: string | null;
+  equipmentSerial: string | null;
+  equipmentCalibrationDate: string | null;
+  levelType: LevelType | null;
+  kmPrecisionMm: number | null;
 }
 
 /**
@@ -72,6 +81,13 @@ export async function createLevelingProcessAction(
       end_bm_code: payload.endBmCode?.trim() || null,
       end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
       has_return_run: payload.hasReturnRun,
+      precision_order: payload.precisionOrder,
+      equipment_brand: payload.equipmentBrand,
+      equipment_model: payload.equipmentModel,
+      equipment_serial: payload.equipmentSerial,
+      equipment_calibration_date: payload.equipmentCalibrationDate,
+      level_type: payload.levelType,
+      km_precision_mm: payload.kmPrecisionMm,
       status: "draft",
     })
     .select("id")

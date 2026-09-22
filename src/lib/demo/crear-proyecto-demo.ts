@@ -13,7 +13,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import type { Database } from "@/types/database";
-import type { PrecisionOrder } from "@/types/project";
 import { PROCESOS_DEMO, PROYECTO_DEMO, type ProcesoDemo } from "./fixtures";
 
 type Client = SupabaseClient<Database>;
@@ -28,7 +27,7 @@ type Client = SupabaseClient<Database>;
  * porque el editor recalcula en vivo, pero el informe y la exportación a
  * Excel —que leen lo persistido— mostraban guiones.
  */
-function resultadosDe(proceso: ProcesoDemo, order: PrecisionOrder) {
+function resultadosDe(proceso: ProcesoDemo) {
   const r = computePolygonal({
     type: proceso.type,
     startNorth: proceso.startNorth,
@@ -37,7 +36,8 @@ function resultadosDe(proceso: ProcesoDemo, order: PrecisionOrder) {
     endNorth: proceso.endNorth ?? null,
     endEast: proceso.endEast ?? null,
     endAzimuth: null,
-    order,
+    // El orden lo declara el proceso (Fase 8), no ya el proyecto.
+    order: proceso.precisionOrder,
     // Las poligonales sin cierre no reparten error, pero el motor exige un
     // método: Bowditch es el que usa la aplicación por defecto.
     method: proceso.correctionMethod ?? "bowditch",
@@ -96,10 +96,9 @@ async function insertarProceso(
   siteId: string,
   userId: string,
   proceso: ProcesoDemo,
-  order: PrecisionOrder,
 ): Promise<void> {
   const cerrado = proceso.status === "closed";
-  const calculo = resultadosDe(proceso, order);
+  const calculo = resultadosDe(proceso);
 
   const { data: creado, error } = await supabase
     .from("polygonal_processes")
@@ -119,6 +118,15 @@ async function insertarProceso(
       end_north: proceso.endNorth ?? null,
       end_east: proceso.endEast ?? null,
       correction_method: proceso.correctionMethod ?? null,
+      // Orden y equipo del proceso (Fase 8): antes vivían en `projects`.
+      precision_order: proceso.precisionOrder,
+      equipment_brand: proceso.equipmentBrand,
+      equipment_model: proceso.equipmentModel,
+      equipment_serial: proceso.equipmentSerial,
+      equipment_calibration_date: proceso.equipmentCalibrationDate,
+      angular_precision_seconds: proceso.angularPrecisionSeconds,
+      distance_precision_mm: proceso.distancePrecisionMm,
+      distance_precision_ppm: proceso.distancePrecisionPpm,
       // Nace abierto aunque el fixture lo quiera cerrado: los triggers de
       // inmutabilidad rechazan escribir estaciones bajo un proceso ya cerrado.
       // El cierre se aplica al final, igual que hace la aplicación.
@@ -215,8 +223,6 @@ export async function crearProyectoDemo(
 ): Promise<boolean> {
   if (!(await reclamarMarca(supabase, userId))) return false;
 
-  const order = PROYECTO_DEMO.precisionOrder as PrecisionOrder;
-
   const { data: proyecto, error } = await supabase
     .from("projects")
     .insert({
@@ -225,15 +231,8 @@ export async function crearProyectoDemo(
       client: PROYECTO_DEMO.client,
       location: PROYECTO_DEMO.location,
       description: PROYECTO_DEMO.description,
-      precision_order: order,
       datum: PROYECTO_DEMO.datum,
       projection: PROYECTO_DEMO.projection,
-      equipment_brand: PROYECTO_DEMO.equipmentBrand,
-      equipment_model: PROYECTO_DEMO.equipmentModel,
-      equipment_serial: PROYECTO_DEMO.equipmentSerial,
-      angular_precision_seconds: PROYECTO_DEMO.angularPrecisionSeconds,
-      linear_precision: PROYECTO_DEMO.linearPrecision,
-      equipment_calibration_date: PROYECTO_DEMO.equipmentCalibrationDate,
       status: "active",
     })
     .select("id")
@@ -262,7 +261,7 @@ export async function crearProyectoDemo(
   // En serie y no en paralelo: son cuatro inserciones y el orden en que
   // aparecen en el listado es el de creación.
   for (const proceso of PROCESOS_DEMO) {
-    await insertarProceso(supabase, proyecto.id, lugar.id, userId, proceso, order);
+    await insertarProceso(supabase, proyecto.id, lugar.id, userId, proceso);
   }
 
   return true;

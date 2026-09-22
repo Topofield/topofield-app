@@ -41,12 +41,13 @@ export type ProcessStatus = (typeof PROCESS_STATUSES)[number];
 
 export type PolygonalProcess = Omit<
   Tables<"polygonal_processes">,
-  "type" | "angle_type" | "correction_method" | "status"
+  "type" | "angle_type" | "correction_method" | "status" | "precision_order"
 > & {
   type: PolygonalType;
   angle_type: AngleType;
   correction_method: CorrectionMethod | null;
   status: ProcessStatus;
+  precision_order: PrecisionOrder;
 };
 
 export type AngleReading = Tables<"polygonal_angle_readings">;
@@ -156,7 +157,7 @@ export interface PolygonalInput {
   endNorth: number | null;
   endEast: number | null;
   endAzimuth: number | null;
-  /** Orden de precisión del proyecto, para la tolerancia. */
+  /** Orden de precisión del PROCESO, para la tolerancia (Fase 8). */
   order: PrecisionOrder;
   /** Dónde caen las lecturas a la derecha. Fija la suma teórica. */
   angleType: AngleType;

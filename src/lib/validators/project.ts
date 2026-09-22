@@ -1,8 +1,10 @@
 // Validación de los datos de un proyecto (wizard de creación y edición).
 // Función pura: sin React, sin Supabase. Es la fuente de verdad — el Server
 // Action la invoca antes de cualquier INSERT/UPDATE.
+//
+// Desde la Fase 8, el proyecto ya no captura equipo ni precisión: cada
+// proceso (poligonal, nivelación, asentamiento) los define por su cuenta.
 
-import { PRECISION_ORDERS, type PrecisionOrder } from "@/types/project";
 import type { ValidationResult } from "./result";
 
 /** Campos de un proyecto que controla el usuario (sin id, user_id, timestamps). */
@@ -15,13 +17,6 @@ export interface ProjectInput {
   longitude: number | null;
   datum: string;
   projection: string | null;
-  precision_order: PrecisionOrder;
-  equipment_brand: string;
-  equipment_model: string;
-  equipment_serial: string;
-  angular_precision_seconds: number;
-  linear_precision: string;
-  equipment_calibration_date: string; // YYYY-MM-DD
 }
 
 function emptyToNull(value: string): string | null {
@@ -57,67 +52,6 @@ export function validateProjectInput(
   const datum = str("datum");
   if (!datum) errors.datum = "El datum es obligatorio.";
 
-  const equipmentBrand = str("equipment_brand");
-  if (!equipmentBrand)
-    errors.equipment_brand = "La marca del equipo es obligatoria.";
-
-  const equipmentModel = str("equipment_model");
-  if (!equipmentModel)
-    errors.equipment_model = "El modelo del equipo es obligatorio.";
-
-  const equipmentSerial = str("equipment_serial");
-  if (!equipmentSerial)
-    errors.equipment_serial = "La serie del equipo es obligatoria.";
-
-  const linearPrecision = str("linear_precision");
-  if (!linearPrecision)
-    errors.linear_precision = "La precisión lineal es obligatoria.";
-
-  // --- Orden de precisión (CHECK) ---
-  const precisionOrder = str("precision_order");
-  if (!precisionOrder) {
-    errors.precision_order = "Selecciona el orden de precisión.";
-  } else if (!(PRECISION_ORDERS as readonly string[]).includes(precisionOrder)) {
-    errors.precision_order = "Orden de precisión no válido.";
-  }
-
-  // --- Precisión angular (decimal(5,1), > 0) ---
-  let angularPrecisionSeconds = 0;
-  const angularRaw = str("angular_precision_seconds");
-  if (!angularRaw) {
-    errors.angular_precision_seconds = "La precisión angular es obligatoria.";
-  } else {
-    const parsed = Number(angularRaw);
-    if (!Number.isFinite(parsed)) {
-      errors.angular_precision_seconds =
-        "La precisión angular debe ser un número.";
-    } else if (parsed <= 0) {
-      errors.angular_precision_seconds =
-        "La precisión angular debe ser mayor que cero.";
-    } else if (parsed > 9999.9) {
-      errors.angular_precision_seconds =
-        "La precisión angular es demasiado grande.";
-    } else {
-      angularPrecisionSeconds = Math.round(parsed * 10) / 10;
-    }
-  }
-
-  // --- Fecha de calibración (DATE, no futura) ---
-  const calibrationDate = str("equipment_calibration_date");
-  if (!calibrationDate) {
-    errors.equipment_calibration_date =
-      "La fecha de calibración es obligatoria.";
-  } else {
-    const date = new Date(`${calibrationDate}T00:00:00`);
-    if (Number.isNaN(date.getTime())) {
-      errors.equipment_calibration_date =
-        "La fecha de calibración no es válida.";
-    } else if (date.getTime() > Date.now()) {
-      errors.equipment_calibration_date =
-        "La fecha de calibración no puede estar en el futuro.";
-    }
-  }
-
   // --- Latitud / longitud opcionales (rango geográfico; sin redondeo) ---
   let latitude: number | null = null;
   const lat = parseOptionalNumber(str("latitude"));
@@ -152,13 +86,6 @@ export function validateProjectInput(
       longitude,
       datum,
       projection: emptyToNull(str("projection")),
-      precision_order: precisionOrder as PrecisionOrder,
-      equipment_brand: equipmentBrand,
-      equipment_model: equipmentModel,
-      equipment_serial: equipmentSerial,
-      angular_precision_seconds: angularPrecisionSeconds,
-      linear_precision: linearPrecision,
-      equipment_calibration_date: calibrationDate,
     },
   };
 }

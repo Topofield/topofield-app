@@ -56,8 +56,10 @@ export function minRelativePrecision(order: PrecisionOrder): number {
  * Coeficiente K de la tolerancia de nivelación K·√D, en milímetros
  * (PRD § 5.4). Coinciden con la tabla del marco teórico § 8; su «Segundo
  * Orden Clase II» es nuestro `segundo_orden`. Los niveles «Clase I» (K=4) y
- * «Expedita» (K=50) del marco teórico no están modelados en
- * `projects.precision_order` (decisión #4 del PRD de fase).
+ * «Expedita» (K=50) del marco teórico no están modelados en el tipo
+ * `PrecisionOrder` (decisión #4 del PRD de la Fase 4). Desde la Fase 8 el
+ * orden lo declara cada proceso —`leveling_processes.precision_order` y
+ * `settlement_visits.precision_order`—, no el proyecto.
  */
 export const LEVELING_TOLERANCE_K: Record<PrecisionOrder, number> = {
   primer_orden: 3,
@@ -191,4 +193,46 @@ export function thresholdsOf(site: SiteThresholdColumns): Thresholds {
     accumulatedAlarm: Number(site.accumulated_alarm),
     angularDistortionLimit: Number(site.angular_distortion_limit),
   };
+}
+
+// ============================================================================
+// Validación de suficiencia del equipo (Fase 8).
+// ============================================================================
+
+/**
+ * ¿La estación total declarada puede entregar el orden exigido?
+ *
+ * La comparación es directa entre coeficientes, y no con un margen, porque la
+ * tolerancia angular escala como `K·√n` y la desviación del instrumento escala
+ * igual, como `σ·√n`: el `√n` se cancela. Un umbral con margen —«avisa si σ
+ * pasa de la mitad de K»— sería un criterio estadístico inventado, y haría
+ * saltar el aviso en el emparejamiento correcto de 1″ con primer orden.
+ *
+ * Es estrictamente mayor: `σ = K` es justo el instrumento que corresponde al
+ * orden, no un problema.
+ *
+ * Sin dato de precisión devuelve `true`: la función no opina sobre lo que no
+ * sabe, y quien llama no debe pintar un aviso por un campo vacío.
+ */
+export function totalStationMeetsOrder(
+  order: PrecisionOrder,
+  angularPrecisionSeconds: number,
+): boolean {
+  if (!Number.isFinite(angularPrecisionSeconds)) return true;
+  return angularPrecisionSeconds <= ANGULAR_TOLERANCE_K[order];
+}
+
+/**
+ * ¿El nivel declarado puede entregar el orden exigido?
+ *
+ * Mismo razonamiento que `totalStationMeetsOrder`: la tolerancia de nivelación
+ * es `K·√D` y la desviación típica del instrumento (ISO 17123-2, en mm por km
+ * de doble nivelación) escala como `σ·√D`.
+ */
+export function levelMeetsOrder(
+  order: PrecisionOrder,
+  kmPrecisionMm: number,
+): boolean {
+  if (!Number.isFinite(kmPrecisionMm)) return true;
+  return kmPrecisionMm <= LEVELING_TOLERANCE_K[order];
 }

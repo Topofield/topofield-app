@@ -256,6 +256,15 @@
     color: var(--color-danger-500);
   }
 
+  /* Nota al pie de una tabla del informe: aclara una marca de la tabla que
+     está justo encima, así que va pegada a ella y en cuerpo menor. */
+  .report-footnote {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-neutral-500);
+  }
+
   .report-footer {
     margin-top: 1.5rem;
     font-size: 0.8125rem;

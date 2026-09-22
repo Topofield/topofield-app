@@ -14,7 +14,8 @@ trazabilidad, los informes y la exportación a Excel.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-08-26 · Las 6 fases del PRD implementadas.
+**Última actualización:** 2026-09-18 · Fase 8 (Precisión y equipo por
+proceso) cerrada.
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -43,9 +44,10 @@ La aplicación está publicada en
 Tres ideas ordenan toda la aplicación:
 
 **Proyecto.** El contenedor de un trabajo topográfico. Guarda el cliente, la
-ubicación, el datum, la proyección, el equipo usado y —lo más importante— el
-**orden de precisión**, que determina qué tolerancias se exigirán a todos sus
-procesos.
+ubicación, el datum y la proyección. El equipo usado y el **orden de
+precisión** no viven aquí: cada proceso —poligonal, nivelación, visita de
+asentamiento— declara los suyos, porque pueden cambiar de un levantamiento a
+otro dentro de un mismo proyecto.
 
 **Proceso.** Un levantamiento concreto dentro de un proyecto: una poligonal, una
 nivelación, un control de asentamientos. Cada proceso pasa por estados:
@@ -99,7 +101,7 @@ Arriba, tres indicadores del estado general:
 - **Proyectos activos** — cuántos proyectos tiene en curso.
 - **Procesos calculados** — levantamientos resueltos, listos para revisar y cerrar.
 - **Fuera de tolerancia** — procesos calculados que no alcanzan el orden de
-  precisión de su proyecto. Requieren revisión antes del cierre.
+  precisión que ellos mismos declararon. Requieren revisión antes del cierre.
 
 Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
 
@@ -118,22 +120,15 @@ El formulario tiene dos pasos:
 **Paso 1 — Datos básicos.** Nombre, descripción, cliente, ubicación y, si
 quiere, las coordenadas geográficas en grados decimales.
 
-**Paso 2 — Equipo y precisión.** Datum, proyección, datos del instrumento y el
-**orden de precisión**.
+**Paso 2 — Datum y proyección.** El sistema de referencia del proyecto.
 
-> **El orden de precisión es la decisión más importante del proyecto.**
-> Define las tolerancias que se exigirán a cada poligonal. Al elegirlo, el
-> formulario le muestra la tolerancia angular y la precisión relativa mínima que
-> implica:
-
-| Orden | Tolerancia angular | Precisión relativa mínima | Uso típico |
-|---|---|---|---|
-| Primer orden | 1″·√n | 1:100.000 | Geodésico de alta precisión |
-| Segundo orden | 5″·√n | 1:20.000 | Control urbano y catastral |
-| Tercer orden | 15″·√n | 1:5.000 | Levantamiento topográfico común |
-| Ordinario | 30″·√n | 1:3.000 | Levantamiento rural o reconocimiento |
-
-Donde *n* es el número de ángulos medidos.
+> **El equipo y el orden de precisión no se piden aquí.** Se declaran en cada
+> proceso: cada poligonal, cada nivelación y cada visita de asentamiento tiene
+> su propia configuración de orden y equipo, con los campos que corresponden a
+> su tipo de instrumento. Un mismo proyecto puede así tener trabajos de
+> distinto orden, medidos con instrumentos distintos y en fechas distintas.
+> Vea [§ 5.2](#52-crear-una-poligonal), [§ 6.4](#64-crear-una-nivelación) y
+> [§ 7.3](#73-registrar-una-visita).
 
 ### 4.2 El proyecto por dentro
 
@@ -183,7 +178,7 @@ todo de un clic.
 | Proceso | Nombre y tipo de poligonal |
 | Estado | Borrador, Calculado, Cerrado o Rechazado |
 | Precisión | La precisión relativa alcanzada |
-| Cumple | ✓ si alcanza el orden del proyecto, ✕ si no, — si no aplica |
+| Cumple | ✓ si alcanza su orden de precisión, ✕ si no, — si no aplica |
 | Última actividad | Cuándo se modificó por última vez |
 
 La columna **Cumple** es la que evita abrir cada proceso para saber si el
@@ -230,10 +225,34 @@ explícitamente en vez de mostrar una precisión inexistente.
 
 ![Nueva poligonal](../../public/manual/06-nueva-poligonal.png)
 
-Desde el proyecto, **+ Nuevo Proceso → Poligonal**. Indique el nombre, el tipo y
-el punto de partida (código, Norte, Este y azimut inicial).
+Desde el proyecto, **+ Nuevo Proceso → Poligonal**. Indique el nombre, el tipo,
+el punto de partida (código, Norte, Este y azimut inicial), el **orden de
+precisión** y los datos de la **estación total** con que va a medir: marca,
+modelo, número de serie, fecha de calibración, precisión angular (en segundos,
+ISO 17123-3) y precisión de distancia como término constante en mm más
+término proporcional en ppm (ISO 17123-4).
 
 Si el tipo es *abierta con control*, deberá indicar además el punto de llegada.
+
+> **El orden de precisión es la decisión más importante del proceso.** Define
+> las tolerancias que se le exigirán al cierre. Al elegirlo, el formulario le
+> muestra la tolerancia angular y la precisión relativa mínima que implica:
+
+| Orden | Tolerancia angular | Precisión relativa mínima | Uso típico |
+|---|---|---|---|
+| Primer orden | 1″·√n | 1:100.000 | Geodésico de alta precisión |
+| Segundo orden | 5″·√n | 1:20.000 | Control urbano y catastral |
+| Tercer orden | 15″·√n | 1:5.000 | Levantamiento topográfico común |
+| Ordinario | 30″·√n | 1:3.000 | Levantamiento rural o reconocimiento |
+
+Donde *n* es el número de ángulos medidos.
+
+> **Si la precisión angular del equipo no alcanza para el orden elegido, la
+> aplicación se lo advierte** junto al campo de precisión angular — por
+> ejemplo, una estación de 5″ con primer orden declarado (cuya tolerancia
+> parte de 1″). Es un aviso, no un bloqueo: puede seguir capturando, porque la
+> decisión de si el equipo basta es suya. Un equipo que cumple justo el orden
+> (5″ con tercer orden, cuya tolerancia parte de 15″) no dispara el aviso.
 
 ### 5.3 El editor
 
@@ -250,7 +269,9 @@ Muestra la precisión alcanzada junto a la requerida, el error de cierre y el
 perímetro. El color lo resume: verde cumple, rojo no cumple.
 
 **Configuración.** Plegada cuando el proceso ya está calculado. Ábrala para
-cambiar el nombre, el tipo o el punto de partida.
+cambiar el nombre, el tipo, el punto de partida, el orden de precisión o los
+datos de la estación total — los mismos campos del alta, editables mientras el
+proceso siga abierto.
 
 Ahí elige también el **tipo de ángulo** y el **punto de amarre**. TopoField no
 preselecciona el tipo de ángulo a propósito: si recorre el polígono en un
@@ -372,14 +393,28 @@ pero tampoco se corrige.
 Desde el proyecto, **+ Nuevo Proceso → Nivelación**. Indique el nombre, el
 tipo y el BM de partida: puede elegirlo del catálogo de puntos de referencia
 del proyecto (autocompleta código y cota) o teclearlo directamente si no lo
-tiene registrado.
+tiene registrado. Indique también el **orden de precisión** y los datos del
+**nivel**: marca, modelo, número de serie, fecha de calibración, tipo
+(automático o digital) y desviación típica en mm por km de doble nivelación
+(ISO 17123-2).
 
 Si el tipo es *de enlace*, deberá indicar además el BM de llegada. Marque
 **Incluye recorrido de vuelta** si va a medir ida y vuelta.
 
+> **Si la desviación típica del nivel no alcanza para el orden elegido, la
+> aplicación se lo advierte** junto al campo de desviación típica — por
+> ejemplo, un nivel de obra de 5.0 mm/km con primer orden declarado (cuya
+> tolerancia parte de 3 mm/km). Es un aviso, no un bloqueo: 2.5 mm/km con
+> primer orden es ajustado pero posible, y no lo dispara.
+
 ### 6.5 El editor
 
 ![Editor de nivelación](../../public/manual/12-editor-nivelacion.png)
+
+**Configuración.** Plegada cuando el proceso ya está calculado. Ábrala para
+cambiar el nombre, el tipo, los BM o el orden de precisión y el equipo de
+nivel — los mismos campos del alta, editables mientras el proceso siga
+abierto.
 
 La libreta se captura por fila: punto, tipo, lecturas atrás y adelante,
 distancia del tramo y **distancia acumulada** desde el origen.
@@ -397,7 +432,7 @@ intermedios quedan fuera de esta suma.
 
 **Cierre.** El error de cierre se compara contra la tolerancia K·√D, donde D
 es la distancia del recorrido **en un solo sentido**, en kilómetros, y K
-depende del orden de precisión del proyecto:
+depende del orden de precisión que declaró el proceso:
 
 | Orden | K (mm) |
 |---|---|
@@ -472,6 +507,18 @@ de partida y no tiene asentamiento ni velocidad propios, porque no hay una
 visita anterior contra la que compararla.
 
 ![Editor de visita con lecturas y semáforo por punto](../../public/manual/16-editor-visita.png)
+
+Cada visita declara también el **orden de precisión** con que se midió y los
+datos del **nivel** usado: marca, modelo, número de serie, fecha de
+calibración, tipo (automático o digital) y desviación típica en mm por km de
+doble nivelación (ISO 17123-2). El instrumento puede cambiar entre una visita
+y la siguiente —pueden pasar meses—, así que cada visita lleva su propio
+equipo, no el lugar.
+
+> **Si la desviación típica del nivel no alcanza para el orden que declaró la
+> visita, la aplicación se lo advierte**, con el mismo criterio que en
+> nivelación (§ 6.5): un nivel de 5.0 mm/km con primer orden (K = 3) avisa; uno
+> de 2.5 mm/km, ajustado pero posible, no. Es un aviso, no un bloqueo.
 
 Por cada punto se captura la **cota medida**. La aplicación calcula al
 instante:
@@ -636,9 +683,11 @@ navegador: elija «Guardar como PDF» como destino.
 
 ![Informe imprimible](../../public/manual/19-informe-imprimible.png)
 
-El documento lleva portada con los datos del proyecto y el equipo, índice,
-una sección por proceso con sus resultados, el resumen consolidado de
-precisiones, sus observaciones y el registro de cierre.
+El documento lleva portada con los datos del proyecto, índice, una sección
+por proceso con sus resultados **y su equipo**, el resumen consolidado de
+precisiones —con una columna de equipo—, sus observaciones y el registro de
+cierre. El equipo ya no es un dato del proyecto: cada sección imprime el que
+declaró su propio proceso (en asentamientos, el de la visita más reciente).
 
 > El PDF lo genera su navegador, no la aplicación. Los márgenes y los
 > encabezados de página dependen de lo que usted elija en ese diálogo.
@@ -654,7 +703,7 @@ asentamientos, en su panel de análisis—. Descarga un `.xlsx` con tres hojas:
 |---|---|
 | Datos Crudos | Las lecturas de campo tal como se capturaron, sin modificar |
 | Cálculos | Lo que la aplicación derivó: cotas, coordenadas, correcciones |
-| Resumen | Método, precisión, tolerancia, estado y trazabilidad |
+| Resumen | Equipo, método, precisión, tolerancia, estado y trazabilidad |
 
 A diferencia del informe, la exportación funciona **en cualquier estado**:
 también sobre un borrador. Las celdas que aún no se han calculado salen
@@ -683,9 +732,22 @@ coordenadas se calculan, pero su exactitud no se puede verificar.
 Que el cierre fue exacto: el error lineal es cero o despreciable. Ocurre con
 datos teóricos o levantamientos muy precisos.
 
-**Cambié el orden de precisión del proyecto. ¿Se recalculan los procesos?**
-Los procesos abiertos se reevalúan contra el orden nuevo al recalcularlos. Los
-cerrados conservan su veredicto original, porque son inmutables.
+**¿Dónde declaro el equipo y el orden de precisión que usé?**
+En cada proceso, no en el proyecto: cada poligonal, cada nivelación y cada
+visita de asentamiento declara los suyos, en su propia configuración. Un mismo
+proyecto puede así tener una poligonal de tercer orden medida con una estación
+total y, meses después, una red de control de primer orden medida con otra —
+cada una con el instrumento con que realmente se trabajó.
+
+**Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?**
+Sí, al recalcularlo. Uno cerrado conserva su veredicto original, porque es
+inmutable.
+
+**¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?**
+La aplicación se lo advierte junto al campo de precisión del equipo,
+comparando la precisión que declaró con la tolerancia del orden. Es un aviso,
+no un bloqueo: puede seguir capturando y cerrando con normalidad. La decisión
+de si el equipo basta para el trabajo es suya, no de la aplicación.
 
 **Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición
 está bien?**

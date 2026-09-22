@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { Alert, Button } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
-import { BasicFields, EquipmentFields } from "./project-fields";
+import { BasicFields, GeodeticFields } from "./project-fields";
 import {
   createProjectAction,
   type CreateProjectState,
@@ -55,7 +55,7 @@ export function ProjectWizard() {
             step === 2 ? "font-semibold text-primary-600" : "text-neutral-500"
           }
         >
-          2. Equipo y precisión
+          2. Datum y proyección
         </li>
       </ol>
 
@@ -70,7 +70,7 @@ export function ProjectWizard() {
         <BasicFields errors={fieldErrors} />
       </div>
       <div className={cn("flex-col gap-4", step === 2 ? "flex" : "hidden")}>
-        <EquipmentFields errors={fieldErrors} />
+        <GeodeticFields errors={fieldErrors} />
       </div>
 
       <div className="flex items-center justify-between gap-3">

@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/design-system";
-import { formatDate, formatDateOnly } from "@/lib/utils/format";
-import {
-  PRECISION_ORDER_LABELS,
-  PROJECT_STATUS_LABELS,
-  type Project,
-} from "@/types/project";
+import { formatDate } from "@/lib/utils/format";
+import { PROJECT_STATUS_LABELS, type Project } from "@/types/project";
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -59,24 +55,6 @@ export function ProjectHeader({ project }: { project: Project }) {
           <Field label="Fecha de creación" value={formatDate(project.created_at)} />
           <Field label="Datum" value={project.datum} />
           <Field label="Proyección" value={project.projection} />
-          <Field
-            label="Orden de precisión"
-            value={PRECISION_ORDER_LABELS[project.precision_order]}
-          />
-          <Field
-            label="Equipo"
-            value={`${project.equipment_brand} ${project.equipment_model}`}
-          />
-          <Field label="Serie" value={project.equipment_serial} />
-          <Field
-            label="Calibración"
-            value={formatDateOnly(project.equipment_calibration_date)}
-          />
-          <Field
-            label="Precisión angular"
-            value={`${project.angular_precision_seconds}″`}
-          />
-          <Field label="Precisión lineal" value={project.linear_precision} />
         </dl>
       </div>
     </div>

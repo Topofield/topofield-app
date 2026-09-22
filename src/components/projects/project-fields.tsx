@@ -1,5 +1,4 @@
 import { Input, Textarea } from "@/components/design-system";
-import { PrecisionOrderSelect } from "./precision-order-select";
 
 /** Valores por defecto de los campos de proyecto (todo string para los inputs). */
 export interface ProjectFormValues {
@@ -11,13 +10,6 @@ export interface ProjectFormValues {
   longitude?: string;
   datum?: string;
   projection?: string;
-  equipment_brand?: string;
-  equipment_model?: string;
-  equipment_serial?: string;
-  angular_precision_seconds?: string;
-  linear_precision?: string;
-  equipment_calibration_date?: string;
-  precision_order?: string;
 }
 
 interface FieldsProps {
@@ -83,82 +75,28 @@ export function BasicFields({ values, errors }: FieldsProps) {
   );
 }
 
-/** Campos de equipo y precisión (paso 2 del wizard). */
-export function EquipmentFields({ values, errors }: FieldsProps) {
+/**
+ * Datum y proyección del proyecto (paso 2 del wizard).
+ *
+ * Desde la Fase 8 el equipo y la precisión ya no se capturan aquí: cada
+ * proceso (poligonal, nivelación, asentamiento) los define por su cuenta. Por
+ * eso el nombre ya no es `EquipmentFields`: no queda ni un campo de equipo.
+ */
+export function GeodeticFields({ values, errors }: FieldsProps) {
   return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Datum"
-          name="datum"
-          required
-          defaultValue={values?.datum ?? "MAGNA-SIRGAS"}
-          error={errors.datum}
-        />
-        <Input
-          label="Proyección"
-          name="projection"
-          defaultValue={values?.projection}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Marca del equipo"
-          name="equipment_brand"
-          required
-          defaultValue={values?.equipment_brand}
-          error={errors.equipment_brand}
-        />
-        <Input
-          label="Modelo del equipo"
-          name="equipment_model"
-          required
-          defaultValue={values?.equipment_model}
-          error={errors.equipment_model}
-        />
-      </div>
+    <div className="grid gap-4 sm:grid-cols-2">
       <Input
-        label="Serie del equipo"
-        name="equipment_serial"
+        label="Datum"
+        name="datum"
         required
-        defaultValue={values?.equipment_serial}
-        error={errors.equipment_serial}
+        defaultValue={values?.datum ?? "MAGNA-SIRGAS"}
+        error={errors.datum}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Precisión angular (segundos)"
-          name="angular_precision_seconds"
-          type="number"
-          step="0.1"
-          min={0}
-          required
-          defaultValue={values?.angular_precision_seconds}
-          error={errors.angular_precision_seconds}
-        />
-        <Input
-          label="Precisión lineal"
-          name="linear_precision"
-          placeholder="ej: 2+2ppm"
-          required
-          defaultValue={values?.linear_precision}
-          error={errors.linear_precision}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Fecha de calibración"
-          name="equipment_calibration_date"
-          type="date"
-          required
-          defaultValue={values?.equipment_calibration_date}
-          error={errors.equipment_calibration_date}
-        />
-        <PrecisionOrderSelect
-          required
-          defaultValue={values?.precision_order}
-          error={errors.precision_order}
-        />
-      </div>
-    </>
+      <Input
+        label="Proyección"
+        name="projection"
+        defaultValue={values?.projection}
+      />
+    </div>
   );
 }

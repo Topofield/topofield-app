@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
-import { PROCESOS_DEMO, PROYECTO_DEMO, type ProcesoDemo } from "./fixtures";
+import { PROCESOS_DEMO, type ProcesoDemo } from "./fixtures";
 
-/** Pasa un fixture por el motor real, con el orden del proyecto demo. */
+/** Pasa un fixture por el motor real, con el orden del propio proceso. */
 function calcular(proceso: ProcesoDemo) {
   return computePolygonal({
     type: proceso.type,
@@ -13,7 +13,7 @@ function calcular(proceso: ProcesoDemo) {
     endNorth: proceso.endNorth ?? null,
     endEast: proceso.endEast ?? null,
     endAzimuth: null,
-    order: PROYECTO_DEMO.precisionOrder,
+    order: proceso.precisionOrder,
     method: proceso.correctionMethod ?? "bowditch",
     angleType: proceso.angleType,
     hasOrientation: false,

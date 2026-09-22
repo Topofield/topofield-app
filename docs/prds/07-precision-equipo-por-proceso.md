@@ -1,8 +1,8 @@
 # PRD-de-fase 8 — Precisión y equipo por proceso
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-17
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-18
 
 ## Propósito
 
@@ -118,7 +118,7 @@ equipment_brand            text
 equipment_model            text
 equipment_serial           text
 equipment_calibration_date date
-angular_precision_seconds  decimal(4,1)   -- ISO 17123-3
+angular_precision_seconds  decimal(5,1)   -- ISO 17123-3
 distance_precision_mm      decimal(4,1)   -- el «2 mm» de 2 mm + 2 ppm
 distance_precision_ppm     decimal(4,1)   -- el «2 ppm»
 ```
@@ -203,8 +203,9 @@ al orden.
 
 `reports/[reportId]/print/page.tsx` deja de imprimir una línea de equipo por
 proyecto y pasa a imprimirla **por proceso**. El «Resumen consolidado de
-precisiones» gana columna de equipo. Los cuatro workbooks de `src/lib/export/`
-leen del proceso.
+precisiones» gana columna de equipo. Los tres workbooks de `src/lib/export/`
+—`polygonal-workbook.ts`, `leveling-workbook.ts` y `settlement-workbook.ts`;
+`workbook.ts` es el andamiaje común, no un libro— leen del proceso.
 
 ## Migración de datos
 
@@ -239,7 +240,7 @@ proyecto, no cambiando una medición.
 | i | La dispersión entre lecturas usa la precisión angular **del proceso** |
 | j | El informe imprime equipo por proceso, no por proyecto |
 | k | Editar un proyecto no altera el informe de un proceso cerrado |
-| l | Los cuatro workbooks exportan el equipo del proceso |
+| l | Los tres workbooks (poligonal, nivelación, asentamientos) exportan el equipo del proceso |
 | m | `npm run typecheck`, `npm run lint` y `npm test` pasan |
 | n | El seed siembra equipos coherentes con el orden de cada proceso y visita |
 
@@ -269,7 +270,7 @@ proyecto, no cambiando una medición.
 8. `leveling-config-fields`: orden + bloque de nivel + aviso.
 9. Editor de visitas: orden + bloque de nivel + aviso.
 10. Informe: equipo por proceso y columna en el resumen consolidado.
-11. Los cuatro workbooks de export.
+11. Los tres workbooks de export.
 12. Seed y fixtures con equipos coherentes.
 13. Verificación end-to-end (criterios a-n), levantar la app y capturar. Cierre.
 

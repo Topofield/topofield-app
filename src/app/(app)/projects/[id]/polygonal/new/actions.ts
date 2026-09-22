@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { AngleType, PolygonalType } from "@/types/polygonal";
+import type { PrecisionOrder } from "@/types/project";
 
 export interface CreatePolygonalState {
   error?: string;
@@ -30,6 +31,15 @@ export interface CreatePolygonalPayload {
   referencePointCode: string | null;
   angleReadingsMin: number;
   hasClosingRow: boolean;
+  /** Orden de precisión y equipo (estación total, ISO 17123-3 y -4). */
+  precisionOrder: PrecisionOrder;
+  equipmentBrand: string | null;
+  equipmentModel: string | null;
+  equipmentSerial: string | null;
+  equipmentCalibrationDate: string | null;
+  angularPrecisionSeconds: number | null;
+  distancePrecisionMm: number | null;
+  distancePrecisionPpm: number | null;
 }
 
 /**
@@ -92,6 +102,14 @@ export async function createPolygonalProcessAction(
       end_azimuth_deg: payload.endAzimuthDeg,
       end_azimuth_min: payload.endAzimuthMin,
       end_azimuth_sec: payload.endAzimuthSec,
+      precision_order: payload.precisionOrder,
+      equipment_brand: payload.equipmentBrand,
+      equipment_model: payload.equipmentModel,
+      equipment_serial: payload.equipmentSerial,
+      equipment_calibration_date: payload.equipmentCalibrationDate,
+      angular_precision_seconds: payload.angularPrecisionSeconds,
+      distance_precision_mm: payload.distancePrecisionMm,
+      distance_precision_ppm: payload.distancePrecisionPpm,
       status: "draft",
     })
     .select("id")

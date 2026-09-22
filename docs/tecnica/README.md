@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-17 · Fase 7 cerrada · 417 tests ·
+**Última actualización:** 2026-09-18 · Fase 8 cerrada · 435 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -60,7 +60,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 5 | Asentamientos | cerrada |
 | 6 | Cierre, informes, exportación | cerrada |
 | 7 | Motor y captura de poligonales | cerrada |
-| 8 | Precisión y equipo por proceso | pendiente |
+| 8 | Precisión y equipo por proceso | cerrada |
 | 9 | Canvas de poligonal | pendiente |
 | 10 | Ajuste por mínimos cuadrados | pendiente |
 | 11 | Georreferenciación de levantamientos | pendiente |
@@ -304,7 +304,7 @@ Estas las escribe `savePolygonalProcessAction` tras cada cálculo:
 | `linear_error` | Error de cierre lineal en metros |
 | `perimeter` | Perímetro total |
 | `relative_precision` | Precisión formateada |
-| `meets_tolerance` | Si cumple el orden del proyecto |
+| `meets_tolerance` | Si cumple el orden de precisión del proceso |
 
 `status` puede ser `draft`, `in_progress`, `calculated`, `closed` o `rejected`.
 Los dos últimos son terminales.
@@ -324,6 +324,40 @@ informes de la Fase 6 los lean sin recalcular:
 `settlement_visits.status` puede ser `draft`, `calculated` o `closed` — sin
 `rejected`: una visita no se rechaza, se cierra o no. `sites.status` es
 `active` o `closed`.
+
+### Precisión y equipo, por proceso (Fase 8)
+
+`precision_order` y los datos del instrumento no viven en `projects`: cada
+`polygonal_processes`, `leveling_processes` y `settlement_visits` los declara
+por su cuenta, con los campos que exige su tipo de instrumento — nunca un
+juego único. Antes de la Fase 8 vivían en `projects` con la forma de una
+estación total (`angular_precision_seconds`, `linear_precision` como texto
+`"2+2ppm"`), que es la razón por la que nivelación y asentamientos nunca
+encajaron: a un nivel no se le pregunta precisión angular.
+
+| Tabla | Campos de equipo | Norma |
+|---|---|---|
+| `polygonal_processes` | `equipment_brand/model/serial/calibration_date`, `angular_precision_seconds`, `distance_precision_mm`, `distance_precision_ppm` | ISO 17123-3 (angular) y -4 (distancia) |
+| `leveling_processes` | los mismos cuatro de marca/modelo/serie/calibración, `level_type` (`automatico`\|`digital`), `km_precision_mm` | ISO 17123-2 |
+| `settlement_visits` | igual que `leveling_processes` — el equipo es de la **visita**, no del lugar: el instrumento puede cambiar entre campañas | ISO 17123-2 |
+
+Las tres tablas tienen además su propio `precision_order`, el mismo dominio de
+cuatro valores que antes vivía solo en `projects`.
+
+**Por qué no un catálogo de equipos reutilizable entre procesos.** Se evaluó y
+se descartó (`docs/prds/07-precision-equipo-por-proceso.md`, decisión #2): una
+tabla `equipment` referenciada por id reabre el agujero de trazabilidad que
+motivó la fase, porque editar la fila cambiaría el equipo de los informes de
+procesos ya cerrados. Con los campos sueltos en el proceso, el congelado sale
+gratis de la inmutabilidad que ya existe (§ 5).
+
+**Consecuencia para `reports`.** Antes de esta fase, la página de impresión
+leía `project.precision_order`/`project.equipment_*` **en vivo**; editar el
+equipo del proyecto reescribía todos los informes ya emitidos, incluidos los
+de procesos cerrados. Ahora lee del proceso incluido en el informe, que es
+inmutable una vez cerrado (§ 5) — el congelado del informe es una consecuencia
+de dónde vive el dato, no un mecanismo aparte. Ver también «Aviso de equipo
+insuficiente» en § 6.
 
 ---
 
@@ -403,6 +437,19 @@ sin problema; borrar uno cerrado ya lo impedía el trigger de `sites`.
 también `generated_by = auth.uid()::text`
 (`20260826120100_reports_insert_check_generated_by.sql`). Sin eso, un `POST`
 directo podía crear un informe en un proyecto propio firmado por otro usuario.
+
+**Precedente de la Fase 8: desactivar el trigger dentro de una migración.** El
+backfill de `20260918022849_precision_equipo_por_proceso.sql` necesitó escribir
+sobre procesos y visitas cerrados —rellenar el equipo y el orden que heredaban
+implícitamente del proyecto— así que desactivó los triggers de inmutabilidad de
+`polygonal_processes`, `leveling_processes` y `settlement_visits` solo para esa
+transacción, reactivándolos en la misma migración. `settlement_visits` exigió
+desactivar dos triggers propios, no uno: dispara tanto por visita cerrada como
+por *lugar* cerrado. Es legítimo porque rellena un dato que el proceso siempre
+tuvo de forma implícita, no porque cambie una medición o un resultado de
+cierre; no es un permiso general, y cualquier migración futura que quiera
+escribir sobre filas cerradas tiene que justificarse por su cuenta — ver
+`docs/prds/07-precision-equipo-por-proceso.md`, «Riesgos conocidos».
 
 ### Cabeceras de seguridad
 
@@ -574,10 +621,11 @@ configurable por proceso, 3 por defecto) y la estación guarda el **promedio**,
 recalculado por el servidor: es derivado, no un dato que el cliente pueda
 contradecir.
 
-La dispersión (máx − mín) se contrasta con `projects.angular_precision_seconds`
-—la precisión del equipo— y no con la tolerancia del orden. El orden gobierna el
-cierre de la poligonal; repetir una lectura mide repetibilidad. El factor
-admitido vive en `READING_DISPERSION_FACTOR`.
+La dispersión (máx − mín) se contrasta con
+`polygonal_processes.angular_precision_seconds` —la precisión del equipo del
+**proceso** desde la Fase 8, antes era la del proyecto— y no con la tolerancia
+del orden. El orden gobierna el cierre de la poligonal; repetir una lectura
+mide repetibilidad. El factor admitido vive en `READING_DISPERSION_FACTOR`.
 
 ### Métodos de corrección
 
@@ -598,7 +646,34 @@ Viven en `tolerances.ts`, **nunca hardcodeadas en componentes**:
 | `tercer_orden` | 15 | 1:5.000 |
 | `ordinario` | 30 | 1:3.000 |
 
-Tolerancia angular = K·√n, donde n es el número de ángulos medidos.
+Tolerancia angular = K·√n, donde n es el número de ángulos medidos. Nivelación
+usa su propio coeficiente, `LEVELING_TOLERANCE_K` (3/6/12/24 mm, tolerancia
+K·√D en km) — ver § 4 y § 7 del PRD principal.
+
+### Aviso de equipo insuficiente (Fase 8)
+
+`totalStationMeetsOrder(order, angularPrecisionSeconds)` y
+`levelMeetsOrder(order, kmPrecisionMm)`, en `tolerances.ts`, responden si el
+instrumento declarado puede entregar el orden elegido. La comparación es
+directa entre coeficientes —`σ > K`— y no con un margen: la tolerancia escala
+como `K·√n` (o `K·√D` en nivelación) y la desviación del instrumento escala
+igual, como `σ·√n`, así que el factor se cancela y un umbral con margen sería
+un criterio estadístico inventado. Es estrictamente mayor: `σ = K` es
+justo el instrumento que corresponde al orden, no un problema. Sin dato de
+precisión, ninguna de las dos función opina —devuelve `true`—, porque un campo
+vacío no es un instrumento insuficiente.
+
+| Módulo | Regla | Avisa | No avisa |
+|---|---|---|---|
+| Poligonal | `angularPrecisionSeconds > ANGULAR_TOLERANCE_K[orden]` | 5″ con primer orden (K=1″) | 1″ con primer orden; 5″ con tercer orden (K=15″) |
+| Nivelación | `kmPrecisionMm > LEVELING_TOLERANCE_K[orden]` | 5.0 mm/km con primer orden (K=3) | 2.5 mm/km con primer orden (ajustado, no imposible) |
+| Asentamientos | igual que nivelación, sobre el `km_precision_mm` de la **visita** | igual que nivelación | igual que nivelación |
+
+El aviso vive en `TotalStationFieldset`/`LevelFieldset`
+(`design-system/equipment-fields.tsx`), compartidos por los tres formularios de
+configuración de proceso (poligonal, nivelación, visita de asentamiento) junto
+al `PrecisionOrderSelect`. Avisa, no bloquea — misma política que el resto de
+la validación de captura (§ 7).
 
 ### Umbral de cierre exacto
 
@@ -872,7 +947,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-392 tests en 25 archivos, Vitest, entorno `node` **sin jsdom**.
+435 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -884,21 +959,22 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/utils/format.test.ts` | 21 | Fecha relativa y **formateo único de precisión** |
 | `lib/validators/settlement.test.ts` | 21 | Captura y cierre de asentamientos — incluye que la alarma no bloquea |
 | `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
-| `lib/export/polygonal-workbook.test.ts` | 15 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto |
+| `lib/export/polygonal-workbook.test.ts` | 17 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8) |
 | `lib/calculations/settlement-persistence.test.ts` | 14 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena |
-| `lib/calculations/tolerances.test.ts` | 13 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
+| `lib/calculations/tolerances.test.ts` | 21 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
+| `lib/export/settlement-workbook.test.ts` | 10 | Libro de asentamientos: catálogo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8) |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
+| `lib/export/leveling-workbook.test.ts` | 9 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta, equipo y orden del proceso (Fase 8) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
 | `lib/calculations/angles.test.ts` | 8 | Conversiones DMS ↔ decimal |
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
-| `lib/export/leveling-workbook.test.ts` | 8 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta |
-| `lib/export/settlement-workbook.test.ts` | 8 | Libro de asentamientos: catálogo, códigos en vez de UUID, `1/∞` |
 | `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `lib/demo/fixtures.test.ts` | 7 | Fixtures del proyecto de ejemplo |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
+| `lib/validators/project.test.ts` | 5 | El proyecto ya no valida equipo ni orden de precisión (Fase 8) |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
 | `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |
 
@@ -1277,11 +1353,16 @@ del canal visual.
 
 **Cerrado — el export de Excel lleva los metadatos geodésicos.** La hoja
 «Resumen» de los tres módulos abre con una sección «Proyecto» que repite
-nombre, cliente, ubicación, datum, proyección, orden de precisión y equipo.
-Un `.xlsx` viaja suelto —se adjunta a un correo y se abre meses después—, y
-sin datum una coordenada como «N=1000.000» no identifica su sistema de
-referencia. El helper es `projectPairs` en `lib/export/workbook.ts`, y el
-parámetro es opcional: sin proyecto, la sección simplemente no se escribe.
+nombre, cliente, ubicación, datum y proyección. Un `.xlsx` viaja suelto —se
+adjunta a un correo y se abre meses después—, y sin datum una coordenada como
+«N=1000.000» no identifica su sistema de referencia. El helper es
+`projectPairs` en `lib/export/workbook.ts`, y el parámetro es opcional: sin
+proyecto, la sección simplemente no se escribe.
+> Nota de la Fase 8: `projectPairs` perdió las filas «Orden de precisión» y
+> «Equipo» — esos dos datos ya no viven en el proyecto. Cada hoja «Resumen»
+> gana en cambio su propia sección «Equipo: estación total» / «Equipo: nivel»
+> con el orden y el equipo **del proceso** (de la visita más reciente en
+> asentamientos). Ver § 4, «Precisión y equipo, por proceso».
 
 **CSP sin nonce (`'unsafe-inline'` en scripts y estilos).** La política que
 sirve la app permite código en línea porque Next lo inyecta y la app usa
@@ -1309,6 +1390,49 @@ HTTP con sesión de navegador (12 KB, tres hojas, catálogo y cotas correctos).
 `npm audit` queda en **0 vulnerabilidades**, producción y desarrollo. Si un
 override deja de hacer falta porque el padre se actualiza, se puede quitar y
 comprobar con `npm audit` que sigue en cero.
+
+**No hay catálogo de equipos reutilizable entre procesos (Fase 8, diferido a
+propósito).** Cada poligonal, cada nivelación y cada visita de asentamiento
+recaptura marca, modelo, serie, fecha de calibración y precisión del
+instrumento, aunque sea el mismo aparato físico que el proceso anterior. Se
+evaluó una tabla `equipment` referenciada por id y se descartó
+(`docs/prds/07-precision-equipo-por-proceso.md`, decisión #2): reabriría el
+agujero de trazabilidad que motivó la fase, porque editar la fila de catálogo
+cambiaría en silencio el equipo de los informes de procesos ya cerrados. Si
+reteclear el mismo equipo en cada proceso se vuelve molesto en el uso real, se
+reabre como mejora — con el congelado resuelto, no solo con menos tecleo.
+
+**El formulario de proyecto quedó más corto (Fase 8).** Al perder los siete
+campos de equipo y precisión, el paso 2 del asistente pasó de «Equipo y
+precisión» a «Datum y proyección» — dos campos únicamente. Se decidió no
+fusionarlo con el paso 1 porque el sistema de referencia es una agrupación
+coherente por sí misma y fusionar habría obligado a rehacer la validación
+nativa por paso. Queda pendiente de una revisión visual (no hecha desde este
+cierre documental, que no levantó la app) para confirmar que el paso corto
+sigue teniendo sentido en pantalla y no se lee como un `fieldset` vacío.
+
+**La portada del informe emitido sigue leyendo el proyecto en vivo, y
+`reports` no tiene trigger de inmutabilidad.** El pie del informe imprimible
+afirma que el contenido procede de procesos cerrados e inmutables, y desde la
+Fase 8 eso es cierto para el equipo, la precisión y las medidas de cada
+proceso. No lo es para el resto de lo que sale impreso:
+
+- El bloque de portada lee `project.name`, `client`, `location`, `datum` y
+  `projection` de una fila de `projects`, que no tiene ningún trigger que la
+  congele. Editar el proyecto reescribe la portada de todos los informes ya
+  emitidos.
+- `reports` tampoco lo tiene: `title`, `observations` e `included_processes`
+  siguen siendo modificables después de emitir el informe, así que un informe
+  puede cambiar de título, de observaciones y hasta de procesos incluidos sin
+  dejar rastro.
+
+Es el mismo agujero de trazabilidad que motivó la Fase 8, en la parte del
+informe que la fase no tocó: preexistente y fuera de su alcance
+(`docs/prds/07-precision-equipo-por-proceso.md`, anti-alcance: «snapshot del
+equipo en `reports`»). Las dos salidas razonables —congelar `reports` con un
+trigger al emitir, o guardar en la fila un snapshot de la portada— son
+candidatas a una fase posterior, no un parche suelto: hay que decidir antes si
+un informe emitido se puede reeditar o solo reemitir.
 
 ---
 

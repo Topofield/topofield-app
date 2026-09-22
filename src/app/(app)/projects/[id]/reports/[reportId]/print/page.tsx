@@ -13,9 +13,20 @@ import {
   getVisits,
 } from "@/lib/supabase/queries";
 import { computeHistory } from "@/lib/calculations/settlement";
-import { thresholdsOf } from "@/lib/calculations/tolerances";
-import { formatDate, formatPrecision } from "@/lib/utils/format";
-import { PRECISION_ORDER_LABELS } from "@/types/project";
+import {
+  levelMeetsOrder,
+  thresholdsOf,
+  totalStationMeetsOrder,
+} from "@/lib/calculations/tolerances";
+import {
+  formatAngularPrecision,
+  formatDate,
+  formatDistancePrecision,
+  formatEquipmentLine,
+  formatKmPrecision,
+  formatPrecision,
+} from "@/lib/utils/format";
+import { LEVEL_TYPE_LABELS, PRECISION_ORDER_LABELS } from "@/types/project";
 import {
   CORRECTION_METHOD_LABELS,
   POLYGONAL_TYPE_LABELS,
@@ -168,6 +179,78 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
     }),
   );
 
+  // ---- Resumen consolidado de precisiones -----------------------------------
+  // Se calcula aquí y no dentro del JSX porque la nota al pie depende de si
+  // alguna fila quedó marcada, y eso hay que saberlo antes de pintar la tabla.
+  const filasResumen = sections.map((s) => {
+    let precision = "—";
+    let equipo = "—";
+    let cumple: boolean | null = null;
+    // ¿El equipo declarado da para el orden declarado? No entra en
+    // `meets_tolerance` —capacidad del instrumento y conformidad de las
+    // medidas son cantidades distintas, y el aviso de equipo es informativo,
+    // no bloqueante—, pero un «Sí» junto a una columna de equipo que no lo
+    // alcanza, sin nada que los relacione, se lee como una conformidad que el
+    // instrumento no respalda. Marca y nota al pie, no cambio de resultado.
+    let equipoAlcanza = true;
+
+    if (s.kind === "polygonal" && s.data.process) {
+      precision = formatPrecision(s.data.process.relative_precision);
+      cumple = s.data.process.meets_tolerance;
+      equipo = formatEquipmentLine(
+        s.data.process.equipment_brand,
+        s.data.process.equipment_model,
+        s.data.process.equipment_serial,
+      );
+      equipoAlcanza = totalStationMeetsOrder(
+        s.data.process.precision_order,
+        n(s.data.process.angular_precision_seconds) ?? Number.NaN,
+      );
+    } else if (s.kind === "leveling" && s.data.process) {
+      precision = `${fixed(s.data.process.closure_error_mm, 1)} mm (tol. ${fixed(s.data.process.tolerance_mm, 1)})`;
+      cumple = s.data.process.meets_tolerance;
+      equipo = formatEquipmentLine(
+        s.data.process.equipment_brand,
+        s.data.process.equipment_model,
+        s.data.process.equipment_serial,
+      );
+      equipoAlcanza = levelMeetsOrder(
+        s.data.process.precision_order,
+        n(s.data.process.km_precision_mm) ?? Number.NaN,
+      );
+    } else if (s.kind === "site") {
+      const last = s.data.history.visits[s.data.history.visits.length - 1];
+      precision = last
+        ? `Peor alerta: ${ALERT_LEVEL_LABELS[last.worstAlert]}`
+        : "Sin visitas";
+      const lastVisit = s.data.visits[s.data.visits.length - 1];
+      if (lastVisit) {
+        equipo = formatEquipmentLine(
+          lastVisit.equipment_brand,
+          lastVisit.equipment_model,
+          lastVisit.equipment_serial,
+        );
+        equipoAlcanza = levelMeetsOrder(
+          lastVisit.precision_order,
+          n(lastVisit.km_precision_mm) ?? Number.NaN,
+        );
+      }
+    }
+
+    return {
+      key: `${s.entry.type}:${s.entry.id}`,
+      nombre: s.entry.name,
+      tipo: CANDIDATE_KIND_LABELS[s.entry.type],
+      precision,
+      equipo,
+      cumple,
+      // La marca solo tiene sentido sobre un «Sí»: si el cierre no cumple, no
+      // hay conformidad que acotar.
+      marcar: cumple === true && !equipoAlcanza,
+    };
+  });
+  const hayEquipoInsuficiente = filasResumen.some((f) => f.marcar);
+
   return (
     <div className="report">
       <PrintButton />
@@ -191,25 +274,12 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
               <dd>{project.location}</dd>
             </>
           )}
-          <dt>Orden de precisión</dt>
-          <dd>{PRECISION_ORDER_LABELS[project.precision_order]}</dd>
           {project.datum && (
             <>
               <dt>Datum / proyección</dt>
               <dd>
                 {project.datum}
                 {project.projection ? ` · ${project.projection}` : ""}
-              </dd>
-            </>
-          )}
-          {(project.equipment_brand || project.equipment_model) && (
-            <>
-              <dt>Equipo</dt>
-              <dd>
-                {[project.equipment_brand, project.equipment_model]
-                  .filter(Boolean)
-                  .join(" ")}
-                {project.equipment_serial ? ` · s/n ${project.equipment_serial}` : ""}
               </dd>
             </>
           )}
@@ -277,6 +347,31 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                 <dd>{fixed(section.data.process.perimeter, 3)} m</dd>
                 <dt>Precisión relativa</dt>
                 <dd>{formatPrecision(section.data.process.relative_precision)}</dd>
+                <dt>Orden de precisión</dt>
+                <dd>
+                  {PRECISION_ORDER_LABELS[section.data.process.precision_order]}
+                </dd>
+                <dt>Equipo</dt>
+                <dd>
+                  {formatEquipmentLine(
+                    section.data.process.equipment_brand,
+                    section.data.process.equipment_model,
+                    section.data.process.equipment_serial,
+                  )}
+                </dd>
+                <dt>Precisión angular</dt>
+                <dd>
+                  {formatAngularPrecision(
+                    section.data.process.angular_precision_seconds,
+                  )}
+                </dd>
+                <dt>Precisión de distancia</dt>
+                <dd>
+                  {formatDistancePrecision(
+                    section.data.process.distance_precision_mm,
+                    section.data.process.distance_precision_ppm,
+                  )}
+                </dd>
               </dl>
               <table className="report-table">
                 <thead>
@@ -326,6 +421,26 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                 <dd>{fixed(section.data.process.tolerance_mm, 1)} mm</dd>
                 <dt>Distancia total</dt>
                 <dd>{fixed(section.data.process.total_distance_km, 3)} km</dd>
+                <dt>Orden de precisión</dt>
+                <dd>
+                  {PRECISION_ORDER_LABELS[section.data.process.precision_order]}
+                </dd>
+                <dt>Equipo</dt>
+                <dd>
+                  {formatEquipmentLine(
+                    section.data.process.equipment_brand,
+                    section.data.process.equipment_model,
+                    section.data.process.equipment_serial,
+                  )}
+                </dd>
+                <dt>Tipo de nivel</dt>
+                <dd>
+                  {section.data.process.level_type
+                    ? LEVEL_TYPE_LABELS[section.data.process.level_type]
+                    : "—"}
+                </dd>
+                <dt>Desviación típica</dt>
+                <dd>{formatKmPrecision(section.data.process.km_precision_mm)}</dd>
               </dl>
               <table className="report-table">
                 <thead>
@@ -378,6 +493,38 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                     return last ? ALERT_LEVEL_LABELS[last.worstAlert] : "—";
                   })()}
                 </dd>
+                {/* El equipo es de la VISITA, no del lugar: el instrumento puede
+                    cambiar entre campañas (§ Fase 8). Se muestra el de la más
+                    reciente, la misma que informa la peor alerta de arriba. */}
+                {(() => {
+                  const lastVisit =
+                    section.data.visits[section.data.visits.length - 1];
+                  if (!lastVisit) return null;
+                  return (
+                    <>
+                      <dt>Orden de precisión (última visita)</dt>
+                      <dd>
+                        {PRECISION_ORDER_LABELS[lastVisit.precision_order]}
+                      </dd>
+                      <dt>Equipo (última visita)</dt>
+                      <dd>
+                        {formatEquipmentLine(
+                          lastVisit.equipment_brand,
+                          lastVisit.equipment_model,
+                          lastVisit.equipment_serial,
+                        )}
+                      </dd>
+                      <dt>Tipo de nivel</dt>
+                      <dd>
+                        {lastVisit.level_type
+                          ? LEVEL_TYPE_LABELS[lastVisit.level_type]
+                          : "—"}
+                      </dd>
+                      <dt>Desviación típica</dt>
+                      <dd>{formatKmPrecision(lastVisit.km_precision_mm)}</dd>
+                    </>
+                  );
+                })()}
               </dl>
               <SettlementPlot
                 points={section.data.pointInputs}
@@ -432,39 +579,32 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
               <th>Proceso</th>
               <th>Tipo</th>
               <th>Precisión / cierre</th>
+              <th>Equipo</th>
               <th>¿Cumple?</th>
             </tr>
           </thead>
           <tbody>
-            {sections.map((s) => {
-              let precision = "—";
-              let cumple: boolean | null = null;
-              if (s.kind === "polygonal" && s.data.process) {
-                precision = formatPrecision(s.data.process.relative_precision);
-                cumple = s.data.process.meets_tolerance;
-              } else if (s.kind === "leveling" && s.data.process) {
-                precision = `${fixed(s.data.process.closure_error_mm, 1)} mm (tol. ${fixed(s.data.process.tolerance_mm, 1)})`;
-                cumple = s.data.process.meets_tolerance;
-              } else if (s.kind === "site") {
-                const last =
-                  s.data.history.visits[s.data.history.visits.length - 1];
-                precision = last
-                  ? `Peor alerta: ${ALERT_LEVEL_LABELS[last.worstAlert]}`
-                  : "Sin visitas";
-              }
-              return (
-                <tr key={`${s.entry.type}:${s.entry.id}`}>
-                  <td>{s.entry.name}</td>
-                  <td>{CANDIDATE_KIND_LABELS[s.entry.type]}</td>
-                  <td>{precision}</td>
-                  <td>
-                    {cumple === null ? "—" : cumple ? "Sí" : "No"}
-                  </td>
-                </tr>
-              );
-            })}
+            {filasResumen.map((f) => (
+              <tr key={f.key}>
+                <td>{f.nombre}</td>
+                <td>{f.tipo}</td>
+                <td>{f.precision}</td>
+                <td>{f.equipo}</td>
+                <td>
+                  {f.cumple === null ? "—" : f.cumple ? "Sí" : "No"}
+                  {f.marcar && <sup> (*)</sup>}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+        {hayEquipoInsuficiente && (
+          <p className="report-footnote">
+            (*) El cierre cumple la tolerancia de su orden, pero la precisión
+            del equipo declarado no alcanza el coeficiente K de ese orden. El
+            «Sí» es sobre las medidas, no sobre la capacidad del instrumento.
+          </p>
+        )}
       </section>
 
       {/* ---------- Observaciones ---------- */}

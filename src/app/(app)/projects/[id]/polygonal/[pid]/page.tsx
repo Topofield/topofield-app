@@ -38,9 +38,17 @@ export default async function PolygonalEditorPage({
       stations={stations}
       projectId={id}
       projectName={project.name}
-      precisionOrder={project.precision_order}
       referencePoints={referencePoints}
-      angularPrecisionSeconds={Number(project.angular_precision_seconds)}
+      // `NaN` y no `0` cuando el proceso no declaró precisión angular: la
+      // columna es nullable y `Number(null)` es 0, no NaN, de modo que la
+      // tolerancia de dispersión salía 0" y avisaba en toda estación con dos
+      // lecturas distintas. `validateReadings` salta el control si no es
+      // finito.
+      angularPrecisionSeconds={
+        process.angular_precision_seconds == null
+          ? Number.NaN
+          : Number(process.angular_precision_seconds)
+      }
     />
   );
 }

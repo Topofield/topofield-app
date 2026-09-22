@@ -11,6 +11,8 @@
 
 import ExcelJS from "exceljs";
 
+import { formatEquipmentLine } from "@/lib/utils/format";
+
 const ACCENT = "FF0B3D5C";
 const HEADER_FILL: ExcelJS.Fill = {
   type: "pattern",
@@ -150,6 +152,11 @@ export function safeFilename(name: string, suffix: string): string {
  * estos campos, un archivo con «N=1000.000 E=1100.000» es ambiguo: la cifra
  * sola no identifica el sistema de referencia. El informe ya los lleva en su
  * portada; el libro debe llevarlos también.
+ *
+ * Desde la Fase 8 el orden de precisión y el equipo NO están aquí: viven en
+ * cada proceso, no en el proyecto (§ precisión y equipo por proceso), así que
+ * cada libro los lee de su propia fila de proceso — ver `equipmentLine` más
+ * abajo — y no del proyecto.
  */
 export interface ProjectMetadata {
   name: string;
@@ -157,35 +164,73 @@ export interface ProjectMetadata {
   location: string | null;
   datum: string | null;
   projection: string | null;
-  precision_order: string;
-  equipment_brand: string | null;
-  equipment_model: string | null;
-  equipment_serial: string | null;
 }
 
 /** Pares etiqueta/valor del proyecto, listos para `writePairs`. */
 export function projectPairs(
   project: ProjectMetadata | null | undefined,
-  precisionOrderLabel: string,
 ): [string, string | number | null][] {
   if (!project) return [];
-  const equipo = [project.equipment_brand, project.equipment_model]
-    .filter(Boolean)
-    .join(" ");
   return [
     ["Proyecto", project.name],
     ["Cliente", project.client],
     ["Ubicación", project.location],
     ["Datum", project.datum],
     ["Proyección", project.projection],
-    ["Orden de precisión", precisionOrderLabel],
-    [
-      "Equipo",
-      equipo === ""
-        ? null
-        : project.equipment_serial
-          ? `${equipo} · s/n ${project.equipment_serial}`
-          : equipo,
-    ],
   ];
+}
+
+/**
+ * «Marca Modelo», con «· s/n Serie» si hay número de serie; `null` si no hay
+ * marca ni modelo — para que `writePairs` deje la celda vacía en vez de
+ * escribir un guion, que en una hoja de cálculo se leería como un dato.
+ *
+ * Compartida entre los tres libros que llevan equipo (poligonal: estación
+ * total; nivelación y asentamientos: nivel), para no componer el mismo texto
+ * tres veces.
+ *
+ * Delega en `formatEquipmentLine` en vez de repetir la composición: el caso
+ * vacío SÍ difiere a propósito —"—" en el informe impreso, `null` en la hoja
+ * de cálculo, donde un guion se leería como dato—, pero el separador y el
+ * orden de los tres campos no deben poder divergir.
+ */
+export function equipmentLine(
+  brand: string | null | undefined,
+  model: string | null | undefined,
+  serial: string | null | undefined,
+): string | null {
+  const linea = formatEquipmentLine(brand, model, serial);
+  return linea === "—" ? null : linea;
+}
+
+/**
+ * Los dos términos de la precisión de distancia (ISO 17123-4) para una hoja
+ * de cálculo: `[mm, ppm]`, o `[null, null]` si falta cualquiera de los dos.
+ *
+ * Todo o nada, igual que `formatDistancePrecision`, que devuelve "—" ante un
+ * par a medias. Antes cada libro escribía los dos términos como filas
+ * independientes, así que un proceso con solo uno de los dos capturado se
+ * leía "—" en el informe impreso y como un número suelto en el Excel: dos
+ * respuestas distintas del mismo dato. Una precisión de distancia a medias no
+ * es un dato usable en ninguno de los dos sitios.
+ *
+ * Se devuelven como números y no como la cadena «3 mm + 2 ppm» porque en una
+ * hoja de cálculo el valor tiene que seguir siendo calculable.
+ */
+export function distancePrecisionPair(
+  mm: number | string | null | undefined,
+  ppm: number | string | null | undefined,
+): [number | null, number | null] {
+  const m = toFiniteNumber(mm);
+  const p = toFiniteNumber(ppm);
+  if (m === null || p === null) return [null, null];
+  return [m, p];
+}
+
+function toFiniteNumber(
+  value: number | string | null | undefined,
+): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const v = Number(value);
+  return Number.isFinite(v) ? v : null;
 }

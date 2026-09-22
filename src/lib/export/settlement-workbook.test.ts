@@ -47,9 +47,28 @@ const POINTS: PointInput[] = POINT_ROWS.map((p) => ({
   initialElevation: Number(p.initial_elevation),
 }));
 
+function visit(over: Partial<VisitRow> = {}): VisitRow {
+  return {
+    id: "v0",
+    visit_number: 0,
+    date: "2026-01-01",
+    status: "closed",
+    operator: null,
+    weather_conditions: null,
+    precision_order: "tercer_orden",
+    equipment_brand: null,
+    equipment_model: null,
+    equipment_serial: null,
+    equipment_calibration_date: null,
+    level_type: null,
+    km_precision_mm: null,
+    ...over,
+  };
+}
+
 const VISIT_ROWS: VisitRow[] = [
-  { id: "v0", visit_number: 0, date: "2026-01-01", status: "closed", operator: null, equipment: null, weather_conditions: null },
-  { id: "v1", visit_number: 1, date: "2026-02-01", status: "draft", operator: null, equipment: null, weather_conditions: null },
+  visit({ id: "v0", visit_number: 0, date: "2026-01-01", status: "closed" }),
+  visit({ id: "v1", visit_number: 1, date: "2026-02-01", status: "draft" }),
 ];
 
 const VISIT_INPUTS: VisitInput[] = [
@@ -176,5 +195,112 @@ describe("buildSettlementWorkbook", () => {
     const history = computeHistory([], [], THRESHOLDS);
     const wb = buildSettlementWorkbook(SITE, [], [], history, THRESHOLDS);
     expect(wb.worksheets).toHaveLength(3);
+  });
+
+  // El equipo es de la VISITA, no del lugar (§ Fase 8): el instrumento puede
+  // cambiar entre campañas. El resumen muestra el de la más reciente, no el
+  // de la primera ni un valor fijo del lugar.
+  it("el resumen lleva el equipo de la visita más reciente", () => {
+    const visitas = [
+      visit({
+        id: "v0",
+        date: "2026-01-01",
+        precision_order: "tercer_orden",
+        equipment_brand: "Sokkia",
+        equipment_model: "B40",
+        level_type: "digital",
+        km_precision_mm: "1.5",
+      }),
+      visit({
+        id: "v1",
+        date: "2026-02-01",
+        precision_order: "primer_orden",
+        equipment_brand: "Leica",
+        equipment_model: "NA2",
+        equipment_serial: "LC-7",
+        level_type: "automatico",
+        km_precision_mm: "0.7",
+      }),
+    ];
+    const history = computeHistory(POINTS, VISIT_INPUTS, THRESHOLDS);
+    const wb = buildSettlementWorkbook(SITE, POINT_ROWS, visitas, history, THRESHOLDS);
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res.getColumn(1).values;
+    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
+
+    expect(res.getCell(fila("Equipo"), 2).value).toBe("Leica NA2 · s/n LC-7");
+    expect(res.getCell(fila("Orden de precisión"), 2).value).toBe(
+      "Primer orden",
+    );
+    expect(res.getCell(fila("Tipo de nivel"), 2).value).toBe("Automático");
+  });
+
+  // El Resumen puede colapsar a la última visita (es un resumen); «Datos
+  // Crudos» no puede: es el artefacto archivable, y ahí el equipo de una
+  // visita cerrada antigua tiene que seguir leyéndose aunque exista una
+  // visita más nueva con otro instrumento. Con una sola visita este test
+  // pasaría aunque el colapso volviera — por eso son dos, con equipos
+  // distintos, y se comprueba que CADA una conserva el suyo.
+  it("Datos Crudos conserva el equipo de cada visita, no solo el de la más reciente", () => {
+    const visitas = [
+      visit({
+        id: "v0",
+        visit_number: 0,
+        date: "2026-01-01",
+        status: "closed",
+        equipment_brand: "Sokkia",
+        equipment_model: "B40",
+        level_type: "digital",
+        km_precision_mm: "1.50",
+      }),
+      visit({
+        id: "v1",
+        visit_number: 1,
+        date: "2026-02-01",
+        status: "closed",
+        equipment_brand: "Leica",
+        equipment_model: "NA2",
+        equipment_serial: "LC-7",
+        level_type: "automatico",
+        km_precision_mm: "0.70",
+      }),
+    ];
+    const history = computeHistory(POINTS, VISIT_INPUTS, THRESHOLDS);
+    const wb = buildSettlementWorkbook(
+      SITE,
+      POINT_ROWS,
+      visitas,
+      history,
+      THRESHOLDS,
+    );
+    const raw = wb.getWorksheet("Datos Crudos")!;
+
+    // Fila → (equipo, tipo de nivel, mm/km), indexadas por el número de
+    // visita de esa misma fila (columna 1 de la tabla «Cotas medidas por
+    // visita»).
+    const porVisita = new Map<
+      number,
+      { equipo: unknown; tipo: unknown; mmKm: unknown }
+    >();
+    raw.eachRow((row) => {
+      const visitNumber = row.getCell(1).value;
+      if (typeof visitNumber !== "number") return;
+      porVisita.set(visitNumber, {
+        equipo: row.getCell(6).value,
+        tipo: row.getCell(7).value,
+        mmKm: row.getCell(8).value,
+      });
+    });
+
+    expect(porVisita.get(0)).toEqual({
+      equipo: "Sokkia B40",
+      tipo: "Digital / electrónico",
+      mmKm: 1.5,
+    });
+    expect(porVisita.get(1)).toEqual({
+      equipo: "Leica NA2 · s/n LC-7",
+      tipo: "Automático",
+      mmKm: 0.7,
+    });
   });
 });

@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Alert, Button } from "@/components/design-system";
 import {
   BasicFields,
-  EquipmentFields,
+  GeodeticFields,
   type ProjectFormValues,
 } from "./project-fields";
 import {
@@ -25,13 +25,6 @@ function toFormValues(project: Project): ProjectFormValues {
     longitude: project.longitude?.toString() ?? "",
     datum: project.datum,
     projection: project.projection ?? "",
-    equipment_brand: project.equipment_brand,
-    equipment_model: project.equipment_model,
-    equipment_serial: project.equipment_serial,
-    angular_precision_seconds: project.angular_precision_seconds.toString(),
-    linear_precision: project.linear_precision,
-    equipment_calibration_date: project.equipment_calibration_date,
-    precision_order: project.precision_order,
   };
 }
 
@@ -49,7 +42,7 @@ export function ProjectEditForm({ project }: { project: Project }) {
       {state.error && <Alert variant="error">{state.error}</Alert>}
       {state.ok && <Alert variant="success">Cambios guardados.</Alert>}
       <BasicFields values={values} errors={errors} />
-      <EquipmentFields values={values} errors={errors} />
+      <GeodeticFields values={values} errors={errors} />
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Guardando…" : "Guardar cambios"}

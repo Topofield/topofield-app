@@ -5,15 +5,8 @@ import {
   getLevelingReadings,
   getProjectById,
 } from "@/lib/supabase/queries";
-import {
-  buildLevelingWorkbook,
-  type LevelingProcessRow,
-  type LevelingReadingRow,
-} from "@/lib/export/leveling-workbook";
-import {
-  safeFilename,
-  type ProjectMetadata,
-} from "@/lib/export/workbook";
+import { buildLevelingWorkbook } from "@/lib/export/leveling-workbook";
+import { safeFilename } from "@/lib/export/workbook";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -44,11 +37,7 @@ export async function GET(
 
   const readings = await getLevelingReadings(supabase, process.id);
 
-  const workbook = buildLevelingWorkbook(
-    process as unknown as LevelingProcessRow,
-    readings as unknown as LevelingReadingRow[],
-    project as unknown as ProjectMetadata,
-  );
+  const workbook = buildLevelingWorkbook(process, readings, project);
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

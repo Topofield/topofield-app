@@ -9,6 +9,7 @@
 import type ExcelJS from "exceljs";
 import {
   DECIMALS,
+  equipmentLine,
   newWorkbook,
   projectPairs,
   type ProjectMetadata,
@@ -24,7 +25,12 @@ import {
   type SettlementHistory,
 } from "@/types/settlement";
 import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
-import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
+import {
+  LEVEL_TYPE_LABELS,
+  PRECISION_ORDER_LABELS,
+  type LevelType,
+  type PrecisionOrder,
+} from "@/types/project";
 import type { Thresholds } from "@/types/settlement";
 
 /**
@@ -60,8 +66,16 @@ export interface VisitRow {
   date: string;
   status: string;
   operator: string | null;
-  equipment: string | null;
   weather_conditions: string | null;
+  /** Orden de precisión y equipo de nivel, propios de la visita (§ Fase 8). */
+  precision_order: PrecisionOrder;
+  equipment_brand: string | null;
+  equipment_model: string | null;
+  equipment_serial: string | null;
+  equipment_calibration_date: string | null;
+  level_type: LevelType | null;
+  /** ISO 17123-2: desviación típica en mm por km de doble nivelación. */
+  km_precision_mm: number | string | null;
 }
 
 function num(value: number | string | null | undefined): number | null {
@@ -85,7 +99,7 @@ function sheetRawData(
   const s = wb.addWorksheet("Datos Crudos");
   s.columns = [
     { width: 9 }, { width: 13 }, { width: 12 }, { width: 14 },
-    { width: 13 }, { width: 13 }, { width: 13 },
+    { width: 13 }, { width: 22 }, { width: 14 }, { width: 18 },
   ];
 
   setSheetTitle(s, `${site.name} — catálogo y cotas medidas`);
@@ -116,18 +130,36 @@ function sheetRawData(
   let row = 5 + points.length + 1;
   writeSection(s, row, "Cotas medidas por visita");
   row += 1;
+  // El equipo va en ESTA tabla, a su propio grano (una fila por lectura,
+  // repetido como ya se repite Visita/Fecha/Estado), y no se colapsa a la
+  // visita más reciente como en el Resumen: el instrumento puede cambiar
+  // entre campañas, y este es el único artefacto que conserva sin pérdida
+  // qué equipo midió cada visita cerrada, incluidas las que ya no son la
+  // última (§ Fase 8 — es justo la pérdida de trazabilidad que la fase existe
+  // para cerrar).
   setHeaders(s, row, [
     "Visita",
     "Fecha",
     "Estado",
     "Punto",
     "Cota (m)",
+    "Equipo",
+    "Tipo de nivel",
+    "Desv. típica (mm/km)",
   ]);
   row += 1;
 
   const codeById = new Map(points.map((p) => [p.id, p.code]));
   for (const visit of visits) {
     const computed = history.visits.find((v) => v.visitId === visit.id);
+    const equipoVisita = equipmentLine(
+      visit.equipment_brand,
+      visit.equipment_model,
+      visit.equipment_serial,
+    );
+    const tipoNivelVisita = visit.level_type
+      ? LEVEL_TYPE_LABELS[visit.level_type]
+      : null;
     for (const reading of computed?.readings ?? []) {
       writeRow(
         s,
@@ -138,8 +170,11 @@ function sheetRawData(
           visit.status === "closed" ? "Cerrada" : "Abierta",
           codeById.get(reading.pointId) ?? reading.pointId,
           reading.elevation,
+          equipoVisita,
+          tipoNivelVisita,
+          num(visit.km_precision_mm),
         ],
-        [null, null, null, null, DECIMALS.elevation],
+        [null, null, null, null, DECIMALS.elevation, null, null, DECIMALS.mm],
       );
       row += 1;
     }
@@ -247,13 +282,7 @@ function sheetSummary(
   ).length;
 
   let row0 = 3;
-  const pares = projectPairs(
-    project,
-    project
-      ? PRECISION_ORDER_LABELS[project.precision_order as PrecisionOrder] ??
-        project.precision_order
-      : "",
-  );
+  const pares = projectPairs(project);
   if (pares.length > 0) {
     writeSection(s, row0, "Proyecto");
     row0 = writePairs(s, row0 + 1, pares) + 1;
@@ -272,6 +301,38 @@ function sheetSummary(
     ["Puntos del catálogo", points.length],
     ["Visitas registradas", visits.length],
   ]);
+
+  // El equipo es de la VISITA, no del lugar ni del proyecto: el instrumento
+  // puede cambiar entre campañas (§ Fase 8). Se muestra el de la más
+  // reciente, la misma que informa «peor alerta» más abajo.
+  const lastVisit = visits[visits.length - 1];
+  if (lastVisit) {
+    row += 1;
+    writeSection(s, row, "Equipo: nivel (última visita)");
+    row = writePairs(s, row + 1, [
+      [
+        "Orden de precisión",
+        PRECISION_ORDER_LABELS[lastVisit.precision_order],
+      ],
+      [
+        "Equipo",
+        equipmentLine(
+          lastVisit.equipment_brand,
+          lastVisit.equipment_model,
+          lastVisit.equipment_serial,
+        ),
+      ],
+      ["Fecha de calibración", lastVisit.equipment_calibration_date],
+      [
+        "Tipo de nivel",
+        lastVisit.level_type ? LEVEL_TYPE_LABELS[lastVisit.level_type] : null,
+      ],
+      [
+        "Desviación típica (mm/km, doble nivelación)",
+        num(lastVisit.km_precision_mm),
+      ],
+    ]);
+  }
 
   row += 1;
   writeSection(s, row, "Umbrales vigentes");

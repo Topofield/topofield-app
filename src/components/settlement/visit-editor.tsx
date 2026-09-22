@@ -1,10 +1,19 @@
 "use client";
 
 import { useMemo, useState, useTransition, type ChangeEvent } from "react";
-import { Alert, Button, Card, Input, Textarea } from "@/components/design-system";
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  LevelFieldset,
+  PrecisionOrderSelect,
+  Textarea,
+} from "@/components/design-system";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { ReadingsTable } from "@/components/settlement/readings-table";
 import { computeHistory } from "@/lib/calculations/settlement";
+import { parseNumber } from "@/lib/utils/parse";
 import {
   closeVisitAction,
   saveVisitAction,
@@ -17,6 +26,7 @@ import type {
   Thresholds,
   VisitInput,
 } from "@/types/settlement";
+import type { LevelFields, PrecisionOrder } from "@/types/project";
 
 interface VisitEditorProps {
   projectId: string;
@@ -37,21 +47,32 @@ interface VisitEditorProps {
 interface HeaderState {
   date: string;
   operator: string;
-  equipment: string;
   weatherConditions: string;
   closureErrorMm: string;
   notes: string;
+  /** Orden de precisión declarado de la visita (ISO 17123-2 para el equipo). */
+  precisionOrder: PrecisionOrder;
+  level: LevelFields;
 }
 
 function headerOf(visit: SettlementVisit): HeaderState {
   return {
     date: visit.date,
     operator: visit.operator ?? "",
-    equipment: visit.equipment ?? "",
     weatherConditions: visit.weather_conditions ?? "",
     closureErrorMm:
       visit.closure_error_mm === null ? "" : String(visit.closure_error_mm),
     notes: visit.notes ?? "",
+    precisionOrder: visit.precision_order,
+    level: {
+      equipmentBrand: visit.equipment_brand ?? "",
+      equipmentModel: visit.equipment_model ?? "",
+      equipmentSerial: visit.equipment_serial ?? "",
+      equipmentCalibrationDate: visit.equipment_calibration_date ?? "",
+      levelType: visit.level_type ?? "",
+      kmPrecisionMm:
+        visit.km_precision_mm != null ? String(visit.km_precision_mm) : "",
+    },
   };
 }
 
@@ -151,13 +172,20 @@ export function VisitEditor({
   const pointsMeasured = computedVisit?.readings.length ?? 0;
   const worstAlert = computedVisit?.worstAlert ?? "normal";
 
-  function setField(key: keyof HeaderState) {
-    return (
-      event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    ) => {
-      setSaved(false);
-      setDirty(true);
-      setHeader((prev) => ({ ...prev, [key]: event.target.value }));
+  function updateHeader<K extends keyof HeaderState>(
+    key: K,
+    fieldValue: HeaderState[K],
+  ) {
+    setSaved(false);
+    setDirty(true);
+    setHeader((prev) => ({ ...prev, [key]: fieldValue }));
+  }
+
+  function setField(
+    key: "date" | "operator" | "weatherConditions" | "closureErrorMm" | "notes",
+  ) {
+    return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      updateHeader(key, event.target.value);
     };
   }
 
@@ -185,13 +213,20 @@ export function VisitEditor({
       visitId: visit.id,
       date: header.date,
       operator: header.operator.trim() === "" ? null : header.operator.trim(),
-      equipment: header.equipment.trim() === "" ? null : header.equipment.trim(),
       weatherConditions:
         header.weatherConditions.trim() === ""
           ? null
           : header.weatherConditions.trim(),
       closureErrorMm,
       notes: header.notes.trim() === "" ? null : header.notes.trim(),
+      precisionOrder: header.precisionOrder,
+      equipmentBrand: header.level.equipmentBrand.trim() || null,
+      equipmentModel: header.level.equipmentModel.trim() || null,
+      equipmentSerial: header.level.equipmentSerial.trim() || null,
+      equipmentCalibrationDate:
+        header.level.equipmentCalibrationDate.trim() || null,
+      levelType: header.level.levelType === "" ? null : header.level.levelType,
+      kmPrecisionMm: parseNumber(header.level.kmPrecisionMm),
       readings: points
         .filter(
           (p) =>
@@ -299,12 +334,6 @@ export function VisitEditor({
             disabled={disabled}
           />
           <Input
-            label="Equipo"
-            value={header.equipment}
-            onChange={setField("equipment")}
-            disabled={disabled}
-          />
-          <Input
             label="Condiciones climáticas"
             value={header.weatherConditions}
             onChange={setField("weatherConditions")}
@@ -316,6 +345,22 @@ export function VisitEditor({
             step="any"
             value={header.closureErrorMm}
             onChange={setField("closureErrorMm")}
+            disabled={disabled}
+          />
+        </div>
+        <div className="mt-4">
+          <PrecisionOrderSelect
+            kind="leveling"
+            value={header.precisionOrder}
+            disabled={disabled}
+            onChange={(v) => updateHeader("precisionOrder", v)}
+          />
+        </div>
+        <div className="mt-4">
+          <LevelFieldset
+            value={header.level}
+            onChange={(v) => updateHeader("level", v)}
+            order={header.precisionOrder}
             disabled={disabled}
           />
         </div>

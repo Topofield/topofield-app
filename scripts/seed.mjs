@@ -127,6 +127,41 @@ function carteraToSpec(cartera, referencePointId, method, status) {
   };
 }
 
+/**
+ * Columnas de equipo y precisión que un spec de proceso o de visita lleva
+ * incorporadas (Fase 8). Se listan por nombre para que `...spec` en el INSERT
+ * no arrastre las claves del fixture (`stations`, `notes`, `startNorth`…).
+ */
+const EQUIPMENT_COLUMNS = [
+  "precision_order",
+  "equipment_brand",
+  "equipment_model",
+  "equipment_serial",
+  "equipment_calibration_date",
+  "angular_precision_seconds",
+  "distance_precision_mm",
+  "distance_precision_ppm",
+  "level_type",
+  "km_precision_mm",
+];
+
+/**
+ * Extrae del spec el equipo que lleva encima.
+ *
+ * El equipo viaja SOBRE el spec —el mismo patrón de `src/lib/demo/fixtures.ts`,
+ * que lo esparce con `...EQUIPO_DEMO`— y nunca emparejado por posición con un
+ * array paralelo de equipos: con `equipos[i]` basta reordenar o insertar un
+ * proceso para que un instrumento acabe en el proceso equivocado, sin que nada
+ * falle ni avise.
+ */
+function equipmentOf(spec) {
+  const campos = {};
+  for (const k of EQUIPMENT_COLUMNS) {
+    if (spec[k] !== undefined) campos[k] = spec[k];
+  }
+  return campos;
+}
+
 /** DMS como tupla [g, m, s], que es lo que consume el spec del seed. */
 function decimalToDmsTuple(decimal) {
   const { deg, min, sec } = decimalToDms(decimal);
@@ -195,10 +230,13 @@ function isClosedStatus(status) {
   return status === "closed" || status === "rejected";
 }
 
-async function insertPolygonal(projectId, siteId, spec, userId, order) {
+async function insertPolygonal(projectId, siteId, spec, userId) {
+  const equipo = equipmentOf(spec);
   const startAz = spec.startAz ?? [0, 0, 0];
   const endAz = spec.endAz ?? [null, null, null];
-  const resultado = resultFieldsFor(spec, order);
+  // El orden que evalúa el motor es el mismo que declara el equipo del
+  // proceso: una sola fuente, sin riesgo de que calen valores distintos.
+  const resultado = resultFieldsFor(spec, equipo.precision_order);
   const { data: proc, error } = await admin
     .from("polygonal_processes")
     .insert({
@@ -230,6 +268,7 @@ async function insertPolygonal(projectId, siteId, spec, userId, order) {
       // triggers de inmutabilidad rechazan escribir estaciones bajo un proceso
       // ya cerrado. El cierre se aplica al final, como hace la aplicación.
       status: isClosedStatus(spec.status) ? "calculated" : spec.status,
+      ...equipo,
       ...resultado.campos,
       notes: spec.notes ?? null,
     })
@@ -322,12 +361,17 @@ async function insertPolygonal(projectId, siteId, spec, userId, order) {
  * `computePolygonal`: el seed nunca queda desincronizado con lo que
  * produciría `saveLevelingProcessAction` en un guardado real.
  */
-async function insertLeveling(projectId, siteId, spec, userId, order) {
+// `userId` no hace falta: `leveling_processes` no lo lleva y el cierre de
+// estos fixtures no pasa por `closed_by`.
+async function insertLeveling(projectId, siteId, spec) {
+  const equipo = equipmentOf(spec);
   const input = {
     type: spec.type,
     startElevation: spec.startElevation,
     endElevation: spec.endElevation ?? null,
-    order,
+    // Mismo criterio que insertPolygonal: el orden que evalúa el motor es el
+    // que declara el equipo del proceso.
+    order: equipo.precision_order,
     totalDistanceKm: spec.totalDistanceKm,
     forward: spec.forward.map((r) => ({
       pointCode: r.code,
@@ -367,6 +411,7 @@ async function insertLeveling(projectId, siteId, spec, userId, order) {
       // escribir lecturas bajo un proceso ya cerrado (mismo motivo que en
       // insertPolygonal). Este fixture se deja "calculated" a propósito.
       status: "calculated",
+      ...equipo,
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
       meets_tolerance: result.meetsTolerance,
@@ -415,6 +460,104 @@ async function insertLeveling(projectId, siteId, spec, userId, order) {
 
   return proc.id;
 }
+
+// ----------------------------------------------------------------------------
+// Equipos coherentes con el orden de cada proceso (Fase 8).
+//
+// El orden y el equipo dejaron de vivir en `projects` y ahora los declara
+// cada proceso. Este seed conserva el emparejamiento que el proyecto ya
+// tenía: "Lote catastral" con estación de 5″ y tercer orden, "Red geodésica"
+// con estación de 1″ y primer orden. Cifras verificadas contra la ficha
+// técnica publicada de cada modelo (no contra el rango genérico de la ISO):
+//  - Estación total 5″: Leica FlexLine TS06plus — 5″ es una de sus clases de
+//    precisión angular de catálogo (2″/3″/5″); EDM con prisma 1.5 mm + 2 ppm.
+//  - Estación total 1″: Trimble S9 — 1″ es una de sus dos clases angulares
+//    (0.5″/1″); EDM con prisma 1.0 mm + 2 ppm.
+//  - Nivel digital: Trimble/Zeiss DiNi 12 — σ = 0.3 mm/km en doble
+//    nivelación con mira de ínvar de código de barras, y 1.0 mm/km con mira
+//    ordinaria (no ínvar). Se usa la cifra de mira ordinaria (1.0 mm/km): es
+//    el emparejamiento de campo realista para trabajo de tercer orden, y deja
+//    el equipo cómodamente dentro del coeficiente de tercer orden (K = 12
+//    mm/km) sin que el margen sea tan ancho que la coherencia deje de verse.
+// ----------------------------------------------------------------------------
+
+const TOTAL_STATION_TERCER_ORDEN = {
+  precision_order: "tercer_orden",
+  equipment_brand: "Leica",
+  equipment_model: "TS06 Plus",
+  equipment_serial: "LCS-2026-001",
+  equipment_calibration_date: "2026-02-10",
+  angular_precision_seconds: 5,
+  distance_precision_mm: 1.5,
+  distance_precision_ppm: 2,
+};
+
+const TOTAL_STATION_PRIMER_ORDEN = {
+  precision_order: "primer_orden",
+  equipment_brand: "Trimble",
+  equipment_model: "S9",
+  equipment_serial: "TRB-2026-009",
+  equipment_calibration_date: "2026-03-15",
+  angular_precision_seconds: 1,
+  distance_precision_mm: 1,
+  distance_precision_ppm: 2,
+};
+
+// Fixture deliberada del aviso de equipo insuficiente: primer orden
+// (K = 1″) capturado con una estación de 5″, muy por debajo de lo exigido.
+// El nombre y las notas del proceso lo dejan explícito — es un fixture del
+// aviso, no un dato mal capturado que alguien deba corregir después.
+const TOTAL_STATION_INSUFICIENTE = {
+  precision_order: "primer_orden",
+  equipment_brand: "Genérica",
+  equipment_model: "TS-5",
+  equipment_serial: "S/N 000",
+  equipment_calibration_date: null,
+  angular_precision_seconds: 5,
+  distance_precision_mm: 5,
+  distance_precision_ppm: 5,
+};
+
+// 1.0 mm/km es la cifra ISO 17123-2 del DiNi 12 con mira ordinaria (no
+// ínvar) — ver el comentario de cabecera de este bloque.
+const LEVEL_DIGITAL_TERCER_ORDEN = {
+  precision_order: "tercer_orden",
+  equipment_brand: "Trimble",
+  equipment_model: "DiNi 12",
+  equipment_serial: "TDN-2026-011",
+  equipment_calibration_date: "2026-01-05",
+  level_type: "digital",
+  km_precision_mm: 1.0,
+};
+
+// Mismo modelo que el de nivelación pero otra unidad física: es el nivel del
+// programa de monitoreo del edificio, un proyecto distinto.
+const LEVEL_DIGITAL_MONITOREO = {
+  precision_order: "tercer_orden",
+  equipment_brand: "Trimble",
+  equipment_model: "DiNi 12",
+  equipment_serial: "TDN-2025-014",
+  equipment_calibration_date: "2024-12-20",
+  level_type: "digital",
+  km_precision_mm: 1.0,
+};
+
+// El nivel de respaldo del programa de monitoreo, para la campaña de abril.
+// Un automático Leica NA720: 2.5 mm/km de catálogo (ISO 17123-2), holgado
+// dentro del K = 12 mm de tercer orden, así que la visita sigue siendo
+// coherente y no dispara el aviso de equipo insuficiente. Existe porque
+// entre una campaña y la siguiente pueden pasar meses y cambiar el
+// instrumento — que es la razón de ser de esta fase— y el seed no lo
+// demostraba en ninguna parte.
+const LEVEL_AUTOMATICO_RESPALDO = {
+  precision_order: "tercer_orden",
+  equipment_brand: "Leica",
+  equipment_model: "NA720",
+  equipment_serial: "LNA-2023-047",
+  equipment_calibration_date: "2024-11-08",
+  level_type: "automatico",
+  km_precision_mm: 2.5,
+};
 
 // ----------------------------------------------------------------------------
 // Definiciones de los procesos
@@ -559,6 +702,53 @@ const PROCESSES = [
   },
 ];
 
+// Procesos de "Red geodésica" (primer orden). Cuadrados que cierran exacto a
+// propósito: el error de cierre no es el punto aquí, lo es el contraste entre
+// equipo y orden, así que la geometría se deja limpia para que el único aviso
+// visible sea el de equipo insuficiente.
+const GEODESICA_PROCESSES = [
+  {
+    name: "Cuadrado de control 200×4 (red geodésica)",
+    type: "closed",
+    angle_type: "interior",
+    startPointCode: "G1",
+    startNorth: 5000,
+    startEast: 5000,
+    startAz: [0, 0, 0],
+    correctionMethod: "bowditch",
+    status: "calculated",
+    ...TOTAL_STATION_PRIMER_ORDEN,
+    stations: [
+      { code: "G1", angle: [90, 0, 0], distance: 200 },
+      { code: "G2", angle: [90, 0, 0], distance: 200 },
+      { code: "G3", angle: [90, 0, 0], distance: 200 },
+      { code: "G4", angle: [90, 0, 0], distance: 200 },
+    ],
+    notes:
+      "Cuadrado de control que cierra exacto. Primer orden (K=1″) con estación de 1″: el equipo alcanza justo la tolerancia angular exigida, sin aviso.",
+  },
+  {
+    name: "Poligonal con equipo insuficiente (fixture del aviso)",
+    type: "closed",
+    angle_type: "interior",
+    startPointCode: "H1",
+    startNorth: 5200,
+    startEast: 5200,
+    startAz: [0, 0, 0],
+    correctionMethod: "bowditch",
+    status: "calculated",
+    ...TOTAL_STATION_INSUFICIENTE,
+    stations: [
+      { code: "H1", angle: [90, 0, 0], distance: 150 },
+      { code: "H2", angle: [90, 0, 0], distance: 150 },
+      { code: "H3", angle: [90, 0, 0], distance: 150 },
+      { code: "H4", angle: [90, 0, 0], distance: 150 },
+    ],
+    notes:
+      "Fixture deliberada del aviso de equipo insuficiente: declara primer orden (K=1″) pero se captura con una estación de 5″ genérica, muy por debajo de lo exigido. No es un dato mal capturado — es a propósito, para ver el aviso sin tener que teclearlo.",
+  },
+];
+
 // Circuito cerrado, 0.9 km, tercer orden, BM 100.000. Error de cierre −8.0 mm
 // contra tolerancia 11.4 mm (cumple); el BM final corregido cierra exacto en
 // 100.0000. Verificado a mano en el brief de la Tarea 13 de la Fase 4.
@@ -663,13 +853,17 @@ const PARTIALS_MM = {
   "P-06": [0, -24.0, -13.0, -7.0, -4.0, -2.5],
 };
 
-const VISIT_DATES = [
-  "2025-01-15",
-  "2025-02-15",
-  "2025-03-15",
-  "2025-04-15",
-  "2025-05-15",
-  "2025-06-15",
+// Las seis campañas. El equipo va SOBRE cada visita, no compartido por el
+// lugar: el instrumento puede cambiar entre campañas —de eso trata la Fase
+// 8— y la de abril se levantó con el nivel de respaldo porque el digital
+// estaba en calibración. Las otras cinco usan el nivel habitual.
+const VISIT_SPECS = [
+  { date: "2025-01-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-02-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-03-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-04-15", ...LEVEL_AUTOMATICO_RESPALDO },
+  { date: "2025-05-15", ...LEVEL_DIGITAL_MONITOREO },
+  { date: "2025-06-15", ...LEVEL_DIGITAL_MONITOREO },
 ];
 
 /** Cota de un punto en una visita: cota base 100.0000 menos el acumulado. */
@@ -714,10 +908,10 @@ async function insertSettlementSite(projectId) {
     initialElevation: p.initial_elevation,
   }));
 
-  const visits = VISIT_DATES.map((date, i) => ({
+  const visits = VISIT_SPECS.map((spec, i) => ({
     id: `visita-${i}`, // id provisional, solo para casar con el resultado de computeHistory
     visitNumber: i,
-    date,
+    date: spec.date,
     readings: SETTLEMENT_POINTS.map((p) => ({
       pointId: pointIdByCode.get(p.code),
       elevation: cotaEn(p.code, i),
@@ -726,7 +920,14 @@ async function insertSettlementSite(projectId) {
 
   const history = computeHistory(points, visits, thresholdsFor("edificio"));
 
+  // El equipo se recupera por FECHA, no por posición en el array: la fecha es
+  // la identidad de la campaña, y así reordenar `VISIT_SPECS` no puede mover
+  // un instrumento a otra visita.
+  const specPorFecha = new Map(VISIT_SPECS.map((v) => [v.date, v]));
+
   for (const visitResult of history.visits) {
+    const visitSpec = specPorFecha.get(visitResult.date);
+    if (!visitSpec) throw new Error(`Visita sin spec: ${visitResult.date}`);
     const { data: visitRow, error: visitErr } = await admin
       .from("settlement_visits")
       .insert({
@@ -734,7 +935,7 @@ async function insertSettlementSite(projectId) {
         visit_number: visitResult.visitNumber,
         date: visitResult.date,
         operator: "Seed TopoField",
-        equipment: "Nivel automático Leica NA2",
+        ...equipmentOf(visitSpec),
         status: "calculated",
       })
       .select("id")
@@ -772,30 +973,16 @@ async function main() {
     location: "Bogotá",
     datum: "MAGNA-SIRGAS",
     projection: "Origen Bogotá",
-    precision_order: "tercer_orden",
-    equipment_brand: "Leica",
-    equipment_model: "TS06 Plus",
-    equipment_serial: "LCS-2026-001",
-    angular_precision_seconds: 5,
-    linear_precision: "3+2ppm",
-    equipment_calibration_date: "2026-02-10",
   });
-  console.log(`  ✓ Proyecto "Lote catastral" (tercer_orden) — ${catastral}`);
+  console.log(`  ✓ Proyecto "Lote catastral" — ${catastral}`);
 
   const geodesica = await createProject(userId, {
     name: "Red geodésica",
     client: "Cliente Demo",
     location: "Bogotá",
     datum: "MAGNA-SIRGAS",
-    precision_order: "primer_orden",
-    equipment_brand: "Trimble",
-    equipment_model: "S9",
-    equipment_serial: "TRB-2026-009",
-    angular_precision_seconds: 1,
-    linear_precision: "1+1ppm",
-    equipment_calibration_date: "2026-03-15",
   });
-  console.log(`  ✓ Proyecto "Red geodésica" (primer_orden) — ${geodesica}`);
+  console.log(`  ✓ Proyecto "Red geodésica" — ${geodesica}`);
 
   // `site_id` es NOT NULL en polygonal_processes/leveling_processes desde la
   // Fase 5: cada proyecto necesita su lugar antes de insertar procesos. Este
@@ -806,9 +993,7 @@ async function main() {
     description: "Lugar genérico para los procesos de poligonal y nivelación del lote.",
     structure_type: "otro",
   });
-  // La red geodésica no trae procesos propios en este seed, pero necesita su
-  // lugar creado por si una fase futura le añade alguno.
-  await createSite(geodesica, {
+  const geodesicaSite = await createSite(geodesica, {
     name: "General",
     description: "Lugar genérico para los procesos de la red geodésica.",
     structure_type: "otro",
@@ -832,10 +1017,18 @@ async function main() {
     `  ✓ ${puntos.length} puntos de referencia en "Lote catastral"`,
   );
 
-  // Los 7 procesos van al proyecto "Lote catastral" (tercer_orden): el mismo
-  // orden de precisión con el que `computePolygonal` evalúa sus tolerancias.
+  // Los 7 procesos van al proyecto "Lote catastral", con la estación de 5″
+  // que ya traía el proyecto (tercer orden, 3 mm + 2 ppm).
   for (const spec of PROCESSES) {
-    await insertPolygonal(catastral, catastralSite, spec, userId, "tercer_orden");
+    // El equipo se esparce sobre el spec, no se pasa aparte: los siete
+    // comparten instrumento, así que se aplica de una vez, y un spec podría
+    // sobrescribirlo declarando el suyo (`...spec` va después).
+    await insertPolygonal(
+      catastral,
+      catastralSite,
+      { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
+      userId,
+    );
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 
@@ -854,13 +1047,32 @@ async function main() {
     ),
   ];
   for (const spec of carteraSpecs) {
-    await insertPolygonal(catastral, catastralSite, spec, userId, "tercer_orden");
+    await insertPolygonal(
+      catastral,
+      catastralSite,
+      { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
+      userId,
+    );
     console.log(`  ✓ Cartera real: ${spec.name}`);
   }
 
   for (const spec of LEVELING_PROCESSES) {
-    await insertLeveling(catastral, catastralSite, spec, userId, "tercer_orden");
+    await insertLeveling(catastral, catastralSite, {
+      ...LEVEL_DIGITAL_TERCER_ORDEN,
+      ...spec,
+    });
     console.log(`  ✓ Proceso de nivelación: ${spec.name}`);
+  }
+
+  // "Red geodésica": el emparejamiento primer orden + estación de 1″ que el
+  // proyecto ya tenía, más la fixture deliberada del aviso de equipo
+  // insuficiente (mismo primer orden, estación de 5″). Aquí cada proceso
+  // lleva SU equipo declarado en su propio literal: son distintos, y un array
+  // paralelo emparejado por índice era exactamente lo frágil que había que
+  // quitar.
+  for (const spec of GEODESICA_PROCESSES) {
+    await insertPolygonal(geodesica, geodesicaSite, spec, userId);
+    console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 
   const monitoreo = await createProject(userId, {
@@ -869,19 +1081,12 @@ async function main() {
     location: "Bogotá",
     datum: "MAGNA-SIRGAS",
     projection: "Origen Bogotá",
-    precision_order: "tercer_orden",
-    equipment_brand: "Leica",
-    equipment_model: "DNA03",
-    equipment_serial: "LDN-2026-003",
-    angular_precision_seconds: 5,
-    linear_precision: "3+2ppm",
-    equipment_calibration_date: "2026-01-20",
   });
   console.log(`  ✓ Proyecto "Edificio en monitoreo" — ${monitoreo}`);
 
   const settlementSiteId = await insertSettlementSite(monitoreo);
   console.log(
-    `  ✓ Lugar "Edificio Torre Central" con ${SETTLEMENT_POINTS.length} puntos y ${VISIT_DATES.length} visitas — ${settlementSiteId}`,
+    `  ✓ Lugar "Edificio Torre Central" con ${SETTLEMENT_POINTS.length} puntos y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
   );
 
   console.log("");

@@ -72,9 +72,11 @@ export default function ManualPage() {
 
         <p>
           <strong>Proyecto.</strong> El contenedor de un trabajo topográfico.
-          Guarda el cliente, la ubicación, el datum, la proyección, el equipo
-          usado y —lo más importante— el <strong>orden de precisión</strong>,
-          que determina qué tolerancias se exigirán a todos sus procesos.
+          Guarda el cliente, la ubicación, el datum y la proyección. El
+          equipo usado y el <strong>orden de precisión</strong> no viven
+          aquí: cada proceso —poligonal, nivelación, visita de
+          asentamiento— declara los suyos, porque pueden cambiar de un
+          levantamiento a otro dentro de un mismo proyecto.
         </p>
 
         <p>
@@ -150,8 +152,8 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Fuera de tolerancia</strong> — procesos calculados que no
-            alcanzan el orden de precisión de su proyecto. Requieren revisión
-            antes del cierre.
+            alcanzan el orden de precisión que ellos mismos declararon.
+            Requieren revisión antes del cierre.
           </li>
         </ul>
 
@@ -181,36 +183,29 @@ export default function ManualPage() {
         </p>
 
         <p>
-          <strong>Paso 2 — Equipo y precisión.</strong> Datum, proyección, datos
-          del instrumento y el <strong>orden de precisión</strong>.
+          <strong>Paso 2 — Datum y proyección.</strong> El sistema de
+          referencia del proyecto.
         </p>
 
-        <Nota titulo="El orden de precisión es la decisión más importante del proyecto">
-          Define las tolerancias que se exigirán a cada poligonal. Al elegirlo,
-          el formulario le muestra la tolerancia angular y la precisión relativa
-          mínima que implica.
+        <Nota titulo="El equipo y el orden de precisión no se piden aquí">
+          Se declaran en cada proceso: cada poligonal, cada nivelación y cada
+          visita de asentamiento tiene su propia configuración de orden y
+          equipo, con los campos que corresponden a su tipo de instrumento.
+          Un mismo proyecto puede así tener trabajos de distinto orden,
+          medidos con instrumentos distintos y en fechas distintas. Vea{" "}
+          <a href="#poligonales" className="underline">
+            § 5
+          </a>
+          ,{" "}
+          <a href="#nivelacion" className="underline">
+            § 6
+          </a>{" "}
+          y{" "}
+          <a href="#asentamientos" className="underline">
+            § 7
+          </a>
+          .
         </Nota>
-
-        <Tabla
-          caption="Órdenes de precisión y sus tolerancias"
-          columnas={[
-            "Orden",
-            "Tolerancia angular",
-            "Precisión relativa mínima",
-            "Uso típico",
-          ]}
-        >
-          {ORDENES_PRECISION.map((o) => (
-            <Fila
-              key={o.orden}
-              celdas={[o.orden, o.angular, o.relativa, o.uso]}
-            />
-          ))}
-        </Tabla>
-
-        <p className="text-sm text-neutral-500">
-          Donde <em>n</em> es el número de ángulos medidos.
-        </p>
 
         <h3 className="mt-4 text-lg font-semibold">
           4.2 El proyecto por dentro
@@ -366,14 +361,56 @@ export default function ManualPage() {
 
         <p>
           Desde el proyecto, <strong>+ Nuevo Proceso → Poligonal</strong>.
-          Indique el nombre, el tipo y el punto de partida (código, Norte, Este
-          y azimut inicial).
+          Indique el nombre, el tipo, el punto de partida (código, Norte, Este
+          y azimut inicial), el <strong>orden de precisión</strong> y los
+          datos de la <strong>estación total</strong> con que va a medir:
+          marca, modelo, número de serie, fecha de calibración, precisión
+          angular (en segundos, ISO 17123-3) y precisión de distancia como
+          término constante en mm más término proporcional en ppm (ISO
+          17123-4).
         </p>
 
         <p>
           Si el tipo es <em>abierta con control</em>, deberá indicar además el
           punto de llegada.
         </p>
+
+        <Nota titulo="El orden de precisión es la decisión más importante del proceso">
+          Define las tolerancias que se le exigirán al cierre. Al elegirlo, el
+          formulario le muestra la tolerancia angular y la precisión relativa
+          mínima que implica:
+        </Nota>
+
+        <Tabla
+          caption="Órdenes de precisión y sus tolerancias"
+          columnas={[
+            "Orden",
+            "Tolerancia angular",
+            "Precisión relativa mínima",
+            "Uso típico",
+          ]}
+        >
+          {ORDENES_PRECISION.map((o) => (
+            <Fila
+              key={o.orden}
+              celdas={[o.orden, o.angular, o.relativa, o.uso]}
+            />
+          ))}
+        </Tabla>
+
+        <p className="text-sm text-neutral-500">
+          Donde <em>n</em> es el número de ángulos medidos.
+        </p>
+
+        <Nota>
+          Si la precisión angular del equipo no alcanza para el orden
+          elegido, la aplicación se lo advierte junto al campo de precisión
+          angular — por ejemplo, una estación de 5″ con primer orden
+          declarado (cuya tolerancia parte de 1″). Es un aviso, no un
+          bloqueo: puede seguir capturando, porque la decisión de si el
+          equipo basta es suya. Un equipo que cumple justo el orden (5″ con
+          tercer orden, cuya tolerancia parte de 15″) no dispara el aviso.
+        </Nota>
 
         <h3 className="mt-4 text-lg font-semibold">5.3 El editor</h3>
 
@@ -396,8 +433,10 @@ export default function ManualPage() {
 
         <p>
           <strong>Configuración.</strong> Plegada cuando el proceso ya está
-          calculado. Ábrala para cambiar el nombre, el tipo o el punto de
-          partida.
+          calculado. Ábrala para cambiar el nombre, el tipo, el punto de
+          partida, el orden de precisión o los datos de la estación total —
+          los mismos campos del alta, editables mientras el proceso siga
+          abierto.
         </p>
 
         <p>
@@ -584,7 +623,11 @@ export default function ManualPage() {
           Desde el proyecto, <strong>+ Nuevo Proceso → Nivelación</strong>.
           Indique el nombre, el tipo y el BM de partida: puede elegirlo del
           catálogo de puntos de referencia del proyecto (autocompleta código y
-          cota) o teclearlo directamente si no lo tiene registrado.
+          cota) o teclearlo directamente si no lo tiene registrado. Indique
+          también el <strong>orden de precisión</strong> y los datos del{" "}
+          <strong>nivel</strong>: marca, modelo, número de serie, fecha de
+          calibración, tipo (automático o digital) y desviación típica en mm
+          por km de doble nivelación (ISO 17123-2).
         </p>
 
         <p>
@@ -593,9 +636,25 @@ export default function ManualPage() {
           medir ida y vuelta.
         </p>
 
+        <Nota>
+          Si la desviación típica del nivel no alcanza para el orden elegido,
+          la aplicación se lo advierte junto al campo de desviación típica —
+          por ejemplo, un nivel de obra de 5.0 mm/km con primer orden
+          declarado (cuya tolerancia parte de 3 mm/km). Es un aviso, no un
+          bloqueo: 2.5 mm/km con primer orden es ajustado pero posible, y no
+          lo dispara.
+        </Nota>
+
         <h3 className="mt-4 text-lg font-semibold">6.5 El editor</h3>
 
         <Captura {...CAPTURAS.editorNivelacion} />
+
+        <p>
+          <strong>Configuración.</strong> Plegada cuando el proceso ya está
+          calculado. Ábrala para cambiar el nombre, el tipo, los BM o el
+          orden de precisión y el equipo de nivel — los mismos campos del
+          alta, editables mientras el proceso siga abierto.
+        </p>
 
         <p>
           La libreta se captura por fila: punto, tipo, lecturas atrás y
@@ -623,7 +682,7 @@ export default function ManualPage() {
           <strong>Cierre.</strong> El error de cierre se compara contra la
           tolerancia K·√D, donde D es la distancia del recorrido{" "}
           <strong>en un solo sentido</strong>, en kilómetros, y K depende del
-          orden de precisión del proyecto:
+          orden de precisión que declaró el proceso:
         </p>
 
         <Tabla caption="Coeficiente K de la tolerancia K·√D" columnas={["Orden", "K (mm)"]}>
@@ -735,6 +794,24 @@ export default function ManualPage() {
         </p>
 
         <Captura {...CAPTURAS.editorVisita} />
+
+        <p>
+          Cada visita declara también el <strong>orden de precisión</strong>{" "}
+          con que se midió y los datos del <strong>nivel</strong> usado:
+          marca, modelo, número de serie, fecha de calibración, tipo
+          (automático o digital) y desviación típica en mm por km de doble
+          nivelación (ISO 17123-2). El instrumento puede cambiar entre una
+          visita y la siguiente —pueden pasar meses—, así que cada visita
+          lleva su propio equipo, no el lugar.
+        </p>
+
+        <Nota>
+          Si la desviación típica del nivel no alcanza para el orden que
+          declaró la visita, la aplicación se lo advierte, con el mismo
+          criterio que en nivelación (§ 6.5): un nivel de 5.0 mm/km con
+          primer orden (K = 3) avisa; uno de 2.5 mm/km, ajustado pero
+          posible, no. Es un aviso, no un bloqueo.
+        </Nota>
 
         <p>
           Por cada punto se captura la <strong>cota medida</strong>. La
@@ -988,9 +1065,12 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.informeImprimible} />
 
         <p>
-          El documento lleva portada con los datos del proyecto y el equipo,
-          índice, una sección por proceso con sus resultados, el resumen
-          consolidado de precisiones, sus observaciones y el registro de cierre.
+          El documento lleva portada con los datos del proyecto, índice, una
+          sección por proceso con sus resultados <strong>y su equipo</strong>,
+          el resumen consolidado de precisiones —con una columna de equipo—,
+          sus observaciones y el registro de cierre. El equipo ya no es un
+          dato del proyecto: cada sección imprime el que declaró su propio
+          proceso (en asentamientos, el de la visita más reciente).
         </p>
         <p className="text-sm text-neutral-500">
           El PDF lo genera su navegador, no la aplicación. Los márgenes y los
