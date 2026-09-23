@@ -1002,7 +1002,12 @@ const PARTIALS_MM = {
   "P-01": [0, -3.5, -2.2, -1.4, -0.9, -0.5],
   "P-02": [0, -4.2, -2.6, -1.6, -1.0, -0.6],
   "P-03": [0, -3.8, -2.3, -1.3, -0.8, -0.5],
-  "P-04": [0, -4.5, -2.8, -1.7, -1.1, -0.7],
+  // Fase 12 — lectura fuera de tendencia: en la visita 5, P-04 SUBE 7.0 mm
+  // en vez de bajar 0.7. Es tercer orden (margen 6 mm), así que sale como
+  // «contraria». De paso muestra la confusión que la fase deshace: la
+  // velocidad de esa visita (≈ 6.9 mm/mes) pone el semáforo en Alerta y el
+  // indicador marca «acelerando», cuando lo probable es una lectura mal tomada.
+  "P-04": [0, -4.5, -2.8, -1.7, -1.1, 7.0],
   // `null` = el punto no se midió en esa visita: P-05 está de baja desde la
   // visita 4 y P-07 se dio de alta en la 2 (Fase 11).
   "P-05": [0, -9.0, -5.0, -3.0, null, null],
