@@ -17,6 +17,11 @@ interface ReadingsTableProps {
   /** La visita 0 (línea base) no muestra parcial ni velocidad: son `—` por definición. */
   isBaseline: boolean;
   disabled?: boolean;
+  /**
+   * Aviso de lectura fuera de tendencia por punto (Fase 12), ya redactado.
+   * Avisa, no bloquea.
+   */
+  trendWarnings: Record<string, string | undefined>;
 }
 
 /**
@@ -31,6 +36,7 @@ export function ReadingsTable({
   computedByPoint,
   isBaseline,
   disabled,
+  trendWarnings,
 }: ReadingsTableProps) {
   if (points.length === 0) {
     return (
@@ -87,6 +93,11 @@ export function ReadingsTable({
                     disabled={disabled}
                     className="w-32"
                   />
+                  {trendWarnings[point.id] && (
+                    <p className="mt-1 w-64 text-xs text-warning-500">
+                      {trendWarnings[point.id]}
+                    </p>
+                  )}
                 </td>
                 <td className="py-2 pr-3 text-neutral-700">
                   {fmt(partial, 1)}

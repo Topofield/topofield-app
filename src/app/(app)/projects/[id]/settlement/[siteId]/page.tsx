@@ -4,7 +4,12 @@ import { Breadcrumbs, buttonClasses } from "@/components/design-system";
 import { AnalysisPanel } from "@/components/settlement/analysis-panel";
 import { VisitsList } from "@/components/settlement/visits-list";
 import { createClient } from "@/lib/supabase/server";
-import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
+import {
+  computeHistory,
+  detectTrendDeviations,
+  pointInputOf,
+} from "@/lib/calculations/settlement";
+import { formatTrendDeviation } from "@/lib/utils/format";
 import {
   getProjectById,
   getSettlementReadingsBySite,
@@ -62,6 +67,19 @@ export default async function SettlementAnalysisPage({
 
   const history = computeHistory(points, visitInputs, thresholdsOf(site));
 
+  // Aviso de lectura fuera de tendencia de la última visita (Fase 12). El
+  // margen sale del orden que declaró cada visita.
+  const lastVisitId = history.visits.at(-1)?.visitId;
+  const deviations = detectTrendDeviations(
+    history.visits,
+    new Map(visits.map((v) => [v.id, v.precision_order])),
+  );
+  const lastVisitTrendWarnings = Object.fromEntries(
+    [...(lastVisitId ? (deviations.get(lastVisitId) ?? []) : [])].map(
+      ([pointId, deviation]) => [pointId, formatTrendDeviation(deviation)],
+    ),
+  );
+
   const visitRows = visits.map((visit) => ({
     visit,
     worstAlert:
@@ -108,6 +126,7 @@ export default async function SettlementAnalysisPage({
         visits={history.visits}
         differentials={history.differentials}
         trends={history.trends}
+        lastVisitTrendWarnings={lastVisitTrendWarnings}
       />
     </div>
   );

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatPrecision, formatRelativeDate } from "./format";
+import {
+  formatPrecision,
+  formatRelativeDate,
+  formatTrendDeviation,
+} from "./format";
 
 const AHORA = new Date("2026-07-27T12:00:00Z");
 
@@ -109,5 +113,33 @@ describe("formatPrecision", () => {
   it("devuelve el guion largo ante una cadena vacía o ilegible", () => {
     expect(formatPrecision("")).toBe("—");
     expect(formatPrecision("sin datos")).toBe("—");
+  });
+});
+
+describe("formatTrendDeviation (Fase 12)", () => {
+  it("dice hacia dónde venía el punto y hacia dónde lo lleva la lectura", () => {
+    expect(
+      formatTrendDeviation({
+        kind: "contrary",
+        partialMm: 7,
+        previousVelocity: -1.116,
+        expectedMm: 1.1,
+      }),
+    ).toBe(
+      "Se sale de la tendencia: el punto venía bajando 1,1 mm/mes y esta lectura lo hace subir 7,0 mm. Verifica la lectura.",
+    );
+  });
+
+  it("dice cuánto se movió frente a lo que su ritmo preveía", () => {
+    expect(
+      formatTrendDeviation({
+        kind: "excessive",
+        partialMm: -18,
+        previousVelocity: -5.9,
+        expectedMm: 5.8,
+      }),
+    ).toBe(
+      "Se sale de la tendencia: baja 18,0 mm cuando su ritmo anterior preveía unos 5,8 mm. Verifica la lectura.",
+    );
   });
 });

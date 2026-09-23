@@ -1,4 +1,9 @@
-import { Card, EmptyState, StatusIndicator } from "@/components/design-system";
+import {
+  Badge,
+  Card,
+  EmptyState,
+  StatusIndicator,
+} from "@/components/design-system";
 import { DifferentialsTable } from "@/components/settlement/differentials-table";
 import { SettlementChart } from "@/components/settlement/settlement-chart";
 import {
@@ -21,6 +26,12 @@ interface AnalysisPanelProps {
   differentials: DifferentialPair[];
   /** Tendencia por punto; un punto sin entrada aún no tiene 3 visitas. */
   trends: Record<string, Trend>;
+  /**
+   * Aviso de lectura fuera de tendencia de la ÚLTIMA visita, por punto, ya
+   * redactado (Fase 12). No cambia el nivel del semáforo: es calidad del
+   * dato, no gravedad del movimiento.
+   */
+  lastVisitTrendWarnings: Record<string, string>;
 }
 
 function formatMm(value: number | null): string {
@@ -41,6 +52,7 @@ export function AnalysisPanel({
   visits,
   differentials,
   trends,
+  lastVisitTrendWarnings,
 }: AnalysisPanelProps) {
   const lastVisit = visits.at(-1) ?? null;
   const hasReadings = visits.some((v) => v.readings.length > 0);
@@ -88,6 +100,18 @@ export function AnalysisPanel({
                           level={reading.alertStatus}
                           label={ALERT_LEVEL_LABELS[reading.alertStatus]}
                         />
+                        {/* Texto, no solo color: la regla del sistema de
+                            diseño. El mensaje completo va en el title. */}
+                        {lastVisitTrendWarnings[reading.pointId] && (
+                          <div
+                            className="mt-1"
+                            title={lastVisitTrendWarnings[reading.pointId]}
+                          >
+                            <Badge tone="warning" className="whitespace-nowrap">
+                              ⚠ Lectura fuera de tendencia
+                            </Badge>
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 pr-3 text-neutral-700">
                         {trend ? TREND_LABELS[trend] : "—"}

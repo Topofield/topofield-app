@@ -67,6 +67,12 @@ export default async function VisitEditorPage({
       })),
     }));
 
+  const otherVisitOrders = Object.fromEntries(
+    allVisits
+      .filter((v) => v.id !== visit.id)
+      .map((v) => [v.id, v.precision_order]),
+  );
+
   const disabled = site.status === "closed" || visit.status === "closed";
 
   return (
@@ -91,6 +97,7 @@ export default async function VisitEditorPage({
         initialElevations={initialElevations}
         points={points}
         otherVisits={otherVisits}
+        otherVisitOrders={otherVisitOrders}
         thresholds={thresholdsOf(site)}
         disabled={disabled}
         siteClosed={site.status === "closed"}

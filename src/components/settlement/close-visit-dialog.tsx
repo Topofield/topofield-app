@@ -27,6 +27,11 @@ interface CloseVisitDialogProps {
    * pantalla — irreversible, porque una visita cerrada es inmutable.
    */
   dirty: boolean;
+  /**
+   * Códigos de los puntos con lectura fuera de tendencia (Fase 12). Cerrar
+   * congela el dato, así que se recuerdan aquí; no bloquean.
+   */
+  trendDeviationCodes: string[];
 }
 
 /**
@@ -48,6 +53,7 @@ export function CloseVisitDialog({
   pointsMeasured,
   worstAlert,
   dirty,
+  trendDeviationCodes,
 }: CloseVisitDialogProps) {
   const [confirmed, setConfirmed] = useState(false);
 
@@ -109,6 +115,14 @@ export function CloseVisitDialog({
           <dd className="text-neutral-900">{ALERT_LEVEL_LABELS[worstAlert]}</dd>
           <dt className="text-neutral-500">Fecha y hora de cierre</dt>
           <dd className="text-neutral-900">{now}</dd>
+          {trendDeviationCodes.length > 0 && (
+            <>
+              <dt className="text-neutral-500">Lecturas fuera de tendencia</dt>
+              <dd className="text-warning-500">
+                {trendDeviationCodes.join(", ")}
+              </dd>
+            </>
+          )}
         </dl>
 
         {worstAlert === "alarm" || worstAlert === "alert" ? (

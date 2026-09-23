@@ -14,10 +14,11 @@ import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { ReadingsTable } from "@/components/settlement/readings-table";
 import {
   computeHistory,
+  detectTrendDeviations,
   isPointActiveOn,
   pointInputOf,
 } from "@/lib/calculations/settlement";
-import { formatDateOnly } from "@/lib/utils/format";
+import { formatDateOnly, formatTrendDeviation } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   closeVisitAction,
@@ -42,6 +43,12 @@ interface VisitEditorProps {
   points: SettlementPoint[];
   /** Resto de visitas del lugar (con sus lecturas), para el histórico. */
   otherVisits: VisitInput[];
+  /**
+   * Orden de precisión de cada una de las otras visitas, por id. El aviso de
+   * lectura fuera de tendencia (Fase 12) saca de él su margen; el de esta
+   * visita es el que el usuario tiene seleccionado en la cabecera.
+   */
+  otherVisitOrders: Record<string, PrecisionOrder>;
   thresholds: Thresholds;
   /** Solo lectura si el lugar o la visita están cerrados. */
   disabled: boolean;
@@ -108,6 +115,7 @@ export function VisitEditor({
   initialElevations,
   points,
   otherVisits,
+  otherVisitOrders,
   thresholds,
   disabled,
   siteClosed,
@@ -185,6 +193,21 @@ export function VisitEditor({
       computedByPoint[reading.pointId] = reading;
     }
   }
+
+  // Lecturas fuera de tendencia (Fase 12), en vivo: con el histórico que
+  // incluye lo que se está tecleando y el orden seleccionado en la cabecera.
+  const trendDeviations = useMemo(() => {
+    const orders = new Map<string, PrecisionOrder>(Object.entries(otherVisitOrders));
+    orders.set(visit.id, header.precisionOrder);
+    return detectTrendDeviations(history.visits, orders).get(visit.id) ?? new Map();
+  }, [history, otherVisitOrders, visit.id, header.precisionOrder]);
+  const trendWarnings: Record<string, string> = {};
+  for (const [pointId, deviation] of trendDeviations) {
+    trendWarnings[pointId] = formatTrendDeviation(deviation);
+  }
+  const trendDeviationCodes = points
+    .filter((p) => trendDeviations.has(p.id))
+    .map((p) => p.code);
 
   const pointsMeasured = computedVisit?.readings.length ?? 0;
   const worstAlert = computedVisit?.worstAlert ?? "normal";
@@ -399,6 +422,7 @@ export function VisitEditor({
           computedByPoint={computedByPoint}
           isBaseline={isBaseline}
           disabled={disabled}
+          trendWarnings={trendWarnings}
         />
         {notMeasured.length > 0 && (
           <p className="mt-3 text-sm text-neutral-500">
@@ -436,6 +460,7 @@ export function VisitEditor({
         pointsMeasured={pointsMeasured}
         worstAlert={worstAlert}
         dirty={dirty}
+        trendDeviationCodes={trendDeviationCodes}
       />
     </div>
   );
