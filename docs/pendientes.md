@@ -21,7 +21,8 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | A2 | **11** — Estado de los BMs | sin redactar |
 | A1 | **12** — Alerta por lectura desfasada | sin redactar |
 | P1 | dentro de la **13** (canvas) | sin redactar |
-| N4, N6 | — | sin fase asignada |
+| N4 | — | sin fase asignada · **desbloqueada** (plantilla propia) |
+| N6 | — | sin fase asignada |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
 Es falso: sí la crea, vía `src/lib/demo/insertar-nivelacion.ts`. El grep que
@@ -78,15 +79,45 @@ así que teclearlos a mano es transcribir lo que ya está en digital — con el
 riesgo de error que eso trae en una aplicación cuyo tema es la trazabilidad de
 la medición.
 
-**Bloqueada a la espera de una cartera de nivelación real** que fije el formato.
-No se especifica el parser antes de ver un archivo: el precedente de la Fase 7
-es que dos carteras de campo encontraron en una tarde lo que cuatro fases de
-fixtures sintéticos no vieron.
+**Desbloqueada el 2026-09-23.** Estuvo esperando un CSV real de un nivel
+digital para no especificar el parser sobre supuestos —el precedente de la
+Fase 7: dos carteras de campo encontraron en una tarde lo que cuatro fases de
+fixtures sintéticos no vieron—. Se resuelve por otra vía: en vez de adivinar el
+formato de un instrumento, **TopoField define su propia plantilla CSV**.
 
-Va a **fase propia**, no dentro de la fase de la cadena de distancias: es un
-flujo distinto —subida, parseo, previsualización, errores por fila— que no
-comparte código con ella, y meterlo allí arriesga que la parte de importación
-arrastre el cierre de la parte de motor.
+### Lo que ya está resuelto
+
+El **modelo** lo cerró la Fase 9: con nivel digital el instrumento mide por
+láser y entrega lectura y distancia directamente, sin hilos estadimétricos. El
+modo `digital` de la libreta ya captura exactamente eso. N4 no añade modelo —
+añade una puerta de entrada.
+
+### Decisiones tomadas
+
+**Plantilla propia, descargable desde el editor.** Columnas fijas y
+documentadas; el topógrafo vuelca ahí lo que traiga su nivel. Desbloquea la
+petición sin inventar supuestos sobre separadores, decimales, cabeceras o
+codificación regional — un Leica configurado en `es-CO` escribe `1,234` con
+coma decimal, y un parser construido a ciegas falla ante el primer archivo
+real, en silencio.
+
+**El tipo de punto se deriva y el usuario lo confirma.** El instrumento no
+sabe qué es un BM, un punto de cambio o una radiación, y sin ese dato la
+cadena de acumulado de la Fase 9 no funciona: una radiación mal clasificada la
+rompe sin avisar. Se deduce de las lecturas —con lectura atrás y adelante es
+punto de cambio; solo adelante es radiación; la primera y la última son BM— y
+la importación muestra una **previsualización editable** donde el topógrafo
+corrige antes de confirmar. Deducir sin confirmar sería adivinar; pedirlo todo
+a mano sería renunciar a la comodidad que justifica importar.
+
+**Queda pendiente para cuando haya un archivo real:** leer el formato nativo
+del instrumento, que iría en una fase posterior sobre esta base.
+
+### Sigue sin fase asignada
+
+Va a **fase propia**: es un flujo distinto —subida, parseo, previsualización,
+errores por fila— que no comparte código con el motor. Se numerará cuando le
+llegue el turno, después de las fases 11 y 12 con el orden actual.
 
 ### N6 · Control ida-vuelta por puntos homólogos
 
