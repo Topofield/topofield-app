@@ -6,7 +6,12 @@
 // (35 valores, todos exactos). La VELOCIDAD no: el documento la calcula mal
 // por no definir el mes. Ver docs/prds/04-asentamientos.md, hallazgo 2.
 
-import { DAYS_PER_MONTH } from "./tolerances";
+import {
+  DAYS_PER_MONTH,
+  TREND_DEVIATION_RATE_FACTOR,
+  trendDeviationMargin,
+} from "./tolerances";
+import type { PrecisionOrder } from "@/types/project";
 import type {
   AlertLevel,
   ComputedReading,
@@ -16,6 +21,7 @@ import type {
   SettlementPoint,
   Thresholds,
   Trend,
+  TrendDeviation,
   VisitInput,
   VisitResult,
 } from "@/types/settlement";
@@ -446,6 +452,83 @@ export function computeTrends(visits: VisitResult[]): Record<string, Trend> {
     trends[pointId] = last > previous ? "accelerating" : "converging";
   }
   return trends;
+}
+
+/**
+ * Lecturas fuera de la tendencia de su punto (Fase 12), por visita y por punto.
+ *
+ * Para cada lectura, con la lectura anterior de ESE punto (la última visita en
+ * que se midió, como el motor) y la velocidad de esa lectura anterior:
+ *
+ *   d = signo de V_prev (−1 si es 0: bajando)
+ *   contraria  si  d · parcial < −m
+ *   excesiva   si  d · parcial >  2 · |V_prev| · Δt + m
+ *
+ * con `m` el margen del orden de la visita (`trendDeviationMargin`). La banda
+ * admite que la consolidación frene hasta cero —moverse menos de lo previsto
+ * nunca avisa—: extrapolar la velocidad anterior, el criterio obvio, marcaba
+ * lecturas correctas en el caso típico del módulo (PRD de la fase, hallazgo 1).
+ *
+ * Solo evalúa desde la tercera lectura del punto (hace falta una velocidad
+ * previa) y nunca con un intervalo de 0 días. Una visita sin orden en
+ * `orderByVisit` no se evalúa: sin margen no hay regla.
+ *
+ * Es una función aparte, y no un campo de `computeSettlements`, porque
+ * necesita el orden de cada visita, que `VisitInput` no lleva.
+ */
+export function detectTrendDeviations(
+  visits: VisitResult[],
+  orderByVisit: ReadonlyMap<string, PrecisionOrder>,
+): Map<string, Map<string, TrendDeviation>> {
+  const ordered = [...visits].sort((a, b) => a.date.localeCompare(b.date));
+  const previous = new Map<
+    string,
+    { elevation: number; date: string; velocity: number | null }
+  >();
+  const out = new Map<string, Map<string, TrendDeviation>>();
+
+  for (const visit of ordered) {
+    const order = orderByVisit.get(visit.visitId);
+    for (const reading of visit.readings) {
+      const prev = previous.get(reading.pointId);
+      previous.set(reading.pointId, {
+        elevation: reading.elevation,
+        date: visit.date,
+        velocity: reading.velocity,
+      });
+
+      if (!order || !prev || prev.velocity === null) continue;
+      const months = monthsBetween(prev.date, visit.date);
+      if (months <= 0) continue;
+
+      const partialMm = (reading.elevation - prev.elevation) * 1000;
+      const direction = prev.velocity > 0 ? 1 : -1;
+      const marginMm = trendDeviationMargin(order);
+      const expectedMm = Math.abs(prev.velocity) * months;
+      const along = direction * partialMm;
+
+      const kind =
+        along < -marginMm
+          ? "contrary"
+          : along > TREND_DEVIATION_RATE_FACTOR * expectedMm + marginMm
+            ? "excessive"
+            : null;
+      if (!kind) continue;
+
+      const byPoint = out.get(visit.visitId) ?? new Map();
+      byPoint.set(reading.pointId, {
+        pointId: reading.pointId,
+        kind,
+        partialMm: round(partialMm, 1),
+        previousVelocity: prev.velocity,
+        expectedMm: round(expectedMm, 1),
+        marginMm,
+      });
+      out.set(visit.visitId, byPoint);
+    }
+  }
+
+  return out;
 }
 
 /**

@@ -151,6 +151,25 @@ export interface DifferentialPair {
   exceedsLimit: boolean;
 }
 
+/**
+ * Aviso de lectura fuera de tendencia (Fase 12): la lectura va contra la
+ * dirección de su punto, o lo mueve más del doble de lo que su ritmo anterior
+ * predice. Es calidad del dato, no gravedad del movimiento: avisa, no
+ * bloquea, y no cambia el semáforo.
+ */
+export interface TrendDeviation {
+  pointId: string;
+  kind: "contrary" | "excessive";
+  /** Parcial de la lectura, en mm (signo: negativo = descenso). */
+  partialMm: number;
+  /** Velocidad de la lectura anterior del punto, en mm/mes. */
+  previousVelocity: number;
+  /** Movimiento que el ritmo anterior preveía para este intervalo, en mm (positivo). */
+  expectedMm: number;
+  /** Margen del orden de la visita, en mm. */
+  marginMm: number;
+}
+
 /** Tendencia de la velocidad entre las dos últimas visitas de un punto. */
 export type Trend = "converging" | "accelerating";
 
