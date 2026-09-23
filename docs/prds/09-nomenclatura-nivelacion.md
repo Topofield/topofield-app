@@ -1,8 +1,8 @@
 # PRD-de-fase 10 — Nomenclatura de nivelación
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-23
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-23
 
 **Rama:** `fase-10-nomenclatura-nivelacion`
 **Petición que recoge:** N1 de [`pendientes.md`](../pendientes.md)
