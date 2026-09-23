@@ -71,7 +71,11 @@ asentamientos).
     en la primera visita, ≈ −23.6 mm/mes, supera el umbral de 10 mm/mes).
   - **P-05** (borde sur, intermedio) no aparece: está de baja y no tiene
     lectura en la última visita. Su historia sigue en la gráfica.
-  - El resto (P-01…P-04 y P-07) queda en **normal**.
+  - **P-04** sale en **alerta** por velocidad (≈ 6,9 mm/mes), con la marca
+    **⚠ Lectura fuera de tendencia** y la tendencia **Acelerando**: en la
+    visita 5 sube 7,0 mm cuando venía bajando. Es la lectura mal tomada que
+    siembra el seed (Fase 12). El título de la marca explica el aviso.
+  - El resto (P-01…P-03 y P-07) queda en **normal**.
 - ✓ El acumulado de **P-06** en la última visita es ≈ **−50.5 mm** (cruza el
   umbral de acumulado de 50 mm → alerta por acumulado).
 
@@ -86,7 +90,7 @@ asentamientos).
   diferencial: **P-01 – P-07** muestra −2,8 y −5,0 y un diferencial de 2,2.
 - ✓ El indicador de **tendencia** marca los puntos como **convergentes**: la
   magnitud de la velocidad decrece en cada visita sucesiva (serie de
-  consolidación que se estabiliza).
+  consolidación que se estabiliza). La excepción es P-04 (ver paso 5).
 
 ### 7. Registrar una visita nueva
 
@@ -96,6 +100,18 @@ asentamientos).
   anterior).
 - Guardar. ✓ La visita nace calculada y el panel recalcula parciales,
   velocidad y semáforo con la nueva medición.
+
+### 7 bis. Lectura fuera de tendencia (Fase 12)
+
+- Abrir la **visita 5**. ✓ Bajo la cota de P-04: «Se sale de la tendencia: el
+  punto venía bajando 1,1 mm/mes y esta lectura lo hace subir 7,0 mm.
+  Verifica la lectura.»
+- Cambiar la cota de **P-01** a `100.0000`. ✓ Aparece al instante el aviso
+  bajo P-01 (sube 8,0 mm). Cambiarla a `99.9790`. ✓ El aviso pasa a «baja
+  13,0 mm cuando su ritmo anterior preveía unos 0,9 mm». Restaurar
+  `99.9915`. ✓ El aviso de P-01 desaparece.
+- Abrir **Cerrar Visita** en la visita 5. ✓ El resumen incluye «Lecturas
+  fuera de tendencia: P-04». El aviso no impide confirmar el cierre.
 
 ### 8. Cerrar una visita
 
@@ -147,5 +163,6 @@ del PRD-de-fase 5 en su uso real: catálogo de puntos, registro de visitas,
 cálculo de parciales/acumulados/velocidad, clasificación por semáforo,
 tendencia, y cierre de visita y de lugar con inmutabilidad. El paso 8 bis
 cubre el PRD-de-fase 11: baja, deshacer la baja, alta y la regla de cierre de
-la línea base. Los niveles de
+la línea base. El paso 7 bis cubre el PRD-de-fase 12: el aviso de lectura
+fuera de tendencia. Los niveles de
 alerta anteriores están verificados a mano en el brief de la fase.
