@@ -21,7 +21,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | cerrada |
 | 10 | Nomenclatura de nivelación | [`prds/09-nomenclatura-nivelacion.md`](./prds/09-nomenclatura-nivelacion.md) | cerrada |
 | 11 | Estado de los BMs | [`prds/10-estado-bms.md`](./prds/10-estado-bms.md) | cerrada |
-| 12 | Alerta por lectura desfasada | — | pendiente |
+| 12 | Alerta por lectura desfasada | [`prds/11-lectura-desfasada.md`](./prds/11-lectura-desfasada.md) | en curso |
 | 13 | Canvas de poligonal | — | pendiente |
 | 14 | Ajuste por mínimos cuadrados | — | pendiente |
 | 15 | Georreferenciación de levantamientos | — | pendiente |
