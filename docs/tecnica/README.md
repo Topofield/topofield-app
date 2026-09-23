@@ -63,7 +63,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 8 | Precisión y equipo por proceso | cerrada |
 | 9 | Cadena de distancias de nivelación | cerrada |
 | 10 | Nomenclatura de nivelación | cerrada |
-| 11 | Estado de los BMs | pendiente |
+| 11 | Estado de los BMs | en curso |
 | 12 | Alerta por lectura desfasada | pendiente |
 | 13 | Canvas de poligonal | pendiente |
 | 14 | Ajuste por mínimos cuadrados | pendiente |
