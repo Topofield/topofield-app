@@ -103,6 +103,7 @@ Mailpit: `http://127.0.0.1:55324`.
 | `npm run seed` | Siembra los datos de ejemplo (`tsx --env-file=.env.local scripts/seed.mjs`) |
 | `npx supabase db reset` | Recrea la base y reaplica migraciones |
 | `npx supabase gen types typescript --local > src/types/database.ts` | Regenera tipos |
+| `npx tsx --env-file=.env.local scripts/resincronizar-asentamientos.mjs` | Reescribe con el motor actual las lecturas persistidas de las visitas abiertas (Fase 11). Simula por defecto; escribe con `--aplicar`. No toca lugares ni visitas cerrados |
 | `npx tsx --env-file=.env.local scripts/reparar-resultados-estacion.mjs` | Detecta procesos cuyas estaciones no tienen resultados persistidos y los recalcula. Simula por defecto; escribe con `--aplicar`. Salta los cerrados y rechazados |
 
 ### Advertencia sobre el entorno local
@@ -117,6 +118,35 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role
 ```
 
 Es un problema del stack local, no del esquema: las migraciones no lo provocan.
+
+**El seed solo corre sobre una base recién reseteada.** Para recrear al usuario
+de ejemplo, el seed lo borra, y eso falla si ya tiene proyectos
+(`projects_user_id_fkey` no es en cascada y los procesos cerrados son
+inmutables). Secuencia correcta: `npx supabase db reset` y luego `npm run seed`.
+
+### Docker: un solo motor
+
+En WSL puede haber **dos** motores de Docker a la vez: el `dockerd` nativo de
+la distribución y la integración WSL de **Docker Desktop**. Si Docker Desktop
+arranca después, reemplaza `/var/run/docker.sock` con su propio proxy. El
+stack de Supabase sigue vivo en el motor nativo y atendiendo los puertos
+`5532x`, pero el CLI ya no lo ve: `docker ps` sale vacío, `supabase status`
+dice que no hay contenedores, y `supabase start` / `db reset` fallan con
+`relation "profiles" already exists`, porque intentan aplicar las migraciones
+sobre la base viva del otro motor.
+
+Diagnóstico en una línea: `docker ps` no lista `supabase_db_topofield-app`
+pero `psql -h 127.0.0.1 -p 55322` responde.
+
+Solución: dejar **un solo motor**. Con el nativo, que es donde vive el stack:
+
+1. En Docker Desktop, *Settings → Resources → WSL integration*, desactivar la
+   distribución (o cerrar Docker Desktop).
+2. `sudo systemctl restart docker.socket docker` para que el nativo recupere
+   el socket.
+3. `docker ps` debe listar los contenedores `supabase_*_topofield-app`. Si
+   el reinicio los dejó parados, `npx supabase start`.
+4. `npx supabase db reset && npm run seed`, y `npm run dev`.
 
 ---
 
