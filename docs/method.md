@@ -582,6 +582,16 @@ son la corrección de la tabla de diferenciales y el defecto anterior de
   punto de alta no lleva C0» vivía en la acción y en el formulario. El motor
   dependía de ella sin saberlo: fecha la C0 en la visita 0. Añadir el CHECK
   costó una línea y lo probó el mismo SQL de verificación que los triggers.
+- **Un trigger nuevo cambia el orden en que se pueden hacer las escrituras
+  que ya existían.** La revisión del PR encontró que `saveVisitAction`
+  escribía la fecha de la visita antes de borrar las lecturas quitadas, y el
+  trigger de vigencia rechazaba justo el flujo que el editor proponía: mover
+  la fecha y quitar en el mismo guardado la lectura del punto que salía de
+  vigencia. Los tests de validadores pasaban, porque el validador ve el estado
+  final. El trigger ve cada escritura por separado. **Al añadir una
+  restricción de base, hay que recorrer en orden cada escritura de las
+  acciones que tocan esas tablas**, no solo comprobar que el estado final es
+  válido.
 - **Tablas de recuentos por archivo: se reescriben desde la ejecución, no se
   editan.** La tabla de pruebas de la doc técnica sumaba 453 mientras
   afirmaba 492: las Fases 7 a 9 subieron el total y no las filas. Se
