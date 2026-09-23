@@ -202,6 +202,46 @@ describe("computeLeveling con la cadena derivada", () => {
   });
 });
 
+describe("las distancias de un intermedio no cuentan", () => {
+  it("una radiación con distancia capturada NO la aporta al acumulado", () => {
+    // El SQL del paso 3 de la migración sí las sumaba, así que la columna
+    // persistida y el motor daban números distintos para el mismo punto.
+    const rows = [
+      bare({ pointType: "bm", backsight: 1.5, backDistanceM: 150 }),
+      bare({ pointType: "pc", foresight: 1.2, backsight: 2.0,
+             foreDistanceM: 150, backDistanceM: 150 }),
+      bare({ pointType: "intermediate", foresight: 1.0, foreDistanceM: 50 }),
+      bare({ pointType: "bm", foresight: 1.5, foreDistanceM: 150 }),
+    ];
+    expect(accumulateDistances(rows)).toEqual([150, 450, 450, 600]);
+  });
+
+  it("tampoco entran en el total", () => {
+    const rows = [
+      bare({ pointType: "bm", backsight: 1.5, backDistanceM: 150 }),
+      bare({ pointType: "intermediate", foresight: 1.0, foreDistanceM: 999 }),
+      bare({ pointType: "bm", foresight: 1.5, foreDistanceM: 150 }),
+    ];
+    expect(totalDistanceFromReadings(rows)).toBeCloseTo(0.3, 9);
+  });
+
+  it("el motor no expone distancia resuelta en una radiación", () => {
+    // Lo que se persiste sale de aquí: si el motor la expusiera, el export
+    // imprimiría metros que el total no incluye.
+    const result = computeLeveling({
+      type: "closed", startElevation: 100, endElevation: null, order: "tercer_orden",
+      forward: [
+        bare({ pointType: "bm", backsight: 1.5, backDistanceM: 150 }),
+        bare({ pointType: "intermediate", foresight: 1.0, foreDistanceM: 50 }),
+        bare({ pointType: "bm", foresight: 1.5, foreDistanceM: 150 }),
+      ],
+      return: null,
+    });
+    expect(result.forward.readings[1]?.foreDistanceResolvedM).toBeNull();
+    expect(result.forward.readings[1]?.backDistanceResolvedM).toBeNull();
+  });
+});
+
 describe("hilos inválidos no envenenan la cadena", () => {
   it("hilos iguales NO anulan la distancia tecleada", () => {
     // `stadiaDistance` daría 0, y `0 ?? 30` es 0: la tecleada se perdía.

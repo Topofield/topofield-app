@@ -96,10 +96,21 @@ where backsight is null and foresight is not null;
 -- proceso. Sin esto conviven dos números que nadie comparó —el acumulado viejo
 -- tecleado y el que ahora deriva `accumulateDistances`—, que es justo la
 -- situación que esta fase existe para eliminar.
+--
+-- Los `intermediate` NO suman: cuelgan de la AI vigente, no propagan cota y
+-- quedan fuera de la compensación. Heredan el acumulado de su armada, igual
+-- que hace `accumulateDistances` en el motor. Excluirlos aquí no es un detalle
+-- de estilo: si el SQL sumara lo que el motor salta, la columna persistida y
+-- lo que calcula el editor darían números distintos para el mismo punto, y el
+-- informe y el export —que leen la fila sin recalcular— imprimirían los unos
+-- mientras la pantalla muestra los otros.
 with acumulado as (
   select id,
-    sum(coalesce(back_distance_m, 0) + coalesce(fore_distance_m, 0))
-      over (partition by process_id, run_type order by reading_order
+    sum(
+      case when point_type = 'intermediate' then 0
+           else coalesce(back_distance_m, 0) + coalesce(fore_distance_m, 0)
+      end
+    ) over (partition by process_id, run_type order by reading_order
             rows between unbounded preceding and current row) / 1000 as acc_km
   from public.leveling_readings
 )
@@ -108,13 +119,24 @@ set distance_accumulated_km = round(a.acc_km, 3)
 from acumulado a
 where r.id = a.id;
 
+-- El total, con la misma exclusión. Y solo se toca el de los procesos que
+-- REALMENTE recibieron distancias: uno cuyas filas no tenían acumulado previo
+-- (la columna era nullable) no obtiene ninguna del reparto, y sobrescribirle
+-- el total con 0 le borraría un valor tecleado válido y lo dejaría sin
+-- veredicto de cierre, en silencio y sin marca que lo indique.
 update public.leveling_processes p
-set total_distance_km = coalesce((
+set total_distance_km = (
   select round(sum(coalesce(r.back_distance_m, 0) + coalesce(r.fore_distance_m, 0)) / 1000, 3)
   from public.leveling_readings r
-  where r.process_id = p.id and r.run_type = 'forward'
-), 0)
-where exists (select 1 from public.leveling_readings r where r.process_id = p.id);
+  where r.process_id = p.id
+    and r.run_type = 'forward'
+    and r.point_type <> 'intermediate'
+)
+where exists (
+  select 1 from public.leveling_readings r
+  where r.process_id = p.id
+    and (r.back_distance_m is not null or r.fore_distance_m is not null)
+);
 
 update public.leveling_processes p
 set distances_reconstructed = true

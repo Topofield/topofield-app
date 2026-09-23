@@ -176,7 +176,12 @@ export function computeRun(
       sumBacksights += reading.backsight;
     }
 
-    const resolved = resolveVisualDistances(reading);
+    // Una radiación no aporta al acumulado, así que tampoco expone distancia
+    // resuelta: lo que se persiste sale de aquí, y una distancia guardada que
+    // el total no incluye deja el Excel con metros que no suman.
+    const resolved = isIntermediate
+      ? { back: null, fore: null }
+      : resolveVisualDistances(reading);
 
     return {
       ...reading,

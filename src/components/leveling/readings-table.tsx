@@ -210,6 +210,10 @@ export function ReadingsTable({
               const isIntermediate = reading.pointType === "intermediate";
               // La primera fila no admite L.Ad; la última, si es bm, no admite L.At.
               const foresightDisabled = disabled || isFirst;
+              // Una radiación no acumula, así que su distancia no cuenta para
+              // nada: dejarla editable invita a teclear metros que el total
+              // nunca incluirá, y que el Excel imprimiría igualmente.
+              const distanceDisabled = foresightDisabled || isIntermediate;
               const backsightDisabled =
                 disabled ||
                 isIntermediate ||
@@ -389,7 +393,7 @@ export function ReadingsTable({
                       inputMode="decimal"
                       aria-label="Distancia adelante (m)"
                       value={reading.foreDistanceM}
-                      disabled={foresightDisabled}
+                      disabled={distanceDisabled}
                       error={issue?.errors.foreDistanceM}
                       className={cn(
                         "w-24",
