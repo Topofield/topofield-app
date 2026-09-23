@@ -18,7 +18,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | cerrada |
 | 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | cerrada |
 | 8 | Precisión y equipo por proceso | [`prds/07-precision-equipo-por-proceso.md`](./prds/07-precision-equipo-por-proceso.md) | cerrada |
-| 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | en curso |
+| 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | cerrada |
 | 10 | Nomenclatura de nivelación | — | pendiente |
 | 11 | Estado de los BMs | — | pendiente |
 | 12 | Alerta por lectura desfasada | — | pendiente |
@@ -389,6 +389,68 @@ riesgo de la aritmética a la consistencia de lo guardado.
   pero es la confirmación más fuerte de que la inmutabilidad no depende del
   código de aplicación. Es lo que permite que un informe se reconstruya en vez
   de guardarse.
+
+### Cierre Fase 9 — Cadena de distancias de nivelación (2026-09-22)
+
+Primera fase que nace de una cartera de campo en vez de un hallazgo de código:
+`TRABAJO NIVELACION EL VERJON.xlsx` es aritméticamente correcta en sus dos
+hojas y aun así **pierde 24.7 m de su distancia total**, porque una vista
+intermedia rompió la cadena de sumas. De ese número depende `K·√D`.
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El PRD y el diseño daban **seis** columnas de hilos. Son **cuatro**: el hilo
+  medio no lleva columna porque **es** la lectura de mira (`backsight` /
+  `foresight`). Darle una habría creado dos fuentes de verdad para el mismo
+  número — justo el defecto que la fase venía a eliminar.
+- El backfill del PRD repartía **todo** tramo por mitades, lo que en una fila
+  terminal (solo visual adelante) o inicial (solo atrás) inventaría una visual
+  inexistente. Se añadieron dos `UPDATE` que vuelcan el tramo entero a la
+  visual que la fila sí tiene.
+- La petición **N5 resultó falsa** y se retiró: el generador de proyecto demo
+  sí crea nivelación, delegada en `src/lib/demo/insertar-nivelacion.ts`. El
+  grep que la originó buscaba «leveling» en `crear-proyecto-demo.ts`, que no la
+  ve. Una petición basada en un grep negativo merece verificarse antes de
+  convertirse en fase.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Persistir el dato que el usuario teclea, cuando existe uno derivado, deja
+  la celda vacía justo en el caso que la fase vino a habilitar.** Los tres
+  sitios de persistencia guardaban `draft.backDistanceM` — la distancia
+  tecleada—, que en una captura por taquimetría es `null` porque la distancia
+  sale de los hilos. El informe y el export leen la fila **sin recalcular**, así
+  que habrían impreso una columna de distancias vacía en todo proceso capturado
+  con hilos. **No lo vio ningún test**: lo destapó consultar la base después del
+  seed. Se corrigió exponiendo la distancia resuelta en `ComputedReading`. Es la
+  misma lección del cierre de la Fase 6 —todo lo que se persiste necesita un
+  consumidor que lo lea sin recalcular— vista desde el otro lado: **cuando un
+  valor pasa a derivarse, hay que revisar qué se persiste, no solo qué se
+  calcula**.
+- **Un seed puede contradecir sus propios datos, y la contradicción solo se ve
+  en pantalla.** El seed declaraba los circuitos como nivel `digital` mientras
+  escribía los tres hilos de cada visual. Un nivel digital entrega la distancia
+  y no lee hilos: el conmutador de captura no aparecía sobre datos que sí los
+  tenían. Ni el typecheck ni los 481 tests lo vieron; apareció al mirar la
+  captura y preguntarse por qué faltaba el conmutador.
+- **`w-full` en una tabla que crece comprime sus columnas en vez de hacer
+  scroll.** Con las 13 columnas del modo automático, el encabezado «Cota
+  corregida» salía cortado. `min-w-full` deja que la tabla crezca y que el
+  contenedor haga el scroll. Medido: 1557 px de tabla en 942 de contenedor.
+- **Una entrada inválida que deja de ser representable no elimina la
+  protección, la muda de puerta.** Cinco tests inyectaban `totalDistanceKm:
+  NaN`, campo que la fase elimina. Borrarlos habría perdido la cobertura; se
+  reescribieron contra la única puerta que queda — una libreta sin distancias —
+  y siguen protegiendo del «NaN mm» que la Fase 4 tuvo en pantalla.
+- **Los fixtures antiguos se traducen, no se reescriben.** Once fixtures
+  declaraban el acumulado a mano. Un helper que reparte el tramo entre las dos
+  visuales conservó la geometría de cotas que las Fases 3-4 verificaron a mano,
+  sin reintroducir un campo que el modelo ya no tiene.
+- **Un `describe` que se evalúa antes que la función que usa da
+  "Cannot access before initialization".** El helper nuevo se llamó `run`,
+  nombre que el archivo ya usaba como variable local para el resultado de
+  `computeRun`. Renombrarlo a `fromAccum` lo resolvió y además describe mejor
+  lo que hace.
 
 ### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
 

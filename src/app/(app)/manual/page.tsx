@@ -668,14 +668,49 @@ export default function ManualPage() {
 
         <p>
           La libreta se captura por fila: punto, tipo, lecturas atrás y
-          adelante, distancia del tramo y <strong>distancia acumulada</strong>{" "}
-          desde el origen.
+          adelante, y la <strong>distancia a cada mira</strong>. La distancia
+          acumulada y la distancia total del recorrido no se teclean: la
+          aplicación las suma sola y las muestra en solo lectura.
         </p>
 
-        <Nota titulo="La distancia acumulada es obligatoria en los BM y en los puntos de cambio">
-          Sin ella la fila no recibe corrección: la aplicación no adivina a
-          qué distancia del origen está un punto, así que un dato faltante
-          deja esa cota sin corregir en silencio hasta que se complete.
+        <Nota titulo="La distancia a cada mira es obligatoria en los BM y en los puntos de cambio">
+          Sin ella el recorrido no acumula, la distancia total sale menor de la
+          real y el punto de cierre queda mal corregido — con el proceso
+          informando que cumple. Los puntos intermedios no la necesitan: no
+          entran en la compensación.
+        </Nota>
+
+        <p>
+          <strong>Los tres hilos, con nivel automático.</strong> Si el proceso
+          declara un nivel automático, la libreta ofrece capturar los tres
+          hilos estadimétricos de cada visual. Marque «Capturar los tres
+          hilos» y aparecerán las casillas del hilo superior y el inferior; la
+          aplicación calcula entonces la distancia por taquimetría,{" "}
+          <code>D = (HS − HI) × 100</code>, y rellena la lectura de mira con el
+          hilo medio si aún está vacía.
+        </p>
+
+        <p>
+          Son <strong>opcionales</strong>: si midió la distancia a cinta,
+          teclee la distancia y deje los hilos en blanco. Y si ya anotó la
+          lectura, teclear los hilos no la sobrescribe. Cuando están los tres,
+          la aplicación comprueba que el hilo medio sea el promedio de los
+          otros dos; si no cuadra, avisa: es un error de lectura o de
+          transcripción.
+        </p>
+
+        <p>
+          <strong>Equilibrado de visuales.</strong> Con las dos distancias de
+          una armada, la aplicación avisa si la mira de atrás y la de adelante
+          quedaron a distancias muy distintas. Equilibrarlas cancela el error
+          de colimación del nivel, así que es la regla de campo más importante
+          de la nivelación de precisión. El límite depende del orden: 2 m en
+          primer orden, 3 en segundo, 4 en tercero y 6 en ordinario.
+        </p>
+
+        <Nota titulo="Con nivel digital no se leen hilos">
+          El instrumento entrega la distancia: se teclean la lectura y la
+          distancia.
         </Nota>
 
         <p>

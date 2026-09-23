@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-18 · Fase 8 cerrada · 435 tests ·
+**Última actualización:** 2026-09-22 · Fase 9 cerrada · 481 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -947,7 +947,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-448 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
+481 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1138,12 +1138,23 @@ vez de perseguir otro cuarteto: `StatusIndicator` en modo `level` añade
 además del texto que el sistema de diseño ya exigía. Ver
 `docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
 
-**Equilibrado de visuales sin validar.** Es la regla de campo más importante
-de la nivelación de precisión (cancela curvatura, refracción y colimación).
-No se valida porque compara `d_atrás` con `d_adelante` dentro de una armada y
-`leveling_readings.distance_m` guarda una sola distancia por fila.
-Implementarlo exige dos columnas por armada o un modelo por armada en vez de
-por punto: toca el modelo de datos en producción.
+**Equilibrado de visuales: resuelto en la Fase 9.** Era la deuda más antigua
+de nivelación — la regla de campo que cancela curvatura, refracción y
+colimación— y no se validaba porque `leveling_readings.distance_m` guardaba
+una sola distancia por fila, mientras el equilibrado compara `d_atrás` con
+`d_adelante` dentro de una armada.
+
+La Fase 9 sustituyó esa columna por `back_distance_m` y `fore_distance_m`, una
+por visual, que es justo lo que la comparación necesitaba.
+`validateSightBalance` (`src/lib/validators/leveling.ts`) avisa —no bloquea—
+cuando la diferencia pasa del límite del orden, definido en
+`SIGHT_BALANCE_LIMIT_M` (`tolerances.ts`).
+
+**Salvedad:** en procesos con `distances_reconstructed = true` el equilibrado
+**no se evalúa**. Son los que existían antes de la Fase 9, cuyas distancias por
+visual las reconstruyó el backfill repartiendo por mitades la diferencia del
+acumulado: el reparto real nunca se capturó, así que el equilibrado saldría
+perfecto por construcción — una conformidad que el dato no respalda.
 
 Dos deudas de revalidación en servidor, ambas cerradas durante la Fase 5 y ya
 sin rastro que corregir en el código actual:

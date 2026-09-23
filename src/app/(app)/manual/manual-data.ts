@@ -445,7 +445,7 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Por qué una fila de mi libreta de nivelación no admite corrección?",
     respuesta:
-      "Le falta la distancia acumulada. Es obligatoria en los puntos BM y de cambio: sin ella la aplicación no sabe a qué distancia del origen está el punto y no puede repartirle su parte del error de cierre.",
+      "Le falta la distancia a alguna de sus miras. Es obligatoria en los puntos BM y de cambio: sin ella el recorrido no acumula, la distancia total sale menor de la real y el punto de cierre queda mal corregido. La distancia acumulada no se teclea — la calcula la aplicación sumando las distancias por visual.",
   },
   {
     pregunta:
