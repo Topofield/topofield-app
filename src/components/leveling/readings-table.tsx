@@ -305,7 +305,7 @@ export function ReadingsTable({
                       </p>
                     )}
                   </td>
-                  <td className="py-2 pr-3">
+                  <td className="min-w-40 py-2 pr-3">
                     <Input
                       type="number"
                       step="any"
@@ -382,7 +382,7 @@ export function ReadingsTable({
                       </p>
                     )}
                   </td>
-                  <td className="py-2 pr-3">
+                  <td className="min-w-40 py-2 pr-3">
                     <Input
                       type="number"
                       step="any"
