@@ -28,6 +28,13 @@ export interface PersistedReading {
  * número según el camino de la fila; sin convertir, toda fila parecería
  * cambiada en cada guardado y la propagación reescribiría la base entera.
  *
+ * Y la compara a la PRECISIÓN CON QUE SE PERSISTE: el motor no redondea la
+ * velocidad (redondear antes de clasificar cambiaría el nivel de alerta), pero
+ * la columna es `DECIMAL(8,2)`. Comparar −3.4364… con −3.44 daba siempre
+ * «cambiada», y cada guardado reescribía todas las lecturas abiertas del
+ * lugar. Se vio en la Fase 11, al simular el script de resincronización sobre
+ * un lugar recién sembrado: 31 lecturas «a reescribir» sin nada que cambiar.
+ *
  * Incluye `alert_status` en la comparación de forma deliberada: al editar los
  * umbrales de un lugar **ningún valor numérico cambia**, solo la
  * clasificación. Si esto mirara únicamente los números, ese cambio no
@@ -46,9 +53,20 @@ export function readingChanged(
   return (
     computed.partialSettlement !== persisted.partial_settlement ||
     computed.accumulatedSettlement !== persisted.accumulated_settlement ||
-    computed.velocity !== persistedVelocity ||
+    velocityChanged(computed.velocity, persistedVelocity) ||
     computed.alertStatus !== persisted.alert_status
   );
+}
+
+/**
+ * ¿Cambió la velocidad, a la resolución de `DECIMAL(8,2)`? Se compara con una
+ * tolerancia de media centésima y no redondeando los dos lados: el redondeo de
+ * JS y el de Postgres difieren en los empates negativos (−2.345), y un empate
+ * no debe leerse como un cambio.
+ */
+function velocityChanged(computed: number | null, persisted: number | null): boolean {
+  if (computed === null || persisted === null) return computed !== persisted;
+  return Math.abs(computed - persisted) > 0.005 + 1e-9;
 }
 
 export interface VisitsToRewriteInput {

@@ -95,6 +95,23 @@ describe("readingChanged", () => {
     ).toBe(false);
   });
 
+  // El motor no redondea la velocidad; la columna es DECIMAL(8,2). Es el caso
+  // real del seed: −3.4364… calculada contra −3.44 persistida.
+  it("no marca cambio cuando la velocidad solo difiere por la precisión de la columna", () => {
+    expect(
+      readingChanged(
+        computed({ velocity: -3.436491935483871 }),
+        persisted({ velocity: "-3.44" as unknown as number }),
+      ),
+    ).toBe(false);
+  });
+
+  it("sí marca cambio cuando la velocidad cambia en la centésima", () => {
+    expect(
+      readingChanged(computed({ velocity: -3.4549 }), persisted({ velocity: -3.44 })),
+    ).toBe(true);
+  });
+
   it("distingue null de cero en velocidad", () => {
     expect(
       readingChanged(computed({ velocity: null }), persisted({ velocity: 0 })),
