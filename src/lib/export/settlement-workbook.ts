@@ -47,6 +47,10 @@ export interface PointRow {
   northing: number | string | null;
   easting: number | string | null;
   initial_elevation: number | string | null;
+  /** Vigencia del punto (Fase 11): fecha de alta, de baja y motivo. */
+  active_from: string | null;
+  retired_on: string | null;
+  retirement_reason: string | null;
 }
 
 export interface SiteRow {
@@ -111,6 +115,9 @@ function sheetRawData(
     "Norte (m)",
     "Este (m)",
     "Cota C0 (m)",
+    "Alta",
+    "Baja",
+    "Motivo de baja",
   ]);
   points.forEach((p, i) => {
     writeRow(
@@ -122,8 +129,14 @@ function sheetRawData(
         num(p.northing),
         num(p.easting),
         num(p.initial_elevation),
+        p.active_from,
+        p.retired_on,
+        p.retirement_reason,
       ],
-      [null, null, DECIMALS.coordinate, DECIMALS.coordinate, DECIMALS.elevation],
+      [
+        null, null, DECIMALS.coordinate, DECIMALS.coordinate, DECIMALS.elevation,
+        null, null, null,
+      ],
     );
   });
 

@@ -9,6 +9,7 @@
 // una geometría distinta de la que se ve en pantalla.
 
 import { linearScale, niceTicks } from "@/lib/design/chart-scale";
+import { settlementPointLabel } from "@/lib/utils/format";
 import { seriesStyle, type SeriesMarker } from "@/lib/design/series-markers";
 import type { PointInput, VisitResult } from "@/types/settlement";
 
@@ -283,7 +284,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
             <svg width={12} height={12} aria-hidden>
               <Marker shape={shape} cx={6} cy={6} color={color} />
             </svg>
-            {point.code}
+            {settlementPointLabel(point)}
           </li>
         ))}
       </ul>
