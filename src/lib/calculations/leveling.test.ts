@@ -5,6 +5,9 @@ import {
   applyProportionalCorrection,
   stadiaDistance,
   distanceFromWires,
+  resolveVisualDistances,
+  accumulateDistances,
+  totalDistanceFromReadings,
 } from "./leveling";
 import type { LevelingInput, PointType, ReadingInput } from "@/types/leveling";
 
@@ -56,6 +59,121 @@ describe("stadiaDistance", () => {
 
   it("admite otra constante estadimétrica", () => {
     expect(stadiaDistance(1.5, 1.3, 50)).toBeCloseTo(10.0, 6);
+  });
+});
+
+describe("resolveVisualDistances", () => {
+  it("deriva de los hilos cuando están", () => {
+    const row = bare({ backUpperM: 1.367, backLowerM: 1.052 });
+    expect(resolveVisualDistances(row).back).toBeCloseTo(31.5, 6);
+  });
+
+  it("usa la distancia tecleada cuando no hay hilos", () => {
+    expect(resolveVisualDistances(bare({ backDistanceM: 30 })).back).toBe(30);
+  });
+
+  it("los hilos ganan sobre la distancia tecleada", () => {
+    // La distancia es un campo autocompletado desde los hilos: si ambos están,
+    // los hilos son la medición y la distancia su resultado.
+    const row = bare({ backUpperM: 1.5, backLowerM: 1.3, backDistanceM: 999 });
+    expect(resolveVisualDistances(row).back).toBeCloseTo(20.0, 6);
+  });
+});
+
+describe("accumulateDistances", () => {
+  it("una armada acumula sus dos visuales", () => {
+    const rows = [
+      bare({ backDistanceM: 30 }),
+      bare({ foreDistanceM: 30, backDistanceM: 25 }),
+    ];
+    expect(accumulateDistances(rows)).toEqual([30, 85]);
+  });
+
+  it("un intermedio no acumula, hereda, y LA CADENA CONTINÚA", () => {
+    // Es el fallo exacto de la cartera de El Verjón: la vista intermedia
+    // AUX 1 rompió la cadena de sumas de la hoja y se perdieron 24.7 m de
+    // la distancia total, que es la que alimenta la tolerancia K·√D.
+    const rows = [
+      bare({ backDistanceM: 30 }),
+      bare({ pointType: "intermediate" }),
+      bare({ foreDistanceM: 20, backDistanceM: 25 }),
+      bare({ foreDistanceM: 15 }),
+    ];
+    expect(accumulateDistances(rows)).toEqual([30, 30, 75, 90]);
+  });
+
+  it("una fila sin distancias no rompe la cadena: aporta 0", () => {
+    const rows = [
+      bare({ backDistanceM: 30 }),
+      bare({}),
+      bare({ foreDistanceM: 20 }),
+    ];
+    expect(accumulateDistances(rows)).toEqual([30, 30, 50]);
+  });
+
+  it("libreta vacía devuelve lista vacía", () => {
+    expect(accumulateDistances([])).toEqual([]);
+  });
+});
+
+describe("totalDistanceFromReadings", () => {
+  it("devuelve el acumulado de la última fila, en km", () => {
+    const rows = [
+      bare({ backDistanceM: 300 }),
+      bare({ foreDistanceM: 300, backDistanceM: 150 }),
+      bare({ foreDistanceM: 150 }),
+    ];
+    expect(totalDistanceFromReadings(rows)).toBeCloseTo(0.9, 9);
+  });
+
+  it("libreta vacía devuelve 0, nunca NaN ni Infinity", () => {
+    // La Fase 4 tuvo un «NaN mm» en pantalla; no se repite.
+    const total = totalDistanceFromReadings([]);
+    expect(total).toBe(0);
+    expect(Number.isFinite(total)).toBe(true);
+  });
+
+  it("una sola fila sin distancias devuelve 0", () => {
+    expect(totalDistanceFromReadings([bare({})])).toBe(0);
+  });
+
+  it("un intermedio al final no altera el total", () => {
+    const rows = [
+      bare({ backDistanceM: 300 }),
+      bare({ foreDistanceM: 300 }),
+      bare({ pointType: "intermediate" }),
+    ];
+    expect(totalDistanceFromReadings(rows)).toBeCloseTo(0.6, 9);
+  });
+});
+
+describe("la invariante de la cadena", () => {
+  it("el acumulado terminal es igual al total, por construcción", () => {
+    const rows = [
+      bare({ backDistanceM: 31.5 }),
+      bare({ foreDistanceM: 28.5, backDistanceM: 28.1 }),
+      bare({ foreDistanceM: 15.7 }),
+    ];
+    const acc = accumulateDistances(rows);
+    expect(acc[acc.length - 1] / 1000).toBeCloseTo(
+      totalDistanceFromReadings(rows),
+      12,
+    );
+  });
+
+  it("vale igual en el recorrido de vuelta", () => {
+    // La vuelta es una libreta independiente con su propia cadena. Un fallo
+    // aquí no lo vería ningún test de la ida.
+    const vuelta = [
+      bare({ backDistanceM: 14.3 }),
+      bare({ foreDistanceM: 13.5, backDistanceM: 15.2 }),
+      bare({ foreDistanceM: 22.6 }),
+    ];
+    const acc = accumulateDistances(vuelta);
+    expect(acc[acc.length - 1] / 1000).toBeCloseTo(
+      totalDistanceFromReadings(vuelta),
+      12,
+    );
   });
 });
 

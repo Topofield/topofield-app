@@ -41,6 +41,63 @@ export function distanceFromWires(
   return stadiaDistance(upper, lower);
 }
 
+/**
+ * Distancia efectiva de cada visual de una fila.
+ *
+ * Los hilos tienen prioridad sobre la distancia tecleada: cuando el par está
+ * completo, los hilos SON la medición y la distancia es su resultado
+ * autocompletado. Con el par incompleto o ausente, vale lo tecleado.
+ */
+export function resolveVisualDistances(reading: ReadingInput): {
+  back: number | null;
+  fore: number | null;
+} {
+  return {
+    back:
+      distanceFromWires(reading.backUpperM, reading.backLowerM) ??
+      reading.backDistanceM,
+    fore:
+      distanceFromWires(reading.foreUpperM, reading.foreLowerM) ??
+      reading.foreDistanceM,
+  };
+}
+
+/**
+ * Distancia acumulada por fila, en METROS, desde las distancias por visual.
+ *
+ * Una armada aporta la distancia a la mira de atrás más la de adelante. Los
+ * puntos `intermediate` aportan 0 y HEREDAN el acumulado de la armada de la
+ * que cuelgan — que es lo que `applyProportionalCorrection` necesita para
+ * interpolarles la corrección—, y la cadena continúa detrás de ellos.
+ *
+ * Que la cadena continúe no es un detalle: en la cartera de El Verjón una
+ * vista intermedia rompió la suma de la hoja de cálculo y dejó 24.7 m fuera
+ * del total, con el veredicto de cierre emitido sobre el número equivocado.
+ */
+export function accumulateDistances(readings: ReadingInput[]): number[] {
+  let running = 0;
+  return readings.map((reading) => {
+    if (reading.pointType === "intermediate") return running;
+    const { back, fore } = resolveVisualDistances(reading);
+    running += (fore ?? 0) + (back ?? 0);
+    return running;
+  });
+}
+
+/**
+ * Distancia total del recorrido, en KILÓMETROS.
+ *
+ * Es el acumulado de la última fila. Por construcción coincide con el
+ * acumulado de la fila terminal, que es lo que hace que el punto de cierre
+ * cierre exactamente contra su cota conocida: la invariante que la Fase 9
+ * establece y que el JSDoc de `applyProportionalCorrection` solo podía
+ * documentar como contrato no verificado.
+ */
+export function totalDistanceFromReadings(readings: ReadingInput[]): number {
+  const acc = accumulateDistances(readings);
+  return (acc[acc.length - 1] ?? 0) / 1000;
+}
+
 /** Tolerancia de la comprobación aritmética, en metros (0.1 mm). */
 const ARITHMETIC_EPSILON = 0.0001;
 
