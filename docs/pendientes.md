@@ -21,7 +21,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | A2 | **11** — Estado de los BMs | sin redactar |
 | A1 | **12** — Alerta por lectura desfasada | sin redactar |
 | P1 | dentro de la **13** (canvas) | sin redactar |
-| N4 | — | sin fase asignada · **desbloqueada** (plantilla propia) |
+| N4 | — | sin fase asignada · **desbloqueada** (crudo real descifrado) |
 | N6 | — | sin fase asignada |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
@@ -71,10 +71,10 @@ Es coherente con el cálculo: la vista más se suma a la cota para obtener la
 altura del instrumento, y la vista menos se resta. Toca la tabla de captura, el
 panel de resultados, el export, el informe y el manual en sus dos copias.
 
-### N4 · Importar lecturas desde CSV (nivel electrónico)
+### N4 · Importar lecturas desde archivo (nivel electrónico)
 
 Con nivel electrónico las lecturas y las distancias deben poder **subirse desde
-un archivo CSV**, además de digitarse. El instrumento ya entrega ambos valores,
+un archivo**, además de digitarse. El instrumento ya entrega ambos valores,
 así que teclearlos a mano es transcribir lo que ya está en digital — con el
 riesgo de error que eso trae en una aplicación cuyo tema es la trazabilidad de
 la medición.
