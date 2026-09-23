@@ -7,7 +7,10 @@
 // `insertLeveling` de `scripts/seed.mjs`.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeLeveling } from "@/lib/calculations/leveling";
+import {
+  computeLeveling,
+  totalDistanceFromReadings,
+} from "@/lib/calculations/leveling";
 import type { Database } from "@/types/database";
 import type { ReadingInput } from "@/types/leveling";
 import type { LecturaNivelacionDemo, NivelacionDemo } from "./fixtures";
@@ -20,8 +23,14 @@ function aReadingInput(r: LecturaNivelacionDemo): ReadingInput {
     pointType: r.type,
     backsight: r.back ?? null,
     foresight: r.fore ?? null,
-    distanceM: r.distanceM ?? null,
-    distanceAccumulatedKm: r.distanceAccumKm ?? null,
+    backUpperM: r.backUpperM ?? null,
+    backLowerM: r.backLowerM ?? null,
+    foreUpperM: r.foreUpperM ?? null,
+    foreLowerM: r.foreLowerM ?? null,
+    backDistanceM: r.backDistanceM ?? null,
+    foreDistanceM: r.foreDistanceM ?? null,
+    // Derivado por el motor desde las distancias por visual.
+    distanceAccumulatedKm: null,
   };
 }
 
@@ -46,7 +55,6 @@ export async function insertarNivelacion(
     endElevation: nivelacion.endElevation ?? null,
     // El orden lo declara el proceso (Fase 8), no ya el proyecto.
     order: nivelacion.precisionOrder,
-    totalDistanceKm: nivelacion.totalDistanceKm,
     forward: nivelacion.forward.map(aReadingInput),
     return: nivelacion.return ? nivelacion.return.map(aReadingInput) : null,
   });
@@ -63,7 +71,10 @@ export async function insertarNivelacion(
       end_bm_code: nivelacion.endBmCode ?? null,
       end_bm_elevation: nivelacion.endElevation ?? null,
       has_return_run: nivelacion.return != null,
-      total_distance_km: nivelacion.totalDistanceKm,
+      // Derivada de las distancias por visual, como en el editor real.
+      total_distance_km: totalDistanceFromReadings(
+        nivelacion.forward.map(aReadingInput),
+      ),
       // Orden y equipo viven en el proceso desde la Fase 8. A un nivel se le
       // pide su tipo y su desviación típica en mm/km (ISO 17123-2), no la
       // precisión angular de una estación total.
@@ -98,8 +109,14 @@ export async function insertarNivelacion(
       point_type: draft.type,
       backsight: draft.back ?? null,
       foresight: draft.fore ?? null,
-      distance_m: draft.distanceM ?? null,
-      distance_accumulated_km: draft.distanceAccumKm ?? null,
+      back_upper_m: draft.backUpperM ?? null,
+      back_lower_m: draft.backLowerM ?? null,
+      fore_upper_m: draft.foreUpperM ?? null,
+      fore_lower_m: draft.foreLowerM ?? null,
+      back_distance_m: r?.backDistanceResolvedM ?? null,
+      fore_distance_m: r?.foreDistanceResolvedM ?? null,
+      // Derivado por el motor, no por el fixture.
+      distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
       instrument_height: r?.instrumentHeight ?? null,
       elevation_calculated: r?.elevationCalculated ?? null,
       elevation_corrected: r?.elevationCorrected ?? null,

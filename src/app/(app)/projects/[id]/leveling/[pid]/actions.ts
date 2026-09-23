@@ -209,8 +209,11 @@ export async function saveLevelingProcessAction(
         back_lower_m: draft.backLowerM,
         fore_upper_m: draft.foreUpperM,
         fore_lower_m: draft.foreLowerM,
-        back_distance_m: draft.backDistanceM,
-        fore_distance_m: draft.foreDistanceM,
+        // Resueltas por el motor: derivadas de los hilos cuando los hay.
+        // Persistir la tecleada sola dejaría la celda vacía en un proceso
+        // capturado por taquimetría, y el informe lee la fila sin recalcular.
+        back_distance_m: r?.backDistanceResolvedM ?? null,
+        fore_distance_m: r?.foreDistanceResolvedM ?? null,
         // Derivado: lo escribe el motor, no el borrador del cliente.
         distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
         instrument_height: r?.instrumentHeight ?? null,

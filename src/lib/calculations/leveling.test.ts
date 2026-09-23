@@ -172,6 +172,22 @@ describe("computeLeveling con la cadena derivada", () => {
     expect(result.closureErrorMm).not.toBeNaN();
   });
 
+  it("expone la distancia RESUELTA de cada visual, derivada de los hilos", () => {
+    // Lo que se persiste es esto, no la distancia tecleada: un proceso
+    // capturado por taquimetría no teclea ninguna, y el informe y el export
+    // leen la fila sin recalcular.
+    const result = computeLeveling({
+      type: "closed", startElevation: 100, endElevation: null, order: "tercer_orden",
+      forward: [
+        bare({ pointType: "bm", backsight: 1.5, backUpperM: 2.25, backLowerM: 0.75 }),
+        bare({ pointType: "bm", foresight: 1.5, foreUpperM: 2.25, foreLowerM: 0.75 }),
+      ],
+      return: null,
+    });
+    expect(result.forward.readings[0]?.backDistanceResolvedM).toBeCloseTo(150, 6);
+    expect(result.forward.readings[1]?.foreDistanceResolvedM).toBeCloseTo(150, 6);
+  });
+
   it("escribe el acumulado derivado en cada fila", () => {
     const result = computeLeveling({
       type: "closed", startElevation: 100, endElevation: null, order: "tercer_orden",

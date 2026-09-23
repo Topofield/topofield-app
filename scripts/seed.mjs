@@ -38,7 +38,10 @@ import {
   CARTERA_TT4,
   CARTERA_VIVERO,
 } from "../src/lib/demo/carteras.ts";
-import { computeLeveling } from "../src/lib/calculations/leveling.ts";
+import {
+  computeLeveling,
+  totalDistanceFromReadings,
+} from "../src/lib/calculations/leveling.ts";
 import { computeHistory } from "../src/lib/calculations/settlement.ts";
 import { thresholdsFor } from "../src/lib/calculations/tolerances.ts";
 import { decimalToDms, dmsToDecimal } from "../src/lib/calculations/angles.ts";
@@ -398,14 +401,18 @@ async function insertLeveling(projectId, siteId, spec, userId) {
     // Mismo criterio que insertPolygonal: el orden que evalúa el motor es el
     // que declara el equipo del proceso.
     order: equipo.precision_order,
-    totalDistanceKm: spec.totalDistanceKm,
     forward: spec.forward.map((r) => ({
       pointCode: r.code,
       pointType: r.type,
       backsight: r.back ?? null,
       foresight: r.fore ?? null,
-      distanceM: r.distanceM ?? null,
-      distanceAccumulatedKm: r.distanceAccumKm ?? null,
+      backUpperM: r.backUpperM ?? null,
+      backLowerM: r.backLowerM ?? null,
+      foreUpperM: r.foreUpperM ?? null,
+      foreLowerM: r.foreLowerM ?? null,
+      backDistanceM: r.backDistanceM ?? null,
+      foreDistanceM: r.foreDistanceM ?? null,
+      distanceAccumulatedKm: null,
     })),
     return: spec.return
       ? spec.return.map((r) => ({
@@ -413,8 +420,13 @@ async function insertLeveling(projectId, siteId, spec, userId) {
           pointType: r.type,
           backsight: r.back ?? null,
           foresight: r.fore ?? null,
-          distanceM: r.distanceM ?? null,
-          distanceAccumulatedKm: r.distanceAccumKm ?? null,
+          backUpperM: r.backUpperM ?? null,
+          backLowerM: r.backLowerM ?? null,
+          foreUpperM: r.foreUpperM ?? null,
+          foreLowerM: r.foreLowerM ?? null,
+          backDistanceM: r.backDistanceM ?? null,
+          foreDistanceM: r.foreDistanceM ?? null,
+          distanceAccumulatedKm: null,
         }))
       : null,
   };
@@ -432,7 +444,8 @@ async function insertLeveling(projectId, siteId, spec, userId) {
       end_bm_code: spec.endBmCode ?? null,
       end_bm_elevation: spec.endElevation ?? null,
       has_return_run: spec.return != null,
-      total_distance_km: spec.totalDistanceKm,
+      // Derivada de las distancias por visual, como en el editor real.
+      total_distance_km: totalDistanceFromReadings(input.forward),
       // Nace calculado aunque el fixture lo quiera cerrado: los triggers de
       // inmutabilidad rechazan escribir lecturas bajo un proceso ya cerrado
       // (mismo motivo que en insertPolygonal). El cierre se aplica al final.
@@ -461,8 +474,13 @@ async function insertLeveling(projectId, siteId, spec, userId) {
         point_type: draft.type,
         backsight: draft.back ?? null,
         foresight: draft.fore ?? null,
-        distance_m: draft.distanceM ?? null,
-        distance_accumulated_km: draft.distanceAccumKm ?? null,
+        back_upper_m: draft.backUpperM ?? null,
+        back_lower_m: draft.backLowerM ?? null,
+        fore_upper_m: draft.foreUpperM ?? null,
+        fore_lower_m: draft.foreLowerM ?? null,
+        back_distance_m: r?.backDistanceResolvedM ?? null,
+        fore_distance_m: r?.foreDistanceResolvedM ?? null,
+        distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
         instrument_height: r?.instrumentHeight ?? null,
         elevation_calculated: r?.elevationCalculated ?? null,
         elevation_corrected: r?.elevationCorrected ?? null,
@@ -797,24 +815,44 @@ const LEVELING_PROCESSES = [
     type: "closed",
     startBmCode: "BM-1",
     startElevation: 100.0,
-    totalDistanceKm: 0.9,
+    // Los tres hilos de cada visual, como los captura un nivel automático. El
+    // hilo medio ES la lectura, y la distancia sale por taquimetría:
+    // (HS − HI)·100 = 150 m en cada visual → 0.900 km de recorrido.
     forward: [
-      { code: "BM-1", type: "bm", back: 1.5, distanceAccumKm: 0.0 },
+      {
+        code: "BM-1",
+        type: "bm",
+        back: 1.5,
+        backUpperM: 2.25,
+        backLowerM: 0.75,
+      },
       {
         code: "PC-1",
         type: "pc",
         fore: 1.2,
+        foreUpperM: 1.95,
+        foreLowerM: 0.45,
         back: 2.0,
-        distanceAccumKm: 0.3,
+        backUpperM: 2.75,
+        backLowerM: 1.25,
       },
       {
         code: "PC-2",
         type: "pc",
         fore: 2.5,
+        foreUpperM: 3.25,
+        foreLowerM: 1.75,
         back: 1.0,
-        distanceAccumKm: 0.6,
+        backUpperM: 1.75,
+        backLowerM: 0.25,
       },
-      { code: "BM-1", type: "bm", fore: 0.808, distanceAccumKm: 0.9 },
+      {
+        code: "BM-1",
+        type: "bm",
+        fore: 0.808,
+        foreUpperM: 1.558,
+        foreLowerM: 0.058,
+      },
     ],
     notes:
       "Circuito cerrado de verificación: sale y vuelve a BM-1. Error de cierre −8.0 mm contra tolerancia 11.4 mm (K=12 · √0.9 km). Cumple tercer orden.",
@@ -827,13 +865,30 @@ const LEVELING_PROCESSES = [
     type: "closed",
     startBmCode: "BM-2",
     startElevation: 100.0,
-    totalDistanceKm: 0.9,
     status: "closed",
     forward: [
-      { code: "BM-2", type: "bm", back: 1.5, distanceAccumKm: 0.0 },
-      { code: "PC-1", type: "pc", fore: 1.2, back: 2.0, distanceAccumKm: 0.3 },
-      { code: "PC-2", type: "pc", fore: 2.5, back: 1.0, distanceAccumKm: 0.6 },
-      { code: "BM-2", type: "bm", fore: 0.808, distanceAccumKm: 0.9 },
+      { code: "BM-2", type: "bm", back: 1.5, backUpperM: 2.25, backLowerM: 0.75 },
+      {
+        code: "PC-1",
+        type: "pc",
+        fore: 1.2,
+        foreUpperM: 1.95,
+        foreLowerM: 0.45,
+        back: 2.0,
+        backUpperM: 2.75,
+        backLowerM: 1.25,
+      },
+      {
+        code: "PC-2",
+        type: "pc",
+        fore: 2.5,
+        foreUpperM: 3.25,
+        foreLowerM: 1.75,
+        back: 1.0,
+        backUpperM: 1.75,
+        backLowerM: 0.25,
+      },
+      { code: "BM-2", type: "bm", fore: 0.808, foreUpperM: 1.558, foreLowerM: 0.058 },
     ],
     notes:
       "Mismo circuito de verificación, cerrado oficialmente para el informe de nivelación. El editor lo abre en solo lectura.",

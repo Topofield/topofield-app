@@ -168,8 +168,12 @@ export function computeRun(
       sumBacksights += reading.backsight;
     }
 
+    const resolved = resolveVisualDistances(reading);
+
     return {
       ...reading,
+      backDistanceResolvedM: resolved.back,
+      foreDistanceResolvedM: resolved.fore,
       distanceAccumulatedKm: (accumulated[index] ?? 0) / 1000,
       instrumentHeight: rowInstrumentHeight,
       elevationCalculated: rowElevation,

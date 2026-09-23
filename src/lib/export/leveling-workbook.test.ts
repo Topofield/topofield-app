@@ -13,7 +13,12 @@ function reading(over: Partial<LevelingReadingRow> = {}): LevelingReadingRow {
     point_type: "bm",
     backsight: "1.2345",
     foresight: null,
-    distance_m: "30.000",
+    back_upper_m: "1.3845",
+    back_lower_m: "1.0845",
+    fore_upper_m: null,
+    fore_lower_m: null,
+    back_distance_m: "30.000",
+    fore_distance_m: null,
     distance_accumulated_km: "0.030",
     instrument_height: "101.2345",
     elevation_calculated: "100.0000",
@@ -68,8 +73,12 @@ describe("buildLevelingWorkbook", () => {
   it("aplica 4 decimales a las cotas y a las lecturas", () => {
     const wb = buildLevelingWorkbook(process(), [reading()]);
     const raw = wb.getWorksheet("Datos Crudos")!;
+    // Desde la Fase 9 la columna E es el hilo superior y la F la lectura de
+    // mira (el hilo medio). Ambas son lecturas sobre la mira, a 4 decimales.
     expect(raw.getCell("E4").numFmt).toBe("0.0000");
-    expect(raw.getCell("E4").value).toBe(1.2345);
+    expect(raw.getCell("E4").value).toBe(1.3845);
+    expect(raw.getCell("F4").numFmt).toBe("0.0000");
+    expect(raw.getCell("F4").value).toBe(1.2345);
   });
 
   // Las etiquetas salen de los mapas del propio dominio, no de una copia local:

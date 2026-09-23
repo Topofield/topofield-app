@@ -108,6 +108,14 @@ export interface LevelingInput {
 }
 
 export interface ComputedReading extends ReadingInput {
+  /**
+   * Distancias por visual RESUELTAS: derivadas de los hilos cuando los hay, o
+   * las tecleadas. Es lo que hay que persistir — la distancia tecleada sola
+   * dejaría vacía la celda de un proceso capturado por taquimetría, y el
+   * informe y el export leen la fila sin recalcular.
+   */
+  backDistanceResolvedM: number | null;
+  foreDistanceResolvedM: number | null;
   /** AI de la armada que abre esta fila. Null si la fila no lleva L.At. */
   instrumentHeight: number | null;
   elevationCalculated: number;
