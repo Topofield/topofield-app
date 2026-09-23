@@ -42,8 +42,24 @@ hoja».
 
 ### Qué cambia
 
-Las **cadenas visibles** y los **comentarios en español**. Ninguna línea
+Las **32 cadenas visibles** y los **43 comentarios en español**. Ninguna línea
 ejecutable.
+
+Las cifras están contadas, no estimadas — el criterio de aceptación 6 exige un
+`grep` limpio al cerrar, y con un conteo mal hecho ese barrido daría por bueno
+un renombrado parcial:
+
+| Archivo | Cadenas |
+|---|---|
+| `readings-table.tsx` | 10 |
+| `export/leveling-workbook.ts` | 8 |
+| `validators/leveling.ts` | 3 |
+| `results-panel.tsx` | 3 |
+| `manual/page.tsx` | 3 |
+| `demo/fixtures.ts` | 2 |
+| `calculations/leveling.ts` | 1 |
+| `calculations/leveling.test.ts` | 1 |
+| `manual/manual-data.ts` | 1 |
 
 | Hoy | Pasa a ser |
 |---|---|
@@ -96,14 +112,27 @@ divergencia que resolvería. `AI` se queda.
 | `src/lib/calculations/leveling.ts` | Comentarios y JSDoc |
 | `src/lib/demo/fixtures.ts` | JSDoc de `LecturaNivelacionDemo` |
 | `src/components/leveling/leveling-editor.tsx` | Comentarios |
+| `src/lib/calculations/leveling.test.ts` | Un comentario de fixture (`ΣL.At`) |
 | `src/app/(app)/manual/page.tsx` + `manual-data.ts` | La copia del manual en la app |
 | `docs/manual/README.md` | La otra copia, **en el mismo commit** |
+| `docs/testing/manual-e2e-nivelacion.md` | **Guion de pruebas manuales.** Si queda con la nomenclatura vieja manda al probador a buscar una columna que ya no existe |
+| `docs/tecnica/README.md` | Una mención, además del estado de fases |
 
 ## Pruebas
 
-**Suite existente:** 492 tests. Los del export afirman posiciones de celda
-(`raw.getCell("E4")`), no rótulos, así que no deberían romperse — se verifica,
-no se supone.
+**Suite existente:** 492 tests. **Verificado**: los del export afirman
+posiciones de celda (`raw.getCell("E4").value`) y valores numéricos, no
+rótulos, así que el renombrado no los rompe. Las dos aserciones sobre texto
+(`"Vuelta"`, `"Punto de cambio"`) son etiquetas de tipo, que esta fase no toca.
+
+**Verificado también** que ningún script depende de los `aria-label` que se
+renombran: `docs/manual/capturas.mjs` usa `[aria-label="Veredicto de cierre"]`
+y `getByLabel("Título")`, ninguno de esta fase.
+
+**El signo U+2212 es seguro**: sobrevive a `JSON.stringify`/`parse`, ExcelJS lo
+escribe en UTF-8 (3 bytes) y es distinto del guion ASCII. No hay búsqueda ni
+filtro sobre estos rótulos en la aplicación, así que la distinción no afecta a
+ningún flujo de usuario.
 
 **En pantalla, antes de cerrar:**
 
@@ -125,8 +154,18 @@ pantalla.
    (`HS V+`, `Dist V− (m)`).
 4. El Excel exporta con la nomenclatura nueva.
 5. Los mensajes de validación visibles usan la nomenclatura nueva.
-6. Ningún comentario ni JSDoc del módulo de nivelación describe estas lecturas
-   como «lectura atrás» / «lectura adelante» / `L.At` / `L.Ad`.
+6. Ningún comentario, JSDoc ni cadena visible del módulo de nivelación describe
+   estas lecturas como «lectura atrás» / «lectura adelante» / `L.At` / `L.Ad`.
+   Se comprueba con el barrido de cierre:
+
+   ```bash
+   grep -rn "L\.At\b\|L\.Ad\b\|ectura atrás\|ectura adelante\|ista atrás\|ista adelante\|ΣL\." \
+     --include=*.ts --include=*.tsx --include=*.mjs --include=*.md \
+     src/ scripts/ docs/manual/ docs/tecnica/ docs/testing/ | grep -v node_modules
+   ```
+
+   Debe salir vacío. Los PRDs y análisis históricos quedan fuera del barrido:
+   el método los declara inmodificables.
 7. `backsight` / `foresight` **siguen intactos** en tipos, motor, validadores y
    base de datos.
 8. `AI`, `HS` y `HI` conservan su significado actual.
@@ -135,7 +174,9 @@ pantalla.
     mismos 492 tests.
 11. Manual actualizado **en sus dos copias**, en el mismo commit, con capturas
     regeneradas por `node docs/manual/capturas.mjs`.
-12. Doc técnica actualizada: estado de fases.
+12. Doc técnica actualizada: estado de fases y la mención de nomenclatura.
+13. `docs/testing/manual-e2e-nivelacion.md` actualizado: es el guion que sigue
+    una persona con la aplicación delante.
 
 ## Fuera de alcance
 
