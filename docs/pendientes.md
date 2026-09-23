@@ -19,7 +19,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~N2 + N3~~ | **9** — Cadena de distancias de nivelación | **cerrada** (2026-09-22) |
 | ~~N1~~ | **10** — Nomenclatura de nivelación | **cerrada** (2026-09-23) |
 | ~~A2~~ | **11** — Estado de los BMs | **cerrada** (2026-09-23) |
-| A1 | **12** — Alerta por lectura desfasada | **en curso** — PRD commiteado |
+| ~~A1~~ | **12** — Alerta por lectura desfasada | **cerrada** (2026-09-23) |
 | P1 | dentro de la **13** (canvas) | sin redactar |
 | N4 | — | sin fase asignada · **desbloqueada** (crudo real descifrado) |
 | N6 | — | sin fase asignada |
@@ -162,6 +162,9 @@ Análisis completo en
 ## Control de asentamientos
 
 ### A1 · Alerta por lectura desfasada de la tendencia
+
+> **Resuelta en la Fase 12** ([`prds/11-lectura-desfasada.md`](./prds/11-lectura-desfasada.md)).
+> Se conserva el texto de la petición como registro.
 
 Se necesita avisar cuando una lectura **se aleja mucho de la tendencia** del
 punto: un valor atípico que probablemente sea error de lectura y no

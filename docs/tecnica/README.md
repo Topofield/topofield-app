@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-23 · Fase 11 cerrada · 529 tests ·
+**Última actualización:** 2026-09-23 · Fase 12 cerrada · 556 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -64,7 +64,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 9 | Cadena de distancias de nivelación | cerrada |
 | 10 | Nomenclatura de nivelación | cerrada |
 | 11 | Estado de los BMs | cerrada |
-| 12 | Alerta por lectura desfasada | en curso |
+| 12 | Alerta por lectura desfasada | cerrada |
 | 13 | Canvas de poligonal | pendiente |
 | 14 | Ajuste por mínimos cuadrados | pendiente |
 | 15 | Georreferenciación de levantamientos | pendiente |
@@ -803,6 +803,32 @@ Cada `DifferentialPair` lleva los dos asentamientos que resta
 (`settlementAMm`, `settlementBMm`) y su `sinceDate`, para que la tabla
 muestre números que restados den el diferencial.
 
+**Lectura fuera de tendencia (Fase 12).** `detectTrendDeviations` marca una
+lectura que va **contra** la dirección de su punto más que un margen, o que lo
+mueve **más del doble** de lo que la velocidad de su lectura anterior preveía,
+más el margen:
+
+```
+d = signo de V_prev (−1 si es 0)
+contraria  si  d · parcial < −m
+excesiva   si  d · parcial >  2 · |V_prev| · Δt + m
+```
+
+Moverse menos de lo previsto nunca avisa. Es a propósito: el criterio obvio,
+extrapolar la velocidad anterior, marcaba lecturas correctas en consolidación,
+que frena. El margen es `m = K_orden · √0.25`, la tolerancia de cierre de un
+circuito de referencia de 250 m con la `K` de nivelación del orden de la visita
+(`trendDeviationMargin`, 1.5 / 3 / 6 / 12 mm). La longitud de referencia
+(`TREND_DEVIATION_REFERENCE_KM`) y el factor 2 (`TREND_DEVIATION_RATE_FACTOR`)
+son decisiones con nombre en `tolerances.ts`. Solo evalúa desde la tercera
+lectura del punto. P-09 del marco teórico y las series del seed son tests de
+regresión: no dan ningún aviso con ninguno de los cuatro márgenes.
+
+Es una función aparte, y no un campo de `computeSettlements`, porque necesita
+el orden de cada visita, que `VisitInput` no lleva. La llaman el editor de
+visita (en vivo, con el orden de la cabecera) y la página del panel. Avisa,
+no bloquea y no se persiste. Tampoco cambia el semáforo ni `computeTrends`.
+
 `computeHistory` compone todo lo anterior sobre la serie completa de un
 lugar: ordena las visitas **por fecha, no por `visit_number`** —hay un test
 que fija ese contrato— y añade `computeTrends`, que solo emite tendencia
@@ -879,7 +905,9 @@ bloquea nada**.
   (`validators/settlement.test.ts`, «NO bloquea el cierre por un
   asentamiento en alarma») y con las Server Actions, que solo invocan
   `validateVisitCapture`/`validateVisitClose` — ninguna de las dos consulta
-  `alert_status`.
+  `alert_status`. El aviso de lectura fuera de tendencia (Fase 12) sigue la
+  misma regla: se muestra al capturar, al cerrar y en el panel, pero no
+  bloquea nada.
 
 ---
 
@@ -1042,19 +1070,19 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-529 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
+556 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
+| `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 69 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
-| `lib/calculations/settlement.test.ts` | 58 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11) |
 | `lib/validators/polygonal.test.ts` | 52 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
 | `lib/calculations/polygonal.test.ts` | 30 | Motor de cálculo, los tres tipos y métodos |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
+| `lib/utils/format.test.ts` | 23 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
-| `lib/utils/format.test.ts` | 21 | Fecha relativa y **formateo único de precisión** |
 | `lib/export/polygonal-workbook.test.ts` | 18 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8) |
 | `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
 | `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
@@ -1524,6 +1552,13 @@ cambian, pero dejan de coincidir con la pantalla—. La Fase 11 lo cerró solo
 para los puntos **de baja**, que ya no se editan. Para los vigentes, la regla
 natural es bloquear la C0 en cuanto el punto tenga una lectura cerrada; queda
 registrada aquí.
+
+**El margen del aviso de lectura fuera de tendencia es fijo por orden (Fase
+12, decisión deliberada).** Sale de un circuito de referencia de 250 m
+(`TREND_DEVIATION_REFERENCE_KM`), razonable para un edificio y posiblemente
+corto para una presa. Si un usuario lo pide, el paso natural es hacerlo un
+umbral editable del lugar, junto a los de velocidad y acumulado, lo que exige
+migración y resincronización.
 
 **CSP sin nonce (`'unsafe-inline'` en scripts y estilos).** La política que
 sirve la app permite código en línea porque Next lo inyecta y la app usa

@@ -1,12 +1,25 @@
 # PRD-de-fase 12 — Alerta por lectura desfasada
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-23
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-23
 
 **Rama:** `fase-12-lectura-desfasada`
 **Petición que recoge:** A1 de [`pendientes.md`](../pendientes.md)
 **Módulo:** control de asentamientos (Fases 5 y 11)
+
+> **Divergencias de la implementación:**
+>
+> - `formatTrendDeviation` vive en `src/lib/utils/format.ts`, junto a
+>   `settlementPointLabel`: lo usan el editor y la página del panel.
+> - La prop de avisos de `ReadingsTable` es **obligatoria**, no opcional con
+>   `{}` por defecto. Un opcional con valor por defecto se deja sin cablear sin
+>   que el typecheck lo note (aprendizaje de la Fase 9).
+> - La captura 16 del manual pasa a la visita 5, que muestra el aviso de P-04
+>   y la nota de P-05 de baja.
+> - Al regenerar capturas salió un defecto anterior en `capturas.mjs`: la
+>   consulta del proceso cerrado no filtraba por proyecto. Corregido en un
+>   commit `fix:` aparte.
 
 ## Propósito
 
