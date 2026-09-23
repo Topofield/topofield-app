@@ -71,7 +71,18 @@ const admin = createClient(URL, SECRET, {
 async function recreateUser() {
   const { data } = await admin.auth.admin.listUsers();
   const existing = data.users.find((u) => u.email === EMAIL);
-  if (existing) await admin.auth.admin.deleteUser(existing.id);
+  if (existing) {
+    // Borrar el usuario no arrastra sus proyectos (`projects_user_id_fkey` no
+    // es en cascada) y los procesos cerrados son inmutables, así que sobre una
+    // base con datos el borrado falla. Sin comprobarlo, el error se perdía y
+    // el seed moría después con un `email_exists` que no explica nada.
+    const { error: deleteError } = await admin.auth.admin.deleteUser(existing.id);
+    if (deleteError) {
+      throw new Error(
+        `No se pudo borrar ${EMAIL} (${deleteError.message}). El seed necesita una base recién reseteada: ejecuta \`npx supabase db reset\` y repite.`,
+      );
+    }
+  }
   const { data: created, error } = await admin.auth.admin.createUser({
     email: EMAIL,
     password: PASSWORD,
