@@ -1079,9 +1079,14 @@ async function insertSettlementSite(projectId, userId, cfg) {
 
   const { data: pointRows, error: pointsErr } = await admin
     .from("settlement_points")
-    // `seed_base_elevation` no es una columna: solo genera las cotas.
-    // eslint-disable-next-line no-unused-vars
-    .insert(cfg.points.map(({ seed_base_elevation, ...p }) => ({ site_id: siteId, ...p })))
+    .insert(
+      cfg.points.map((p) => {
+        // `seed_base_elevation` no es una columna: solo genera las cotas.
+        const row = { site_id: siteId, ...p };
+        delete row.seed_base_elevation;
+        return row;
+      }),
+    )
     .select("id, code");
   if (pointsErr) throw pointsErr;
 
