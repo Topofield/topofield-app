@@ -21,7 +21,8 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | A2 | **11** — Estado de los BMs | sin redactar |
 | A1 | **12** — Alerta por lectura desfasada | sin redactar |
 | P1 | dentro de la **13** (canvas) | sin redactar |
-| N4, N6 | — | sin fase asignada |
+| N4 | — | sin fase asignada · **desbloqueada** (crudo real descifrado) |
+| N6 | — | sin fase asignada |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
 Es falso: sí la crea, vía `src/lib/demo/insertar-nivelacion.ts`. El grep que
@@ -70,23 +71,69 @@ Es coherente con el cálculo: la vista más se suma a la cota para obtener la
 altura del instrumento, y la vista menos se resta. Toca la tabla de captura, el
 panel de resultados, el export, el informe y el manual en sus dos copias.
 
-### N4 · Importar lecturas desde CSV (nivel electrónico)
+### N4 · Importar lecturas desde archivo (nivel electrónico)
 
 Con nivel electrónico las lecturas y las distancias deben poder **subirse desde
-un archivo CSV**, además de digitarse. El instrumento ya entrega ambos valores,
+un archivo**, además de digitarse. El instrumento ya entrega ambos valores,
 así que teclearlos a mano es transcribir lo que ya está en digital — con el
 riesgo de error que eso trae en una aplicación cuyo tema es la trazabilidad de
 la medición.
 
-**Bloqueada a la espera de una cartera de nivelación real** que fije el formato.
-No se especifica el parser antes de ver un archivo: el precedente de la Fase 7
-es que dos carteras de campo encontraron en una tarde lo que cuatro fases de
-fixtures sintéticos no vieron.
+**Desbloqueada el 2026-09-23, con un crudo real.** Llegó
+`CRDUDO-TRAMO2.L`, formato nativo de un nivel digital Leica, descifrado y
+verificado contra su propia línea de cierre. Ver
+[`carteras/analisis-crudo-nivel-digital.md`](./carteras/analisis-crudo-nivel-digital.md).
 
-Va a **fase propia**, no dentro de la fase de la cadena de distancias: es un
-flujo distinto —subida, parseo, previsualización, errores por fila— que no
-comparte código con ella, y meterlo allí arriesga que la parte de importación
-arrastre el cierre de la parte de motor.
+La decisión previa —definir una plantilla CSV propia porque no teníamos
+archivo— **se revisa a la luz del archivo**: el crudo es parseable
+directamente, así que leerlo cumple el propósito de la petición (que el
+topógrafo no transcriba a mano lo que ya está en digital) mejor que pedirle
+volcarlo a otra plantilla.
+
+### Lo que ya está resuelto
+
+El **modelo** lo cerró la Fase 9: con nivel digital el instrumento mide por
+láser y entrega lectura y distancia directamente, sin hilos estadimétricos. El
+modo `digital` de la libreta ya captura exactamente eso. N4 no añade modelo —
+añade una puerta de entrada.
+
+### Decisiones tomadas
+
+**Detector de formato con parsers intercambiables.** No un parser, sino
+varios: cada uno declara cómo reconocer su formato —por el contenido, no por
+la extensión— y todos desembocan en **una forma intermedia única**. Añadir
+Trimble o Topcon mañana es escribir un parser y registrarlo, sin tocar la
+previsualización, la validación ni la escritura en la libreta.
+
+De salida, dos: el **`.L` de Leica** (descifrado, con archivo real) y una
+**plantilla CSV propia** de TopoField, documentada y descargable, para quien
+traiga un instrumento que todavía no sepamos leer. Cuando nada reconoce el
+archivo, el mensaje dice qué formatos sí se entienden y ofrece la plantilla —
+un «formato inválido» a secas deja al usuario sin salida.
+
+**Las repeticiones se promedian al importar.** El Leica mide dos veces cada
+visual (`B1`/`B2`, `F1`/`F2`) y da la desviación típica de cada lectura. El
+import promedia y guarda una sola lectura, que es lo que la libreta admite
+hoy. Se pierde la σ del instrumento; queda anotado como candidato a fase
+futura llevar a nivelación el modelo de lecturas múltiples de la Fase 7.
+
+**El tipo de punto se deriva y el usuario lo confirma.** El instrumento no
+sabe qué es un BM, un punto de cambio o una radiación, y sin ese dato la
+cadena de acumulado de la Fase 9 no funciona: una radiación mal clasificada la
+rompe sin avisar. Se deduce de las lecturas —con lectura atrás y adelante es
+punto de cambio; solo adelante es radiación; la primera y la última son BM— y
+la importación muestra una **previsualización editable** donde el topógrafo
+corrige antes de confirmar. Deducir sin confirmar sería adivinar; pedirlo todo
+a mano sería renunciar a la comodidad que justifica importar.
+
+**Queda fuera:** modelar las repeticiones y su desviación típica, que es un
+cambio del modelo de nivelación y no de la importación.
+
+### Sigue sin fase asignada
+
+Va a **fase propia**: es un flujo distinto —subida, parseo, previsualización,
+errores por fila— que no comparte código con el motor. Se numerará cuando le
+llegue el turno, después de las fases 11 y 12 con el orden actual.
 
 ### N6 · Control ida-vuelta por puntos homólogos
 
