@@ -51,7 +51,7 @@ const nivelacion = sql("select id from public.leveling_processes where name like
 const proyectoMonitoreo = sql("select id from public.projects where name='Edificio en monitoreo' limit 1;");
 const lugarMonitoreo = sql("select id from public.sites where name='Edificio Torre Central' limit 1;");
 const visitaCalculada = sql(
-  "select id from public.settlement_visits where site_id=(select id from public.sites where name='Edificio Torre Central') and visit_number=1;",
+  "select id from public.settlement_visits where site_id=(select id from public.sites where name='Edificio Torre Central') and visit_number=5;",
 );
 
 if (

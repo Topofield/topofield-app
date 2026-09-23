@@ -920,6 +920,38 @@ export default function ManualPage() {
           pena revisar, no un error de signo.
         </p>
 
+        <p>
+          <strong>Lecturas fuera de tendencia.</strong> Desde la tercera
+          lectura de un punto, la aplicación compara cada cota con la
+          tendencia de ese punto y avisa bajo la casilla si la lectura:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            va <strong>contra</strong> su tendencia más que el margen —por
+            ejemplo, un punto que viene bajando y de pronto sube—, o
+          </li>
+          <li>
+            lo mueve <strong>más del doble</strong> de lo que su ritmo
+            anterior preveía, más el margen.
+          </li>
+        </ul>
+
+        <p>
+          El margen absorbe el ruido de medición y depende del orden de
+          precisión de la visita: 1,5 mm en primer orden, 3 en segundo, 6 en
+          tercero y 12 en ordinario. Moverse <strong>menos</strong> de lo
+          previsto nunca avisa, porque un asentamiento por consolidación
+          frena con el tiempo.
+        </p>
+
+        <Nota titulo="El aviso no bloquea">
+          Pide verificar la lectura en la libreta o volver a medir; una
+          lectura atípica también puede ser real. Si dos visitas seguidas
+          salen marcadas, casi siempre el error está en la primera: la
+          segunda se compara contra una velocidad ya contaminada.
+        </Nota>
+
         <h3 className="mt-4 text-lg font-semibold">
           7.4 El semáforo y la gráfica
         </h3>
@@ -953,6 +985,17 @@ export default function ManualPage() {
           al indicador, así que se reconoce igual con daltonismo o en una
           impresión en blanco y negro.
         </Nota>
+
+        <p>
+          La columna de estado del semáforo muestra además la marca{" "}
+          <strong>⚠ Lectura fuera de tendencia</strong> cuando la lectura de
+          la última visita la tuvo. No cambia el nivel del semáforo: es un
+          aviso sobre la calidad del dato, no sobre la gravedad del
+          movimiento. Es útil cuando el mismo punto sale en{" "}
+          <strong>Alerta</strong> y <strong>Acelerando</strong>: la marca
+          indica que lo más probable es una lectura mal tomada, no una
+          aceleración real.
+        </p>
 
         <p>
           <strong>Un dato en alarma se registra con normalidad.</strong> El
