@@ -695,6 +695,7 @@ export type Database = {
       }
       settlement_points: {
         Row: {
+          active_from: string | null
           code: string
           created_at: string
           easting: number | null
@@ -702,9 +703,12 @@ export type Database = {
           initial_elevation: number | null
           location_description: string
           northing: number | null
+          retired_on: string | null
+          retirement_reason: string | null
           site_id: string
         }
         Insert: {
+          active_from?: string | null
           code: string
           created_at?: string
           easting?: number | null
@@ -712,9 +716,12 @@ export type Database = {
           initial_elevation?: number | null
           location_description: string
           northing?: number | null
+          retired_on?: string | null
+          retirement_reason?: string | null
           site_id: string
         }
         Update: {
+          active_from?: string | null
           code?: string
           created_at?: string
           easting?: number | null
@@ -722,6 +729,8 @@ export type Database = {
           initial_elevation?: number | null
           location_description?: string
           northing?: number | null
+          retired_on?: string | null
+          retirement_reason?: string | null
           site_id?: string
         }
         Relationships: [
@@ -940,6 +949,10 @@ export type Database = {
     Functions: {
       owns_reading_station: {
         Args: { target_station: string }
+        Returns: boolean
+      }
+      point_active_on: {
+        Args: { p_active_from: string; p_date: string; p_retired_on: string }
         Returns: boolean
       }
     }

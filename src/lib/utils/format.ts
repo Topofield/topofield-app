@@ -142,3 +142,22 @@ export function formatRelativeDate(iso: string, now: Date = new Date()): string 
   const años = Math.max(1, Math.floor(dias / 365));
   return `hace ${años} ${años === 1 ? "año" : "años"}`;
 }
+
+/**
+ * Código de un punto de asentamiento con su estado (Fase 11), para las
+ * gráficas del panel y del informe. Un punto de baja sigue en la gráfica —su
+ * serie es historia válida— y la marca explica por qué su línea termina. Uno
+ * de alta empieza en 0 a mitad del eje: la fecha dice desde cuándo cuenta su
+ * acumulado.
+ */
+export function settlementPointLabel(point: {
+  code: string;
+  activeFrom: string | null;
+  retiredOn: string | null;
+}): string {
+  if (point.retiredOn !== null) return `${point.code} (de baja)`;
+  if (point.activeFrom !== null) {
+    return `${point.code} (alta ${formatDateOnly(point.activeFrom)})`;
+  }
+  return point.code;
+}

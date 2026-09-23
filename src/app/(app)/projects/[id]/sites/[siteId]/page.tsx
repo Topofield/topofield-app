@@ -10,6 +10,7 @@ import {
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
+import { undoRetirementBlocker } from "@/lib/validators/settlement";
 
 interface SitePageProps {
   params: Promise<{ id: string; siteId: string }>;
@@ -36,6 +37,18 @@ export default async function SitePage({ params }: SitePageProps) {
   const visitsOpen = visits.filter((v) => v.status !== "closed").length;
   const disabled = site.status === "closed";
 
+  // Por cada punto de baja, si la baja todavía se puede deshacer (Fase 11).
+  // La misma regla que aplica `undoRetirementAction` al ejecutarla.
+  const closedVisits = visits
+    .filter((v) => v.status === "closed")
+    .map((v) => ({ visitNumber: v.visit_number, date: v.date }));
+  const undoBlockers: Record<string, string | null> = {};
+  for (const point of points) {
+    if (point.retired_on !== null) {
+      undoBlockers[point.id] = undoRetirementBlocker(point.retired_on, closedVisits);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs
@@ -61,7 +74,13 @@ export default async function SitePage({ params }: SitePageProps) {
         visitsTotal={visits.length}
         visitsOpen={visitsOpen}
       />
-      <PointsCatalog siteId={site.id} points={points} disabled={disabled} />
+      <PointsCatalog
+        siteId={site.id}
+        points={points}
+        disabled={disabled}
+        hasVisits={visits.length > 0}
+        undoBlockers={undoBlockers}
+      />
     </div>
   );
 }

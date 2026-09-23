@@ -82,6 +82,9 @@ export async function insertarAsentamiento(
     northing: p.northing,
     easting: p.easting,
     initialElevation: p.initialElevation,
+    // El lugar demo no tiene altas ni bajas: todos sus puntos son originales.
+    activeFrom: null,
+    retiredOn: null,
   }));
 
   const visits: VisitInput[] = fixture.visitDates.map((date, i) => ({

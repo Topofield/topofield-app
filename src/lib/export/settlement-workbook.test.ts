@@ -28,6 +28,9 @@ const POINT_ROWS: PointRow[] = [
     northing: "1000.000",
     easting: "2000.000",
     initial_elevation: "100.0000",
+    active_from: null,
+    retired_on: null,
+    retirement_reason: null,
   },
   {
     id: "p2",
@@ -36,6 +39,9 @@ const POINT_ROWS: PointRow[] = [
     northing: "1000.000",
     easting: "2030.000",
     initial_elevation: "100.0000",
+    active_from: null,
+    retired_on: null,
+    retirement_reason: null,
   },
 ];
 
@@ -45,6 +51,8 @@ const POINTS: PointInput[] = POINT_ROWS.map((p) => ({
   northing: Number(p.northing),
   easting: Number(p.easting),
   initialElevation: Number(p.initial_elevation),
+  activeFrom: null,
+  retiredOn: null,
 }));
 
 function visit(over: Partial<VisitRow> = {}): VisitRow {
@@ -120,6 +128,30 @@ describe("buildSettlementWorkbook", () => {
     expect(raw.getCell("B5").value).toBe("Esquina NW");
     expect(raw.getCell("E5").value).toBe(100);
     expect(raw.getCell("E5").numFmt).toBe("0.0000");
+  });
+
+  it("escribe en el catálogo el alta, la baja y el motivo de cada punto (Fase 11)", () => {
+    const rows: PointRow[] = [
+      POINT_ROWS[0]!,
+      {
+        ...POINT_ROWS[1]!,
+        retired_on: "2026-03-01",
+        retirement_reason: "Destruido por obra",
+      },
+    ];
+    const raw = buildSettlementWorkbook(
+      SITE,
+      rows,
+      VISIT_ROWS,
+      computeHistory(POINTS, VISIT_INPUTS, THRESHOLDS),
+      THRESHOLDS,
+    ).getWorksheet("Datos Crudos")!;
+    expect(raw.getCell("F4").value).toBe("Alta");
+    expect(raw.getCell("G4").value).toBe("Baja");
+    expect(raw.getCell("H4").value).toBe("Motivo de baja");
+    expect(raw.getCell("G5").value).toBeNull();
+    expect(raw.getCell("G6").value).toBe("2026-03-01");
+    expect(raw.getCell("H6").value).toBe("Destruido por obra");
   });
 
   // El libro debe mostrar el CÓDIGO del punto, no su UUID: un informe con

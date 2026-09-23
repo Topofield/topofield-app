@@ -52,8 +52,19 @@ export interface PointInput {
   code: string;
   northing: number | null;
   easting: number | null;
-  /** Cota C0, la línea base contra la que se mide el acumulado. */
+  /**
+   * Cota C0 tecleada en el catálogo. Si es null, la línea base del punto es su
+   * primera lectura (Fase 11): la «visita 0» de un BM dado de alta a mitad del
+   * monitoreo es la primera en que se midió.
+   */
   initialElevation: number | null;
+  /** Fecha de alta (ISO). Null = punto original del lugar. */
+  activeFrom: string | null;
+  /**
+   * Fecha de baja (ISO): la PRIMERA fecha en que ya no se mide. Null = vigente.
+   * Ver `isPointActiveOn`.
+   */
+  retiredOn: string | null;
 }
 
 /**
@@ -85,11 +96,23 @@ export interface ComputedReading {
   elevation: number;
   /** mm vs la visita anterior. Null en la línea base. */
   partialSettlement: number | null;
-  /** mm vs C0. Null si el punto no tiene C0. */
+  /**
+   * mm vs la línea base del punto: su C0 o, sin C0, su primera lectura. Nunca
+   * es null en una lectura calculada por el motor; el tipo lo admite porque
+   * los consumidores también leen filas persistidas.
+   */
   accumulatedSettlement: number | null;
   /** mm/mes. Null en la línea base o si Δt = 0. */
   velocity: number | null;
   alertStatus: AlertLevel;
+  /**
+   * Fecha de la línea base del punto: la de la primera visita del lugar si
+   * tiene C0 (la C0 es la cota de la visita 0), o la de su primera lectura si
+   * no. Los diferenciales la necesitan para comparar periodos comunes.
+   */
+  baselineDate: string;
+  /** Cota de la línea base: la C0 o la primera lectura. */
+  baselineElevation: number;
 }
 
 export interface VisitResult {
@@ -107,6 +130,17 @@ export interface DifferentialPair {
   pointIdB: string;
   /** mm, siempre positivo. */
   differentialMm: number;
+  /**
+   * Asentamiento de cada punto (mm) desde `sinceDate`: los dos números cuya
+   * diferencia es `differentialMm`. Para dos puntos originales es su
+   * acumulado; para un par con un punto de alta, el asentamiento sobre el
+   * periodo común (Fase 11). Mostrar el acumulado en su lugar pondría en
+   * pantalla dos números que restados no dan el diferencial.
+   */
+  settlementAMm: number;
+  settlementBMm: number;
+  /** Fecha desde la que se miden los dos asentamientos (ISO). */
+  sinceDate: string;
   /** Distancia horizontal en m. */
   distanceM: number;
   /**

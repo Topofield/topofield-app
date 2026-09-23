@@ -16,7 +16,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 8 | Precisión y equipo por proceso | `07-precision-equipo-por-proceso.md` | cerrada |
 | 9 | Cadena de distancias de nivelación | `08-cadena-distancias-nivelacion.md` | cerrada |
 | 10 | Nomenclatura de nivelación | `09-nomenclatura-nivelacion.md` | cerrada |
-| 11 | Estado de los BMs | — | pendiente |
+| 11 | Estado de los BMs | `10-estado-bms.md` | cerrada |
 | 12 | Alerta por lectura desfasada | — | pendiente |
 | 13 | Canvas de poligonal | — | pendiente |
 | 14 | Ajuste por mínimos cuadrados | — | pendiente |

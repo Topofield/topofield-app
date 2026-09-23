@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-23 · Fase 10 cerrada · 492 tests ·
+**Última actualización:** 2026-09-23 · Fase 11 cerrada · 529 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -63,7 +63,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 8 | Precisión y equipo por proceso | cerrada |
 | 9 | Cadena de distancias de nivelación | cerrada |
 | 10 | Nomenclatura de nivelación | cerrada |
-| 11 | Estado de los BMs | pendiente |
+| 11 | Estado de los BMs | cerrada |
 | 12 | Alerta por lectura desfasada | pendiente |
 | 13 | Canvas de poligonal | pendiente |
 | 14 | Ajuste por mínimos cuadrados | pendiente |
@@ -330,13 +330,48 @@ informes de la Fase 6 los lean sin recalcular:
 | Columna | Contenido |
 |---|---|
 | `partial_settlement` | Asentamiento desde la visita anterior, en mm (signo: negativo = descenso) |
-| `accumulated_settlement` | Asentamiento desde la línea base (C0), en mm |
+| `accumulated_settlement` | Asentamiento desde la línea base del punto —su C0 o, sin C0, su primera lectura (Fase 11)—, en mm |
 | `velocity` | mm/mes, con los días reales entre visitas (`DAYS_PER_MONTH = 30.4375`) |
 | `alert_status` | `normal` \| `caution` \| `alert` \| `alarm` — la peor clasificación entre velocidad y acumulado |
 
 `settlement_visits.status` puede ser `draft`, `calculated` o `closed` — sin
 `rejected`: una visita no se rechaza, se cierra o no. `sites.status` es
 `active` o `closed`.
+
+### `settlement_points` — vigencia (Fase 11)
+
+El catálogo cambia durante el monitoreo sin borrar historia: un BM se da de
+**baja** cuando se destruye y otro se da de **alta** a mitad de la serie.
+
+| Columna | Contenido |
+|---|---|
+| `active_from` | Fecha de alta. Null = punto original del lugar |
+| `retired_on` | Fecha de baja: la **primera fecha en que ya no se mide** (límite exclusivo) |
+| `retirement_reason` | Motivo de la baja, obligatorio con ella |
+
+Un punto se mide en una visita de fecha `d` si y solo si
+`(active_from is null or d >= active_from) and (retired_on is null or d < retired_on)`.
+La regla tiene dos expresiones, que se prueban en los mismos bordes: el
+predicado SQL `public.point_active_on` y `isPointActiveOn`
+(`src/lib/calculations/settlement.ts`). Ningún consumidor en TypeScript la
+reimplementa.
+
+El estado «de baja» no se guarda aparte: se deriva de `retired_on`. Los CHECK
+imponen que baja y motivo vayan juntos, que el alta sea anterior a la baja y
+que **un punto de alta no lleve C0** (`settlement_points_alta_without_c0`): su
+línea base es su primera lectura.
+
+**Tres triggers guardan el invariante «ninguna lectura cae fuera de la
+vigencia de su punto»**, uno por cada escritura que puede romperlo: escribir
+una lectura, cambiar las fechas del punto o cambiar la fecha de una visita.
+Un trigger solo en las lecturas dejaría pasar las otras dos por REST.
+
+Las reglas de aplicación están en `validators/settlement.ts`:
+`validateRetirement` (la baja es posterior a la última lectura y lleva
+motivo), `undoRetirementBlocker` (la baja se deshace solo mientras ninguna
+visita cerrada tenga fecha igual o posterior) y `validateActiveFrom` (el alta
+es posterior a la última visita cerrada). Las Server Actions de
+`point-actions.ts` las aplican; un punto de baja no se edita.
 
 ### Precisión y equipo, por proceso (Fase 8)
 
@@ -705,8 +740,12 @@ verificadas independientemente contra el marco teórico del dominio (ver
 `docs/prds/04-asentamientos.md`, «Hallazgos de la verificación»):
 
 - **Asentamiento** — `Δs_parcial = (cota_n − cota_{n-1}) × 1000`,
-  `Δs_acumulado = (cota_n − C0) × 1000`, ambos en mm. Un signo positivo es
-  levantamiento y se muestra como tal, no como valor absoluto.
+  `Δs_acumulado = (cota_n − línea_base) × 1000`, ambos en mm. Un signo
+  positivo es levantamiento y se muestra como tal, no como valor absoluto.
+  La **línea base** es la C0 si el catálogo la trae, fechada en la primera
+  visita del lugar, o la primera lectura del punto si no (Fase 11). Hasta la
+  Fase 10 un punto sin C0 tenía acumulado `null` y nunca alertaba por
+  acumulado.
 - **Velocidad** — `V = Δs_parcial / (días_entre_visitas / DAYS_PER_MONTH)`,
   con `DAYS_PER_MONTH = 30.4375` (`365.25/12`). Si el intervalo es 0 días,
   devuelve `null`, nunca `Infinity` ni `NaN`. El marco teórico calcula esta
@@ -724,6 +763,15 @@ puntos como `1/((L×1000)/Δs_diferencial)`; un diferencial de 0 da `1/∞`,
 clasificado normal, y un par sin coordenadas en alguno de sus puntos queda
 fuera de la tabla en vez de calcularse con `L=0` (que daría una distorsión
 infinita y aparentaría normalidad falsa).
+
+**Periodo común (Fase 11).** Si los dos puntos de un par tienen líneas base
+de fechas distintas —uno se dio de alta a mitad del monitoreo—, restar
+acumulados compararía periodos distintos. Se mide entonces desde `t0`, la
+más tardía de las dos, con una sola fórmula para ambos puntos
+(`cota − cota_en_t0`). Si alguno no se midió en `t0`, el par queda fuera.
+Cada `DifferentialPair` lleva los dos asentamientos que resta
+(`settlementAMm`, `settlementBMm`) y su `sinceDate`, para que la tabla
+muestre números que restados den el diferencial.
 
 `computeHistory` compone todo lo anterior sobre la serie completa de un
 lugar: ordena las visitas **por fecha, no por `visit_number`** —hay un test
@@ -787,9 +835,13 @@ bloquea nada**.
   de visita anterior o igual a la visita previa: error — evita un intervalo
   negativo que invertiría el signo de la velocidad. Punto duplicado o
   fantasma en la misma visita: error.
-- **Cierre** — exige lectura de todos los puntos del catálogo; una visita
-  cerrada es el registro inmutable de una fecha, y cerrarla incompleta deja
-  un hueco que ya no se puede rellenar.
+- **Cierre** — exige lectura de todos los puntos **vigentes** en la fecha de
+  la visita; una visita cerrada es el registro inmutable de una fecha, y
+  cerrarla incompleta deja un hueco que ya no se puede rellenar. Además, no
+  cierra una visita si alguno de sus puntos sin C0 tiene la línea base en una
+  visita **anterior abierta**: si esa lectura siguiera editable, cambiarla
+  movería el acumulado que se recalcula en vivo para la visita ya cerrada
+  (Fase 11).
 - **Estadística** — clasifica el semáforo, pero **no participa en si se
   puede guardar o cerrar**. Un punto en alarma se guarda y se cierra con
   normalidad: es el hallazgo que el monitoreo existe para documentar, no un
@@ -960,36 +1012,36 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-492 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
+529 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/settlement.test.ts` | 44 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico |
-| `lib/validators/polygonal.test.ts` | 43 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio |
-| `lib/calculations/leveling.test.ts` | 40 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
+| `lib/calculations/leveling.test.ts` | 69 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
+| `lib/calculations/settlement.test.ts` | 58 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11) |
+| `lib/validators/polygonal.test.ts` | 52 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio |
+| `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
+| `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
+| `lib/calculations/polygonal.test.ts` | 30 | Motor de cálculo, los tres tipos y métodos |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
-| `lib/validators/leveling.test.ts` | 24 | Captura y cierre de nivelación |
-| `lib/utils/format.test.ts` | 21 | Fecha relativa y **formateo único de precisión** |
-| `lib/validators/settlement.test.ts` | 21 | Captura y cierre de asentamientos — incluye que la alarma no bloquea |
-| `lib/calculations/polygonal.test.ts` | 17 | Motor de cálculo, los tres tipos y métodos |
-| `lib/export/polygonal-workbook.test.ts` | 17 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8) |
-| `lib/calculations/settlement-persistence.test.ts` | 14 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena |
-| `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
+| `lib/utils/format.test.ts` | 21 | Fecha relativa y **formateo único de precisión** |
+| `lib/export/polygonal-workbook.test.ts` | 18 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8) |
+| `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
+| `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
 | `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
+| `lib/calculations/angles.test.ts` | 12 | Conversiones DMS ↔ decimal |
+| `lib/export/settlement-workbook.test.ts` | 11 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
-| `lib/export/settlement-workbook.test.ts` | 10 | Libro de asentamientos: catálogo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8) |
+| `components/polygonal/closure-verdict.test.tsx` | 10 | Decisión del veredicto |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
 | `lib/export/leveling-workbook.test.ts` | 9 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta, equipo y orden del proceso (Fase 8) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
-| `lib/calculations/angles.test.ts` | 8 | Conversiones DMS ↔ decimal |
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
 | `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `lib/validators/project.test.ts` | 5 | El proyecto ya no valida equipo ni orden de precisión (Fase 8) |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
-| `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -1272,6 +1324,16 @@ de 36 lecturas; sin él, las 36 conservan el criterio viejo. Con los umbrales en
 La decisión de qué reescribir vive en funciones puras con tests
 (`src/lib/calculations/settlement-persistence.ts`), no en el Server Action.
 
+> Nota de la Fase 11: las tres acciones nuevas del catálogo
+> (`retirePointAction`, `undoRetirementAction` y el alta en
+> `createPointAction`) no cambian ningún valor derivado —dar de baja no altera
+> el cálculo de los demás puntos, y un punto recién dado de alta no tiene
+> lecturas—, así que no necesitan resincronizar. Lo que sí cambió una entrada
+> fue el **motor**: los puntos sin C0 pasaron de acumulado `null` a acumulado
+> contra su primera lectura. Para los datos ya persistidos existe
+> `scripts/resincronizar-asentamientos.mjs`, que simula por defecto y reescribe
+> con `--aplicar` las visitas abiertas mediante `resyncSiteReadings`.
+
 **Cerrado — `validatePolygonalStation` exige el código del punto.** El
 validador de nivelación lo hacía desde la Fase 4 y el de poligonal no, así que
 una estación sin código se persistía igual en cliente y servidor, contra una
@@ -1316,11 +1378,20 @@ que se leería como distorsión infinita, es decir, como normalidad perfecta.
 **La propagación de lecturas ya tiene tests, aunque no de integración.** La
 decisión de qué filas hay que reescribir salió de `saveVisitAction` a
 `src/lib/calculations/settlement-persistence.ts` (`readingChanged` y
-`visitsToRewrite`) y tiene 14 tests: que un cambio de **solo** el nivel de
+`visitsToRewrite`) y tiene 16 tests: que un cambio de **solo** el nivel de
 alerta cuenta como cambio —el caso exacto de editar umbrales, donde ningún
 número varía—, que una visita cerrada no se devuelve nunca, que la velocidad
 que llega como cadena no marca una fila como cambiada, y que se devuelven solo
 las lecturas alteradas y no la visita entera.
+
+Hasta la Fase 11, `readingChanged` comparaba la velocidad sin redondear del
+motor con la persistida en `DECIMAL(8,2)` (−3.4364… frente a −3.44), así que
+**toda** lectura abierta parecía cambiada y cada guardado de visita reescribía
+el lugar entero. No corrompía valores —reescribía los mismos—, y por eso
+ningún test ni ninguna pantalla lo delató: salió al simular el script de
+resincronización sobre un lugar recién sembrado, que contó 31 lecturas «a
+reescribir» sin nada que cambiar. Ahora se compara con tolerancia de media
+centésima.
 
 Queda en pie la limitación de fondo: **el proyecto sigue sin poder probar la
 E/S**. `resyncSiteReadings` y el bucle de `upsert` de `saveVisitAction` no
@@ -1414,6 +1485,15 @@ indicador sale en las diecinueve capturas. Se vio al cerrar la Fase 10; ya
 estaba en las capturas commiteadas antes. El arreglo es de una línea en el
 script (ocultar `nextjs-portal` antes de capturar); relajar la CSP no, porque
 abriría `eval` en desarrollo solo por una captura.
+
+**La C0 de un punto vigente sigue siendo editable aunque tenga lecturas
+cerradas (Fase 11, fuera de alcance).** El acumulado se recalcula en vivo
+contra la C0, así que corregirla reescribe el histórico que el panel, el
+informe y el Excel muestran para visitas ya cerradas —las persistidas no
+cambian, pero dejan de coincidir con la pantalla—. La Fase 11 lo cerró solo
+para los puntos **de baja**, que ya no se editan. Para los vigentes, la regla
+natural es bloquear la C0 en cuanto el punto tenga una lectura cerrada; queda
+registrada aquí.
 
 **CSP sin nonce (`'unsafe-inline'` en scripts y estilos).** La política que
 sirve la app permite código en línea porque Next lo inyecta y la app usa

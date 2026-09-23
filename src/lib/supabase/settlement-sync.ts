@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
   visitsToRewrite,
   type PersistedReading,
@@ -26,11 +26,16 @@ import type { PointInput, VisitInput } from "@/types/settlement";
  * Las visitas CERRADAS no se tocan: conservan la clasificación con la que se
  * cerraron, que es lo correcto para la trazabilidad. `visitsToRewrite` decide
  * eso, aquí solo se escribe.
+ *
+ * `dryRun` no escribe: solo cuenta cuántas lecturas se reescribirían. Lo usa
+ * `scripts/resincronizar-asentamientos.mjs` para simular antes de aplicar el
+ * cambio de línea base de la Fase 11.
  */
 export async function resyncSiteReadings(
   supabase: SupabaseClient,
   siteId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+  { dryRun = false }: { dryRun?: boolean } = {},
+): Promise<{ ok: true; rewritten: number } | { ok: false; error: string }> {
   const { data: site } = await supabase
     .from("sites")
     .select("*")
@@ -75,14 +80,7 @@ export async function resyncSiteReadings(
     readingsByVisit.set(r.visit_id, list);
   }
 
-  const pointInputs: PointInput[] = (points ?? []).map((p) => ({
-    id: p.id,
-    code: p.code,
-    northing: p.northing === null ? null : Number(p.northing),
-    easting: p.easting === null ? null : Number(p.easting),
-    initialElevation:
-      p.initial_elevation === null ? null : Number(p.initial_elevation),
-  }));
+  const pointInputs: PointInput[] = (points ?? []).map(pointInputOf);
 
   const visitInputs: VisitInput[] = (visits ?? []).map((v) => ({
     id: v.id,
@@ -98,6 +96,9 @@ export async function resyncSiteReadings(
     statusByVisit,
     persistedByVisit,
   });
+
+  const rewritten = rewrites.reduce((n, r) => n + r.readings.length, 0);
+  if (dryRun) return { ok: true, rewritten };
 
   for (const rewrite of rewrites) {
     const { error } = await supabase.from("settlement_readings").upsert(
@@ -115,5 +116,5 @@ export async function resyncSiteReadings(
     if (error) return { ok: false, error: error.message };
   }
 
-  return { ok: true };
+  return { ok: true, rewritten };
 }

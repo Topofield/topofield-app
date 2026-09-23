@@ -12,7 +12,7 @@ import {
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
   levelMeetsOrder,
   thresholdsOf,
@@ -21,6 +21,7 @@ import {
 import {
   formatAngularPrecision,
   formatDate,
+  formatDateOnly,
   formatDistancePrecision,
   formatEquipmentLine,
   formatKmPrecision,
@@ -149,14 +150,7 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         getVisits(supabase, site.id),
         getSettlementReadingsBySite(supabase, site.id),
       ]);
-      const pointInputs: PointInput[] = points.map((p) => ({
-        id: p.id,
-        code: p.code,
-        northing: p.northing === null ? null : Number(p.northing),
-        easting: p.easting === null ? null : Number(p.easting),
-        initialElevation:
-          p.initial_elevation === null ? null : Number(p.initial_elevation),
-      }));
+      const pointInputs: PointInput[] = points.map(pointInputOf);
       const visitInputs: VisitInput[] = visits.map((v) => ({
         id: v.id,
         visitNumber: v.visit_number,
@@ -480,7 +474,24 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                   ] ?? section.data.site.structure_type}
                 </dd>
                 <dt>Puntos de control</dt>
-                <dd>{section.data.points.length}</dd>
+                <dd>
+                  {(() => {
+                    // Fase 11: un punto de baja sigue contando —su serie es
+                    // historia válida—, pero el informe dice cuál y desde
+                    // cuándo, para que su ausencia en la última visita no
+                    // parezca un olvido.
+                    const points = section.data.points;
+                    const bajas = points.filter((p) => p.retired_on !== null);
+                    if (bajas.length === 0) return points.length;
+                    const detalle = bajas
+                      .map(
+                        (p) =>
+                          `${p.code}, desde el ${formatDateOnly(p.retired_on!)}`,
+                      )
+                      .join("; ");
+                    return `${points.length} (${bajas.length} de baja: ${detalle})`;
+                  })()}
+                </dd>
                 <dt>Visitas</dt>
                 <dd>{section.data.visits.length}</dd>
                 <dt>Peor alerta (última visita)</dt>
@@ -565,6 +576,17 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                   })}
                 </tbody>
               </table>
+              {section.data.points.some((p) => p.active_from !== null) && (
+                <p className="report-footnote">
+                  {section.data.points
+                    .filter((p) => p.active_from !== null)
+                    .map(
+                      (p) =>
+                        `El acumulado de ${p.code} se mide desde su alta (${formatDateOnly(p.active_from!)}), no desde la línea base del lugar.`,
+                    )
+                    .join(" ")}
+                </p>
+              )}
             </>
           )}
         </section>

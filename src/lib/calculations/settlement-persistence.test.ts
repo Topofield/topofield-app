@@ -22,6 +22,8 @@ function computed(over: Partial<{
     accumulatedSettlement: -10,
     velocity: -2.5,
     alertStatus: "caution" as AlertLevel,
+    baselineDate: "2025-12-01",
+    baselineElevation: 100.01,
     ...over,
   };
 }
@@ -91,6 +93,23 @@ describe("readingChanged", () => {
         persisted({ velocity: "-2.50" as unknown as number }),
       ),
     ).toBe(false);
+  });
+
+  // El motor no redondea la velocidad; la columna es DECIMAL(8,2). Es el caso
+  // real del seed: −3.4364… calculada contra −3.44 persistida.
+  it("no marca cambio cuando la velocidad solo difiere por la precisión de la columna", () => {
+    expect(
+      readingChanged(
+        computed({ velocity: -3.436491935483871 }),
+        persisted({ velocity: "-3.44" as unknown as number }),
+      ),
+    ).toBe(false);
+  });
+
+  it("sí marca cambio cuando la velocidad cambia en la centésima", () => {
+    expect(
+      readingChanged(computed({ velocity: -3.4549 }), persisted({ velocity: -3.44 })),
+    ).toBe(true);
   });
 
   it("distingue null de cero en velocidad", () => {

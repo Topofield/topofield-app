@@ -4,7 +4,7 @@ import { Breadcrumbs, buttonClasses } from "@/components/design-system";
 import { AnalysisPanel } from "@/components/settlement/analysis-panel";
 import { VisitsList } from "@/components/settlement/visits-list";
 import { createClient } from "@/lib/supabase/server";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
   getProjectById,
   getSettlementReadingsBySite,
@@ -48,14 +48,7 @@ export default async function SettlementAnalysisPage({
     getSettlementReadingsBySite(supabase, site.id),
   ]);
 
-  const points: PointInput[] = sitePoints.map((p) => ({
-    id: p.id,
-    code: p.code,
-    northing: p.northing === null ? null : Number(p.northing),
-    easting: p.easting === null ? null : Number(p.easting),
-    initialElevation:
-      p.initial_elevation === null ? null : Number(p.initial_elevation),
-  }));
+  const points: PointInput[] = sitePoints.map(pointInputOf);
 
   const visitInputs: VisitInput[] = visits.map((v) => ({
     id: v.id,

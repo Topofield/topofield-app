@@ -8,6 +8,7 @@ import {
   seriesStyle,
   type SeriesMarker,
 } from "@/lib/design/series-markers";
+import { settlementPointLabel as pointLabel } from "@/lib/utils/format";
 import type { PointInput, VisitResult } from "@/types/settlement";
 
 interface SettlementChartProps {
@@ -224,7 +225,7 @@ export function SettlementChart({ points, visits }: SettlementChartProps) {
               onChange={() => togglePoint(point.id)}
               className="h-4 w-4 rounded border-neutral-300"
             />
-            {point.code}
+            {pointLabel(point)}
           </label>
         ))}
       </fieldset>
@@ -377,7 +378,7 @@ export function SettlementChart({ points, visits }: SettlementChartProps) {
               <svg width={14} height={14} aria-hidden>
                 <Marker shape={shape} cx={7} cy={7} color={color} />
               </svg>
-              {point.code}
+              {pointLabel(point)}
             </li>
           ))}
         </ul>

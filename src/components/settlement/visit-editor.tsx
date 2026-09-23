@@ -12,7 +12,12 @@ import {
 } from "@/components/design-system";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { ReadingsTable } from "@/components/settlement/readings-table";
-import { computeHistory } from "@/lib/calculations/settlement";
+import {
+  computeHistory,
+  isPointActiveOn,
+  pointInputOf,
+} from "@/lib/calculations/settlement";
+import { formatDateOnly } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   closeVisitAction,
@@ -129,16 +134,28 @@ export function VisitEditor({
 
   const pointInputs: PointInput[] = useMemo(
     () =>
-      points.map((p) => ({
-        id: p.id,
-        code: p.code,
-        northing: p.northing === null ? null : Number(p.northing),
-        easting: p.easting === null ? null : Number(p.easting),
-        initialElevation:
-          p.initial_elevation === null ? null : Number(p.initial_elevation),
-      })),
+      points.map(pointInputOf),
     [points],
   );
+
+  // Filas de la tabla (Fase 11): los puntos vigentes en la fecha de la
+  // visita. Uno con cota ya tecleada se muestra aunque haya dejado de estar
+  // vigente —p. ej. al mover la fecha—, para que el error de captura tenga
+  // dónde verse y la cota dónde borrarse. Mientras la fecha se teclea y aún
+  // no es válida, manda la guardada.
+  const vigenciaDate = /^\d{4}-\d{2}-\d{2}$/.test(header.date)
+    ? header.date
+    : visit.date;
+  const rowPoints = useMemo(
+    () =>
+      points.filter(
+        (p) =>
+          isPointActiveOn(pointInputOf(p), vigenciaDate) ||
+          (rawElevations[p.id] ?? "").trim() !== "",
+      ),
+    [points, vigenciaDate, rawElevations],
+  );
+  const notMeasured = points.filter((p) => !rowPoints.includes(p));
 
   const history = useMemo(() => {
     const candidate: VisitInput = {
@@ -376,13 +393,26 @@ export function VisitEditor({
 
       <Card title="Lecturas">
         <ReadingsTable
-          points={points}
+          points={rowPoints}
           rawElevations={rawElevations}
           onElevationChange={handleElevationChange}
           computedByPoint={computedByPoint}
           isBaseline={isBaseline}
           disabled={disabled}
         />
+        {notMeasured.length > 0 && (
+          <p className="mt-3 text-sm text-neutral-500">
+            No se miden en esta visita:{" "}
+            {notMeasured
+              .map((p) =>
+                p.retired_on !== null
+                  ? `${p.code} (de baja desde el ${formatDateOnly(p.retired_on)})`
+                  : `${p.code} (alta el ${formatDateOnly(p.active_from ?? "")})`,
+              )
+              .join(", ")}
+            .
+          </p>
+        )}
       </Card>
 
       {!disabled && (

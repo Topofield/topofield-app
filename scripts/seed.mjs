@@ -960,6 +960,32 @@ const SETTLEMENT_POINTS = [
   { code: "P-04", location_description: "Esquina SW", northing: 1970.0, easting: 1000.0, initial_elevation: 100.0 },
   { code: "P-05", location_description: "Borde sur, intermedio", northing: 1970.0, easting: 1015.0, initial_elevation: 100.0 },
   { code: "P-06", location_description: "Esquina SE (mayor carga)", northing: 1970.0, easting: 1030.0, initial_elevation: 100.0 },
+  // Fase 11 — los dos casos del estado de los BMs, para las capturas y para
+  // verificar contra la base que ninguna lectura cae fuera de vigencia.
+  //
+  // P-07: dado de ALTA en la visita 2 (15/03), en la ampliación de la fachada
+  // este. Sin C0: su línea base es su primera lectura. `seed_base_elevation`
+  // no es una columna; es la cota con la que el seed genera esa primera
+  // lectura, y se descarta antes del insert.
+  {
+    code: "P-07",
+    location_description: "Ampliación, fachada este",
+    northing: 1985.0,
+    easting: 1045.0,
+    initial_elevation: null,
+    active_from: "2025-03-15",
+    seed_base_elevation: 100.25,
+  },
+];
+
+/**
+ * Baja de P-05 (Fase 11): la obra del andén sur lo destruyó después de la
+ * visita 3 (15/04). `retired_on` es la primera fecha en que ya no se mide.
+ * Se aplica DESPUÉS de insertar las lecturas: la baja no borra nada, y sus
+ * cuatro lecturas siguen siendo historia válida.
+ */
+const SETTLEMENT_RETIREMENTS = [
+  { code: "P-05", retired_on: "2025-05-01", retirement_reason: "Destruido por la obra del andén sur." },
 ];
 
 /**
@@ -977,8 +1003,11 @@ const PARTIALS_MM = {
   "P-02": [0, -4.2, -2.6, -1.6, -1.0, -0.6],
   "P-03": [0, -3.8, -2.3, -1.3, -0.8, -0.5],
   "P-04": [0, -4.5, -2.8, -1.7, -1.1, -0.7],
-  "P-05": [0, -9.0, -5.0, -3.0, -1.8, -1.0],
+  // `null` = el punto no se midió en esa visita: P-05 está de baja desde la
+  // visita 4 y P-07 se dio de alta en la 2 (Fase 11).
+  "P-05": [0, -9.0, -5.0, -3.0, null, null],
   "P-06": [0, -24.0, -13.0, -7.0, -4.0, -2.5],
+  "P-07": [null, null, 0, -2.6, -1.5, -0.9],
 };
 
 // Las seis campañas. El equipo va SOBRE cada visita, no compartido por el
@@ -1014,12 +1043,19 @@ const NORTE_PARTIALS_MM = {
 
 const NORTE_VISIT_DATES = ["2025-01-20", "2025-02-20", "2025-03-20"];
 
-/** Cota de un punto en una visita: su cota inicial menos el acumulado. */
-function cotaEn(partialsMm, code, initialElevation, visitIndex) {
-  const acumuladoMm = partialsMm[code]
+/**
+ * Cota de un punto en una visita: su cota base más el acumulado, o null si el
+ * punto no se midió en esa visita. La base es la C0 o, en un punto de alta sin
+ * C0, `seed_base_elevation` (Fase 11).
+ */
+function cotaEn(partialsMm, point, visitIndex) {
+  const serie = partialsMm[point.code];
+  if (serie[visitIndex] === null) return null;
+  const acumuladoMm = serie
     .slice(0, visitIndex + 1)
-    .reduce((a, b) => a + b, 0);
-  return initialElevation + acumuladoMm / 1000;
+    .reduce((a, b) => a + (b ?? 0), 0);
+  const base = point.initial_elevation ?? point.seed_base_elevation;
+  return Number((base + acumuladoMm / 1000).toFixed(4));
 }
 
 /**
@@ -1043,7 +1079,14 @@ async function insertSettlementSite(projectId, userId, cfg) {
 
   const { data: pointRows, error: pointsErr } = await admin
     .from("settlement_points")
-    .insert(cfg.points.map((p) => ({ site_id: siteId, ...p })))
+    .insert(
+      cfg.points.map((p) => {
+        // `seed_base_elevation` no es una columna: solo genera las cotas.
+        const row = { site_id: siteId, ...p };
+        delete row.seed_base_elevation;
+        return row;
+      }),
+    )
     .select("id, code");
   if (pointsErr) throw pointsErr;
 
@@ -1057,16 +1100,22 @@ async function insertSettlementSite(projectId, userId, cfg) {
     northing: p.northing,
     easting: p.easting,
     initialElevation: p.initial_elevation,
+    activeFrom: p.active_from ?? null,
+    // La baja se aplica al final (ver `cfg.retirements`); para el motor no
+    // cambia nada: calcula sobre las lecturas que existen.
+    retiredOn: null,
   }));
 
   const visits = cfg.visitSpecs.map((spec, i) => ({
     id: `visita-${i}`, // id provisional, solo para casar con el resultado de computeHistory
     visitNumber: i,
     date: spec.date,
-    readings: cfg.points.map((p) => ({
-      pointId: pointIdByCode.get(p.code),
-      elevation: cotaEn(cfg.partialsMm, p.code, p.initial_elevation, i),
-    })),
+    readings: cfg.points
+      .map((p) => ({
+        pointId: pointIdByCode.get(p.code),
+        elevation: cotaEn(cfg.partialsMm, p, i),
+      }))
+      .filter((r) => r.elevation !== null),
   }));
 
   const history = computeHistory(points, visits, thresholdsFor("edificio"));
@@ -1107,6 +1156,19 @@ async function insertSettlementSite(projectId, userId, cfg) {
       .from("settlement_readings")
       .insert(readingRows);
     if (readingsErr) throw readingsErr;
+  }
+
+  // Bajas (Fase 11), una vez insertadas las lecturas: el trigger de vigencia
+  // rechazaría la baja si alguna lectura quedara en o después de su fecha.
+  for (const baja of cfg.retirements ?? []) {
+    const { error: bajaErr } = await admin
+      .from("settlement_points")
+      .update({
+        retired_on: baja.retired_on,
+        retirement_reason: baja.retirement_reason,
+      })
+      .eq("id", pointIdByCode.get(baja.code));
+    if (bajaErr) throw bajaErr;
   }
 
   // Cierre diferido: cerrar el lugar bloquea por trigger toda escritura sobre
@@ -1261,14 +1323,15 @@ async function main() {
   const settlementSiteId = await insertSettlementSite(monitoreo, userId, {
     name: "Edificio Torre Central",
     description:
-      "Edificio de 6 niveles sobre arcilla blanda, con 6 puntos de control en grilla.",
+      "Edificio de 6 niveles sobre arcilla blanda, con 6 puntos de control en grilla y uno en la ampliación.",
     points: SETTLEMENT_POINTS,
     partialsMm: PARTIALS_MM,
     visitSpecs: VISIT_SPECS,
+    retirements: SETTLEMENT_RETIREMENTS,
     close: false,
   });
   console.log(
-    `  ✓ Lugar "Edificio Torre Central" (abierto) con ${SETTLEMENT_POINTS.length} puntos y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
+    `  ✓ Lugar "Edificio Torre Central" (abierto) con ${SETTLEMENT_POINTS.length} puntos (P-07 de alta, P-05 de baja) y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
   );
 
   // Segundo lugar, cerrado, cuyo único fin es el informe de asentamientos.

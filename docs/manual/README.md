@@ -536,6 +536,13 @@ coordenadas Norte/Este (opcionales, pero necesarias para calcular distorsión
 angular entre puntos) y la **cota inicial (C0)** — la referencia contra la
 que se mide el asentamiento acumulado de todas las visitas futuras.
 
+La C0 es opcional. Si la deja vacía, la **línea base del punto es su primera
+lectura**: esa lectura queda con acumulado 0 y las siguientes se miden contra
+ella.
+
+El catálogo puede cambiar a mitad del monitoreo —un punto se destruye, otro se
+instala—; ver [§ 7.6](#76-dar-de-baja-y-de-alta-un-punto).
+
 ### 7.3 Registrar una visita
 
 Cada **visita** es una fecha en la que se releyeron los puntos del catálogo.
@@ -557,11 +564,16 @@ equipo, no el lugar.
 > nivelación (§ 6.5): un nivel de 5.0 mm/km con primer orden (K = 3) avisa; uno
 > de 2.5 mm/km, ajustado pero posible, no. Es un aviso, no un bloqueo.
 
+La tabla pide los puntos **vigentes** en la fecha de la visita. Un punto de
+baja, o dado de alta después de esa fecha, no aparece, y una nota debajo de la
+tabla dice cuál falta y por qué, para que la ausencia no parezca un olvido.
+
 Por cada punto se captura la **cota medida**. La aplicación calcula al
 instante:
 
 - **Parcial** — cuánto bajó (o subió) el punto desde la visita anterior, en mm.
-- **Acumulado** — cuánto ha bajado desde la línea base (C0), en mm.
+- **Acumulado** — cuánto ha bajado desde la línea base del punto —su C0 o,
+  sin C0, su primera lectura—, en mm.
 - **Velocidad** — el parcial dividido entre el tiempo transcurrido, en
   mm/mes. **Se calcula con los días reales entre las dos visitas**, no con
   «un mes» genérico: una visita a 28 días y otra a 31 no dan la misma
@@ -607,6 +619,12 @@ esa diferencia dada la distancia entre ellos, como `1/X`. Un par sin
 coordenadas capturadas queda fuera de esta tabla en vez de calcularse con una
 distancia de cero.
 
+Si uno de los dos puntos se dio de alta a mitad del monitoreo, los dos
+asentamientos se miden **desde la fecha de ese alta** —el periodo que ambos
+comparten— y la fila lo indica debajo del par («desde el 15 de marzo de
+2025»). Comparar un punto que lleva meses bajando con uno recién instalado
+daría una distorsión que no significa nada.
+
 **Gráfica de evolución.** El asentamiento acumulado de cada punto a lo largo
 de las visitas. Puede activar o desactivar puntos con las casillas de
 arriba. Cada serie se distingue por **forma de marcador además de color**
@@ -617,11 +635,51 @@ textual para cuando la gráfica no basta.
 ### 7.5 Cerrar una visita o el lugar
 
 Cerrar una **visita** la deja en solo lectura: es el registro de campo de una
-fecha concreta, y una vez cerrada no admite más cambios.
+fecha concreta, y una vez cerrada no admite más cambios. Se exige lectura de
+todos los puntos **vigentes** en su fecha; los de baja no.
+
+> **Cierre antes la visita de la línea base.** Si un punto sin C0 tiene su
+> primera lectura en una visita anterior que sigue abierta, la aplicación no
+> deja cerrar las posteriores: «Cierra antes la visita 2: contiene la primera
+> lectura de P-07, que es su línea base». Si esa primera lectura siguiera
+> editable, cambiarla movería el acumulado de visitas ya cerradas.
 
 Cerrar el **lugar** termina el monitoreo por completo: el lugar y todas sus
 visitas —cerradas o no— quedan en solo lectura. Use el cierre del lugar
 cuando el seguimiento del sitio haya concluido, no visita por visita.
+
+### 7.6 Dar de baja y de alta un punto
+
+Los puntos que se miden no son siempre los mismos durante todo el monitoreo.
+Un BM se destruye, se tapa o se pierde; otro se instala cuando la obra avanza.
+
+**Dar de baja.** En el catálogo, **Dar de baja** pide dos datos:
+
+- **De baja desde** — la primera fecha en que el punto ya **no** se mide. Debe
+  ser posterior a su última lectura.
+- **Motivo** — obligatorio: dentro de un año nadie recordará por qué el punto
+  dejó de medirse.
+
+La baja **no borra nada**. Las lecturas anteriores siguen en el análisis, la
+gráfica muestra la serie hasta su última lectura con la marca «(de baja)», y
+el informe cuenta el punto y dice desde cuándo está de baja. Un punto de baja
+no se edita.
+
+**Deshacer una baja** solo sirve para corregir un error, y solo mientras
+ninguna visita cerrada tenga fecha igual o posterior a la baja. Después es
+definitiva, y el catálogo dice qué visita la hizo definitiva. Si un BM tapado
+aparece de nuevo, puede haberse movido: regístrelo como **punto nuevo**, con
+otro código y su propia línea base, no como la continuación de su serie.
+
+> **Borrar no es dar de baja.** Un punto con lecturas en visitas cerradas no
+> se puede eliminar: es parte del registro del monitoreo. Borrar queda para
+> los puntos creados por error.
+
+**Dar de alta.** Un punto que se agrega cuando el lugar ya tiene visitas se da
+de alta: el formulario pide la **fecha de alta** en lugar de la C0, porque su
+línea base será su **primera lectura**, no la visita 0 del lugar. La fecha
+debe ser posterior a la última visita cerrada, que se cerró sin él. El punto
+se exige en las visitas desde esa fecha y no en las anteriores.
 
 ---
 

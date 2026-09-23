@@ -831,6 +831,21 @@ export default function ManualPage() {
           mide el asentamiento acumulado de todas las visitas futuras.
         </p>
 
+        <p>
+          La C0 es opcional. Si la deja vacía, la{" "}
+          <strong>línea base del punto es su primera lectura</strong>: esa
+          lectura queda con acumulado 0 y las siguientes se miden contra ella.
+        </p>
+
+        <p>
+          El catálogo puede cambiar a mitad del monitoreo —un punto se
+          destruye, otro se instala—; ver{" "}
+          <a href="#baja-alta" className="underline">
+            § 7.6
+          </a>
+          .
+        </p>
+
         <h3 className="mt-4 text-lg font-semibold">
           7.3 Registrar una visita
         </h3>
@@ -864,6 +879,13 @@ export default function ManualPage() {
         </Nota>
 
         <p>
+          La tabla pide los puntos <strong>vigentes</strong> en la fecha de la
+          visita. Un punto de baja, o dado de alta después de esa fecha, no
+          aparece, y una nota debajo de la tabla dice cuál falta y por qué,
+          para que la ausencia no parezca un olvido.
+        </p>
+
+        <p>
           Por cada punto se captura la <strong>cota medida</strong>. La
           aplicación calcula al instante:
         </p>
@@ -875,7 +897,7 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Acumulado</strong> — cuánto ha bajado desde la línea base
-            (C0), en mm.
+            del punto —su C0 o, sin C0, su primera lectura—, en mm.
           </li>
           <li>
             <strong>Velocidad</strong> — el parcial dividido entre el tiempo
@@ -951,6 +973,15 @@ export default function ManualPage() {
         </p>
 
         <p>
+          Si uno de los dos puntos se dio de alta a mitad del monitoreo, los
+          dos asentamientos se miden <strong>desde la fecha de ese alta</strong>{" "}
+          —el periodo que ambos comparten— y la fila lo indica debajo del par
+          («desde el 15 de marzo de 2025»). Comparar un punto que lleva meses
+          bajando con uno recién instalado daría una distorsión que no
+          significa nada.
+        </p>
+
+        <p>
           <strong>Gráfica de evolución.</strong> El asentamiento acumulado de
           cada punto a lo largo de las visitas. Puede activar o desactivar
           puntos con las casillas de arriba. Cada serie se distingue por{" "}
@@ -968,14 +999,83 @@ export default function ManualPage() {
         <p>
           Cerrar una <strong>visita</strong> la deja en solo lectura: es el
           registro de campo de una fecha concreta, y una vez cerrada no
-          admite más cambios.
+          admite más cambios. Se exige lectura de todos los puntos{" "}
+          <strong>vigentes</strong> en su fecha; los de baja no.
         </p>
+
+        <Nota titulo="Cierre antes la visita de la línea base">
+          Si un punto sin C0 tiene su primera lectura en una visita anterior
+          que sigue abierta, la aplicación no deja cerrar las posteriores:
+          «Cierra antes la visita 2: contiene la primera lectura de P-07, que
+          es su línea base». Si esa primera lectura siguiera editable,
+          cambiarla movería el acumulado de visitas ya cerradas.
+        </Nota>
 
         <p>
           Cerrar el <strong>lugar</strong> termina el monitoreo por completo:
           el lugar y todas sus visitas —cerradas o no— quedan en solo
           lectura. Use el cierre del lugar cuando el seguimiento del sitio
           haya concluido, no visita por visita.
+        </p>
+
+        <h3 id="baja-alta" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.6 Dar de baja y de alta un punto
+        </h3>
+
+        <p>
+          Los puntos que se miden no son siempre los mismos durante todo el
+          monitoreo. Un BM se destruye, se tapa o se pierde; otro se instala
+          cuando la obra avanza.
+        </p>
+
+        <p>
+          <strong>Dar de baja.</strong> En el catálogo,{" "}
+          <strong>Dar de baja</strong> pide dos datos:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>De baja desde</strong> — la primera fecha en que el punto
+            ya <strong>no</strong> se mide. Debe ser posterior a su última
+            lectura.
+          </li>
+          <li>
+            <strong>Motivo</strong> — obligatorio: dentro de un año nadie
+            recordará por qué el punto dejó de medirse.
+          </li>
+        </ul>
+
+        <p>
+          La baja <strong>no borra nada</strong>. Las lecturas anteriores
+          siguen en el análisis, la gráfica muestra la serie hasta su última
+          lectura con la marca «(de baja)», y el informe cuenta el punto y
+          dice desde cuándo está de baja. Un punto de baja no se edita.
+        </p>
+
+        <p>
+          <strong>Deshacer una baja</strong> solo sirve para corregir un
+          error, y solo mientras ninguna visita cerrada tenga fecha igual o
+          posterior a la baja. Después es definitiva, y el catálogo dice qué
+          visita la hizo definitiva. Si un BM tapado aparece de nuevo, puede
+          haberse movido: regístrelo como <strong>punto nuevo</strong>, con
+          otro código y su propia línea base, no como la continuación de su
+          serie.
+        </p>
+
+        <Nota titulo="Borrar no es dar de baja">
+          Un punto con lecturas en visitas cerradas no se puede eliminar: es
+          parte del registro del monitoreo. Borrar queda para los puntos
+          creados por error.
+        </Nota>
+
+        <p>
+          <strong>Dar de alta.</strong> Un punto que se agrega cuando el lugar
+          ya tiene visitas se da de alta: el formulario pide la{" "}
+          <strong>fecha de alta</strong> en lugar de la C0, porque su línea
+          base será su <strong>primera lectura</strong>, no la visita 0 del
+          lugar. La fecha debe ser posterior a la última visita cerrada, que
+          se cerró sin él. El punto se exige en las visitas desde esa fecha y
+          no en las anteriores.
         </p>
 
         <VolverArriba />

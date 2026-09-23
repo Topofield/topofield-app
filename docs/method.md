@@ -20,7 +20,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 8 | Precisión y equipo por proceso | [`prds/07-precision-equipo-por-proceso.md`](./prds/07-precision-equipo-por-proceso.md) | cerrada |
 | 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | cerrada |
 | 10 | Nomenclatura de nivelación | [`prds/09-nomenclatura-nivelacion.md`](./prds/09-nomenclatura-nivelacion.md) | cerrada |
-| 11 | Estado de los BMs | — | pendiente |
+| 11 | Estado de los BMs | [`prds/10-estado-bms.md`](./prds/10-estado-bms.md) | cerrada |
 | 12 | Alerta por lectura desfasada | — | pendiente |
 | 13 | Canvas de poligonal | — | pendiente |
 | 14 | Ajuste por mínimos cuadrados | — | pendiente |
@@ -538,6 +538,65 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 11 — Estado de los BMs (2026-09-23)
+
+Los puntos de asentamiento tienen vigencia: se dan de baja sin borrar su
+historia y de alta a mitad del monitoreo, con la primera lectura como línea
+base. Tres triggers impiden que una lectura quede fuera de la vigencia de su
+punto. 492 → 529 tests.
+
+**Divergencias del PRD-de-fase:** están en su cabecera. Las dos que importan
+son la corrección de la tabla de diferenciales y el defecto anterior de
+`readingChanged`, ambas abajo.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un número correcto al lado de dos números que no lo explican es un
+  defecto.** El motor calculaba bien el diferencial sobre el periodo común,
+  y los 37 tests nuevos lo confirmaban. Pero la tabla seguía poniendo al lado
+  los acumulados de cada punto, y P-01 − P-07 se leía «−8,5 y −5,0 →
+  diferencial 2,2». Ningún test miraba qué columnas acompañan al resultado;
+  lo vio la captura. **Cuando un cálculo cambia de definición, hay que revisar
+  qué se muestra junto a él, no solo el valor.** Es la misma mezcla de
+  periodos que la fase venía a quitar, trasladada a la presentación.
+- **Un script que informa «cuántos» es el primer test real de su
+  comparación.** `readingChanged` llevaba desde la Fase 6 dando por cambiada
+  toda lectura abierta, porque comparaba la velocidad sin redondear del motor
+  con un `DECIMAL(8,2)`. No corrompía nada —reescribía los mismos valores—, y
+  por eso ni los tests ni la pantalla lo delataban. Lo destapó simular el
+  script sobre un lugar recién sembrado: 31 lecturas «a reescribir» donde
+  debía haber 0. **Una comparación contra un valor persistido tiene que
+  hacerse a la precisión de la columna**, y un «0 esperado» es una prueba
+  barata de que lo está.
+- **La revisión del PRD volvió a encontrar más que la del código.** Tres
+  defectos antes de escribir una línea: una fórmula que mezclaba periodos
+  para un caso límite, un trigger que cubría una de tres escrituras y una
+  línea base que podía moverse bajo una visita cerrada. El tercero lo arregló
+  una regla que no estaba en el borrador. Al aplicarlo apareció que la
+  alternativa propuesta en la revisión tampoco bastaba: cerrar después la
+  visita anterior habría movido la línea base otra vez. **Una solución a un
+  hallazgo de revisión también hay que recorrerla contra el invariante**, no
+  solo contra el caso que la motivó.
+- **Un CHECK en la base convierte una decisión del PRD en un hecho.** «Un
+  punto de alta no lleva C0» vivía en la acción y en el formulario. El motor
+  dependía de ella sin saberlo: fecha la C0 en la visita 0. Añadir el CHECK
+  costó una línea y lo probó el mismo SQL de verificación que los triggers.
+- **Un trigger nuevo cambia el orden en que se pueden hacer las escrituras
+  que ya existían.** La revisión del PR encontró que `saveVisitAction`
+  escribía la fecha de la visita antes de borrar las lecturas quitadas, y el
+  trigger de vigencia rechazaba justo el flujo que el editor proponía: mover
+  la fecha y quitar en el mismo guardado la lectura del punto que salía de
+  vigencia. Los tests de validadores pasaban, porque el validador ve el estado
+  final. El trigger ve cada escritura por separado. **Al añadir una
+  restricción de base, hay que recorrer en orden cada escritura de las
+  acciones que tocan esas tablas**, no solo comprobar que el estado final es
+  válido.
+- **Tablas de recuentos por archivo: se reescriben desde la ejecución, no se
+  editan.** La tabla de pruebas de la doc técnica sumaba 453 mientras
+  afirmaba 492: las Fases 7 a 9 subieron el total y no las filas. Se
+  regeneró desde `vitest --reporter=json`. El `grep` de cifras del cierre
+  encuentra el total; las filas solo cuadran si se recalculan.
 
 ### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
 
