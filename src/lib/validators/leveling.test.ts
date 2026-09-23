@@ -258,9 +258,11 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
     const issues = validateReadingCapture(reading({
         pointType: "intermediate",
         backsight: null,
-        distanceAccumulatedKm: null,
+        backDistanceM: null,
+        foreDistanceM: null,
       }));
-    expect(issues.errors.distanceAccumulatedKm).toBeUndefined();
+    // Un intermedio no acumula, así que no exige distancia por visual.
+    expect(issues.errors.foreDistanceM).toBeUndefined();
   });
 });
 

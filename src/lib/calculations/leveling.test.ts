@@ -141,8 +141,8 @@ describe("computeLeveling con la cadena derivada", () => {
       return: null,
     });
 
-    const last = result.forward.readings[result.forward.readings.length - 1];
-    expect(last.elevationCorrected).toBeCloseTo(100.0, 10);
+    const last = result.forward.readings.at(-1);
+    expect(last?.elevationCorrected).toBeCloseTo(100.0, 10);
   });
 
   it("deriva totalDistanceKm de las lecturas", () => {
@@ -181,8 +181,8 @@ describe("computeLeveling con la cadena derivada", () => {
       ],
       return: null,
     });
-    expect(result.forward.readings[0].distanceAccumulatedKm).toBeCloseTo(0.3, 9);
-    expect(result.forward.readings[1].distanceAccumulatedKm).toBeCloseTo(0.6, 9);
+    expect(result.forward.readings[0]?.distanceAccumulatedKm).toBeCloseTo(0.3, 9);
+    expect(result.forward.readings[1]?.distanceAccumulatedKm).toBeCloseTo(0.6, 9);
   });
 });
 
@@ -279,7 +279,7 @@ describe("la invariante de la cadena", () => {
       bare({ foreDistanceM: 15.7 }),
     ];
     const acc = accumulateDistances(rows);
-    expect(acc[acc.length - 1] / 1000).toBeCloseTo(
+    expect((acc.at(-1) ?? 0) / 1000).toBeCloseTo(
       totalDistanceFromReadings(rows),
       12,
     );
@@ -294,7 +294,7 @@ describe("la invariante de la cadena", () => {
       bare({ foreDistanceM: 22.6 }),
     ];
     const acc = accumulateDistances(vuelta);
-    expect(acc[acc.length - 1] / 1000).toBeCloseTo(
+    expect((acc.at(-1) ?? 0) / 1000).toBeCloseTo(
       totalDistanceFromReadings(vuelta),
       12,
     );
@@ -395,12 +395,12 @@ describe("computeRun — el orden consumir → generar", () => {
   // de forma coherente, así que el resultado sigue pareciendo plausible.
   it("no usa la L.At de la propia fila para calcular su cota", () => {
     const run = computeRun(
-      [
+      fromAccum([
         r("BM-1", "bm", 1.5, null, 0.0),
         // Si la implementación generase la AI antes de consumirla, la cota de
         // PC-1 saldría de 100.0 + 1.5 + 2.0 − 1.2, no de 101.5 − 1.2.
         r("PC-1", "pc", 2.0, 1.2, 0.3),
-      ],
+      ]),
       100.0,
     );
     expect(run.readings[1]?.elevationCalculated).toBeCloseTo(100.3, 6);
@@ -408,7 +408,7 @@ describe("computeRun — el orden consumir → generar", () => {
   });
 
   it("deja la primera fila en la cota de partida, sin L.Ad que consumir", () => {
-    const run = computeRun([r("BM-1", "bm", 1.5, null, 0.0)], 100.0);
+    const run = computeRun(fromAccum([r("BM-1", "bm", 1.5, null, 0.0)]), 100.0);
     expect(run.readings[0]?.elevationCalculated).toBeCloseTo(100.0, 6);
     expect(run.readings[0]?.instrumentHeight).toBeCloseTo(101.5, 6);
     expect(run.heightDifference).toBeCloseTo(0, 6);
@@ -420,7 +420,6 @@ const CLOSED_INPUT: LevelingInput = {
   startElevation: 100.0,
   endElevation: null,
   order: "tercer_orden",
-  totalDistanceKm: 0.9,
   forward: CLOSED_RUN,
   return: null,
 };
@@ -463,7 +462,6 @@ describe("computeLeveling — enlace", () => {
     startElevation: 250.0,
     endElevation: 248.7,
     order: "tercer_orden",
-    totalDistanceKm: 2.2,
     forward: linkRun,
     return: null,
   });
@@ -496,12 +494,11 @@ describe("computeLeveling — abierta sin control", () => {
     startElevation: 500.0,
     endElevation: null,
     order: "tercer_orden",
-    totalDistanceKm: 0.4,
-    forward: [
+    forward: fromAccum([
       r("BM-X", "bm", 1.325, null, 0.0),
       r("PC-1", "pc", 0.654, 0.876, 0.08),
       r("PC-2", "pc", null, 1.987, 0.16),
-    ],
+    ]),
     return: null,
   });
 
@@ -636,10 +633,10 @@ describe("computeLeveling — ida y vuelta", () => {
     const strict = computeLeveling({
       ...CLOSED_INPUT,
       order: "primer_orden", // T·√2 = 3·√0.9·√2 = 4.02 mm
-      return: [
+      return: fromAccum([
         r("BM-1", "bm", 1.2, null, 0.0),
         r("BM-1", "bm", null, 1.17, 0.9),
-      ], // Δh = +0.030 → discrepancia |−0.008 + 0.030| = 22 mm
+      ]), // Δh = +0.030 → discrepancia |−0.008 + 0.030| = 22 mm
       forward: CLOSED_RUN,
     });
     expect(strict.discrepancyMm).toBeCloseTo(22.0, 4);
@@ -793,7 +790,7 @@ describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea
     ]);
     const result = computeLeveling({
       ...CLOSED_INPUT,
-      totalDistanceKm: Number.NaN,
+      forward: SIN_DISTANCIAS,
       return: returnRun,
     });
     const numericFields = [

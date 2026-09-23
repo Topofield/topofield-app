@@ -170,7 +170,7 @@ export function computeRun(
 
     return {
       ...reading,
-      distanceAccumulatedKm: accumulated[index] / 1000,
+      distanceAccumulatedKm: (accumulated[index] ?? 0) / 1000,
       instrumentHeight: rowInstrumentHeight,
       elevationCalculated: rowElevation,
       elevationCorrected: rowElevation,
