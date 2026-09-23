@@ -4,6 +4,13 @@
 **Fecha de apertura:** 2026-09-17
 **Fecha de cierre:** 2026-09-18
 
+> **Nota de renumeración (2026-09-22).** Este documento está cerrado y su texto
+> no se modifica. Las fases que menciona por número se desplazaron al insertarse
+> las fases 9 a 12 (nivelación y asentamientos): **canvas de poligonal** es
+> ahora la 13, **ajuste por mínimos cuadrados** la 14 y **georreferenciación**
+> la 15. Léanse así las referencias de más abajo. Ver la tabla de
+> [`method.md`](../method.md).
+
 ## Propósito
 
 Mover el orden de precisión y los datos del equipo de `projects` a cada

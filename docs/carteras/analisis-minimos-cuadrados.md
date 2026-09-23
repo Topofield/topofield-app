@@ -1,7 +1,7 @@
 # Análisis de la cartera de mínimos cuadrados
 
 Verificación de `Ajuste_Poligonal_Minimos_Cuadrados.xlsx` (U. Distrital, Sede
-Vivero, 4-nov-2021). Es el insumo de la **Fase 10**; se deja escrito para no
+Vivero, 4-nov-2021). Es el insumo de la **Fase 14**; se deja escrito para no
 rederivarlo.
 
 ## El método de la hoja
@@ -81,7 +81,7 @@ los ángulos participan además de las dos condiciones lineales.
 
 Regresa al punto de partida exacto.
 
-## Para la Fase 10
+## Para la Fase 14
 
 - El ángulo de **orientación no entra en las condiciones**: un error suyo rota
   el polígono entero y no afecta al cierre, así que no es determinable desde
@@ -121,13 +121,18 @@ Regresa al punto de partida exacto.
 Los archivos guardan fórmulas, no valores: al abrirlos, Excel o LibreOffice
 recalculan todo.
 
-## Estado de las cuatro hojas analizadas
+## Estado de las hojas analizadas
 
-De las dos carteras del proyecto, una sola hoja está bien:
+De las **tres carteras** del proyecto y sus **seis hojas**, dos están bien:
 
-| Hoja | Estado |
-|---|---|
-| `BRUJULA` (Bowditch) | **correcta** — el motor la reproduce con 0.000 mm |
-| `TRANSITO` | reparte sobre la proyección con signo; las correcciones se cancelan y deja el error entero sin corregir |
-| `CRANDALL` | suma donde va un producto, `Σ(LDᵢ²)` donde va `(Σ LD)²`, paréntesis mal puestos; no cierra por 0.22 mm |
-| `POLIGONAL MINIMOS` | no satisface ninguna de sus tres condiciones; queda el 27 % sin corregir |
+| Cartera | Hoja | Estado |
+|---|---|---|
+| `poligonales` | `BRUJULA` (Bowditch) | **correcta** — el motor la reproduce con 0.000 mm |
+| `poligonales` | `TRANSITO` | reparte sobre la proyección con signo; las correcciones se cancelan y deja el error entero sin corregir |
+| `poligonales` | `CRANDALL` | suma donde va un producto, `Σ(LDᵢ²)` donde va `(Σ LD)²`, paréntesis mal puestos; no cierra por 0.22 mm |
+| `Ajuste_…_Minimos_Cuadrados` | `POLIGONAL MINIMOS` | no satisface ninguna de sus tres condiciones; queda el 27 % sin corregir |
+| `TRABAJO NIVELACION EL VERJON` | `NIVELACION` | **aritmética correcta**; compensa mal y usa una K ajena |
+| `TRABAJO NIVELACION EL VERJON` | `CONTRANIVELACION` | **aritmética correcta**; pierde 24.7 m del total por una vista intermedia, y en dos armadas falta el hilo inferior |
+
+El análisis de la cartera de nivelación está en
+[`analisis-nivelacion-verjon.md`](./analisis-nivelacion-verjon.md).

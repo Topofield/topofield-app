@@ -4,6 +4,9 @@ Diseño acordado en la sesión de brainstorming del 2026-09-22. Recoge las
 peticiones **N2** (taquimetría por los tres hilos) y **N3** (sumatoria
 automática de distancias) de [`docs/pendientes.md`](../../pendientes.md).
 
+Es la **Fase 9** del índice de [`method.md`](../../method.md), primera de las
+cuatro que se insertaron en la renumeración del 2026-09-22.
+
 Este documento es el diseño; el PRD-de-fase (`docs/prds/08-cadena-distancias-nivelacion.md`)
 y el plan de implementación se derivan de él.
 

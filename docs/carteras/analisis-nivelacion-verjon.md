@@ -2,9 +2,9 @@
 
 Verificación de `TRABAJO NIVELACION EL VERJON.xlsx`. Nivelación geométrica
 compuesta de **D1 a D4**, medida en ida (`NIVELACION`) y vuelta
-(`CONTRANIVELACION`). Es el insumo de la **fase de la cadena de distancias**
-(N2 + N3) y del control ida-vuelta punto a punto; se deja escrito para no
-rederivarlo.
+(`CONTRANIVELACION`). Es el insumo de la **Fase 9** (cadena de distancias de
+nivelación, N2 + N3) y del control ida-vuelta punto a punto (N6, sin fase
+asignada); se deja escrito para no rederivarlo.
 
 ## Qué hace la hoja
 

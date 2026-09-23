@@ -8,6 +8,27 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
+## Estado (2026-09-22)
+
+Cuatro de estas peticiones ya tienen fase asignada en la renumeración del
+2026-09-22. Siguen listadas aquí hasta que su PRD-de-fase se redacte y
+commitee, que es lo que marca el inicio del trabajo de la fase.
+
+| Petición | Fase | Estado |
+|---|---|---|
+| N2 + N3 | **9** — Cadena de distancias de nivelación | diseño escrito, PRD pendiente |
+| N1 | **10** — Nomenclatura de nivelación | sin redactar |
+| A2 | **11** — Estado de los BMs | sin redactar |
+| A1 | **12** — Alerta por lectura desfasada | sin redactar |
+| P1 | dentro de la **13** (canvas) | sin redactar |
+| N4, N5, N6 | — | sin fase asignada |
+
+N1 va **después** de la 9 a propósito: la Fase 9 reescribe la tabla de captura
+entera, así que renombrar antes obligaría a renombrar sobre texto que esa fase
+sustituye. Y A2 va antes que A1 porque la alerta por tendencia necesita saber
+qué series existen: un BM retirado a media serie y uno incorporado tarde son
+justo los casos donde «la tendencia» está mal definida.
+
 ---
 
 ## Poligonales

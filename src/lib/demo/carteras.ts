@@ -61,7 +61,7 @@ export const CARTERA_TT4: Cartera = {
  * orientación solo fija el datum.
  * Suma teórica (5-2)·180 = 540; observada 539°59'56".
  *
- * Su ajuste por mínimos cuadrados llega en la Fase 9; aquí se calcula con los
+ * Su ajuste por mínimos cuadrados llega en la Fase 14; aquí se calcula con los
  * tres métodos actuales.
  *
  * Las coordenadas de 14_IS1 no vienen en la hoja: solo trae el azimut

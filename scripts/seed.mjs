@@ -1132,7 +1132,7 @@ async function main() {
 
   // Las dos carteras de campo reales. La TT4 se siembra con los tres métodos
   // para poder compararlos lado a lado contra el Excel; la Vivero con Bowditch,
-  // porque su ajuste por mínimos cuadrados llega en la Fase 10.
+  // porque su ajuste por mínimos cuadrados llega en la Fase 14.
   const carteraSpecs = [
     ...["bowditch", "transit", "crandall"].map((m) =>
       carteraToSpec(CARTERA_TT4, idPorCodigo.get(CARTERA_TT4.referencePointCode), m, "calculated"),

@@ -28,6 +28,26 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
+> **Renumeración del 2026-09-22.** Las fases 9 a 12 son nuevas: salen de las
+> peticiones de nivelación y asentamientos de [`pendientes.md`](./pendientes.md),
+> que el orden anterior no contemplaba y que el usuario quiere antes del canvas.
+> Al insertarlas, las tres fases que ya estaban planificadas se desplazaron:
+>
+> | Antes | Ahora | Fase |
+> |---|---|---|
+> | 9 | **13** | Canvas de poligonal |
+> | 10 | **14** | Ajuste por mínimos cuadrados |
+> | 11 | **15** | Georreferenciación de levantamientos |
+>
+> Los PRDs ya cerrados conservan su texto original —el método los declara
+> históricos— con una nota de equivalencia al principio. Antes de esta
+> renumeración las referencias ya se contradecían entre sí: el PRD de la Fase 7
+> situaba los mínimos cuadrados en la «Fase 9» y el de la Fase 8 en la «Fase 10».
+
+Las fases 9 a 12 cubren cuatro de las peticiones de `pendientes.md`; las
+restantes (P1, N4, N5, N6) siguen **sin número**, que es lo que el método
+prescribe: se numera al redactar el PRD, no por adelantado.
+
 ## El ciclo de una fase
 
 Cada fase atraviesa estas etapas, en orden:

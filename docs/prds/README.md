@@ -14,9 +14,13 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 6 | Cierre, Informes, Export | `05-cierre-informes-export.md` | cerrada |
 | 7 | Motor y captura de poligonales | `06-motor-captura-poligonal.md` | cerrada |
 | 8 | Precisión y equipo por proceso | `07-precision-equipo-por-proceso.md` | cerrada |
-| 9 | Canvas de poligonal | — | pendiente |
-| 10 | Ajuste por mínimos cuadrados | — | pendiente |
-| 11 | Georreferenciación de levantamientos | — | pendiente |
+| 9 | Cadena de distancias de nivelación | — | pendiente |
+| 10 | Nomenclatura de nivelación | — | pendiente |
+| 11 | Estado de los BMs | — | pendiente |
+| 12 | Alerta por lectura desfasada | — | pendiente |
+| 13 | Canvas de poligonal | — | pendiente |
+| 14 | Ajuste por mínimos cuadrados | — | pendiente |
+| 15 | Georreferenciación de levantamientos | — | pendiente |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
