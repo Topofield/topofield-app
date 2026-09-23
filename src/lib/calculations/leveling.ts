@@ -10,6 +10,37 @@ import type {
   RunResult,
 } from "@/types/leveling";
 
+/**
+ * Distancia por taquimetría sobre la mira: D = (HS − HI)·K.
+ *
+ * `K = 100` en instrumentos modernos. La visual de un nivel es horizontal por
+ * construcción, así que NO lleva la corrección por cos²α que sí necesitaría un
+ * teodolito inclinado.
+ *
+ * No valida el orden de los hilos: `HS ≤ HI` da un resultado nulo o negativo.
+ * Rechazarlo es responsabilidad del validador (`validators/leveling.ts`), que
+ * bloquea porque una distancia negativa envenena el acumulado, el total y con
+ * ellos la tolerancia K·√D.
+ */
+export function stadiaDistance(upper: number, lower: number, k = 100): number {
+  return (upper - lower) * k;
+}
+
+/**
+ * Distancia derivada de un par de hilos, o `null` si el par está incompleto.
+ *
+ * Los hilos son opcionales y pueden venir a medias (la cartera de El Verjón
+ * tiene dos armadas sin hilo inferior). Un par incompleto no deriva nada y
+ * tampoco es un error: la distancia se teclea.
+ */
+export function distanceFromWires(
+  upper: number | null,
+  lower: number | null,
+): number | null {
+  if (upper == null || lower == null) return null;
+  return stadiaDistance(upper, lower);
+}
+
 /** Tolerancia de la comprobación aritmética, en metros (0.1 mm). */
 const ARITHMETIC_EPSILON = 0.0001;
 

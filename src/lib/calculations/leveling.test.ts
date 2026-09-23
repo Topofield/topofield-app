@@ -1,6 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { computeRun, computeLeveling, applyProportionalCorrection } from "./leveling";
+import {
+  computeRun,
+  computeLeveling,
+  applyProportionalCorrection,
+  stadiaDistance,
+  distanceFromWires,
+} from "./leveling";
 import type { LevelingInput, PointType, ReadingInput } from "@/types/leveling";
+
+/** Fila con todo a null; se sobrescribe lo que cada test necesite. */
+function bare(over: Partial<ReadingInput> = {}): ReadingInput {
+  return {
+    pointCode: "P",
+    pointType: "pc",
+    backsight: null,
+    foresight: null,
+    backUpperM: null,
+    backLowerM: null,
+    foreUpperM: null,
+    foreLowerM: null,
+    backDistanceM: null,
+    foreDistanceM: null,
+    distanceAccumulatedKm: null,
+    ...over,
+  };
+}
 
 function r(
   pointCode: string,
@@ -9,15 +33,43 @@ function r(
   foresight: number | null,
   distanceAccumulatedKm: number | null,
 ): ReadingInput {
-  return {
+  return bare({
     pointCode,
     pointType,
     backsight,
     foresight,
-    distanceM: null,
     distanceAccumulatedKm,
-  };
+  });
 }
+
+describe("stadiaDistance", () => {
+  it("D = (HS − HI)·100", () => {
+    expect(stadiaDistance(1.5, 1.3)).toBeCloseTo(20.0, 6);
+  });
+
+  it("reproduce la primera armada de El Verjón", () => {
+    // Cartera real: I3 = (1.367 − 1.052)·100 = 31.5 m
+    expect(stadiaDistance(1.367, 1.052)).toBeCloseTo(31.5, 6);
+    // K6 = (0.410 − 0.125)·100 = 28.5 m
+    expect(stadiaDistance(0.41, 0.125)).toBeCloseTo(28.5, 6);
+  });
+
+  it("admite otra constante estadimétrica", () => {
+    expect(stadiaDistance(1.5, 1.3, 50)).toBeCloseTo(10.0, 6);
+  });
+});
+
+describe("distanceFromWires", () => {
+  it("con un solo hilo devuelve null: no hay distancia derivable", () => {
+    expect(distanceFromWires(1.5, null)).toBeNull();
+    expect(distanceFromWires(null, 1.3)).toBeNull();
+    expect(distanceFromWires(null, null)).toBeNull();
+  });
+
+  it("con los dos hilos deriva la distancia", () => {
+    expect(distanceFromWires(1.5, 1.3)).toBeCloseTo(20.0, 6);
+  });
+});
 
 // Fixture verificado a mano. Circuito cerrado de 0.900 km que sale del BM-1
 // (cota 100.000) y regresa a él con un error deliberado de −8.0 mm.
