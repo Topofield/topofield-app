@@ -7,7 +7,7 @@ import {
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { buildSettlementWorkbook } from "@/lib/export/settlement-workbook";
 import { safeFilename } from "@/lib/export/workbook";
@@ -47,14 +47,7 @@ export async function GET(
     getSettlementReadingsBySite(supabase, site.id),
   ]);
 
-  const points: PointInput[] = sitePoints.map((p) => ({
-    id: p.id,
-    code: p.code,
-    northing: p.northing === null ? null : Number(p.northing),
-    easting: p.easting === null ? null : Number(p.easting),
-    initialElevation:
-      p.initial_elevation === null ? null : Number(p.initial_elevation),
-  }));
+  const points: PointInput[] = sitePoints.map(pointInputOf);
 
   const visitInputs: VisitInput[] = visits.map((v) => ({
     id: v.id,

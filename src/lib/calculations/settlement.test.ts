@@ -8,7 +8,9 @@ import {
   computeTrends,
   daysBetween,
   horizontalDistance,
+  isPointActiveOn,
   monthsBetween,
+  pointInputOf,
 } from "./settlement";
 import { thresholdsFor } from "./tolerances";
 import type {
@@ -24,6 +26,8 @@ const P1: PointInput = {
   northing: 0,
   easting: 0,
   initialElevation: 100.0,
+  activeFrom: null,
+  retiredOn: null,
 };
 
 /** Construye una visita con una sola lectura de P1. */
@@ -92,13 +96,126 @@ describe("computeSettlements — parcial y acumulado", () => {
     expect(r[1]?.readings[0]?.accumulatedSettlement).toBeCloseTo(3.0, 6);
   });
 
-  it("deja el acumulado en null si el punto no tiene C0", () => {
+  // Fase 11, decisión 1: sin C0, la línea base es la primera lectura. Hasta la
+  // Fase 10 el acumulado quedaba en null y el punto nunca alertaba por
+  // acumulado, sin que nada lo avisara.
+  it("sin C0, mide el acumulado contra la primera lectura del punto", () => {
     const sinC0: PointInput = { ...P1, initialElevation: null };
     const r = computeSettlements(
       [sinC0],
       [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 99.99)],
     );
-    expect(r[1]?.readings[0]?.accumulatedSettlement).toBeNull();
+    expect(r[0]?.readings[0]?.accumulatedSettlement).toBe(0);
+    expect(r[1]?.readings[0]?.accumulatedSettlement).toBeCloseTo(-10.0, 6);
+  });
+});
+
+describe("computeSettlements — línea base (Fase 11)", () => {
+  const P7: PointInput = {
+    ...P1,
+    id: "p7",
+    code: "P-07",
+    initialElevation: null,
+    activeFrom: "2025-03-15",
+  };
+  const visitas: VisitInput[] = [
+    { id: "v0", visitNumber: 0, date: "2025-01-15", readings: [{ pointId: "p1", elevation: 100.0 }] },
+    { id: "v1", visitNumber: 1, date: "2025-02-15", readings: [{ pointId: "p1", elevation: 99.995 }] },
+    {
+      id: "v2",
+      visitNumber: 2,
+      date: "2025-03-15",
+      readings: [
+        { pointId: "p1", elevation: 99.991 },
+        { pointId: "p7", elevation: 101.2345 },
+      ],
+    },
+    {
+      id: "v3",
+      visitNumber: 3,
+      date: "2025-04-15",
+      readings: [
+        { pointId: "p1", elevation: 99.989 },
+        { pointId: "p7", elevation: 101.2315 },
+      ],
+    },
+  ];
+  const r = computeSettlements([P1, P7], visitas);
+  const de = (i: number, id: string) =>
+    r[i]!.readings.find((x) => x.pointId === id)!;
+
+  it("la primera lectura de un punto de alta es su visita 0", () => {
+    expect(de(2, "p7").accumulatedSettlement).toBe(0);
+    expect(de(2, "p7").partialSettlement).toBeNull();
+    expect(de(2, "p7").velocity).toBeNull();
+    expect(de(2, "p7").baselineDate).toBe("2025-03-15");
+    expect(de(2, "p7").baselineElevation).toBe(101.2345);
+  });
+
+  it("las lecturas siguientes se miden contra esa primera lectura", () => {
+    expect(de(3, "p7").accumulatedSettlement).toBeCloseTo(-3.0, 6);
+  });
+
+  it("un punto con C0 fecha su línea base en la primera visita del lugar", () => {
+    expect(de(3, "p1").baselineDate).toBe("2025-01-15");
+    expect(de(3, "p1").baselineElevation).toBe(100.0);
+    expect(de(3, "p1").accumulatedSettlement).toBeCloseTo(-11.0, 6);
+  });
+
+  it("la línea base es la lectura más antigua por FECHA, no la primera capturada", () => {
+    // La visita fechada antes llega al final del arreglo: el motor ordena.
+    const sinC0: PointInput = { ...P1, initialElevation: null };
+    const r2 = computeSettlements(
+      [sinC0],
+      [visita(1, "2025-02-15", 99.99), visita(0, "2025-01-15", 100.0)],
+    );
+    expect(r2[0]?.readings[0]?.accumulatedSettlement).toBe(0);
+    expect(r2[1]?.readings[0]?.accumulatedSettlement).toBeCloseTo(-10.0, 6);
+  });
+});
+
+describe("isPointActiveOn", () => {
+  const original = { activeFrom: null, retiredOn: null };
+  const alta = { activeFrom: "2025-03-15", retiredOn: null };
+  const baja = { activeFrom: null, retiredOn: "2025-05-15" };
+
+  it("un punto original sin baja está vigente siempre", () => {
+    expect(isPointActiveOn(original, "1990-01-01")).toBe(true);
+  });
+
+  it("el alta es un límite inclusivo: la fecha de alta SÍ es vigente", () => {
+    expect(isPointActiveOn(alta, "2025-03-14")).toBe(false);
+    expect(isPointActiveOn(alta, "2025-03-15")).toBe(true);
+    expect(isPointActiveOn(alta, "2025-03-16")).toBe(true);
+  });
+
+  it("la baja es un límite exclusivo: la fecha de baja ya NO es vigente", () => {
+    expect(isPointActiveOn(baja, "2025-05-14")).toBe(true);
+    expect(isPointActiveOn(baja, "2025-05-15")).toBe(false);
+    expect(isPointActiveOn(baja, "2025-06-15")).toBe(false);
+  });
+});
+
+describe("pointInputOf", () => {
+  it("convierte los DECIMAL que PostgREST entrega como cadena y respeta los null", () => {
+    const fila = {
+      id: "p1",
+      code: "P-01",
+      northing: "2000.000" as unknown as number,
+      easting: null,
+      initial_elevation: "100.0000" as unknown as number,
+      active_from: "2025-03-15",
+      retired_on: null,
+    };
+    expect(pointInputOf(fila)).toEqual({
+      id: "p1",
+      code: "P-01",
+      northing: 2000,
+      easting: null,
+      initialElevation: 100,
+      activeFrom: "2025-03-15",
+      retiredOn: null,
+    });
   });
 });
 
@@ -268,8 +385,15 @@ function lectura(
     accumulatedSettlement: accumulated,
     velocity: null,
     alertStatus: "normal",
+    // Misma línea base para todos: el caso de los puntos originales, donde el
+    // diferencial es la diferencia de acumulados (Fase 5).
+    baselineDate: "2025-01-15",
+    baselineElevation: 100,
   };
 }
+
+/** Sin histórico: basta cuando todas las lecturas comparten línea base. */
+const sinHistorico = () => undefined;
 
 const A: PointInput = {
   id: "a",
@@ -277,6 +401,8 @@ const A: PointInput = {
   northing: 0,
   easting: 0,
   initialElevation: 100,
+  activeFrom: null,
+  retiredOn: null,
 };
 const B: PointInput = {
   id: "b",
@@ -284,6 +410,8 @@ const B: PointInput = {
   northing: 0,
   easting: 6,
   initialElevation: 100,
+  activeFrom: null,
+  retiredOn: null,
 };
 
 describe("horizontalDistance", () => {
@@ -306,11 +434,12 @@ describe("computeDifferentials", () => {
   // debe contarse como diferencial 0, que se leería como distorsión infinita,
   // es decir, como normalidad perfecta.
   it("excluye un punto del catálogo que no tiene lectura en la visita", () => {
-    const C: PointInput = { id: "c", code: "P-C", northing: 0, easting: 12, initialElevation: 100 };
+    const C: PointInput = { id: "c", code: "P-C", northing: 0, easting: 12, initialElevation: 100, activeFrom: null, retiredOn: null };
     const pairs = computeDifferentials(
       [A, B, C],
       [lectura("a", -10), lectura("b", -4)],
       500,
+    sinHistorico,
     );
     expect(pairs).toHaveLength(1);
     const ids = pairs.flatMap((p) => [p.pointIdA, p.pointIdB]);
@@ -318,7 +447,9 @@ describe("computeDifferentials", () => {
   });
 
   it("no produce pares si solo un punto tiene lectura", () => {
-    expect(computeDifferentials([A, B], [lectura("a", -10)], 500)).toEqual([]);
+    expect(
+      computeDifferentials([A, B], [lectura("a", -10)], 500, sinHistorico),
+    ).toEqual([]);
   });
 
   // Una lectura cuyo acumulado es null (el punto no tiene C0) tampoco puede
@@ -328,6 +459,7 @@ describe("computeDifferentials", () => {
       [A, B],
       [lectura("a", -10), lectura("b", null)],
       500,
+    sinHistorico,
     );
     expect(pairs).toEqual([]);
   });
@@ -338,6 +470,7 @@ describe("computeDifferentials", () => {
       [A, B],
       [lectura("a", -1.8), lectura("b", -2.5)],
       500,
+    sinHistorico,
     );
     expect(pairs).toHaveLength(1);
     expect(pairs[0]?.differentialMm).toBeCloseTo(0.7, 6);
@@ -352,6 +485,7 @@ describe("computeDifferentials", () => {
       [A, B],
       [lectura("a", 0), lectura("b", -20)],
       500,
+    sinHistorico,
     );
     expect(pairs[0]?.distortionInverse).toBeCloseTo(300, 6);
     expect(pairs[0]?.exceedsLimit).toBe(true);
@@ -363,6 +497,7 @@ describe("computeDifferentials", () => {
       [A, B],
       [lectura("a", -5), lectura("b", -5)],
       500,
+    sinHistorico,
     );
     expect(pairs[0]?.differentialMm).toBe(0);
     expect(pairs[0]?.distortionInverse).toBe(Number.POSITIVE_INFINITY);
@@ -376,6 +511,7 @@ describe("computeDifferentials", () => {
       [A, sinCoords],
       [lectura("a", 0), lectura("b", -20)],
       500,
+    sinHistorico,
     );
     expect(pairs).toHaveLength(0);
   });
@@ -385,6 +521,7 @@ describe("computeDifferentials", () => {
       [A, B],
       [lectura("a", -5), lectura("b", null)],
       500,
+    sinHistorico,
     );
     expect(pairs).toHaveLength(0);
   });
@@ -395,8 +532,66 @@ describe("computeDifferentials", () => {
       [A, B, C],
       [lectura("a", -1), lectura("b", -2), lectura("c", -3)],
       500,
+    sinHistorico,
     );
     expect(pairs).toHaveLength(3); // a-b, a-c, b-c
+  });
+
+  describe("periodo común (Fase 11)", () => {
+    // P-07 entra el 15/03. P-01 lleva C0 = 100.000 desde el 15/01 y el 15/03
+    // midió 99.991; hoy mide 99.989. P-07 midió 101.2345 al darse de alta y
+    // hoy 101.2315. Desde t0 = 15/03:
+    //   P-01: (99.989 − 99.991) × 1000 = −2.0 mm
+    //   P-07: (101.2315 − 101.2345) × 1000 = −3.0 mm   ⇒ diferencial 1.0 mm
+    // Restar acumulados habría dado |−11.0 − (−3.0)| = 8.0 mm: la distorsión
+    // de un periodo que P-07 no vivió.
+    const p01: ComputedReading = {
+      ...lectura("a", -11.0),
+      elevation: 99.989,
+      baselineDate: "2025-01-15",
+      baselineElevation: 100.0,
+    };
+    const p07: ComputedReading = {
+      ...lectura("b", -3.0),
+      elevation: 101.2315,
+      baselineDate: "2025-03-15",
+      baselineElevation: 101.2345,
+    };
+    const cotas: Record<string, number> = { "a|2025-03-15": 99.991 };
+    const cotaEn = (id: string, fecha: string) => cotas[`${id}|${fecha}`];
+
+    it("mide los dos puntos desde la línea base más tardía", () => {
+      const pairs = computeDifferentials([A, B], [p01, p07], 500, cotaEn);
+      expect(pairs).toHaveLength(1);
+      expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);
+    });
+
+    it("es simétrico: el orden del par no cambia el resultado", () => {
+      const pairs = computeDifferentials([A, B], [p07, p01], 500, cotaEn);
+      expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);
+    });
+
+    it("un punto con C0 que no se midió en la visita 0 se mide desde t0, no desde la C0", () => {
+      // Es el defecto que encontró la revisión del PRD: «usar su acumulado»
+      // habría medido P-02 desde su C0 (visita 0) aunque t0 sea su primera
+      // lectura. Aquí P-02 tiene C0 = 100.0 fechada el 15/01, y P-07, alta el
+      // 15/03. t0 = 15/03 y P-02 midió 99.996 ese día y 99.994 hoy: −2.0 mm.
+      const p02: ComputedReading = {
+        ...lectura("a", -6.0),
+        elevation: 99.994,
+        baselineDate: "2025-01-15",
+        baselineElevation: 100.0,
+      };
+      const pairs = computeDifferentials([A, B], [p02, p07], 500, (id, f) =>
+        id === "a" && f === "2025-03-15" ? 99.996 : undefined,
+      );
+      expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);
+    });
+
+    it("excluye el par si un punto no se midió en t0", () => {
+      const pairs = computeDifferentials([A, B], [p01, p07], 500, sinHistorico);
+      expect(pairs).toEqual([]);
+    });
   });
 
   it("el diferencial es siempre positivo, sea cual sea el orden", () => {
@@ -404,6 +599,7 @@ describe("computeDifferentials", () => {
       [A, B],
       [lectura("a", -5), lectura("b", -1)],
       500,
+    sinHistorico,
     );
     expect(pairs[0]?.differentialMm).toBeCloseTo(4, 6);
   });
@@ -563,6 +759,36 @@ describe("computeHistory", () => {
     expect(h.differentials).toHaveLength(1);
     expect(h.differentials[0]?.differentialMm).toBeCloseTo(1.0, 6);
     expect(h.trends).toEqual({});
+  });
+
+  it("calcula los diferenciales de un punto de alta sobre el periodo común", () => {
+    // La ruta real: computeHistory arma la búsqueda de cotas por fecha que
+    // computeDifferentials necesita. Mismos números que el test aislado.
+    const A7: PointInput = { ...B, initialElevation: null, activeFrom: "2025-03-15" };
+    const visitas: VisitInput[] = [
+      { id: "v0", visitNumber: 0, date: "2025-01-15", readings: [{ pointId: "a", elevation: 100.0 }] },
+      {
+        id: "v2",
+        visitNumber: 2,
+        date: "2025-03-15",
+        readings: [
+          { pointId: "a", elevation: 99.991 },
+          { pointId: "b", elevation: 101.2345 },
+        ],
+      },
+      {
+        id: "v3",
+        visitNumber: 3,
+        date: "2025-04-15",
+        readings: [
+          { pointId: "a", elevation: 99.989 },
+          { pointId: "b", elevation: 101.2315 },
+        ],
+      },
+    ];
+    const h = computeHistory([A, A7], visitas, T);
+    expect(h.differentials).toHaveLength(1);
+    expect(h.differentials[0]?.differentialMm).toBeCloseTo(1.0, 6);
   });
 
   it("devuelve estructuras vacías si no hay visitas", () => {

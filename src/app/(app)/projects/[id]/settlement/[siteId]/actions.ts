@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
   visitsToRewrite,
   type PersistedReading,
@@ -97,14 +97,7 @@ async function loadContext(
     persistedReadingsByVisit.set(r.visit_id, byPoint);
   }
 
-  const pointInputs: PointInput[] = (points ?? []).map((p) => ({
-    id: p.id,
-    code: p.code,
-    northing: p.northing === null ? null : Number(p.northing),
-    easting: p.easting === null ? null : Number(p.easting),
-    initialElevation:
-      p.initial_elevation === null ? null : Number(p.initial_elevation),
-  }));
+  const pointInputs: PointInput[] = (points ?? []).map(pointInputOf);
 
   const readingsByVisit = new Map<string, { pointId: string; elevation: number }[]>();
   for (const row of readings ?? []) {

@@ -12,7 +12,7 @@ import {
 } from "@/components/design-system";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { ReadingsTable } from "@/components/settlement/readings-table";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   closeVisitAction,
@@ -129,14 +129,7 @@ export function VisitEditor({
 
   const pointInputs: PointInput[] = useMemo(
     () =>
-      points.map((p) => ({
-        id: p.id,
-        code: p.code,
-        northing: p.northing === null ? null : Number(p.northing),
-        easting: p.easting === null ? null : Number(p.easting),
-        initialElevation:
-          p.initial_elevation === null ? null : Number(p.initial_elevation),
-      })),
+      points.map(pointInputOf),
     [points],
   );
 

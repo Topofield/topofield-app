@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
   visitsToRewrite,
   type PersistedReading,
@@ -75,14 +75,7 @@ export async function resyncSiteReadings(
     readingsByVisit.set(r.visit_id, list);
   }
 
-  const pointInputs: PointInput[] = (points ?? []).map((p) => ({
-    id: p.id,
-    code: p.code,
-    northing: p.northing === null ? null : Number(p.northing),
-    easting: p.easting === null ? null : Number(p.easting),
-    initialElevation:
-      p.initial_elevation === null ? null : Number(p.initial_elevation),
-  }));
+  const pointInputs: PointInput[] = (points ?? []).map(pointInputOf);
 
   const visitInputs: VisitInput[] = (visits ?? []).map((v) => ({
     id: v.id,

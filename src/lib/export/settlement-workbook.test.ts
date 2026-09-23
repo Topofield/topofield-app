@@ -45,6 +45,8 @@ const POINTS: PointInput[] = POINT_ROWS.map((p) => ({
   northing: Number(p.northing),
   easting: Number(p.easting),
   initialElevation: Number(p.initial_elevation),
+  activeFrom: null,
+  retiredOn: null,
 }));
 
 function visit(over: Partial<VisitRow> = {}): VisitRow {

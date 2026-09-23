@@ -12,6 +12,8 @@ const P1: PointInput = {
   northing: 0,
   easting: 0,
   initialElevation: 100.0,
+  activeFrom: null,
+  retiredOn: null,
 };
 
 describe("validateReadingCapture", () => {

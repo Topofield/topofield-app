@@ -22,6 +22,8 @@ function computed(over: Partial<{
     accumulatedSettlement: -10,
     velocity: -2.5,
     alertStatus: "caution" as AlertLevel,
+    baselineDate: "2025-12-01",
+    baselineElevation: 100.01,
     ...over,
   };
 }

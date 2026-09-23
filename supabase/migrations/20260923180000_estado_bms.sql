@@ -28,7 +28,12 @@ alter table public.settlement_points
   add constraint settlement_points_retirement_reason_not_blank
     check (retirement_reason is null or btrim(retirement_reason) <> ''),
   add constraint settlement_points_active_before_retired
-    check (active_from is null or retired_on is null or active_from < retired_on);
+    check (active_from is null or retired_on is null or active_from < retired_on),
+  -- Un punto dado de alta no lleva C0: su línea base es su primera lectura. Con
+  -- las dos, no habría respuesta a qué fecha corresponde la C0 tecleada, y el
+  -- motor la fecharía en la visita 0 del lugar, antes de que el punto existiera.
+  add constraint settlement_points_alta_without_c0
+    check (active_from is null or initial_elevation is null);
 
 -- --- Predicado de vigencia ---------------------------------------------------
 -- Una sola expresión de la regla dentro de la base, compartida por los tres

@@ -166,6 +166,8 @@ describe("fixture de asentamientos del demo", () => {
       northing: p.northing,
       easting: p.easting,
       initialElevation: p.initialElevation,
+      activeFrom: null,
+      retiredOn: null,
     }));
     const visits = ASENTAMIENTO_DEMO.visitDates.map((date, i) => ({
       id: `v-${i}`,

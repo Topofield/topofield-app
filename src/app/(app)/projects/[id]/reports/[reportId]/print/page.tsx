@@ -12,7 +12,7 @@ import {
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
-import { computeHistory } from "@/lib/calculations/settlement";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
   levelMeetsOrder,
   thresholdsOf,
@@ -149,14 +149,7 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         getVisits(supabase, site.id),
         getSettlementReadingsBySite(supabase, site.id),
       ]);
-      const pointInputs: PointInput[] = points.map((p) => ({
-        id: p.id,
-        code: p.code,
-        northing: p.northing === null ? null : Number(p.northing),
-        easting: p.easting === null ? null : Number(p.easting),
-        initialElevation:
-          p.initial_elevation === null ? null : Number(p.initial_elevation),
-      }));
+      const pointInputs: PointInput[] = points.map(pointInputOf);
       const visitInputs: VisitInput[] = visits.map((v) => ({
         id: v.id,
         visitNumber: v.visit_number,
