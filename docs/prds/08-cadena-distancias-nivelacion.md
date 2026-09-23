@@ -374,6 +374,42 @@ aparecieron al mirar la pantalla.
 15. Doc técnica actualizada: estado de fases, tabla de pruebas, y **la deuda del
     equilibrado marcada como resuelta**.
 
+## Verificación realizada (2026-09-22)
+
+**Los cinco casos de pantalla**, con capturas revisadas una por una:
+
+| Caso | Resultado |
+|---|---|
+| `automatico` sin hilos desplegados | Conmutador visible; lectura y distancia editables |
+| `automatico` con hilos | Cuatro casillas de hilos; distancia autocompletada a 150 m; scroll horizontal |
+| `digital` | Sin conmutador ni hilos; lectura y distancia tecleadas |
+| `level_type` sin definir | La libreta no se habilita; «Elegir…» sin preselección; distancia total en `0.000`, no `NaN` |
+| `distances_reconstructed = true` | Aviso ámbar; el equilibrado no se evalúa |
+
+El cuarto caso es además el **arranque en frío** (proceso en borrador, sin
+lecturas), que el cierre de la Fase 5 señaló como el que más se escapa.
+
+**El backfill, sobre datos pre-Fase 9 auténticos.** No simulados: se revirtió
+la base al esquema anterior, se sembró con el `seed.mjs` y el motor de
+`8528bac` —que escriben `distance_m` y el acumulado tecleado— y se aplicó la
+migración real.
+
+| | Antes | Después |
+|---|---|---|
+| `total_distance_km` | `0.900` | `0.900` |
+| `meets_tolerance` | `true` | `true` |
+| `tolerance_mm` | `11.4` | `11.4` |
+| Cotas corregidas | `100.0000 / 100.3027 / 99.8053 / 100.0000` | idénticas |
+| Acumulado | `0.000 / 0.300 / 0.600 / 0.900` | idéntico |
+
+El criterio de aceptación 10 se cumple. Uno de los dos procesos estaba
+**cerrado** y la migración pasó sobre él sin abortar: los triggers de
+inmutabilidad se desactivan y se restauran correctamente.
+
+La primera fila queda con la distancia en `null` —el dato nunca se registró— y
+el editor la marca en rojo pidiéndola, que es lo previsto. Las cotas y el
+veredicto no cambian porque esos metros nunca estuvieron en el acumulado.
+
 ## Fuera de alcance
 
 - **Importación por CSV** (N4). Fase propia, bloqueada hasta tener una cartera
