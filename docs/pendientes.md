@@ -79,11 +79,16 @@ así que teclearlos a mano es transcribir lo que ya está en digital — con el
 riesgo de error que eso trae en una aplicación cuyo tema es la trazabilidad de
 la medición.
 
-**Desbloqueada el 2026-09-23.** Estuvo esperando un CSV real de un nivel
-digital para no especificar el parser sobre supuestos —el precedente de la
-Fase 7: dos carteras de campo encontraron en una tarde lo que cuatro fases de
-fixtures sintéticos no vieron—. Se resuelve por otra vía: en vez de adivinar el
-formato de un instrumento, **TopoField define su propia plantilla CSV**.
+**Desbloqueada el 2026-09-23, con un crudo real.** Llegó
+`CRDUDO-TRAMO2.L`, formato nativo de un nivel digital Leica, descifrado y
+verificado contra su propia línea de cierre. Ver
+[`carteras/analisis-crudo-nivel-digital.md`](./carteras/analisis-crudo-nivel-digital.md).
+
+La decisión previa —definir una plantilla CSV propia porque no teníamos
+archivo— **se revisa a la luz del archivo**: el crudo es parseable
+directamente, así que leerlo cumple el propósito de la petición (que el
+topógrafo no transcriba a mano lo que ya está en digital) mejor que pedirle
+volcarlo a otra plantilla.
 
 ### Lo que ya está resuelto
 
@@ -94,12 +99,23 @@ añade una puerta de entrada.
 
 ### Decisiones tomadas
 
-**Plantilla propia, descargable desde el editor.** Columnas fijas y
-documentadas; el topógrafo vuelca ahí lo que traiga su nivel. Desbloquea la
-petición sin inventar supuestos sobre separadores, decimales, cabeceras o
-codificación regional — un Leica configurado en `es-CO` escribe `1,234` con
-coma decimal, y un parser construido a ciegas falla ante el primer archivo
-real, en silencio.
+**Detector de formato con parsers intercambiables.** No un parser, sino
+varios: cada uno declara cómo reconocer su formato —por el contenido, no por
+la extensión— y todos desembocan en **una forma intermedia única**. Añadir
+Trimble o Topcon mañana es escribir un parser y registrarlo, sin tocar la
+previsualización, la validación ni la escritura en la libreta.
+
+De salida, dos: el **`.L` de Leica** (descifrado, con archivo real) y una
+**plantilla CSV propia** de TopoField, documentada y descargable, para quien
+traiga un instrumento que todavía no sepamos leer. Cuando nada reconoce el
+archivo, el mensaje dice qué formatos sí se entienden y ofrece la plantilla —
+un «formato inválido» a secas deja al usuario sin salida.
+
+**Las repeticiones se promedian al importar.** El Leica mide dos veces cada
+visual (`B1`/`B2`, `F1`/`F2`) y da la desviación típica de cada lectura. El
+import promedia y guarda una sola lectura, que es lo que la libreta admite
+hoy. Se pierde la σ del instrumento; queda anotado como candidato a fase
+futura llevar a nivelación el modelo de lecturas múltiples de la Fase 7.
 
 **El tipo de punto se deriva y el usuario lo confirma.** El instrumento no
 sabe qué es un BM, un punto de cambio o una radiación, y sin ese dato la
@@ -110,8 +126,8 @@ la importación muestra una **previsualización editable** donde el topógrafo
 corrige antes de confirmar. Deducir sin confirmar sería adivinar; pedirlo todo
 a mano sería renunciar a la comodidad que justifica importar.
 
-**Queda pendiente para cuando haya un archivo real:** leer el formato nativo
-del instrumento, que iría en una fase posterior sobre esta base.
+**Queda fuera:** modelar las repeticiones y su desviación típica, que es un
+cambio del modelo de nivelación y no de la importación.
 
 ### Sigue sin fase asignada
 
