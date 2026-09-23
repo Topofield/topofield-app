@@ -169,7 +169,11 @@ export function ReadingsTable({
         </label>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        {/* `min-w-full` en vez de `w-full`: con 13 columnas en modo
+            automático, `w-full` comprime las calculadas hasta cortarles el
+            encabezado. Así la tabla crece lo que necesite y el contenedor
+            hace scroll horizontal. */}
+        <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
               <th className="py-2 pr-3 font-medium">Punto</th>
@@ -182,7 +186,7 @@ export function ReadingsTable({
               )}
               <th className="py-2 pr-3 font-medium">L.Atrás</th>
               <th className="py-2 pr-3 font-medium">Dist atrás (m)</th>
-              <th className="py-2 pr-3 font-medium">AI</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">AI</th>
               {wiresVisible && (
                 <>
                   <th className="py-2 pr-3 font-medium">HS adelante</th>
@@ -191,9 +195,9 @@ export function ReadingsTable({
               )}
               <th className="py-2 pr-3 font-medium">L.Adelante</th>
               <th className="py-2 pr-3 font-medium">Dist adelante (m)</th>
-              <th className="py-2 pr-3 font-medium">Dist acum (km)</th>
-              <th className="py-2 pr-3 font-medium">Cota</th>
-              <th className="py-2 pr-3 font-medium">Cota corregida</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">Dist acum (km)</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">Cota</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">Cota corregida</th>
               {!disabled && <th className="py-2" />}
             </tr>
           </thead>

@@ -815,6 +815,15 @@ const LEVELING_PROCESSES = [
     type: "closed",
     startBmCode: "BM-1",
     startElevation: 100.0,
+    // Nivel AUTOMÁTICO: es el que lee los tres hilos sobre la mira y obtiene
+    // la distancia por taquimetría. Un digital entregaría la distancia y no
+    // se leerían hilos, así que declararlo digital contradiría sus datos.
+    equipment_brand: "Leica",
+    equipment_model: "NA2",
+    equipment_serial: "LNA2-2025-003",
+    equipment_calibration_date: "2025-11-10",
+    level_type: "automatico",
+    km_precision_mm: 0.7,
     // Los tres hilos de cada visual, como los captura un nivel automático. El
     // hilo medio ES la lectura, y la distancia sale por taquimetría:
     // (HS − HI)·100 = 150 m en cada visual → 0.900 km de recorrido.
@@ -866,6 +875,12 @@ const LEVELING_PROCESSES = [
     startBmCode: "BM-2",
     startElevation: 100.0,
     status: "closed",
+    equipment_brand: "Leica",
+    equipment_model: "NA2",
+    equipment_serial: "LNA2-2025-003",
+    equipment_calibration_date: "2025-11-10",
+    level_type: "automatico",
+    km_precision_mm: 0.7,
     forward: [
       { code: "BM-2", type: "bm", back: 1.5, backUpperM: 2.25, backLowerM: 0.75 },
       {
