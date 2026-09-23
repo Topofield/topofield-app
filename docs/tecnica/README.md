@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-22 · Fase 9 cerrada · 481 tests ·
+**Última actualización:** 2026-09-22 · Fase 9 cerrada · 489 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -947,7 +947,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-481 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
+489 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1137,6 +1137,16 @@ vez de perseguir otro cuarteto: `StatusIndicator` en modo `level` añade
 **forma** (círculo, cuadrado, rombo, triángulo) como segundo canal gráfico,
 además del texto que el sistema de diseño ya exigía. Ver
 `docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
+
+**Las distancias de un punto intermedio se persisten pero no acumulan.**
+`computeRun` resuelve las distancias por visual de **todas** las filas, así que
+un `intermediate` con distancia capturada la guarda y el Excel la imprime en la
+hoja «Lecturas» — pero `accumulateDistances` no la suma, porque una radiación
+cuelga de la AI vigente y no propaga cota. Es correcto que no acumule; lo
+inconsistente es que la columna del export muestre metros que el total no
+incluye. Quien sume la columna a mano obtiene un número distinto. Detectado en
+la revisión de la Fase 9 y diferido: o no se persisten esas distancias, o el
+export marca esas celdas.
 
 **Equilibrado de visuales: resuelto en la Fase 9.** Era la deuda más antigua
 de nivelación — la regla de campo que cancela curvatura, refracción y

@@ -446,6 +446,27 @@ intermedia rompió la cadena de sumas. De ese número depende `K·√D`.
   declaraban el acumulado a mano. Un helper que reparte el tramo entre las dos
   visuales conservó la geometría de cotas que las Fases 3-4 verificaron a mano,
   sin reintroducir un campo que el modelo ya no tiene.
+- **Implementar una función y no cablearla pasa todos los controles.**
+  `validateSightBalance` quedó definida, documentada y cubierta por tres
+  tests… y no la llamaba nadie. El typecheck no lo ve (está exportada), el
+  lint tampoco (se usa en los tests), y los 481 tests pasaban porque probaban
+  la función **directamente**, nunca la ruta real. Lo destapó la revisión de
+  rama con contexto fresco. La fase entera se justificaba en parte por pagar
+  esa deuda, y habría cerrado sin pagarla: capturando dos distancias por visual
+  que nadie compararía — exactamente el error de `distance_m` que la fase venía
+  a eliminar, repetido. **Un test que ejercita la función y no la ruta no prueba
+  que la funcionalidad exista.** Los tests del arreglo van por
+  `validateRunCapture`, que es la puerta por la que pasan las filas de verdad.
+- **Un `0` donde debería haber `null` pasa el validador.** Dos veces en la misma
+  fase: `distanceFromWires` devolvía `0` con hilos iguales (y `0 ?? tecleada` es
+  `0`, así que la distancia tecleada desaparecía), y el backfill escribía `0` en
+  la visual atrás de la primera fila. Los validadores rechazan `null`, no `0`,
+  así que ambos casos dejaban una visual de 0 m en silencio. **La ausencia de un
+  dato se representa con `null`; un `0` es una medición, y afirma algo falso.**
+- **Un `??` sobre una función que puede devolver `0` no es un fallback.** Es el
+  mecanismo concreto del punto anterior y merece recordarse solo: `??` distingue
+  `null`/`undefined`, no valores falsy. Si la función puede devolver `0`
+  legítimamente inválido, tiene que devolver `null`.
 - **Un `describe` que se evalúa antes que la función que usa da
   "Cannot access before initialization".** El helper nuevo se llamó `run`,
   nombre que el archivo ya usaba como variable local para el resultado de
