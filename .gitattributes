@@ -1,0 +1,5 @@
+# Las carteras de campo son EVIDENCIA de un formato, no código fuente: su
+# terminador de línea es parte de lo que documentan. El crudo de nivel digital
+# viene con CRLF, y normalizarlo a LF falsearía el archivo que el parser de N4
+# tiene que saber leer.
+docs/carteras/*.L -text
