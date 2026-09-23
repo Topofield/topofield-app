@@ -16,7 +16,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 
 | Petición | Fase | Estado |
 |---|---|---|
-| N2 + N3 | **9** — Cadena de distancias de nivelación | diseño escrito, PRD pendiente |
+| N2 + N3 | **9** — Cadena de distancias de nivelación | **en curso** — PRD commiteado |
 | N1 | **10** — Nomenclatura de nivelación | sin redactar |
 | A2 | **11** — Estado de los BMs | sin redactar |
 | A1 | **12** — Alerta por lectura desfasada | sin redactar |

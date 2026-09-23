@@ -18,7 +18,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | cerrada |
 | 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | cerrada |
 | 8 | Precisión y equipo por proceso | [`prds/07-precision-equipo-por-proceso.md`](./prds/07-precision-equipo-por-proceso.md) | cerrada |
-| 9 | Cadena de distancias de nivelación | — | pendiente |
+| 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | en curso |
 | 10 | Nomenclatura de nivelación | — | pendiente |
 | 11 | Estado de los BMs | — | pendiente |
 | 12 | Alerta por lectura desfasada | — | pendiente |
