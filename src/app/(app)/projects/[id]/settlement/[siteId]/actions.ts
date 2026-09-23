@@ -397,7 +397,16 @@ export async function closeVisitAction(
       .sort((a, b) => a.date.localeCompare(b.date))
       .at(-1)?.date ?? null;
 
-  const issues = validateVisitClose(visit, context.points, previousDate);
+  const siteVisits = context.visits.map((v) => ({
+    ...v,
+    closed: context.statusByVisit.get(v.id) === "closed",
+  }));
+  const issues = validateVisitClose(
+    visit,
+    context.points,
+    previousDate,
+    siteVisits,
+  );
   if (Object.keys(issues.errors).length > 0) {
     return { ok: false, error: Object.values(issues.errors)[0] };
   }
