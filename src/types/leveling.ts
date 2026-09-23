@@ -61,7 +61,32 @@ export interface ReadingInput {
   pointType: PointType;
   backsight: number | null;
   foresight: number | null;
-  distanceM: number | null;
+  /**
+   * Hilos estadimétricos de la visual atrás. OPCIONALES: con nivel automático
+   * el topógrafo puede anotar solo la lectura y medir la distancia a cinta.
+   * Verificado contra la cartera de El Verjón, donde dos armadas de doce no
+   * traen el hilo inferior.
+   *
+   * El hilo MEDIO no tiene campo propio: es `backsight`. Darle uno crearía dos
+   * fuentes de verdad para el mismo número.
+   */
+  backUpperM: number | null;
+  backLowerM: number | null;
+  /** Ídem para la visual adelante; el hilo medio es `foresight`. */
+  foreUpperM: number | null;
+  foreLowerM: number | null;
+  /**
+   * Distancia a cada mira, en metros. Derivada de los hilos cuando los hay, o
+   * tecleada. Es la ÚNICA entrada de la cadena de distancias: el acumulado y
+   * el total se derivan de ella.
+   */
+  backDistanceM: number | null;
+  foreDistanceM: number | null;
+  /**
+   * DERIVADO. Lo calcula `accumulateDistances`; la UI lo muestra en solo
+   * lectura y el servidor lo persiste. Se conserva en el contrato porque el
+   * informe y el export lo leen sin recalcular.
+   */
   distanceAccumulatedKm: number | null;
 }
 
