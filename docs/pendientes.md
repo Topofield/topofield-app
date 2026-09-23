@@ -17,7 +17,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | Petición | Fase | Estado |
 |---|---|---|
 | ~~N2 + N3~~ | **9** — Cadena de distancias de nivelación | **cerrada** (2026-09-22) |
-| N1 | **10** — Nomenclatura de nivelación | sin redactar |
+| N1 | **10** — Nomenclatura de nivelación | **en curso** — PRD commiteado |
 | A2 | **11** — Estado de los BMs | sin redactar |
 | A1 | **12** — Alerta por lectura desfasada | sin redactar |
 | P1 | dentro de la **13** (canvas) | sin redactar |
