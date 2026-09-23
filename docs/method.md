@@ -18,9 +18,13 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | cerrada |
 | 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | cerrada |
 | 8 | Precisión y equipo por proceso | [`prds/07-precision-equipo-por-proceso.md`](./prds/07-precision-equipo-por-proceso.md) | cerrada |
-| 9 | Canvas de poligonal | — | pendiente |
-| 10 | Ajuste por mínimos cuadrados | — | pendiente |
-| 11 | Georreferenciación de levantamientos | — | pendiente |
+| 9 | Cadena de distancias de nivelación | — | pendiente |
+| 10 | Nomenclatura de nivelación | — | pendiente |
+| 11 | Estado de los BMs | — | pendiente |
+| 12 | Alerta por lectura desfasada | — | pendiente |
+| 13 | Canvas de poligonal | — | pendiente |
+| 14 | Ajuste por mínimos cuadrados | — | pendiente |
+| 15 | Georreferenciación de levantamientos | — | pendiente |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -85,6 +89,26 @@ problema: **nada falla cuando una afirmación caduca**. No hay test que lo
 detecte, el `lint` no lo ve y el `build` pasa. Solo lo encuentra alguien que
 compare el documento con el código a propósito — y por eso tiene que ser un
 paso del cierre, no un acto de memoria.
+
+### 3.bis Integración: rama y Pull Request
+
+**Cada fase se trabaja en su propia rama y entra a `main` por Pull Request**, no
+por merge local.
+
+El motivo es concreto, no ceremonia: el repositorio se trabaja desde varias
+sesiones a la vez. Las fases 7 y 8 se hicieron en local mientras otra sesión
+empujaba cinco commits a `main`, y reconciliarlas costó 24 conflictos —entre
+ellos dos que solo aparecieron al correr el seed, porque no daban error de
+compilación—. Una rama publicada temprano hace visible la divergencia antes de
+que crezca.
+
+- La rama se crea al abrir la fase, con el nombre de la fase
+  (`fase-8-precision-equipo-por-proceso`).
+- Se empuja pronto, aunque esté a medias: su valor es avisar a las otras
+  sesiones de que ese territorio está ocupado.
+- El PR se abre al cerrar la fase, con la descripción resumiendo qué cambió y
+  qué se verificó.
+- El merge a `main` lo decide el usuario, nunca el agente.
 
 ### 4. Apertura de la siguiente fase
 
