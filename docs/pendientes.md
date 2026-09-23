@@ -18,7 +18,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 |---|---|---|
 | ~~N2 + N3~~ | **9** — Cadena de distancias de nivelación | **cerrada** (2026-09-22) |
 | ~~N1~~ | **10** — Nomenclatura de nivelación | **cerrada** (2026-09-23) |
-| A2 | **11** — Estado de los BMs | **en curso** — PRD commiteado |
+| ~~A2~~ | **11** — Estado de los BMs | **cerrada** (2026-09-23) |
 | A1 | **12** — Alerta por lectura desfasada | sin redactar |
 | P1 | dentro de la **13** (canvas) | sin redactar |
 | N4 | — | sin fase asignada · **desbloqueada** (crudo real descifrado) |
@@ -177,6 +177,9 @@ anteriores, y con qué margen— y si avisa o bloquea. Precedente aplicable: en
 esta aplicación los controles de calidad de captura avisan, no bloquean.
 
 ### A2 · Estado de los BMs (dar de baja y dar de alta)
+
+> **Resuelta en la Fase 11** ([`prds/10-estado-bms.md`](./prds/10-estado-bms.md)).
+> Se conserva el texto de la petición como registro.
 
 Los puntos que se miden se llaman **BMs**, y su conjunto no es fijo:
 

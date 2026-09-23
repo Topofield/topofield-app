@@ -1,12 +1,31 @@
 # PRD-de-fase 11 — Estado de los BMs
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-23
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-23
 
 **Rama:** `fase-11-estado-bms`
 **Petición que recoge:** A2 de [`pendientes.md`](../pendientes.md)
 **Módulo:** control de asentamientos (Fase 5, [`04-asentamientos.md`](./04-asentamientos.md))
+
+> **Divergencias de la implementación** (el PRD es documento vivo hasta el
+> cierre; el detalle está en los aprendizajes de `method.md`):
+>
+> - `point_active_on` recibe las dos fechas, no el `point_id`: así es
+>   `immutable` y no consulta ninguna tabla.
+> - Un CHECK más, `settlement_points_alta_without_c0`: la decisión 5 también en
+>   la base. Sin él, un punto de alta con C0 recibiría la fecha de línea base
+>   de la visita 0.
+> - `pointInputOf` vive en `settlement.ts`, junto a `isPointActiveOn`, y no en
+>   `tolerances.ts`: un punto del catálogo no es una tolerancia.
+> - `DifferentialPair` lleva los dos asentamientos que resta y su fecha. La
+>   tabla del panel mostraba los acumulados junto a un diferencial calculado
+>   sobre el periodo común, y los números no cuadraban. Se vio en pantalla.
+> - `readingChanged` comparaba la velocidad sin la precisión de su columna, y
+>   toda lectura abierta parecía cambiada. El defecto era anterior a esta
+>   fase; salió al simular el script de resincronización.
+> - `resyncSiteReadings` ganó un modo `dryRun` para que el script simule sin
+>   duplicar la carga del histórico.
 
 ## Propósito
 
