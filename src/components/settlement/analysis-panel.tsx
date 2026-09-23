@@ -106,6 +106,7 @@ export function AnalysisPanel({
           points={points}
           differentials={differentials}
           hasReadings={hasReadings}
+          siteBaselineDate={visits[0]?.date ?? null}
         />
       </Card>
 

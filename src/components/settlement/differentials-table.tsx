@@ -7,6 +7,12 @@ interface DifferentialsTableProps {
   differentials: DifferentialPair[];
   /** Si el lugar ya tiene al menos una lectura registrada en alguna visita. */
   hasReadings: boolean;
+  /**
+   * Fecha de la primera visita del lugar (ISO): la línea base de los puntos
+   * originales. Un par medido desde una fecha posterior —periodo común con un
+   * punto de alta, Fase 11— lo dice en su fila.
+   */
+  siteBaselineDate: string | null;
 }
 
 /**
@@ -45,12 +51,9 @@ export function DifferentialsTable({
   points,
   differentials,
   hasReadings,
+  siteBaselineDate,
 }: DifferentialsTableProps) {
   const byId = new Map(points.map((p) => [p.id, p]));
-  const earliestSince = differentials.reduce(
-    (min, p) => (p.sinceDate < min ? p.sinceDate : min),
-    differentials[0]?.sinceDate ?? "",
-  );
   const pointsWithCoordinates = points.filter(
     (p) => p.northing !== null && p.easting !== null,
   ).length;
@@ -101,7 +104,11 @@ export function DifferentialsTable({
             // Un par con un punto de alta se mide sobre el periodo común
             // (Fase 11): sus dos columnas cuentan desde una fecha posterior
             // a la línea base del lugar, y la fila lo dice.
-            const fromLaterDate = pair.sinceDate > earliestSince;
+            // Contra la primera visita del lugar, no contra el mínimo de la
+            // tabla: si todos los pares que quedan son de periodo común, el
+            // mínimo ya es una fecha posterior y ninguna fila lo diría.
+            const fromLaterDate =
+              siteBaselineDate !== null && pair.sinceDate > siteBaselineDate;
             return (
               <tr
                 key={`${pair.pointIdA}-${pair.pointIdB}`}
