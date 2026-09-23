@@ -29,19 +29,77 @@ function bare(over: Partial<ReadingInput> = {}): ReadingInput {
   };
 }
 
+/**
+ * Fila de un fixture expresada por su distancia ACUMULADA, como se escribían
+ * antes de la Fase 9.
+ *
+ * Desde la Fase 9 el acumulado se deriva de las distancias por visual, así que
+ * el helper traduce: reparte el tramo respecto de la fila anterior entre las
+ * dos visuales de la armada. Los fixtures conservan así la geometría que
+ * verificaron a mano en las Fases 3-4, sin reintroducir un campo que el modelo
+ * ya no tiene.
+ *
+ * `fromAccum()` es quien hace la traducción: necesita la fila anterior.
+ */
+interface AccumRow {
+  pointCode: string;
+  pointType: PointType;
+  backsight: number | null;
+  foresight: number | null;
+  accumKm: number | null;
+}
+
 function r(
   pointCode: string,
   pointType: PointType,
   backsight: number | null,
   foresight: number | null,
-  distanceAccumulatedKm: number | null,
-): ReadingInput {
-  return bare({
-    pointCode,
-    pointType,
-    backsight,
-    foresight,
-    distanceAccumulatedKm,
+  accumKm: number | null,
+): AccumRow {
+  return { pointCode, pointType, backsight, foresight, accumKm };
+}
+
+/**
+ * Traduce filas por acumulado a filas con distancias por visual.
+ *
+ * El tramo de cada fila es la diferencia con el acumulado anterior, y se
+ * reparte entre la visual de adelante (que cierra la armada previa) y la de
+ * atrás (que abre la siguiente), según cuáles tenga la fila. Con las dos, se
+ * parte por mitades: los fixtures antiguos no distinguían, y su geometría de
+ * cotas no depende del reparto — solo el acumulado total, que se conserva.
+ */
+function fromAccum(rows: AccumRow[]): ReadingInput[] {
+  let prev = 0;
+  return rows.map((row) => {
+    const accum = row.accumKm ?? prev;
+    const tramoM = Math.max((accum - prev) * 1000, 0);
+    prev = accum;
+
+    const isIntermediate = row.pointType === "intermediate";
+    const hasFore = row.foresight != null;
+    const hasBack = row.backsight != null;
+
+    let foreDistanceM: number | null = null;
+    let backDistanceM: number | null = null;
+    if (!isIntermediate && tramoM > 0) {
+      if (hasFore && hasBack) {
+        foreDistanceM = tramoM / 2;
+        backDistanceM = tramoM / 2;
+      } else if (hasFore) {
+        foreDistanceM = tramoM;
+      } else if (hasBack) {
+        backDistanceM = tramoM;
+      }
+    }
+
+    return bare({
+      pointCode: row.pointCode,
+      pointType: row.pointType,
+      backsight: row.backsight,
+      foresight: row.foresight,
+      backDistanceM,
+      foreDistanceM,
+    });
   });
 }
 
@@ -59,6 +117,72 @@ describe("stadiaDistance", () => {
 
   it("admite otra constante estadimétrica", () => {
     expect(stadiaDistance(1.5, 1.3, 50)).toBeCloseTo(10.0, 6);
+  });
+});
+
+describe("computeLeveling con la cadena derivada", () => {
+  it("el BM final cierra EXACTAMENTE contra su cota conocida", () => {
+    // La prueba que el contrato del JSDoc nunca pudo hacer. Antes de la Fase 9
+    // una fila con el acumulado mal puesto dejaba el cierre en 99.992 mientras
+    // el proceso informaba que cumplía.
+    const result = computeLeveling({
+      type: "closed",
+      startElevation: 100.0,
+      endElevation: null,
+      order: "tercer_orden",
+      forward: [
+        bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: 150 }),
+        bare({ pointCode: "PC-1", pointType: "pc", foresight: 1.2, backsight: 2.0,
+               foreDistanceM: 150, backDistanceM: 150 }),
+        bare({ pointCode: "PC-2", pointType: "pc", foresight: 2.5, backsight: 1.0,
+               foreDistanceM: 150, backDistanceM: 150 }),
+        bare({ pointCode: "BM-1", pointType: "bm", foresight: 0.808, foreDistanceM: 150 }),
+      ],
+      return: null,
+    });
+
+    const last = result.forward.readings[result.forward.readings.length - 1];
+    expect(last.elevationCorrected).toBeCloseTo(100.0, 10);
+  });
+
+  it("deriva totalDistanceKm de las lecturas", () => {
+    const result = computeLeveling({
+      type: "closed", startElevation: 100, endElevation: null, order: "tercer_orden",
+      forward: [
+        bare({ pointType: "bm", backsight: 1.5, backDistanceM: 450 }),
+        bare({ pointType: "bm", foresight: 1.5, foreDistanceM: 450 }),
+      ],
+      return: null,
+    });
+    // 900 m → K·√0.9 con K=12
+    expect(result.toleranceMm).toBeCloseTo(12 * Math.sqrt(0.9), 6);
+  });
+
+  it("sin distancias no calcula tolerancia, y no produce NaN", () => {
+    const result = computeLeveling({
+      type: "closed", startElevation: 100, endElevation: null, order: "tercer_orden",
+      forward: [
+        bare({ pointType: "bm", backsight: 1.5 }),
+        bare({ pointType: "bm", foresight: 1.5 }),
+      ],
+      return: null,
+    });
+    expect(result.toleranceMm).toBeNull();
+    expect(result.meetsTolerance).toBeNull();
+    expect(result.closureErrorMm).not.toBeNaN();
+  });
+
+  it("escribe el acumulado derivado en cada fila", () => {
+    const result = computeLeveling({
+      type: "closed", startElevation: 100, endElevation: null, order: "tercer_orden",
+      forward: [
+        bare({ pointType: "bm", backsight: 1.5, backDistanceM: 300 }),
+        bare({ pointType: "bm", foresight: 1.5, foreDistanceM: 300 }),
+      ],
+      return: null,
+    });
+    expect(result.forward.readings[0].distanceAccumulatedKm).toBeCloseTo(0.3, 9);
+    expect(result.forward.readings[1].distanceAccumulatedKm).toBeCloseTo(0.6, 9);
   });
 });
 
@@ -192,12 +316,12 @@ describe("distanceFromWires", () => {
 // Fixture verificado a mano. Circuito cerrado de 0.900 km que sale del BM-1
 // (cota 100.000) y regresa a él con un error deliberado de −8.0 mm.
 //   ΣL.At = 4.500 · ΣL.Ad = 4.508 · diferencia = −0.008 = Δcota. Cuadra.
-const CLOSED_RUN: ReadingInput[] = [
+const CLOSED_RUN: ReadingInput[] = fromAccum([
   r("BM-1", "bm", 1.5, null, 0.0),
   r("PC-1", "pc", 2.0, 1.2, 0.3),
   r("PC-2", "pc", 1.0, 2.5, 0.6),
   r("BM-1", "bm", null, 0.808, 0.9),
-];
+]);
 
 describe("computeRun — cálculo base", () => {
   const run = computeRun(CLOSED_RUN, 100.0);
@@ -237,12 +361,12 @@ describe("computeRun — cálculo base", () => {
 
 describe("computeRun — puntos intermedios", () => {
   // Un intermedio cuelga de la AI vigente y NO la actualiza.
-  const withIntermediate: ReadingInput[] = [
+  const withIntermediate: ReadingInput[] = fromAccum([
     r("BM-1", "bm", 1.5, null, 0.0),
     r("A", "intermediate", null, 1.1, 0.1),
     r("PC-1", "pc", 2.0, 1.2, 0.3),
     r("BM-2", "bm", null, 2.5, 0.6),
-  ];
+  ]);
   const run = computeRun(withIntermediate, 100.0);
 
   it("calcula la cota del intermedio contra la AI vigente", () => {
@@ -329,11 +453,11 @@ describe("computeLeveling — cerrada", () => {
 
 describe("computeLeveling — enlace", () => {
   // BM-A 250.000 → BM-B conocida 248.700. Cadena que llega a 248.685: −15 mm.
-  const linkRun: ReadingInput[] = [
+  const linkRun: ReadingInput[] = fromAccum([
     r("BM-A", "bm", 1.0, null, 0.0),
     r("PC-1", "pc", 2.0, 1.5, 1.1),
     r("BM-B", "bm", null, 2.815, 2.2),
-  ];
+  ]);
   const result = computeLeveling({
     type: "link",
     startElevation: 250.0,
@@ -464,11 +588,11 @@ describe("computeLeveling — ida y vuelta", () => {
   // distinto número de armadas que la ida. Solo comparten los BM extremos.
   //   ida:    3 armadas, Δh = −0.008
   //   vuelta: 2 armadas, Δh = +0.010 (sentido opuesto)
-  const returnRun: ReadingInput[] = [
+  const returnRun: ReadingInput[] = fromAccum([
     r("BM-1", "bm", 1.2, null, 0.0),
     r("PV-1", "pc", 1.6, 0.9, 0.45),
     r("BM-1", "bm", null, 1.89, 0.9),
-  ];
+  ]);
 
   const result = computeLeveling({
     ...CLOSED_INPUT,
@@ -534,13 +658,13 @@ describe("computeLeveling — el cierre usa la cota de la CADENA, no la última 
   // práctica de campo, pero es exactamente el escenario que hace que el
   // bug se manifieste: una fila después del BM de cierre con una AI
   // vigente y lectura adelante 0.805, tal como lo reportó la revisión).
-  const closedRunWithBacksightAtClose: ReadingInput[] = [
+  const closedRunWithBacksightAtClose: ReadingInput[] = fromAccum([
     r("BM-1", "bm", 1.5, null, 0.0),
     r("PC-1", "pc", 2.0, 1.2, 0.3),
     r("PC-2", "pc", 1.0, 2.5, 0.6),
     r("BM-1", "bm", 1.5, 0.808, 0.9), // BM de cierre, ahora con L.At propia
     r("RAD-1", "intermediate", null, 0.805, 0.9), // radiación tras el cierre
-  ];
+  ]);
 
   const result = computeLeveling({
     ...CLOSED_INPUT,
@@ -562,13 +686,13 @@ describe("computeLeveling — el cierre usa la cota de la CADENA, no la última 
     // normal de un intermedio interior, ya cubierto en el describe de
     // "computeRun — puntos intermedios" pero verificado aquí también a
     // nivel de computeLeveling end-to-end.
-    const withMiddleIntermediate: ReadingInput[] = [
+    const withMiddleIntermediate: ReadingInput[] = fromAccum([
       r("BM-1", "bm", 1.5, null, 0.0),
       r("A", "intermediate", null, 1.1, 0.1),
       r("PC-1", "pc", 2.0, 1.2, 0.3),
       r("PC-2", "pc", 1.0, 2.5, 0.6),
       r("BM-1", "bm", null, 0.808, 0.9),
-    ];
+    ]);
     const midResult = computeLeveling({
       ...CLOSED_INPUT,
       forward: withMiddleIntermediate,
@@ -581,12 +705,12 @@ describe("computeLeveling — el cierre usa la cota de la CADENA, no la última 
   });
 
   it("el error de cierre de la VUELTA también usa la cadena, no la última fila", () => {
-    const returnWithTrailingIntermediate: ReadingInput[] = [
+    const returnWithTrailingIntermediate: ReadingInput[] = fromAccum([
       r("BM-1", "bm", 1.2, null, 0.0),
       r("PV-1", "pc", 1.6, 0.9, 0.45),
       r("BM-1", "bm", 1.0, 1.89, 0.9), // BM de cierre de la vuelta, con L.At
       r("RAD-V", "intermediate", null, 0.5, 0.9), // radiación tras el cierre
-    ];
+    ]);
     const rtResult = computeLeveling({
       ...CLOSED_INPUT,
       return: returnWithTrailingIntermediate,
@@ -608,28 +732,32 @@ describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea
   // sola lectura. El error de cierre SÍ debe seguir calculándose: no depende
   // de la distancia.
 
-  it("con totalDistanceKm NaN dejar tolerancia y cumplimiento en null, sin tocar el error de cierre", () => {
-    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: Number.NaN });
+  // Desde la Fase 9 la distancia NO se teclea, así que `NaN` y los negativos
+  // dejan de ser representables: la entrada inválida llega ahora por una sola
+  // puerta, una libreta SIN distancias capturadas. La protección sigue siendo
+  // la misma y estos tests la ejercen por esa puerta.
+  const SIN_DISTANCIAS: ReadingInput[] = [
+    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5 }),
+    bare({ pointCode: "PC-1", pointType: "pc", foresight: 1.2, backsight: 2.0 }),
+    bare({ pointCode: "PC-2", pointType: "pc", foresight: 2.5, backsight: 1.0 }),
+    bare({ pointCode: "BM-1", pointType: "bm", foresight: 0.808 }),
+  ];
+
+  it("sin distancias capturadas deja tolerancia y cumplimiento en null, sin tocar el error de cierre", () => {
+    const result = computeLeveling({ ...CLOSED_INPUT, forward: SIN_DISTANCIAS });
     expect(result.closureErrorMm).toBeCloseTo(-8.0, 4);
     expect(result.toleranceMm).toBeNull();
     expect(result.meetsTolerance).toBeNull();
   });
 
-  it("con totalDistanceKm = 0 dejar tolerancia y cumplimiento en null", () => {
-    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: 0 });
-    expect(result.closureErrorMm).toBeCloseTo(-8.0, 4);
-    expect(result.toleranceMm).toBeNull();
-    expect(result.meetsTolerance).toBeNull();
-  });
-
-  it("con totalDistanceKm negativo dejar tolerancia y cumplimiento en null", () => {
-    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: -1 });
+  it("una libreta vacía deja tolerancia y cumplimiento en null", () => {
+    const result = computeLeveling({ ...CLOSED_INPUT, forward: [] });
     expect(result.toleranceMm).toBeNull();
     expect(result.meetsTolerance).toBeNull();
   });
 
   it("no aplica corrección proporcional sin tolerancia calculable", () => {
-    const result = computeLeveling({ ...CLOSED_INPUT, totalDistanceKm: Number.NaN });
+    const result = computeLeveling({ ...CLOSED_INPUT, forward: SIN_DISTANCIAS });
     for (const reading of result.forward.readings) {
       expect(reading.correctionApplied).toBe(0);
       expect(reading.elevationCorrected).toBeCloseTo(
@@ -639,16 +767,16 @@ describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea
     }
   });
 
-  it("en ida y vuelta, con totalDistanceKm NaN deja discrepancyToleranceMm y meetsDiscrepancy en null", () => {
-    const returnRun: ReadingInput[] = [
-      r("BM-1", "bm", 1.2, null, 0.0),
-      r("PV-1", "pc", 1.6, 0.9, 0.45),
-      r("BM-1", "bm", null, 1.89, 0.9),
+  it("en ida y vuelta, sin distancias deja discrepancyToleranceMm y meetsDiscrepancy en null", () => {
+    const returnSinDistancias: ReadingInput[] = [
+      bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.2 }),
+      bare({ pointCode: "PV-1", pointType: "pc", foresight: 0.9, backsight: 1.6 }),
+      bare({ pointCode: "BM-1", pointType: "bm", foresight: 1.89 }),
     ];
     const result = computeLeveling({
       ...CLOSED_INPUT,
-      totalDistanceKm: Number.NaN,
-      return: returnRun,
+      forward: SIN_DISTANCIAS,
+      return: returnSinDistancias,
     });
     // La discrepancia en sí (no depende de K, solo de los dos desniveles) se
     // sigue calculando; solo la tolerancia contra la que se compara queda null.
@@ -658,11 +786,11 @@ describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea
   });
 
   it("no produce NaN en ningún campo numérico del resultado", () => {
-    const returnRun: ReadingInput[] = [
+    const returnRun: ReadingInput[] = fromAccum([
       r("BM-1", "bm", 1.2, null, 0.0),
       r("PV-1", "pc", 1.6, 0.9, 0.45),
       r("BM-1", "bm", null, 1.89, 0.9),
-    ];
+    ]);
     const result = computeLeveling({
       ...CLOSED_INPUT,
       totalDistanceKm: Number.NaN,

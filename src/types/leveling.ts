@@ -97,8 +97,11 @@ export interface LevelingInput {
   /** Cota conocida del BM de llegada. Solo `link`; null en el resto. */
   endElevation: number | null;
   order: PrecisionOrder;
-  /** Distancia del recorrido en UN solo sentido, en km (decisión #9). */
-  totalDistanceKm: number;
+  /**
+   * La distancia total NO viaja en el input desde la Fase 9: se deriva de las
+   * distancias por visual de `forward` con `totalDistanceFromReadings`. Ver
+   * `computeLeveling`.
+   */
   forward: ReadingInput[];
   /** Recorrido de vuelta, independiente de la ida (decisión #2). */
   return: ReadingInput[] | null;

@@ -142,7 +142,12 @@ export function computeRun(
   let sumBacksights = 0;
   let sumForesights = 0;
 
-  const computed: ComputedReading[] = readings.map((reading) => {
+  // El acumulado se DERIVA de las distancias por visual; ya no viene tecleado.
+  // Eso hace que el acumulado de la fila terminal y el total del recorrido
+  // sean el mismo número por construcción.
+  const accumulated = accumulateDistances(readings);
+
+  const computed: ComputedReading[] = readings.map((reading, index) => {
     const isIntermediate = reading.pointType === "intermediate";
     let rowElevation = currentElevation;
     let rowInstrumentHeight: number | null = null;
@@ -165,6 +170,7 @@ export function computeRun(
 
     return {
       ...reading,
+      distanceAccumulatedKm: accumulated[index] / 1000,
       instrumentHeight: rowInstrumentHeight,
       elevationCalculated: rowElevation,
       elevationCorrected: rowElevation,
@@ -204,15 +210,15 @@ export function computeRun(
  * corrección de la armada de la que cuelgan: se interpola por su propia
  * distancia acumulada, que es la de esa armada.
  *
- * CONTRATO: el cierre exacto del punto final depende de que su fila traiga
- * `distanceAccumulatedKm` no nulo e igual a `totalDistanceKm`. Una fila con
- * `distanceAccumulatedKm: null` se trata como si estuviera en el origen
- * (`?? 0`) y por tanto recibe corrección 0, NO el reparto que le
- * correspondería. Si la fila del punto final llega con distancia nula, el
- * cierre exacto no se produce y el resultado queda sin corregir en silencio
- * — esta función no valida datos de entrada, solo reparte con la distancia
- * que recibe. Detectar filas con distancia faltante es responsabilidad de la
- * capa de validadores (`src/lib/validators/leveling.ts`, Tarea 7).
+ * INVARIANTE (desde la Fase 9): `distanceAccumulatedKm` ya no se teclea — lo
+ * deriva `accumulateDistances` de las distancias por visual—, así que el
+ * acumulado de la fila terminal es igual a `totalDistanceKm` por construcción.
+ * El punto final cierra por tanto exactamente contra su cota conocida.
+ *
+ * Antes de la Fase 9 esto era un contrato NO verificado: una fila terminal con
+ * el acumulado mal puesto dejaba el cierre descompensado en silencio, con el
+ * proceso reportando conformidad. Medido en la Fase 4: 99.992 en vez de
+ * 100.000, con los −8 mm intactos.
  */
 export function applyProportionalCorrection(
   readings: ComputedReading[],
@@ -271,18 +277,19 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
   const forward = computeRun(input.forward, input.startElevation);
   const known = knownClosingElevation(input);
 
-  // El formulario de creación no pide la distancia total (vive solo en el
-  // editor), así que un proceso recién creado llega aquí con
-  // `totalDistanceKm: Number.NaN` (ver `buildInput` en `leveling-editor.tsx`).
-  // Sin una distancia finita y positiva no hay con qué evaluar K·√D: NO se
-  // puede calcular la tolerancia, así que se deja en `null` en vez de dejar
-  // que `levelingTolerance` propague `NaN` (que además vuelve `meetsTolerance`
-  // `false` sin más — un "no cumple" que no significa nada porque toda
-  // comparación con `NaN` es `false`). El error de cierre SÍ es independiente
-  // de la distancia (compara cotas, no depende de K·√D) y se sigue calculando
-  // igual.
+  // La distancia ya no se teclea: se deriva de las distancias por visual de la
+  // propia libreta. Eso hace que el acumulado terminal y el total sean el
+  // mismo número por construcción, y con ello que el punto de cierre cierre
+  // exacto contra su cota conocida.
+  const totalDistanceKm = totalDistanceFromReadings(input.forward);
+
+  // Una libreta sin distancias capturadas da 0. Sin distancia no hay con qué
+  // evaluar K·√D, así que la tolerancia queda en `null` en vez de propagar
+  // `NaN` (que además volvería `meetsTolerance` `false` sin significar nada,
+  // porque toda comparación con `NaN` es `false`). El error de cierre SÍ es
+  // independiente de la distancia y se sigue calculando igual.
   const hasValidDistance =
-    Number.isFinite(input.totalDistanceKm) && input.totalDistanceKm > 0;
+    Number.isFinite(totalDistanceKm) && totalDistanceKm > 0;
 
   let closureErrorMm: number | null = null;
   let toleranceMm: number | null = null;
@@ -293,7 +300,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     closureErrorMm = (forward.finalElevation - known) * 1000;
 
     if (hasValidDistance) {
-      toleranceMm = levelingTolerance(input.order, input.totalDistanceKm);
+      toleranceMm = levelingTolerance(input.order, totalDistanceKm);
       meetsTolerance = Math.abs(closureErrorMm) <= toleranceMm;
 
       // Solo se compensa un trabajo que cumple la tolerancia. Si no cumple,
@@ -302,7 +309,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
         readings = applyProportionalCorrection(
           forward.readings,
           closureErrorMm,
-          input.totalDistanceKm,
+          totalDistanceKm,
         );
       }
     }
@@ -331,9 +338,19 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
 
     discrepancyMm =
       Math.abs(forward.heightDifference + back.heightDifference) * 1000;
-    if (hasValidDistance) {
+    // La vuelta tiene su propia distancia: es otra medición, con otras armadas
+    // y a menudo otra longitud. En la cartera de El Verjón la ida mide 384.3 m
+    // y la vuelta 397.6 m. Se evalúa con la MENOR de las dos, que es el
+    // criterio conservador — la hoja de El Verjón juzga el cierre con la
+    // distancia del recorrido contrario, que es arbitrario.
+    const returnDistanceKm = totalDistanceFromReadings(input.return);
+    const pairDistanceKm = Math.min(
+      totalDistanceKm || Number.POSITIVE_INFINITY,
+      returnDistanceKm || Number.POSITIVE_INFINITY,
+    );
+    if (Number.isFinite(pairDistanceKm) && pairDistanceKm > 0) {
       discrepancyToleranceMm =
-        levelingTolerance(input.order, input.totalDistanceKm) * Math.SQRT2;
+        levelingTolerance(input.order, pairDistanceKm) * Math.SQRT2;
       meetsDiscrepancy = discrepancyMm <= discrepancyToleranceMm;
     }
     adoptedHeightDifference =
