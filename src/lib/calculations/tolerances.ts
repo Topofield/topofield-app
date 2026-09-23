@@ -69,6 +69,37 @@ export const LEVELING_TOLERANCE_K: Record<PrecisionOrder, number> = {
 };
 
 /**
+ * Equilibrado de visuales: diferencia máxima admisible entre la distancia a
+ * la mira de atrás y la de adelante dentro de una misma armada, en metros.
+ *
+ * Equilibrar las visuales cancela el error de colimación del nivel: si la
+ * visual sale inclinada, el mismo error entra con signo opuesto en las dos
+ * lecturas y se anula al restarlas. Cuanto más exigente el orden, menos
+ * desequilibrio se admite.
+ *
+ * Esta validación quedó pendiente desde la Fase 4, que registró como deuda que
+ * una sola `distance_m` por fila no permitía comprobarla: el equilibrado
+ * compara d_atrás con d_adelante DENTRO de una armada. La Fase 9 captura las
+ * dos distancias por separado y la deuda se paga aquí.
+ */
+export const SIGHT_BALANCE_LIMIT_M: Record<PrecisionOrder, number> = {
+  primer_orden: 2,
+  segundo_orden: 3,
+  tercer_orden: 4,
+  ordinario: 6,
+};
+
+/**
+ * Tolerancia de la comprobación del hilo medio, en metros.
+ *
+ * El hilo medio debe ser el promedio de los otros dos: `m = (HS + HI)/2`. La
+ * cifra es de lectura de mira, no de cálculo: 2 mm admite el error de
+ * apreciación al leer tres hilos sobre una mira centimetrada sin dejar pasar
+ * una transcripción equivocada.
+ */
+export const MIDDLE_WIRE_TOLERANCE_M = 0.002;
+
+/**
  * Tolerancia de cierre de nivelación en milímetros: K·√D_km.
  *
  * IMPORTANTE: `distanceKm` es la longitud del recorrido en UN SOLO SENTIDO,
