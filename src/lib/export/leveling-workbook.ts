@@ -105,14 +105,14 @@ function sheetRawData(
     "Orden",
     "Punto",
     "Tipo",
-    "HS atrás",
-    "Atrás (m)",
-    "HI atrás",
-    "Dist atrás (m)",
-    "HS adelante",
-    "Adelante (m)",
-    "HI adelante",
-    "Dist adelante (m)",
+    "HS V+",
+    "V+ (m)",
+    "HI V+",
+    "Dist V+ (m)",
+    "HS V−",
+    "V− (m)",
+    "HI V−",
+    "Dist V− (m)",
   ]);
 
   const formats = [

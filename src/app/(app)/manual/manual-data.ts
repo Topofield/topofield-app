@@ -293,17 +293,17 @@ export const TIPOS_PUNTO_NIVELACION = [
     tipo: "BM",
     hace: "Banco de nivel, de cota conocida. Ancla el recorrido",
     lecturas:
-      "La primera fila solo lleva atrás; la última, si es BM, solo lleva adelante",
+      "La primera fila solo lleva V+; la última, si es BM, solo lleva V−",
   },
   {
     tipo: "Punto de cambio",
     hace: "Transmite la cota de una armada a la siguiente",
-    lecturas: "Atrás y adelante (salvo en los extremos)",
+    lecturas: "V+ y V− (salvo en los extremos)",
   },
   {
     tipo: "Intermedio (radiación)",
     hace: "Solo se lee para conocer su cota, sin continuar el recorrido a través de él",
-    lecturas: "Solo adelante",
+    lecturas: "Solo V−",
   },
 ];
 
@@ -440,7 +440,7 @@ export const PREGUNTAS: Pregunta[] = [
     pregunta:
       "Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición está bien?",
     respuesta:
-      "No. La comprobación aritmética (ΣL.Atrás − ΣL.Adelante = desnivel total) solo valida que las cuentas de gabinete están bien hechas: cuadra igual con un nivel descolimado. La calidad de la medición la juzga el error de cierre contra la tolerancia K·√D.",
+      "No. La comprobación aritmética (ΣV+ − ΣV− = desnivel total) solo valida que las cuentas de gabinete están bien hechas: cuadra igual con un nivel descolimado. La calidad de la medición la juzga el error de cierre contra la tolerancia K·√D.",
   },
   {
     pregunta: "¿Por qué una fila de mi libreta de nivelación no admite corrección?",

@@ -367,16 +367,19 @@ compensar.
 
 La libreta es una fila por punto. Cada fila puede llevar dos lecturas:
 
-- **Lectura atrás (L.Atrás)** — la primera que se toma tras estacionar el
-  nivel. Con ella se **abre la armada siguiente**: fija la altura del
-  instrumento (AI) que usarán las filas venideras.
-- **Lectura adelante (L.Adelante)** — **fija la cota del punto** de la fila.
-  Viene de la armada anterior: la resta de la AI vigente.
+- **Vista más (V+)** — la primera que se toma tras estacionar el nivel. Con
+  ella se **abre la armada siguiente**: fija la altura del instrumento
+  (AI = cota + V+) que usarán las filas venideras.
+- **Vista menos (V−)** — **fija la cota del punto** de la fila. Viene de la
+  armada anterior: cota = AI − V−.
 
-Por eso la columna **AI solo tiene valor en las filas que llevan lectura
-atrás**: la altura de instrumento es un dato de la armada, no de la fila. Una
-fila con solo lectura adelante (que cierra una armada sin abrir la
-siguiente) no muestra AI propia; usa la de la armada en curso.
+Los nombres dicen qué hace cada número en la cuenta: la vista más se suma y la
+vista menos se resta. Son los de la cartera de campo.
+
+Por eso la columna **AI solo tiene valor en las filas que llevan V+**: la
+altura de instrumento es un dato de la armada, no de la fila. Una fila con
+solo V− (que cierra una armada sin abrir la siguiente) no muestra AI propia;
+usa la de la armada en curso.
 
 ### 6.3 Tipos de punto
 
@@ -384,9 +387,9 @@ Cada fila indica de qué tipo es el punto que registra:
 
 | Tipo | Qué hace | Lecturas que lleva |
 |---|---|---|
-| **BM** | Banco de nivel, de cota conocida. Ancla el recorrido | La primera fila solo lleva atrás; la última, si es BM, solo lleva adelante |
-| **Punto de cambio** | Transmite la cota de una armada a la siguiente | Atrás y adelante (salvo en los extremos) |
-| **Intermedio (radiación)** | Solo se lee para conocer su cota, sin continuar el recorrido a través de él | Solo adelante |
+| **BM** | Banco de nivel, de cota conocida. Ancla el recorrido | La primera fila solo lleva V+; la última, si es BM, solo lleva V− |
+| **Punto de cambio** | Transmite la cota de una armada a la siguiente | V+ y V− (salvo en los extremos) |
+| **Intermedio (radiación)** | Solo se lee para conocer su cota, sin continuar el recorrido a través de él | Solo V− |
 
 El punto intermedio cuelga de la AI vigente pero **no propaga cota ni abre
 una armada nueva**, y por eso queda fuera de la comprobación aritmética y de
@@ -423,8 +426,8 @@ cambiar el nombre, el tipo, los BM o el orden de precisión y el equipo de
 nivel — los mismos campos del alta, editables mientras el proceso siga
 abierto.
 
-La libreta se captura por fila: punto, tipo, lecturas atrás y adelante, y la
-**distancia a cada mira**. La distancia acumulada y la distancia total del
+La libreta se captura por fila: punto, tipo, V+ y V−, y la **distancia a
+cada mira**. La distancia acumulada y la distancia total del
 recorrido **no se teclean**: la aplicación las suma sola y las muestra en solo
 lectura.
 
@@ -450,8 +453,7 @@ promedio de los otros dos. Si no cuadra, avisa: es un error de lectura o de
 transcripción.
 
 **Equilibrado de visuales.** Con las dos distancias de una armada, la
-aplicación avisa si la mira de atrás y la de adelante quedaron a distancias
-muy distintas. Equilibrarlas cancela el error de colimación del nivel, así que
+aplicación avisa si la V+ y la V− quedaron a distancias muy distintas. Equilibrarlas cancela el error de colimación del nivel, así que
 es la regla de campo más importante de la nivelación de precisión. El límite
 depende del orden: 2 m en primer orden, 3 en segundo, 4 en tercero y 6 en
 ordinario.
@@ -459,7 +461,7 @@ ordinario.
 > Con **nivel digital** el instrumento entrega la distancia y no se leen
 > hilos: se teclean la lectura y la distancia.
 
-**Comprobación aritmética.** ΣL.Atrás − ΣL.Adelante debe coincidir con el
+**Comprobación aritmética.** ΣV+ − ΣV− debe coincidir con el
 desnivel total del recorrido. Es una verificación de gabinete: confirma que
 las sumas y traslados de la libreta son correctos, **no dice nada sobre la
 calidad de la medición** — cuadra igual con un nivel descolimado. Los puntos
@@ -786,7 +788,7 @@ de si el equipo basta para el trabajo es suya, no de la aplicación.
 
 **Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición
 está bien?**
-No. La comprobación aritmética (ΣL.Atrás − ΣL.Adelante = desnivel total) solo
+No. La comprobación aritmética (ΣV+ − ΣV− = desnivel total) solo
 valida que las cuentas de gabinete están bien hechas: cuadra igual con un
 nivel descolimado. La calidad de la medición la juzga el error de cierre
 contra la tolerancia K·√D.

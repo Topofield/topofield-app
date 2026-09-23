@@ -107,10 +107,10 @@ interface ReadingsTableProps {
  * Libreta de campo editable con las columnas calculadas en vivo.
  *
  * La AI es un valor por armada, no por fila: solo se muestra en las filas
- * que llevan lectura atrás (las que abren una armada nueva). La primera fila
- * (bm) no admite lectura adelante; la última fila, si es bm, no admite
- * lectura atrás. Las filas `intermediate` no llevan lectura atrás: cuelgan
- * de la AI vigente y no propagan cota.
+ * que llevan vista más (V+), las que abren una armada nueva. La primera fila
+ * (bm) no admite vista menos (V−); la última fila, si es bm, no admite V+.
+ * Las filas `intermediate` no llevan V+: cuelgan de la AI vigente y no
+ * propagan cota.
  */
 export function ReadingsTable({
   readings,
@@ -180,21 +180,21 @@ export function ReadingsTable({
               <th className="py-2 pr-3 font-medium">Tipo</th>
               {wiresVisible && (
                 <>
-                  <th className="py-2 pr-3 font-medium">HS atrás</th>
-                  <th className="py-2 pr-3 font-medium">HI atrás</th>
+                  <th className="py-2 pr-3 font-medium">HS V+</th>
+                  <th className="py-2 pr-3 font-medium">HI V+</th>
                 </>
               )}
-              <th className="py-2 pr-3 font-medium">L.Atrás</th>
-              <th className="py-2 pr-3 font-medium">Dist atrás (m)</th>
+              <th className="py-2 pr-3 font-medium">V+</th>
+              <th className="py-2 pr-3 font-medium">Dist V+ (m)</th>
               <th className="whitespace-nowrap py-2 pr-3 font-medium">AI</th>
               {wiresVisible && (
                 <>
-                  <th className="py-2 pr-3 font-medium">HS adelante</th>
-                  <th className="py-2 pr-3 font-medium">HI adelante</th>
+                  <th className="py-2 pr-3 font-medium">HS V−</th>
+                  <th className="py-2 pr-3 font-medium">HI V−</th>
                 </>
               )}
-              <th className="py-2 pr-3 font-medium">L.Adelante</th>
-              <th className="py-2 pr-3 font-medium">Dist adelante (m)</th>
+              <th className="py-2 pr-3 font-medium">V−</th>
+              <th className="py-2 pr-3 font-medium">Dist V− (m)</th>
               <th className="whitespace-nowrap py-2 pr-3 font-medium">Dist acum (km)</th>
               <th className="whitespace-nowrap py-2 pr-3 font-medium">Cota</th>
               <th className="whitespace-nowrap py-2 pr-3 font-medium">Cota corregida</th>
@@ -208,7 +208,7 @@ export function ReadingsTable({
               const isFirst = i === 0;
               const isLast = i === readings.length - 1;
               const isIntermediate = reading.pointType === "intermediate";
-              // La primera fila no admite L.Ad; la última, si es bm, no admite L.At.
+              // La primera fila no admite V−; la última, si es bm, no admite V+.
               const foresightDisabled = disabled || isFirst;
               // Una radiación no acumula, así que su distancia no cuenta para
               // nada: dejarla editable invita a teclear metros que el total
@@ -219,7 +219,7 @@ export function ReadingsTable({
                 isIntermediate ||
                 (isLast && reading.pointType === "bm");
               // La AI es de la armada, no de la fila: solo se pinta cuando la
-              // fila lleva L.At (es la que la genera).
+              // fila lleva V+ (es la que la genera).
               const showInstrumentHeight = row?.instrumentHeight != null;
 
               return (
@@ -259,7 +259,7 @@ export function ReadingsTable({
                           type="number"
                           step="any"
                           inputMode="decimal"
-                          aria-label="Hilo superior atrás"
+                          aria-label="Hilo superior V+"
                           value={reading.backUpperM}
                           disabled={backsightDisabled}
                           error={issue?.errors.backWires}
@@ -274,7 +274,7 @@ export function ReadingsTable({
                           type="number"
                           step="any"
                           inputMode="decimal"
-                          aria-label="Hilo inferior atrás"
+                          aria-label="Hilo inferior V+"
                           value={reading.backLowerM}
                           disabled={backsightDisabled}
                           error={issue?.errors.backWires}
@@ -291,7 +291,7 @@ export function ReadingsTable({
                       type="number"
                       step="any"
                       inputMode="decimal"
-                      aria-label="Lectura atrás"
+                      aria-label="Vista más (V+)"
                       value={reading.backsight}
                       disabled={backsightDisabled}
                       error={issue?.errors.backsight}
@@ -314,7 +314,7 @@ export function ReadingsTable({
                       type="number"
                       step="any"
                       inputMode="decimal"
-                      aria-label="Distancia atrás (m)"
+                      aria-label="Distancia V+ (m)"
                       value={reading.backDistanceM}
                       disabled={backsightDisabled}
                       error={issue?.errors.backDistanceM}
@@ -336,7 +336,7 @@ export function ReadingsTable({
                           type="number"
                           step="any"
                           inputMode="decimal"
-                          aria-label="Hilo superior adelante"
+                          aria-label="Hilo superior V−"
                           value={reading.foreUpperM}
                           disabled={foresightDisabled}
                           error={issue?.errors.foreWires}
@@ -351,7 +351,7 @@ export function ReadingsTable({
                           type="number"
                           step="any"
                           inputMode="decimal"
-                          aria-label="Hilo inferior adelante"
+                          aria-label="Hilo inferior V−"
                           value={reading.foreLowerM}
                           disabled={foresightDisabled}
                           error={issue?.errors.foreWires}
@@ -368,7 +368,7 @@ export function ReadingsTable({
                       type="number"
                       step="any"
                       inputMode="decimal"
-                      aria-label="Lectura adelante"
+                      aria-label="Vista menos (V−)"
                       value={reading.foresight}
                       disabled={foresightDisabled}
                       error={issue?.errors.foresight}
@@ -391,7 +391,7 @@ export function ReadingsTable({
                       type="number"
                       step="any"
                       inputMode="decimal"
-                      aria-label="Distancia adelante (m)"
+                      aria-label="Distancia V− (m)"
                       value={reading.foreDistanceM}
                       disabled={distanceDisabled}
                       error={issue?.errors.foreDistanceM}
@@ -407,7 +407,7 @@ export function ReadingsTable({
                       }
                     />
                     {/* El equilibrado compara las DOS visuales de la armada,
-                        así que el aviso se pinta en la celda de adelante, que
+                        así que el aviso se pinta en la celda de la V−, que
                         es la segunda que el usuario teclea. */}
                     {issue?.warnings.sightBalance && (
                       <p className="mt-1 w-48 text-xs text-warning-500">

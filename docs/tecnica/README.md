@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-23 · Fase 9 cerrada · 492 tests ·
+**Última actualización:** 2026-09-23 · Fase 10 cerrada · 492 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -61,9 +61,13 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 6 | Cierre, informes, exportación | cerrada |
 | 7 | Motor y captura de poligonales | cerrada |
 | 8 | Precisión y equipo por proceso | cerrada |
-| 9 | Canvas de poligonal | pendiente |
-| 10 | Ajuste por mínimos cuadrados | pendiente |
-| 11 | Georreferenciación de levantamientos | pendiente |
+| 9 | Cadena de distancias de nivelación | cerrada |
+| 10 | Nomenclatura de nivelación | cerrada |
+| 11 | Estado de los BMs | pendiente |
+| 12 | Alerta por lectura desfasada | pendiente |
+| 13 | Canvas de poligonal | pendiente |
+| 14 | Ajuste por mínimos cuadrados | pendiente |
+| 15 | Georreferenciación de levantamientos | pendiente |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -289,6 +293,15 @@ Es lo que registra el topógrafo en su cartera, y evita pérdida por redondeo en
 la ida y vuelta.
 
 **Precisión numérica:** coordenadas a 3 decimales, cotas a 4, distancias a 3.
+
+**Nivelación: el código dice `backsight`/`foresight`, la pantalla dice `V+`/`V−`**
+(Fase 10). La interfaz, el Excel, los mensajes y los comentarios usan la
+nomenclatura de la cartera de campo —vista más y vista menos—, que describe
+qué hace el número: `AI = cota + V+`, `cota = AI − V−`. Tipos, motor, columnas
+de Postgres y los prefijos `back*`/`fore*` (`back_distance_m`, `foreUpperM`)
+conservan el vocabulario inglés estándar, igual que `pointType` se muestra como
+«Tipo de punto». El signo es U+2212, no guion. `AI`, `HS` y `HI` (altura de
+instrumento, hilo superior, hilo inferior) no cambian.
 
 **`relative_precision` se guarda como texto ya formateado** (`"1:5000"`,
 `"1:∞"`). Simplifica la lectura, pero impide ordenar numéricamente. Ver
@@ -1155,8 +1168,8 @@ se dejaron sin arreglar por acotados:
 **Equilibrado de visuales: resuelto en la Fase 9.** Era la deuda más antigua
 de nivelación — la regla de campo que cancela curvatura, refracción y
 colimación— y no se validaba porque `leveling_readings.distance_m` guardaba
-una sola distancia por fila, mientras el equilibrado compara `d_atrás` con
-`d_adelante` dentro de una armada.
+una sola distancia por fila, mientras el equilibrado compara la distancia de
+la V+ con la de la V− dentro de una armada.
 
 La Fase 9 sustituyó esa columna por `back_distance_m` y `fore_distance_m`, una
 por visual, que es justo lo que la comparación necesitaba.
@@ -1392,6 +1405,16 @@ proyecto, la sección simplemente no se escribe.
 > con el orden y el equipo **del proceso** (de la visita más reciente en
 > asentamientos). Ver § 4, «Precisión y equipo, por proceso».
 
+**Las capturas del manual llevan el indicador «1 Issue» de Next.** En
+desarrollo, React usa `eval()` para reconstruir pilas de llamadas, y la CSP
+no incluye `'unsafe-eval'`: React lo avisa por consola y Next muestra el
+indicador rojo sobre la página. En producción no ocurre —React no usa `eval()`
+fuera de desarrollo—, pero `capturas.mjs` corre contra `npm run dev` y el
+indicador sale en las diecinueve capturas. Se vio al cerrar la Fase 10; ya
+estaba en las capturas commiteadas antes. El arreglo es de una línea en el
+script (ocultar `nextjs-portal` antes de capturar); relajar la CSP no, porque
+abriría `eval` en desarrollo solo por una captura.
+
 **CSP sin nonce (`'unsafe-inline'` en scripts y estilos).** La política que
 sirve la app permite código en línea porque Next lo inyecta y la app usa
 `style={{…}}`. Endurecerla con un nonce por petición exigiría generarlo en
@@ -1494,8 +1517,8 @@ compense su coste, y se factura por uso. El riesgo real de `<img>` —el salto d
 layout— se evita con `width`/`height` reales en cada imagen. Hay un
 `eslint-disable` puntual con esa explicación.
 
-**`loading="lazy"` en todas menos la primera.** Las diecisiete capturas suman
-4,6 MB; sin esto la página las descargaría de golpe.
+**`loading="lazy"` en todas menos la primera.** Las diecinueve capturas suman
+5,7 MB; sin esto la página las descargaría de golpe.
 
 **`Nota` propia en lugar de `Alert`.** `Alert` lleva `role="alert"` siempre, lo
 que anuncia el contenido con prioridad al lector de pantalla. Una nota

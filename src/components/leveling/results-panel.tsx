@@ -38,7 +38,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
         <div className="flex flex-col gap-4">
           {!result.arithmeticCheckOk && (
             <Alert variant="error" title="La comprobación aritmética no cuadra">
-              ΣL.Atrás − ΣL.Adelante no coincide con el desnivel total del
+              ΣV+ − ΣV− no coincide con el desnivel total del
               recorrido. Es un fallo de gabinete (suma o traslado de datos):
               cuadra igual con el nivel descolimado, así que no dice nada
               sobre la calidad de la medición. Revisa la libreta antes de
@@ -47,13 +47,13 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
           )}
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
             <div>
-              <dt className="text-neutral-500">ΣL.Atrás</dt>
+              <dt className="text-neutral-500">ΣV+</dt>
               <dd className="font-mono tabular-nums text-neutral-900">
                 {formatElevation(result.sumBacksights)}
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-500">ΣL.Adelante</dt>
+              <dt className="text-neutral-500">ΣV−</dt>
               <dd className="font-mono tabular-nums text-neutral-900">
                 {formatElevation(result.sumForesights)}
               </dd>

@@ -37,7 +37,7 @@ Los procesos de nivelación de la seed viven en el proyecto **Lote catastral**.
 - ✓ La configuración muestra tipo **Cerrada**, BM de salida **BM-1**, cota
   inicial **100.0000** y distancia total **0.9 km**.
 - ✓ La libreta de ida tiene 4 filas: `BM-1`, `PC-1`, `PC-2`, `BM-1`, con sus
-  lecturas atrás (L.At) y adelante (L.Ad).
+  vistas V+ y V−.
 
 ### 3. Cálculo en vivo — cotas de la libreta
 
@@ -46,7 +46,7 @@ Los procesos de nivelación de la seed viven en el proyecto **Lote catastral**.
   - `PC-1`: **100.3000**, altura de instrumento **102.300**.
   - `PC-2`: **99.8000**, altura de instrumento **100.800**.
   - `BM-1` (llegada): **99.9920** calculada, **100.0000** corregida.
-- ✓ La comprobación aritmética cuadra: ΣL.At (4.500) − ΣL.Ad (4.508) = −0.008 m,
+- ✓ La comprobación aritmética cuadra: ΣV+ (4.500) − ΣV− (4.508) = −0.008 m,
   igual al desnivel de cierre.
 
 ### 4. Veredicto de cierre
@@ -88,7 +88,7 @@ Los procesos de nivelación de la seed viven en el proyecto **Lote catastral**.
 
 ### 8. Validación de captura
 
-- En el nuevo proceso, dejar una fila de punto de cambio sin lectura adelante.
+- En el nuevo proceso, dejar una fila de punto de cambio sin V−.
 - ✓ La celda se marca y aparece el aviso correspondiente; el botón **Guardar**
   se deshabilita mientras haya errores de captura.
 - Restaurar la lectura para volver al estado válido.

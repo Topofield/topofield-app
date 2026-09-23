@@ -123,7 +123,7 @@ describe("validación de distancia por visual", () => {
   });
 
   it("no exige distancia a una visual que no existe", () => {
-    // La primera fila (bm) no lleva lectura adelante.
+    // La primera fila (bm) no lleva V−.
     const issues = validateReadingCapture(
       bare({ pointType: "bm", backsight: 1.5, backDistanceM: 30 }),
     );
@@ -269,7 +269,7 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
     expect(issues.errors.foresight).toBeDefined();
   });
 
-  it("advierte cuando L.At y L.Ad son exactamente iguales", () => {
+  it("advierte cuando V+ y V− son exactamente iguales", () => {
     const issues = validateReadingCapture(reading({ backsight: 1.5, foresight: 1.5 }));
     expect(issues.warnings.backsight ?? issues.warnings.foresight).toBeDefined();
     expect(issues.errors).toEqual({});
@@ -320,7 +320,7 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
 });
 
 describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () => {
-  it("rechaza una fila bm inicial sin lectura atrás", () => {
+  it("rechaza una fila bm inicial sin V+", () => {
     const readings = [
       reading({ pointCode: "BM-1", pointType: "bm", backsight: null, distanceAccumulatedKm: 0 }),
       reading({ pointCode: "PC-1", pointType: "pc" }),
@@ -330,7 +330,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
     expect(issues.at(0)?.errors.backsight).toBeDefined();
   });
 
-  it("no rechaza una fila bm final sin lectura atrás (es lo correcto: cierra el recorrido)", () => {
+  it("no rechaza una fila bm final sin V+ (es lo correcto: cierra el recorrido)", () => {
     const readings = [
       reading({ pointCode: "BM-1", pointType: "bm", foresight: null, distanceAccumulatedKm: 0 }),
       reading({ pointCode: "PC-1", pointType: "pc" }),
@@ -340,7 +340,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
     expect(issues.at(2)?.errors.backsight).toBeUndefined();
   });
 
-  it("acepta una fila bm inicial con lectura atrás presente", () => {
+  it("acepta una fila bm inicial con V+ presente", () => {
     const readings = [
       reading({ pointCode: "BM-1", pointType: "bm", foresight: null, distanceAccumulatedKm: 0 }),
       reading({ pointCode: "PC-1", pointType: "pc" }),

@@ -46,7 +46,7 @@ export interface ReadingCaptureIssues {
 const MIN_READING = 0;
 const MAX_READING = 4;
 
-// El equilibrado de visuales (|d_atrás − d_adelante| ≤ límite por orden) SÍ se
+// El equilibrado de visuales (|d_V+ − d_V−| ≤ límite por orden) SÍ se
 // valida desde la Fase 9: `backDistanceM` y `foreDistanceM` guardan una
 // distancia por visual, que es lo que la comparación necesita. La deuda que la
 // Fase 4 registró —una sola `distance_m` por fila no bastaba— queda pagada.
@@ -111,11 +111,11 @@ export function validateReadingCapture(
     const { back, fore } = resolveVisualDistances(reading);
     if (reading.backsight != null && back == null) {
       errors.backDistanceM =
-        "Falta la distancia a la mira de atrás: sin ella el recorrido no acumula.";
+        "Falta la distancia de la V+: sin ella el recorrido no acumula.";
     }
     if (reading.foresight != null && fore == null) {
       errors.foreDistanceM =
-        "Falta la distancia a la mira de adelante: sin ella el recorrido no acumula.";
+        "Falta la distancia de la V−: sin ella el recorrido no acumula.";
     }
   }
 
@@ -134,7 +134,7 @@ export function validateReadingCapture(
     reading.foresight != null &&
     reading.backsight === reading.foresight
   ) {
-    warnings.foresight = "Lectura atrás y adelante idénticas: posible error de anotación.";
+    warnings.foresight = "V+ y V− idénticas: posible error de anotación.";
   }
 
   return { errors, warnings };
@@ -186,10 +186,10 @@ export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
 /**
  * Valida una libreta completa (un recorrido), añadiendo a
  * `validateReadingCapture` el único error que depende de la POSICIÓN de la
- * fila dentro del recorrido: la lectura atrás de la fila `bm` inicial.
+ * fila dentro del recorrido: la V+ de la fila `bm` inicial.
  *
  * Por qué hace falta: `backsightDisabled` en `ReadingsTable` deshabilita la
- * celda de L.At en la última fila `bm` (la de cierre, que por definición no
+ * celda de V+ en la última fila `bm` (la de cierre, que por definición no
  * la lleva), pero la habilita en cualquier otra — incluida la primera fila
  * en el instante en que el usuario la marca como `bm` antes de agregar el
  * resto de la libreta. En ese instante es a la vez primera y última, así que
@@ -200,7 +200,7 @@ export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
  * igual. Medido en verificación de la Tarea 10.
  *
  * La fila `bm` FINAL (última del recorrido) es la única excepción legítima:
- * por definición no lleva L.At, así que aquí no se exige.
+ * por definición no lleva V+, así que aquí no se exige.
  *
  * `levelingType` habilita una segunda regla posicional (hallazgo 1 de la
  * revisión final de la Fase 4): en un recorrido `closed` o `link` la ÚLTIMA
@@ -236,14 +236,14 @@ export function validateRunCapture(
     let errors = issues.errors;
 
     // Toda fila `bm` que no sea la última de cierre abre una armada y por
-    // tanto necesita L.At. La última `bm` es la única excepción legítima:
-    // por definición cierra el recorrido y no lleva lectura atrás.
+    // tanto necesita V+. La última `bm` es la única excepción legítima:
+    // por definición cierra el recorrido y no lleva V+.
     const mustHaveBacksight = reading.pointType === "bm" && index !== lastIndex;
     if (mustHaveBacksight && reading.backsight == null) {
       errors = {
         ...errors,
         backsight:
-          "Este BM necesita la lectura atrás: sin ella la AI de su armada queda vacía y todas las cotas siguientes se desplazan.",
+          "Este BM necesita la V+: sin ella la AI de su armada queda vacía y todas las cotas siguientes se desplazan.",
       };
     }
 
@@ -284,7 +284,7 @@ export interface ClosureEvaluation {
  * resultado de cálculo (§ 5.2).
  */
 export function evaluateLevelingClosure(result: LevelingResult): ClosureEvaluation {
-  // La comprobación aritmética (ΣL.Atrás − ΣL.Adelante == desnivel total) es
+  // La comprobación aritmética (ΣV+ − ΣV− == desnivel total) es
   // un fallo estructural en los datos, no un problema de precisión: si no
   // cuadra, ningún cierre es confiable y se bloquea sin más.
   if (!result.arithmeticCheckOk) {
@@ -293,7 +293,7 @@ export function evaluateLevelingClosure(result: LevelingResult): ClosureEvaluati
       mustReject: false,
       blocked: true,
       messages: [
-        "La comprobación aritmética no cuadra: ΣL.Atrás − ΣL.Adelante no coincide con el desnivel total.",
+        "La comprobación aritmética no cuadra: ΣV+ − ΣV− no coincide con el desnivel total.",
       ],
     };
   }

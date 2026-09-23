@@ -19,7 +19,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | cerrada |
 | 8 | Precisión y equipo por proceso | [`prds/07-precision-equipo-por-proceso.md`](./prds/07-precision-equipo-por-proceso.md) | cerrada |
 | 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | cerrada |
-| 10 | Nomenclatura de nivelación | — | pendiente |
+| 10 | Nomenclatura de nivelación | [`prds/09-nomenclatura-nivelacion.md`](./prds/09-nomenclatura-nivelacion.md) | cerrada |
 | 11 | Estado de los BMs | — | pendiente |
 | 12 | Alerta por lectura desfasada | — | pendiente |
 | 13 | Canvas de poligonal | — | pendiente |
@@ -492,6 +492,52 @@ intermedia rompió la cadena de sumas. De ese número depende `K·√D`.
   nombre que el archivo ya usaba como variable local para el resultado de
   `computeRun`. Renombrarlo a `fromAccum` lo resolvió y además describe mejor
   lo que hace.
+
+### Cierre Fase 10 — Nomenclatura de nivelación (2026-09-23)
+
+Renombrado de superficie: `L.Atrás`/`L.Adelante` pasan a `V+`/`V−` en la tabla
+de captura, el panel de resultados, los mensajes de validación, el Excel, el
+manual y los comentarios. `backsight`/`foresight` no cambian en código ni en
+base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- **El barrido de cierre del criterio 6 estaba mal en los dos sentidos.** Se
+  quedaba corto porque buscaba las grafías viejas que el redactor tenía en
+  mente (`L.At`, `ectura atrás`) y dejaba pasar `HS atrás`, `Dist atrás (m)`,
+  `Atrás (m)`, seis `aria-label`, «mira de atrás» y la tabla de tipos del
+  manual. Y se pasaba porque `ista atrás` coincide con la vista atrás de la
+  **poligonal**, así que ni un renombrado completo lo habría dejado vacío.
+  Se reescribió antes de tocar código: busca `atrás|adelante` sin más y
+  excluye por texto los cuatro usos legítimos.
+- A la lista de archivos le faltaban cuatro: `types/leveling.ts`,
+  `validators/leveling.test.ts`, `tolerances.ts` y `types/settlement.ts`.
+- El informe imprimible, uno de los seis consumidores, no pinta lecturas: no
+  tenía nada que renombrar. Se miró igual.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un barrido que enumera las grafías viejas solo encuentra las que el
+  redactor recordaba.** Para un renombrado, el barrido tiene que buscar la
+  raíz (`atrás`) y listar las excepciones, no listar las variantes. Y hay que
+  correrlo **antes** de implementar: el primer resultado es el inventario real.
+  Si da falsos positivos, el criterio «debe salir vacío» es incumplible y
+  alguien acabará ignorándolo.
+- **Una renumeración de fases caduca en todos los sitios que no se tocaron el
+  mismo día.** La tabla de fases de `docs/tecnica/README.md` seguía en la
+  numeración anterior a la del 2026-09-22 («9 · Canvas de poligonal»), y el
+  cierre de la Fase 9 no lo vio porque buscó cifras y no nombres. Cuando cambia
+  un número, el `grep` tiene que buscar **el nombre** de lo que ocupaba ese
+  número. La misma búsqueda encontró «diecisiete capturas» donde hay diecinueve.
+- **Mirar la captura contra la versión anterior separa lo que la fase cambió
+  de lo que ya estaba.** El indicador «1 Issue» de Next aparece en todas las
+  capturas del manual; comparar con el PNG commiteado mostró que venía de
+  antes. Es la CSP sin `'unsafe-eval'` en desarrollo, inofensiva en
+  producción, y quedó en la § 11 en vez de colarse como arreglo en una fase de
+  rótulos.
+- **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
+  salieron distintas solo por la fecha del día. Se restauraron: solo se
+  commitea la captura cuya pantalla tocó la fase.
 
 ### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
 

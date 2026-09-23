@@ -193,9 +193,9 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
 export interface LecturaNivelacionDemo {
   code: string;
   type: PointType;
-  /** Lectura atrás (L.At): abre la armada siguiente. Es el hilo medio. */
+  /** Vista más (V+): abre la armada siguiente. Es el hilo medio. */
   back?: number;
-  /** Lectura adelante (L.Ad): cierra la armada vigente. Es el hilo medio. */
+  /** Vista menos (V−): cierra la armada vigente. Es el hilo medio. */
   fore?: number;
   /**
    * Hilos estadimétricos. El demo usa un nivel automático, así que captura

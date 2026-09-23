@@ -69,8 +69,8 @@ export const LEVELING_TOLERANCE_K: Record<PrecisionOrder, number> = {
 };
 
 /**
- * Equilibrado de visuales: diferencia máxima admisible entre la distancia a
- * la mira de atrás y la de adelante dentro de una misma armada, en metros.
+ * Equilibrado de visuales: diferencia máxima admisible entre la distancia de
+ * la V+ y la de la V− dentro de una misma armada, en metros.
  *
  * Equilibrar las visuales cancela el error de colimación del nivel: si la
  * visual sale inclinada, el mismo error entra con signo opuesto en las dos
@@ -79,7 +79,7 @@ export const LEVELING_TOLERANCE_K: Record<PrecisionOrder, number> = {
  *
  * Esta validación quedó pendiente desde la Fase 4, que registró como deuda que
  * una sola `distance_m` por fila no permitía comprobarla: el equilibrado
- * compara d_atrás con d_adelante DENTRO de una armada. La Fase 9 captura las
+ * compara d_V+ con d_V− DENTRO de una armada. La Fase 9 captura las
  * dos distancias por separado y la deuda se paga aquí.
  */
 export const SIGHT_BALANCE_LIMIT_M: Record<PrecisionOrder, number> = {

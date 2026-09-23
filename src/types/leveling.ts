@@ -21,9 +21,9 @@ export type RunType = (typeof RUN_TYPES)[number];
 /**
  * Tipo de punto en la libreta:
  * - `bm`: banco de nivel, cota conocida. Ancla el recorrido.
- * - `pc`: punto de cambio. Recibe L.Ad de una armada y L.At de la siguiente;
+ * - `pc`: punto de cambio. Recibe la V− de una armada y la V+ de la siguiente;
  *   propaga la cota entre armadas.
- * - `intermediate`: radiación. Solo recibe L.Ad, cuelga de la AI vigente, no
+ * - `intermediate`: radiación. Solo recibe V−, cuelga de la AI vigente, no
  *   propaga cota y queda FUERA de la comprobación aritmética y de la
  *   compensación.
  */
@@ -62,7 +62,7 @@ export interface ReadingInput {
   backsight: number | null;
   foresight: number | null;
   /**
-   * Hilos estadimétricos de la visual atrás. OPCIONALES: con nivel automático
+   * Hilos estadimétricos de la V+. OPCIONALES: con nivel automático
    * el topógrafo puede anotar solo la lectura y medir la distancia a cinta.
    * Verificado contra la cartera de El Verjón, donde dos armadas de doce no
    * traen el hilo inferior.
@@ -72,7 +72,7 @@ export interface ReadingInput {
    */
   backUpperM: number | null;
   backLowerM: number | null;
-  /** Ídem para la visual adelante; el hilo medio es `foresight`. */
+  /** Ídem para la V−; el hilo medio es `foresight`. */
   foreUpperM: number | null;
   foreLowerM: number | null;
   /**
@@ -116,7 +116,7 @@ export interface ComputedReading extends ReadingInput {
    */
   backDistanceResolvedM: number | null;
   foreDistanceResolvedM: number | null;
-  /** AI de la armada que abre esta fila. Null si la fila no lleva L.At. */
+  /** AI de la armada que abre esta fila. Null si la fila no lleva V+. */
   instrumentHeight: number | null;
   elevationCalculated: number;
   elevationCorrected: number;
