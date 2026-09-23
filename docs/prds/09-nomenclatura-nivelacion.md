@@ -42,12 +42,23 @@ hoja».
 
 ### Qué cambia
 
-Las **32 cadenas visibles** y los **43 comentarios en español**. Ninguna línea
-ejecutable.
+Cadenas visibles y comentarios en español del módulo de nivelación. Ninguna
+línea ejecutable.
 
-Las cifras están contadas, no estimadas — el criterio de aceptación 6 exige un
-`grep` limpio al cerrar, y con un conteo mal hecho ese barrido daría por bueno
-un renombrado parcial:
+> **Corrección al implementar.** La primera versión contaba 32 cadenas y 43
+> comentarios, y su barrido de cierre tenía dos defectos:
+>
+> - **Dejaba pasar un renombrado parcial.** No buscaba `HS atrás`,
+>   `Dist atrás (m)`, `Atrás (m)`, los seis `aria-label` de hilos y
+>   distancias, «mira de atrás», «visual atrás», `d_atrás` ni la tabla de tipos
+>   del manual («Solo adelante»). Todos son la misma lectura con otro nombre.
+> - **No podía salir vacío.** El patrón `ista atrás` coincide con la «vista
+>   atrás» de la **poligonal** (cero del círculo horizontal), que es otra
+>   magnitud y queda fuera de alcance.
+>
+> La tabla de abajo es la del primer conteo y se conserva como referencia; la
+> autoridad es el barrido del criterio 6, reescrito para buscar ampliamente y
+> excluir por nombre los únicos usos legítimos.
 
 | Archivo | Cadenas |
 |---|---|
@@ -72,6 +83,9 @@ un renombrado parcial:
 | `HS atrás` / `HI atrás` | `HS V+` / `HI V+` |
 | `HS adelante` / `HI adelante` | `HS V−` / `HI V−` |
 | `Dist atrás (m)` / `Dist adelante (m)` | `Dist V+ (m)` / `Dist V− (m)` |
+| `Hilo superior atrás` … `Distancia adelante (m)` (aria-label) | `Hilo superior V+` … `Distancia V− (m)` |
+| «Falta la distancia a la mira de atrás» (validación) | «Falta la distancia de la V+» |
+| «La primera fila solo lleva atrás…» (manual, tabla de tipos) | «…solo lleva V+…» |
 
 Y los **43 comentarios y JSDoc** que describen estas lecturas como «lectura
 atrás» / `L.At`.
@@ -117,6 +131,14 @@ divergencia que resolvería. `AI` se queda.
 | `docs/manual/README.md` | La otra copia, **en el mismo commit** |
 | `docs/testing/manual-e2e-nivelacion.md` | **Guion de pruebas manuales.** Si queda con la nomenclatura vieja manda al probador a buscar una columna que ya no existe |
 | `docs/tecnica/README.md` | Una mención, además del estado de fases |
+| `src/types/leveling.ts` | JSDoc de los tipos de punto y de los hilos *(añadido al implementar)* |
+| `src/lib/validators/leveling.test.ts` | Nombres de `it` y un comentario; el conteo de tests no cambia *(añadido)* |
+| `src/lib/calculations/tolerances.ts` | JSDoc del equilibrado (`d_atrás`) *(añadido)* |
+| `src/types/settlement.ts` | Un comentario que cita las lecturas de nivelación *(añadido)* |
+
+**El informe imprimible no pinta lecturas**, solo cotas corregidas por
+recorrido: no tiene nada que renombrar. Se mira igual, como pide la sección de
+pruebas, para confirmarlo.
 
 ## Pruebas
 
@@ -159,13 +181,18 @@ pantalla.
    Se comprueba con el barrido de cierre:
 
    ```bash
-   grep -rn "L\.At\b\|L\.Ad\b\|ectura atrás\|ectura adelante\|ista atrás\|ista adelante\|ΣL\." \
+   grep -rniE "atr[aá]s|adelante|L\.A[td]\b|ΣL" \
      --include=*.ts --include=*.tsx --include=*.mjs --include=*.md \
-     src/ scripts/ docs/manual/ docs/tecnica/ docs/testing/ | grep -v node_modules
+     src/ scripts/ docs/manual/ docs/tecnica/ docs/testing/ \
+     | grep -viE "cero en la vista atrás|project-wizard\.tsx|vuelta atrás|fases 7 en adelante"
    ```
 
-   Debe salir vacío. Los PRDs y análisis históricos quedan fuera del barrido:
-   el método los declara inmodificables.
+   Debe salir vacío. Busca **ampliamente** —cualquier «atrás» o «adelante»—
+   y excluye por texto los cuatro usos legítimos: la vista atrás de la
+   poligonal, el botón «Atrás» del asistente de proyecto, «no tiene vuelta
+   atrás» y «las fases 7 en adelante». Una exclusión nueva exige justificarla
+   aquí. Los PRDs y análisis históricos quedan fuera del barrido: el método
+   los declara inmodificables.
 7. `backsight` / `foresight` **siguen intactos** en tipos, motor, validadores y
    base de datos.
 8. `AI`, `HS` y `HI` conservan su significado actual.
@@ -183,6 +210,9 @@ pantalla.
 - **Renombrar identificadores** (`backsight`/`foresight`) en TypeScript.
 - **Renombrar columnas** de la base de datos.
 - **Cambiar `AI`, `HS` o `HI`.**
+- **La «vista atrás» de la poligonal** (`polygonal.ts`, `carteras.ts`, doc
+  técnica): es el cero del círculo horizontal en la estación, no una lectura
+  de mira. No tiene `V+` que la sustituya.
 - Los PRDs y documentos históricos ya cerrados, que conservan su texto: el
   método los declara inmodificables.
 
