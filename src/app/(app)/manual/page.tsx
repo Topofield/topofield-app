@@ -582,24 +582,29 @@ export default function ManualPage() {
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>Lectura atrás (L.Atrás)</strong> — la primera que se toma
-            tras estacionar el nivel. Con ella se <strong>abre la armada
-            siguiente</strong>: fija la altura del instrumento (AI) que usarán
-            las filas venideras.
+            <strong>Vista más (V+)</strong> — la primera que se toma tras
+            estacionar el nivel. Con ella se <strong>abre la armada
+            siguiente</strong>: fija la altura del instrumento (AI = cota + V+)
+            que usarán las filas venideras.
           </li>
           <li>
-            <strong>Lectura adelante (L.Adelante)</strong> —{" "}
+            <strong>Vista menos (V−)</strong> —{" "}
             <strong>fija la cota del punto</strong> de la fila. Viene de la
-            armada anterior: la resta de la AI vigente.
+            armada anterior: cota = AI − V−.
           </li>
         </ul>
 
         <p>
+          Los nombres dicen qué hace cada número en la cuenta: la vista más se
+          suma y la vista menos se resta. Son los de la cartera de campo.
+        </p>
+
+        <p>
           Por eso la columna <strong>AI solo tiene valor en las filas que
-          llevan lectura atrás</strong>: la altura de instrumento es un dato
-          de la armada, no de la fila. Una fila con solo lectura adelante (que
-          cierra una armada sin abrir la siguiente) no muestra AI propia; usa
-          la de la armada en curso.
+          llevan V+</strong>: la altura de instrumento es un dato de la
+          armada, no de la fila. Una fila con solo V− (que cierra una armada
+          sin abrir la siguiente) no muestra AI propia; usa la de la armada
+          en curso.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">6.3 Tipos de punto</h3>
@@ -667,8 +672,8 @@ export default function ManualPage() {
         </p>
 
         <p>
-          La libreta se captura por fila: punto, tipo, lecturas atrás y
-          adelante, y la <strong>distancia a cada mira</strong>. La distancia
+          La libreta se captura por fila: punto, tipo, V+ y V−, y la{" "}
+          <strong>distancia a cada mira</strong>. La distancia
           acumulada y la distancia total del recorrido no se teclean: la
           aplicación las suma sola y las muestra en solo lectura.
         </p>
@@ -701,8 +706,8 @@ export default function ManualPage() {
 
         <p>
           <strong>Equilibrado de visuales.</strong> Con las dos distancias de
-          una armada, la aplicación avisa si la mira de atrás y la de adelante
-          quedaron a distancias muy distintas. Equilibrarlas cancela el error
+          una armada, la aplicación avisa si la V+ y la V− quedaron a
+          distancias muy distintas. Equilibrarlas cancela el error
           de colimación del nivel, así que es la regla de campo más importante
           de la nivelación de precisión. El límite depende del orden: 2 m en
           primer orden, 3 en segundo, 4 en tercero y 6 en ordinario.
@@ -714,7 +719,7 @@ export default function ManualPage() {
         </Nota>
 
         <p>
-          <strong>Comprobación aritmética.</strong> ΣL.Atrás − ΣL.Adelante
+          <strong>Comprobación aritmética.</strong> ΣV+ − ΣV−
           debe coincidir con el desnivel total del recorrido. Es una
           verificación de gabinete: confirma que las sumas y traslados de la
           libreta son correctos,{" "}
