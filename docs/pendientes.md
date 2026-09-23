@@ -112,6 +112,28 @@ Detectado al planificar la fase de la cadena de distancias. Es la misma familia
 de hallazgo que el del cierre de la Fase 6, donde el generador de la demo
 compartía un defecto con el seed: conviene revisar ambos a la vez.
 
+### N6 · Control ida-vuelta por puntos homólogos
+
+Cuando la ida y la vuelta recorren **los mismos puntos** —práctica confirmada en
+la cartera de El Verjón, donde los 12 puntos se reocupan en orden inverso— se
+puede comparar cada punto homólogo entre los dos recorridos, no solo el desnivel
+total de la sección.
+
+La hoja lo hace en su columna `P`, y la lectura es informativa: los residuos
+crecen de `−1 mm` a `−7 mm` a lo largo del recorrido, que es la firma de un
+error sistemático repartido y no de un punto mal medido. Un único número de
+discrepancia esconde esa distinción.
+
+**No sustituye al emparejamiento por sección**, que sigue siendo el default: el
+cierre de la Fase 4 argumentó bien que reocupar los puntos de cambio debilita el
+doble recorrido —un PC mal asentado mete el mismo error con el mismo signo en
+ambos—. Lo que la cartera demuestra es que **las dos prácticas existen**, y el
+modelo debe admitir ambas: sección por defecto, homólogos cuando ida y vuelta
+comparten códigos.
+
+Análisis completo en
+[`carteras/analisis-nivelacion-verjon.md`](./carteras/analisis-nivelacion-verjon.md).
+
 ---
 
 ## Control de asentamientos
