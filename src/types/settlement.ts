@@ -130,6 +130,17 @@ export interface DifferentialPair {
   pointIdB: string;
   /** mm, siempre positivo. */
   differentialMm: number;
+  /**
+   * Asentamiento de cada punto (mm) desde `sinceDate`: los dos números cuya
+   * diferencia es `differentialMm`. Para dos puntos originales es su
+   * acumulado; para un par con un punto de alta, el asentamiento sobre el
+   * periodo común (Fase 11). Mostrar el acumulado en su lugar pondría en
+   * pantalla dos números que restados no dan el diferencial.
+   */
+  settlementAMm: number;
+  settlementBMm: number;
+  /** Fecha desde la que se miden los dos asentamientos (ISO). */
+  sinceDate: string;
   /** Distancia horizontal en m. */
   distanceM: number;
   /**

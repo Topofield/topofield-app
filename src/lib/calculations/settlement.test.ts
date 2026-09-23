@@ -566,6 +566,16 @@ describe("computeDifferentials", () => {
       expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);
     });
 
+    // La tabla del panel muestra estos dos números junto al diferencial. Antes
+    // mostraba los acumulados (−11.0 y −3.0), que restados no dan 1.0: se vio
+    // en pantalla al verificar la fase.
+    it("devuelve los dos asentamientos del periodo común, que restados dan el diferencial", () => {
+      const [pair] = computeDifferentials([A, B], [p01, p07], 500, cotaEn);
+      expect(pair?.settlementAMm).toBeCloseTo(-2.0, 6);
+      expect(pair?.settlementBMm).toBeCloseTo(-3.0, 6);
+      expect(pair?.sinceDate).toBe("2025-03-15");
+    });
+
     it("es simétrico: el orden del par no cambia el resultado", () => {
       const pairs = computeDifferentials([A, B], [p07, p01], 500, cotaEn);
       expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);

@@ -294,9 +294,13 @@ export function computeDifferentials(
       const distanceM = horizontalDistance(pointA, pointB);
       if (distanceM === null) continue;
 
-      let difference: number;
+      let settlementA: number;
+      let settlementB: number;
+      let sinceDate: string;
       if (readingA.baselineDate === readingB.baselineDate) {
-        difference = accA - accB;
+        settlementA = accA;
+        settlementB = accB;
+        sinceDate = readingA.baselineDate;
       } else {
         const t0 =
           readingA.baselineDate > readingB.baselineDate
@@ -305,10 +309,12 @@ export function computeDifferentials(
         const sinceA = settlementSince(readingA, t0);
         const sinceB = settlementSince(readingB, t0);
         if (sinceA === null || sinceB === null) continue;
-        difference = sinceA - sinceB;
+        settlementA = round(sinceA, 1);
+        settlementB = round(sinceB, 1);
+        sinceDate = t0;
       }
 
-      const differentialMm = round(Math.abs(difference), 1);
+      const differentialMm = round(Math.abs(settlementA - settlementB), 1);
       const distortionInverse =
         differentialMm === 0
           ? Number.POSITIVE_INFINITY
@@ -318,6 +324,9 @@ export function computeDifferentials(
         pointIdA: idA,
         pointIdB: idB,
         differentialMm,
+        settlementAMm: settlementA,
+        settlementBMm: settlementB,
+        sinceDate,
         distanceM,
         distortionInverse,
         exceedsLimit: distortionInverse < angularDistortionLimit,

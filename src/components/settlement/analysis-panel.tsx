@@ -45,13 +45,6 @@ export function AnalysisPanel({
   const lastVisit = visits.at(-1) ?? null;
   const hasReadings = visits.some((v) => v.readings.length > 0);
 
-  const accumulatedByPoint: Record<string, number | null> = {};
-  if (lastVisit) {
-    for (const reading of lastVisit.readings) {
-      accumulatedByPoint[reading.pointId] = reading.accumulatedSettlement;
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <Card title="Semáforo por punto (última visita)">
@@ -112,7 +105,6 @@ export function AnalysisPanel({
         <DifferentialsTable
           points={points}
           differentials={differentials}
-          accumulatedByPoint={accumulatedByPoint}
           hasReadings={hasReadings}
         />
       </Card>

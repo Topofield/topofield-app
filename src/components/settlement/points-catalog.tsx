@@ -87,7 +87,7 @@ function PointState({ point }: { point: SettlementPoint }) {
   if (point.retired_on !== null) {
     return (
       <div className="flex flex-col gap-1">
-        <Badge tone="warning" className="w-fit">
+        <Badge tone="warning" className="w-fit whitespace-nowrap">
           De baja desde el {formatDateOnly(point.retired_on)}
         </Badge>
         <span className="text-xs text-neutral-500">{point.retirement_reason}</span>
@@ -96,7 +96,9 @@ function PointState({ point }: { point: SettlementPoint }) {
   }
   if (point.active_from !== null) {
     return (
-      <Badge tone="primary">Alta el {formatDateOnly(point.active_from)}</Badge>
+      <Badge tone="primary" className="whitespace-nowrap">
+        Alta el {formatDateOnly(point.active_from)}
+      </Badge>
     );
   }
   return <Badge>Vigente</Badge>;
@@ -391,7 +393,7 @@ export function PointsCatalog({
                           </div>
                         )
                       ) : (
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                           <Button
                             size="sm"
                             variant="ghost"
@@ -449,7 +451,7 @@ export function PointsCatalog({
                 error={errors.locationDescription}
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className={isAltaForm ? "grid gap-4 sm:grid-cols-2" : "grid gap-4 sm:grid-cols-3"}>
               <Input
                 label="Norte"
                 type="number"
@@ -466,15 +468,7 @@ export function PointsCatalog({
                 onChange={set("easting")}
                 error={errors.easting}
               />
-              {isAltaForm ? (
-                <Input
-                  label="Fecha de alta"
-                  type="date"
-                  value={form.activeFrom}
-                  onChange={set("activeFrom")}
-                  error={errors.activeFrom}
-                />
-              ) : (
+              {!isAltaForm && (
                 <Input
                   label="Cota C0"
                   type="number"
@@ -485,6 +479,15 @@ export function PointsCatalog({
                 />
               )}
             </div>
+            {isAltaForm && (
+              <Input
+                label="Fecha de alta"
+                type="date"
+                value={form.activeFrom}
+                onChange={set("activeFrom")}
+                error={errors.activeFrom}
+              />
+            )}
             {isAltaForm && (
               <p className="text-sm text-neutral-500">
                 El monitoreo ya está en curso: el punto se da de alta y su

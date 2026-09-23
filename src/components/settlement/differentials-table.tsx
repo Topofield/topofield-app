@@ -1,11 +1,10 @@
 import { Badge, EmptyState } from "@/components/design-system";
+import { formatDateOnly } from "@/lib/utils/format";
 import type { DifferentialPair, PointInput } from "@/types/settlement";
 
 interface DifferentialsTableProps {
   points: PointInput[];
   differentials: DifferentialPair[];
-  /** Acumulado (mm) de cada punto en la última visita, para las columnas P1/P2. */
-  accumulatedByPoint: Record<string, number | null>;
   /** Si el lugar ya tiene al menos una lectura registrada en alguna visita. */
   hasReadings: boolean;
 }
@@ -45,10 +44,13 @@ function formatM(value: number): string {
 export function DifferentialsTable({
   points,
   differentials,
-  accumulatedByPoint,
   hasReadings,
 }: DifferentialsTableProps) {
   const byId = new Map(points.map((p) => [p.id, p]));
+  const earliestSince = differentials.reduce(
+    (min, p) => (p.sinceDate < min ? p.sinceDate : min),
+    differentials[0]?.sinceDate ?? "",
+  );
   const pointsWithCoordinates = points.filter(
     (p) => p.northing !== null && p.easting !== null,
   ).length;
@@ -96,8 +98,10 @@ export function DifferentialsTable({
           {differentials.map((pair) => {
             const pointA = byId.get(pair.pointIdA);
             const pointB = byId.get(pair.pointIdB);
-            const accA = accumulatedByPoint[pair.pointIdA] ?? null;
-            const accB = accumulatedByPoint[pair.pointIdB] ?? null;
+            // Un par con un punto de alta se mide sobre el periodo común
+            // (Fase 11): sus dos columnas cuentan desde una fecha posterior
+            // a la línea base del lugar, y la fila lo dice.
+            const fromLaterDate = pair.sinceDate > earliestSince;
             return (
               <tr
                 key={`${pair.pointIdA}-${pair.pointIdB}`}
@@ -105,12 +109,17 @@ export function DifferentialsTable({
               >
                 <td className="py-2 pr-3 font-medium text-neutral-900">
                   {(pointA?.code ?? "—")} – {(pointB?.code ?? "—")}
+                  {fromLaterDate && (
+                    <span className="block text-xs font-normal text-neutral-500">
+                      desde el {formatDateOnly(pair.sinceDate)}
+                    </span>
+                  )}
                 </td>
                 <td className="py-2 pr-3 text-neutral-700">
-                  {accA === null ? "—" : formatMm(accA)}
+                  {formatMm(pair.settlementAMm)}
                 </td>
                 <td className="py-2 pr-3 text-neutral-700">
-                  {accB === null ? "—" : formatMm(accB)}
+                  {formatMm(pair.settlementBMm)}
                 </td>
                 <td className="py-2 pr-3 text-neutral-700">
                   {formatMm(pair.differentialMm)}
