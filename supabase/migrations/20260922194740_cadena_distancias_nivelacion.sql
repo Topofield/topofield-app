@@ -66,15 +66,55 @@ where r.id = d.id
 -- Una fila terminal solo tiene visual de adelante, y una inicial solo de
 -- atrás: repartir por mitades ahí inventaría una visual que no existe. Se
 -- corrige tras el reparto, volcando el tramo entero a la visual que sí hay.
+--
+-- `nullif(..., 0)` importa: la PRIMERA fila de un recorrido tiene tramo 0 (no
+-- hay fila anterior de la que restar), así que la suma da 0. Un 0 NO es una
+-- distancia medida — es la ausencia del dato —, y escribirlo pasaría el
+-- validador, que solo rechaza `null`, dejando una visual de 0 m en silencio.
+-- La distancia real de esa primera visual atrás no está en los datos
+-- históricos: el acumulado se contaba desde el origen, así que nunca se
+-- registró.
+--
+-- CONSECUENCIA DELIBERADA: queda `null`, así que un proceso migrado abre con
+-- esa celda marcada en rojo pidiendo el dato. Es lo honesto — el dato falta de
+-- verdad—, y el total no cambia porque esos metros nunca estuvieron en el
+-- acumulado. La alternativa, dejar un `0`, pasaría el validador (que solo
+-- rechaza `null`) y dejaría una visual de 0 m en silencio, que es la clase de
+-- fallo plausible que esta fase existe para eliminar.
 update public.leveling_readings
-set back_distance_m = coalesce(back_distance_m, 0) + coalesce(fore_distance_m, 0),
+set back_distance_m = nullif(coalesce(back_distance_m, 0) + coalesce(fore_distance_m, 0), 0),
     fore_distance_m = null
-where foresight is null and backsight is not null and back_distance_m is not null;
+where foresight is null and backsight is not null;
 
 update public.leveling_readings
-set fore_distance_m = coalesce(fore_distance_m, 0) + coalesce(back_distance_m, 0),
+set fore_distance_m = nullif(coalesce(fore_distance_m, 0) + coalesce(back_distance_m, 0), 0),
     back_distance_m = null
-where backsight is null and foresight is not null and fore_distance_m is not null;
+where backsight is null and foresight is not null;
+
+-- Paso 3 del plan: recalcular el acumulado y el total desde lo derivado, para
+-- que las columnas persistidas digan lo mismo que dirá el motor al abrir el
+-- proceso. Sin esto conviven dos números que nadie comparó —el acumulado viejo
+-- tecleado y el que ahora deriva `accumulateDistances`—, que es justo la
+-- situación que esta fase existe para eliminar.
+with acumulado as (
+  select id,
+    sum(coalesce(back_distance_m, 0) + coalesce(fore_distance_m, 0))
+      over (partition by process_id, run_type order by reading_order
+            rows between unbounded preceding and current row) / 1000 as acc_km
+  from public.leveling_readings
+)
+update public.leveling_readings r
+set distance_accumulated_km = round(a.acc_km, 3)
+from acumulado a
+where r.id = a.id;
+
+update public.leveling_processes p
+set total_distance_km = coalesce((
+  select round(sum(coalesce(r.back_distance_m, 0) + coalesce(r.fore_distance_m, 0)) / 1000, 3)
+  from public.leveling_readings r
+  where r.process_id = p.id and r.run_type = 'forward'
+), 0)
+where exists (select 1 from public.leveling_readings r where r.process_id = p.id);
 
 update public.leveling_processes p
 set distances_reconstructed = true

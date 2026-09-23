@@ -120,7 +120,12 @@ export async function saveLevelingProcessAction(
   // directa a esta acción podría guardar una libreta que la interfaz habría
   // bloqueado. Antes solo se recalculaban los resultados, de modo que los
   // números eran del servidor pero los datos de campo no se comprobaban.
-  const forwardIssues = validateRunCapture(input.forward, input.type);
+  const forwardIssues = validateRunCapture(
+    input.forward,
+    input.type,
+    payload.precisionOrder,
+    false,
+  );
   if (hasReadingErrors(forwardIssues)) {
     return {
       ok: false,
@@ -128,7 +133,12 @@ export async function saveLevelingProcessAction(
     };
   }
   if (input.return) {
-    const returnIssues = validateRunCapture(input.return, input.type);
+    const returnIssues = validateRunCapture(
+      input.return,
+      input.type,
+      payload.precisionOrder,
+      false,
+    );
     if (hasReadingErrors(returnIssues)) {
       return {
         ok: false,
@@ -163,6 +173,14 @@ export async function saveLevelingProcessAction(
       end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
       has_return_run: payload.hasReturnRun,
       total_distance_km: totalDistanceKm,
+      // Guardar reemplaza la libreta entera, así que las distancias dejan de
+      // ser las que inventó el backfill de la Fase 9 repartiendo por mitades.
+      // Sin esto el proceso quedaba marcado para siempre: el banner seguiría
+      // afirmando que sus distancias son reconstruidas —falso sobre datos ya
+      // medidos en campo, en una aplicación cuyo tema es la trazabilidad— y el
+      // equilibrado quedaría suprimido justo sobre las distancias reales que
+      // sí permiten evaluarlo.
+      distances_reconstructed: false,
       precision_order: payload.precisionOrder,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,

@@ -391,11 +391,25 @@ export function ReadingsTable({
                       value={reading.foreDistanceM}
                       disabled={foresightDisabled}
                       error={issue?.errors.foreDistanceM}
-                      className="w-24"
+                      className={cn(
+                        "w-24",
+                        warningClass(
+                          issue?.errors.foreDistanceM,
+                          issue?.warnings.sightBalance,
+                        ),
+                      )}
                       onChange={(e) =>
                         update(i, { foreDistanceM: e.target.value })
                       }
                     />
+                    {/* El equilibrado compara las DOS visuales de la armada,
+                        así que el aviso se pinta en la celda de adelante, que
+                        es la segunda que el usuario teclea. */}
+                    {issue?.warnings.sightBalance && (
+                      <p className="mt-1 w-48 text-xs text-warning-500">
+                        {issue.warnings.sightBalance}
+                      </p>
+                    )}
                   </td>
                   {/* Derivada: la calcula el motor desde las distancias por
                       visual. Solo lectura — que se teclease era la causa de

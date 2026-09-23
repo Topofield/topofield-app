@@ -131,6 +131,59 @@ describe("validación de distancia por visual", () => {
   });
 });
 
+describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
+  // validateSightBalance existía, estaba probada y NO la llamaba nadie: el
+  // criterio de aceptación 8 de la fase no se cumplía. Estos tests van por
+  // validateRunCapture, que es la puerta por la que pasan las filas de verdad
+  // (la usan el editor y el Server Action).
+  const armada = (over: Partial<ReadingInput> = {}) => [
+    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: 30 }),
+    bare({
+      pointCode: "PC-1", pointType: "pc",
+      foresight: 1.2, backsight: 2.0,
+      foreDistanceM: 30, backDistanceM: 30,
+      ...over,
+    }),
+    bare({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, foreDistanceM: 30 }),
+  ];
+
+  it("avisa del desequilibrio desde validateRunCapture", () => {
+    // tercer_orden admite 4 m; aquí hay 20.
+    const issues = validateRunCapture(
+      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      "closed",
+      "tercer_orden",
+      false,
+    );
+    expect(issues[1]?.warnings.sightBalance).toBeDefined();
+  });
+
+  it("no avisa cuando las visuales están equilibradas", () => {
+    const issues = validateRunCapture(armada(), "closed", "tercer_orden", false);
+    expect(issues[1]?.warnings.sightBalance).toBeUndefined();
+  });
+
+  it("no lo evalúa en un proceso reconstruido por el backfill", () => {
+    const issues = validateRunCapture(
+      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      "closed",
+      "tercer_orden",
+      true,
+    );
+    expect(issues[1]?.warnings.sightBalance).toBeUndefined();
+  });
+
+  it("el aviso NO bloquea el guardado", () => {
+    const issues = validateRunCapture(
+      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      "closed",
+      "tercer_orden",
+      false,
+    );
+    expect(hasReadingErrors(issues)).toBe(false);
+  });
+});
+
 describe("equilibrado de visuales", () => {
   it("avisa cuando la diferencia pasa del límite del orden", () => {
     // tercer_orden admite 4 m; aquí hay 20.

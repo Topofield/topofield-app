@@ -216,11 +216,23 @@ export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
 export function validateRunCapture(
   readings: ReadingInput[],
   levelingType: LevelingType,
+  /**
+   * Orden de precisión del proceso y si sus distancias las reconstruyó el
+   * backfill. Gobiernan el equilibrado de visuales, que se evalúa aquí porque
+   * esta es la puerta por la que pasan las filas de verdad.
+   */
+  order: PrecisionOrder = "tercer_orden",
+  distancesReconstructed = false,
 ): ReadingCaptureIssues[] {
   const lastIndex = readings.length - 1;
   const mustEndInBm = levelingType !== "open";
   return readings.map((reading, index) => {
     const issues = validateReadingCapture(reading);
+    const balance = validateSightBalance(
+      reading,
+      order,
+      distancesReconstructed,
+    );
     let errors = issues.errors;
 
     // Toda fila `bm` que no sea la última de cierre abre una armada y por
@@ -247,7 +259,10 @@ export function validateRunCapture(
       };
     }
 
-    return errors === issues.errors ? issues : { ...issues, errors };
+    return {
+      errors,
+      warnings: { ...issues.warnings, ...balance.warnings },
+    };
   });
 }
 

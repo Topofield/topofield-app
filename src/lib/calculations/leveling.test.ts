@@ -202,6 +202,37 @@ describe("computeLeveling con la cadena derivada", () => {
   });
 });
 
+describe("hilos inválidos no envenenan la cadena", () => {
+  it("hilos iguales NO anulan la distancia tecleada", () => {
+    // `stadiaDistance` daría 0, y `0 ?? 30` es 0: la tecleada se perdía.
+    const row = bare({ backUpperM: 1.4, backLowerM: 1.4, backDistanceM: 30 });
+    expect(resolveVisualDistances(row).back).toBe(30);
+  });
+
+  it("hilos invertidos NO restan del acumulado", () => {
+    // (1.2 − 1.5)·100 = −30, que restaba del total.
+    const row = bare({ backUpperM: 1.2, backLowerM: 1.5, backDistanceM: 30 });
+    expect(resolveVisualDistances(row).back).toBe(30);
+  });
+
+  it("un par inválido sin distancia tecleada deja la visual sin distancia", () => {
+    const row = bare({ backUpperM: 1.4, backLowerM: 1.4 });
+    expect(resolveVisualDistances(row).back).toBeNull();
+  });
+
+  it("el acumulado nunca decrece con hilos invertidos", () => {
+    // Una ruta que llama a computeLeveling sin validar antes (seed, demo)
+    // obtenía un total envenenado.
+    const rows = [
+      bare({ backDistanceM: 100 }),
+      bare({ foreUpperM: 1.2, foreLowerM: 1.5, foreDistanceM: 50 }),
+    ];
+    const acc = accumulateDistances(rows);
+    expect(acc[1]).toBeGreaterThanOrEqual(acc[0] ?? 0);
+    expect(acc[1]).toBe(150);
+  });
+});
+
 describe("resolveVisualDistances", () => {
   it("deriva de los hilos cuando están", () => {
     const row = bare({ backUpperM: 1.367, backLowerM: 1.052 });

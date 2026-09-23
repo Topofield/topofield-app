@@ -38,6 +38,14 @@ export function distanceFromWires(
   lower: number | null,
 ): number | null {
   if (upper == null || lower == null) return null;
+  // Un par con HS ≤ HI no es una medición de 0 m ni de −30 m: es la ausencia
+  // de una distancia derivable, que es lo que `null` significa aquí. Devolver
+  // el número envenenaba la cadena por dos vías — `0 ?? tecleada` da 0, así
+  // que la distancia tecleada desaparecía, y un valor negativo RESTABA del
+  // acumulado. El validador bloquea la fila por su cuenta, pero `computeLeveling`
+  // también se llama sin validar antes (seed, generador de la demo), así que la
+  // salvaguarda tiene que estar aquí y no solo allí.
+  if (upper <= lower) return null;
   return stadiaDistance(upper, lower);
 }
 
