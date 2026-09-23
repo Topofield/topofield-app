@@ -14,7 +14,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 6 | Cierre, Informes, Export | `05-cierre-informes-export.md` | cerrada |
 | 7 | Motor y captura de poligonales | `06-motor-captura-poligonal.md` | cerrada |
 | 8 | Precisión y equipo por proceso | `07-precision-equipo-por-proceso.md` | cerrada |
-| 9 | Cadena de distancias de nivelación | — | pendiente |
+| 9 | Cadena de distancias de nivelación | `08-cadena-distancias-nivelacion.md` | cerrada |
 | 10 | Nomenclatura de nivelación | — | pendiente |
 | 11 | Estado de los BMs | — | pendiente |
 | 12 | Alerta por lectura desfasada | — | pendiente |

@@ -1,0 +1,155 @@
+-- ============================================================================
+-- Cadena de distancias de nivelación — Fase 9 (N2 + N3)
+-- ============================================================================
+-- La distancia del recorrido deja de teclearse y pasa a derivarse de las
+-- mediciones. Hasta ahora había tres campos de distancia sin relación
+-- verificada entre sí, y de uno de ellos depende la tolerancia K·√D.
+--
+-- El caso que lo justifica es real: en la cartera de El Verjón una vista
+-- intermedia rompió la cadena de sumas de la hoja de cálculo y dejó 24.7 m
+-- fuera del total, con el veredicto de cierre emitido sobre ese número.
+-- Ver docs/carteras/analisis-nivelacion-verjon.md.
+-- ============================================================================
+
+-- --- Columnas nuevas --------------------------------------------------------
+-- Los hilos comparten tipo con las lecturas de mira, porque lecturas son. El
+-- hilo MEDIO no lleva columna: es `backsight` / `foresight`. Darle una crearía
+-- dos fuentes de verdad para el mismo número.
+alter table public.leveling_readings
+  add column back_upper_m    decimal(6,4),
+  add column back_lower_m    decimal(6,4),
+  add column fore_upper_m    decimal(6,4),
+  add column fore_lower_m    decimal(6,4),
+  -- decimal(8,3) da milímetro hasta 99999 m. La `distance_m` que se elimina
+  -- era decimal(8,1), menos precisa de lo que la taquimetría produce.
+  add column back_distance_m decimal(8,3),
+  add column fore_distance_m decimal(8,3);
+
+alter table public.leveling_processes
+  add column distances_reconstructed boolean not null default false;
+
+comment on column public.leveling_processes.distances_reconstructed is
+  'Las distancias por visual las reconstruyó el backfill de la Fase 9 repartiendo por mitades la diferencia del acumulado. Sobre estos procesos el equilibrado de visuales NO se evalúa: saldría perfecto por construcción.';
+
+-- --- Backfill ---------------------------------------------------------------
+-- Toca filas de procesos que pueden estar cerrados, así que hay que desactivar
+-- los dos triggers de inmutabilidad. Verificados contra
+-- 20260812020455_leveling.sql:173 y :207.
+alter table public.leveling_processes disable trigger leveling_processes_reject_update_on_closed;
+alter table public.leveling_readings  disable trigger leveling_readings_reject_write_when_closed;
+
+-- La diferencia sucesiva del acumulado da la distancia de cada armada. Cómo se
+-- repartía entre la visual de atrás y la de adelante NO está en los datos: esa
+-- información nunca se capturó. Se reparte por mitades y el proceso se marca.
+with diffs as (
+  select
+    id,
+    process_id,
+    greatest(
+      coalesce(distance_accumulated_km, 0) - coalesce(
+        lag(distance_accumulated_km) over (
+          partition by process_id, run_type order by reading_order
+        ), 0
+      ),
+      0
+    ) * 1000 as tramo_m
+  from public.leveling_readings
+  where point_type <> 'intermediate'
+)
+update public.leveling_readings r
+set back_distance_m = round((d.tramo_m / 2)::numeric, 3),
+    fore_distance_m = round((d.tramo_m / 2)::numeric, 3)
+from diffs d
+where r.id = d.id
+  and d.tramo_m > 0;
+
+-- Una fila terminal solo tiene visual de adelante, y una inicial solo de
+-- atrás: repartir por mitades ahí inventaría una visual que no existe. Se
+-- corrige tras el reparto, volcando el tramo entero a la visual que sí hay.
+--
+-- `nullif(..., 0)` importa: la PRIMERA fila de un recorrido tiene tramo 0 (no
+-- hay fila anterior de la que restar), así que la suma da 0. Un 0 NO es una
+-- distancia medida — es la ausencia del dato —, y escribirlo pasaría el
+-- validador, que solo rechaza `null`, dejando una visual de 0 m en silencio.
+-- La distancia real de esa primera visual atrás no está en los datos
+-- históricos: el acumulado se contaba desde el origen, así que nunca se
+-- registró.
+--
+-- CONSECUENCIA DELIBERADA: queda `null`, así que un proceso migrado abre con
+-- esa celda marcada en rojo pidiendo el dato. Es lo honesto — el dato falta de
+-- verdad—, y el total no cambia porque esos metros nunca estuvieron en el
+-- acumulado. La alternativa, dejar un `0`, pasaría el validador (que solo
+-- rechaza `null`) y dejaría una visual de 0 m en silencio, que es la clase de
+-- fallo plausible que esta fase existe para eliminar.
+update public.leveling_readings
+set back_distance_m = nullif(coalesce(back_distance_m, 0) + coalesce(fore_distance_m, 0), 0),
+    fore_distance_m = null
+where foresight is null and backsight is not null;
+
+update public.leveling_readings
+set fore_distance_m = nullif(coalesce(fore_distance_m, 0) + coalesce(back_distance_m, 0), 0),
+    back_distance_m = null
+where backsight is null and foresight is not null;
+
+-- Paso 3 del plan: recalcular el acumulado y el total desde lo derivado, para
+-- que las columnas persistidas digan lo mismo que dirá el motor al abrir el
+-- proceso. Sin esto conviven dos números que nadie comparó —el acumulado viejo
+-- tecleado y el que ahora deriva `accumulateDistances`—, que es justo la
+-- situación que esta fase existe para eliminar.
+--
+-- Los `intermediate` NO suman: cuelgan de la AI vigente, no propagan cota y
+-- quedan fuera de la compensación. Heredan el acumulado de su armada, igual
+-- que hace `accumulateDistances` en el motor. Excluirlos aquí no es un detalle
+-- de estilo: si el SQL sumara lo que el motor salta, la columna persistida y
+-- lo que calcula el editor darían números distintos para el mismo punto, y el
+-- informe y el export —que leen la fila sin recalcular— imprimirían los unos
+-- mientras la pantalla muestra los otros.
+with acumulado as (
+  select id,
+    sum(
+      case when point_type = 'intermediate' then 0
+           else coalesce(back_distance_m, 0) + coalesce(fore_distance_m, 0)
+      end
+    ) over (partition by process_id, run_type order by reading_order
+            rows between unbounded preceding and current row) / 1000 as acc_km
+  from public.leveling_readings
+)
+update public.leveling_readings r
+set distance_accumulated_km = round(a.acc_km, 3)
+from acumulado a
+where r.id = a.id;
+
+-- El total, con la misma exclusión. Y solo se toca el de los procesos que
+-- REALMENTE recibieron distancias: uno cuyas filas no tenían acumulado previo
+-- (la columna era nullable) no obtiene ninguna del reparto, y sobrescribirle
+-- el total con 0 le borraría un valor tecleado válido y lo dejaría sin
+-- veredicto de cierre, en silencio y sin marca que lo indique.
+update public.leveling_processes p
+set total_distance_km = (
+  select round(sum(coalesce(r.back_distance_m, 0) + coalesce(r.fore_distance_m, 0)) / 1000, 3)
+  from public.leveling_readings r
+  where r.process_id = p.id
+    and r.run_type = 'forward'
+    and r.point_type <> 'intermediate'
+)
+where exists (
+  select 1 from public.leveling_readings r
+  where r.process_id = p.id
+    and (r.back_distance_m is not null or r.fore_distance_m is not null)
+);
+
+update public.leveling_processes p
+set distances_reconstructed = true
+where exists (
+  select 1 from public.leveling_readings r
+  where r.process_id = p.id
+    and (r.back_distance_m is not null or r.fore_distance_m is not null)
+);
+
+alter table public.leveling_readings  enable trigger leveling_readings_reject_write_when_closed;
+alter table public.leveling_processes enable trigger leveling_processes_reject_update_on_closed;
+
+-- --- La columna que nadie leía ---------------------------------------------
+-- `distance_m` se capturaba desde la Fase 4 y ningún consumidor la leía. Su
+-- sustituto son las dos distancias por visual.
+alter table public.leveling_readings drop column distance_m;

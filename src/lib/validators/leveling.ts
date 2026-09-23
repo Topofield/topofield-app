@@ -7,12 +7,18 @@
 // celda de la libreta según su propio estado y así se consulta directo
 // (`issues.errors.backsight`) sin recorrer un array filtrando por `field`.
 
+import { resolveVisualDistances } from "@/lib/calculations/leveling";
+import {
+  MIDDLE_WIRE_TOLERANCE_M,
+  SIGHT_BALANCE_LIMIT_M,
+} from "@/lib/calculations/tolerances";
 import type {
   LevelingResult,
   LevelingType,
   PointType,
   ReadingInput,
 } from "@/types/leveling";
+import type { PrecisionOrder } from "@/types/project";
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
@@ -20,29 +26,39 @@ import type {
 export interface ReadingCaptureIssues {
   errors: Partial<
     Record<
-      "pointCode" | "pointType" | "backsight" | "foresight" | "distanceAccumulatedKm",
+      | "pointCode"
+      | "pointType"
+      | "backsight"
+      | "foresight"
+      | "backWires"
+      | "foreWires"
+      | "backDistanceM"
+      | "foreDistanceM",
       string
     >
   >;
-  warnings: Partial<Record<"backsight" | "foresight", string>>;
+  warnings: Partial<
+    Record<"backsight" | "foresight" | "sightBalance", string>
+  >;
 }
 
 /** Rango físico de una lectura de mira, en metros (§ 5.1). */
 const MIN_READING = 0;
 const MAX_READING = 4;
 
-// El equilibrado de visuales (|d_atrás − d_adelante| ≤ 2/3/4/6 m según orden)
-// NO se valida aquí: es una propiedad de la armada, que compara la distancia a
-// la mira de atrás con la de adelante, y `distanceM` guarda un solo valor por
-// fila. Validarlo exigiría capturar ambas distancias por armada — un cambio de
-// modelo de datos que no entra en esta fase. Se registra como deuda técnica.
+// El equilibrado de visuales (|d_atrás − d_adelante| ≤ límite por orden) SÍ se
+// valida desde la Fase 9: `backDistanceM` y `foreDistanceM` guardan una
+// distancia por visual, que es lo que la comparación necesita. La deuda que la
+// Fase 4 registró —una sola `distance_m` por fila no bastaba— queda pagada.
+// Avisa, no bloquea: es un juicio sobre la calidad de una medición correcta en
+// su forma. Ver `validateSightBalance`, más abajo.
 
 /**
  * Tipos de punto que entran en la comprobación aritmética y en la
  * compensación (§ 5.1). Los `intermediate` cuelgan de la AI vigente y quedan
- * fuera de ambas, así que no exigen distancia acumulada.
+ * fuera de ambas, así que no exigen distancia por visual.
  */
-function requiresDistanceAccumulated(pointType: PointType): boolean {
+function requiresVisualDistances(pointType: PointType): boolean {
   return pointType !== "intermediate";
 }
 
@@ -59,18 +75,48 @@ export function validateReadingCapture(
     errors.pointCode = "El punto necesita un código.";
   }
 
-  // La distancia acumulada es obligatoria en bm y pc porque la corrección
-  // proporcional la usa como peso. Un null se compensaría como 0 — es decir,
-  // sin corrección — y el punto de cierre quedaría descompensado en silencio,
-  // con el proceso reportando que cumple la tolerancia. Medido en la Tarea 5:
-  // el BM final cerraba en 99.992 en vez de 100.000, con los −8 mm intactos.
-  // Los `intermediate` sí pueden traerla nula: no entran en la compensación.
-  if (
-    requiresDistanceAccumulated(reading.pointType) &&
-    reading.distanceAccumulatedKm == null
-  ) {
-    errors.distanceAccumulatedKm =
-      "La distancia acumulada es obligatoria: sin ella el punto no recibe corrección.";
+  // --- Hilos: orden y coherencia del medio ---------------------------------
+  for (const side of ["back", "fore"] as const) {
+    const upper = side === "back" ? reading.backUpperM : reading.foreUpperM;
+    const lower = side === "back" ? reading.backLowerM : reading.foreLowerM;
+    const middle = side === "back" ? reading.backsight : reading.foresight;
+    const wireKey = side === "back" ? "backWires" : "foreWires";
+
+    // Con el par incompleto no hay orden que comprobar. No es un error: los
+    // hilos son opcionales y la cartera de El Verjón trae dos armadas así.
+    if (upper == null || lower == null) continue;
+
+    if (upper <= lower) {
+      errors[wireKey] =
+        "El hilo superior debe ser mayor que el inferior: la distancia saldría nula o negativa.";
+      continue;
+    }
+
+    if (middle != null) {
+      const expected = (upper + lower) / 2;
+      if (Math.abs(middle - expected) > MIDDLE_WIRE_TOLERANCE_M) {
+        warnings[side === "back" ? "backsight" : "foresight"] =
+          `El hilo medio debería ser ${expected.toFixed(4)} m, el promedio de los otros dos.`;
+      }
+    }
+  }
+
+  // --- Distancia por visual ------------------------------------------------
+  // Obligatoria donde la fila acumula. Sin ella el acumulado queda corto, el
+  // total sale menor del real y el punto de cierre queda mal compensado, con
+  // el proceso reportando que cumple. Es la traducción al modelo nuevo de la
+  // regla que hasta la Fase 9 exigía `distanceAccumulatedKm`: el acumulado ya
+  // no se teclea, se deriva de estas distancias.
+  if (requiresVisualDistances(reading.pointType)) {
+    const { back, fore } = resolveVisualDistances(reading);
+    if (reading.backsight != null && back == null) {
+      errors.backDistanceM =
+        "Falta la distancia a la mira de atrás: sin ella el recorrido no acumula.";
+    }
+    if (reading.foresight != null && fore == null) {
+      errors.foreDistanceM =
+        "Falta la distancia a la mira de adelante: sin ella el recorrido no acumula.";
+    }
   }
 
   for (const field of ["backsight", "foresight"] as const) {
@@ -89,6 +135,44 @@ export function validateReadingCapture(
     reading.backsight === reading.foresight
   ) {
     warnings.foresight = "Lectura atrás y adelante idénticas: posible error de anotación.";
+  }
+
+  return { errors, warnings };
+}
+
+/**
+ * Equilibrado de visuales de una armada (§ 5.1; deuda de la Fase 4 pagada en
+ * la Fase 9).
+ *
+ * Equilibrar las visuales cancela el error de colimación: si la visual sale
+ * inclinada, el mismo error entra con signo opuesto en las dos lecturas y se
+ * anula al restarlas. Avisa, no bloquea — es un juicio sobre la calidad de una
+ * medición correcta en su forma.
+ *
+ * `distancesReconstructed` viene de `leveling_processes`: en los procesos que
+ * el backfill de la Fase 9 reconstruyó, las dos distancias salen de repartir
+ * por mitades la diferencia del acumulado, así que el equilibrado saldría
+ * perfecto por construcción. Evaluarlo allí sería emitir una conformidad que
+ * el dato no respalda.
+ */
+export function validateSightBalance(
+  reading: ReadingInput,
+  order: PrecisionOrder,
+  distancesReconstructed: boolean,
+): ReadingCaptureIssues {
+  const errors: ReadingCaptureIssues["errors"] = {};
+  const warnings: ReadingCaptureIssues["warnings"] = {};
+
+  if (distancesReconstructed) return { errors, warnings };
+
+  const { back, fore } = resolveVisualDistances(reading);
+  if (back == null || fore == null) return { errors, warnings };
+
+  const limit = SIGHT_BALANCE_LIMIT_M[order];
+  const diff = Math.abs(back - fore);
+  if (diff > limit) {
+    warnings.sightBalance =
+      `Visuales desequilibradas: ${diff.toFixed(1)} m de diferencia, el límite del orden es ${limit} m.`;
   }
 
   return { errors, warnings };
@@ -132,11 +216,23 @@ export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
 export function validateRunCapture(
   readings: ReadingInput[],
   levelingType: LevelingType,
+  /**
+   * Orden de precisión del proceso y si sus distancias las reconstruyó el
+   * backfill. Gobiernan el equilibrado de visuales, que se evalúa aquí porque
+   * esta es la puerta por la que pasan las filas de verdad.
+   */
+  order: PrecisionOrder = "tercer_orden",
+  distancesReconstructed = false,
 ): ReadingCaptureIssues[] {
   const lastIndex = readings.length - 1;
   const mustEndInBm = levelingType !== "open";
   return readings.map((reading, index) => {
     const issues = validateReadingCapture(reading);
+    const balance = validateSightBalance(
+      reading,
+      order,
+      distancesReconstructed,
+    );
     let errors = issues.errors;
 
     // Toda fila `bm` que no sea la última de cierre abre una armada y por
@@ -163,7 +259,10 @@ export function validateRunCapture(
       };
     }
 
-    return errors === issues.errors ? issues : { ...issues, errors };
+    return {
+      errors,
+      warnings: { ...issues.warnings, ...balance.warnings },
+    };
   });
 }
 

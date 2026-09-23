@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { computeLeveling } from "@/lib/calculations/leveling";
+import {
+  computeLeveling,
+  totalDistanceFromReadings,
+} from "@/lib/calculations/leveling";
 import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
 import { deriveLevelingCloseStatus } from "./close-status";
 import type {
@@ -23,8 +26,14 @@ export interface ReadingDraft {
   pointType: PointType;
   backsight: number | null;
   foresight: number | null;
-  distanceM: number | null;
-  distanceAccumulatedKm: number | null;
+  /** Hilos opcionales; el medio es la lectura de mira. */
+  backUpperM: number | null;
+  backLowerM: number | null;
+  foreUpperM: number | null;
+  foreLowerM: number | null;
+  /** Distancia por visual: la única entrada de la cadena. */
+  backDistanceM: number | null;
+  foreDistanceM: number | null;
 }
 
 export interface SaveLevelingPayload {
@@ -36,7 +45,6 @@ export interface SaveLevelingPayload {
   endBmCode: string | null;
   endBmElevation: number | null;
   hasReturnRun: boolean;
-  totalDistanceKm: number;
   notes: string | null;
   forward: ReadingDraft[];
   return: ReadingDraft[];
@@ -61,8 +69,15 @@ function toReadingInput(draft: ReadingDraft): ReadingInput {
     pointType: draft.pointType,
     backsight: draft.backsight,
     foresight: draft.foresight,
-    distanceM: draft.distanceM,
-    distanceAccumulatedKm: draft.distanceAccumulatedKm,
+    backUpperM: draft.backUpperM,
+    backLowerM: draft.backLowerM,
+    foreUpperM: draft.foreUpperM,
+    foreLowerM: draft.foreLowerM,
+    backDistanceM: draft.backDistanceM,
+    foreDistanceM: draft.foreDistanceM,
+    // Derivado por el motor a partir de las distancias por visual; lo que
+    // envíe el cliente no se usa.
+    distanceAccumulatedKm: null,
   };
 }
 
@@ -72,7 +87,6 @@ function buildInput(payload: SaveLevelingPayload): LevelingInput {
     startElevation: payload.startBmElevation,
     endElevation: payload.type === "link" ? payload.endBmElevation : null,
     order: payload.precisionOrder,
-    totalDistanceKm: payload.totalDistanceKm,
     forward: payload.forward.map(toReadingInput),
     return: payload.hasReturnRun ? payload.return.map(toReadingInput) : null,
   };
@@ -106,7 +120,12 @@ export async function saveLevelingProcessAction(
   // directa a esta acción podría guardar una libreta que la interfaz habría
   // bloqueado. Antes solo se recalculaban los resultados, de modo que los
   // números eran del servidor pero los datos de campo no se comprobaban.
-  const forwardIssues = validateRunCapture(input.forward, input.type);
+  const forwardIssues = validateRunCapture(
+    input.forward,
+    input.type,
+    payload.precisionOrder,
+    false,
+  );
   if (hasReadingErrors(forwardIssues)) {
     return {
       ok: false,
@@ -114,7 +133,12 @@ export async function saveLevelingProcessAction(
     };
   }
   if (input.return) {
-    const returnIssues = validateRunCapture(input.return, input.type);
+    const returnIssues = validateRunCapture(
+      input.return,
+      input.type,
+      payload.precisionOrder,
+      false,
+    );
     if (hasReadingErrors(returnIssues)) {
       return {
         ok: false,
@@ -124,6 +148,12 @@ export async function saveLevelingProcessAction(
   }
 
   const result = computeLeveling(input);
+
+  // El total se deriva en el servidor, igual que el resto de resultados. Que
+  // el cliente lo mandara no lo haría autoritativo: la clave publicable de
+  // Supabase es pública por diseño y una llamada directa podría enviar
+  // cualquier número. De ese número depende la tolerancia K·√D.
+  const totalDistanceKm = totalDistanceFromReadings(input.forward);
 
   const computed = result.forward.readings.length > 0;
   const status = computed
@@ -142,7 +172,15 @@ export async function saveLevelingProcessAction(
       end_bm_code: payload.endBmCode,
       end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
       has_return_run: payload.hasReturnRun,
-      total_distance_km: payload.totalDistanceKm,
+      total_distance_km: totalDistanceKm,
+      // Guardar reemplaza la libreta entera, así que las distancias dejan de
+      // ser las que inventó el backfill de la Fase 9 repartiendo por mitades.
+      // Sin esto el proceso quedaba marcado para siempre: el banner seguiría
+      // afirmando que sus distancias son reconstruidas —falso sobre datos ya
+      // medidos en campo, en una aplicación cuyo tema es la trazabilidad— y el
+      // equilibrado quedaría suprimido justo sobre las distancias reales que
+      // sí permiten evaluarlo.
+      distances_reconstructed: false,
       precision_order: payload.precisionOrder,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
@@ -185,8 +223,17 @@ export async function saveLevelingProcessAction(
         point_type: draft.pointType,
         backsight: draft.backsight,
         foresight: draft.foresight,
-        distance_m: draft.distanceM,
-        distance_accumulated_km: draft.distanceAccumulatedKm,
+        back_upper_m: draft.backUpperM,
+        back_lower_m: draft.backLowerM,
+        fore_upper_m: draft.foreUpperM,
+        fore_lower_m: draft.foreLowerM,
+        // Resueltas por el motor: derivadas de los hilos cuando los hay.
+        // Persistir la tecleada sola dejaría la celda vacía en un proceso
+        // capturado por taquimetría, y el informe lee la fila sin recalcular.
+        back_distance_m: r?.backDistanceResolvedM ?? null,
+        fore_distance_m: r?.foreDistanceResolvedM ?? null,
+        // Derivado: lo escribe el motor, no el borrador del cliente.
+        distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
         instrument_height: r?.instrumentHeight ?? null,
         elevation_calculated: r?.elevationCalculated ?? null,
         elevation_corrected: r?.elevationCorrected ?? null,

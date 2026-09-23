@@ -42,6 +42,7 @@ export type Database = {
           correction_method: string
           created_at: string
           discrepancy_mm: number | null
+          distances_reconstructed: boolean
           end_bm_code: string | null
           end_bm_elevation: number | null
           equipment_brand: string | null
@@ -75,6 +76,7 @@ export type Database = {
           correction_method?: string
           created_at?: string
           discrepancy_mm?: number | null
+          distances_reconstructed?: boolean
           end_bm_code?: string | null
           end_bm_elevation?: number | null
           equipment_brand?: string | null
@@ -108,6 +110,7 @@ export type Database = {
           correction_method?: string
           created_at?: string
           discrepancy_mm?: number | null
+          distances_reconstructed?: boolean
           end_bm_code?: string | null
           end_bm_elevation?: number | null
           equipment_brand?: string | null
@@ -153,13 +156,18 @@ export type Database = {
       }
       leveling_readings: {
         Row: {
+          back_distance_m: number | null
+          back_lower_m: number | null
+          back_upper_m: number | null
           backsight: number | null
           correction_applied: number | null
           created_at: string
           distance_accumulated_km: number | null
-          distance_m: number | null
           elevation_calculated: number | null
           elevation_corrected: number | null
+          fore_distance_m: number | null
+          fore_lower_m: number | null
+          fore_upper_m: number | null
           foresight: number | null
           has_warnings: boolean
           id: string
@@ -172,13 +180,18 @@ export type Database = {
           warning_messages: Json | null
         }
         Insert: {
+          back_distance_m?: number | null
+          back_lower_m?: number | null
+          back_upper_m?: number | null
           backsight?: number | null
           correction_applied?: number | null
           created_at?: string
           distance_accumulated_km?: number | null
-          distance_m?: number | null
           elevation_calculated?: number | null
           elevation_corrected?: number | null
+          fore_distance_m?: number | null
+          fore_lower_m?: number | null
+          fore_upper_m?: number | null
           foresight?: number | null
           has_warnings?: boolean
           id?: string
@@ -191,13 +204,18 @@ export type Database = {
           warning_messages?: Json | null
         }
         Update: {
+          back_distance_m?: number | null
+          back_lower_m?: number | null
+          back_upper_m?: number | null
           backsight?: number | null
           correction_applied?: number | null
           created_at?: string
           distance_accumulated_km?: number | null
-          distance_m?: number | null
           elevation_calculated?: number | null
           elevation_corrected?: number | null
+          fore_distance_m?: number | null
+          fore_lower_m?: number | null
+          fore_upper_m?: number | null
           foresight?: number | null
           has_warnings?: boolean
           id?: string

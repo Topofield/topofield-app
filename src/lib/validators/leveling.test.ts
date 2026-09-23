@@ -14,6 +14,7 @@ import {
   hasReadingErrors,
   validateReadingCapture,
   validateRunCapture,
+  validateSightBalance,
 } from "./leveling";
 import type { LevelingResult, ReadingInput } from "@/types/leveling";
 
@@ -25,11 +26,210 @@ function reading(over: Partial<ReadingInput> = {}): ReadingInput {
     pointType: "pc",
     backsight: 1.5,
     foresight: 1.2,
-    distanceM: 40, // visual normal de campo
+    backUpperM: null,
+    backLowerM: null,
+    foreUpperM: null,
+    foreLowerM: null,
+    // Visuales normales de campo, equilibradas.
+    backDistanceM: 40,
+    foreDistanceM: 40,
     distanceAccumulatedKm: 0.1,
     ...over,
   };
 }
+
+/** Fila con todo a null salvo lo que el test ponga. */
+function bare(over: Partial<ReadingInput> = {}): ReadingInput {
+  return {
+    pointCode: "P",
+    pointType: "pc",
+    backsight: null,
+    foresight: null,
+    backUpperM: null,
+    backLowerM: null,
+    foreUpperM: null,
+    foreLowerM: null,
+    backDistanceM: null,
+    foreDistanceM: null,
+    distanceAccumulatedKm: null,
+    ...over,
+  };
+}
+
+describe("validación de hilos", () => {
+  it("hilos desordenados bloquean: HS debe ser mayor que HI", () => {
+    const issues = validateReadingCapture(
+      bare({ backUpperM: 1.2, backLowerM: 1.5, backDistanceM: 30 }),
+    );
+    expect(issues.errors.backWires).toBeDefined();
+  });
+
+  it("hilos iguales bloquean: la distancia sería cero", () => {
+    const issues = validateReadingCapture(
+      bare({ backUpperM: 1.4, backLowerM: 1.4, backDistanceM: 30 }),
+    );
+    expect(issues.errors.backWires).toBeDefined();
+  });
+
+  it("un par de hilos incompleto no bloquea", () => {
+    // Sin los dos no hay orden que comprobar. La cartera de El Verjón trae
+    // dos armadas así.
+    const issues = validateReadingCapture(
+      bare({ backUpperM: 1.5, backLowerM: null, backDistanceM: 30 }),
+    );
+    expect(issues.errors.backWires).toBeUndefined();
+  });
+
+  it("el hilo medio incoherente AVISA, no bloquea", () => {
+    const issues = validateReadingCapture(
+      bare({
+        backsight: 1.5,
+        backUpperM: 1.7,
+        backLowerM: 1.2,
+        backDistanceM: 50,
+      }),
+    );
+    // (1.700 + 1.200)/2 = 1.450, difiere de 1.500 en 50 mm
+    expect(issues.warnings.backsight).toBeDefined();
+    expect(issues.errors.backsight).toBeUndefined();
+  });
+
+  it("el hilo medio dentro de tolerancia no avisa", () => {
+    const issues = validateReadingCapture(
+      bare({
+        backsight: 1.4505,
+        backUpperM: 1.7,
+        backLowerM: 1.2,
+        backDistanceM: 50,
+      }),
+    );
+    expect(issues.warnings.backsight).toBeUndefined();
+  });
+});
+
+describe("validación de distancia por visual", () => {
+  it("bloquea si falta en un pc", () => {
+    const issues = validateReadingCapture(
+      bare({ pointType: "pc", backsight: 1.5, foresight: 1.2 }),
+    );
+    expect(issues.errors.backDistanceM).toBeDefined();
+  });
+
+  it("no bloquea en un intermedio", () => {
+    const issues = validateReadingCapture(
+      bare({ pointType: "intermediate", foresight: 1.2 }),
+    );
+    expect(issues.errors.foreDistanceM).toBeUndefined();
+  });
+
+  it("no exige distancia a una visual que no existe", () => {
+    // La primera fila (bm) no lleva lectura adelante.
+    const issues = validateReadingCapture(
+      bare({ pointType: "bm", backsight: 1.5, backDistanceM: 30 }),
+    );
+    expect(issues.errors.foreDistanceM).toBeUndefined();
+  });
+});
+
+describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
+  // validateSightBalance existía, estaba probada y NO la llamaba nadie: el
+  // criterio de aceptación 8 de la fase no se cumplía. Estos tests van por
+  // validateRunCapture, que es la puerta por la que pasan las filas de verdad
+  // (la usan el editor y el Server Action).
+  const armada = (over: Partial<ReadingInput> = {}) => [
+    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: 30 }),
+    bare({
+      pointCode: "PC-1", pointType: "pc",
+      foresight: 1.2, backsight: 2.0,
+      foreDistanceM: 30, backDistanceM: 30,
+      ...over,
+    }),
+    bare({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, foreDistanceM: 30 }),
+  ];
+
+  it("avisa del desequilibrio desde validateRunCapture", () => {
+    // tercer_orden admite 4 m; aquí hay 20.
+    const issues = validateRunCapture(
+      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      "closed",
+      "tercer_orden",
+      false,
+    );
+    expect(issues[1]?.warnings.sightBalance).toBeDefined();
+  });
+
+  it("no avisa cuando las visuales están equilibradas", () => {
+    const issues = validateRunCapture(armada(), "closed", "tercer_orden", false);
+    expect(issues[1]?.warnings.sightBalance).toBeUndefined();
+  });
+
+  it("no lo evalúa en un proceso reconstruido por el backfill", () => {
+    const issues = validateRunCapture(
+      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      "closed",
+      "tercer_orden",
+      true,
+    );
+    expect(issues[1]?.warnings.sightBalance).toBeUndefined();
+  });
+
+  it("el aviso NO bloquea el guardado", () => {
+    const issues = validateRunCapture(
+      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      "closed",
+      "tercer_orden",
+      false,
+    );
+    expect(hasReadingErrors(issues)).toBe(false);
+  });
+});
+
+describe("equilibrado de visuales", () => {
+  it("avisa cuando la diferencia pasa del límite del orden", () => {
+    // tercer_orden admite 4 m; aquí hay 20.
+    const issues = validateSightBalance(
+      bare({
+        backsight: 1.5,
+        foresight: 1.2,
+        backDistanceM: 40,
+        foreDistanceM: 20,
+      }),
+      "tercer_orden",
+      false,
+    );
+    expect(issues.warnings.sightBalance).toBeDefined();
+  });
+
+  it("no avisa dentro del límite", () => {
+    const issues = validateSightBalance(
+      bare({
+        backsight: 1.5,
+        foresight: 1.2,
+        backDistanceM: 31.5,
+        foreDistanceM: 28.5,
+      }),
+      "tercer_orden",
+      false,
+    );
+    expect(issues.warnings.sightBalance).toBeUndefined();
+  });
+
+  it("NO evalúa en un proceso reconstruido por el backfill", () => {
+    // Allí las distancias se repartieron por mitades, así que el equilibrado
+    // saldría perfecto siempre — un aviso falso de conformidad.
+    const issues = validateSightBalance(
+      bare({
+        backsight: 1.5,
+        foresight: 1.2,
+        backDistanceM: 40,
+        foreDistanceM: 20,
+      }),
+      "tercer_orden",
+      true,
+    );
+    expect(issues.warnings.sightBalance).toBeUndefined();
+  });
+});
 
 /** Resultado de cierre; por defecto todo cumple, cada caso altera lo que prueba. */
 function resultWith(over: Partial<LevelingResult> = {}): LevelingResult {
@@ -85,27 +285,37 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
     expect(issues.errors.pointCode).toBeDefined();
   });
 
-  it("exige distancia acumulada en bm", () => {
-    const issues = validateReadingCapture(reading({ pointType: "bm", distanceAccumulatedKm: null }));
-    expect(issues.errors.distanceAccumulatedKm).toBeDefined();
+  it("exige distancia por visual en bm", () => {
+    // Desde la Fase 9 el acumulado se DERIVA de las distancias por visual, así
+    // que lo que hay que exigir es la distancia, no el acumulado.
+    const issues = validateReadingCapture(
+      reading({ pointType: "bm", backDistanceM: null, foreDistanceM: null }),
+    );
+    expect(issues.errors.backDistanceM).toBeDefined();
   });
 
-  it("exige distancia acumulada en pc", () => {
-    // Sin ella la corrección proporcional trata el punto como si estuviera en
-    // el origen y lo deja sin compensar, en silencio: el cierre reporta que
-    // cumple tolerancia con el error real intacto (medido: 99.992 vs 100.000
-    // esperado, con los −8 mm sin corregir).
-    const issues = validateReadingCapture(reading({ pointType: "pc", distanceAccumulatedKm: null }));
-    expect(issues.errors.distanceAccumulatedKm).toBeDefined();
+  it("exige distancia por visual en pc", () => {
+    // Sin ella el recorrido no acumula: la corrección proporcional trata el
+    // punto como si estuviera en el origen y lo deja sin compensar, en
+    // silencio, con el cierre reportando que cumple tolerancia y el error
+    // intacto (medido en la Fase 4: 99.992 vs 100.000, con los −8 mm sin
+    // corregir).
+    const issues = validateReadingCapture(
+      reading({ pointType: "pc", backDistanceM: null, foreDistanceM: null }),
+    );
+    expect(issues.errors.backDistanceM).toBeDefined();
+    expect(issues.errors.foreDistanceM).toBeDefined();
   });
 
   it("no la exige en los puntos intermedios, que no se compensan", () => {
     const issues = validateReadingCapture(reading({
         pointType: "intermediate",
         backsight: null,
-        distanceAccumulatedKm: null,
+        backDistanceM: null,
+        foreDistanceM: null,
       }));
-    expect(issues.errors.distanceAccumulatedKm).toBeUndefined();
+    // Un intermedio no acumula, así que no exige distancia por visual.
+    expect(issues.errors.foreDistanceM).toBeUndefined();
   });
 });
 

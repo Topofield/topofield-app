@@ -18,7 +18,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 6 | Cierre, Informes, Export | [`prds/05-cierre-informes-export.md`](./prds/05-cierre-informes-export.md) | cerrada |
 | 7 | Motor y captura de poligonales | [`prds/06-motor-captura-poligonal.md`](./prds/06-motor-captura-poligonal.md) | cerrada |
 | 8 | Precisión y equipo por proceso | [`prds/07-precision-equipo-por-proceso.md`](./prds/07-precision-equipo-por-proceso.md) | cerrada |
-| 9 | Cadena de distancias de nivelación | — | pendiente |
+| 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | cerrada |
 | 10 | Nomenclatura de nivelación | — | pendiente |
 | 11 | Estado de los BMs | — | pendiente |
 | 12 | Alerta por lectura desfasada | — | pendiente |
@@ -389,6 +389,109 @@ riesgo de la aritmética a la consistencia de lo guardado.
   pero es la confirmación más fuerte de que la inmutabilidad no depende del
   código de aplicación. Es lo que permite que un informe se reconstruya en vez
   de guardarse.
+
+### Cierre Fase 9 — Cadena de distancias de nivelación (2026-09-22)
+
+Primera fase que nace de una cartera de campo en vez de un hallazgo de código:
+`TRABAJO NIVELACION EL VERJON.xlsx` es aritméticamente correcta en sus dos
+hojas y aun así **pierde 24.7 m de su distancia total**, porque una vista
+intermedia rompió la cadena de sumas. De ese número depende `K·√D`.
+
+**Divergencias del PRD-de-fase respecto a lo implementado:**
+
+- El PRD y el diseño daban **seis** columnas de hilos. Son **cuatro**: el hilo
+  medio no lleva columna porque **es** la lectura de mira (`backsight` /
+  `foresight`). Darle una habría creado dos fuentes de verdad para el mismo
+  número — justo el defecto que la fase venía a eliminar.
+- El backfill del PRD repartía **todo** tramo por mitades, lo que en una fila
+  terminal (solo visual adelante) o inicial (solo atrás) inventaría una visual
+  inexistente. Se añadieron dos `UPDATE` que vuelcan el tramo entero a la
+  visual que la fila sí tiene.
+- La petición **N5 resultó falsa** y se retiró: el generador de proyecto demo
+  sí crea nivelación, delegada en `src/lib/demo/insertar-nivelacion.ts`. El
+  grep que la originó buscaba «leveling» en `crear-proyecto-demo.ts`, que no la
+  ve. Una petición basada en un grep negativo merece verificarse antes de
+  convertirse en fase.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Persistir el dato que el usuario teclea, cuando existe uno derivado, deja
+  la celda vacía justo en el caso que la fase vino a habilitar.** Los tres
+  sitios de persistencia guardaban `draft.backDistanceM` — la distancia
+  tecleada—, que en una captura por taquimetría es `null` porque la distancia
+  sale de los hilos. El informe y el export leen la fila **sin recalcular**, así
+  que habrían impreso una columna de distancias vacía en todo proceso capturado
+  con hilos. **No lo vio ningún test**: lo destapó consultar la base después del
+  seed. Se corrigió exponiendo la distancia resuelta en `ComputedReading`. Es la
+  misma lección del cierre de la Fase 6 —todo lo que se persiste necesita un
+  consumidor que lo lea sin recalcular— vista desde el otro lado: **cuando un
+  valor pasa a derivarse, hay que revisar qué se persiste, no solo qué se
+  calcula**.
+- **Un seed puede contradecir sus propios datos, y la contradicción solo se ve
+  en pantalla.** El seed declaraba los circuitos como nivel `digital` mientras
+  escribía los tres hilos de cada visual. Un nivel digital entrega la distancia
+  y no lee hilos: el conmutador de captura no aparecía sobre datos que sí los
+  tenían. Ni el typecheck ni los 481 tests lo vieron; apareció al mirar la
+  captura y preguntarse por qué faltaba el conmutador.
+- **`w-full` en una tabla que crece comprime sus columnas en vez de hacer
+  scroll.** Con las 13 columnas del modo automático, el encabezado «Cota
+  corregida» salía cortado. `min-w-full` deja que la tabla crezca y que el
+  contenedor haga el scroll. Medido: 1557 px de tabla en 942 de contenedor.
+- **Una entrada inválida que deja de ser representable no elimina la
+  protección, la muda de puerta.** Cinco tests inyectaban `totalDistanceKm:
+  NaN`, campo que la fase elimina. Borrarlos habría perdido la cobertura; se
+  reescribieron contra la única puerta que queda — una libreta sin distancias —
+  y siguen protegiendo del «NaN mm» que la Fase 4 tuvo en pantalla.
+- **Los fixtures antiguos se traducen, no se reescriben.** Once fixtures
+  declaraban el acumulado a mano. Un helper que reparte el tramo entre las dos
+  visuales conservó la geometría de cotas que las Fases 3-4 verificaron a mano,
+  sin reintroducir un campo que el modelo ya no tiene.
+- **Implementar una función y no cablearla pasa todos los controles.**
+  `validateSightBalance` quedó definida, documentada y cubierta por tres
+  tests… y no la llamaba nadie. El typecheck no lo ve (está exportada), el
+  lint tampoco (se usa en los tests), y los 481 tests pasaban porque probaban
+  la función **directamente**, nunca la ruta real. Lo destapó la revisión de
+  rama con contexto fresco. La fase entera se justificaba en parte por pagar
+  esa deuda, y habría cerrado sin pagarla: capturando dos distancias por visual
+  que nadie compararía — exactamente el error de `distance_m` que la fase venía
+  a eliminar, repetido. **Un test que ejercita la función y no la ruta no prueba
+  que la funcionalidad exista.** Los tests del arreglo van por
+  `validateRunCapture`, que es la puerta por la que pasan las filas de verdad.
+- **Un pase de arreglos sin revisión propia introduce defectos nuevos.** La
+  revisión del PR encontró tres defectos confirmados, y **los tres estaban en
+  el código escrito para arreglar los hallazgos de la revisión anterior**: el
+  paso 3 de la migración y el `nullif` salieron de aquel pase. La skill de
+  ejecución dice que no se despacha re-revisión porque los tests que cubren
+  cada arreglo ya responden «está atendido» — y es cierto que lo responden,
+  pero no responden «¿el arreglo rompió otra cosa?». En una migración con SQL
+  que duplica lógica del motor, esa pregunta hay que hacerla aparte.
+- **Duplicar lógica del motor en SQL la condena a divergir.** El paso 3 sumaba
+  las distancias de las filas `intermediate` mientras `accumulateDistances` las
+  salta. Ninguna de las dos implementaciones es obviamente incorrecta leída
+  sola; solo lo son juntas. Cuando una migración tiene que reproducir un
+  cálculo del motor, el criterio de aceptación es que **el resultado coincida
+  con el motor sobre un caso que ejercite la diferencia** — aquí, una libreta
+  con radiación —, no que el SQL «haga lo mismo».
+- **Revertir código para probar una migración se lleva por delante arreglos
+  sin commitear.** Al volver a `8528bac` para sembrar datos pre-fase perdí un
+  arreglo del motor hecho minutos antes. No lo noté al revertir; lo atrapó la
+  suite al volver. **Commitear antes de revertir**, o el test que cubre el
+  arreglo es lo único que lo salva.
+- **Un `0` donde debería haber `null` pasa el validador.** Dos veces en la misma
+  fase: `distanceFromWires` devolvía `0` con hilos iguales (y `0 ?? tecleada` es
+  `0`, así que la distancia tecleada desaparecía), y el backfill escribía `0` en
+  la visual atrás de la primera fila. Los validadores rechazan `null`, no `0`,
+  así que ambos casos dejaban una visual de 0 m en silencio. **La ausencia de un
+  dato se representa con `null`; un `0` es una medición, y afirma algo falso.**
+- **Un `??` sobre una función que puede devolver `0` no es un fallback.** Es el
+  mecanismo concreto del punto anterior y merece recordarse solo: `??` distingue
+  `null`/`undefined`, no valores falsy. Si la función puede devolver `0`
+  legítimamente inválido, tiene que devolver `null`.
+- **Un `describe` que se evalúa antes que la función que usa da
+  "Cannot access before initialization".** El helper nuevo se llamó `run`,
+  nombre que el archivo ya usaba como variable local para el resultado de
+  `computeRun`. Renombrarlo a `fromAccum` lo resolvió y además describe mejor
+  lo que hace.
 
 ### Cierre plan de estabilización — Sistema de diseño (2026-08-09)
 

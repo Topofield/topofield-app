@@ -16,12 +16,17 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 
 | Petición | Fase | Estado |
 |---|---|---|
-| N2 + N3 | **9** — Cadena de distancias de nivelación | diseño escrito, PRD pendiente |
+| ~~N2 + N3~~ | **9** — Cadena de distancias de nivelación | **cerrada** (2026-09-22) |
 | N1 | **10** — Nomenclatura de nivelación | sin redactar |
 | A2 | **11** — Estado de los BMs | sin redactar |
 | A1 | **12** — Alerta por lectura desfasada | sin redactar |
 | P1 | dentro de la **13** (canvas) | sin redactar |
-| N4, N5, N6 | — | sin fase asignada |
+| N4, N6 | — | sin fase asignada |
+
+**N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
+Es falso: sí la crea, vía `src/lib/demo/insertar-nivelacion.ts`. El grep que
+originó la petición buscaba «leveling» en `crear-proyecto-demo.ts`, que no la
+ve porque está delegada en ese módulo. Verificado al implementar la Fase 9.
 
 N1 va **después** de la 9 a propósito: la Fase 9 reescribe la tabla de captura
 entera, así que renombrar antes obligaría a renombrar sobre texto que esa fase
@@ -65,46 +70,6 @@ Es coherente con el cálculo: la vista más se suma a la cota para obtener la
 altura del instrumento, y la vista menos se resta. Toca la tabla de captura, el
 panel de resultados, el export, el informe y el manual en sus dos copias.
 
-### N2 · Taquimetría: distancia por los tres hilos
-
-Con **nivel automático**, la distancia se obtiene leyendo los tres hilos
-estadimétricos sobre la mira, sin cinta:
-
-```
-D = (HS − HI) · K        con K = 100 en instrumentos modernos
-```
-
-`HS` es el hilo superior y `HI` el inferior, en metros. No hace falta la
-corrección por `cos²α` que llevaría un teodolito inclinado: en un nivel la
-visual es horizontal por construcción.
-
-**Validación que esto regala:** el hilo medio debe ser el promedio de los otros
-dos, `m = (HS + HI)/2`. Si no cuadra dentro de la tolerancia de lectura, hay un
-error de lectura o de transcripción. Es el mismo tipo de control que la
-dispersión entre lecturas de la Fase 7.
-
-Con **nivel electrónico / digital** el instrumento ya entrega la distancia, así
-que no se leen hilos: se teclea o se importa el valor (ver N4).
-
-Esto conecta con la Fase 8: `level_type` (`automatico` | `digital`) es el campo
-que decide la forma de la celda.
-
-**Precisado el 2026-09-22:** con nivel automático los tres hilos son
-**opcionales**, no obligatorios. El topógrafo puede anotar solo la lectura de
-mira y medir la distancia a cinta. Cuando captura los hilos, la distancia se
-deriva por taquimetría y se habilita la comprobación del hilo medio; cuando no,
-teclea la distancia directamente. La lectura de mira es siempre editable.
-
-### N3 · Sumatoria automática de distancias
-
-Hoy la suma de las distancias del recorrido no se genera sola. Debe calcularse
-automáticamente a partir de las distancias por tramo, vengan de taquimetría o
-del instrumento.
-
-Importa más de lo que parece: `leveling_processes.total_distance_km` alimenta la
-tolerancia de cierre `K·√D`. Si ese número se teclea a mano, la tolerancia
-depende de un dato que nadie verifica.
-
 ### N4 · Importar lecturas desde CSV (nivel electrónico)
 
 Con nivel electrónico las lecturas y las distancias deben poder **subirse desde
@@ -122,16 +87,6 @@ Va a **fase propia**, no dentro de la fase de la cadena de distancias: es un
 flujo distinto —subida, parseo, previsualización, errores por fila— que no
 comparte código con ella, y meterlo allí arriesga que la parte de importación
 arrastre el cierre de la parte de motor.
-
-### N5 · Nivelación en el generador de proyecto demo
-
-`src/lib/demo/crear-proyecto-demo.ts` —que corre para cada usuario nuevo— no
-crea ningún proceso de nivelación. El usuario que entra por primera vez ve la
-demo sin ese módulo.
-
-Detectado al planificar la fase de la cadena de distancias. Es la misma familia
-de hallazgo que el del cierre de la Fase 6, donde el generador de la demo
-compartía un defecto con el seed: conviene revisar ambos a la vez.
 
 ### N6 · Control ida-vuelta por puntos homólogos
 

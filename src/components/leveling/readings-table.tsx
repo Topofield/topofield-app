@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button, Input, Select } from "@/components/design-system";
 import type { ReadingCaptureIssues } from "@/lib/validators/leveling";
 import {
@@ -6,6 +7,7 @@ import {
   type ComputedReading,
   type PointType,
 } from "@/types/leveling";
+import type { LevelType } from "@/types/project";
 import { cn } from "@/lib/utils/cn";
 
 /** Fila editable de la libreta de campo (todo texto, sin parsear). */
@@ -16,8 +18,14 @@ export interface ReadingDraftState {
   pointType: PointType;
   backsight: string;
   foresight: string;
-  distanceM: string;
-  distanceAccumulatedKm: string;
+  /** Hilos opcionales; el medio es la lectura de mira. */
+  backUpperM: string;
+  backLowerM: string;
+  foreUpperM: string;
+  foreLowerM: string;
+  /** Distancia por visual: autocompletada desde los hilos, o tecleada. */
+  backDistanceM: string;
+  foreDistanceM: string;
 }
 
 export function emptyReading(): ReadingDraftState {
@@ -27,8 +35,50 @@ export function emptyReading(): ReadingDraftState {
     pointType: "pc",
     backsight: "",
     foresight: "",
-    distanceM: "",
-    distanceAccumulatedKm: "",
+    backUpperM: "",
+    backLowerM: "",
+    foreUpperM: "",
+    foreLowerM: "",
+    backDistanceM: "",
+    foreDistanceM: "",
+  };
+}
+
+/** Parseo laxo: la celda vacía o a medio teclear no es un número. */
+function parseCell(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Al teclear un hilo: si el par queda completo, autocompleta la distancia de
+ * esa visual; si además la lectura de mira está VACÍA, la rellena con el hilo
+ * medio.
+ *
+ * No sobrescribe una lectura ya escrita: la lectura es el dato, el hilo medio
+ * es una forma de obtenerlo. El topógrafo que anotó la lectura y luego añade
+ * los hilos no debe ver cambiar lo que escribió.
+ */
+export function applyWireDerivation(
+  row: ReadingDraftState,
+  side: "back" | "fore",
+): ReadingDraftState {
+  const upper = parseCell(side === "back" ? row.backUpperM : row.foreUpperM);
+  const lower = parseCell(side === "back" ? row.backLowerM : row.foreLowerM);
+  if (upper == null || lower == null || upper <= lower) return row;
+
+  const readingKey = side === "back" ? "backsight" : "foresight";
+  const distanceKey = side === "back" ? "backDistanceM" : "foreDistanceM";
+
+  return {
+    ...row,
+    [distanceKey]: ((upper - lower) * 100).toFixed(3),
+    [readingKey]:
+      row[readingKey].trim() === ""
+        ? ((upper + lower) / 2).toFixed(4)
+        : row[readingKey],
   };
 }
 
@@ -47,6 +97,10 @@ interface ReadingsTableProps {
   computed: ComputedReading[];
   issues: ReadingCaptureIssues[];
   disabled?: boolean;
+  /** `automatico` ofrece los hilos; `digital` no los usa. */
+  levelType: LevelType | null;
+  /** Distancias reconstruidas por el backfill: el equilibrado no se evalúa. */
+  distancesReconstructed?: boolean;
 }
 
 /**
@@ -64,9 +118,29 @@ export function ReadingsTable({
   computed,
   issues,
   disabled,
+  levelType,
+  distancesReconstructed = false,
 }: ReadingsTableProps) {
+  const [showWires, setShowWires] = useState(false);
+  // Los hilos son cosa del nivel automático: con uno digital el instrumento
+  // entrega la distancia y no se leen hilos sobre la mira.
+  const wiresAvailable = levelType === "automatico";
+  const wiresVisible = wiresAvailable && showWires;
   function update(index: number, patch: Partial<ReadingDraftState>) {
     onChange(readings.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  /** Aplica el cambio de un hilo y deriva distancia y lectura de esa visual. */
+  function updateWires(
+    index: number,
+    patch: Partial<ReadingDraftState>,
+    side: "back" | "fore",
+  ) {
+    onChange(
+      readings.map((r, i) =>
+        i === index ? applyWireDerivation({ ...r, ...patch }, side) : r,
+      ),
+    );
   }
 
   // `Input` ya pinta el borde rojo vía `error`; el amarillo de advertencia no
@@ -77,19 +151,53 @@ export function ReadingsTable({
 
   return (
     <div className="flex flex-col gap-3">
+      {distancesReconstructed && (
+        <p className="text-sm text-warning-500">
+          Las distancias por visual de este proceso las reconstruyó la
+          migración repartiendo por mitades; el equilibrado de visuales no se
+          evalúa.
+        </p>
+      )}
+      {wiresAvailable && (
+        <label className="flex items-center gap-2 text-sm text-neutral-700">
+          <input
+            type="checkbox"
+            checked={showWires}
+            onChange={(e) => setShowWires(e.target.checked)}
+          />
+          Capturar los tres hilos (la distancia se calcula por taquimetría)
+        </label>
+      )}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        {/* `min-w-full` en vez de `w-full`: con 13 columnas en modo
+            automático, `w-full` comprime las calculadas hasta cortarles el
+            encabezado. Así la tabla crece lo que necesite y el contenedor
+            hace scroll horizontal. */}
+        <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
               <th className="py-2 pr-3 font-medium">Punto</th>
               <th className="py-2 pr-3 font-medium">Tipo</th>
+              {wiresVisible && (
+                <>
+                  <th className="py-2 pr-3 font-medium">HS atrás</th>
+                  <th className="py-2 pr-3 font-medium">HI atrás</th>
+                </>
+              )}
               <th className="py-2 pr-3 font-medium">L.Atrás</th>
-              <th className="py-2 pr-3 font-medium">AI</th>
+              <th className="py-2 pr-3 font-medium">Dist atrás (m)</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">AI</th>
+              {wiresVisible && (
+                <>
+                  <th className="py-2 pr-3 font-medium">HS adelante</th>
+                  <th className="py-2 pr-3 font-medium">HI adelante</th>
+                </>
+              )}
               <th className="py-2 pr-3 font-medium">L.Adelante</th>
-              <th className="py-2 pr-3 font-medium">Dist (m)</th>
-              <th className="py-2 pr-3 font-medium">Dist acum (km)</th>
-              <th className="py-2 pr-3 font-medium">Cota</th>
-              <th className="py-2 pr-3 font-medium">Cota corregida</th>
+              <th className="py-2 pr-3 font-medium">Dist adelante (m)</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">Dist acum (km)</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">Cota</th>
+              <th className="whitespace-nowrap py-2 pr-3 font-medium">Cota corregida</th>
               {!disabled && <th className="py-2" />}
             </tr>
           </thead>
@@ -102,6 +210,10 @@ export function ReadingsTable({
               const isIntermediate = reading.pointType === "intermediate";
               // La primera fila no admite L.Ad; la última, si es bm, no admite L.At.
               const foresightDisabled = disabled || isFirst;
+              // Una radiación no acumula, así que su distancia no cuenta para
+              // nada: dejarla editable invita a teclear metros que el total
+              // nunca incluirá, y que el Excel imprimiría igualmente.
+              const distanceDisabled = foresightDisabled || isIntermediate;
               const backsightDisabled =
                 disabled ||
                 isIntermediate ||
@@ -140,6 +252,40 @@ export function ReadingsTable({
                       className="w-32"
                     />
                   </td>
+                  {wiresVisible && (
+                    <>
+                      <td className="py-2 pr-3">
+                        <Input
+                          type="number"
+                          step="any"
+                          inputMode="decimal"
+                          aria-label="Hilo superior atrás"
+                          value={reading.backUpperM}
+                          disabled={backsightDisabled}
+                          error={issue?.errors.backWires}
+                          className="w-24"
+                          onChange={(e) =>
+                            updateWires(i, { backUpperM: e.target.value }, "back")
+                          }
+                        />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <Input
+                          type="number"
+                          step="any"
+                          inputMode="decimal"
+                          aria-label="Hilo inferior atrás"
+                          value={reading.backLowerM}
+                          disabled={backsightDisabled}
+                          error={issue?.errors.backWires}
+                          className="w-24"
+                          onChange={(e) =>
+                            updateWires(i, { backLowerM: e.target.value }, "back")
+                          }
+                        />
+                      </td>
+                    </>
+                  )}
                   <td className="py-2 pr-3">
                     <Input
                       type="number"
@@ -163,11 +309,60 @@ export function ReadingsTable({
                       </p>
                     )}
                   </td>
+                  <td className="min-w-40 py-2 pr-3">
+                    <Input
+                      type="number"
+                      step="any"
+                      inputMode="decimal"
+                      aria-label="Distancia atrás (m)"
+                      value={reading.backDistanceM}
+                      disabled={backsightDisabled}
+                      error={issue?.errors.backDistanceM}
+                      className="w-24"
+                      onChange={(e) =>
+                        update(i, { backDistanceM: e.target.value })
+                      }
+                    />
+                  </td>
                   <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {showInstrumentHeight
                       ? formatElevation(row?.instrumentHeight)
                       : "—"}
                   </td>
+                  {wiresVisible && (
+                    <>
+                      <td className="py-2 pr-3">
+                        <Input
+                          type="number"
+                          step="any"
+                          inputMode="decimal"
+                          aria-label="Hilo superior adelante"
+                          value={reading.foreUpperM}
+                          disabled={foresightDisabled}
+                          error={issue?.errors.foreWires}
+                          className="w-24"
+                          onChange={(e) =>
+                            updateWires(i, { foreUpperM: e.target.value }, "fore")
+                          }
+                        />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <Input
+                          type="number"
+                          step="any"
+                          inputMode="decimal"
+                          aria-label="Hilo inferior adelante"
+                          value={reading.foreLowerM}
+                          disabled={foresightDisabled}
+                          error={issue?.errors.foreWires}
+                          className="w-24"
+                          onChange={(e) =>
+                            updateWires(i, { foreLowerM: e.target.value }, "fore")
+                          }
+                        />
+                      </td>
+                    </>
+                  )}
                   <td className="py-2 pr-3">
                     <Input
                       type="number"
@@ -191,34 +386,42 @@ export function ReadingsTable({
                       </p>
                     )}
                   </td>
-                  <td className="py-2 pr-3">
+                  <td className="min-w-40 py-2 pr-3">
                     <Input
                       type="number"
                       step="any"
                       inputMode="decimal"
-                      aria-label="Distancia (m)"
-                      value={reading.distanceM}
-                      disabled={disabled}
-                      className="w-24"
+                      aria-label="Distancia adelante (m)"
+                      value={reading.foreDistanceM}
+                      disabled={distanceDisabled}
+                      error={issue?.errors.foreDistanceM}
+                      className={cn(
+                        "w-24",
+                        warningClass(
+                          issue?.errors.foreDistanceM,
+                          issue?.warnings.sightBalance,
+                        ),
+                      )}
                       onChange={(e) =>
-                        update(i, { distanceM: e.target.value })
+                        update(i, { foreDistanceM: e.target.value })
                       }
                     />
+                    {/* El equilibrado compara las DOS visuales de la armada,
+                        así que el aviso se pinta en la celda de adelante, que
+                        es la segunda que el usuario teclea. */}
+                    {issue?.warnings.sightBalance && (
+                      <p className="mt-1 w-48 text-xs text-warning-500">
+                        {issue.warnings.sightBalance}
+                      </p>
+                    )}
                   </td>
-                  <td className="py-2 pr-3">
-                    <Input
-                      type="number"
-                      step="any"
-                      inputMode="decimal"
-                      aria-label="Distancia acumulada (km)"
-                      value={reading.distanceAccumulatedKm}
-                      disabled={disabled}
-                      error={issue?.errors.distanceAccumulatedKm}
-                      className="w-28"
-                      onChange={(e) =>
-                        update(i, { distanceAccumulatedKm: e.target.value })
-                      }
-                    />
+                  {/* Derivada: la calcula el motor desde las distancias por
+                      visual. Solo lectura — que se teclease era la causa de
+                      que el punto de cierre pudiera quedar sin compensar. */}
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                    {row?.distanceAccumulatedKm == null
+                      ? "—"
+                      : row.distanceAccumulatedKm.toFixed(3)}
                   </td>
                   <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
                     {formatElevation(row?.elevationCalculated)}

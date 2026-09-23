@@ -193,13 +193,21 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
 export interface LecturaNivelacionDemo {
   code: string;
   type: PointType;
-  /** Lectura atrás (L.At): abre la armada siguiente. */
+  /** Lectura atrás (L.At): abre la armada siguiente. Es el hilo medio. */
   back?: number;
-  /** Lectura adelante (L.Ad): cierra la armada vigente. */
+  /** Lectura adelante (L.Ad): cierra la armada vigente. Es el hilo medio. */
   fore?: number;
-  distanceM?: number;
-  /** Distancia acumulada desde el origen, en km. */
-  distanceAccumKm?: number;
+  /**
+   * Hilos estadimétricos. El demo usa un nivel automático, así que captura
+   * los tres y la distancia sale por taquimetría: D = (HS − HI)·100.
+   */
+  backUpperM?: number;
+  backLowerM?: number;
+  foreUpperM?: number;
+  foreLowerM?: number;
+  /** Distancia por visual, en metros. Derivada de los hilos cuando los hay. */
+  backDistanceM?: number;
+  foreDistanceM?: number;
 }
 
 export interface NivelacionDemo {
@@ -210,7 +218,6 @@ export interface NivelacionDemo {
   endBmCode?: string;
   endElevation?: number;
   /** Distancia del recorrido en un solo sentido, en km. */
-  totalDistanceKm: number;
   precisionOrder: PrecisionOrder;
   equipmentBrand: string;
   equipmentModel: string;
@@ -236,7 +243,6 @@ export const NIVELACION_DEMO: NivelacionDemo = {
   type: "closed",
   startBmCode: "BM-1",
   startElevation: 100.0,
-  totalDistanceKm: 0.9,
   // Mismo nivel que el control de asentamientos: un NA2 de 0.7 mm/km sobra
   // para tercer orden, cuyo coeficiente de tolerancia es 12 mm.
   precisionOrder: "tercer_orden",
@@ -246,11 +252,44 @@ export const NIVELACION_DEMO: NivelacionDemo = {
   equipmentCalibrationDate: "2025-11-10",
   levelType: "automatico",
   kmPrecisionMm: 0.7,
+  // Los tres hilos de cada visual, como los captura un nivel automático. El
+  // hilo medio ES la lectura (`back` / `fore`), y la distancia sale por
+  // taquimetría: (HS − HI)·100 = 150 m en todas las visuales.
   forward: [
-    { code: "BM-1", type: "bm", back: 1.5, distanceAccumKm: 0.0 },
-    { code: "PC-1", type: "pc", fore: 1.2, back: 2.0, distanceAccumKm: 0.3 },
-    { code: "PC-2", type: "pc", fore: 2.5, back: 1.0, distanceAccumKm: 0.6 },
-    { code: "BM-1", type: "bm", fore: 0.808, distanceAccumKm: 0.9 },
+    {
+      code: "BM-1",
+      type: "bm",
+      back: 1.5,
+      backUpperM: 2.25,
+      backLowerM: 0.75,
+    },
+    {
+      code: "PC-1",
+      type: "pc",
+      fore: 1.2,
+      foreUpperM: 1.95,
+      foreLowerM: 0.45,
+      back: 2.0,
+      backUpperM: 2.75,
+      backLowerM: 1.25,
+    },
+    {
+      code: "PC-2",
+      type: "pc",
+      fore: 2.5,
+      foreUpperM: 3.25,
+      foreLowerM: 1.75,
+      back: 1.0,
+      backUpperM: 1.75,
+      backLowerM: 0.25,
+    },
+    {
+      code: "BM-1",
+      type: "bm",
+      fore: 0.808,
+      foreUpperM: 1.558,
+      foreLowerM: 0.058,
+    },
   ],
   notes:
     "Circuito cerrado que sale y regresa al BM-1. El error de cierre (−8 mm) queda dentro de la tolerancia de tercer orden: el resultado es conforme.",

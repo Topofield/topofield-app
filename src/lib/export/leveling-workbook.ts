@@ -37,7 +37,12 @@ export interface LevelingReadingRow {
   point_type: string;
   backsight: number | string | null;
   foresight: number | string | null;
-  distance_m: number | string | null;
+  back_upper_m: number | string | null;
+  back_lower_m: number | string | null;
+  fore_upper_m: number | string | null;
+  fore_lower_m: number | string | null;
+  back_distance_m: number | string | null;
+  fore_distance_m: number | string | null;
   distance_accumulated_km: number | string | null;
   instrument_height: number | string | null;
   elevation_calculated: number | string | null;
@@ -100,14 +105,22 @@ function sheetRawData(
     "Orden",
     "Punto",
     "Tipo",
+    "HS atrás",
     "Atrás (m)",
+    "HI atrás",
+    "Dist atrás (m)",
+    "HS adelante",
     "Adelante (m)",
-    "Distancia (m)",
+    "HI adelante",
+    "Dist adelante (m)",
   ]);
 
   const formats = [
     null, null, null, null,
-    DECIMALS.elevation, DECIMALS.elevation, DECIMALS.coordinate,
+    DECIMALS.elevation, DECIMALS.elevation, DECIMALS.elevation,
+    DECIMALS.coordinate,
+    DECIMALS.elevation, DECIMALS.elevation, DECIMALS.elevation,
+    DECIMALS.coordinate,
   ];
 
   readings.forEach((r, i) => {
@@ -119,9 +132,14 @@ function sheetRawData(
         r.reading_order,
         r.point_code,
         POINT_TYPE_LABELS[r.point_type as PointType] ?? r.point_type,
+        num(r.back_upper_m),
         num(r.backsight),
+        num(r.back_lower_m),
+        num(r.back_distance_m),
+        num(r.fore_upper_m),
         num(r.foresight),
-        num(r.distance_m),
+        num(r.fore_lower_m),
+        num(r.fore_distance_m),
       ],
       formats,
     );

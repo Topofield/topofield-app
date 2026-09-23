@@ -10,7 +10,10 @@ import {
   Card,
 } from "@/components/design-system";
 import { PROCESS_STATUS_LABELS, type ProcessStatus } from "@/types/polygonal";
-import { computeLeveling } from "@/lib/calculations/leveling";
+import {
+  computeLeveling,
+  totalDistanceFromReadings,
+} from "@/lib/calculations/leveling";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   hasReadingErrors,
@@ -75,16 +78,23 @@ function processToConfig(p: LevelingProcess): LevelingConfigState {
   };
 }
 
+function str(value: number | null): string {
+  return value != null ? String(value) : "";
+}
+
 function readingToDraft(r: LevelingReading): ReadingDraftState {
   return {
     id: crypto.randomUUID(),
     pointCode: r.point_code,
     pointType: r.point_type,
-    backsight: r.backsight != null ? String(r.backsight) : "",
-    foresight: r.foresight != null ? String(r.foresight) : "",
-    distanceM: r.distance_m != null ? String(r.distance_m) : "",
-    distanceAccumulatedKm:
-      r.distance_accumulated_km != null ? String(r.distance_accumulated_km) : "",
+    backsight: str(r.backsight),
+    foresight: str(r.foresight),
+    backUpperM: str(r.back_upper_m),
+    backLowerM: str(r.back_lower_m),
+    foreUpperM: str(r.fore_upper_m),
+    foreLowerM: str(r.fore_lower_m),
+    backDistanceM: str(r.back_distance_m),
+    foreDistanceM: str(r.fore_distance_m),
   };
 }
 
@@ -94,8 +104,14 @@ function draftToReadingInput(d: ReadingDraftState): ReadingInput {
     pointType: d.pointType,
     backsight: parseNumber(d.backsight),
     foresight: parseNumber(d.foresight),
-    distanceM: parseNumber(d.distanceM),
-    distanceAccumulatedKm: parseNumber(d.distanceAccumulatedKm),
+    backUpperM: parseNumber(d.backUpperM),
+    backLowerM: parseNumber(d.backLowerM),
+    foreUpperM: parseNumber(d.foreUpperM),
+    foreLowerM: parseNumber(d.foreLowerM),
+    backDistanceM: parseNumber(d.backDistanceM),
+    foreDistanceM: parseNumber(d.foreDistanceM),
+    // Derivado por el motor; el cliente no lo envía.
+    distanceAccumulatedKm: null,
   };
 }
 
@@ -105,14 +121,17 @@ function draftToReadingDraft(d: ReadingDraftState): ReadingDraft {
     pointType: d.pointType,
     backsight: parseNumber(d.backsight),
     foresight: parseNumber(d.foresight),
-    distanceM: parseNumber(d.distanceM),
-    distanceAccumulatedKm: parseNumber(d.distanceAccumulatedKm),
+    backUpperM: parseNumber(d.backUpperM),
+    backLowerM: parseNumber(d.backLowerM),
+    foreUpperM: parseNumber(d.foreUpperM),
+    foreLowerM: parseNumber(d.foreLowerM),
+    backDistanceM: parseNumber(d.backDistanceM),
+    foreDistanceM: parseNumber(d.foreDistanceM),
   };
 }
 
 function buildInput(
   config: LevelingConfigState,
-  totalDistanceKm: string,
   forward: ReadingDraftState[],
   back: ReadingDraftState[],
   order: PrecisionOrder,
@@ -123,7 +142,6 @@ function buildInput(
     endElevation:
       config.type === "link" ? parseNumber(config.endBm.elevation) : null,
     order,
-    totalDistanceKm: parseNumber(totalDistanceKm) ?? Number.NaN,
     forward: forward.map(draftToReadingInput),
     return: config.hasReturnRun ? back.map(draftToReadingInput) : null,
   };
@@ -148,9 +166,6 @@ export function LevelingEditor({
   const readOnly = process.status === "closed" || process.status === "rejected";
 
   const [config, setConfig] = useState(() => processToConfig(process));
-  const [totalDistanceKm, setTotalDistanceKm] = useState(
-    process.total_distance_km != null ? String(process.total_distance_km) : "",
-  );
   const [forward, setForward] = useState(() =>
     initialReadings.filter((r) => r.run_type === "forward").map(readingToDraft),
   );
@@ -170,22 +185,46 @@ export function LevelingEditor({
   // página (mismo problema que se corrigió en polygonal-editor.tsx).
   const result = useMemo(
     () =>
-      computeLeveling(
-        buildInput(config, totalDistanceKm, forward, back, config.precisionOrder),
-      ),
-    [config, totalDistanceKm, forward, back],
+      computeLeveling(buildInput(config, forward, back, config.precisionOrder)),
+    [config, forward, back],
+  );
+
+  // La distancia total se DERIVA de las distancias por visual de la libreta.
+  // Antes se tecleaba, y de ella depende la tolerancia K·√D: un número que
+  // nadie verificaba decidía si el trabajo cumple.
+  // Sin tipo de nivel la libreta no se habilita: decide si la distancia sale
+  // de los tres hilos o la entrega el instrumento. Sin preselección —
+  // precedente de `angle_type` en la Fase 7: adivinar reintroduce el fallo
+  // silencioso que esta fase existe para cerrar.
+  const levelType = config.level.levelType === "" ? null : config.level.levelType;
+
+  const derivedTotalKm = useMemo(
+    () => totalDistanceFromReadings(forward.map(draftToReadingInput)),
+    [forward],
   );
 
   // validateRunCapture (no validateReadingCapture fila a fila) porque el
   // error de la fila `bm` inicial sin L.At depende de su POSICIÓN en el
   // recorrido, no solo de sus propios campos.
   const forwardIssues = useMemo<ReadingCaptureIssues[]>(
-    () => validateRunCapture(forward.map(draftToReadingInput), config.type),
-    [forward, config.type],
+    () =>
+      validateRunCapture(
+        forward.map(draftToReadingInput),
+        config.type,
+        config.precisionOrder,
+        process.distances_reconstructed,
+      ),
+    [forward, config.type, config.precisionOrder, process.distances_reconstructed],
   );
   const backIssues = useMemo<ReadingCaptureIssues[]>(
-    () => validateRunCapture(back.map(draftToReadingInput), config.type),
-    [back, config.type],
+    () =>
+      validateRunCapture(
+        back.map(draftToReadingInput),
+        config.type,
+        config.precisionOrder,
+        process.distances_reconstructed,
+      ),
+    [back, config.type, config.precisionOrder, process.distances_reconstructed],
   );
 
   const captureBlocked =
@@ -232,7 +271,6 @@ export function LevelingEditor({
         endBmElevation:
           config.type === "link" ? parseNumber(config.endBm.elevation) : null,
         hasReturnRun: config.hasReturnRun,
-        totalDistanceKm: parseNumber(totalDistanceKm) ?? 0,
         notes: process.notes,
         precisionOrder: config.precisionOrder,
         equipmentBrand: config.level.equipmentBrand.trim() || null,
@@ -341,22 +379,15 @@ export function LevelingEditor({
             onChange={handleConfigChange}
           />
           <div className="max-w-xs">
-            <label className="flex flex-col gap-1 text-sm font-medium text-neutral-800">
+            <span className="flex flex-col gap-1 text-sm font-medium text-neutral-800">
               Distancia total del recorrido (km)
-              <input
-                type="number"
-                step="any"
-                inputMode="decimal"
-                value={totalDistanceKm}
-                disabled={readOnly}
-                className="h-10 rounded-md border border-neutral-400 bg-white px-3 text-base text-neutral-900 disabled:bg-neutral-100 disabled:text-neutral-500"
-                onChange={(e) => {
-                  setTotalDistanceKm(e.target.value);
-                  setDirty(true);
-                  setSaveMessage(null);
-                }}
-              />
-            </label>
+              <output className="flex h-10 items-center rounded-md bg-neutral-100 px-3 font-mono text-base tabular-nums text-neutral-900">
+                {derivedTotalKm.toFixed(3)}
+              </output>
+            </span>
+            <p className="mt-1 text-xs text-neutral-600">
+              Se calcula sumando las distancias por visual de la libreta.
+            </p>
           </div>
         </div>
       </details>
@@ -372,12 +403,23 @@ export function LevelingEditor({
           {config.hasReturnRun && (
             <RunTabs active={activeRun} onChange={setActiveRun} />
           )}
-          {(!config.hasReturnRun || activeRun === "forward") && (
+          {levelType == null ? (
+            <p className="rounded-md bg-neutral-100 px-4 py-3 text-sm text-neutral-700">
+              Elige el <strong>tipo de nivel</strong> en la configuración antes
+              de capturar la libreta: decide si la distancia se obtiene leyendo
+              los tres hilos sobre la mira (nivel automático) o la entrega el
+              instrumento (nivel digital).
+            </p>
+          ) : null}
+          {levelType != null &&
+            (!config.hasReturnRun || activeRun === "forward") && (
             <ReadingsTable
               readings={forward}
               computed={result.forward.readings}
               issues={forwardIssues}
               disabled={readOnly}
+              levelType={levelType}
+              distancesReconstructed={process.distances_reconstructed}
               onChange={(v) => {
                 setForward(v);
                 setDirty(true);
@@ -385,12 +427,16 @@ export function LevelingEditor({
               }}
             />
           )}
-          {config.hasReturnRun && activeRun === "return" && (
+          {levelType != null &&
+            config.hasReturnRun &&
+            activeRun === "return" && (
             <ReadingsTable
               readings={back}
               computed={result.return?.readings ?? []}
               issues={backIssues}
               disabled={readOnly}
+              levelType={levelType}
+              distancesReconstructed={process.distances_reconstructed}
               onChange={(v) => {
                 setBack(v);
                 setDirty(true);
