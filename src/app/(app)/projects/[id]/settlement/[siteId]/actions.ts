@@ -259,6 +259,30 @@ export async function saveVisitAction(
   const computed = history.visits.find((v) => v.visitId === payload.visitId);
   if (!computed) return { ok: false, error: "No se pudo calcular la visita." };
 
+  // Las lecturas que el usuario QUITÓ se retiran antes que nada. Hasta la
+  // Fase 11 iban al final, después del upsert, para que un fallo intermedio
+  // no dejara la visita sin datos; pero solo se borran las que ya no vienen
+  // en el payload —las que el usuario decidió quitar—, así que borrarlas
+  // primero no pierde ningún dato que se quisiera conservar. Y tiene que ser
+  // primero: el trigger de vigencia de `settlement_visits` rechaza el cambio
+  // de fecha mientras quede una lectura de un punto no vigente en la fecha
+  // nueva, que es exactamente la que el usuario acaba de quitar al mover la
+  // visita. Si no queda ninguna lectura (el usuario borró todas), se purga la
+  // visita completa.
+  const idsVigentes = computed.readings.map((r) => r.pointId);
+  const purga = supabase
+    .from("settlement_readings")
+    .delete()
+    .eq("visit_id", payload.visitId);
+  const { error: deleteError } =
+    idsVigentes.length > 0
+      ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
+      : await purga;
+  if (deleteError) return { ok: false, error: deleteError.message };
+
+  // La cabecera va antes del upsert: una lectura nueva de un punto que solo
+  // es vigente en la fecha NUEVA (un alta) la rechazaría el trigger de
+  // lecturas si la visita conservara todavía la fecha vieja.
   const { error: headerError } = await supabase
     .from("settlement_visits")
     .update({
@@ -301,21 +325,6 @@ export async function saveVisitAction(
       );
     if (upsertError) return { ok: false, error: upsertError.message };
   }
-
-  // Las lecturas de puntos que ya no vienen en el payload se retiran DESPUÉS
-  // de que el upsert haya confirmado las actuales, nunca antes: así ningún
-  // fallo intermedio deja la visita sin datos. Si no queda ninguna lectura
-  // vigente (el usuario borró todas), se purga la visita completa.
-  const idsVigentes = computed.readings.map((r) => r.pointId);
-  const purga = supabase
-    .from("settlement_readings")
-    .delete()
-    .eq("visit_id", payload.visitId);
-  const { error: deleteError } =
-    idsVigentes.length > 0
-      ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
-      : await purga;
-  if (deleteError) return { ok: false, error: deleteError.message };
 
   // --- Propagación a visitas posteriores ABIERTAS ---------------------------
   // `computeHistory` recalculó TODO el histórico (`merged`), no solo la visita
