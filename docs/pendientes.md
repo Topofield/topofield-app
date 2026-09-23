@@ -63,10 +63,16 @@ error de lectura o de transcripción. Es el mismo tipo de control que la
 dispersión entre lecturas de la Fase 7.
 
 Con **nivel electrónico / digital** el instrumento ya entrega la distancia, así
-que no se leen hilos: se teclea o se importa el valor.
+que no se leen hilos: se teclea o se importa el valor (ver N4).
 
-Esto conecta con la Fase 8: `level_type` (`automatico` | `digital`) es
-justamente el campo que decide si la celda pide tres hilos o una distancia.
+Esto conecta con la Fase 8: `level_type` (`automatico` | `digital`) es el campo
+que decide la forma de la celda.
+
+**Precisado el 2026-09-22:** con nivel automático los tres hilos son
+**opcionales**, no obligatorios. El topógrafo puede anotar solo la lectura de
+mira y medir la distancia a cinta. Cuando captura los hilos, la distancia se
+deriva por taquimetría y se habilita la comprobación del hilo medio; cuando no,
+teclea la distancia directamente. La lectura de mira es siempre editable.
 
 ### N3 · Sumatoria automática de distancias
 
@@ -77,6 +83,34 @@ del instrumento.
 Importa más de lo que parece: `leveling_processes.total_distance_km` alimenta la
 tolerancia de cierre `K·√D`. Si ese número se teclea a mano, la tolerancia
 depende de un dato que nadie verifica.
+
+### N4 · Importar lecturas desde CSV (nivel electrónico)
+
+Con nivel electrónico las lecturas y las distancias deben poder **subirse desde
+un archivo CSV**, además de digitarse. El instrumento ya entrega ambos valores,
+así que teclearlos a mano es transcribir lo que ya está en digital — con el
+riesgo de error que eso trae en una aplicación cuyo tema es la trazabilidad de
+la medición.
+
+**Bloqueada a la espera de una cartera de nivelación real** que fije el formato.
+No se especifica el parser antes de ver un archivo: el precedente de la Fase 7
+es que dos carteras de campo encontraron en una tarde lo que cuatro fases de
+fixtures sintéticos no vieron.
+
+Va a **fase propia**, no dentro de la fase de la cadena de distancias: es un
+flujo distinto —subida, parseo, previsualización, errores por fila— que no
+comparte código con ella, y meterlo allí arriesga que la parte de importación
+arrastre el cierre de la parte de motor.
+
+### N5 · Nivelación en el generador de proyecto demo
+
+`src/lib/demo/crear-proyecto-demo.ts` —que corre para cada usuario nuevo— no
+crea ningún proceso de nivelación. El usuario que entra por primera vez ve la
+demo sin ese módulo.
+
+Detectado al planificar la fase de la cadena de distancias. Es la misma familia
+de hallazgo que el del cierre de la Fase 6, donde el generador de la demo
+compartía un defecto con el seed: conviene revisar ambos a la vez.
 
 ---
 

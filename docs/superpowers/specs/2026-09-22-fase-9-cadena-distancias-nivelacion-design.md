@@ -58,11 +58,14 @@ representables porque los estados incoherentes dejan de existir.
 | # | Decisión | Razón |
 |---|---|---|
 | 1 | N2 y N3 en una sola fase | Misma cadena de datos; separarlas tira trabajo |
-| 2 | **Derivación estricta**: acumulado y total pasan a ser de solo lectura, siempre calculados | Los tres fallos silenciosos dejan de ser representables. Sin override manual |
+| 2 | **Derivación estricta del acumulado y el total**: pasan a solo lectura, siempre calculados desde las distancias por visual. Sin override manual | Los tres fallos silenciosos dejan de ser representables |
+| 2b | La **distancia por visual** sí es editable, y se autocompleta desde los hilos cuando los hay | Taquimetría y cinta son dos formas legítimas de medir lo mismo. No debilita la 2: el acumulado y el total siguen derivándose de lo que haya |
+| 2c | Los **tres hilos son opcionales**; la lectura de mira es siempre editable | Con nivel automático se puede anotar solo la lectura y medir a cinta. Obligar a los hilos pediría tres números donde la cartera trae uno |
 | 3 | **Backfill por diferencias sucesivas** del acumulado existente, repartido por mitades y marcado como reconstruido | Verificado sobre el fixture del seed: 0.0/0.3/0.6/0.9 → 300/300/300 m por armada. El reparto atrás/adelante no está en los datos, así que no puede alimentar el equilibrado |
 | 4 | Se **paga la deuda del equilibrado de visuales** | La fase produce el dato que faltaba; capturarlo sin leerlo repetiría el error de `distance_m` |
 | 5 | `level_type` sin definir **exige elegirlo** antes de capturar | Precedente de `angle_type` en la Fase 7: no preseleccionar, porque adivinar reintroduce el fallo silencioso |
 | 6 | Se corrige `scripts/seed.mjs` dentro de la fase | Sin eso el backfill limpia el pasado y el seed lo vuelve a ensuciar al siguiente `db reset` |
+| 7 | La importación por CSV va a **fase propia**, bloqueada hasta tener una cartera real | Flujo distinto que no comparte código con la cadena; y el formato hay que verlo, no suponerlo |
 
 ### Sobre la decisión 6
 
@@ -72,9 +75,19 @@ el modelo nuevo exige. El aprendizaje del cierre de la Fase 6 («cuando se
 corrige un fallo en un generador de datos, hay que buscar de inmediato sus
 gemelos») aplica literalmente.
 
-**Queda fuera**: añadir nivelación a `src/lib/demo/crear-proyecto-demo.ts`, que
-hoy no crea ninguna. Eso sí es alcance nuevo y una decisión de producto
-separada; se anota en `docs/pendientes.md`.
+## Fuera de alcance
+
+- **Añadir nivelación a `src/lib/demo/crear-proyecto-demo.ts`**, que hoy no crea
+  ninguna. Es alcance nuevo y una decisión de producto separada; se anota en
+  `docs/pendientes.md`.
+- **Importación de lecturas por CSV** en modo `digital`. Petición nueva recogida
+  el 2026-09-22, va a **fase propia**: es un flujo distinto —subida, parseo,
+  previsualización, errores por fila— que no comparte código con la cadena de
+  distancias, y meterlo aquí arriesga que la parte de importación arrastre el
+  cierre de la parte de motor. **Bloqueada a la espera de una cartera de
+  nivelación real** que fije el formato; el precedente de la Fase 7 es que dos
+  carteras de campo encontraron en una tarde lo que cuatro fases de fixtures
+  sintéticos no vieron. Se anota en `docs/pendientes.md` como N4.
 
 ## Modelo de datos
 
@@ -110,15 +123,48 @@ criterio**: derivada, persistida, de solo lectura en la UI.
 `distance_m` **se elimina**. No la lee nadie y su sustituto son las dos
 distancias por visual. La migración la borra después del backfill.
 
-### Relación entre hilo medio y lectura
+### Los hilos son opcionales; la lectura de mira nunca lo es
 
-En modo `automatico` el **hilo medio es la lectura de mira**. `backsight` y
-`foresight` no desaparecen: se derivan de `back_middle_m` y `fore_middle_m`.
-Esto mantiene intacto todo el motor de cálculo de cotas, que sigue consumiendo
-`backsight`/`foresight` sin enterarse del cambio.
+Corregido tras la revisión del 2026-09-22 con el usuario. Una versión anterior
+de esta spec hacía obligatorios los tres hilos en modo `automatico` y ponía la
+lectura de mira en solo lectura, derivada del hilo medio. **Es demasiado
+rígido**: con nivel automático el topógrafo puede anotar solo la lectura y medir
+la distancia a cinta, y la spec le habría exigido teclear tres números donde
+su cartera trae uno.
 
-En modo `digital` se teclean `backsight`/`foresight` y las distancias
-directamente, como hoy.
+La forma correcta:
+
+- **`backsight` / `foresight` son siempre el campo principal y siempre
+  editables**, en los dos modos. El motor de cotas no se entera de nada: sigue
+  consumiendo exactamente los mismos dos campos que hoy.
+- **Los tres hilos son un añadido opcional.** Cuando están, dos cosas: derivan
+  la distancia de esa visual, y habilitan la comprobación `m = (HS+HI)/2`.
+- **Teclear el hilo medio rellena la lectura de mira** si está vacía, porque son
+  el mismo número. No la sobrescribe si ya tiene valor: la lectura es el dato,
+  el hilo medio es una forma de obtenerlo.
+
+### La distancia: derivada u opcionalmente tecleada
+
+La celda de distancia **acepta escritura directa y se autocompleta desde los
+hilos** cuando los hay. No es de solo lectura.
+
+Esto **no debilita la derivación estricta** de la decisión 2. Lo estricto es que
+el **acumulado y el total** se derivan de las distancias por tramo, y eso se
+mantiene intacto: son los que alimentan la compensación y la tolerancia `K·√D`,
+y son los tres fallos silenciosos que la fase cierra. Lo que queda a elección
+del usuario es un escalón más abajo — de dónde sale la distancia de una visual —
+donde taquimetría y cinta son dos formas legítimas de medir lo mismo.
+
+### Siempre dos distancias por armada
+
+Aunque se teclee a mano, se capturan **dos** distancias: a la mira de atrás y a
+la de adelante. No una sola «distancia al cambio».
+
+Es lo que permite validar el equilibrado **en todos los casos**, con hilos o sin
+ellos. La alternativa —una distancia por tramo— dejaría el equilibrado evaluable
+solo en las armadas con hilos, y un control que aparece siempre pero que en
+media tabla no significa nada es el mismo defecto que obligó a marcar los
+procesos del backfill como reconstruidos.
 
 ## Motor de cálculo
 
@@ -160,6 +206,7 @@ bloquean**, salvo donde se indique — precedente de la app.
 
 | Regla | Criterio | Severidad |
 |---|---|---|
+| Distancia por visual presente | obligatoria en `bm` y `pc`; libre en `intermediate` | error (bloquea) |
 | Hilo medio coherente | `\|m − (HS+HI)/2\| ≤ tolerancia de lectura` | aviso |
 | Orden de los hilos | `HS > m > HI` | error |
 | Equilibrado de visuales | `\|d_atrás − d_adelante\| ≤ límite por orden` | aviso |
@@ -168,6 +215,20 @@ bloquean**, salvo donde se indique — precedente de la app.
 El **error de orden de los hilos bloquea** porque un HS y un HI intercambiados
 dan una distancia negativa, que envenena el acumulado, el total y con él la
 tolerancia. No es un aviso: es un dato imposible.
+
+La **distancia ausente también bloquea**, en las mismas filas en las que hoy es
+obligatorio el acumulado (`bm` y `pc`). Al volverse editable la distancia, puede
+quedar vacía —antes no podía, porque salía de unos hilos obligatorios— y una
+armada sin distancias deja el acumulado corto, el total menor del real y el
+punto de cierre mal compensado. Es exactamente el fallo del JSDoc entrando por
+otra puerta. Bloquear es además **continuidad**, no un endurecimiento: el
+validador ya bloquea hoy el acumulado ausente en esas mismas filas
+(`validators/leveling.ts:69`), y esta regla es su traducción al modelo nuevo.
+
+Conviene notar que este fallo se inclina hacia el lado seguro —un total menor da
+una tolerancia `K·√D` más estricta, que rechaza trabajo bueno en vez de aprobar
+trabajo malo—, pero la compensación del punto de cierre sí queda mal repartida,
+y eso no lo salva ningún margen.
 
 El límite del equilibrado por orden de precisión va a
 `src/lib/calculations/tolerances.ts` como constante, junto a
@@ -185,16 +246,23 @@ Fase 4 sobre comentarios caducados.
 
 La tabla de captura cambia de forma según `level_type`:
 
-- **`automatico`** — seis casillas de hilos (tres atrás, tres adelante). Las dos
-  distancias y las dos lecturas de mira se muestran calculadas, en solo lectura.
-- **`digital`** — dos lecturas de mira y dos distancias, tecleadas.
+- **`automatico`** — lectura de mira y distancia por cada visual, editables, más
+  las seis casillas de hilos **opcionales** (tres atrás, tres adelante). Con
+  hilos, la distancia se autocompleta y la lectura se rellena desde el hilo
+  medio si está vacía.
+- **`digital`** — lectura de mira y distancia por visual, tecleadas. Sin hilos:
+  el instrumento ya entrega ambas. (La importación por CSV **no entra en esta
+  fase**, ver «Fuera de alcance».)
 - **sin definir** — la tabla no se habilita: se pide elegir el tipo de nivel
   primero, sin preselección.
 
 Acumulado por fila y total del recorrido pasan a **solo lectura** en los dos
 modos, mostrados como valores calculados en vivo.
 
-**Ancho de la tabla**: en modo automático la libreta pasa de 7 a 11 columnas.
+**Ancho de la tabla**: en modo automático con hilos desplegados la libreta pasa
+de 7 a 13 columnas. Los hilos son opcionales, así que conviene que se
+muestren/oculten en vez de ocupar sitio siempre — decidir la forma exacta al
+implementar, mirándola en pantalla.
 Hay que mirarla en pantalla antes de cerrar la fase — es exactamente el tipo de
 problema que solo aparece al levantar la app, y las Fases 7 y 8 dejaron dos
 bugs cada una que ninguna otra cosa encontró.
@@ -248,9 +316,15 @@ marco teórico falló como fixture tres veces, Fases 3, 4 y 5):
   seed: cierre en 100.0000, no en 99.992.
 - `stadiaDistance` con HS < HI: la validación lo rechaza antes de llegar al
   motor.
+- **Armada sin hilos, con las dos distancias tecleadas**: acumula y evalúa el
+  equilibrado igual que una con hilos.
+- **Hilos tecleados sobre una lectura ya escrita**: la lectura NO se sobrescribe.
+- **Hilos tecleados sobre una lectura vacía**: la lectura se rellena con el hilo
+  medio.
 
 **Validadores**: hilo medio fuera de tolerancia avisa; hilos desordenados
-bloquean; equilibrado fuera de límite avisa; `level_type` nulo bloquea.
+bloquean; equilibrado fuera de límite avisa; `level_type` nulo bloquea;
+distancia ausente en `bm`/`pc` bloquea, y en `intermediate` no.
 
 **Backfill**: sobre el circuito del seed, las diferencias sucesivas dan
 300/300/300 m por armada y el total recalculado sigue siendo 0.9 km, con el
@@ -267,17 +341,21 @@ sembrados oculta los fallos del arranque en frío.
 
 ## Criterios de aceptación
 
-1. La distancia por tramo es la única entrada; acumulado y total son de solo
-   lectura y se recalculan en vivo.
-2. En modo `automatico` la distancia sale de los tres hilos y el hilo medio es
-   la lectura de mira.
-3. En modo `digital` se teclean lectura y distancia.
+1. Las distancias por visual son la única entrada de la cadena; acumulado y
+   total son de solo lectura y se recalculan en vivo.
+2. Los tres hilos son opcionales. Cuando se capturan, derivan la distancia de su
+   visual y rellenan la lectura de mira si está vacía, sin sobrescribirla.
+3. La lectura de mira es editable siempre, en los dos modos.
+3b. Se capturan dos distancias por armada (atrás y adelante) en todos los casos,
+   vengan de hilos o tecleadas.
 4. Con `level_type` sin definir, la captura no se habilita.
 5. El acumulado de la fila terminal es igual al total **por construcción**, y el
    punto de cierre cierra exactamente contra su cota conocida.
-6. El equilibrado de visuales se valida y avisa; su límite vive en
+6. El equilibrado de visuales se valida y avisa en **todas** las armadas con las
+   dos distancias presentes, con hilos o sin ellos; su límite vive en
    `tolerances.ts`.
-7. El hilo medio incoherente avisa; los hilos desordenados bloquean.
+7. El hilo medio incoherente avisa; los hilos desordenados bloquean; la
+   distancia ausente bloquea en `bm` y `pc`, y no en `intermediate`.
 8. El backfill deja los procesos existentes con las mismas cotas y el mismo
    veredicto de cierre que antes de la migración, y los marca como
    reconstruidos para que no se evalúe su equilibrado.
