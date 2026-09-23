@@ -60,7 +60,7 @@ export interface PointInput {
  * Una lectura de campo: la cota medida de un punto en una visita.
  *
  * OJO: `src/types/leveling.ts` exporta otro `ReadingInput` con forma distinta
- * (lecturas de mira atrás/adelante). Los dos nombres coexisten porque cada uno
+ * (vistas V+/V− sobre la mira). Los dos nombres coexisten porque cada uno
  * es el natural en su módulo, pero un archivo que necesite ambos debe
  * renombrar en el import:
  * `import type { ReadingInput as LevelingReadingInput } from "@/types/leveling"`.

@@ -73,7 +73,7 @@ export function resolveVisualDistances(reading: ReadingInput): {
 /**
  * Distancia acumulada por fila, en METROS, desde las distancias por visual.
  *
- * Una armada aporta la distancia a la mira de atrás más la de adelante. Los
+ * Una armada aporta la distancia de su V+ más la de su V−. Los
  * puntos `intermediate` aportan 0 y HEREDAN el acumulado de la armada de la
  * que cuelgan — que es lo que `applyProportionalCorrection` necesita para
  * interpolarles la corrección—, y la cadena continúa detrás de ellos.
@@ -130,11 +130,11 @@ export interface RunComputation {
  * Recorre la libreta calculando altura de instrumento y cotas (§ 6.7).
  *
  * La regla, por fila y en este orden:
- *   1. si tiene L.Ad → cota = AI_vigente − L.Ad   (consume la AI anterior)
- *   2. si tiene L.At → AI_vigente = cota + L.At   (genera la armada siguiente)
+ *   1. si tiene V− → cota = AI_vigente − V−   (consume la AI anterior)
+ *   2. si tiene V+ → AI_vigente = cota + V+   (genera la armada siguiente)
  *
- * El orden importa: en la fila de un punto de cambio, la L.Ad viene de la
- * armada anterior y la L.At abre la siguiente. Invertirlo desplaza todas las
+ * El orden importa: en la fila de un punto de cambio, la V− viene de la
+ * armada anterior y la V+ abre la siguiente. Invertirlo desplaza todas las
  * cotas del recorrido.
  *
  * Los puntos `intermediate` consumen la AI vigente pero no la actualizan ni
@@ -197,7 +197,7 @@ export function computeRun(
 
   const heightDifference = currentElevation - startElevation;
 
-  // ΣL.At − ΣL.Ad = cota_final − cota_inicial. Solo valida la aritmética de
+  // ΣV+ − ΣV− = cota_final − cota_inicial. Solo valida la aritmética de
   // gabinete: cuadra igual con el nivel descolimado. La calidad la juzga el
   // error de cierre contra la tolerancia.
   const arithmeticCheckOk =

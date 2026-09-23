@@ -63,8 +63,8 @@ function r(
  * Traduce filas por acumulado a filas con distancias por visual.
  *
  * El tramo de cada fila es la diferencia con el acumulado anterior, y se
- * reparte entre la visual de adelante (que cierra la armada previa) y la de
- * atrás (que abre la siguiente), según cuáles tenga la fila. Con las dos, se
+ * reparte entre la V− (que cierra la armada previa) y la V+ (que abre la
+ * siguiente), según cuáles tenga la fila. Con las dos, se
  * parte por mitades: los fixtures antiguos no distinguían, y su geometría de
  * cotas no depende del reparto — solo el acumulado total, que se conserva.
  */
@@ -402,7 +402,7 @@ describe("distanceFromWires", () => {
 
 // Fixture verificado a mano. Circuito cerrado de 0.900 km que sale del BM-1
 // (cota 100.000) y regresa a él con un error deliberado de −8.0 mm.
-//   ΣL.At = 4.500 · ΣL.Ad = 4.508 · diferencia = −0.008 = Δcota. Cuadra.
+//   ΣV+ = 4.500 · ΣV− = 4.508 · diferencia = −0.008 = Δcota. Cuadra.
 const CLOSED_RUN: ReadingInput[] = fromAccum([
   r("BM-1", "bm", 1.5, null, 0.0),
   r("PC-1", "pc", 2.0, 1.2, 0.3),
@@ -413,14 +413,14 @@ const CLOSED_RUN: ReadingInput[] = fromAccum([
 describe("computeRun — cálculo base", () => {
   const run = computeRun(CLOSED_RUN, 100.0);
 
-  it("calcula la AI solo en las filas con lectura atrás", () => {
+  it("calcula la AI solo en las filas con V+", () => {
     expect(run.readings.map((x) => x.instrumentHeight)).toEqual([
       101.5, 102.3, 100.8, null,
     ]);
   });
 
   it("consume la AI anterior antes de generar la nueva", () => {
-    // PC-1: cota = AI(BM-1) 101.5 − L.Ad 1.2 = 100.3
+    // PC-1: cota = AI(BM-1) 101.5 − V− 1.2 = 100.3
     //       y SOLO DESPUÉS AI = 100.3 + 2.0 = 102.3
     expect(run.readings[1]?.elevationCalculated).toBeCloseTo(100.3, 6);
     expect(run.readings[1]?.instrumentHeight).toBeCloseTo(102.3, 6);
@@ -439,7 +439,7 @@ describe("computeRun — cálculo base", () => {
     expect(run.heightDifference).toBeCloseTo(-0.008, 6);
   });
 
-  it("cuadra la comprobación aritmética ΣLA − ΣLD = Δcota", () => {
+  it("cuadra la comprobación aritmética ΣV+ − ΣV− = Δcota", () => {
     expect(run.sumBacksights).toBeCloseTo(4.5, 6);
     expect(run.sumForesights).toBeCloseTo(4.508, 6);
     expect(run.arithmeticCheckOk).toBe(true);
@@ -468,8 +468,8 @@ describe("computeRun — puntos intermedios", () => {
   });
 
   it("excluye los intermedios de la comprobación aritmética", () => {
-    // ΣLA = 1.5 + 2.0 = 3.5 (el intermedio no aporta L.At, y su L.Ad se ignora)
-    // ΣLD = 1.2 + 2.5 = 3.7 → diferencia −0.2 = 99.8 − 100.0. Cuadra.
+    // ΣV+ = 1.5 + 2.0 = 3.5 (el intermedio no aporta V+, y su V− se ignora)
+    // ΣV− = 1.2 + 2.5 = 3.7 → diferencia −0.2 = 99.8 − 100.0. Cuadra.
     expect(run.sumBacksights).toBeCloseTo(3.5, 6);
     expect(run.sumForesights).toBeCloseTo(3.7, 6);
     expect(run.arithmeticCheckOk).toBe(true);
@@ -480,7 +480,7 @@ describe("computeRun — el orden consumir → generar", () => {
   // Este es el test que protege contra el error más difícil de ver a ojo:
   // invertir el orden dentro de la fila desplaza TODAS las cotas del recorrido
   // de forma coherente, así que el resultado sigue pareciendo plausible.
-  it("no usa la L.At de la propia fila para calcular su cota", () => {
+  it("no usa la V+ de la propia fila para calcular su cota", () => {
     const run = computeRun(
       fromAccum([
         r("BM-1", "bm", 1.5, null, 0.0),
@@ -494,7 +494,7 @@ describe("computeRun — el orden consumir → generar", () => {
     expect(run.readings[1]?.elevationCalculated).not.toBeCloseTo(102.3, 6);
   });
 
-  it("deja la primera fila en la cota de partida, sin L.Ad que consumir", () => {
+  it("deja la primera fila en la cota de partida, sin V− que consumir", () => {
     const run = computeRun(fromAccum([r("BM-1", "bm", 1.5, null, 0.0)]), 100.0);
     expect(run.readings[0]?.elevationCalculated).toBeCloseTo(100.0, 6);
     expect(run.readings[0]?.instrumentHeight).toBeCloseTo(101.5, 6);
@@ -738,15 +738,15 @@ describe("computeLeveling — el cierre usa la cota de la CADENA, no la última 
   // cota de la cadena bm/pc, que es la del BM de cierre real.
   //
   // Para que la radiación final tenga una AI vigente de la que colgar, el
-  // recorrido necesita que el BM de cierre lleve L.At (algo inusual en la
+  // recorrido necesita que el BM de cierre lleve V+ (algo inusual en la
   // práctica de campo, pero es exactamente el escenario que hace que el
   // bug se manifieste: una fila después del BM de cierre con una AI
-  // vigente y lectura adelante 0.805, tal como lo reportó la revisión).
+  // vigente y V− 0.805, tal como lo reportó la revisión).
   const closedRunWithBacksightAtClose: ReadingInput[] = fromAccum([
     r("BM-1", "bm", 1.5, null, 0.0),
     r("PC-1", "pc", 2.0, 1.2, 0.3),
     r("PC-2", "pc", 1.0, 2.5, 0.6),
-    r("BM-1", "bm", 1.5, 0.808, 0.9), // BM de cierre, ahora con L.At propia
+    r("BM-1", "bm", 1.5, 0.808, 0.9), // BM de cierre, ahora con V+ propia
     r("RAD-1", "intermediate", null, 0.805, 0.9), // radiación tras el cierre
   ]);
 
@@ -792,7 +792,7 @@ describe("computeLeveling — el cierre usa la cota de la CADENA, no la última 
     const returnWithTrailingIntermediate: ReadingInput[] = fromAccum([
       r("BM-1", "bm", 1.2, null, 0.0),
       r("PV-1", "pc", 1.6, 0.9, 0.45),
-      r("BM-1", "bm", 1.0, 1.89, 0.9), // BM de cierre de la vuelta, con L.At
+      r("BM-1", "bm", 1.0, 1.89, 0.9), // BM de cierre de la vuelta, con V+
       r("RAD-V", "intermediate", null, 0.5, 0.9), // radiación tras el cierre
     ]);
     const rtResult = computeLeveling({

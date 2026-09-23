@@ -204,7 +204,7 @@ export function LevelingEditor({
   );
 
   // validateRunCapture (no validateReadingCapture fila a fila) porque el
-  // error de la fila `bm` inicial sin L.At depende de su POSICIÓN en el
+  // error de la fila `bm` inicial sin V+ depende de su POSICIÓN en el
   // recorrido, no solo de sus propios campos.
   const forwardIssues = useMemo<ReadingCaptureIssues[]>(
     () =>
