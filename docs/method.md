@@ -457,6 +457,26 @@ intermedia rompió la cadena de sumas. De ese número depende `K·√D`.
   a eliminar, repetido. **Un test que ejercita la función y no la ruta no prueba
   que la funcionalidad exista.** Los tests del arreglo van por
   `validateRunCapture`, que es la puerta por la que pasan las filas de verdad.
+- **Un pase de arreglos sin revisión propia introduce defectos nuevos.** La
+  revisión del PR encontró tres defectos confirmados, y **los tres estaban en
+  el código escrito para arreglar los hallazgos de la revisión anterior**: el
+  paso 3 de la migración y el `nullif` salieron de aquel pase. La skill de
+  ejecución dice que no se despacha re-revisión porque los tests que cubren
+  cada arreglo ya responden «está atendido» — y es cierto que lo responden,
+  pero no responden «¿el arreglo rompió otra cosa?». En una migración con SQL
+  que duplica lógica del motor, esa pregunta hay que hacerla aparte.
+- **Duplicar lógica del motor en SQL la condena a divergir.** El paso 3 sumaba
+  las distancias de las filas `intermediate` mientras `accumulateDistances` las
+  salta. Ninguna de las dos implementaciones es obviamente incorrecta leída
+  sola; solo lo son juntas. Cuando una migración tiene que reproducir un
+  cálculo del motor, el criterio de aceptación es que **el resultado coincida
+  con el motor sobre un caso que ejercite la diferencia** — aquí, una libreta
+  con radiación —, no que el SQL «haga lo mismo».
+- **Revertir código para probar una migración se lleva por delante arreglos
+  sin commitear.** Al volver a `8528bac` para sembrar datos pre-fase perdí un
+  arreglo del motor hecho minutos antes. No lo noté al revertir; lo atrapó la
+  suite al volver. **Commitear antes de revertir**, o el test que cubre el
+  arreglo es lo único que lo salva.
 - **Un `0` donde debería haber `null` pasa el validador.** Dos veces en la misma
   fase: `distanceFromWires` devolvía `0` con hilos iguales (y `0 ?? tecleada` es
   `0`, así que la distancia tecleada desaparecía), y el backfill escribía `0` en

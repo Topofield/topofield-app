@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-22 · Fase 9 cerrada · 489 tests ·
+**Última actualización:** 2026-09-23 · Fase 9 cerrada · 492 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -947,7 +947,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-489 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
+492 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1138,15 +1138,19 @@ vez de perseguir otro cuarteto: `StatusIndicator` en modo `level` añade
 además del texto que el sistema de diseño ya exigía. Ver
 `docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
 
-**Las distancias de un punto intermedio se persisten pero no acumulan.**
-`computeRun` resuelve las distancias por visual de **todas** las filas, así que
-un `intermediate` con distancia capturada la guarda y el Excel la imprime en la
-hoja «Lecturas» — pero `accumulateDistances` no la suma, porque una radiación
-cuelga de la AI vigente y no propaga cota. Es correcto que no acumule; lo
-inconsistente es que la columna del export muestre metros que el total no
-incluye. Quien sume la columna a mano obtiene un número distinto. Detectado en
-la revisión de la Fase 9 y diferido: o no se persisten esas distancias, o el
-export marca esas celdas.
+**Dos cabos sueltos de la Fase 9, menores.** Los detectó la revisión del PR y
+se dejaron sin arreglar por acotados:
+
+- `computeLeveling` evalúa la tolerancia de discrepancia con `Math.min` de las
+  dos distancias, pero `|| Number.POSITIVE_INFINITY` hace que una ida **sin**
+  distancias ceda el cálculo a la vuelta. El veredicto de discrepancia sale
+  entonces de un solo recorrido, cuando el comentario promete «la menor de las
+  dos». Acotado porque una ida sin distancias ya bloquea el guardado.
+- `validateRunCapture` tiene `order` y `distancesReconstructed` con valores por
+  defecto, así que un llamador que los olvide evalúa el equilibrado contra
+  tercer orden sin que el typecheck lo señale. Hacerlos obligatorios dejaría
+  que el compilador señale a cada llamador — que es justo lo que habría
+  atrapado el `hasClosingRow` no propagado de la Fase 7.
 
 **Equilibrado de visuales: resuelto en la Fase 9.** Era la deuda más antigua
 de nivelación — la regla de campo que cancela curvatura, refracción y
