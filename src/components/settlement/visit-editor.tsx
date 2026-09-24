@@ -267,6 +267,17 @@ export function VisitEditor({
         header.level.equipmentCalibrationDate.trim() || null,
       levelType: header.level.levelType === "" ? null : header.level.levelType,
       kmPrecisionMm: parseNumber(header.level.kmPrecisionMm),
+      // Provisional hasta el editor de libreta: toda visita sigue en cotas
+      // directas.
+      captureMode: "direct",
+      referenceBm: {
+        code: visit.reference_bm_code ?? "",
+        elevation:
+          visit.reference_bm_elevation == null
+            ? null
+            : Number(visit.reference_bm_elevation),
+      },
+      book: [],
       readings: points
         .filter(
           (p) =>

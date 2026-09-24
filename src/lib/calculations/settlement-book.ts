@@ -17,9 +17,51 @@ import type {
 import type { PrecisionOrder } from "@/types/project";
 import type {
   BookIssue,
+  BookRowPayload,
   DerivedElevation,
   PointInput,
+  SettlementBookReading,
 } from "@/types/settlement";
+
+/**
+ * Una fila de libreta, tal como llega de la base, lista para el editor y el
+ * motor. El `Number()` no es decorativo: PostgREST entrega las columnas
+ * `DECIMAL` como cadena (ver `pointInputOf`).
+ */
+export function bookRowOf(
+  row: Pick<
+    SettlementBookReading,
+    | "point_code"
+    | "point_type"
+    | "backsight"
+    | "foresight"
+    | "back_upper_m"
+    | "back_lower_m"
+    | "fore_upper_m"
+    | "fore_lower_m"
+    | "back_distance_m"
+    | "fore_distance_m"
+  >,
+): BookRowPayload {
+  const n = (v: number | string | null) => (v === null ? null : Number(v));
+  return {
+    pointCode: row.point_code,
+    pointType: row.point_type,
+    backsight: n(row.backsight),
+    foresight: n(row.foresight),
+    backUpperM: n(row.back_upper_m),
+    backLowerM: n(row.back_lower_m),
+    foreUpperM: n(row.fore_upper_m),
+    foreLowerM: n(row.fore_lower_m),
+    backDistanceM: n(row.back_distance_m),
+    foreDistanceM: n(row.fore_distance_m),
+  };
+}
+
+/** La fila como entra al motor: el acumulado lo deriva él, no el cliente. */
+export function bookRowInputOf(row: BookRowPayload): BookRowInput {
+  return { ...row, distanceAccumulatedKm: null };
+}
 
 /**
  * Calcula la libreta de una visita: circuito cerrado que arranca y termina en

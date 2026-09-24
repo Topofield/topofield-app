@@ -212,6 +212,24 @@ export type BookIssue =
   | { kind: "inactive"; level: "warning"; pointId: string; code: string; row: number }
   | { kind: "missing"; level: "warning"; pointId: string; code: string };
 
+/**
+ * Una fila de la libreta de la visita tal como viaja entre el editor y el
+ * servidor: números ya parseados, sin calculados. Misma forma que el
+ * `ReadingDraft` de nivelación, del que es la libreta hermana.
+ */
+export interface BookRowPayload {
+  pointCode: string;
+  pointType: PointType;
+  backsight: number | null;
+  foresight: number | null;
+  backUpperM: number | null;
+  backLowerM: number | null;
+  foreUpperM: number | null;
+  foreLowerM: number | null;
+  backDistanceM: number | null;
+  foreDistanceM: number | null;
+}
+
 /** Una cota derivada de la libreta: la de la fila `rowIndex`. */
 export interface DerivedElevation {
   pointId: string;

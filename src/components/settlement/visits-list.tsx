@@ -67,7 +67,20 @@ export function VisitsList({ projectId, siteId, rows, disabled }: VisitsListProp
     }
     setError(null);
     startTransition(async () => {
-      const response = await createVisitAction(projectId, siteId, date);
+      // Provisional hasta el formulario de nueva visita de la Fase 18.
+      const response = await createVisitAction(projectId, siteId, {
+        date,
+        operator: null,
+        captureMode: "direct",
+        referenceBm: null,
+        precisionOrder: "tercer_orden",
+        equipmentBrand: null,
+        equipmentModel: null,
+        equipmentSerial: null,
+        equipmentCalibrationDate: null,
+        levelType: null,
+        kmPrecisionMm: null,
+      });
       if (response.ok) {
         closeModal();
       } else {

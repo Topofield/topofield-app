@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
+  bookRowInputOf,
+  bookRowOf,
+  computeVisitBook,
+  deriveControlElevations,
+} from "@/lib/calculations/settlement-book";
+import { totalDistanceFromReadings } from "@/lib/calculations/leveling";
+import {
+  bookRowsToPersist,
   visitsToRewrite,
   type PersistedReading,
 } from "@/lib/calculations/settlement-persistence";
@@ -11,10 +19,19 @@ import {
   validateVisitCapture,
   validateVisitClose,
 } from "@/lib/validators/settlement";
-import type {
-  PointInput,
-  VisitInput,
-  VisitStatus,
+import {
+  bookIssueMessage,
+  validateVisitBook,
+} from "@/lib/validators/settlement-book";
+import { hasReadingErrors } from "@/lib/validators/leveling";
+import {
+  CAPTURE_MODES,
+  type BookRowPayload,
+  type CaptureMode,
+  type PointInput,
+  type SettlementBookReading,
+  type VisitInput,
+  type VisitStatus,
 } from "@/types/settlement";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import type { Site } from "@/types/site";
@@ -26,15 +43,42 @@ export interface ActionResult {
   visitId?: string;
 }
 
+/** El BM de amarre de la visita: código y cota, copiados del catálogo o tecleados. */
+export interface ReferenceBm {
+  code: string;
+  elevation: number | null;
+}
+
+/** Lo que pide el formulario de nueva visita (PRD de la Fase 18, decisión 15). */
+export interface NewVisitPayload {
+  date: string;
+  operator: string | null;
+  captureMode: CaptureMode;
+  referenceBm: ReferenceBm | null;
+  precisionOrder: PrecisionOrder;
+  equipmentBrand: string | null;
+  equipmentModel: string | null;
+  equipmentSerial: string | null;
+  equipmentCalibrationDate: string | null;
+  levelType: LevelType | null;
+  kmPrecisionMm: number | null;
+}
+
 export interface VisitPayload {
   siteId: string;
   visitId: string;
   date: string;
   operator: string | null;
   weatherConditions: string | null;
+  /** Solo en `direct`: en `book` lo deriva el servidor de la libreta. */
   closureErrorMm: number | null;
   notes: string | null;
+  /** Solo en `direct`: en `book` las cotas se derivan de la libreta. */
   readings: { pointId: string; elevation: number }[];
+  captureMode: CaptureMode;
+  referenceBm: ReferenceBm;
+  /** La libreta. En `direct` debe ir vacía: se purga la que hubiera. */
+  book: BookRowPayload[];
   /** Orden de precisión y equipo (nivel, ISO 17123-2). */
   precisionOrder: PrecisionOrder;
   equipmentBrand: string | null;
@@ -127,12 +171,25 @@ async function loadContext(
   };
 }
 
-/** Crea una visita con el número siguiente y la fecha dada. */
+/**
+ * Crea una visita con el número siguiente y lo que trae el formulario: fecha,
+ * nivelador, modo de captura, BM de amarre y equipo (Fase 18).
+ */
 export async function createVisitAction(
   projectId: string,
   siteId: string,
-  date: string,
+  input: NewVisitPayload,
 ): Promise<ActionResult> {
+  const { date } = input;
+  if (!CAPTURE_MODES.includes(input.captureMode)) {
+    return { ok: false, error: "Modo de captura no válido." };
+  }
+  if (
+    input.referenceBm?.elevation != null &&
+    !Number.isFinite(input.referenceBm.elevation)
+  ) {
+    return { ok: false, error: "La cota del BM de amarre debe ser un número." };
+  }
   const supabase = await createClient();
 
   const context = await loadContext(supabase, siteId);
@@ -160,9 +217,26 @@ export async function createVisitAction(
     return { ok: false, error: Object.values(issues.errors)[0] };
   }
 
+  const amarreCode = input.referenceBm?.code.trim() ?? "";
   const { data, error } = await supabase
     .from("settlement_visits")
-    .insert({ site_id: siteId, visit_number: nextNumber, date })
+    .insert({
+      site_id: siteId,
+      visit_number: nextNumber,
+      date,
+      operator: input.operator,
+      capture_mode: input.captureMode,
+      reference_bm_code: amarreCode === "" ? null : amarreCode,
+      reference_bm_elevation:
+        amarreCode === "" ? null : (input.referenceBm?.elevation ?? null),
+      precision_order: input.precisionOrder,
+      equipment_brand: input.equipmentBrand,
+      equipment_model: input.equipmentModel,
+      equipment_serial: input.equipmentSerial,
+      equipment_calibration_date: input.equipmentCalibrationDate,
+      level_type: input.levelType,
+      km_precision_mm: input.kmPrecisionMm,
+    })
     .select("id")
     .single();
 
@@ -223,6 +297,49 @@ export async function saveVisitAction(
     return { ok: false, error: "La visita está cerrada; no admite cambios." };
   }
 
+  if (!CAPTURE_MODES.includes(payload.captureMode)) {
+    return { ok: false, error: "Modo de captura no válido." };
+  }
+
+  // --- Libreta (Fase 18) -----------------------------------------------------
+  // En modo `book` las cotas NO vienen del cliente: se derivan de la libreta,
+  // que se revalida y se recalcula aquí. Lo que el editor muestre en vivo es
+  // una vista previa; lo que se persiste sale de este cálculo.
+  const amarreCode = payload.referenceBm.code.trim();
+  const bookInputs = payload.book.map(bookRowInputOf);
+  let readings = payload.readings;
+  let book: ReturnType<typeof computeVisitBook> | null = null;
+  if (payload.captureMode === "book") {
+    const check = validateVisitBook(
+      bookInputs,
+      payload.referenceBm,
+      payload.precisionOrder,
+    );
+    if (check.errors.length > 0) return { ok: false, error: check.errors[0] };
+    const rowIndex = check.rowIssues.findIndex(
+      (i) => Object.keys(i.errors).length > 0,
+    );
+    if (hasReadingErrors(check.rowIssues) && rowIndex >= 0) {
+      const first = Object.values(check.rowIssues[rowIndex]!.errors)[0];
+      return { ok: false, error: `Libreta, fila ${rowIndex + 1}: ${first}` };
+    }
+    readings = [];
+    if (bookInputs.length > 0) {
+      book = computeVisitBook(
+        bookInputs,
+        payload.referenceBm.elevation!,
+        payload.precisionOrder,
+      );
+      const derived = deriveControlElevations(book, context.points, payload.date);
+      const blocking = derived.issues.find((i) => i.level === "error");
+      if (blocking) return { ok: false, error: bookIssueMessage(blocking) };
+      readings = derived.readings.map(({ pointId, elevation }) => ({
+        pointId,
+        elevation,
+      }));
+    }
+  }
+
   // --- Revalidación en el servidor -----------------------------------------
   const others = context.visits
     .filter((v) => v.id !== payload.visitId)
@@ -234,7 +351,7 @@ export async function saveVisitAction(
     id: payload.visitId,
     visitNumber: visit.visit_number,
     date: payload.date,
-    readings: payload.readings,
+    readings,
   };
 
   const issues = validateVisitCapture(candidate, context.points, previousDate);
@@ -283,13 +400,29 @@ export async function saveVisitAction(
   // La cabecera va antes del upsert: una lectura nueva de un punto que solo
   // es vigente en la fecha NUEVA (un alta) la rechazaría el trigger de
   // lecturas si la visita conservara todavía la fecha vieja.
+  // En `book` el cierre, la tolerancia y la distancia son derivados de la
+  // libreta; en `direct` el cierre es el tecleado y lo demás no existe.
+  const round = (v: number | null, d: number) =>
+    v == null ? null : Number(v.toFixed(d));
   const { error: headerError } = await supabase
     .from("settlement_visits")
     .update({
       date: payload.date,
       operator: payload.operator,
       weather_conditions: payload.weatherConditions,
-      closure_error_mm: payload.closureErrorMm,
+      capture_mode: payload.captureMode,
+      reference_bm_code: amarreCode === "" ? null : amarreCode,
+      reference_bm_elevation:
+        amarreCode === "" ? null : payload.referenceBm.elevation,
+      closure_error_mm:
+        payload.captureMode === "book"
+          ? round(book?.closureErrorMm ?? null, 1)
+          : payload.closureErrorMm,
+      tolerance_mm: round(book?.toleranceMm ?? null, 1),
+      meets_tolerance: book?.meetsTolerance ?? null,
+      total_distance_km: book
+        ? round(totalDistanceFromReadings(bookInputs), 3)
+        : null,
       notes: payload.notes,
       precision_order: payload.precisionOrder,
       equipment_brand: payload.equipmentBrand,
@@ -298,10 +431,35 @@ export async function saveVisitAction(
       equipment_calibration_date: payload.equipmentCalibrationDate,
       level_type: payload.levelType,
       km_precision_mm: payload.kmPrecisionMm,
-      status: payload.readings.length > 0 ? "calculated" : "draft",
+      status: readings.length > 0 ? "calculated" : "draft",
     })
     .eq("id", payload.visitId);
   if (headerError) return { ok: false, error: headerError.message };
+
+  // La libreta: upsert por (visit_id, reading_order) y purga de las filas
+  // sobrantes, nunca borrado y reinserción —un fallo entre las dos dejaría la
+  // visita sin su dato de campo (PRD de la Fase 18, decisión 19)—. En
+  // `direct` la purga se lleva la libreta entera: el editor ya avisó.
+  const bookRows = book
+    ? bookRowsToPersist(
+        payload.visitId,
+        payload.book,
+        book.forward.readings,
+        context.points,
+      )
+    : [];
+  if (bookRows.length > 0) {
+    const { error: bookError } = await supabase
+      .from("settlement_book_readings")
+      .upsert(bookRows, { onConflict: "visit_id,reading_order" });
+    if (bookError) return { ok: false, error: bookError.message };
+  }
+  const { error: bookPurgeError } = await supabase
+    .from("settlement_book_readings")
+    .delete()
+    .eq("visit_id", payload.visitId)
+    .gt("reading_order", bookRows.length);
+  if (bookPurgeError) return { ok: false, error: bookPurgeError.message };
 
   // Upsert en vez de delete+insert: un `delete` seguido de un `insert` que
   // fallara dejaría la visita sin lecturas y perdería el dato de campo ya
@@ -410,11 +568,37 @@ export async function closeVisitAction(
     ...v,
     closed: context.statusByVisit.get(v.id) === "closed",
   }));
+
+  // Con libreta, la comprobación aritmética bloquea el cierre; la tolerancia
+  // solo avisa y no se mira aquí (Fase 18, decisión 5).
+  const { data: header } = await supabase
+    .from("settlement_visits")
+    .select("capture_mode, reference_bm_elevation, precision_order")
+    .eq("id", visitId)
+    .maybeSingle();
+  let bookCheck: { arithmeticCheckOk: boolean } | null = null;
+  if (header?.capture_mode === "book" && header.reference_bm_elevation != null) {
+    const { data: rows } = await supabase
+      .from("settlement_book_readings")
+      .select("*")
+      .eq("visit_id", visitId)
+      .order("reading_order");
+    if (rows && rows.length > 0) {
+      const result = computeVisitBook(
+        rows.map((r) => bookRowInputOf(bookRowOf(r as SettlementBookReading))),
+        Number(header.reference_bm_elevation),
+        header.precision_order as PrecisionOrder,
+      );
+      bookCheck = { arithmeticCheckOk: result.arithmeticCheckOk };
+    }
+  }
+
   const issues = validateVisitClose(
     visit,
     context.points,
     previousDate,
     siteVisits,
+    bookCheck,
   );
   if (Object.keys(issues.errors).length > 0) {
     return { ok: false, error: Object.values(issues.errors)[0] };

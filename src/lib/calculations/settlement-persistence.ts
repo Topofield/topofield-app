@@ -9,7 +9,14 @@
 // Separar la DECISIÓN (qué filas cambiaron) de la E/S (escribirlas) permite
 // probar la primera sin mockear el cliente de Supabase.
 
-import type { ComputedReading, VisitResult } from "@/types/settlement";
+import { samePointCode } from "./leveling";
+import type { ComputedReading as BookComputedRow } from "@/types/leveling";
+import type {
+  BookRowPayload,
+  ComputedReading,
+  PointInput,
+  VisitResult,
+} from "@/types/settlement";
 
 /** Forma mínima de una lectura ya persistida, para comparar con la recalculada. */
 export interface PersistedReading {
@@ -126,3 +133,48 @@ export function visitsToRewrite({
 
   return out;
 }
+
+/**
+ * Las filas de la libreta de una visita tal como se escriben en
+ * `settlement_book_readings` (Fase 18), con los calculados del motor.
+ *
+ * - `reading_order` empieza en 1, como en nivelación. El guardado hace upsert
+ *   por `(visit_id, reading_order)` y purga las filas con orden mayor que el
+ *   último: nunca borra y reinserta.
+ * - Las distancias son las RESUELTAS por el motor (de los hilos, si los hay):
+ *   la tecleada sola dejaría vacía la celda de una libreta por taquimetría.
+ * - `point_id` enlaza la fila con su punto de control por código. Lo usa el
+ *   renombrado de puntos (decisión 20); la derivación de cotas no lo necesita.
+ */
+export function bookRowsToPersist(
+  visitId: string,
+  rows: BookRowPayload[],
+  computed: BookComputedRow[],
+  points: Pick<PointInput, "id" | "code">[],
+) {
+  return rows.map((row, i) => {
+    const r = computed[i];
+    const point = points.find((p) => samePointCode(p.code, row.pointCode));
+    return {
+      visit_id: visitId,
+      reading_order: i + 1,
+      point_code: row.pointCode.trim(),
+      point_type: row.pointType,
+      point_id: point?.id ?? null,
+      backsight: row.backsight,
+      foresight: row.foresight,
+      back_upper_m: row.backUpperM,
+      back_lower_m: row.backLowerM,
+      fore_upper_m: row.foreUpperM,
+      fore_lower_m: row.foreLowerM,
+      back_distance_m: r?.backDistanceResolvedM ?? null,
+      fore_distance_m: r?.foreDistanceResolvedM ?? null,
+      distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
+      instrument_height: r?.instrumentHeight ?? null,
+      elevation_calculated: r?.elevationCalculated ?? null,
+      elevation_corrected: r?.elevationCorrected ?? null,
+      correction_applied: r?.correctionApplied ?? null,
+    };
+  });
+}
+
