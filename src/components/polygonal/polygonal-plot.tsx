@@ -16,6 +16,7 @@ import {
 import { polygonalTraces } from "@/lib/calculations/polygonal";
 import type { PolygonalInput, PolygonalResult } from "@/types/polygonal";
 
+/** Tamaño por defecto (el del informe impreso), en unidades del viewBox. */
 export const PLOT_WIDTH = 720;
 export const PLOT_HEIGHT = 480;
 const PADDING = 48;
@@ -36,6 +37,13 @@ interface PolygonalPlotProps {
   /** Punto de amarre con coordenadas, si el proceso lo tiene. */
   reference?: { code: string; north: number; east: number } | null;
   view?: PlotView;
+  /**
+   * Ancho y alto del dibujo, en unidades del viewBox. El editor pasa el ancho
+   * real de su contenedor para que una unidad sea un píxel y el texto no se
+   * encoja en un teléfono; el informe usa el tamaño por defecto.
+   */
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -66,6 +74,8 @@ export function PolygonalPlot({
   result,
   reference = null,
   view = DEFAULT_VIEW,
+  width: W = PLOT_WIDTH,
+  height: H = PLOT_HEIGHT,
 }: PolygonalPlotProps) {
   const traces = polygonalTraces(input, result);
   if (!traces) {
@@ -90,13 +100,13 @@ export function PolygonalPlot({
     ...(reference ? [reference] : []),
   ];
 
-  const base = plotFrame(all, PLOT_WIDTH, PLOT_HEIGHT, PADDING);
+  const base = plotFrame(all, W, H, PADDING);
   const baseCenter = {
     east: (base.east[0] + base.east[1]) / 2,
     north: (base.north[0] + base.north[1]) / 2,
   };
   const mpp = base.metersPerPixel / view.zoom;
-  const frame = plotFrame(all, PLOT_WIDTH, PLOT_HEIGHT, PADDING, {
+  const frame = plotFrame(all, W, H, PADDING, {
     zoom: view.zoom,
     center: {
       east: baseCenter.east - view.offsetX * mpp,
@@ -106,13 +116,15 @@ export function PolygonalPlot({
 
   // Solo las marcas cuyo rótulo cabe: una marca pegada al borde sale cortada.
   const LABEL_MARGIN = 36;
-  const eastTicks = niceTicks(frame.east[0], frame.east[1], 6).filter((v) => {
+  // Una marca cada ~140 px: un rótulo «E 101440» ocupa ~70 px y en un teléfono
+  // seis marcas se montaban unas sobre otras.
+  const eastTicks = niceTicks(frame.east[0], frame.east[1], Math.max(3, Math.floor(W / 140))).filter((v) => {
     const x = frame.toX(v);
-    return x >= LABEL_MARGIN && x <= PLOT_WIDTH - LABEL_MARGIN;
+    return x >= LABEL_MARGIN && x <= W - LABEL_MARGIN;
   });
-  const northTicks = niceTicks(frame.north[0], frame.north[1], 5).filter((v) => {
+  const northTicks = niceTicks(frame.north[0], frame.north[1], Math.max(3, Math.floor(H / 100))).filter((v) => {
     const y = frame.toY(v);
-    return y >= LABEL_MARGIN && y <= PLOT_HEIGHT - LABEL_MARGIN;
+    return y >= LABEL_MARGIN && y <= H - LABEL_MARGIN;
   });
 
   const toPoints = (ps: PlanePoint[]) =>
@@ -134,18 +146,14 @@ export function PolygonalPlot({
   return (
     <figure className="flex flex-col gap-2">
       <svg
-        viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
+        viewBox={`0 0 ${W} ${H}`}
         className="h-auto w-full max-w-full touch-none select-none rounded-md border border-neutral-200 bg-white"
         role="img"
         aria-label={summary}
       >
-        <defs>
-          <clipPath id="polygonal-plot-area">
-            <rect x={0} y={0} width={PLOT_WIDTH} height={PLOT_HEIGHT} />
-          </clipPath>
-        </defs>
-
-        <g clipPath="url(#polygonal-plot-area)">
+        {/* Sin clipPath: el <svg> raíz ya recorta lo que sale de su área, y un
+            id fijo se duplicaría en el informe, que imprime varias poligonales. */}
+        <g>
           {/* Grilla de coordenadas */}
           {eastTicks.map((e) => (
             <g key={`e${e}`}>
@@ -153,13 +161,13 @@ export function PolygonalPlot({
                 x1={frame.toX(e)}
                 x2={frame.toX(e)}
                 y1={0}
-                y2={PLOT_HEIGHT}
+                y2={H}
                 stroke="var(--color-neutral-200)"
                 strokeWidth={1}
               />
               <text
                 x={frame.toX(e)}
-                y={PLOT_HEIGHT - 6}
+                y={H - 6}
                 textAnchor="middle"
                 fontSize={10}
                 fill="var(--color-neutral-500)"
@@ -172,7 +180,7 @@ export function PolygonalPlot({
             <g key={`n${n}`}>
               <line
                 x1={0}
-                x2={PLOT_WIDTH}
+                x2={W}
                 y1={frame.toY(n)}
                 y2={frame.toY(n)}
                 stroke="var(--color-neutral-200)"
@@ -273,7 +281,7 @@ export function PolygonalPlot({
         </g>
 
         {/* Flecha de norte */}
-        <g transform={`translate(${PLOT_WIDTH - 30}, 18)`}>
+        <g transform={`translate(${W - 30}, 18)`}>
           <polygon points="0,0 7,18 0,13 -7,18" fill="var(--color-neutral-900)" />
           <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--color-neutral-900)">
             N
@@ -281,7 +289,7 @@ export function PolygonalPlot({
         </g>
 
         {/* Barra de escala */}
-        <g transform={`translate(12, ${PLOT_HEIGHT - 28})`}>
+        <g transform={`translate(12, ${H - 28})`}>
           <rect x={0} y={0} width={barPixels} height={4} fill="var(--color-neutral-900)" />
           <text x={barPixels / 2} y={-4} textAnchor="middle" fontSize={10} fill="var(--color-neutral-900)">
             {barMeters.toLocaleString("es-CO")} m
