@@ -45,14 +45,27 @@ declare
     'reference_point_id',
     'georef_at', 'georef_by', 'georef_point_a_code', 'georef_point_b_code',
     'georef_rotation_deg', 'georef_rotation_min', 'georef_rotation_sec',
-    'georef_scale_factor'
+    'georef_scale_factor',
+    -- Lo pone `polygonal_processes_set_updated_at`. Sin él en la lista, la
+    -- excepción dependería de que ese trigger dispare después de este, que
+    -- hoy solo lo decide el orden alfabético de sus nombres.
+    'updated_at'
   ];
 begin
-  if old.status in ('closed', 'rejected')
-     and (to_jsonb(new) - position_columns) is distinct from (to_jsonb(old) - position_columns) then
-    raise exception
-      'El proceso % está cerrado (%): solo puede cambiar su posición.', old.id, old.status
-      using errcode = 'restrict_violation';
+  if old.status in ('closed', 'rejected') then
+    if (to_jsonb(new) - position_columns) is distinct from (to_jsonb(old) - position_columns) then
+      raise exception
+        'El proceso % está cerrado (%): solo puede cambiar su posición.', old.id, old.status
+        using errcode = 'restrict_violation';
+    end if;
+    -- El amarre del catálogo solo puede soltarse (pasar a manual), no cambiar
+    -- por otro: la poligonal cerrada no se midió contra él.
+    if new.reference_point_id is not null
+       and new.reference_point_id is distinct from old.reference_point_id then
+      raise exception
+        'El proceso % está cerrado (%): su amarre solo puede pasar a manual.', old.id, old.status
+        using errcode = 'restrict_violation';
+    end if;
   end if;
   return new;
 end;

@@ -35,6 +35,12 @@ con el mecanismo que allí quedó acordado: **recalcular y guardar**
 > - `capturas.mjs` buscaba «el» proceso cerrado del proyecto sin nombre; con la
 >   Vivero local cerrada había dos. Ahora filtra por nombre.
 > - Los residuos del diálogo pasan a metros cuando superan 1 m.
+> - **Hallado en la revisión:** un factor de escala fuera de 0.5–2 **se
+>   rechaza** con el motivo (son unidades equivocadas, y `georef_scale_factor`
+>   no cabría), igual que coordenadas por encima de `decimal(12,4)`. La lista
+>   blanca admite `reference_point_id` **solo hacia `null`**, como decía la
+>   decisión 7, y `updated_at`, para no depender del orden de los triggers. El
+>   `Modal` limita el alto y desplaza solo en su tamaño grande.
 
 ## Propósito
 

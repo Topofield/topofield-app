@@ -544,7 +544,7 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 Una poligonal medida en local se lleva al sistema real con dos de sus
 estaciones, esté o no cerrada: se recalcula con la entrada girada y
 trasladada, y la base admite en un cerrado solo las columnas de posición.
-618 → 651 tests.
+618 → 652 tests.
 
 **Aprendizajes a llevar a fases siguientes:**
 

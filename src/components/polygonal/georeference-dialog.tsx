@@ -197,7 +197,9 @@ export function GeoreferenceDialog({
           {pointFields("Punto A", a, setA)}
           {pointFields("Punto B", b, setB)}
 
-          {planned && !planned.ok && (a.index !== "" && b.index !== "") && (
+          {/* El error, solo cuando ya está todo tecleado: antes es el paso
+              siguiente, no un fallo. */}
+          {planned && !planned.ok && [a, b].every((p) => p.index !== "" && p.north !== "" && p.east !== "") && (
             <p className="text-sm text-danger-500">{planned.error}</p>
           )}
 

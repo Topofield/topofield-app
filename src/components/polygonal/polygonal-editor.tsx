@@ -39,7 +39,6 @@ import { ResultsPanel } from "./results-panel";
 import { StationsTable } from "./stations-table";
 import {
   buildInput,
-  polygonalInputOf,
   processToConfig,
   stationToDraft,
   weightsFromDraft,
@@ -176,16 +175,10 @@ export function PolygonalEditor({
 
   // Georreferenciar (Fase 15) trabaja con lo guardado: con cambios sin
   // guardar se mezclaría la edición en curso con la georreferenciación.
-  const savedHasCoordinates = useMemo(
-    () =>
-      computePolygonal(polygonalInputOf(process, initialStations)).stations.filter(
-        (s) => s.north != null,
-      ).length >= 2,
-    [process, initialStations],
-  );
+  // Sin cambios pendientes, el cálculo en vivo es el de lo guardado.
   const georefBlocked = dirty
     ? "Guarde los cambios antes de georreferenciar."
-    : !savedHasCoordinates
+    : result.stations.filter((s) => s.north != null).length < 2
       ? "Para georreferenciar hacen falta coordenadas calculadas."
       : null;
 

@@ -115,8 +115,23 @@ export function planGeoreference(
 
   const fit = fitTwoPoints(local(ia), local(ib), realA, realB);
   if (!fit) return { ok: false, error: "Los dos puntos no definen una dirección." };
+  // `georef_scale_factor` es decimal(12,9). Un factor así no es de una
+  // proyección: son unidades equivocadas (kilómetros por metros, un dígito de
+  // más), y es mejor decirlo que dejar que la base falle.
+  if (!(fit.scaleFactor > 0.5 && fit.scaleFactor < 2)) {
+    return {
+      ok: false,
+      error: `La distancia real entre las dos estaciones es ${fit.scaleFactor.toFixed(3)} veces la medida. Revise las coordenadas y sus unidades.`,
+    };
+  }
 
   const moved = georeferenceInput(input, fit.transform);
+  const outOfRange = [moved.startNorth, moved.startEast, moved.endNorth, moved.endEast].some(
+    (v) => v != null && !(Math.abs(v) < 1e8),
+  );
+  if (outOfRange) {
+    return { ok: false, error: "El arranque quedaría fuera del rango de coordenadas admitido." };
+  }
   const after = computePolygonal(moved);
   if (!sameVerdict(before, after)) {
     // No debería pasar nunca: una transformación rígida no cambia el cierre.

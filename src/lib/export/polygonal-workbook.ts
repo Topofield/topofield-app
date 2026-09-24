@@ -23,7 +23,7 @@ import {
   type PolygonalType,
   type ProcessStatus,
 } from "@/types/polygonal";
-import { formatPrecision } from "@/lib/utils/format";
+import { formatDate, formatPrecision } from "@/lib/utils/format";
 import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
 
 /** Fila de `polygonal_stations`, tal como llega de la base. */
@@ -371,7 +371,9 @@ function sheetSummary(
     row += 1;
     writeSection(s, row, "Georreferenciación");
     row = writePairs(s, row + 1, [
-      ["Fecha", process.georef_at],
+      // La fecha de Bogotá, como en el editor y el informe: el ISO en UTC
+      // puede caer al día siguiente.
+      ["Fecha", formatDate(process.georef_at)],
       ["Puntos de control", `${process.georef_point_a_code} y ${process.georef_point_b_code}`],
       [
         "Rotación",

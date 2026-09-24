@@ -40,15 +40,17 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-lg border border-neutral-200 bg-white shadow-lg",
-          size === "lg" ? "max-w-2xl" : "max-w-md",
+          "relative w-full rounded-lg border border-neutral-200 bg-white shadow-lg",
+          // Solo el grande limita su alto y desplaza el cuerpo: los diálogos
+          // de formulario quedan como estaban, sin recortar nada.
+          size === "lg" ? "flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col" : "max-w-md",
         )}
       >
         <header className="border-b border-neutral-100 px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
         </header>
-        {/* El cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
-        <div className="overflow-y-auto px-6 py-4">{children}</div>
+        {/* En el grande, el cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
+        <div className={cn("px-6 py-4", size === "lg" && "overflow-y-auto")}>{children}</div>
         {footer && (
           <footer className="flex justify-end gap-2 border-t border-neutral-100 px-6 py-4">
             {footer}

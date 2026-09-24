@@ -110,6 +110,14 @@ describe("planGeoreference", () => {
     expect(r).toEqual({ ok: false, error: "Las dos estaciones de control deben ser puntos distintos." });
   });
 
+  it("rechaza, con el motivo, un factor de escala que son unidades equivocadas", () => {
+    // Un dígito de más en el Norte de D3: la distancia real sale unas cien
+    // veces la medida.
+    const r = planGeoreference(process(), stations, D1, { ...D3, north: D3.north + 9000 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/unidades/);
+  });
+
   it("avisa del factor de escala con 1 m de más en D3", () => {
     const r = planGeoreference(process(), stations, D1, { ...D3, north: D3.north + 1 });
     if (!r.ok) throw new Error(r.error);

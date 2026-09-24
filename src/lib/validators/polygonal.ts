@@ -335,6 +335,11 @@ export function validateGeoreferencePoints(
   ) {
     return "Faltan las coordenadas reales de las dos estaciones.";
   }
+  // El límite de `decimal(12,4)`: más allá, la base rechazaría el guardado
+  // con un error que no dice por qué.
+  if (![a.north, a.east, b.north, b.east].every((v) => Math.abs(v) < 1e8)) {
+    return "Las coordenadas reales deben estar por debajo de 100 000 000.";
+  }
   if (Math.hypot(b.north - a.north, b.east - a.east) < 0.001) {
     return "Las coordenadas reales de las dos estaciones coinciden.";
   }

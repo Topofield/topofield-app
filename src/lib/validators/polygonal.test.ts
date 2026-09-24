@@ -656,5 +656,7 @@ describe("validateGeoreferencePoints (Fase 15)", () => {
     expect(validateGeoreferencePoints(stations, real(1, null), real(2))).toMatch(/Faltan/);
     expect(validateGeoreferencePoints(stations, real(1, Number.NaN), real(2))).toMatch(/Faltan/);
     expect(validateGeoreferencePoints(stations, real(1), real(2))).toMatch(/coinciden/);
+    // Por encima del límite de decimal(12,4).
+    expect(validateGeoreferencePoints(stations, real(1, 1e9), real(2, 180, 280))).toMatch(/100 000 000/);
   });
 });

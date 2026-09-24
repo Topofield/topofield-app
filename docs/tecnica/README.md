@@ -513,7 +513,10 @@ gana la misma regla. Sobre un cerrado o rechazado admiten un `UPDATE` si lo
 `to_jsonb(new) - lista` y `to_jsonb(old) - lista`.
 
 - Cabecera: `start_north`, `start_east`, `start_azimuth_*`, `end_north`,
-  `end_east`, `end_azimuth_*`, `reference_point_id` y `georef_*`.
+  `end_east`, `end_azimuth_*`, `reference_point_id` —solo hacia `null`: el
+  amarre puede pasar a manual, no cambiar por otro—, `georef_*` y
+  `updated_at`, que pone otro trigger y no debe depender del orden en que
+  disparan.
 - Estaciones: `azimuth_*`, `delta_north`, `delta_east`, `corrected_delta_*`,
   `north` y `east`.
 
@@ -784,7 +787,10 @@ estaciones de coordenadas conocidas.
 - `components/polygonal/georeference-plan.ts` (sin `"use client"`) compone la
   ruta completa desde las filas con `polygonalInputOf`: valida los puntos,
   ajusta, recalcula, comprueba que el veredicto no cambió a la resolución de
-  las columnas y devuelve las columnas que hay que escribir. Lo usan la vista
+  las columnas y devuelve las columnas que hay que escribir. Rechaza con el
+  motivo un factor de escala fuera de 0.5–2 —son unidades equivocadas, no una
+  proyección— y coordenadas por encima de `decimal(12,4)`, que la base
+  rechazaría con un error opaco. Lo usan la vista
   previa del diálogo y `georeferencePolygonalProcessAction`, así que se
   escribe exactamente lo que el usuario vio.
 - Un amarre del catálogo pasa a **manual** (`reference_point_id = null`, el
@@ -1230,7 +1236,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-651 tests en 30 archivos, Vitest, entorno `node` **sin jsdom**.
+652 tests en 30 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1245,7 +1251,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
-| `components/polygonal/georeference-plan.test.ts` | 8 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, aviso de escala (Fase 15) |
+| `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
 | `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
 | `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
 | `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
