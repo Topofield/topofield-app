@@ -22,7 +22,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~A1~~ | **12** — Alerta por lectura desfasada | **cerrada** (2026-09-23) |
 | ~~P1~~ | dentro de la **13** (canvas) | **cerrada** (2026-09-23) |
 | ~~N4~~ | **16** — Importar lecturas de nivel digital | **cerrada** (2026-09-24) |
-| N6 | — | sin fase asignada |
+| N6 | **17** — Control ida-vuelta por puntos homólogos | en curso (PRD redactado el 2026-09-24) |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
 Es falso: sí la crea, vía `src/lib/demo/insertar-nivelacion.ts`. El grep que
