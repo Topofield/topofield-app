@@ -613,13 +613,32 @@ corrección igual y de signo opuesto al error de cierre.
 ### 6.6 Ida y vuelta
 
 Al activar el recorrido de vuelta, la libreta muestra dos pestañas. Ida y
-vuelta son **mediciones independientes**: cada una tiene sus propios puntos
-de cambio, y no hace falta —de hecho es mejor no— reocupar los mismos puntos
-en los dos sentidos.
+vuelta son **mediciones independientes**. En campo se hace de dos maneras:
+con puntos de cambio propios en cada sentido, o **volviendo por los mismos
+puntos**. La aplicación admite las dos.
 
 La aplicación compara los **desniveles totales** de ambos recorridos. La
 discrepancia entre ellos se contrasta contra **T·√2**, donde T es la misma
-tolerancia K·√D del cierre individual.
+tolerancia K·√D del cierre individual. Ese es el veredicto.
+
+**Puntos homólogos.** Si la ida y la vuelta pasan por los mismos puntos,
+Resultados añade una tabla que compara la cota de cada punto en los dos
+recorridos: cota de la vuelta menos cota de la ida, con las cotas sin
+compensar. Los códigos se emparejan sin distinguir espacios ni mayúsculas
+(`AUX1` y `AUX 1` son el mismo punto).
+
+![Puntos homólogos del crudo de nivel digital leído como ida y vuelta](../../public/manual/24-puntos-homologos.png)
+
+Un único número de discrepancia esconde lo que la serie deja ver:
+
+- si el residuo **crece a lo largo del recorrido**, hay un error sistemático
+  repartido;
+- si **salta en un punto**, revise ese punto.
+
+En la imagen, la discrepancia es de 0.4 mm, pero a mitad del recorrido las dos
+mediciones difieren en 5 mm. La tabla es informativa: no cambia el veredicto.
+Un código que se repite dentro de un recorrido —el BM de partida de una
+cerrada— no se compara, porque no se sabe con cuál de sus cotas.
 
 ### 6.7 Importar desde archivo
 

@@ -8,7 +8,12 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-09-22)
+## Estado (2026-09-24)
+
+**Todas las peticiones recogidas están resueltas.** La última, N6, cerró en la
+Fase 17. La tabla y los textos de abajo se conservan como registro.
+
+### Renumeración del 2026-09-22
 
 Cuatro de estas peticiones ya tienen fase asignada en la renumeración del
 2026-09-22. Siguen listadas aquí hasta que su PRD-de-fase se redacte y
@@ -22,7 +27,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~A1~~ | **12** — Alerta por lectura desfasada | **cerrada** (2026-09-23) |
 | ~~P1~~ | dentro de la **13** (canvas) | **cerrada** (2026-09-23) |
 | ~~N4~~ | **16** — Importar lecturas de nivel digital | **cerrada** (2026-09-24) |
-| N6 | — | sin fase asignada |
+| ~~N6~~ | **17** — Control ida-vuelta por puntos homólogos | **cerrada** (2026-09-24) |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
 Es falso: sí la crea, vía `src/lib/demo/insertar-nivelacion.ts`. El grep que
@@ -142,6 +147,9 @@ errores por fila— que no comparte código con el motor. Se numerará cuando le
 llegue el turno, después de las fases 11 y 12 con el orden actual.
 
 ### N6 · Control ida-vuelta por puntos homólogos
+
+> **Resuelta en la Fase 17** ([`prds/16-homologos-ida-vuelta.md`](./prds/16-homologos-ida-vuelta.md)).
+> Se conserva el texto de la petición como registro.
 
 Cuando la ida y la vuelta recorren **los mismos puntos** —práctica confirmada en
 la cartera de El Verjón, donde los 12 puntos se reocupan en orden inverso— se

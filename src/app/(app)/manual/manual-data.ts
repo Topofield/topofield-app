@@ -96,6 +96,12 @@ export const CAPTURAS = {
     width: 1344,
     height: 2736,
   },
+  puntosHomologos: {
+    src: "/manual/24-puntos-homologos.png",
+    alt: "Tabla de puntos homólogos del crudo de nivel digital leído como ida y vuelta: los residuos crecen hasta −5.2 mm a mitad del recorrido y vuelven a −0.4 mm, la discrepancia.",
+    width: 1984,
+    height: 1116,
+  },
   editorNivelacion: {
     src: "/manual/12-editor-nivelacion.png",
     alt: "Editor de nivelación completo: libreta, comprobación aritmética, cierre y cotas corregidas.",

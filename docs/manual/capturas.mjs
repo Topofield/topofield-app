@@ -181,7 +181,17 @@ await importar.locator('input[type="file"]').setInputFiles(join(AQUI, "..", "car
 await page.waitForTimeout(600);
 await importar.screenshot({ path: join(OUT, "23-importar-nivelacion.png") });
 console.log("✓", "23-importar-nivelacion");
-await page.keyboard.press("Escape");
+
+// Fase 17 — el mismo crudo aceptado como ida y vuelta (sin guardar): la tabla
+// de puntos homólogos.
+await importar.getByRole("button", { name: "Usar estas lecturas" }).click();
+await page.waitForTimeout(800);
+const homologos = page.getByRole("heading", { name: "Puntos homólogos" });
+await homologos.scrollIntoViewIfNeeded();
+await homologos
+  .locator("xpath=ancestor::*[contains(@class,'rounded')][1]")
+  .screenshot({ path: join(OUT, "24-puntos-homologos.png") });
+console.log("✓", "24-puntos-homologos");
 await page.setViewportSize({ width: 1280, height: 800 });
 
 // Control de asentamientos

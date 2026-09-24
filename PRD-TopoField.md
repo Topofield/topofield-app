@@ -1033,6 +1033,14 @@ Para cada punto i:
 > adoptado se calcula y se muestra como dato informativo del doble recorrido,
 > pero **no entra en el cálculo de las cotas corregidas**. Ver deuda técnica
 > en `docs/tecnica/README.md`.
+>
+> **Enmendado en la Fase 17** (2026-09-24). La afirmación de que los PC «no se
+> reocupan» la desmienten dos carteras reales —El Verjón y el crudo de nivel
+> digital del Tramo 2—, que recorren en la vuelta los mismos puntos de la ida.
+> Las dos prácticas existen. El emparejamiento **por sección** sigue siendo el
+> veredicto; cuando ida y vuelta comparten puntos intermedios, el editor añade
+> una comparación **por puntos homólogos** (cota de la vuelta − cota de la
+> ida, punto a punto), informativa. Ver `docs/prds/16-homologos-ida-vuelta.md`.
 
 ```
 Cada recorrido se calcula de forma independiente y produce el desnivel

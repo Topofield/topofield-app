@@ -69,6 +69,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 14 | Ajuste por mínimos cuadrados | cerrada |
 | 15 | Georreferenciación de levantamientos | cerrada |
 | 16 | Importar lecturas de nivel digital | cerrada |
+| 17 | Control ida-vuelta por puntos homólogos | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -807,6 +808,33 @@ abierta con vuelta todas las cotas de la vuelta salían desplazadas por el
 desnivel de la ida. Ahora parte de la cota final calculada de la ida. La
 discrepancia no cambia: compara desniveles.
 
+### Puntos homólogos ida-vuelta (Fase 17)
+
+`compareHomologousPoints(result)` compara punto a punto la ida y la vuelta
+cuando pasan por los mismos puntos: residuo = cota de la vuelta − cota de la
+ida, con las cotas **calculadas** (la compensación reparte el error de la ida
+y escondería lo que se quiere ver), en el orden de la vuelta.
+
+- Los códigos se emparejan con `samePointCode`, que ignora espacios y
+  mayúsculas: El Verjón escribe `AUX1` en la ida y `AUX 1` en la vuelta.
+- Devuelve `null` sin vuelta, si solo se comparten los extremos de la vuelta
+  —la tabla repetiría la discrepancia— o si la vuelta no empieza en el punto
+  donde terminó la ida: el motor la arranca en esa cota y todos los residuos
+  saldrían desplazados. Las filas a medio capturar, con cota no finita, no se
+  comparan.
+- Un código que se repite dentro de un recorrido (el BM de partida de una
+  cerrada) no se empareja y se devuelve en `skippedCodes`.
+- Es **informativa**: no entra en el veredicto, ni en la compensación, ni en
+  el informe o el Excel. Solo la muestra el panel de resultados del editor.
+- El último residuo es la discrepancia cuando la vuelta arranca en la cota a
+  la que llegó la ida (cerrada, abierta). En una de enlace arranca en la cota
+  conocida de llegada y no lo es. El motor lo dice en `lastIsDiscrepancy`, y
+  el panel solo lo rotula entonces.
+
+Reproduce la columna `P` de la hoja de El Verjón (de −1 a −7 mm, y −5 mm en
+D1) y los residuos del crudo de nivel digital (hasta −5.2 mm a mitad del
+recorrido, con una discrepancia de 0.4 mm).
+
 ### Georreferenciación (Fase 15)
 
 Una poligonal medida en local se lleva al sistema real con dos de sus
@@ -1275,12 +1303,13 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-676 tests en 31 archivos, Vitest, entorno `node` **sin jsdom**.
+687 tests en 32 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 71 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16) |
+| `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 22 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16) |
 | `lib/validators/polygonal.test.ts` | 66 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |

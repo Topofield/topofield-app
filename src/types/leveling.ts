@@ -150,6 +150,33 @@ export interface LevelingResult {
   adoptedHeightDifference: number | null;
 }
 
+/**
+ * Un punto que la ida y la vuelta comparten (Fase 17). Informativo: el
+ * veredicto sigue siendo la discrepancia de la sección.
+ */
+export interface HomologousPoint {
+  /** El código tal como aparece en la vuelta. */
+  pointCode: string;
+  pointType: PointType;
+  forwardElevation: number;
+  returnElevation: number;
+  /** Cota de la vuelta − cota de la ida, en mm. Cotas calculadas, sin compensar. */
+  residualMm: number;
+}
+
+export interface HomologousComparison {
+  /** En el orden de la vuelta. */
+  points: HomologousPoint[];
+  /** Códigos compartidos que no se emparejan por repetirse dentro de un recorrido. */
+  skippedCodes: string[];
+  /**
+   * El último residuo es la discrepancia de la sección. Lo es cuando la vuelta
+   * arranca en la cota a la que llegó la ida (cerrada, abierta); en una de
+   * enlace arranca en la cota conocida de llegada y no lo es.
+   */
+  lastIsDiscrepancy: boolean;
+}
+
 // --- Etiquetas en español ---
 
 export const LEVELING_TYPE_LABELS: Record<LevelingType, string> = {
