@@ -4,6 +4,8 @@
 import { levelingTolerance } from "./tolerances";
 import type {
   ComputedReading,
+  HomologousComparison,
+  HomologousPoint,
   LevelingInput,
   LevelingResult,
   ReadingInput,
@@ -409,4 +411,73 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     meetsDiscrepancy,
     adoptedHeightDifference,
   };
+}
+
+// --- Puntos homólogos (Fase 17) ----------------------------------------------
+
+/** El código sin espacios y en mayúsculas: «AUX 1», «aux1» y «AUX1 » son el mismo. */
+function normalizedCode(code: string): string {
+  return code.replace(/\s+/g, "").toUpperCase();
+}
+
+/**
+ * ¿Son el mismo punto? Se ignoran espacios y mayúsculas: la cartera de El
+ * Verjón escribe `AUX1` en la ida y `AUX 1` en la vuelta.
+ */
+export function samePointCode(a: string, b: string): boolean {
+  return normalizedCode(a) === normalizedCode(b);
+}
+
+/**
+ * Compara punto a punto la ida y la vuelta cuando pasan por los mismos puntos
+ * (Fase 17, N6). Residuo = cota de la vuelta − cota de la ida, con las cotas
+ * CALCULADAS: la compensación reparte el error de la ida y escondería justo lo
+ * que se quiere ver. En el orden de la vuelta.
+ *
+ * `null` si no hay vuelta, o si solo comparten los extremos de la vuelta: la
+ * tabla repetiría la discrepancia. Un código que se repite dentro de un
+ * recorrido —el BM de partida de una cerrada— no se empareja: no se sabe con
+ * cuál de sus cotas comparar.
+ */
+export function compareHomologousPoints(
+  result: LevelingResult,
+): HomologousComparison | null {
+  const back = result.return?.readings;
+  if (!back || back.length === 0) return null;
+  const forward = result.forward.readings;
+
+  const count = (rows: ComputedReading[]) => {
+    const m = new Map<string, number>();
+    for (const r of rows) {
+      const k = normalizedCode(r.pointCode);
+      if (k !== "") m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  };
+  const inForward = count(forward);
+  const inReturn = count(back);
+
+  const skipped = new Set<string>();
+  const points: HomologousPoint[] = [];
+  let sharesInterior = false;
+  back.forEach((r, i) => {
+    const k = normalizedCode(r.pointCode);
+    if (k === "" || !inForward.has(k)) return;
+    if ((inForward.get(k) ?? 0) > 1 || (inReturn.get(k) ?? 0) > 1) {
+      skipped.add(r.pointCode.trim());
+      return;
+    }
+    const f = forward.find((x) => normalizedCode(x.pointCode) === k)!;
+    points.push({
+      pointCode: r.pointCode.trim(),
+      pointType: r.pointType,
+      forwardElevation: f.elevationCalculated,
+      returnElevation: r.elevationCalculated,
+      residualMm: (r.elevationCalculated - f.elevationCalculated) * 1000,
+    });
+    if (i !== 0 && i !== back.length - 1) sharesInterior = true;
+  });
+
+  if (!sharesInterior) return null;
+  return { points, skippedCodes: [...skipped] };
 }

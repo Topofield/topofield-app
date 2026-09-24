@@ -1,6 +1,12 @@
 import { Alert, Card, StatusIndicator } from "@/components/design-system";
+import { compareHomologousPoints } from "@/lib/calculations/leveling";
 import { evaluateLevelingClosure } from "@/lib/validators/leveling";
-import { RUN_TYPE_LABELS, type LevelingResult, type LevelingType } from "@/types/leveling";
+import {
+  POINT_TYPE_LABELS,
+  RUN_TYPE_LABELS,
+  type LevelingResult,
+  type LevelingType,
+} from "@/types/leveling";
 
 /** Formatea metros como cota, a 4 decimales. */
 function formatElevation(value: number): string {
@@ -30,6 +36,7 @@ interface ResultsPanelProps {
 export function ResultsPanel({ result, type }: ResultsPanelProps) {
   const closure = evaluateLevelingClosure(result);
   const arithmeticDifference = result.sumBacksights - result.sumForesights;
+  const homologous = compareHomologousPoints(result);
 
   return (
     <div className="flex flex-col gap-6">
@@ -213,6 +220,71 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                 tolerancia.
               </p>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* Bloque 3 bis: puntos homólogos (Fase 17, N6). Solo si ida y vuelta
+          comparten puntos intermedios; informativo, sin veredicto. */}
+      {homologous && (
+        <Card title="Puntos homólogos">
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-neutral-700">
+              La ida y la vuelta pasan por los mismos puntos, así que se compara
+              la cota de cada uno en los dos recorridos. Si el residuo{" "}
+              <strong>crece a lo largo del recorrido</strong>, hay un error
+              sistemático repartido; si <strong>salta en un punto</strong>,
+              revise ese punto.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+                    <th className="py-2 pr-3 font-medium">Punto</th>
+                    <th className="py-2 pr-3 font-medium">Tipo</th>
+                    <th className="py-2 pr-3 font-medium">Cota ida</th>
+                    <th className="py-2 pr-3 font-medium">Cota vuelta</th>
+                    <th className="py-2 pr-3 font-medium">Vuelta − ida (mm)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {homologous.points.map((p, i) => (
+                    <tr key={`${p.pointCode}-${i}`} className="border-b border-neutral-100">
+                      <td className="py-2 pr-3 text-neutral-900">{p.pointCode}</td>
+                      <td className="py-2 pr-3 text-neutral-700">{POINT_TYPE_LABELS[p.pointType]}</td>
+                      <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                        {formatElevation(p.forwardElevation)}
+                      </td>
+                      <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                        {formatElevation(p.returnElevation)}
+                      </td>
+                      <td className="py-2 pr-3 font-mono tabular-nums text-neutral-900">
+                        {formatMm(p.residualMm)}
+                        {/* En una de enlace la vuelta arranca en la cota
+                            conocida del BM de llegada, no en la de la ida, y
+                            el último residuo ya no es la discrepancia: se
+                            rotula solo cuando lo es. */}
+                        {i === homologous.points.length - 1 &&
+                          result.discrepancyMm != null &&
+                          Math.abs(Math.abs(p.residualMm) - result.discrepancyMm) < 1e-6 && (
+                          <span className="ml-2 font-sans text-xs text-neutral-500">
+                            = discrepancia
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-neutral-500">
+              Con las cotas calculadas, sin compensar. Es una lectura
+              informativa: el veredicto sigue siendo la discrepancia de la
+              sección. Los códigos se emparejan sin distinguir espacios ni
+              mayúsculas.
+              {homologous.skippedCodes.length > 0 &&
+                ` No se comparan ${homologous.skippedCodes.join(", ")}: se repiten dentro de un recorrido y no se sabe con cuál de sus cotas emparejarlos.`}
+            </p>
           </div>
         </Card>
       )}
