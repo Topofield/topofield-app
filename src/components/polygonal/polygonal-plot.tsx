@@ -94,11 +94,10 @@ export function PolygonalPlot({
   const exaggerated = k ? exaggeratedPoints(traces, k) : null;
   const adjusted: PlanePoint[] = traces.map((t) => t.adjusted);
 
-  const all: PlanePoint[] = [
-    ...adjusted,
-    ...(exaggerated ?? []),
-    ...(reference ? [reference] : []),
-  ];
+  // El encuadre es la poligonal, no el amarre: un amarre en un punto de red
+  // a 800 m reduciría un lote de 40 m a unos píxeles. Si el amarre queda
+  // fuera, su línea de orientación sale hasta el borde y el <svg> la recorta.
+  const all: PlanePoint[] = [...adjusted, ...(exaggerated ?? [])];
 
   const base = plotFrame(all, W, H, PADDING);
   const baseCenter = {
@@ -126,6 +125,14 @@ export function PolygonalPlot({
     const y = frame.toY(v);
     return y >= LABEL_MARGIN && y <= H - LABEL_MARGIN;
   });
+
+  const referenceOutside =
+    reference !== null &&
+    (() => {
+      const x = frame.toX(reference.east);
+      const y = frame.toY(reference.north);
+      return x < 0 || x > W || y < 0 || y > H;
+    })();
 
   const toPoints = (ps: PlanePoint[]) =>
     ps.map((p) => `${frame.toX(p.east)},${frame.toY(p.north)}`).join(" ");
@@ -316,6 +323,12 @@ export function PolygonalPlot({
             {input.type === "open_uncontrolled"
               ? "Abierta sin control: no se compensa."
               : "Sin correcciones: la poligonal cierra exacta."}
+          </span>
+        )}
+        {referenceOutside && reference && (
+          <span>
+            El amarre {reference.code} queda fuera del encuadre: la línea
+            punteada indica su dirección.
           </span>
         )}
       </figcaption>

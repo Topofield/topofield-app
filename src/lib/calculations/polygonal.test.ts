@@ -569,6 +569,17 @@ describe("polygonalTraces — la sin compensar cierra con el error de cierre", (
     });
   });
 
+  it("devuelve null si falta el arranque, aunque las proyecciones sean finitas", () => {
+    const input: PolygonalInput = {
+      ...BASE,
+      type: "closed",
+      method: "bowditch",
+      startNorth: Number.NaN,
+      stations: [st("A", 90, 100), st("B", 90, 100), st("C", 90, 100), st("D", 90, 100)],
+    };
+    expect(polygonalTraces(input, computePolygonal(input))).toBeNull();
+  });
+
   it("devuelve null mientras falten datos", () => {
     const input: PolygonalInput = {
       ...BASE,

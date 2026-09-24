@@ -588,6 +588,10 @@ export function polygonalTraces(
   result: PolygonalResult,
 ): TracePoint[] | null {
   const { stations } = result;
+  // Sin arranque no hay dónde anclar el dibujo: con el Norte o el Este en
+  // blanco las proyecciones siguen siendo finitas, y sin esta guarda todos los
+  // puntos saldrían NaN.
+  if (!isNum(input.startNorth) || !isNum(input.startEast)) return null;
 
   // Lados con proyección, en orden. En una cerrada la fila de control (con
   // orientación) no abre lado y trae las proyecciones en null.
