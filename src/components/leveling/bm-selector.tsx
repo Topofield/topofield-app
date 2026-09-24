@@ -58,10 +58,15 @@ function matchingPoint(
   value: BmValue,
 ): ReferencePoint | undefined {
   if (value.code.trim() === "") return undefined;
+  // La cota se compara como NÚMERO: el catálogo la entrega como número
+  // (`100`) y quien guardó una copia puede traerla formateada (`100.0000`, el
+  // BM de amarre de una visita, Fase 18). Como texto no coincidirían y el BM
+  // del catálogo aparecería como «Otro».
+  const elevation = value.elevation.trim() === "" ? null : Number(value.elevation);
   return points.find(
     (p) =>
       p.code === value.code &&
-      (p.elevation != null ? String(p.elevation) : "") === value.elevation,
+      (p.elevation == null ? elevation == null : Number(p.elevation) === elevation),
   );
 }
 

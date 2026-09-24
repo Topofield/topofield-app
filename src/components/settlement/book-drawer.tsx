@@ -1,7 +1,6 @@
 "use client";
 
 import { Drawer } from "@/components/design-system";
-import { samePointCode } from "@/lib/calculations/leveling";
 import { formatBookClosure, formatDateOnly } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import type { SettlementBookReading } from "@/types/settlement";
@@ -18,10 +17,8 @@ interface BookDrawerProps {
   closureErrorMm: number | null;
   toleranceMm: number | null;
   meetsTolerance: boolean | null;
-  /** Códigos del catálogo del lugar: sus filas se resaltan. */
-  pointCodes: string[];
   /** El punto seleccionado en la vista, cuya fila se marca además. */
-  selectedCode: string | null;
+  selectedPointId: string | null;
 }
 
 /** Un valor DECIMAL (que PostgREST entrega como cadena) a 4 decimales, o «—». */
@@ -59,8 +56,7 @@ export function BookDrawer({
   closureErrorMm,
   toleranceMm,
   meetsTolerance,
-  pointCodes,
-  selectedCode,
+  selectedPointId,
 }: BookDrawerProps) {
   const closure = formatBookClosure(closureErrorMm, toleranceMm, meetsTolerance);
   const sumBack = rows.reduce((a, r) => a + (r.backsight == null ? 0 : Number(r.backsight)), 0);
@@ -101,7 +97,8 @@ export function BookDrawer({
         </div>
       </dl>
 
-      <div className="overflow-x-auto">
+      {/* `relative` contiene el `sr-only` de las celdas (ver visits-table). */}
+      <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
@@ -117,8 +114,11 @@ export function BookDrawer({
           </thead>
           <tbody>
             {rows.map((r, i) => {
-              const isControl = pointCodes.some((c) => samePointCode(c, r.point_code));
-              const isSelected = selectedCode != null && samePointCode(selectedCode, r.point_code);
+              // Por `point_id` y no por código: una visita cerrada conserva el
+              // código con que se midió aunque el punto se renombre después
+              // (Fase 18, decisión 20), y seguiría siendo su punto de control.
+              const isControl = r.point_id != null;
+              const isSelected = selectedPointId != null && r.point_id === selectedPointId;
               const intermediate = r.point_type === "intermediate";
               const newSetup = i === 0 || setups[i] !== setups[i - 1];
               return (
@@ -133,7 +133,7 @@ export function BookDrawer({
                   <td className="py-1.5 pr-3 font-sans text-neutral-500">
                     {newSetup && r.backsight != null ? setups[i] : ""}
                   </td>
-                  <td className="py-1.5 pr-3 font-sans">
+                  <td className="whitespace-nowrap py-1.5 pr-3 font-sans">
                     {r.point_code}
                     {isControl && <span className="sr-only"> (punto de control)</span>}
                   </td>

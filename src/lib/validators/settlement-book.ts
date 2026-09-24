@@ -76,6 +76,6 @@ export function bookIssueMessage(issue: BookIssue): string {
     case "inactive":
       return `${issue.code} no está vigente en la fecha de la visita: su lectura (fila ${issue.row + 1}) no se usa.`;
     case "missing":
-      return `${issue.code} no aparece en la libreta.`;
+      return `${issue.code} no tiene vista menos en la libreta: queda sin cota.`;
   }
 }

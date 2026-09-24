@@ -433,8 +433,7 @@ export function VisitView(props: VisitViewProps) {
         closureErrorMm={props.closureErrorMm}
         toleranceMm={props.toleranceMm}
         meetsTolerance={props.meetsTolerance}
-        pointCodes={rows.map((r) => r.code)}
-        selectedCode={current?.code ?? null}
+        selectedPointId={current?.pointId ?? null}
       />
 
       <CloseVisitDialog

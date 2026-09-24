@@ -60,7 +60,10 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
   }
 
   return (
-    <div className="max-h-[28rem] overflow-auto">
+    // `relative`: el texto `sr-only` de las celdas es absoluto, y sin un
+    // contenedor posicionado escapa del recorte y ensancha la página entera
+    // en un teléfono.
+    <div className="relative max-h-[28rem] overflow-auto">
       <table className="w-full text-sm">
         <thead className="sticky top-0 z-10 bg-white">
           <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">

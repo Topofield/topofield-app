@@ -111,7 +111,7 @@ describe("bookIssueMessage", () => {
     ).toBe("PC-02 no está vigente en la fecha de la visita: su lectura (fila 3) no se usa.");
     expect(
       bookIssueMessage({ kind: "missing", level: "warning", pointId: "x", code: "PC-04" }),
-    ).toBe("PC-04 no aparece en la libreta.");
+    ).toBe("PC-04 no tiene vista menos en la libreta: queda sin cota.");
   });
 });
 
