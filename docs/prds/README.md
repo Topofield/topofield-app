@@ -18,7 +18,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 10 | Nomenclatura de nivelación | `09-nomenclatura-nivelacion.md` | cerrada |
 | 11 | Estado de los BMs | `10-estado-bms.md` | cerrada |
 | 12 | Alerta por lectura desfasada | `11-lectura-desfasada.md` | cerrada |
-| 13 | Canvas de poligonal | — | pendiente |
+| 13 | Canvas de poligonal | `12-canvas-poligonal.md` | cerrada |
 | 14 | Ajuste por mínimos cuadrados | — | pendiente |
 | 15 | Georreferenciación de levantamientos | — | pendiente |
 

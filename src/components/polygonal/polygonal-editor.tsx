@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   Alert,
   Badge,
@@ -9,8 +9,6 @@ import {
   Button,
   Card,
 } from "@/components/design-system";
-import type { DmsValue } from "@/components/design-system";
-import { dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { totalStationMeetsOrder } from "@/lib/calculations/tolerances";
 import { parseNumber } from "@/lib/utils/parse";
@@ -19,160 +17,28 @@ import {
   validatePolygonalStation,
   type CaptureIssues,
 } from "@/lib/validators/polygonal";
-import { savePolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
+import {
+  savePolygonalProcessAction,
+  setAngleInputFormatAction,
+} from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import {
   PROCESS_STATUS_LABELS,
   type CorrectionMethod,
-  type PolygonalInput,
   type PolygonalProcess,
   type PolygonalStationWithReadings,
   type ProcessStatus,
 } from "@/types/polygonal";
-import type { PrecisionOrder, ReferencePoint } from "@/types/project";
-import {
-  PolygonalConfigFields,
-  type PolygonalConfigState,
-} from "./polygonal-config-fields";
+import type { ReferencePoint } from "@/types/project";
+import { PolygonalConfigFields } from "./polygonal-config-fields";
 import { CloseProcessDialog } from "./close-process-dialog";
 import { ClosureVerdict } from "./closure-verdict";
+import { PolygonalPlotViewer } from "./polygonal-plot-viewer";
 import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
-import {
-  StationsTable,
-  averageOf,
-  readingValues,
-  type StationDraftState,
-} from "./stations-table";
-
-function dmsRow(
-  deg: number | null,
-  min: number | null,
-  sec: number | null,
-): DmsValue {
-  return {
-    deg: deg != null ? String(deg) : "",
-    min: min != null ? String(min) : "",
-    sec: sec != null ? String(sec) : "",
-  };
-}
-
-function processToConfig(p: PolygonalProcess): PolygonalConfigState {
-  return {
-    name: p.name,
-    type: p.type,
-    angleType: p.angle_type,
-    referencePointId: p.reference_point_id ?? "",
-    referencePointCode: p.reference_point_code ?? "",
-    hasClosingRow: p.has_closing_row ?? false,
-    angleReadingsMin: String(p.angle_readings_min),
-    startPointCode: p.start_point_code,
-    startNorth: String(p.start_north),
-    startEast: String(p.start_east),
-    startAzimuth: dmsRow(
-      p.start_azimuth_deg,
-      p.start_azimuth_min,
-      p.start_azimuth_sec,
-    ),
-    endPointCode: p.end_point_code ?? "",
-    endNorth: p.end_north != null ? String(p.end_north) : "",
-    endEast: p.end_east != null ? String(p.end_east) : "",
-    endAzimuth: dmsRow(p.end_azimuth_deg, p.end_azimuth_min, p.end_azimuth_sec),
-    precisionOrder: p.precision_order,
-    totalStation: {
-      equipmentBrand: p.equipment_brand ?? "",
-      equipmentModel: p.equipment_model ?? "",
-      equipmentSerial: p.equipment_serial ?? "",
-      equipmentCalibrationDate: p.equipment_calibration_date ?? "",
-      angularPrecisionSeconds:
-        p.angular_precision_seconds != null
-          ? String(p.angular_precision_seconds)
-          : "",
-      distancePrecisionMm:
-        p.distance_precision_mm != null ? String(p.distance_precision_mm) : "",
-      distancePrecisionPpm:
-        p.distance_precision_ppm != null
-          ? String(p.distance_precision_ppm)
-          : "",
-    },
-  };
-}
-
-function stationToDraft(
-  st: PolygonalStationWithReadings,
-  readingsMin: number,
-): StationDraftState {
-  const stored = (st.polygonal_angle_readings ?? []).map((r) =>
-    dmsRow(r.angle_deg, r.angle_min, r.angle_sec),
-  );
-  // Siempre se muestran al menos `readingsMin` filas: las que falten van
-  // vacías, para que el capturador vea cuántas le exige el proceso.
-  const readings =
-    stored.length >= readingsMin
-      ? stored
-      : [
-          ...stored,
-          ...Array.from({ length: readingsMin - stored.length }, () => ({
-            deg: "",
-            min: "",
-            sec: "",
-          })),
-        ];
-  return {
-    id: crypto.randomUUID(),
-    pointCode: st.point_code,
-    angle: dmsRow(st.angle_deg, st.angle_min, st.angle_sec),
-    readings,
-    deflectionDirection: st.deflection_direction,
-    distance:
-      st.horizontal_distance != null ? String(st.horizontal_distance) : "",
-  };
-}
-
-function dmsToDecimalOrNaN(value: DmsValue): number {
-  const deg = parseNumber(value.deg);
-  const min = parseNumber(value.min);
-  const sec = parseNumber(value.sec);
-  return deg != null && min != null && sec != null
-    ? dmsToDecimal(deg, min, sec)
-    : Number.NaN;
-}
-
-function buildInput(
-  config: PolygonalConfigState,
-  stations: StationDraftState[],
-  method: CorrectionMethod,
-  order: PrecisionOrder,
-): PolygonalInput {
-  const controlled = config.type === "open_controlled";
-  return {
-    type: config.type,
-    startNorth: parseNumber(config.startNorth) ?? Number.NaN,
-    startEast: parseNumber(config.startEast) ?? Number.NaN,
-    startAzimuth: dmsToDecimalOrNaN(config.startAzimuth),
-    endNorth: controlled ? parseNumber(config.endNorth) : null,
-    endEast: controlled ? parseNumber(config.endEast) : null,
-    endAzimuth:
-      controlled && config.endAzimuth.deg.trim() !== ""
-        ? dmsToDecimalOrNaN(config.endAzimuth)
-        : null,
-    order,
-    method,
-    angleType: config.angleType === "" ? "interior" : config.angleType,
-    hasOrientation:
-      config.referencePointId !== "" || config.referencePointCode !== "",
-    hasClosingRow: config.hasClosingRow,
-    stations: stations.map((st) => ({
-      pointCode: st.pointCode,
-      angle: dmsToDecimalOrNaN(averageOf(st.readings) ?? st.angle),
-      deflectionDirection: st.deflectionDirection,
-      distance: parseNumber(st.distance),
-      readings: readingValues(st.readings).map((angle, i) => ({
-        order: i + 1,
-        angle,
-      })),
-    })),
-  };
-}
+import { StationsTable } from "./stations-table";
+import { buildInput, processToConfig, stationToDraft } from "./polygonal-draft";
+import { AngleFormatToggle } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 const STATUS_TONE: Record<
   ProcessStatus,
@@ -226,19 +92,45 @@ export function PolygonalEditor({
   const [dirty, setDirty] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Formato de captura de ángulos (Fase 13, P1). Se guarda al conmutar, no con
+  // el botón Guardar; en un proceso cerrado solo cambia la vista.
+  const [angleFormat, setAngleFormat] = useState<AngleInputFormat>(
+    process.angle_input_format,
+  );
+  const [formatError, setFormatError] = useState<string | null>(null);
+
+  // Se guardan en serie: con dos clics rápidos, dos peticiones en paralelo
+  // podían llegar en desorden y dejar en la base el formato que no se ve.
+  // Cada una espera a la anterior, y la última escrita es la última pedida.
+  const formatQueue = useRef<Promise<unknown>>(Promise.resolve());
+
+  function changeAngleFormat(next: AngleInputFormat) {
+    setAngleFormat(next);
+    setFormatError(null);
+    if (readOnly) return;
+    formatQueue.current = formatQueue.current.then(() =>
+      setAngleInputFormatAction(process.id, next).then((r) => {
+        if (!r.ok) setFormatError(r.error ?? "No se pudo guardar el formato.");
+      }),
+    );
+  }
 
   // El orden sale de `config.precisionOrder`, no de un prop aparte: el
   // selector de orden vive dentro de `PolygonalConfigFields` y edita
   // `config` en vivo, así que el veredicto de cierre debe recalcular con el
   // mismo valor que ve el usuario, no con el que tenía el proceso al cargar
   // la página.
-  const result = useMemo(
-    () =>
-      computePolygonal(
-        buildInput(config, stations, method, config.precisionOrder),
-      ),
+  const input = useMemo(
+    () => buildInput(config, stations, method, config.precisionOrder),
     [config, stations, method],
   );
+  const result = useMemo(() => computePolygonal(input), [input]);
+
+  // El amarre se dibuja solo si tiene coordenadas en el catálogo.
+  const plotReference =
+    amarre && amarre.north !== null && amarre.east !== null
+      ? { code: amarre.code, north: Number(amarre.north), east: Number(amarre.east) }
+      : null;
 
   const issues = useMemo<CaptureIssues[]>(
     () =>
@@ -396,6 +288,19 @@ export function PolygonalEditor({
         )}
       />
 
+      <div className="flex flex-wrap items-center gap-3">
+        <AngleFormatToggle value={angleFormat} onChange={changeAngleFormat} />
+        {readOnly && (
+          <span className="text-xs text-neutral-500">
+            El proceso está cerrado: el formato solo cambia la vista y no se
+            guarda.
+          </span>
+        )}
+        {formatError && (
+          <span className="text-xs text-danger-500">{formatError}</span>
+        )}
+      </div>
+
       <details
         open={process.status === "draft" || process.status === "in_progress"}
         className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
@@ -422,6 +327,7 @@ export function PolygonalEditor({
         <div className="border-t border-neutral-100 px-5 py-4">
           <PolygonalConfigFields
             value={config}
+            angleFormat={angleFormat}
             disabled={readOnly}
             onChange={(v) => {
               setConfig(v);
@@ -444,11 +350,20 @@ export function PolygonalEditor({
           }
           showDeflection={config.type === "open_controlled"}
           disabled={readOnly}
+          angleFormat={angleFormat}
           onChange={(v) => {
             setStations(v);
             setDirty(true);
             setSaveMessage(null);
           }}
+        />
+      </Card>
+
+      <Card title="Dibujo de la poligonal">
+        <PolygonalPlotViewer
+          input={input}
+          result={result}
+          reference={plotReference}
         />
       </Card>
 
@@ -469,6 +384,7 @@ export function PolygonalEditor({
       {!readOnly && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ReassignCoordinatesDialog
+            angleFormat={angleFormat}
             startNorth={config.startNorth}
             startEast={config.startEast}
             startAzimuth={config.startAzimuth}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computePolygonal } from "./polygonal";
+import { computePolygonal, polygonalTraces } from "./polygonal";
 import { azimuthFromCoordinates, dmsToDecimal } from "./angles";
 import { CARTERA_TT4, CARTERA_VIVERO, type Cartera } from "@/lib/demo/carteras";
 import type {
@@ -465,5 +465,128 @@ describe("computePolygonal — ángulos exteriores", () => {
   it("cierra el cuadrado con azimuts 0°, 90°, 180°, 270°", () => {
     expect(square.stations.map((s) => s.azimuth)).toEqual([0, 90, 180, 270]);
     expect(square.linearError).toBeCloseTo(0, 6);
+  });
+});
+
+// ============================================================================
+// Fase 13 — trazas para el dibujo
+// ============================================================================
+
+describe("polygonalTraces — la sin compensar cierra con el error de cierre", () => {
+  const casos: [string, PolygonalInput][] = [
+    ["TT4 (bowditch)", fromCartera(CARTERA_TT4, "bowditch")],
+    ["TT4 (transit)", fromCartera(CARTERA_TT4, "transit")],
+    ["TT4 (crandall)", fromCartera(CARTERA_TT4, "crandall")],
+    ["Vivero (bowditch)", fromCartera(CARTERA_VIVERO, "bowditch")],
+    [
+      "Pentágono del marco teórico",
+      {
+        ...BASE,
+        type: "closed",
+        method: "bowditch",
+        startNorth: 1000,
+        startEast: 1000,
+        startAzimuth: 45,
+        stations: [
+          st("A", 95.5, 120.5),
+          st("B", 108.25, 98.75),
+          st("C", 112, 135.2),
+          st("D", 87.75, 110.3),
+          st("E", 136.5, 89.6),
+        ],
+      },
+    ],
+  ];
+
+  it.each(casos)("%s: último sin compensar − arranque = (errorNorth, errorEast)", (_, input) => {
+    const result = computePolygonal(input);
+    const trazas = polygonalTraces(input, result)!;
+    const ultimo = trazas.at(-1)!;
+    expect(ultimo.unadjusted.north - input.startNorth).toBeCloseTo(result.errorNorth!, 9);
+    expect(ultimo.unadjusted.east - input.startEast).toBeCloseTo(result.errorEast!, 9);
+    // Ajustada: vuelve al arranque, y cada vértice coincide con el del motor.
+    expect(ultimo.adjusted.north).toBeCloseTo(input.startNorth, 9);
+    expect(ultimo.adjusted.east).toBeCloseTo(input.startEast, 9);
+    trazas.slice(0, -1).forEach((t, i) => {
+      expect(t.adjusted.north).toBeCloseTo(result.stations[i]!.north!, 9);
+      expect(t.adjusted.east).toBeCloseTo(result.stations[i]!.east!, 9);
+    });
+    // El punto de cierre lleva el código del arranque.
+    expect(ultimo.code).toBe(input.stations[0]!.pointCode);
+  });
+
+  it("un cierre perfecto no separa las dos trazas", () => {
+    const input: PolygonalInput = {
+      ...BASE,
+      type: "closed",
+      method: "bowditch",
+      startAzimuth: 0,
+      stations: [st("A", 90, 100), st("B", 90, 100), st("C", 90, 100), st("D", 90, 100)],
+    };
+    const trazas = polygonalTraces(input, computePolygonal(input))!;
+    for (const t of trazas) {
+      expect(t.unadjusted.north).toBeCloseTo(t.adjusted.north, 9);
+      expect(t.unadjusted.east).toBeCloseTo(t.adjusted.east, 9);
+    }
+  });
+
+  it("abierta con control: la sin compensar termina a (errorNorth, errorEast) del punto de llegada", () => {
+    const input: PolygonalInput = {
+      ...BASE,
+      type: "open_controlled",
+      method: "bowditch",
+      startAzimuth: 90,
+      endNorth: -50.1,
+      endEast: 186.60254,
+      stations: [st("P1", 0, 100), st("P2", 30, 100, "right"), st("P3", 0, 0)],
+    };
+    const result = computePolygonal(input);
+    const trazas = polygonalTraces(input, result)!;
+    expect(trazas.map((t) => t.code)).toEqual(["P1", "P2", "P3"]);
+    const ultimo = trazas.at(-1)!;
+    expect(ultimo.adjusted.north).toBeCloseTo(-50.1, 6);
+    expect(ultimo.adjusted.east).toBeCloseTo(186.60254, 6);
+    expect(ultimo.unadjusted.north - ultimo.adjusted.north).toBeCloseTo(result.errorNorth!, 9);
+    expect(ultimo.unadjusted.east - ultimo.adjusted.east).toBeCloseTo(result.errorEast!, 9);
+  });
+
+  it("abierta sin control: las dos trazas coinciden", () => {
+    const input: PolygonalInput = {
+      ...BASE,
+      type: "open_uncontrolled",
+      method: "bowditch",
+      startNorth: 1000,
+      startEast: 1000,
+      startAzimuth: 150,
+      stations: [st("E1", 0, 45.8), st("E2", 175.5, 62.3), st("E3", 192.25, 38.5), st("E4", 168, 0)],
+    };
+    const result = computePolygonal(input);
+    const trazas = polygonalTraces(input, result)!;
+    expect(trazas).toHaveLength(4);
+    trazas.forEach((t, i) => {
+      expect(t.unadjusted).toEqual(t.adjusted);
+      expect(t.adjusted.north).toBeCloseTo(result.stations[i]!.north!, 9);
+    });
+  });
+
+  it("devuelve null si falta el arranque, aunque las proyecciones sean finitas", () => {
+    const input: PolygonalInput = {
+      ...BASE,
+      type: "closed",
+      method: "bowditch",
+      startNorth: Number.NaN,
+      stations: [st("A", 90, 100), st("B", 90, 100), st("C", 90, 100), st("D", 90, 100)],
+    };
+    expect(polygonalTraces(input, computePolygonal(input))).toBeNull();
+  });
+
+  it("devuelve null mientras falten datos", () => {
+    const input: PolygonalInput = {
+      ...BASE,
+      type: "closed",
+      method: "bowditch",
+      stations: [st("A", 90, 100), st("B", 90, null)],
+    };
+    expect(polygonalTraces(input, computePolygonal(input))).toBeNull();
   });
 });

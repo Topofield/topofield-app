@@ -385,6 +385,12 @@ export default function ManualPage() {
           punto de llegada.
         </p>
 
+        <p>
+          Arriba del formulario elige si tecleará los ángulos en{" "}
+          <strong>DMS</strong> o en <strong>grados decimales</strong> (ver
+          § 5.3).
+        </p>
+
         <Nota titulo="El orden de precisión es la decisión más importante del proceso">
           Define las tolerancias que se le exigirán al cierre. Al elegirlo, el
           formulario le muestra la tolerancia angular y la precisión relativa
@@ -440,6 +446,34 @@ export default function ManualPage() {
           cierre y el perímetro. El color lo resume, y el texto lo dice: verde
           cumple, rojo no cumple.
         </p>
+
+        <p>
+          <strong>Ángulos en DMS o en grados decimales.</strong> Bajo el
+          veredicto, el conmutador <strong>Ángulos en</strong> elige cómo
+          teclea los ángulos: en tres casillas (grados, minutos, segundos) o
+          en un solo campo de grados decimales. Afecta a las lecturas de las
+          estaciones, a los azimuts de partida y de llegada y al diálogo de
+          reasignación.
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            Cambiar de formato <strong>no altera ningún valor</strong>: la
+            aplicación guarda los ángulos siempre en DMS y el decimal es solo
+            otra forma de verlos, con seis decimales.
+          </li>
+          <li>
+            Los ángulos se guardan a la <strong>décima de segundo</strong>. Si
+            teclea un decimal con más precisión, bajo el campo aparece cómo se
+            guardará —«Se guarda como 124°29′42″»—.
+          </li>
+          <li>
+            El formato se recuerda por proceso: al volver a abrirlo, aparece
+            como lo dejó. En un proceso cerrado el conmutador solo cambia la
+            vista.
+          </li>
+          <li>Resultados, informe y Excel muestran siempre DMS.</li>
+        </ul>
 
         <p>
           <strong>Configuración.</strong> Plegada cuando el proceso ya está
@@ -524,6 +558,48 @@ export default function ManualPage() {
         </Tabla>
 
         <p>Cambiar el método recalcula las coordenadas al instante.</p>
+
+        <p>
+          <strong>Dibujo de la poligonal.</strong> La poligonal a escala sobre
+          una grilla de coordenadas, con flecha de norte, barra de escala y el
+          amarre si lo tiene. Se actualiza en vivo mientras captura.
+        </p>
+
+        <Captura {...CAPTURAS.dibujoPoligonal} />
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            En <strong>trazo continuo</strong>, la poligonal{" "}
+            <strong>ajustada</strong>.
+          </li>
+          <li>
+            En <strong>trazo discontinuo</strong>, la poligonal{" "}
+            <strong>sin compensar</strong>, con los desplazamientos{" "}
+            <strong>exagerados</strong> por el factor que indica la leyenda
+            (×100 en la imagen). En una cerrada no llega a cerrar: el hueco del
+            último vértice es el error de cierre.
+          </li>
+        </ul>
+
+        <Nota titulo="Por qué se exagera">
+          En un buen levantamiento el error de cierre es de centímetros sobre
+          cientos de metros: dibujado a escala real, ocupa menos de un píxel y
+          las dos poligonales se verían idénticas. El factor se elige solo —1,
+          2 o 5 × 10ⁿ— para que el mayor desplazamiento ocupe alrededor del 5 %
+          del dibujo, y nunca es menor que 1. Una abierta sin control no tiene
+          nada que compensar y no muestra trazo discontinuo.
+        </Nota>
+
+        <p>
+          Con <strong>Acercar</strong>, <strong>Alejar</strong> y{" "}
+          <strong>Restablecer</strong>, y con las <strong>flechas</strong> o
+          arrastrando el dibujo, puede acercarse a un vértice; todos los
+          controles funcionan con el teclado. Si el amarre está lejos, queda
+          fuera del encuadre y solo se ve su línea de orientación: la leyenda
+          lo indica. La rueda del ratón no hace zoom, para no
+          interferir con el desplazamiento de la página. El factor de
+          exageración no cambia al acercarse.
+        </p>
 
         <h3 className="mt-4 text-lg font-semibold">5.4 Reasignar coordenadas</h3>
 
@@ -1259,7 +1335,8 @@ export default function ManualPage() {
 
         <p>
           El documento lleva portada con los datos del proyecto, índice, una
-          sección por proceso con sus resultados <strong>y su equipo</strong>,
+          sección por proceso con sus resultados <strong>y su equipo</strong>{" "}
+          —en las poligonales, con su dibujo—,
           el resumen consolidado de precisiones —con una columna de equipo—,
           sus observaciones y el registro de cierre. El equipo ya no es un
           dato del proyecto: cada sección imprime el que declaró su propio

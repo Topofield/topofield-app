@@ -3,13 +3,13 @@
 import { useState } from "react";
 import {
   Button,
-  DmsInput,
   EMPTY_DMS,
   Input,
   Select,
   type DmsValue,
 } from "@/components/design-system";
-import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
+import { decimalToDms, formatDecimalDegrees } from "@/lib/calculations/angles";
+import { averageOf, readingValues } from "./polygonal-draft";
 import {
   validateReadings,
   type CaptureIssues,
@@ -19,6 +19,8 @@ import {
   type DeflectionDirection,
   type PolygonalResult,
 } from "@/types/polygonal";
+import { AngleInput } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 export interface StationDraftState {
   /** Clave estable para React (no se persiste). */
@@ -44,34 +46,6 @@ export function emptyStation(readingsMin = 3): StationDraftState {
     deflectionDirection: null,
     distance: "",
   };
-}
-
-/**
- * Lecturas capturadas de una estación, en grados decimales.
- *
- * Las filas en blanco NO cuentan. El filtro es por `deg` y no por
- * `Number.isFinite`, porque `Number("")` en JavaScript es 0 y no NaN: sin este
- * filtro, las filas vacías con que se rellena hasta el mínimo se leerían como
- * lecturas de 0°0'0" y la dispersión saldría contra el ángulo real.
- * Los minutos y segundos en blanco sí valen 0, que es lo que espera quien
- * teclea un ángulo redondo.
- */
-export function readingValues(readings: DmsValue[]): number[] {
-  return readings
-    .filter((r) => r.deg.trim() !== "")
-    .map((r) =>
-      dmsToDecimal(Number(r.deg), Number(r.min || 0), Number(r.sec || 0)),
-    )
-    .filter((v) => Number.isFinite(v));
-}
-
-/** Promedio de las lecturas completas, en DMS. `null` si no hay ninguna. */
-export function averageOf(readings: DmsValue[]): DmsValue | null {
-  const values = readingValues(readings);
-  if (values.length === 0) return null;
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const dms = decimalToDms(avg);
-  return { deg: String(dms.deg), min: String(dms.min), sec: String(dms.sec) };
 }
 
 const DEFLECTION_OPTIONS = [
@@ -101,12 +75,14 @@ function AngleReadingsCell({
   issue,
   readingIssue,
   disabled,
+  format,
   onChange,
 }: {
   station: StationDraftState;
   issue?: CaptureIssues;
   readingIssue?: { error?: string; warning?: string };
   disabled?: boolean;
+  format: AngleInputFormat;
   onChange: (readings: DmsValue[]) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -130,7 +106,11 @@ function AngleReadingsCell({
       >
         <span className={average ? "font-medium" : "text-neutral-400"}>
           {average
-            ? `${average.deg}°${average.min}′${average.sec}″`
+            ? format === "decimal"
+              ? // El promedio en decimal sale de las lecturas, no del DMS ya
+                // redondeado: es el mismo ángulo en las dos vistas.
+                `${formatDecimalDegrees(values.reduce((x, y) => x + y, 0) / values.length)}°`
+              : `${average.deg}°${average.min}′${average.sec}″`
             : "Sin lecturas"}
         </span>
         <span className="text-xs text-neutral-500">
@@ -157,7 +137,8 @@ function AngleReadingsCell({
           {station.readings.map((reading, index) => (
             <div key={index} className="flex items-center gap-2">
               <span className="w-4 text-xs text-neutral-500">{index + 1}</span>
-              <DmsInput
+              <AngleInput
+                format={format}
                 value={reading}
                 disabled={disabled}
                 onChange={(v) => setReading(index, v)}
@@ -191,6 +172,8 @@ interface StationsTableProps {
   /** Precisión angular del equipo, para la dispersión. */
   angularPrecisionSeconds: number;
   disabled?: boolean;
+  /** Formato de captura de los ángulos (Fase 13, P1). */
+  angleFormat: AngleInputFormat;
 }
 
 /** Tabla editable de estaciones con las columnas calculadas en vivo. */
@@ -203,6 +186,7 @@ export function StationsTable({
   readingsMin,
   angularPrecisionSeconds,
   disabled,
+  angleFormat,
 }: StationsTableProps) {
   function update(index: number, patch: Partial<StationDraftState>) {
     onChange(stations.map((s, i) => (i === index ? { ...s, ...patch } : s)));
@@ -264,6 +248,7 @@ export function StationsTable({
                       issue={issue}
                       readingIssue={readingIssue(station)}
                       disabled={disabled}
+                      format={angleFormat}
                       onChange={(readings) =>
                         update(i, {
                           readings,
@@ -381,6 +366,7 @@ export function StationsTable({
                     issue={issue}
                     readingIssue={readingIssue(station)}
                     disabled={disabled}
+                    format={angleFormat}
                     onChange={(readings) =>
                       update(i, {
                         readings,

@@ -121,6 +121,15 @@ await capturar("09-proceso-cerrado", { fullPage: true });
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${rechazado}`, { waitUntil: "networkidle" });
 await capturar("10-proceso-rechazado", { fullPage: true });
 
+// Fase 13 — dibujo de la poligonal, con la cartera real TT4: su error de 1.6 cm
+// se ve exagerado ×100.
+const tt4 = sql(
+  `select id from public.polygonal_processes where name like 'Poligonal V10%bowditch' and project_id='${proyecto}';`,
+);
+await page.goto(`${BASE}/projects/${proyecto}/polygonal/${tt4}`, { waitUntil: "networkidle" });
+await page.locator("figure").first().screenshot({ path: join(OUT, "20-dibujo-poligonal.png") });
+console.log("✓", "20-dibujo-poligonal");
+
 // Nivelación
 await page.goto(`${BASE}/projects/${proyecto}/leveling/new`, { waitUntil: "networkidle" });
 await capturar("11-nueva-nivelacion");

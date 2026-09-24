@@ -3,6 +3,10 @@ import {
   azimuthFromCoordinates,
   cosDeg,
   decimalToDms,
+  decimalToDmsFields,
+  dmsFieldsToDecimal,
+  formatDecimalDegrees,
+  roundsOnStorage,
   degreesToSeconds,
   dmsToDecimal,
   normalizeAzimuth,
@@ -100,5 +104,41 @@ describe("azimuthFromCoordinates", () => {
 
   it("devuelve 0 cuando los dos puntos coinciden", () => {
     expect(azimuthFromCoordinates(5, 5, 5, 5)).toBe(0);
+  });
+});
+
+describe("captura en grados decimales (Fase 13, P1)", () => {
+  const f = (deg: string, min: string, sec: string) => ({ deg, min, sec });
+
+  it("ida y vuelta DMS → decimal (6 cifras) → DMS exacta en pasos de 0.1″", () => {
+    // Barrido: todos los segundos a la décima en varios grados y minutos,
+    // incluidos los límites 0°0′0″ y 359°59′59.9″.
+    for (const deg of [0, 1, 45, 180, 359]) {
+      for (const min of [0, 1, 30, 59]) {
+        for (let tenths = 0; tenths < 600; tenths++) {
+          const sec = tenths / 10;
+          const texto = formatDecimalDegrees(dmsToDecimal(deg, min, sec));
+          const vuelta = decimalToDmsFields(Number(texto));
+          expect(vuelta).toEqual({ deg: String(deg), min: String(min), sec: String(sec) });
+        }
+      }
+    }
+  });
+
+  it("un DMS incompleto toma 0 en lo que falta; sin grados no hay ángulo", () => {
+    expect(dmsFieldsToDecimal(f("45", "", ""))).toBe(45);
+    expect(dmsFieldsToDecimal(f("45", "30", ""))).toBe(45.5);
+    expect(dmsFieldsToDecimal(f("", "30", "0"))).toBeNull();
+    expect(dmsFieldsToDecimal(f("x", "", ""))).toBeNull();
+  });
+
+  it("un decimal con más precisión que 0.1″ se redondea al guardarse, y se avisa", () => {
+    expect(roundsOnStorage(45.5042501)).toBe(true);
+    expect(decimalToDmsFields(45.5042501)).toEqual({ deg: "45", min: "30", sec: "15.3" });
+    expect(roundsOnStorage(Number(formatDecimalDegrees(dmsToDecimal(45, 30, 15.3))))).toBe(false);
+  });
+
+  it("muestra seis decimales", () => {
+    expect(formatDecimalDegrees(45.5)).toBe("45.500000");
   });
 });

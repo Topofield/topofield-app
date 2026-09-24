@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { Alert, Button } from "@/components/design-system";
+import {
+  Alert,
+  Button,
+} from "@/components/design-system";
 import { parseNumber } from "@/lib/utils/parse";
 import { createPolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/new/actions";
 import {
@@ -10,6 +13,8 @@ import {
   type PolygonalConfigState,
 } from "./polygonal-config-fields";
 import type { ReferencePoint } from "@/types/project";
+import { AngleFormatToggle } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 export function NewPolygonalForm({
   projectId,
@@ -22,6 +27,7 @@ export function NewPolygonalForm({
     EMPTY_POLYGONAL_CONFIG,
   );
   const [error, setError] = useState<string | null>(null);
+  const [angleFormat, setAngleFormat] = useState<AngleInputFormat>("dms");
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -72,6 +78,7 @@ export function NewPolygonalForm({
         distancePrecisionPpm: parseNumber(
           config.totalStation.distancePrecisionPpm,
         ),
+        angleInputFormat: angleFormat,
       });
       // En éxito la acción redirige al editor; solo llega aquí si hubo error.
       if (result.error) setError(result.error);
@@ -81,8 +88,13 @@ export function NewPolygonalForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && <Alert variant="error">{error}</Alert>}
+      <AngleFormatToggle value={angleFormat} onChange={setAngleFormat} />
       <PolygonalConfigFields
-        referencePoints={referencePoints} value={config} onChange={setConfig} />
+        referencePoints={referencePoints}
+        value={config}
+        angleFormat={angleFormat}
+        onChange={setConfig}
+      />
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Creando…" : "Crear proceso"}

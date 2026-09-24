@@ -285,6 +285,9 @@ async function insertPolygonal(projectId, siteId, spec, userId) {
       name: spec.name,
       type: spec.type,
       angle_type: spec.angle_type,
+      // Fase 13 (P1): formato de captura de ángulos. Solo la vista; los
+      // ángulos se siguen guardando en DMS.
+      angle_input_format: spec.angleInputFormat ?? "dms",
       start_point_code: spec.startPointCode,
       start_north: spec.startNorth,
       start_east: spec.startEast,
@@ -716,6 +719,9 @@ const PROCESSES = [
     name: "Reconocimiento E1-E4 (sin cierre)",
     type: "open_uncontrolled",
     angle_type: "interior",
+    // Transcrito de una libreta en grados decimales (Fase 13, P1): el editor
+    // abre en ese formato.
+    angleInputFormat: "decimal",
     startPointCode: "E1",
     startNorth: 1000,
     startEast: 1000,
