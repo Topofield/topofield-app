@@ -260,10 +260,24 @@ export function canPersistAngleFormat(status: string): boolean {
   return status !== "closed" && status !== "rejected";
 }
 
+/** ¿Tiene `value` como mucho `decimals` decimales? Con holgura de coma flotante. */
+function fitsScale(value: number, decimals: number): boolean {
+  const scaled = value * 10 ** decimals;
+  return Math.abs(scaled - Math.round(scaled)) < 1e-6;
+}
+
 /**
- * ¿Están completos y son válidos los pesos del ajuste por mínimos cuadrados?
- * (Fase 14.) Solo se exigen con ese método, que además no aplica a la abierta
- * sin control: no tiene redundancia que ajustar. Devuelve el motivo o null.
+ * ¿Son válidos los pesos del ajuste por mínimos cuadrados? (Fase 14.)
+ * Devuelve el motivo o null.
+ *
+ * Se exigen completos solo con ese método, que además no aplica a la abierta
+ * sin control: no tiene redundancia que ajustar. Pero los que vengan se
+ * validan **siempre**, con cualquier método: se guardan igual, y un valor que
+ * no cabe en su columna tumbaría el guardado con un error opaco.
+ *
+ * Los límites y los decimales son los de las columnas —`decimal(6,2)` y
+ * `decimal(8,4)`—: un σ con más decimales se guardaría redondeado, y el
+ * ajuste recalculado al reabrir no coincidiría con las coordenadas guardadas.
  */
 export function validateLeastSquaresWeights(
   method: string,
@@ -274,21 +288,22 @@ export function validateLeastSquaresWeights(
     distanceMeasurements: number | null;
   },
 ): string | null {
+  const { sigmaAngleSeconds: a, sigmaDistanceM: d, distanceMeasurements: m } = weights;
+  if (a != null && !(a >= 0.01 && a <= 9999.99 && fitsScale(a, 2))) {
+    return "El σ angular debe estar entre 0.01″ y 9999.99″, con dos decimales como mucho.";
+  }
+  if (d != null && !(d >= 0.0001 && d <= 9999.9999 && fitsScale(d, 4))) {
+    return "El σ de distancia debe estar entre 0.0001 m y 9999.9999 m, con cuatro decimales como mucho.";
+  }
+  if (m != null && !(Number.isInteger(m) && m >= 1 && m <= 1000)) {
+    return "El número de mediciones debe ser un entero entre 1 y 1000.";
+  }
   if (method !== "least_squares") return null;
   if (type === "open_uncontrolled") {
     return "La abierta sin control no tiene nada que ajustar: elija otro método.";
   }
-  const { sigmaAngleSeconds: a, sigmaDistanceM: d, distanceMeasurements: m } = weights;
   if (a == null || d == null || m == null) {
     return "Faltan los pesos del ajuste: σ angular, σ de distancia y número de mediciones.";
   }
-  if (!(a > 0) || !(d > 0)) return "Los σ del ajuste deben ser mayores que cero.";
-  // Los límites de las columnas: decimal(6,2) y decimal(8,4). Un σ que la base
-  // redondeara a cero lo rechazaría su CHECK con un error opaco.
-  if (a < 0.01 || a > 9999.99) return "El σ angular debe estar entre 0.01″ y 9999.99″.";
-  if (d < 0.0001 || d > 9999.9999) {
-    return "El σ de distancia debe estar entre 0.0001 m y 9999.9999 m.";
-  }
-  if (!Number.isInteger(m) || m < 1) return "El número de mediciones debe ser un entero de 1 o más.";
   return null;
 }

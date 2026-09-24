@@ -171,13 +171,35 @@ export function PolygonalEditor({
 
   const captureBlocked = issues.some((i) => Object.keys(i.errors).length > 0);
 
-  // Mínimos cuadrados sin pesos completos no se guarda (Fase 14): la misma
-  // regla que aplica el servidor, para decirlo antes de pulsar Guardar.
-  const weightsError = validateLeastSquaresWeights(method, config.type, {
-    sigmaAngleSeconds: parseNumber(weights.sigmaAngleSeconds),
-    sigmaDistanceM: parseNumber(weights.sigmaDistanceM),
-    distanceMeasurements: parseNumber(weights.distanceMeasurements),
-  });
+  // Pesos que se guardan (Fase 14). Con mínimos cuadrados, tal cual. Con
+  // otro método los campos no se ven, así que un peso inválido que quedó
+  // tecleado no puede bloquear el guardado: se descarta y se conservan los
+  // válidos, para no perderlos si se vuelve al método.
+  const savedWeights = useMemo(() => {
+    const parsed = {
+      sigmaAngleSeconds: parseNumber(weights.sigmaAngleSeconds),
+      sigmaDistanceM: parseNumber(weights.sigmaDistanceM),
+      distanceMeasurements: parseNumber(weights.distanceMeasurements),
+    };
+    if (method === "least_squares") return parsed;
+    const none = {
+      sigmaAngleSeconds: null,
+      sigmaDistanceM: null,
+      distanceMeasurements: null,
+    };
+    const keep = <K extends keyof typeof parsed>(key: K) =>
+      validateLeastSquaresWeights(method, config.type, { ...none, [key]: parsed[key] }) === null
+        ? parsed[key]
+        : null;
+    return {
+      sigmaAngleSeconds: keep("sigmaAngleSeconds"),
+      sigmaDistanceM: keep("sigmaDistanceM"),
+      distanceMeasurements: keep("distanceMeasurements"),
+    };
+  }, [weights, method, config.type]);
+  // La misma regla que aplica el servidor, para decirlo antes de pulsar
+  // Guardar: sin pesos completos y válidos no se guarda el método.
+  const weightsError = validateLeastSquaresWeights(method, config.type, savedWeights);
 
   function handleSave() {
     setError(null);
@@ -200,9 +222,9 @@ export function PolygonalEditor({
         endAzimuthMin: controlled ? parseNumber(config.endAzimuth.min) : null,
         endAzimuthSec: controlled ? parseNumber(config.endAzimuth.sec) : null,
         correctionMethod: method,
-        lsSigmaAngleSeconds: parseNumber(weights.sigmaAngleSeconds),
-        lsSigmaDistanceM: parseNumber(weights.sigmaDistanceM),
-        lsDistanceMeasurements: parseNumber(weights.distanceMeasurements),
+        lsSigmaAngleSeconds: savedWeights.sigmaAngleSeconds,
+        lsSigmaDistanceM: savedWeights.sigmaDistanceM,
+        lsDistanceMeasurements: savedWeights.distanceMeasurements,
         angleType:
           config.angleType === "" ? "interior" : config.angleType,
         referencePointId: config.referencePointId || null,
@@ -405,6 +427,7 @@ export function PolygonalEditor({
             setSaveMessage(null);
           }}
           weights={weights}
+          weightsError={weightsError}
           onWeightsChange={(w) => {
             setWeights(w);
             setDirty(true);

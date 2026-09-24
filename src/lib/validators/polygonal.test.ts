@@ -579,10 +579,32 @@ describe("validateLeastSquaresWeights (Fase 14)", () => {
     ).toMatch(/Faltan los pesos/);
     expect(
       validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaAngleSeconds: 0 }),
-    ).toMatch(/mayores que cero/);
+    ).toMatch(/entre 0.01″/);
     expect(
       validateLeastSquaresWeights("least_squares", "closed", { ...hoja, distanceMeasurements: 1.5 }),
     ).toMatch(/entero/);
+  });
+
+  it("valida los pesos que vengan aunque el método sea otro", () => {
+    // Se guardan igual: un valor fuera de la columna tumbaría el guardado.
+    expect(
+      validateLeastSquaresWeights("bowditch", "closed", { ...vacios, sigmaAngleSeconds: 100000 }),
+    ).toMatch(/σ angular/);
+    expect(
+      validateLeastSquaresWeights("bowditch", "closed", { ...vacios, sigmaDistanceM: -1 }),
+    ).toMatch(/σ de distancia/);
+  });
+
+  it("rechaza más decimales de los que guarda la columna", () => {
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaAngleSeconds: 0.015 }),
+    ).toMatch(/dos decimales/);
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaDistanceM: 0.00015 }),
+    ).toMatch(/cuatro decimales/);
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaDistanceM: 0.0115 }),
+    ).toBeNull();
   });
 });
 

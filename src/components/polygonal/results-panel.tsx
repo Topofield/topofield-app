@@ -39,6 +39,15 @@ const SIGMA0_TEXT = {
   pessimistic: "Los σ supuestos son pesimistas: se midió mejor de lo declarado.",
 } as const;
 
+const UNADJUSTABLE_TEXT = {
+  one_side:
+    "Con un solo lado no hay nada que ajustar: las condiciones de llegada dependen de una sola distancia. Elija otro método o añada estaciones.",
+  singular:
+    "La geometría de la poligonal no permite el ajuste (el sistema de condiciones es singular). Revise los datos o elija otro método.",
+  not_converged:
+    "El ajuste no convergió: las condiciones no quedan en cero. Revise la cartera en busca de un error grueso, o elija otro método.",
+} as const;
+
 interface ResultsPanelProps {
   result: PolygonalResult;
   type: PolygonalType;
@@ -46,6 +55,8 @@ interface ResultsPanelProps {
   onMethodChange: (method: CorrectionMethod) => void;
   /** Pesos del ajuste por mínimos cuadrados (Fase 14). */
   weights: LeastSquaresWeightsDraft;
+  /** Por qué no se pueden guardar los pesos, con la regla del servidor. */
+  weightsError?: string | null;
   onWeightsChange: (weights: LeastSquaresWeightsDraft) => void;
   disabled?: boolean;
 }
@@ -56,6 +67,7 @@ export function ResultsPanel({
   method,
   onMethodChange,
   weights,
+  weightsError,
   onWeightsChange,
   disabled,
 }: ResultsPanelProps) {
@@ -119,9 +131,16 @@ export function ResultsPanel({
           </p>
           {adjustment?.status === "missing_weights" && (
             <Alert variant="warning">
-              Faltan los pesos del ajuste: sin ellos no hay coordenadas
-              ajustadas, y el método no se puede guardar.
+              {/* El motor solo sabe que no puede usar los pesos; el porqué
+                  —faltan o no son válidos— lo da el validador. */}
+              {weightsError ??
+                "Faltan los pesos del ajuste: σ angular, σ de distancia y número de mediciones."}{" "}
+              Sin pesos válidos no hay coordenadas ajustadas, y el método no
+              se puede guardar.
             </Alert>
+          )}
+          {adjustment?.status === "unadjustable" && (
+            <Alert variant="warning">{UNADJUSTABLE_TEXT[adjustment.reason]}</Alert>
           )}
         </div>
       )}
