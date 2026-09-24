@@ -6,6 +6,7 @@ import {
   getPolygonalProcess,
   getPolygonalStations,
   getProjectById,
+  getReferencePoints,
   getReport,
   getSettlementReadingsBySite,
   getSite,
@@ -13,6 +14,9 @@ import {
   getVisits,
 } from "@/lib/supabase/queries";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
+import { computePolygonal } from "@/lib/calculations/polygonal";
+import { PolygonalPlot } from "@/components/polygonal/polygonal-plot";
+import { polygonalInputOf } from "@/components/polygonal/polygonal-draft";
 import {
   levelMeetsOrder,
   thresholdsOf,
@@ -31,6 +35,8 @@ import { LEVEL_TYPE_LABELS, PRECISION_ORDER_LABELS } from "@/types/project";
 import {
   CORRECTION_METHOD_LABELS,
   POLYGONAL_TYPE_LABELS,
+  type PolygonalInput,
+  type PolygonalResult,
 } from "@/types/polygonal";
 import {
   LEVELING_TYPE_LABELS,
@@ -83,6 +89,16 @@ type Section =
 interface PolygonalSection {
   process: Awaited<ReturnType<typeof getPolygonalProcess>>;
   stations: Awaited<ReturnType<typeof getPolygonalStations>>;
+  /**
+   * Lo que consume el dibujo (Fase 13). La entrada sale de `polygonalInputOf`,
+   * el mismo camino que usa el editor, así que el dibujo del informe es por
+   * construcción el del editor.
+   */
+  plot: {
+    input: PolygonalInput;
+    result: PolygonalResult;
+    reference: { code: string; north: number; east: number } | null;
+  };
 }
 interface LevelingSection {
   process: Awaited<ReturnType<typeof getLevelingProcess>>;
@@ -131,7 +147,25 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
           return { kind: "missing", entry, data: null };
         }
         const stations = await getPolygonalStations(supabase, process.id);
-        return { kind: "polygonal", entry, data: { process, stations } };
+        const input = polygonalInputOf(process, stations);
+        const amarre = process.reference_point_id
+          ? (await getReferencePoints(supabase, project.id)).find(
+              (p) => p.id === process.reference_point_id,
+            )
+          : undefined;
+        const reference =
+          amarre && amarre.north !== null && amarre.east !== null
+            ? { code: amarre.code, north: Number(amarre.north), east: Number(amarre.east) }
+            : null;
+        return {
+          kind: "polygonal",
+          entry,
+          data: {
+            process,
+            stations,
+            plot: { input, result: computePolygonal(input), reference },
+          },
+        };
       }
       if (entry.type === "leveling") {
         const process = await getLevelingProcess(supabase, entry.id);
@@ -397,6 +431,13 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                   ))}
                 </tbody>
               </table>
+              <div className="report-plot">
+                <PolygonalPlot
+                  input={section.data.plot.input}
+                  result={section.data.plot.result}
+                  reference={section.data.plot.reference}
+                />
+              </div>
             </>
           )}
 
