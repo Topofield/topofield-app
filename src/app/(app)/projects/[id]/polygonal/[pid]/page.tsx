@@ -34,6 +34,10 @@ export default async function PolygonalEditorPage({
 
   return (
     <PolygonalEditor
+      // Georreferenciar (Fase 15) reescribe el arranque en la base; el editor
+      // guarda la configuración en estado propio, así que se remonta para no
+      // volver a guardar después las coordenadas locales.
+      key={process.georef_at ?? "local"}
       process={process}
       stations={stations}
       projectId={id}

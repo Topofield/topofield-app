@@ -23,7 +23,7 @@ import {
   type PolygonalType,
   type ProcessStatus,
 } from "@/types/polygonal";
-import { formatPrecision } from "@/lib/utils/format";
+import { formatDate, formatPrecision } from "@/lib/utils/format";
 import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
 
 /** Fila de `polygonal_stations`, tal como llega de la base. */
@@ -91,6 +91,14 @@ export interface PolygonalProcessRow {
   ls_sigma_angle_seconds?: number | string | null;
   ls_sigma_distance_m?: number | string | null;
   ls_distance_measurements?: number | null;
+  /** Última georreferenciación (Fase 15). */
+  georef_at?: string | null;
+  georef_point_a_code?: string | null;
+  georef_point_b_code?: string | null;
+  georef_rotation_deg?: number | null;
+  georef_rotation_min?: number | null;
+  georef_rotation_sec?: number | string | null;
+  georef_scale_factor?: number | string | null;
 }
 
 /** El ajuste por mínimos cuadrados, solo si hay uno hecho. */
@@ -356,6 +364,28 @@ function sheetSummary(
       ["σ₀", adjustment ? Number(adjustment.sigma0.toFixed(3)) : null],
       ["Condiciones", adjustment?.conditions ?? null],
       ["Iteraciones", adjustment?.iterations ?? null],
+    ]);
+  }
+
+  if (process.georef_at) {
+    row += 1;
+    writeSection(s, row, "Georreferenciación");
+    row = writePairs(s, row + 1, [
+      // La fecha de Bogotá, como en el editor y el informe: el ISO en UTC
+      // puede caer al día siguiente.
+      ["Fecha", formatDate(process.georef_at)],
+      ["Puntos de control", `${process.georef_point_a_code} y ${process.georef_point_b_code}`],
+      [
+        "Rotación",
+        process.georef_rotation_deg != null
+          ? dms(
+              process.georef_rotation_deg,
+              process.georef_rotation_min ?? 0,
+              num(process.georef_rotation_sec) ?? 0,
+            )
+          : null,
+      ],
+      ["Factor de escala", num(process.georef_scale_factor)],
     ]);
   }
 

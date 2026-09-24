@@ -67,7 +67,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 12 | Alerta por lectura desfasada | cerrada |
 | 13 | Canvas de poligonal | cerrada |
 | 14 | Ajuste por mínimos cuadrados | cerrada |
-| 15 | Georreferenciación de levantamientos | pendiente |
+| 15 | Georreferenciación de levantamientos | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -242,8 +242,11 @@ propósito.
 incluye y en qué orden, nunca una copia de sus datos ni un PDF. Reabrirlo
 vuelve a leer los procesos y a componer el documento. Eso es seguro **solo
 porque un informe únicamente puede incluir trabajos cerrados**, que son
-inmutables por trigger de base: dentro de un año dará exactamente lo mismo.
-Está verificado comparando el hash del contenido en dos lecturas.
+inmutables por trigger de base: dentro de un año dará las mismas mediciones y
+el mismo veredicto. Está verificado comparando el hash del contenido en dos
+lecturas. **Excepción desde la Fase 15:** si una poligonal incluida se
+georreferencia después de emitir el informe, el informe muestra las
+coordenadas nuevas, con una nota de fecha y puntos (decisión del usuario).
 
 La regla vive en `lib/reports/eligibility.ts` como función pura con tests, y se
 aplica **dos veces**: al pintar el selector y otra vez dentro de
@@ -357,6 +360,11 @@ cómo se **teclean** los ángulos del proceso. El almacenamiento sigue siendo DM
 en tres columnas. Lo escribe `setAngleInputFormatAction` al conmutar, y la
 rechaza en un proceso cerrado o rechazado (`canPersistAngleFormat`); ahí el
 conmutador solo cambia la vista.
+
+`georef_at`, `georef_by`, `georef_point_a_code`, `georef_point_b_code`,
+`georef_rotation_*` (DMS) y `georef_scale_factor` (Fase 15) anotan la **última**
+georreferenciación. No hay historial ni copia de las coordenadas locales: el
+producto no busca aún trazabilidad estricta de la posición.
 
 `ls_sigma_angle_seconds`, `ls_sigma_distance_m` y `ls_distance_measurements`
 (Fase 14) tampoco son resultados: son los **pesos** del ajuste por mínimos
@@ -496,6 +504,31 @@ proceso cerrado tenía éxito.
 Los triggers permiten la transición *hacia* cerrado —el cierre mismo es un
 `UPDATE`— y bloquean todo cambio posterior.
 
+**Excepción de posición (Fase 15).** La cabecera de poligonal tiene su propia
+función, `reject_update_on_closed_polygonal_process()` —la genérica la
+comparten nivelación, lugares y visitas—, y la de sus estaciones
+(`reject_write_on_closed_process_station()`, que solo usa `polygonal_stations`)
+gana la misma regla. Sobre un cerrado o rechazado admiten un `UPDATE` si lo
+único que cambió está en una **lista blanca de posición**: se comparan
+`to_jsonb(new) - lista` y `to_jsonb(old) - lista`.
+
+- Cabecera: `start_north`, `start_east`, `start_azimuth_*`, `end_north`,
+  `end_east`, `end_azimuth_*`, `reference_point_id` —solo hacia `null`: el
+  amarre puede pasar a manual, no cambiar por otro—, `georef_*` y
+  `updated_at`, que pone otro trigger y no debe depender del orden en que
+  disparan.
+- Estaciones: `azimuth_*`, `delta_north`, `delta_east`, `corrected_delta_*`,
+  `north` y `east`.
+
+Ángulos, ángulos corregidos, distancias, lecturas, errores, precisión,
+`meets_tolerance` y `status` siguen bloqueados, igual que insertar o borrar
+estaciones y borrar el proceso. Verificado con `psql`: mover `north` de un
+cerrado funciona; tocar `angular_error_seconds`, `linear_error`, un ángulo,
+`status` o borrar una estación falla con `23001`; una nivelación cerrada sigue
+rechazando cualquier cambio. **Lo que se acepta:** una sesión del dueño puede
+mover por REST las coordenadas de su poligonal cerrada sin pasar por la
+acción; la garantía que se mantiene es la del veredicto.
+
 **`settlement_readings` necesitó su propia función**, no la genérica. El
 trigger de cabecera (`sites`, `settlement_visits`) reutiliza
 `reject_update_on_closed_process()` tal cual — es genérica, solo mira
@@ -633,6 +666,7 @@ testear los algoritmos de forma aislada y es lo que sostiene la monografía.
 |---|---|
 | `angles.ts` | `dmsToDecimal`, `decimalToDms`, `normalizeAzimuth`, `degreesToSeconds`, `cosDeg`, `sinDeg` |
 | `polygonal.ts` | `computePolygonal` — el motor completo |
+| `georeference.ts` | `fitTwoPoints`, `georeferenceInput`, `applyTransform`, `scaleWithinOrder` — georreferenciación rígida desde dos puntos (Fase 15) |
 | `least-squares.ts` | `adjustByConditions` — ajuste por ecuaciones de condición, genérico; `solveLinear`; `sigma0Reading` (Fase 14) |
 | `leveling.ts` | `computeLeveling` — libreta, corrección proporcional, cierre, ida y vuelta |
 | `settlement.ts` | `computeSettlements`, `computeDifferentials`, `classifyAlert`, `computeTrends`, `computeHistory` |
@@ -733,6 +767,37 @@ cómo se guardará (`roundsOnStorage`).
 
 No está en el sistema de diseño porque convierte con `@/lib/calculations/angles`
 (ver § 8, «Qué entra en el sistema de diseño»). El genérico, `DmsInput`, sí.
+
+### Georreferenciación (Fase 15)
+
+Una poligonal medida en local se lleva al sistema real con dos de sus
+estaciones de coordenadas conocidas.
+
+- `fitTwoPoints` da una transformación **rígida**: θ es la diferencia de
+  azimuts de la línea A→B, y la traslación hace coincidir los centroides. θ se
+  redondea a 0.1″ y la traslación a 0.1 mm, las resoluciones de las columnas.
+  El factor de escala |AB| real / |AB| local se calcula solo como control
+  (`scaleWithinOrder` lo compara con `1 / minRelativePrecision(orden)`); no se
+  aplica, porque cambiaría las distancias medidas.
+- `georeferenceInput` transforma la **entrada** —arranque, azimut de arranque
+  y, en la abierta con control, llegada y su azimut— y se **recalcula**. No se
+  rota lo calculado. Bowditch, Crandall y mínimos cuadrados dan lo mismo por
+  los dos caminos; **Tránsito no**, porque reparte según |ΔN| y |ΔE|: 2.66 mm
+  de diferencia en la Vivero. El veredicto es el mismo con los cuatro.
+- `components/polygonal/georeference-plan.ts` (sin `"use client"`) compone la
+  ruta completa desde las filas con `polygonalInputOf`: valida los puntos,
+  ajusta, recalcula, comprueba que el veredicto no cambió a la resolución de
+  las columnas y devuelve las columnas que hay que escribir. Rechaza con el
+  motivo un factor de escala fuera de 0.5–2 —son unidades equivocadas, no una
+  proyección— y coordenadas por encima de `decimal(12,4)`, que la base
+  rechazaría con un error opaco. Lo usan la vista
+  previa del diálogo y `georeferencePolygonalProcessAction`, así que se
+  escribe exactamente lo que el usuario vio.
+- Un amarre del catálogo pasa a **manual** (`reference_point_id = null`, el
+  código se queda): si no, `resolveStartAzimuth` recalcularía el azimut desde
+  sus coordenadas locales en el siguiente guardado y desharía la rotación.
+- La acción escribe fila a fila con `UPDATE`: en un cerrado el trigger no deja
+  borrar y reinsertar, que es lo que hace el guardado.
 
 ### Trazas y dibujo (Fase 13)
 
@@ -1171,20 +1236,22 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-618 tests en 28 archivos, Vitest, entorno `node` **sin jsdom**.
+652 tests en 30 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 69 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
-| `lib/validators/polygonal.test.ts` | 61 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14) |
+| `lib/validators/polygonal.test.ts` | 66 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
 | `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
 | `lib/utils/format.test.ts` | 24 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
-| `lib/export/polygonal-workbook.test.ts` | 21 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14) |
+| `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
+| `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
+| `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
 | `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
 | `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
 | `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
@@ -1728,9 +1795,12 @@ sigue teniendo sentido en pantalla y no se lee como un `fieldset` vacío.
 
 **La portada del informe emitido sigue leyendo el proyecto en vivo, y
 `reports` no tiene trigger de inmutabilidad.** El pie del informe imprimible
-afirma que el contenido procede de procesos cerrados e inmutables, y desde la
-Fase 8 eso es cierto para el equipo, la precisión y las medidas de cada
-proceso. No lo es para el resto de lo que sale impreso:
+afirma que el contenido procede de procesos cerrados, cuyas mediciones y
+veredicto son inmutables, y desde la Fase 8 eso es cierto para el equipo, la
+precisión y las medidas de cada proceso. Desde la Fase 15 la **posición** de
+una poligonal cerrada puede cambiar al georreferenciarla —decisión del
+usuario, con nota en el informe—, y por eso el pie ya no dice «inmutables» a
+secas. No es cierto para el resto de lo que sale impreso:
 
 - El bloque de portada lee `project.name`, `client`, `location`, `datum` y
   `projection` de una fila de `projects`, que no tiene ningún trigger que la
@@ -1760,6 +1830,25 @@ ofrece ahí, pero un proceso con el método al que después se le cambia el tipo
 a sin control lo conserva: el panel muestra entonces el selector para elegir
 otro, y el guardado lo rechaza con un mensaje hasta que se cambie. No se
 reescribe el método en silencio porque sería perder los pesos.
+
+**La georreferenciación no es atómica (Fase 15).** La acción escribe la
+cabecera y después cada estación con su propio `UPDATE`: PostgREST no da una
+transacción que abarque varias peticiones, y una función de base se descartó
+al simplificar la fase. Si falla a medias, la cabecera queda en el sistema
+nuevo y alguna estación en el anterior. Se arregla georreferenciando otra
+vez: el plan parte de la cabecera, ya transformada, y reescribe todas las
+estaciones.
+
+**Sin historial de georreferenciaciones (Fase 15).** Se guarda solo la última
+—fecha, puntos, rotación, factor—, no las coordenadas locales. Volver al
+sistema local es georreferenciar con las coordenadas anteriores, que hay que
+conocer. Decisión del usuario: el producto no busca aún trazabilidad estricta
+de la posición.
+
+**Dos diálogos para mover una poligonal (Fase 15).** «Asignar coordenadas
+reales» (arranque + azimut, solo sin cerrar, sin anotación) y «Georreferenciar»
+(dos estaciones, cualquier estado, anotado) resuelven casi lo mismo. Unificarlos
+quedó fuera de alcance.
 
 **Los pesos no pueden guardarse fuera del rango ni de la escala de sus
 columnas.** El validador rechaza σ angular fuera de 0.01″–9999.99″ o con más

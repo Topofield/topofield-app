@@ -45,7 +45,7 @@ export const CAPTURAS = {
     src: "/manual/04-hub-proyecto.png",
     alt: "Hub del proyecto: ficha de datos arriba y la pestaña de procesos con su listado.",
     width: 2560,
-    height: 3320,
+    height: 3482,
   },
   configuracionProyecto: {
     src: "/manual/05-configuracion-proyecto.png",
@@ -121,6 +121,12 @@ export const CAPTURAS = {
     width: 1884,
     height: 1308,
   },
+  georreferenciar: {
+    src: "/manual/22-georreferenciar.png",
+    alt: "Diálogo Georreferenciar sobre la cartera Vivero en sistema local: D1 y D3 con sus coordenadas reales, rotación 35° 00′ 07.8″, factor de escala 1.000000 y la tabla de coordenadas actuales frente a reales.",
+    width: 1344,
+    height: 2108,
+  },
   minimosCuadrados: {
     src: "/manual/21-minimos-cuadrados.png",
     alt: "Resultados de la cartera Vivero con mínimos cuadrados: los tres pesos, la tabla de correcciones por ángulo y distancia, y σ₀ = 0.698 con su lectura.",
@@ -150,7 +156,7 @@ export const CAPTURAS = {
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
     pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
     width: 780,
-    height: 6472,
+    height: 6576,
     angosta: true,
   },
 } as const satisfies Record<string, Captura>;
@@ -190,10 +196,10 @@ export const ESTADOS_PROCESO = [
     estado: "Calculado",
     significado: "Cálculo resuelto; se puede revisar y cerrar",
   },
-  { estado: "Cerrado", significado: "Terminado y conforme. Inmutable" },
+  { estado: "Cerrado", significado: "Terminado y conforme. Inmutable, salvo su posición" },
   {
     estado: "Rechazado",
-    significado: "Terminado pero fuera de tolerancia. Inmutable",
+    significado: "Terminado pero fuera de tolerancia. Inmutable, salvo su posición",
   },
 ];
 
@@ -447,6 +453,12 @@ export const PREGUNTAS: Pregunta[] = [
     pregunta: "Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?",
     respuesta:
       "Sí, al recalcularlo. Uno cerrado conserva su veredicto original, porque es inmutable.",
+  },
+  {
+    pregunta:
+      "Levanté en un sistema local y cerré el proceso. ¿Puedo pasarlo a coordenadas reales?",
+    respuesta:
+      "Sí: Georreferenciar (§ 5.5), con dos estaciones de coordenadas conocidas. Funciona también sobre un proceso cerrado, y no cambia su veredicto.",
   },
   {
     pregunta: "¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?",

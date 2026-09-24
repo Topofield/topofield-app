@@ -31,6 +31,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/lib/calculations/leveling.ts` → corrección proporcional a distancia
 - `src/lib/calculations/settlement.ts` → asentamientos, velocidades, alertas
 - `src/lib/calculations/angles.ts` → conversiones DMS ↔ decimal, normalización
+- `src/lib/calculations/georeference.ts` → transformación rígida desde dos puntos (georreferenciación)
 - `src/lib/validators/` → reglas de validación por capa (captura, cierre, estadística)
 - `src/lib/supabase/` → clientes Supabase (browser, server) y helper de sesión para `proxy.ts`
 - `src/types/` → tipos TypeScript e interfaces, incluye database.ts autogenerado
@@ -45,7 +46,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - IMPORTANT: el registro exige el código de `SIGNUP_INVITE_CODE` y confirmación de correo. La variable NO lleva prefijo `NEXT_PUBLIC_` y solo se lee en el Server Action; si falta, el registro se bloquea (nunca se abre).
 - No usar shadcn/ui ni ninguna librería de componentes. El sistema de diseño está en `src/components/design-system/` y se construye sobre Tailwind puro.
 - Las coordenadas van a 3 decimales (0.000), las cotas a 4 decimales (0.0000), los ángulos en DMS.
-- Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado.
+- Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado. Única excepción: la **posición** de una poligonal (coordenadas, proyecciones, azimuts, arranque y llegada) se puede reescribir al georreferenciarla (Fase 15); los triggers admiten solo esas columnas.
 - Cada tabla tiene Row Level Security (RLS) en Supabase. El user solo ve sus propios proyectos.
 - Las tolerancias están definidas como constantes en `src/lib/calculations/tolerances.ts`, no hardcodeadas en componentes.
 - Idioma de la interfaz: español (Colombia). Zona horaria: America/Bogota.

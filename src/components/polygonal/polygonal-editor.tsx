@@ -45,6 +45,8 @@ import {
   weightsToDraft,
 } from "./polygonal-draft";
 import { AngleFormatToggle } from "./angle-input";
+import { GeoreferenceDialog } from "./georeference-dialog";
+import { georeferenceSummary } from "./georeference-plan";
 import type { AngleInputFormat } from "@/types/polygonal";
 
 const STATUS_TONE: Record<
@@ -171,6 +173,15 @@ export function PolygonalEditor({
 
   const captureBlocked = issues.some((i) => Object.keys(i.errors).length > 0);
 
+  // Georreferenciar (Fase 15) trabaja con lo guardado: con cambios sin
+  // guardar se mezclaría la edición en curso con la georreferenciación.
+  // Sin cambios pendientes, el cálculo en vivo es el de lo guardado.
+  const georefBlocked = dirty
+    ? "Guarde los cambios antes de georreferenciar."
+    : result.stations.filter((s) => s.north != null).length < 2
+      ? "Para georreferenciar hacen falta coordenadas calculadas."
+      : null;
+
   // Pesos que se guardan (Fase 14). Con mínimos cuadrados, tal cual. Con
   // otro método los campos no se ven, así que un peso inválido que quedó
   // tecleado no puede bloquear el guardado: se descarta y se conservan los
@@ -282,11 +293,13 @@ export function PolygonalEditor({
             { label: process.name },
           ]}
         />
-        <div className="mt-2 flex items-center justify-between gap-4">
+        {/* Envuelve en móvil: con tres acciones, en una sola fila la página
+            desbordaba a lo ancho a 390 px. */}
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h1 className="text-2xl font-bold">
             {process.name}
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Badge tone={STATUS_TONE[process.status]}>
               {PROCESS_STATUS_LABELS[process.status]}
             </Badge>
@@ -299,8 +312,22 @@ export function PolygonalEditor({
             >
               Exportar a Excel
             </a>
+            <GeoreferenceDialog
+              process={process}
+              stations={initialStations}
+              referencePoints={referencePoints}
+              disabledReason={georefBlocked}
+            />
           </div>
         </div>
+        {georefBlocked && (
+          <p className="mt-1 text-right text-xs text-neutral-500">{georefBlocked}</p>
+        )}
+        {georeferenceSummary(process) && (
+          <p className="mt-1 text-sm text-neutral-600">
+            Georreferenciado {georeferenceSummary(process)}.
+          </p>
+        )}
       </div>
 
       {readOnly &&
@@ -308,15 +335,16 @@ export function PolygonalEditor({
         process.meets_tolerance === false && (
           <Alert variant="warning">
             Este proceso se cerró sin alcanzar la tolerancia del orden de
-            precisión. Los datos son de solo lectura.
+            precisión. Los datos son de solo lectura; su posición se puede
+            georreferenciar.
           </Alert>
         )}
       {readOnly &&
         !(process.status === "closed" && process.meets_tolerance === false) && (
           <Alert variant="info">
             {process.status === "rejected"
-              ? "Este proceso fue rechazado; los datos son de solo lectura."
-              : "Este proceso está cerrado; los datos son de solo lectura."}
+              ? "Este proceso fue rechazado; los datos son de solo lectura, salvo su posición, que se puede georreferenciar."
+              : "Este proceso está cerrado; los datos son de solo lectura, salvo su posición, que se puede georreferenciar."}
           </Alert>
         )}
       {error && <Alert variant="error">{error}</Alert>}

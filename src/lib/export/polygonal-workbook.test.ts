@@ -373,3 +373,35 @@ describe("buildPolygonalWorkbook — mínimos cuadrados (Fase 14)", () => {
     expect(summaryValue(wb, "σ₀")).toBeUndefined();
   });
 });
+
+describe("buildPolygonalWorkbook — georreferenciación (Fase 15)", () => {
+  function summaryValue(wb: ReturnType<typeof buildPolygonalWorkbook>, label: string) {
+    const s = wb.getWorksheet("Resumen")!;
+    for (let r = 1; r <= s.rowCount; r++) {
+      if (s.getCell(r, 1).value === label) return s.getCell(r, 2).value;
+    }
+    return undefined;
+  }
+
+  it("muestra en «Resumen» la última georreferenciación", () => {
+    const wb = buildPolygonalWorkbook(
+      process({
+        georef_at: "2026-09-24T15:00:00Z",
+        georef_point_a_code: "D1",
+        georef_point_b_code: "D3",
+        georef_rotation_deg: 35,
+        georef_rotation_min: 0,
+        georef_rotation_sec: "7.8",
+        georef_scale_factor: "1.000000274",
+      }),
+      [station()],
+    );
+    expect(summaryValue(wb, "Puntos de control")).toBe("D1 y D3");
+    expect(summaryValue(wb, "Rotación")).toBe("35° 0' 7.8\"");
+    expect(summaryValue(wb, "Factor de escala")).toBe(1.000000274);
+  });
+
+  it("sin georreferenciar, no hay sección", () => {
+    expect(summaryValue(buildPolygonalWorkbook(process(), [station()]), "Puntos de control")).toBeUndefined();
+  });
+});

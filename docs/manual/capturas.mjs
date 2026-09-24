@@ -48,7 +48,7 @@ const calculado = sql("select id from public.polygonal_processes where name like
 // Sin proyecto (base sin sembrar) no se consulta: `project_id=''` haría fallar
 // psql antes de que la guarda de abajo explique que falta el seed.
 const cerrado = proyecto
-  ? sql(`select id from public.polygonal_processes where status='closed' and project_id='${proyecto}';`)
+  ? sql(`select id from public.polygonal_processes where status='closed' and name like 'Cuadrado oficial%' and project_id='${proyecto}';`)
   : "";
 const rechazado = proyecto
   ? sql(`select id from public.polygonal_processes where status='rejected' and project_id='${proyecto}';`)
@@ -141,6 +141,30 @@ await page
   .locator("xpath=ancestor::*[contains(@class,'rounded')][1]")
   .screenshot({ path: join(OUT, "21-minimos-cuadrados.png") });
 console.log("✓", "21-minimos-cuadrados");
+
+// Fase 15 — georreferenciar la cartera Vivero sembrada en sistema local, con
+// D1 y D3. Se captura el diálogo con la vista previa, sin confirmar: el seed
+// queda como estaba.
+const viveroLocal = sql(
+  `select id from public.polygonal_processes where name like '%Vivero%sistema local' and project_id='${proyecto}';`,
+);
+// Más alto que el resto: el diálogo desplaza, y así cabe la vista previa.
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.goto(`${BASE}/projects/${proyecto}/polygonal/${viveroLocal}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "Georreferenciar" }).click();
+const dialogo = page.getByRole("dialog");
+const puntos = dialogo.locator("fieldset");
+await puntos.nth(0).getByLabel("Estación").selectOption({ label: "D1" });
+await puntos.nth(0).getByLabel("Norte real").fill("100117.462");
+await puntos.nth(0).getByLabel("Este real").fill("101515.6333");
+await puntos.nth(1).getByLabel("Estación").selectOption({ label: "D3" });
+await puntos.nth(1).getByLabel("Norte real").fill("100182.239");
+await puntos.nth(1).getByLabel("Este real").fill("101581.7814");
+await page.waitForTimeout(500);
+await dialogo.screenshot({ path: join(OUT, "22-georreferenciar.png") });
+console.log("✓", "22-georreferenciar");
+await page.keyboard.press("Escape");
+await page.setViewportSize({ width: 1280, height: 800 });
 
 // Nivelación
 await page.goto(`${BASE}/projects/${proyecto}/leveling/new`, { waitUntil: "networkidle" });

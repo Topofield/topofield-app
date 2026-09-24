@@ -298,6 +298,14 @@ export type Database = {
           equipment_calibration_date: string | null
           equipment_model: string | null
           equipment_serial: string | null
+          georef_at: string | null
+          georef_by: string | null
+          georef_point_a_code: string | null
+          georef_point_b_code: string | null
+          georef_rotation_deg: number | null
+          georef_rotation_min: number | null
+          georef_rotation_sec: number | null
+          georef_scale_factor: number | null
           has_closing_row: boolean
           id: string
           linear_error: number | null
@@ -346,6 +354,14 @@ export type Database = {
           equipment_calibration_date?: string | null
           equipment_model?: string | null
           equipment_serial?: string | null
+          georef_at?: string | null
+          georef_by?: string | null
+          georef_point_a_code?: string | null
+          georef_point_b_code?: string | null
+          georef_rotation_deg?: number | null
+          georef_rotation_min?: number | null
+          georef_rotation_sec?: number | null
+          georef_scale_factor?: number | null
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null
@@ -394,6 +410,14 @@ export type Database = {
           equipment_calibration_date?: string | null
           equipment_model?: string | null
           equipment_serial?: string | null
+          georef_at?: string | null
+          georef_by?: string | null
+          georef_point_a_code?: string | null
+          georef_point_b_code?: string | null
+          georef_rotation_deg?: number | null
+          georef_rotation_min?: number | null
+          georef_rotation_sec?: number | null
+          georef_scale_factor?: number | null
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null

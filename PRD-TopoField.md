@@ -702,6 +702,13 @@ El cierre es el mecanismo de trazabilidad. Aplica a los 3 tipos de proceso.
 5. Sistema registra: `closed_at` (timestamp), `closed_by` (user ID), cambia `status` a `closed`
 6. A partir de ese momento: todos los campos son de solo lectura, no se puede editar ni eliminar
 
+> **Enmienda (Fase 15, 2026-09-24).** Excepción única: la **posición** de una
+> poligonal cerrada —coordenadas, proyecciones, azimuts y datos de arranque y
+> llegada— se puede reescribir al georreferenciarla con dos de sus estaciones.
+> Ángulos, distancias, lecturas, errores, precisión, veredicto y estado siguen
+> inmutables, y la base lo garantiza con una lista blanca en los triggers. Ver
+> `docs/prds/14-georreferenciacion.md`.
+
 **Proceso rechazado:**
 - Si el proceso no cumple tolerancia, el usuario puede cerrarlo como "Rechazado"
 - Se registra igualmente con timestamp y responsable

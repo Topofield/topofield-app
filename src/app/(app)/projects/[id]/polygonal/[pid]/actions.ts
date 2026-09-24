@@ -17,6 +17,11 @@ import {
 } from "@/lib/validators/polygonal";
 import { derivePolygonalCloseStatus } from "./close-status";
 import {
+  planGeoreference,
+  type ControlPoint,
+} from "@/components/polygonal/georeference-plan";
+import { getPolygonalProcess, getPolygonalStations } from "@/lib/supabase/queries";
+import {
   ANGLE_INPUT_FORMATS,
   type AngleInputFormat,
   type AngleType,
@@ -612,5 +617,59 @@ export async function setAngleInputFormatAction(
     .update({ angle_input_format: format })
     .eq("id", processId);
   if (error) return { ok: false, error: "No se pudo guardar el formato." };
+  return { ok: true };
+}
+
+/**
+ * Georreferencia un proceso con dos de sus estaciones (Fase 15): transforma la
+ * entrada, recalcula y reescribe solo las columnas de posición. Vale en
+ * cualquier estado, también cerrado: la base admite ahí esas columnas y nada
+ * más, así que el veredicto no puede cambiar (PRD, decisión 3).
+ *
+ * Un proceso no cerrado con cambios sin guardar lo bloquea el editor: aquí se
+ * trabaja con lo guardado.
+ */
+export async function georeferencePolygonalProcessAction(
+  processId: string,
+  a: ControlPoint,
+  b: ControlPoint,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Sesión no válida." };
+
+  const process = await getPolygonalProcess(supabase, processId);
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  const stations = await getPolygonalStations(supabase, process.id);
+
+  const planned = planGeoreference(process, stations, a, b);
+  if (!planned.ok) return planned;
+  const { plan } = planned;
+
+  const { error: headerError } = await supabase
+    .from("polygonal_processes")
+    .update({
+      ...plan.header,
+      georef_at: new Date().toISOString(),
+      georef_by: user.id,
+    })
+    .eq("id", process.id);
+  if (headerError) return { ok: false, error: "No se pudo georreferenciar el proceso." };
+
+  // Una fila por estación: en un cerrado no se puede borrar y reinsertar, como
+  // hace el guardado, porque el trigger solo admite UPDATE de posición.
+  const results = await Promise.all(
+    plan.stations.map(({ id, ...columns }) =>
+      supabase.from("polygonal_stations").update(columns).eq("id", id),
+    ),
+  );
+  if (results.some((r) => r.error)) {
+    return { ok: false, error: "No se pudieron georreferenciar las estaciones." };
+  }
+
+  revalidatePath(`/projects/${process.project_id}/polygonal/${process.id}`);
+  revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
 }

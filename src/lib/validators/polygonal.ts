@@ -307,3 +307,44 @@ export function validateLeastSquaresWeights(
   }
   return null;
 }
+
+/**
+ * ¿Sirven estos dos puntos de control para georreferenciar? (Fase 15.)
+ * Devuelve el motivo o null. Los índices son de `stations`, las filas del
+ * proceso en orden; `north`/`east` son sus coordenadas calculadas.
+ */
+export function validateGeoreferencePoints(
+  stations: { pointCode: string; north: number | null; east: number | null }[],
+  a: { index: number | null; north: number | null; east: number | null },
+  b: { index: number | null; north: number | null; east: number | null },
+): string | null {
+  const sa = a.index != null ? stations[a.index] : undefined;
+  const sb = b.index != null ? stations[b.index] : undefined;
+  if (!sa || !sb) return "Elija las dos estaciones de control.";
+  // Con fila de cierre u orientación, el arranque aparece dos veces: es el
+  // mismo punto aunque sean filas distintas.
+  if (a.index === b.index || sa.pointCode === sb.pointCode) {
+    return "Las dos estaciones de control deben ser puntos distintos.";
+  }
+  if (sa.north == null || sa.east == null || sb.north == null || sb.east == null) {
+    return "Las dos estaciones deben tener coordenadas calculadas.";
+  }
+  if (
+    a.north == null || a.east == null || b.north == null || b.east == null ||
+    ![a.north, a.east, b.north, b.east].every(Number.isFinite)
+  ) {
+    return "Faltan las coordenadas reales de las dos estaciones.";
+  }
+  // El límite de `decimal(12,4)`: más allá, la base rechazaría el guardado
+  // con un error que no dice por qué.
+  if (![a.north, a.east, b.north, b.east].every((v) => Math.abs(v) < 1e8)) {
+    return "Las coordenadas reales deben estar por debajo de 100 000 000.";
+  }
+  if (Math.hypot(b.north - a.north, b.east - a.east) < 0.001) {
+    return "Las coordenadas reales de las dos estaciones coinciden.";
+  }
+  if (Math.hypot(sb.north - sa.north, sb.east - sa.east) < 0.001) {
+    return "Las dos estaciones están en el mismo sitio: no definen una dirección.";
+  }
+  return null;
+}
