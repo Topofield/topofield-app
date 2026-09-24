@@ -1,8 +1,8 @@
 # PRD-de-fase 17 — Control ida-vuelta por puntos homólogos
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-24
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-24
 
 **Rama:** `fase-17-homologos-ida-vuelta`
 **Petición:** N6 de [`pendientes.md`](../pendientes.md)
@@ -11,6 +11,18 @@
 y el crudo de nivel digital
 ([`carteras/analisis-crudo-nivel-digital.md`](../carteras/analisis-crudo-nivel-digital.md))
 **Módulo:** nivelación
+
+> **Divergencias de la implementación:**
+>
+> - **La etiqueta «= discrepancia» es condicional.** En una de enlace la vuelta
+>   arranca en la cota conocida del BM de llegada y el último residuo no es la
+>   discrepancia (decisión 7 la daba por cierta siempre). Se rotula solo cuando
+>   coincide, y un test lo cubre.
+> - Los tipos `HomologousPoint` y `HomologousComparison` viven en
+>   `src/types/leveling.ts`, con el resto de contratos del motor, no en
+>   `leveling.ts`.
+> - La tercera comprobación en pantalla se hizo importando una plantilla con
+>   puntos de cambio propios, en vez de teclearla.
 
 ## Propósito
 

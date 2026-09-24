@@ -26,7 +26,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 14 | Ajuste por mínimos cuadrados | [`prds/13-minimos-cuadrados.md`](./prds/13-minimos-cuadrados.md) | cerrada |
 | 15 | Georreferenciación de levantamientos | [`prds/14-georreferenciacion.md`](./prds/14-georreferenciacion.md) | cerrada |
 | 16 | Importar lecturas de nivel digital | [`prds/15-importar-nivel-digital.md`](./prds/15-importar-nivel-digital.md) | cerrada |
-| 17 | Control ida-vuelta por puntos homólogos | [`prds/16-homologos-ida-vuelta.md`](./prds/16-homologos-ida-vuelta.md) | en curso |
+| 17 | Control ida-vuelta por puntos homólogos | [`prds/16-homologos-ida-vuelta.md`](./prds/16-homologos-ida-vuelta.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -540,6 +540,29 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 17 — Control ida-vuelta por puntos homólogos (2026-09-24)
+
+Cuando la ida y la vuelta pasan por los mismos puntos, el editor compara la
+cota de cada uno en los dos recorridos. Informativo: el veredicto sigue siendo
+la discrepancia de la sección. Con esta fase no quedan peticiones pendientes.
+676 → 685 tests.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un supuesto del PRD principal se desmiente con datos, no con
+  argumentos.** La Fase 4 escribió que los puntos de cambio no se reocupan.
+  Dos carteras de dos instrumentos lo contradicen; el § 6.9 se enmendó citando
+  las carteras, y el razonamiento original —que reocupar debilita el doble
+  recorrido— se conservó, porque sigue siendo cierto.
+- **Una fase apoyada en la anterior hereda sus arreglos.** Los residuos del
+  crudo solo salen bien porque la Fase 16 corrigió el arranque de la vuelta de
+  una abierta; con el motor anterior, todos habrían salido desplazados
+  1.16 m.
+- **Rotular una equivalencia exige comprobar que se cumple en todos los
+  tipos.** «El último residuo es la discrepancia» era cierto en las dos
+  carteras, que son abiertas, y falso en una de enlace. Salió al escribir el
+  test del caso que el PRD no había mirado.
 
 ### Cierre Fase 16 — Importar lecturas de nivel digital (2026-09-24)
 

@@ -132,6 +132,17 @@ Los procesos de nivelación de la seed viven en el proyecto **Lote catastral**.
   radiación, e importarla. ✓ La radiación sale como Intermedio y el recorrido
   no se toma por ida y vuelta.
 
+### 12. Puntos homólogos (Fase 17)
+
+- En el **Circuito BM-1**, importar `docs/carteras/CRDUDO-TRAMO2.L` como
+  **Ida y vuelta** (armada 9). ✓ Aparece **Puntos homólogos**: C18 0.0, C17
+  −2.4, C16 −2.1, C15 −4.5, C14 −5.2, C13 −5.2, C12 −3.5, C11 −2.0 y C10
+  −0.4 mm, esta última rotulada «= discrepancia».
+- Importarlo como **Un recorrido**. ✓ La sección no aparece.
+- Importar una plantilla con ida A → P1 → B y vuelta B → Q1 → A (puntos de
+  cambio propios). ✓ Aparece la discrepancia, no los homólogos.
+- No guardar: recargar deja el Circuito como estaba.
+
 ## Resultado esperado
 
 Si los puntos pasan, el módulo de nivelación cumple los criterios del

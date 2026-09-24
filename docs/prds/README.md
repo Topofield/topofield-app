@@ -22,7 +22,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 14 | Ajuste por mínimos cuadrados | `13-minimos-cuadrados.md` | cerrada |
 | 15 | Georreferenciación de levantamientos | `14-georreferenciacion.md` | cerrada |
 | 16 | Importar lecturas de nivel digital | `15-importar-nivel-digital.md` | cerrada |
-| 17 | Control ida-vuelta por puntos homólogos | `16-homologos-ida-vuelta.md` | en curso |
+| 17 | Control ida-vuelta por puntos homólogos | `16-homologos-ida-vuelta.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
