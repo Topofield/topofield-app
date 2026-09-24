@@ -2208,14 +2208,28 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-08-25):** la nube tiene aplicadas las ocho migraciones,
-incluidas las dos de la Fase 5 (`20260825175626_sites_and_settlement` y
-`20260825230000_reject_write_on_closed_site`). Verificado contra la base tras
-aplicarlas —no contra la interfaz—: `site_id` es `NOT NULL` en
-`polygonal_processes` y `leveling_processes`, ningún proceso quedó huérfano,
-ninguno apunta al lugar de otro proyecto, RLS está activo en las cuatro tablas
-nuevas y sus triggers de inmutabilidad existen. El backfill creó **un** lugar
-`General`, el número exacto que la auditoría previa había predicho.
+**Estado actual (2026-09-24):** la nube tiene aplicadas las **diecinueve**
+migraciones, hasta `20260926000000_libreta_visita` (Fase 18). Verificado contra
+la base con `migration list --linked` y consultas al esquema: columnas de las
+fases 8 a 18 presentes, RLS y los dos triggers de inmutabilidad en
+`settlement_book_readings`.
+
+**Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
+mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de
+Vercel no aplica migraciones**, y nadie las empujó. Al aplicarlas afloraron dos
+cosas que `db reset` nunca muestra, porque aplica las migraciones sobre una
+base vacía:
+
+- la de la Fase 7 hacía un `UPDATE` sobre procesos **cerrados** y el trigger
+  de inmutabilidad lo rechazó; se corrigió desactivándolo solo alrededor del
+  `UPDATE`, como ya hacían los backfills de las fases 8 y 9;
+- la de la Fase 8 se detuvo, como está diseñada, ante tres proyectos con
+  `linear_precision = '10+100'` (sin `ppm`).
+
+Como los datos de producción no importaban, se vaciaron los de trabajo
+(`TRUNCATE public.projects CASCADE`, que no dispara triggers de fila) y se
+dejó `profiles.demo_seeded_at` en nulo para que el dashboard recree el
+proyecto demo. La cuenta del usuario se conservó.
 
 **El orden importa cuando hay auto-deploy.** Vercel despliega solo al empujar a
 `main`, así que la migración va **primero** y el `git push` después: al revés,

@@ -577,6 +577,15 @@ Divergencias en el propio PRD.
   libreta desde la serie, en vez de inventar lecturas y aceptar la serie que
   saliera, dejó intactos esos escenarios y dio un test útil: la libreta
   reproduce la serie a 0.1 mm.
+- **El despliegue no migra, y `db reset` no prueba una migración de datos.**
+  Al integrar la fase, la nube llevaba ocho migraciones de atraso mientras
+  `main` desplegaba el código que las necesitaba. Al empujarlas, la de la Fase
+  7 chocó con el trigger de inmutabilidad (procesos cerrados reales) y la de
+  la Fase 8 con una precisión mal escrita: dos fallos que `db reset` nunca
+  enseña, porque aplica las migraciones antes de que existan datos. Una
+  migración que toca filas se prueba sobre una base **con** datos —incluidos
+  cerrados—, y cada merge a `main` que trae migración la empuja antes (§ 13 de
+  la doc técnica).
 - **Delegar piezas con archivos disjuntos funciona si nadie más commitea.**
   Las gráficas, el `Drawer` y la hoja del Excel se hicieron en paralelo. Los
   agentes no commitean; el que orquesta revisa y commitea. El precio: los
