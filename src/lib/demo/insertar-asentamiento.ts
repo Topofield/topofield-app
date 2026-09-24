@@ -2,13 +2,23 @@
 //
 // Crea el lugar, su catálogo de puntos y sus visitas, con los parciales,
 // acumulados, velocidad y nivel de alerta calculados por `computeHistory` —
-// nunca escritos a mano. Misma estrategia que `insertSettlementSite` en
-// `scripts/seed.mjs`. El lugar se cierra en diferido para que alimente el
-// informe de asentamientos.
+// nunca escritos a mano. Misma estrategia que `insertBookSite` en
+// `scripts/seed.mjs`: desde la Fase 18 cada visita lleva su libreta de
+// nivelación, generada hacia atrás desde la serie del fixture, y las cotas se
+// derivan de ella con el motor real. El lugar se cierra en diferido para que
+// alimente el informe de asentamientos.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { totalDistanceFromReadings } from "@/lib/calculations/leveling";
 import { computeHistory } from "@/lib/calculations/settlement";
+import {
+  bookRowInputOf,
+  computeVisitBook,
+  deriveControlElevations,
+} from "@/lib/calculations/settlement-book";
+import { bookRowsToPersist } from "@/lib/calculations/settlement-persistence";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
+import { generateVisitBook } from "./libreta-asentamientos";
 import type { Database } from "@/types/database";
 import type { PointInput, VisitInput } from "@/types/settlement";
 import type { AsentamientoDemo } from "./fixtures";
@@ -87,19 +97,49 @@ export async function insertarAsentamiento(
     retiredOn: null,
   }));
 
+  // El BM de amarre de las libretas, en el catálogo del proyecto.
+  const { error: errAmarre } = await supabase.from("reference_points").insert({
+    project_id: projectId,
+    code: fixture.amarre.code,
+    type: "bm",
+    elevation: fixture.amarre.elevation,
+    description: fixture.amarre.description,
+  });
+  if (errAmarre) throw errAmarre;
+
+  // La libreta de cada visita, hacia atrás desde la serie; las cotas salen de
+  // ella por el motor, como al guardar desde el editor.
+  const books = fixture.visitDates.map((date, i) => {
+    const rows = generateVisitBook({
+      amarre: fixture.amarre,
+      targets: fixture.points.map((p) => ({
+        code: p.code,
+        elevation: Number(cotaEn(fixture, p.code, p.initialElevation, i).toFixed(4)),
+      })),
+      closureMm: fixture.closuresMm[i] ?? 0,
+      order: fixture.precisionOrder,
+      seed: 200 + i,
+    });
+    const result = computeVisitBook(
+      rows.map(bookRowInputOf),
+      fixture.amarre.elevation,
+      fixture.precisionOrder,
+    );
+    return { rows, result, readings: deriveControlElevations(result, points, date).readings };
+  });
+
   const visits: VisitInput[] = fixture.visitDates.map((date, i) => ({
     id: `visita-${i}`, // provisional, solo para casar con el resultado
     visitNumber: i,
     date,
-    readings: fixture.points.map((p) => ({
-      pointId: idPorCodigo.get(p.code)!,
-      elevation: cotaEn(fixture, p.code, p.initialElevation, i),
-    })),
+    readings: books[i]!.readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
   }));
 
   const history = computeHistory(points, visits, thresholdsFor("edificio"));
 
+  const round = (v: number | null, d: number) => (v == null ? null : Number(v.toFixed(d)));
   for (const visitResult of history.visits) {
+    const book = books[visitResult.visitNumber]!;
     const { data: visitRow, error: errVisita } = await supabase
       .from("settlement_visits")
       .insert({
@@ -116,11 +156,23 @@ export async function insertarAsentamiento(
         equipment_calibration_date: fixture.equipmentCalibrationDate ?? null,
         level_type: fixture.levelType ?? null,
         km_precision_mm: fixture.kmPrecisionMm ?? null,
+        capture_mode: "book",
+        reference_bm_code: fixture.amarre.code,
+        reference_bm_elevation: fixture.amarre.elevation,
+        closure_error_mm: round(book.result.closureErrorMm, 1),
+        tolerance_mm: round(book.result.toleranceMm, 1),
+        meets_tolerance: book.result.meetsTolerance,
+        total_distance_km: round(totalDistanceFromReadings(book.rows.map(bookRowInputOf)), 3),
         status: "calculated",
       })
       .select("id")
       .single();
     if (errVisita) throw errVisita;
+
+    const { error: errLibreta } = await supabase
+      .from("settlement_book_readings")
+      .insert(bookRowsToPersist(visitRow.id, book.rows, book.result.forward.readings, points));
+    if (errLibreta) throw errLibreta;
 
     const lecturas = visitResult.readings.map((r) => ({
       visit_id: visitRow.id,

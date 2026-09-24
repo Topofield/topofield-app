@@ -330,6 +330,13 @@ export interface AsentamientoDemo {
    * `computeHistory`, no el fixture.
    */
   partialsMm: Record<string, number[]>;
+  /**
+   * BM de amarre de las libretas (Fase 18): el demo lo crea en el catálogo
+   * del proyecto, y cada visita cierra en él con `closuresMm` de error.
+   */
+  amarre: { code: string; elevation: number; description: string };
+  /** Error de cierre de la libreta de cada visita, en mm (múltiplos de 0.1). */
+  closuresMm: number[];
   notes: string;
 }
 
@@ -376,6 +383,8 @@ export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
     "P-05": [0, -9.0, -5.0, -3.0, -1.8, -1.0],
     "P-06": [0, -24.0, -13.0, -7.0, -4.0, -2.5],
   },
+  amarre: { code: "BM-E1", elevation: 99.65, description: "BM de amarre del edificio de ejemplo" },
+  closuresMm: [0.8, -1.2, 0.5, 1.9, -0.7, 1.1],
   notes:
     "Lugar cerrado tras seis visitas mensuales: su informe de asentamientos ya es reproducible.",
 };
