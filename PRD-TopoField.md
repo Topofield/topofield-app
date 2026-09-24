@@ -516,6 +516,27 @@ fila equivocada — un fallo silencioso.
 **`polygonal_processes` y `leveling_processes` ganaron `site_id UUID NOT NULL
 REFERENCES sites(id)`** en la misma fase: todo proceso pertenece a un lugar.
 
+**Fase 18 — libreta de la visita** (`docs/prds/17-libreta-panel-asentamientos.md`).
+`settlement_visits` gana el modo de captura y el BM de amarre, y el cierre deja
+de teclearse cuando hay libreta:
+
+```sql
+ALTER TABLE settlement_visits
+  ADD COLUMN capture_mode TEXT NOT NULL DEFAULT 'direct'
+    CHECK (capture_mode IN ('book', 'direct')),   -- libreta o cotas tecleadas
+  ADD COLUMN reference_bm_code TEXT,               -- copia del BM de amarre
+  ADD COLUMN reference_bm_elevation DECIMAL(10,4),
+  ADD COLUMN total_distance_km DECIMAL(8,3),       -- derivados en 'book'
+  ADD COLUMN tolerance_mm DECIMAL(8,1),
+  ADD COLUMN meets_tolerance BOOLEAN;
+-- closure_error_mm: derivado en 'book', tecleado en 'direct'.
+```
+
+La libreta vive en `settlement_book_readings`, espejo de `leveling_readings` sin
+`run_type` y con `point_id` al punto de control. En modo `book`,
+`settlement_readings.elevation` se **deriva** de la libreta (cota compensada de
+la fila del punto) y la escribe el servidor.
+
 #### `reports`
 ```sql
 CREATE TABLE reports (
@@ -659,10 +680,14 @@ equipos. Ver `docs/prds/05-cierre-informes-export.md`, decisión #4.
 Asentamientos», cada medición periódica es una **visita** (antes «campaña»), y
 la configuración vive en el **lugar** (`sites`), no en un «sistema».
 
-**Pantallas:**
+**Pantallas** (enmendadas en la Fase 18):
 - `/projects/[id]/sites/[siteId]` — configuración del lugar
-- `/projects/[id]/settlement/[siteId]` — panel del control y lista de visitas
-- `/projects/[id]/settlement/[siteId]/visits/[visitId]` — editor de visita
+- `/projects/[id]/settlement/[siteId]` — panel del control: KPIs, tabla de
+  visitas, tendencia y evolución por punto
+- `/projects/[id]/settlement/[siteId]/visits/[visitId]` — vista de la visita:
+  KPIs, puntos de control con historial, barras y registro de nivelación
+- `/projects/[id]/settlement/[siteId]/visits/[visitId]/editar` — editor de la
+  visita (solo abiertas)
 
 **Configuración del lugar (una vez):**
 - Nombre, descripción, tipo de estructura (aplica el preset de umbrales)
@@ -676,8 +701,12 @@ la configuración vive en el **lugar** (`sites`), no en un «sistema».
 - Cada visita se abre en su editor para ver/editar lecturas
 - Una visita cerrada queda inmutable; el lugar se cierra al terminar el monitoreo
 
-**Tabla de lecturas por visita:**
-- Columnas: punto, cota medida
+**Captura de la visita** (enmendada en la Fase 18):
+- Modo **libreta** (por defecto): la libreta de nivelación del circuito cerrado
+  sobre el BM de amarre, digitada en vivo o importada (`.L` de Leica o
+  plantilla CSV). Las cotas de los puntos de control se derivan de ella.
+- Modo **cotas directas**: columnas punto, cota medida (las visitas anteriores
+  a la Fase 18, o una nivelación procesada fuera).
 - Calculados (auto): asentamiento parcial, acumulado, velocidad, estado (semáforo)
 
 **Panel de análisis (lateral en desktop, debajo en mobile):**
@@ -797,6 +826,8 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Nivelación enlace | Cota calculada ≠ cota conocida (fuera de tolerancia) | Banner rojo |
 | Nivelación ida/vuelta | Discrepancia > T×√2 | Banner amarillo |
 | Nivelación | ΣLA − ΣLD ≠ desnivel total (error aritmético) | Banner rojo crítico |
+| Asentamiento, libreta de la visita | Error de cierre > tolerancia | Aviso; **no bloquea** (Fase 18) |
+| Asentamiento, libreta de la visita | Comprobación aritmética fallida | Bloquea el cierre de la visita |
 
 ### 5.3 Capa 3 — Validación Estadística (asentamientos)
 
