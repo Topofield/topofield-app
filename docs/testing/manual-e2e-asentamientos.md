@@ -74,7 +74,7 @@ asentamientos).
   - **P-04** sale en **alerta** por velocidad (≈ 6,9 mm/mes), con la marca
     **⚠ Lectura fuera de tendencia** y la tendencia **Acelerando**: en la
     visita 5 sube 7,0 mm cuando venía bajando. Es la lectura mal tomada que
-    siembra el seed (Fase 12). El título de la marca explica el aviso.
+    siembra el seed (Fase 12). Debajo de la marca se lee el aviso completo.
   - El resto (P-01…P-03 y P-07) queda en **normal**.
 - ✓ El acumulado de **P-06** en la última visita es ≈ **−50.5 mm** (cruza el
   umbral de acumulado de 50 mm → alerta por acumulado).

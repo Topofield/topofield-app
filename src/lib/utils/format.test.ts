@@ -130,6 +130,19 @@ describe("formatTrendDeviation (Fase 12)", () => {
     );
   });
 
+  it("no dice «bajando 0,0 mm/mes» de un punto que estaba quieto", () => {
+    expect(
+      formatTrendDeviation({
+        kind: "contrary",
+        partialMm: 2,
+        previousVelocity: 0,
+        expectedMm: 0,
+      }),
+    ).toBe(
+      "Se sale de la tendencia: el punto venía estable y esta lectura lo hace subir 2,0 mm. Verifica la lectura.",
+    );
+  });
+
   it("dice cuánto se movió frente a lo que su ritmo preveía", () => {
     expect(
       formatTrendDeviation({

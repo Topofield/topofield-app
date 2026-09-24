@@ -183,8 +183,13 @@ export function formatTrendDeviation(deviation: {
 }): string {
   const moves = (mm: number) => (mm > 0 ? "subir" : "bajar");
   if (deviation.kind === "contrary") {
-    const venia = deviation.previousVelocity > 0 ? "subiendo" : "bajando";
-    return `Se sale de la tendencia: el punto venía ${venia} ${mmAbs(deviation.previousVelocity)} mm/mes y esta lectura lo hace ${moves(deviation.partialMm)} ${mmAbs(deviation.partialMm)} mm. Verifica la lectura.`;
+    // Con velocidad previa 0 la regla trata el punto como «bajando» (d = −1),
+    // pero decirlo así sería falso: el punto estaba quieto.
+    const venia =
+      deviation.previousVelocity === 0
+        ? "estable"
+        : `${deviation.previousVelocity > 0 ? "subiendo" : "bajando"} ${mmAbs(deviation.previousVelocity)} mm/mes`;
+    return `Se sale de la tendencia: el punto venía ${venia} y esta lectura lo hace ${moves(deviation.partialMm)} ${mmAbs(deviation.partialMm)} mm. Verifica la lectura.`;
   }
   const verbo = deviation.partialMm > 0 ? "sube" : "baja";
   return `Se sale de la tendencia: ${verbo} ${mmAbs(deviation.partialMm)} mm cuando su ritmo anterior preveía unos ${mmAbs(deviation.expectedMm)} mm. Verifica la lectura.`;

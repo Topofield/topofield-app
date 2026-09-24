@@ -101,15 +101,17 @@ export function AnalysisPanel({
                           label={ALERT_LEVEL_LABELS[reading.alertStatus]}
                         />
                         {/* Texto, no solo color: la regla del sistema de
-                            diseño. El mensaje completo va en el title. */}
+                            diseño. El mensaje completo va visible debajo,
+                            no en un title: un title no llega al teclado, al
+                            lector de pantalla ni a una tableta en campo. */}
                         {lastVisitTrendWarnings[reading.pointId] && (
-                          <div
-                            className="mt-1"
-                            title={lastVisitTrendWarnings[reading.pointId]}
-                          >
-                            <Badge tone="warning" className="whitespace-nowrap">
+                          <div className="mt-1 flex max-w-xs flex-col gap-1">
+                            <Badge tone="warning" className="w-fit whitespace-nowrap">
                               ⚠ Lectura fuera de tendencia
                             </Badge>
+                            <span className="text-xs text-neutral-600">
+                              {lastVisitTrendWarnings[reading.pointId]}
+                            </span>
                           </div>
                         )}
                       </td>
