@@ -222,6 +222,9 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 - Abrir **Enlace P1-P3 con deflexión** y elegir Mínimos cuadrados. ✓ Los tres
   campos salen **vacíos**. Con 2 / 0.011 / 2 aparecen 2 condiciones (no hay
   azimut de llegada). Guardar y recargar: ✓ los pesos se conservan.
+- Con σ angular **0**: ✓ el aviso explica que debe estar entre 0.01″ y
+  9999.99″. Cambiar a Bowditch: ✓ se puede guardar (el peso inválido se
+  descarta). Volver a Mínimos cuadrados con 2.
 - Abrir **Reconocimiento E1-E4**. ✓ No hay selector de método.
 - **Exportar a Excel** la Vivero. ✓ «Cálculos» trae «Corrección angular (″)» y
   «Distancia ajustada (m)»; «Resumen», la sección «Ajuste por mínimos

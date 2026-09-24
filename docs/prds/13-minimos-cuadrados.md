@@ -24,9 +24,18 @@
 > - **Lectura de σ₀ con una banda con nombre**, `SIGMA0_BAND = [0.5, 2]`: el
 >   PRD decía «≈ 1», «≫ 1» y «≪ 1» sin fijar límites, y la pantalla necesita
 >   uno. Solo cambia el texto; no decide nada (decisión 8).
-> - **Límites de los pesos** según sus columnas (σ angular 0.01″–9999.99″, σ
->   de distancia 0.0001–9999.9999 m, mediciones entero ≥ 1): un σ que la base
->   redondeara a cero lo rechazaba el CHECK con un error opaco.
+> - **Límites y escala de los pesos** según sus columnas (σ angular
+>   0.01″–9999.99″ con dos decimales, σ de distancia 0.0001–9999.9999 m con
+>   cuatro, mediciones entero de 1 a 1000). Un σ que la base redondeara lo
+>   guardaba distinto del que produjo las coordenadas. Se validan con
+>   cualquier método, porque se guardan igual (hallado en la revisión).
+> - **Estado `unadjustable`**, no previsto: una abierta de un solo lado no tiene
+>   redundancia y el motor lanzaba «Sistema singular», que tumbaba el editor.
+>   Ahora dice por qué no hay ajuste —un lado, sistema singular o sin
+>   convergencia— y deja las coordenadas en `null`, como sin pesos.
+> - **La abierta no publica deflexiones corregidas**, igual que con los otros
+>   métodos. Publicarlas en valor absoluto perdía el signo cuando la corrección
+>   cruzaba el cero (hallado en la revisión).
 > - **Duplicar copia los pesos** —sin ellos el CHECK rechazaba el duplicado de
 >   un proceso con el método— y también `angle_input_format`, que la Fase 13
 >   olvidó copiar.

@@ -793,6 +793,16 @@ control, dos lineales más la angular si hay azimut de llegada. El sistema es de
 - Los pesos llegan en `PolygonalInput.leastSquares`. Sin ellos, el resultado
   trae `adjustment: { status: "missing_weights" }` y coordenadas en `null`: el
   motor no cae a Bowditch en silencio.
+- Con pesos pero **sin ajuste posible**, `adjustment: { status:
+  "unadjustable", reason }`, también con coordenadas en `null`: una abierta de
+  **un solo lado** (`one_side`: las condiciones de llegada en N y en E dependen
+  de una sola distancia), un sistema **singular** (`solveLinear` lanza
+  `SingularSystemError` con un pivote menor que 1e-12 veces la mayor entrada,
+  y `polygonal.ts` lo captura) o **sin convergencia** en 10 iteraciones. El
+  motor sigue siendo total: no lanza.
+- La abierta con control **no publica deflexiones corregidas**, como con los
+  otros métodos: el ajuste va en los azimuts, y cada corrección, con su signo,
+  en `adjustment.angleCorrectionsSec`.
 - El **veredicto no cambia**: error angular, lineal y precisión relativa son
   los de la cartera medida, antes de ajustar. Solo cambian las coordenadas,
   los ángulos corregidos y los azimuts.
@@ -1161,13 +1171,13 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-612 tests en 28 archivos, Vitest, entorno `node` **sin jsdom**.
+618 tests en 28 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 69 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
-| `lib/validators/polygonal.test.ts` | 59 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados y sus límites (Fase 14) |
+| `lib/validators/polygonal.test.ts` | 61 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
 | `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
@@ -1175,7 +1185,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/utils/format.test.ts` | 24 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/export/polygonal-workbook.test.ts` | 21 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14) |
-| `lib/calculations/least-squares.test.ts` | 19 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; lectura de σ₀ (Fase 14) |
+| `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
 | `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
 | `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
 | `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
@@ -1751,11 +1761,15 @@ a sin control lo conserva: el panel muestra entonces el selector para elegir
 otro, y el guardado lo rechaza con un mensaje hasta que se cambie. No se
 reescribe el método en silencio porque sería perder los pesos.
 
-**Los pesos no pueden guardarse fuera del rango de sus columnas.** El
-validador rechaza σ angular fuera de 0.01″–9999.99″ y σ de distancia fuera de
-0.0001–9999.9999 m, los límites de `decimal(6,2)` y `decimal(8,4)`. Un σ de
-distancia de 0.05 mm, que alguien con un distanciómetro muy bueno podría
-querer, no cabe: habría que ampliar la escala de la columna.
+**Los pesos no pueden guardarse fuera del rango ni de la escala de sus
+columnas.** El validador rechaza σ angular fuera de 0.01″–9999.99″ o con más
+de dos decimales, y σ de distancia fuera de 0.0001–9999.9999 m o con más de
+cuatro: la base los guardaría redondeados y el ajuste recalculado al reabrir
+no coincidiría con las coordenadas guardadas. Valida los pesos presentes con
+cualquier método, porque se guardan igual; el editor descarta los inválidos
+cuando el método es otro y sus campos no se ven. Un σ de distancia de 0.05 mm,
+que alguien con un distanciómetro muy bueno podría querer, no cabe: habría
+que ampliar la escala de la columna.
 
 ---
 

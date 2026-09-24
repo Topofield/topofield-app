@@ -617,6 +617,12 @@ export default function ManualPage() {
         </ul>
 
         <p>
+          Si los pesos están pero no hay ajuste posible, un aviso dice por qué:
+          con un solo lado, por ejemplo, las condiciones de llegada dependen de
+          una sola distancia y no hay nada que ajustar.
+        </p>
+
+        <p>
           σ₀ es información, no un criterio. El{" "}
           <strong>veredicto de cierre es el mismo</strong> con cualquier
           método: se juzga con el error de la cartera tal como se midió, antes

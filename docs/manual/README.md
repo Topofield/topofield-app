@@ -376,6 +376,10 @@ supuso:
   cartera.
 - **Menor que 0.5**: sus σ son pesimistas; midió mejor de lo declarado.
 
+Si los pesos están pero no hay ajuste posible, un aviso dice por qué: con un
+solo lado, por ejemplo, las condiciones de llegada dependen de una sola
+distancia y no hay nada que ajustar.
+
 σ₀ es información, no un criterio. El **veredicto de cierre es el mismo** con
 cualquier método: se juzga con el error de la cartera tal como se midió, antes
 de corregir.

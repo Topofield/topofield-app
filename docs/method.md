@@ -544,7 +544,7 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 Cuarto método de corrección: ajuste por ecuaciones de condición con pesos
 tecleados por proceso, como en la hoja de la universidad. El editor muestra
 las correcciones por observación y σ₀; el informe y el Excel, los pesos y σ₀.
-El veredicto no cambia con el método. 585 → 612 tests.
+El veredicto no cambia con el método. 585 → 618 tests.
 
 **Aprendizajes a llevar a fases siguientes:**
 
@@ -567,6 +567,12 @@ El veredicto no cambia con el método. 585 → 612 tests.
   `correctDeltas` habría tratado `least_squares` como Crandall sin error. Al
   añadir un valor a un enum, buscar cada sitio que lo discrimina, no solo los
   que fallan al compilar.
+- **Un motor «total» deja de serlo con la primera rutina que lanza.** El
+  ajuste llama a una resolución lineal que lanza con un sistema singular, y
+  una abierta de un solo lado —un dato válido a medio capturar— tumbaba el
+  editor. Lo encontró la revisión, no los tests: todos los casos de prueba
+  tenían redundancia. **Al añadir una rama al motor, probarla con la entrada
+  mínima que pasa los guardas de datos completos.**
 - **Lo que no se persiste se recalcula por el mismo camino.** Correcciones y
   σ₀ salen de `polygonalInputOf` en el editor, el informe y el Excel. El
   módulo común que la Fase 13 creó para el dibujo pagó aquí su coste: dos
