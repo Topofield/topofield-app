@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
+  AngleInput,
   Button,
-  DmsInput,
   Input,
   Modal,
+  type AngleFormat,
   type DmsValue,
 } from "@/components/design-system";
 import {
@@ -30,6 +31,8 @@ interface ReassignCoordinatesDialogProps {
     referenceEast?: string,
   ) => void;
   disabled?: boolean;
+  /** Formato de captura de los ángulos (Fase 13, P1). */
+  angleFormat: AngleFormat;
 }
 
 /**
@@ -53,6 +56,7 @@ export function ReassignCoordinatesDialog({
   referencePointCode,
   onApply,
   disabled,
+  angleFormat,
 }: ReassignCoordinatesDialogProps) {
   const [open, setOpen] = useState(false);
   const [north, setNorth] = useState(startNorth);
@@ -154,7 +158,8 @@ export function ReassignCoordinatesDialog({
               />
             </div>
           )}
-          <DmsInput
+          <AngleInput
+            format={angleFormat}
             label={
               azimutCalculado
                 ? "Azimut hacia el amarre (calculado)"

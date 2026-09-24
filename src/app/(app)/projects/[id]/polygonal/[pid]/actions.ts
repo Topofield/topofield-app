@@ -9,17 +9,20 @@ import {
 } from "@/lib/calculations/angles";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import {
+  canPersistAngleFormat,
   expectStationCapture,
   hasCaptureErrors,
   validatePolygonalStation,
 } from "@/lib/validators/polygonal";
 import { derivePolygonalCloseStatus } from "./close-status";
-import type {
-  AngleType,
-  CorrectionMethod,
-  DeflectionDirection,
-  PolygonalInput,
-  PolygonalType,
+import {
+  ANGLE_INPUT_FORMATS,
+  type AngleInputFormat,
+  type AngleType,
+  type CorrectionMethod,
+  type DeflectionDirection,
+  type PolygonalInput,
+  type PolygonalType,
 } from "@/types/polygonal";
 import type { PrecisionOrder } from "@/types/project";
 
@@ -541,5 +544,39 @@ export async function deletePolygonalProcessAction(
   if (error) return { ok: false, error: "No se pudo eliminar el proceso." };
 
   revalidatePath(`/projects/${process.project_id}`);
+  return { ok: true };
+}
+
+/**
+ * Guarda en qué formato se teclean los ángulos del proceso (Fase 13, P1). Se
+ * llama al conmutar, sin esperar al botón Guardar: así la preferencia no se
+ * pierde si el usuario cambia de formato y sale. En un proceso cerrado o
+ * rechazado no se guarda (`canPersistAngleFormat`): ahí el conmutador solo
+ * cambia la vista.
+ */
+export async function setAngleInputFormatAction(
+  processId: string,
+  format: AngleInputFormat,
+): Promise<ActionResult> {
+  if (!ANGLE_INPUT_FORMATS.includes(format)) {
+    return { ok: false, error: "Formato de ángulo no válido." };
+  }
+
+  const supabase = await createClient();
+  const { data: process } = await supabase
+    .from("polygonal_processes")
+    .select("id, status")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  if (!canPersistAngleFormat(process.status)) {
+    return { ok: false, error: "El proceso está cerrado: el formato solo cambia la vista." };
+  }
+
+  const { error } = await supabase
+    .from("polygonal_processes")
+    .update({ angle_input_format: format })
+    .eq("id", processId);
+  if (error) return { ok: false, error: "No se pudo guardar el formato." };
   return { ok: true };
 }

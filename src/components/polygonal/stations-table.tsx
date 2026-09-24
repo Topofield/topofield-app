@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import {
+  AngleInput,
   Button,
-  DmsInput,
   EMPTY_DMS,
   Input,
   Select,
+  type AngleFormat,
   type DmsValue,
 } from "@/components/design-system";
-import { decimalToDms } from "@/lib/calculations/angles";
+import { decimalToDms, formatDecimalDegrees } from "@/lib/calculations/angles";
 import { averageOf, readingValues } from "./polygonal-draft";
 import {
   validateReadings,
@@ -74,12 +75,14 @@ function AngleReadingsCell({
   issue,
   readingIssue,
   disabled,
+  format,
   onChange,
 }: {
   station: StationDraftState;
   issue?: CaptureIssues;
   readingIssue?: { error?: string; warning?: string };
   disabled?: boolean;
+  format: AngleFormat;
   onChange: (readings: DmsValue[]) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -103,7 +106,11 @@ function AngleReadingsCell({
       >
         <span className={average ? "font-medium" : "text-neutral-400"}>
           {average
-            ? `${average.deg}°${average.min}′${average.sec}″`
+            ? format === "decimal"
+              ? // El promedio en decimal sale de las lecturas, no del DMS ya
+                // redondeado: es el mismo ángulo en las dos vistas.
+                `${formatDecimalDegrees(values.reduce((x, y) => x + y, 0) / values.length)}°`
+              : `${average.deg}°${average.min}′${average.sec}″`
             : "Sin lecturas"}
         </span>
         <span className="text-xs text-neutral-500">
@@ -130,7 +137,8 @@ function AngleReadingsCell({
           {station.readings.map((reading, index) => (
             <div key={index} className="flex items-center gap-2">
               <span className="w-4 text-xs text-neutral-500">{index + 1}</span>
-              <DmsInput
+              <AngleInput
+                format={format}
                 value={reading}
                 disabled={disabled}
                 onChange={(v) => setReading(index, v)}
@@ -164,6 +172,8 @@ interface StationsTableProps {
   /** Precisión angular del equipo, para la dispersión. */
   angularPrecisionSeconds: number;
   disabled?: boolean;
+  /** Formato de captura de los ángulos (Fase 13, P1). */
+  angleFormat: AngleFormat;
 }
 
 /** Tabla editable de estaciones con las columnas calculadas en vivo. */
@@ -176,6 +186,7 @@ export function StationsTable({
   readingsMin,
   angularPrecisionSeconds,
   disabled,
+  angleFormat,
 }: StationsTableProps) {
   function update(index: number, patch: Partial<StationDraftState>) {
     onChange(stations.map((s, i) => (i === index ? { ...s, ...patch } : s)));
@@ -237,6 +248,7 @@ export function StationsTable({
                       issue={issue}
                       readingIssue={readingIssue(station)}
                       disabled={disabled}
+                      format={angleFormat}
                       onChange={(readings) =>
                         update(i, {
                           readings,
@@ -354,6 +366,7 @@ export function StationsTable({
                     issue={issue}
                     readingIssue={readingIssue(station)}
                     disabled={disabled}
+                    format={angleFormat}
                     onChange={(readings) =>
                       update(i, {
                         readings,

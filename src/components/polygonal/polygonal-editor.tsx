@@ -8,6 +8,8 @@ import {
   buttonClasses,
   Button,
   Card,
+  AngleFormatToggle,
+  type AngleFormat,
 } from "@/components/design-system";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { totalStationMeetsOrder } from "@/lib/calculations/tolerances";
@@ -17,7 +19,10 @@ import {
   validatePolygonalStation,
   type CaptureIssues,
 } from "@/lib/validators/polygonal";
-import { savePolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
+import {
+  savePolygonalProcessAction,
+  setAngleInputFormatAction,
+} from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import {
   PROCESS_STATUS_LABELS,
   type CorrectionMethod,
@@ -87,6 +92,21 @@ export function PolygonalEditor({
   const [dirty, setDirty] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Formato de captura de ángulos (Fase 13, P1). Se guarda al conmutar, no con
+  // el botón Guardar; en un proceso cerrado solo cambia la vista.
+  const [angleFormat, setAngleFormat] = useState<AngleFormat>(
+    process.angle_input_format,
+  );
+  const [formatError, setFormatError] = useState<string | null>(null);
+
+  function changeAngleFormat(next: AngleFormat) {
+    setAngleFormat(next);
+    setFormatError(null);
+    if (readOnly) return;
+    void setAngleInputFormatAction(process.id, next).then((r) => {
+      if (!r.ok) setFormatError(r.error ?? "No se pudo guardar el formato.");
+    });
+  }
 
   // El orden sale de `config.precisionOrder`, no de un prop aparte: el
   // selector de orden vive dentro de `PolygonalConfigFields` y edita
@@ -261,6 +281,19 @@ export function PolygonalEditor({
         )}
       />
 
+      <div className="flex flex-wrap items-center gap-3">
+        <AngleFormatToggle value={angleFormat} onChange={changeAngleFormat} />
+        {readOnly && (
+          <span className="text-xs text-neutral-500">
+            El proceso está cerrado: el formato solo cambia la vista y no se
+            guarda.
+          </span>
+        )}
+        {formatError && (
+          <span className="text-xs text-danger-500">{formatError}</span>
+        )}
+      </div>
+
       <details
         open={process.status === "draft" || process.status === "in_progress"}
         className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
@@ -287,6 +320,7 @@ export function PolygonalEditor({
         <div className="border-t border-neutral-100 px-5 py-4">
           <PolygonalConfigFields
             value={config}
+            angleFormat={angleFormat}
             disabled={readOnly}
             onChange={(v) => {
               setConfig(v);
@@ -309,6 +343,7 @@ export function PolygonalEditor({
           }
           showDeflection={config.type === "open_controlled"}
           disabled={readOnly}
+          angleFormat={angleFormat}
           onChange={(v) => {
             setStations(v);
             setDirty(true);
@@ -342,6 +377,7 @@ export function PolygonalEditor({
       {!readOnly && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ReassignCoordinatesDialog
+            angleFormat={angleFormat}
             startNorth={config.startNorth}
             startEast={config.startEast}
             startAzimuth={config.startAzimuth}

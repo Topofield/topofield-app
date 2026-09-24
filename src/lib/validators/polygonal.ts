@@ -250,3 +250,12 @@ export function validateReadings(
   }
   return {};
 }
+
+/**
+ * ¿Se puede guardar el formato de captura de ángulos en un proceso con este
+ * estado? (Fase 13, P1.) En uno cerrado o rechazado no: es inmutable, y ahí el
+ * conmutador solo cambia la vista.
+ */
+export function canPersistAngleFormat(status: string): boolean {
+  return status !== "closed" && status !== "rejected";
+}

@@ -1,10 +1,11 @@
 import {
-  DmsInput,
+  AngleInput,
   EMPTY_DMS,
   Input,
   PrecisionOrderSelect,
   Select,
   TotalStationFieldset,
+  type AngleFormat,
   type DmsValue,
 } from "@/components/design-system";
 import {
@@ -77,6 +78,8 @@ interface PolygonalConfigFieldsProps {
   /** Catálogo del proyecto, para elegir el punto de amarre. */
   referencePoints?: ReferencePoint[];
   disabled?: boolean;
+  /** Formato de captura de los ángulos (Fase 13, P1). */
+  angleFormat: AngleFormat;
 }
 
 /**
@@ -109,6 +112,7 @@ export function PolygonalConfigFields({
   onChange,
   referencePoints = [],
   disabled,
+  angleFormat,
 }: PolygonalConfigFieldsProps) {
   // Solo sirven de amarre los puntos que tienen las dos coordenadas.
   const amarreOptions = [
@@ -218,7 +222,8 @@ export function PolygonalConfigFields({
           onChange={(e) => set("referencePointId", e.target.value)}
         />
 
-        <DmsInput
+        <AngleInput
+          format={angleFormat}
           label={
             azimutCalculado
               ? "Azimut hacia el amarre (calculado)"
@@ -278,7 +283,8 @@ export function PolygonalConfigFields({
               onChange={(e) => set("endEast", e.target.value)}
             />
           </div>
-          <DmsInput
+          <AngleInput
+            format={angleFormat}
             label="Azimut de llegada"
             value={value.endAzimuth}
             disabled={disabled}

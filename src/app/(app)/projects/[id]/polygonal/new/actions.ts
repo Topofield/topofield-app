@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { AngleType, PolygonalType } from "@/types/polygonal";
+import type { AngleInputFormat, AngleType, PolygonalType } from "@/types/polygonal";
 import type { PrecisionOrder } from "@/types/project";
 
 export interface CreatePolygonalState {
@@ -40,6 +40,8 @@ export interface CreatePolygonalPayload {
   angularPrecisionSeconds: number | null;
   distancePrecisionMm: number | null;
   distancePrecisionPpm: number | null;
+  /** Formato en que se teclean los ángulos (Fase 13, P1). */
+  angleInputFormat: AngleInputFormat;
 }
 
 /**
@@ -103,6 +105,7 @@ export async function createPolygonalProcessAction(
       end_azimuth_min: payload.endAzimuthMin,
       end_azimuth_sec: payload.endAzimuthSec,
       precision_order: payload.precisionOrder,
+      angle_input_format: payload.angleInputFormat,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
       equipment_serial: payload.equipmentSerial,
