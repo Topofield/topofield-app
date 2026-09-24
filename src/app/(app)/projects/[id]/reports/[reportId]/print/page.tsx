@@ -123,8 +123,9 @@ interface SiteSection {
  *
  * El contenido se **reconstruye** en cada visita a partir de los procesos que
  * el informe referencia. Es seguro porque solo puede incluir procesos
- * cerrados, que son inmutables por trigger de base: reabrir el informe dentro
- * de un año da exactamente lo mismo.
+ * cerrados, cuyas mediciones y veredicto son inmutables por trigger de base.
+ * La excepción es la posición de una poligonal georreferenciada después
+ * (Fase 15): el informe muestra las coordenadas nuevas, con una nota.
  */
 export default async function ReportPrintPage({ params }: PrintPageProps) {
   const { id, reportId } = await params;
@@ -750,7 +751,8 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         <p className="report-footer">
           Informe emitido desde TopoField el{" "}
           {report.generated_at ? formatDate(report.generated_at) : "—"}. El
-          contenido procede de procesos cerrados, inmutables desde su cierre.
+          contenido procede de procesos cerrados, cuyas mediciones y veredicto
+          son inmutables desde su cierre.
         </p>
       </section>
     </div>
