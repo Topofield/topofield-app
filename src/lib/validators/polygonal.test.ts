@@ -10,6 +10,7 @@ import {
   canPersistAngleFormat,
   evaluatePolygonalClosure,
   expectStationCapture,
+  validateGeoreferencePoints,
   validateLeastSquaresWeights,
   hasCaptureErrors,
   validatePolygonalStation,
@@ -617,5 +618,43 @@ describe("validateLeastSquaresWeights — límites de las columnas", () => {
     expect(
       validateLeastSquaresWeights("least_squares", "closed", { ...base, sigmaAngleSeconds: 0.001 }),
     ).toMatch(/0.01″/);
+  });
+});
+
+describe("validateGeoreferencePoints (Fase 15)", () => {
+  const stations = [
+    { pointCode: "F5", north: 1000, east: 2000 },
+    { pointCode: "D1", north: 995.5, east: 2032.7 },
+    { pointCode: "D3", north: 1086.5, east: 2049.7 },
+    { pointCode: "D4", north: null, east: null },
+    { pointCode: "F5", north: 1000, east: 2000 },
+  ];
+  const real = (index: number | null, north: number | null = 100, east: number | null = 200) => ({
+    index,
+    north,
+    east,
+  });
+
+  it("acepta dos estaciones distintas con coordenadas", () => {
+    expect(validateGeoreferencePoints(stations, real(1), real(2, 180, 280))).toBeNull();
+  });
+
+  it("exige elegir las dos", () => {
+    expect(validateGeoreferencePoints(stations, real(null), real(2))).toMatch(/Elija/);
+  });
+
+  it("rechaza el mismo punto, aunque sea otra fila (el arranque repetido)", () => {
+    expect(validateGeoreferencePoints(stations, real(1), real(1, 180, 280))).toMatch(/distintos/);
+    expect(validateGeoreferencePoints(stations, real(0), real(4, 180, 280))).toMatch(/distintos/);
+  });
+
+  it("rechaza una estación sin coordenadas calculadas", () => {
+    expect(validateGeoreferencePoints(stations, real(1), real(3, 180, 280))).toMatch(/calculadas/);
+  });
+
+  it("rechaza coordenadas reales faltantes, no finitas o coincidentes", () => {
+    expect(validateGeoreferencePoints(stations, real(1, null), real(2))).toMatch(/Faltan/);
+    expect(validateGeoreferencePoints(stations, real(1, Number.NaN), real(2))).toMatch(/Faltan/);
+    expect(validateGeoreferencePoints(stations, real(1), real(2))).toMatch(/coinciden/);
   });
 });
