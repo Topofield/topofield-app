@@ -57,18 +57,20 @@ nivelación, un control de asentamientos. Cada proceso pasa por estados:
 | **Borrador** | Creado, sin datos suficientes |
 | **En progreso** | Con datos de campo, aún sin cálculo completo |
 | **Calculado** | Cálculo resuelto; se puede revisar y cerrar |
-| **Cerrado** | Terminado y conforme. **Inmutable** |
-| **Rechazado** | Terminado pero fuera de tolerancia. **Inmutable** |
+| **Cerrado** | Terminado y conforme. **Inmutable**, salvo su posición |
+| **Rechazado** | Terminado pero fuera de tolerancia. **Inmutable**, salvo su posición |
 
 **Cierre.** El acto de dar por terminado un proceso. Queda registrado con fecha,
-hora y autor, y **a partir de ese momento los datos no se pueden modificar**. Es
-lo que da trazabilidad al trabajo.
+hora y autor, y **a partir de ese momento las mediciones y el veredicto no se
+pueden modificar**. Es lo que da trazabilidad al trabajo.
 
 > **Sobre la inmutabilidad**
 > Un proceso cerrado no se puede editar ni eliminar, ni desde la interfaz ni por
 > ninguna otra vía. La restricción está aplicada en la propia base de datos, no
 > solo en la pantalla. Si necesita corregir un levantamiento cerrado, cree uno
-> nuevo.
+> nuevo. La única excepción es la **posición** de una poligonal: se puede
+> georreferenciar aunque esté cerrada (§ 5.5), porque girarla y trasladarla no
+> cambia nada de lo que el cierre certificó.
 
 ---
 
@@ -424,6 +426,49 @@ teclearlo.
 Lo que no cambia al reasignar: el error angular, el error de cierre y la
 precisión relativa. Girar y trasladar la poligonal no altera nada de lo que el
 cierre certifica; solo se mueven las coordenadas.
+
+Este diálogo es para un proceso **sin cerrar** y parte del punto de arranque.
+Si lo que tiene son las coordenadas reales de **dos estaciones** —medidas con
+GPS, por ejemplo—, o el proceso ya está cerrado, use **Georreferenciar**.
+
+### 5.5 Georreferenciar
+
+Un levantamiento suele arrancar en un sistema local —(1000, 2000) y un azimut
+supuesto— y recibir coordenadas reales después, a veces con el proceso ya
+cerrado. El botón **Georreferenciar**, junto a **Exportar a Excel**, lo lleva
+al sistema real con **dos de sus estaciones** de coordenadas conocidas. Está
+disponible en cualquier estado, también cerrado o rechazado.
+
+![Georreferenciar la cartera Vivero en sistema local con D1 y D3](../../public/manual/22-georreferenciar.png)
+
+1. Elija la estación del **punto A** y teclee su Norte y Este reales, o tómelos
+   de un punto del catálogo del proyecto.
+2. Lo mismo para el **punto B**. Use las dos estaciones **más alejadas** entre
+   sí: con puntos cercanos, un error pequeño en sus coordenadas gira mucho la
+   poligonal.
+3. Revise la vista previa: **rotación**, **traslación**, **factor de escala**,
+   **residuos** en A y B, y las coordenadas actuales frente a las reales.
+4. Confirme. En un proceso cerrado el botón dice **Reescribir coordenadas**.
+
+La poligonal se **gira y se traslada**, sin escala: las distancias y los
+ángulos medidos no cambian, y el **veredicto de cierre tampoco**. Se recalcula
+con el nuevo arranque, así que coordenadas, azimuts y proyecciones quedan en el
+sistema real. Bajo el título queda anotada la última georreferenciación: fecha,
+puntos, rotación y factor de escala. Puede georreferenciar otra vez para
+corregir una coordenada mal tecleada.
+
+El diálogo avisa, sin impedirlo, en tres casos:
+
+- **El factor de escala se aparta de 1** más de lo que admite el orden de
+  precisión: la distancia real entre A y B no concuerda con la medida. Revise
+  las coordenadas. Si están en una proyección con factor de escala distinto de
+  1 (p. ej. CTM12), la diferencia puede ser de la proyección y no un error.
+- **El método es Tránsito.** Tránsito reparte el error según la orientación,
+  así que sus coordenadas cambian unos milímetros más allá del giro. El
+  veredicto no cambia.
+- **El amarre es del catálogo.** Sus coordenadas siguen en el sistema
+  anterior, así que pasa a amarre manual con el mismo código, y el dibujo deja
+  de mostrarlo.
 
 ---
 
@@ -819,7 +864,8 @@ precisión y la fecha. Debe marcar la confirmación explícitamente.
 ![Proceso rechazado](../../public/manual/10-proceso-rechazado.png)
 
 En ambos casos el editor se abre en solo lectura: los campos están
-deshabilitados y no hay botones de guardado.
+deshabilitados y no hay botones de guardado. Lo único que sigue disponible es
+**Georreferenciar** (§ 5.5).
 
 ---
 
@@ -848,8 +894,11 @@ documento imprimible, con su registro de quién cerró cada cosa y cuándo.
 
 **Solo procesos cerrados.** Es la regla principal y tiene una razón práctica:
 el informe no guarda una copia de los datos, sino que los vuelve a leer cada
-vez que se abre. Como un proceso cerrado ya no puede cambiar, el informe dice
-siempre lo mismo — hoy y dentro de un año.
+vez que se abre. Como un proceso cerrado ya no puede cambiar sus mediciones ni
+su veredicto, el informe dice lo mismo hoy y dentro de un año. La excepción es
+la **posición**: si georreferencia una poligonal después de emitir el informe,
+el informe muestra las coordenadas nuevas, con una nota de cuándo y con qué
+puntos se georreferenció.
 
 De ahí se siguen dos consecuencias:
 
@@ -911,6 +960,8 @@ asentamientos, en su panel de análisis—. Descarga un `.xlsx` con tres hojas:
 Con **mínimos cuadrados**, «Cálculos» añade la corrección de cada ángulo y la
 distancia ajustada, y «Resumen» los pesos y σ₀. El informe imprimible también
 indica los pesos y σ₀ de cada poligonal ajustada así.
+Si la poligonal se georreferenció, «Resumen» lleva además la sección
+«Georreferenciación», con la última.
 
 A diferencia del informe, la exportación funciona **en cualquier estado**:
 también sobre un borrador. Las celdas que aún no se han calculado salen
@@ -949,6 +1000,11 @@ cada una con el instrumento con que realmente se trabajó.
 **Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?**
 Sí, al recalcularlo. Uno cerrado conserva su veredicto original, porque es
 inmutable.
+
+**Levanté en un sistema local y cerré el proceso. ¿Puedo pasarlo a
+coordenadas reales?**
+Sí: **Georreferenciar** (§ 5.5), con dos estaciones de coordenadas conocidas.
+Funciona también sobre un proceso cerrado, y no cambia su veredicto.
 
 **¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?**
 La aplicación se lo advierte junto al campo de precisión del equipo,

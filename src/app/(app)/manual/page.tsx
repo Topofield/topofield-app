@@ -98,16 +98,20 @@ export default function ManualPage() {
           <strong>Cierre.</strong> El acto de dar por terminado un proceso.
           Queda registrado con fecha, hora y autor, y{" "}
           <strong>
-            a partir de ese momento los datos no se pueden modificar
+            a partir de ese momento las mediciones y el veredicto no se pueden
+            modificar
           </strong>
-          .
+          . Es lo que da trazabilidad al trabajo.
         </p>
 
         <Nota titulo="Sobre la inmutabilidad">
           Un proceso cerrado no se puede editar ni eliminar, ni desde la
           interfaz ni por ninguna otra vía. La restricción está aplicada en la
           propia base de datos, no solo en la pantalla. Si necesita corregir un
-          levantamiento cerrado, cree uno nuevo.
+          levantamiento cerrado, cree uno nuevo. La única excepción es la{" "}
+          <strong>posición</strong> de una poligonal: se puede georreferenciar
+          aunque esté cerrada (§ 5.5), porque girarla y trasladarla no cambia
+          nada de lo que el cierre certificó.
         </Nota>
       </Seccion>
 
@@ -691,6 +695,80 @@ export default function ManualPage() {
           la precisión relativa. Girar y trasladar la poligonal no altera nada
           de lo que el cierre certifica; solo se mueven las coordenadas.
         </p>
+
+        <p>
+          Este diálogo es para un proceso <strong>sin cerrar</strong> y parte
+          del punto de arranque. Si lo que tiene son las coordenadas reales de{" "}
+          <strong>dos estaciones</strong> —medidas con GPS, por ejemplo—, o el
+          proceso ya está cerrado, use <strong>Georreferenciar</strong>.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">5.5 Georreferenciar</h3>
+
+        <p>
+          Un levantamiento suele arrancar en un sistema local —(1000, 2000) y
+          un azimut supuesto— y recibir coordenadas reales después, a veces con
+          el proceso ya cerrado. El botón <strong>Georreferenciar</strong>,
+          junto a <strong>Exportar a Excel</strong>, lo lleva al sistema real
+          con <strong>dos de sus estaciones</strong> de coordenadas conocidas.
+          Está disponible en cualquier estado, también cerrado o rechazado.
+        </p>
+
+        <Captura {...CAPTURAS.georreferenciar} />
+
+        <ol className="ml-5 list-decimal space-y-1">
+          <li>
+            Elija la estación del <strong>punto A</strong> y teclee su Norte y
+            Este reales, o tómelos de un punto del catálogo del proyecto.
+          </li>
+          <li>
+            Lo mismo para el <strong>punto B</strong>. Use las dos estaciones{" "}
+            <strong>más alejadas</strong> entre sí: con puntos cercanos, un
+            error pequeño en sus coordenadas gira mucho la poligonal.
+          </li>
+          <li>
+            Revise la vista previa: <strong>rotación</strong>,{" "}
+            <strong>traslación</strong>, <strong>factor de escala</strong>,{" "}
+            <strong>residuos</strong> en A y B, y las coordenadas actuales
+            frente a las reales.
+          </li>
+          <li>
+            Confirme. En un proceso cerrado el botón dice{" "}
+            <strong>Reescribir coordenadas</strong>.
+          </li>
+        </ol>
+
+        <p>
+          La poligonal se <strong>gira y se traslada</strong>, sin escala: las
+          distancias y los ángulos medidos no cambian, y el{" "}
+          <strong>veredicto de cierre tampoco</strong>. Se recalcula con el
+          nuevo arranque, así que coordenadas, azimuts y proyecciones quedan en
+          el sistema real. Bajo el título queda anotada la última
+          georreferenciación: fecha, puntos, rotación y factor de escala. Puede
+          georreferenciar otra vez para corregir una coordenada mal tecleada.
+        </p>
+
+        <p>El diálogo avisa, sin impedirlo, en tres casos:</p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>El factor de escala se aparta de 1</strong> más de lo que
+            admite el orden de precisión: la distancia real entre A y B no
+            concuerda con la medida. Revise las coordenadas. Si están en una
+            proyección con factor de escala distinto de 1 (p. ej. CTM12), la
+            diferencia puede ser de la proyección y no un error.
+          </li>
+          <li>
+            <strong>El método es Tránsito.</strong> Tránsito reparte el error
+            según la orientación, así que sus coordenadas cambian unos
+            milímetros más allá del giro. El veredicto no cambia.
+          </li>
+          <li>
+            <strong>El amarre es del catálogo.</strong> Sus coordenadas siguen
+            en el sistema anterior, así que pasa a amarre manual con el mismo
+            código, y el dibujo deja de mostrarlo.
+          </li>
+        </ul>
 
         <VolverArriba />
       </Seccion>
@@ -1310,7 +1388,8 @@ export default function ManualPage() {
 
         <p>
           En ambos casos el editor se abre en solo lectura: los campos están
-          deshabilitados y no hay botones de guardado.
+          deshabilitados y no hay botones de guardado. Lo único que sigue
+          disponible es <strong>Georreferenciar</strong> (§ 5.5).
         </p>
       </Seccion>
 
@@ -1352,8 +1431,11 @@ export default function ManualPage() {
           <strong>Solo procesos cerrados.</strong> Es la regla principal y tiene
           una razón práctica: el informe no guarda una copia de los datos, sino
           que los vuelve a leer cada vez que se abre. Como un proceso cerrado ya
-          no puede cambiar, el informe dice siempre lo mismo — hoy y dentro de
-          un año.
+          no puede cambiar sus mediciones ni su veredicto, el informe dice lo
+          mismo hoy y dentro de un año. La excepción es la{" "}
+          <strong>posición</strong>: si georreferencia una poligonal después de
+          emitir el informe, el informe muestra las coordenadas nuevas, con una
+          nota de cuándo y con qué puntos se georreferenció.
         </p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
@@ -1439,7 +1521,9 @@ export default function ManualPage() {
           Con <strong>mínimos cuadrados</strong>, «Cálculos» añade la
           corrección de cada ángulo y la distancia ajustada, y «Resumen» los
           pesos y σ₀. El informe imprimible también indica los pesos y σ₀ de
-          cada poligonal ajustada así.
+          cada poligonal ajustada así. Si la poligonal se georreferenció,
+          «Resumen» lleva además la sección «Georreferenciación», con la
+          última.
         </p>
 
         <p>
