@@ -20,7 +20,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 12 | Alerta por lectura desfasada | `11-lectura-desfasada.md` | cerrada |
 | 13 | Canvas de poligonal | `12-canvas-poligonal.md` | cerrada |
 | 14 | Ajuste por mínimos cuadrados | `13-minimos-cuadrados.md` | cerrada |
-| 15 | Georreferenciación de levantamientos | — | pendiente |
+| 15 | Georreferenciación de levantamientos | `14-georreferenciacion.md` | en curso |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
