@@ -247,7 +247,7 @@ export function ImportDialog({
 
           {file && rows && (
             <div className="flex flex-col gap-4">
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
                 <dt className="text-neutral-500">Formato</dt>
                 <dd>{FORMAT_LABELS[file.format]}</dd>
                 <dt className="text-neutral-500">Armadas · visuales leídas</dt>
