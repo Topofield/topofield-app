@@ -554,3 +554,77 @@ export function computePolygonal(input: PolygonalInput): PolygonalResult {
       return computeOpenUncontrolled(input);
   }
 }
+
+// ----------------------------------------------------------------------------
+// Trazas para el dibujo (Fase 13)
+// ----------------------------------------------------------------------------
+
+/** Un vértice del dibujo: dónde queda ajustado y dónde quedaría sin compensar. */
+export interface TracePoint {
+  code: string;
+  adjusted: { north: number; east: number };
+  unadjusted: { north: number; east: number };
+}
+
+/**
+ * La poligonal ajustada y la sin compensar, vértice a vértice, para dibujarlas.
+ *
+ * No hay matemática nueva: las dos se encadenan desde el arranque con las
+ * proyecciones que el motor ya calculó — las corregidas para la ajustada y las
+ * originales (`deltaNorth`, `deltaEast`, con el azimut ya corregido
+ * angularmente) para la sin compensar. Por construcción:
+ *
+ * - en una **cerrada**, el último punto repite el arranque: ajustado, cae en
+ *   él; sin compensar, queda a `(errorNorth, errorEast)` de él;
+ * - en una **abierta con control**, el último punto sin compensar queda a
+ *   `(errorNorth, errorEast)` del punto de llegada conocido;
+ * - en una **abierta sin control**, las dos coinciden: no hay nada que
+ *   compensar.
+ *
+ * Devuelve `null` si el motor aún no tiene proyecciones (datos incompletos).
+ */
+export function polygonalTraces(
+  input: PolygonalInput,
+  result: PolygonalResult,
+): TracePoint[] | null {
+  const { stations } = result;
+
+  // Lados con proyección, en orden. En una cerrada la fila de control (con
+  // orientación) no abre lado y trae las proyecciones en null.
+  const legs: { dN: number; dE: number; cN: number; cE: number }[] = [];
+  for (const s of stations) {
+    if (!isNum(s.deltaNorth) || !isNum(s.deltaEast)) break;
+    legs.push({
+      dN: s.deltaNorth,
+      dE: s.deltaEast,
+      cN: isNum(s.correctedDeltaNorth) ? s.correctedDeltaNorth : s.deltaNorth,
+      cE: isNum(s.correctedDeltaEast) ? s.correctedDeltaEast : s.deltaEast,
+    });
+  }
+
+  // Una abierta tiene un punto por estación (la última no abre lado: su
+  // distancia es 0); una cerrada, uno por lado más el de cierre.
+  const pointCount = input.type === "closed" ? legs.length + 1 : stations.length;
+  const legsUsed = pointCount - 1;
+  if (legsUsed < 1 || legs.length < legsUsed) return null;
+
+  const points: TracePoint[] = [];
+  let adjusted = { north: input.startNorth, east: input.startEast };
+  let unadjusted = { ...adjusted };
+  for (let i = 0; i < pointCount; i++) {
+    const code =
+      input.type === "closed" && i === pointCount - 1
+        ? (stations[0]?.pointCode ?? "")
+        : (stations[i]?.pointCode ?? "");
+    points.push({ code, adjusted, unadjusted });
+    const leg = legs[i];
+    if (i < legsUsed && leg) {
+      adjusted = { north: adjusted.north + leg.cN, east: adjusted.east + leg.cE };
+      unadjusted = {
+        north: unadjusted.north + leg.dN,
+        east: unadjusted.east + leg.dE,
+      };
+    }
+  }
+  return points;
+}
