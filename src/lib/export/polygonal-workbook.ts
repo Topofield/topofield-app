@@ -19,6 +19,7 @@ import {
   POLYGONAL_TYPE_LABELS,
   PROCESS_STATUS_LABELS,
   type CorrectionMethod,
+  type LeastSquaresAdjustment,
   type PolygonalType,
   type ProcessStatus,
 } from "@/types/polygonal";
@@ -86,7 +87,14 @@ export interface PolygonalProcessRow {
   /** ISO 17123-4: término constante (mm) y proporcional (ppm) de la distancia. */
   distance_precision_mm: number | string | null;
   distance_precision_ppm: number | string | null;
+  /** Pesos del ajuste por mínimos cuadrados (Fase 14). */
+  ls_sigma_angle_seconds?: number | string | null;
+  ls_sigma_distance_m?: number | string | null;
+  ls_distance_measurements?: number | null;
 }
+
+/** El ajuste por mínimos cuadrados, solo si hay uno hecho. */
+type Adjusted = Extract<LeastSquaresAdjustment, { status: "adjusted" }>;
 
 /**
  * `DECIMAL` de Postgres llega como cadena vía PostgREST. Excel debe recibir un
@@ -181,12 +189,14 @@ function sheetCalculations(
   wb: ExcelJS.Workbook,
   process: PolygonalProcessRow,
   stations: StationRow[],
+  adjustment: Adjusted | null,
 ): void {
   const s = wb.addWorksheet("Cálculos");
   s.columns = [
     { width: 8 }, { width: 14 }, { width: 16 }, { width: 16 },
     { width: 13 }, { width: 13 }, { width: 13 }, { width: 13 },
     { width: 14 }, { width: 14 },
+    ...(adjustment ? [{ width: 18 }, { width: 18 }] : []),
   ];
 
   setSheetTitle(s, `${process.name} — cálculos y coordenadas`);
@@ -202,6 +212,8 @@ function sheetCalculations(
     "ΔE corr. (m)",
     "Norte (m)",
     "Este (m)",
+    // Fase 14: lo propio del ajuste. No se persiste; llega recalculado.
+    ...(adjustment ? ["Corrección angular (″)", "Distancia ajustada (m)"] : []),
   ]);
 
   const formats = [
@@ -209,6 +221,8 @@ function sheetCalculations(
     DECIMALS.coordinate, DECIMALS.coordinate,
     DECIMALS.coordinate, DECIMALS.coordinate,
     DECIMALS.coordinate, DECIMALS.coordinate,
+    // Segundos de corrección a tres decimales: son décimas de segundo.
+    ...(adjustment ? [3, DECIMALS.coordinate] : []),
   ];
 
   stations.forEach((st, i) => {
@@ -226,6 +240,12 @@ function sheetCalculations(
         num(st.corrected_delta_east),
         num(st.north),
         num(st.east),
+        ...(adjustment
+          ? [
+              adjustment.angleCorrectionsSec[i] ?? null,
+              adjustment.adjustedDistances[i] ?? null,
+            ]
+          : []),
       ],
       formats,
     );
@@ -245,6 +265,7 @@ function sheetSummary(
   process: PolygonalProcessRow,
   stations: StationRow[],
   project: ProjectMetadata | null,
+  adjustment: Adjusted | null,
 ): void {
   const s = wb.addWorksheet("Resumen");
   s.columns = [{ width: 30 }, { width: 34 }];
@@ -325,6 +346,19 @@ function sheetSummary(
     ],
   ]);
 
+  if (process.correction_method === "least_squares") {
+    row += 1;
+    writeSection(s, row, "Ajuste por mínimos cuadrados");
+    row = writePairs(s, row + 1, [
+      ["σ angular (\")", num(process.ls_sigma_angle_seconds)],
+      ["σ de distancia (m)", num(process.ls_sigma_distance_m)],
+      ["Mediciones por distancia", process.ls_distance_measurements ?? null],
+      ["σ₀", adjustment ? Number(adjustment.sigma0.toFixed(3)) : null],
+      ["Condiciones", adjustment?.conditions ?? null],
+      ["Iteraciones", adjustment?.iterations ?? null],
+    ]);
+  }
+
   row += 1;
   writeSection(s, row, "Trazabilidad");
   writePairs(s, row + 1, [
@@ -335,18 +369,29 @@ function sheetSummary(
   ]);
 }
 
-/** Libro completo de un proceso poligonal: tres hojas de la § 4.8. */
+/**
+ * Libro completo de un proceso poligonal: tres hojas de la § 4.8.
+ *
+ * `adjustment` es el del motor, recalculado sobre las mismas estaciones en
+ * orden (Fase 14): las correcciones y σ₀ no se guardan en la base.
+ */
 export function buildPolygonalWorkbook(
   process: PolygonalProcessRow,
   stations: StationRow[],
   project: ProjectMetadata | null = null,
+  adjustment: LeastSquaresAdjustment | null = null,
 ): ExcelJS.Workbook {
   const wb = newWorkbook();
   const ordered = [...stations].sort(
     (a, b) => a.station_order - b.station_order,
   );
+  const adjusted =
+    process.correction_method === "least_squares" &&
+    adjustment?.status === "adjusted"
+      ? adjustment
+      : null;
   sheetRawData(wb, process, ordered);
-  sheetCalculations(wb, process, ordered);
-  sheetSummary(wb, process, ordered, project);
+  sheetCalculations(wb, process, ordered, adjusted);
+  sheetSummary(wb, process, ordered, project, adjusted);
   return wb;
 }

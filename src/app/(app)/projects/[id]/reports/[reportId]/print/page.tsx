@@ -371,6 +371,25 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                       ]
                     : "—"}
                 </dd>
+                {section.data.process.correction_method === "least_squares" && (
+                  <>
+                    {/* Fase 14: los pesos se guardan; σ₀ se recalcula con el
+                        dibujo, sobre la misma entrada. */}
+                    <dt>Pesos del ajuste</dt>
+                    <dd>
+                      σ angular {n(section.data.process.ls_sigma_angle_seconds) ?? "—"}&Prime; ·
+                      σ de distancia {n(section.data.process.ls_sigma_distance_m) ?? "—"} m ·{" "}
+                      {section.data.process.ls_distance_measurements ?? "—"} mediciones por
+                      distancia
+                    </dd>
+                    <dt>σ₀</dt>
+                    <dd>
+                      {section.data.plot.result.adjustment?.status === "adjusted"
+                        ? section.data.plot.result.adjustment.sigma0.toFixed(3)
+                        : "—"}
+                    </dd>
+                  </>
+                )}
                 <dt>Error angular</dt>
                 <dd>{fixed(section.data.process.angular_error_seconds, 1)}&Prime;</dd>
                 <dt>Error lineal</dt>

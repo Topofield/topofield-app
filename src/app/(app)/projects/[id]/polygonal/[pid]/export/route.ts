@@ -6,6 +6,8 @@ import {
   getProjectById,
 } from "@/lib/supabase/queries";
 import { buildPolygonalWorkbook } from "@/lib/export/polygonal-workbook";
+import { computePolygonal } from "@/lib/calculations/polygonal";
+import { polygonalInputOf } from "@/components/polygonal/polygonal-draft";
 import { safeFilename } from "@/lib/export/workbook";
 
 const XLSX_MIME =
@@ -44,7 +46,13 @@ export async function GET(
 
   const stations = await getPolygonalStations(supabase, process.id);
 
-  const workbook = buildPolygonalWorkbook(process, stations, project);
+  // Las correcciones y σ₀ del ajuste por mínimos cuadrados no se guardan: se
+  // recalculan con la misma entrada que el editor y el informe (Fase 14).
+  const adjustment =
+    process.correction_method === "least_squares"
+      ? (computePolygonal(polygonalInputOf(process, stations)).adjustment ?? null)
+      : null;
+  const workbook = buildPolygonalWorkbook(process, stations, project, adjustment);
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

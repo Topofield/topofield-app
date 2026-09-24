@@ -324,3 +324,52 @@ describe("safeFilename", () => {
     expect(safeFilename("///", "poligonal")).toBe("proceso-poligonal.xlsx");
   });
 });
+describe("buildPolygonalWorkbook — mínimos cuadrados (Fase 14)", () => {
+  const adjustment = {
+    status: "adjusted" as const,
+    angleCorrectionsSec: [0.757],
+    distanceCorrectionsM: [-0.00393],
+    adjustedDistances: [32.953],
+    sigma0: 0.6981,
+    conditions: 3,
+    iterations: 3,
+  };
+  const ls = process({
+    correction_method: "least_squares",
+    ls_sigma_angle_seconds: "2.00",
+    ls_sigma_distance_m: "0.0110",
+    ls_distance_measurements: 2,
+  });
+
+  function summaryValue(wb: ReturnType<typeof buildPolygonalWorkbook>, label: string) {
+    const s = wb.getWorksheet("Resumen")!;
+    for (let r = 1; r <= s.rowCount; r++) {
+      if (s.getCell(r, 1).value === label) return s.getCell(r, 2).value;
+    }
+    return undefined;
+  }
+
+  it("añade a «Cálculos» la corrección angular y la distancia ajustada", () => {
+    const calc = buildPolygonalWorkbook(ls, [station()], null, adjustment).getWorksheet(
+      "Cálculos",
+    )!;
+    expect(calc.getCell("K3").value).toBe("Corrección angular (″)");
+    expect(calc.getCell("L3").value).toBe("Distancia ajustada (m)");
+    expect(calc.getCell("K4").value).toBe(0.757);
+    expect(calc.getCell("L4").value).toBe(32.953);
+  });
+
+  it("muestra en «Resumen» los pesos y σ₀", () => {
+    const wb = buildPolygonalWorkbook(ls, [station()], null, adjustment);
+    expect(summaryValue(wb, "σ angular (\")")).toBe(2);
+    expect(summaryValue(wb, "σ de distancia (m)")).toBe(0.011);
+    expect(summaryValue(wb, "Mediciones por distancia")).toBe(2);
+    expect(summaryValue(wb, "σ₀")).toBe(0.698);
+  });
+
+  it("no añade nada con otro método", () => {
+    const wb = buildPolygonalWorkbook(process(), [station()], null, adjustment);
+    expect(wb.getWorksheet("Cálculos")!.getCell("K3").value).toBeNull();
+    expect(summaryValue(wb, "σ₀")).toBeUndefined();
+  });
+});
