@@ -23,7 +23,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 11 | Estado de los BMs | [`prds/10-estado-bms.md`](./prds/10-estado-bms.md) | cerrada |
 | 12 | Alerta por lectura desfasada | [`prds/11-lectura-desfasada.md`](./prds/11-lectura-desfasada.md) | cerrada |
 | 13 | Canvas de poligonal | [`prds/12-canvas-poligonal.md`](./prds/12-canvas-poligonal.md) | cerrada |
-| 14 | Ajuste por mínimos cuadrados | [`prds/13-minimos-cuadrados.md`](./prds/13-minimos-cuadrados.md) | en curso |
+| 14 | Ajuste por mínimos cuadrados | [`prds/13-minimos-cuadrados.md`](./prds/13-minimos-cuadrados.md) | cerrada |
 | 15 | Georreferenciación de levantamientos | — | pendiente |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
@@ -538,6 +538,39 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 14 — Ajuste de poligonales por mínimos cuadrados (2026-09-23)
+
+Cuarto método de corrección: ajuste por ecuaciones de condición con pesos
+tecleados por proceso, como en la hoja de la universidad. El editor muestra
+las correcciones por observación y σ₀; el informe y el Excel, los pesos y σ₀.
+El veredicto no cambia con el método. 585 → 612 tests.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un CHECK con una columna opcional hay que probarlo con `NULL`, contra la
+  base.** `a > 0 and b > 0` parecía exigir los pesos, pero con uno en `NULL` la
+  condición da `NULL` y PostgreSQL la da por cumplida. El SQL estaba en el PRD
+  aprobado y los tests del motor no podían verlo: lo delató un `UPDATE` a mano
+  al verificar en pantalla. **Toda restricción que dependa de columnas
+  opcionales va con `coalesce(…, false)` o `is not null` explícito.**
+- **Los valores esperados de una hoja de referencia se recalculan aparte.**
+  El análisis de la hoja daba correcciones que heredaban su defecto en la
+  conversión del azimut (hasta 2″). El PRD fijó un cálculo independiente y los
+  tests lo reproducen al 0.001″; tomar la hoja como verdad habría sido
+  codificar su error.
+- **Una tolerancia numérica se elige con la escala de lo que mide.** 1e-12 σ
+  pedía iteraciones que solo movían ruido de coma flotante. Se relajó a 1e-10
+  mirando el tamaño real de las correcciones en radianes, y el criterio que
+  importa —condiciones en cero— siguió en los tests.
+- **Un `switch` de métodos con rama por defecto oculta el método nuevo.**
+  `correctDeltas` habría tratado `least_squares` como Crandall sin error. Al
+  añadir un valor a un enum, buscar cada sitio que lo discrimina, no solo los
+  que fallan al compilar.
+- **Lo que no se persiste se recalcula por el mismo camino.** Correcciones y
+  σ₀ salen de `polygonalInputOf` en el editor, el informe y el Excel. El
+  módulo común que la Fase 13 creó para el dibujo pagó aquí su coste: dos
+  consumidores nuevos sin una línea de reglas duplicada.
 
 ### Cierre Fase 13 — Dibujo de la poligonal y ángulos en decimal (2026-09-23)
 

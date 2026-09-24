@@ -1,13 +1,40 @@
 # PRD-de-fase 14 — Ajuste de poligonales por mínimos cuadrados
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-23
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-23
 
 **Rama:** `fase-14-minimos-cuadrados`
 **Cartera de referencia:** [`carteras/analisis-minimos-cuadrados.md`](../carteras/analisis-minimos-cuadrados.md)
 (`Ajuste_Poligonal_Minimos_Cuadrados.xlsx`, U. Distrital, Sede Vivero)
 **Módulo:** poligonal
+
+> **Divergencias de la implementación:**
+>
+> - **Tolerancia de convergencia 1e-10 σ**, no 1e-12 (decisión 7). Con 1e-12
+>   un caso de prueba necesitaba 6 iteraciones que no movían nada: una
+>   corrección angular en radianes ronda 1e-5 y por debajo de 1e-10 σ el
+>   cambio es ruido de coma flotante. Las condiciones siguen quedando en cero
+>   (< 1e-9) en todos los casos; la Vivero converge en 3 iteraciones.
+> - **El CHECK de pesos lleva `coalesce(…, false)`.** Tal como estaba en
+>   «Modelo de datos», un peso en `NULL` hacía `NULL` la condición y
+>   PostgreSQL da por cumplido un CHECK `NULL`: el método se guardaba sin
+>   pesos. Se vio al verificar contra la base. Corregido aquí y en la
+>   migración.
+> - **Lectura de σ₀ con una banda con nombre**, `SIGMA0_BAND = [0.5, 2]`: el
+>   PRD decía «≈ 1», «≫ 1» y «≪ 1» sin fijar límites, y la pantalla necesita
+>   uno. Solo cambia el texto; no decide nada (decisión 8).
+> - **Límites de los pesos** según sus columnas (σ angular 0.01″–9999.99″, σ
+>   de distancia 0.0001–9999.9999 m, mediciones entero ≥ 1): un σ que la base
+>   redondeara a cero lo rechazaba el CHECK con un error opaco.
+> - **Duplicar copia los pesos** —sin ellos el CHECK rechazaba el duplicado de
+>   un proceso con el método— y también `angle_input_format`, que la Fase 13
+>   olvidó copiar.
+> - **Un proceso con el método cuyo tipo pasa a abierta sin control** conserva
+>   el selector para poder cambiarlo, y el guardado lo rechaza con un mensaje
+>   hasta entonces (criterio 1 sin reescribir el método en silencio).
+> - La tabla de correcciones añade la **distancia ajustada**, que el Excel ya
+>   pedía, y el número de **condiciones** junto a las iteraciones.
 
 ## Propósito
 

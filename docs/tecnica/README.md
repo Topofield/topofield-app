@@ -66,7 +66,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 11 | Estado de los BMs | cerrada |
 | 12 | Alerta por lectura desfasada | cerrada |
 | 13 | Canvas de poligonal | cerrada |
-| 14 | Ajuste por mínimos cuadrados | en curso |
+| 14 | Ajuste por mínimos cuadrados | cerrada |
 | 15 | Georreferenciación de levantamientos | pendiente |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
@@ -358,6 +358,15 @@ en tres columnas. Lo escribe `setAngleInputFormatAction` al conmutar, y la
 rechaza en un proceso cerrado o rechazado (`canPersistAngleFormat`); ahí el
 conmutador solo cambia la vista.
 
+`ls_sigma_angle_seconds`, `ls_sigma_distance_m` y `ls_distance_measurements`
+(Fase 14) tampoco son resultados: son los **pesos** del ajuste por mínimos
+cuadrados, tecleados por proceso. El CHECK `polygonal_processes_ls_weights_complete`
+los exige con `correction_method = 'least_squares'` y va envuelto en
+`coalesce(…, false)`: sin él, un peso en `NULL` hacía la condición `NULL`, y un
+CHECK que da `NULL` se da por cumplido. Las correcciones por observación y σ₀
+**no se guardan**: el editor, el informe y el Excel las recalculan con
+`polygonalInputOf`. El proceso cerrado es inmutable, así que da lo mismo.
+
 ### `settlement_readings` — columnas de resultado
 
 Igual que `polygonal_processes`, los cálculos se persisten para que los
@@ -624,6 +633,7 @@ testear los algoritmos de forma aislada y es lo que sostiene la monografía.
 |---|---|
 | `angles.ts` | `dmsToDecimal`, `decimalToDms`, `normalizeAzimuth`, `degreesToSeconds`, `cosDeg`, `sinDeg` |
 | `polygonal.ts` | `computePolygonal` — el motor completo |
+| `least-squares.ts` | `adjustByConditions` — ajuste por ecuaciones de condición, genérico; `solveLinear`; `sigma0Reading` (Fase 14) |
 | `leveling.ts` | `computeLeveling` — libreta, corrección proporcional, cierre, ida y vuelta |
 | `settlement.ts` | `computeSettlements`, `computeDifferentials`, `classifyAlert`, `computeTrends`, `computeHistory` |
 | `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `LEVELING_TOLERANCE_K`, `DAYS_PER_MONTH`, `SETTLEMENT_THRESHOLD_PRESETS`, `angularTolerance`, `minRelativePrecision`, `levelingTolerance`, `thresholdsFor` |
@@ -761,6 +771,38 @@ absoluto** de las proyecciones) y `crandall` (mínimos cuadrados sobre
 distancias). El valor absoluto en Tránsito no es un detalle: repartir sobre la
 proyección con signo hace que las correcciones se cancelen y la poligonal no
 cierre. Ver «Las hojas de Excel de referencia».
+
+**`least_squares` (Fase 14)** ajusta ángulos y distancias a la vez por
+**ecuaciones de condición**: `v = −Q·Aᵀ·(A·Q·Aᵀ)⁻¹·w`, con `Q = diag(σ²)`. En
+una cerrada hay tres condiciones (angular, ΣΔN, ΣΔE); en una abierta con
+control, dos lineales más la angular si hay azimut de llegada. El sistema es de
+3×3 o 2×2 sea cual sea el número de estaciones.
+
+- `least-squares.ts` no sabe de topografía: recibe observaciones, σ y una
+  función que da `f(l)` y `A = ∂f/∂l`. `polygonal.ts` pone el modelo
+  (`leastSquaresClosed`, `leastSquaresOpenControlled`) con coeficientes
+  **analíticos**: un ángulo *i* rota todos los lados desde *i*, así que
+  `∂ΣΔN/∂αᵢ = −Σ ΔE` y `∂ΣΔE/∂αᵢ = +Σ ΔN` sobre esos lados. Un test los compara
+  con diferencias finitas.
+- **Itera** con `w = f(lₖ) + A·(l₀ − lₖ)` porque las condiciones no son lineales
+  en los ángulos. Converge cuando el cambio de toda corrección es menor que
+  1e-10 σ (3 iteraciones en la Vivero).
+- El **ángulo de orientación es datum**: no entra como observación. En el
+  esquema con fila de cierre (TT4) aparece en la condición angular como
+  constante.
+- Los pesos llegan en `PolygonalInput.leastSquares`. Sin ellos, el resultado
+  trae `adjustment: { status: "missing_weights" }` y coordenadas en `null`: el
+  motor no cae a Bowditch en silencio.
+- El **veredicto no cambia**: error angular, lineal y precisión relativa son
+  los de la cartera medida, antes de ajustar. Solo cambian las coordenadas,
+  los ángulos corregidos y los azimuts.
+- σ₀ = √(vᵀPv / r). `sigma0Reading` lo lee contra `SIGMA0_BAND = [0.5, 2]`:
+  una banda con nombre, no una prueba χ² (fuera de alcance).
+
+Sobre la cartera Vivero con los pesos de la hoja (2″, 0.011 m, 2 mediciones)
+reproduce el cálculo independiente del PRD, y no los valores del análisis de
+la hoja, que heredan su defecto en la conversión del azimut
+(`docs/prds/13-minimos-cuadrados.md`, hallazgo 2).
 
 ### Tolerancias
 
@@ -1119,20 +1161,21 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-584 tests en 27 archivos, Vitest, entorno `node` **sin jsdom**.
+612 tests en 28 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 69 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
-| `lib/validators/polygonal.test.ts` | 54 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13) |
+| `lib/validators/polygonal.test.ts` | 59 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados y sus límites (Fase 14) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
-| `lib/calculations/polygonal.test.ts` | 39 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
+| `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
 | `lib/utils/format.test.ts` | 24 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
-| `lib/export/polygonal-workbook.test.ts` | 18 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8) |
+| `lib/export/polygonal-workbook.test.ts` | 21 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14) |
+| `lib/calculations/least-squares.test.ts` | 19 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; lectura de σ₀ (Fase 14) |
 | `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
 | `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
 | `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
@@ -1695,6 +1738,24 @@ equipo en `reports`»). Las dos salidas razonables —congelar `reports` con un
 trigger al emitir, o guardar en la fila un snapshot de la portada— son
 candidatas a una fase posterior, no un parche suelto: hay que decidir antes si
 un informe emitido se puede reeditar o solo reemitir.
+
+**La banda de σ₀ es una decisión, no una prueba (Fase 14).** `SIGMA0_BAND =
+[0.5, 2]` solo cambia el texto que acompaña a σ₀. Con 2 o 3 condiciones σ₀
+fluctúa mucho aunque los pesos sean los correctos, así que la banda es ancha;
+la prueba χ² con sus grados de libertad sería lo riguroso y quedó fuera de
+alcance. Si algún día σ₀ decide algo, hay que cambiarla por la prueba.
+
+**Mínimos cuadrados en una abierta sin control (Fase 14).** El selector no lo
+ofrece ahí, pero un proceso con el método al que después se le cambia el tipo
+a sin control lo conserva: el panel muestra entonces el selector para elegir
+otro, y el guardado lo rechaza con un mensaje hasta que se cambie. No se
+reescribe el método en silencio porque sería perder los pesos.
+
+**Los pesos no pueden guardarse fuera del rango de sus columnas.** El
+validador rechaza σ angular fuera de 0.01″–9999.99″ y σ de distancia fuera de
+0.0001–9999.9999 m, los límites de `decimal(6,2)` y `decimal(8,4)`. Un σ de
+distancia de 0.05 mm, que alguien con un distanciómetro muy bueno podría
+querer, no cabe: habría que ampliar la escala de la columna.
 
 ---
 

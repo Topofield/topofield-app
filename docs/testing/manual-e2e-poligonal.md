@@ -201,6 +201,34 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
   vista y avisa «El proceso está cerrado: el formato solo cambia la vista y no
   se guarda». Al recargar vuelve a DMS.
 
+### 15 quater. Mínimos cuadrados (Fase 14)
+
+- Abrir **Poligonal Famarena — Sede Vivero — least_squares**. ✓ El método es
+  **Mínimos cuadrados** y los pesos son los de la hoja: 2, 0.011 y 2.
+- ✓ La tabla **Correcciones del ajuste** da, en segundos, D1 +0.757, D2
+  +0.771, D3 +0.876, D4 +0.855 y Famarena_5 +0.741; y en milímetros −3.93,
+  −2.94, +1.86, +3.36 y −0.92. La orientación (primera fila) no tiene
+  corrección angular.
+- ✓ Coordenadas: D1 100117.464 / 101515.631, D3 100182.240 / 101581.781.
+- ✓ σ₀ = **0.698**, «Los pesos supuestos describen bien las observaciones»,
+  3 condiciones y 3 iteraciones.
+- ✓ El veredicto (error angular −4.0″, error lineal 0.0100, 1:24.717) es el
+  mismo que en la Vivero con Bowditch.
+- Cambiar σ angular a **4**. ✓ Las correcciones cambian en vivo y se cargan
+  más en los ángulos (D3 +1.099″).
+- Vaciar σ angular. ✓ «Faltan los pesos del ajuste», coordenadas en «—» y
+  **Guardar** deshabilitado con el motivo al lado. Restaurar 2.
+- ✓ El dibujo sigue mostrando la ajustada y la sin compensar.
+- Abrir **Enlace P1-P3 con deflexión** y elegir Mínimos cuadrados. ✓ Los tres
+  campos salen **vacíos**. Con 2 / 0.011 / 2 aparecen 2 condiciones (no hay
+  azimut de llegada). Guardar y recargar: ✓ los pesos se conservan.
+- Abrir **Reconocimiento E1-E4**. ✓ No hay selector de método.
+- **Exportar a Excel** la Vivero. ✓ «Cálculos» trae «Corrección angular (″)» y
+  «Distancia ajustada (m)»; «Resumen», la sección «Ajuste por mínimos
+  cuadrados» con los pesos y σ₀ 0.698.
+- En un informe que incluya una poligonal con el método, ✓ aparecen «Pesos
+  del ajuste» y σ₀.
+
 ### 16. RLS — aislamiento entre usuarios
 
 - Cerrar sesión y registrar un segundo usuario nuevo (`otro@topofield.local`).
