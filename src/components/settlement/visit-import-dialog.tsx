@@ -240,9 +240,9 @@ export function VisitImportDialog({
               ))}
 
               <p className="text-sm text-neutral-700">
-                Revise el tipo de cada punto: el archivo no lo trae y se deduce
-                de su posición. Los puntos de control suelen ser radiaciones
-                (intermedios).
+                Revise el tipo de cada punto: el .L no lo trae y se deduce de
+                su posición; la plantilla CSV puede declararlo. Los puntos de
+                control suelen ser radiaciones (intermedios).
               </p>
               <RunPreview
                 title="Libreta"

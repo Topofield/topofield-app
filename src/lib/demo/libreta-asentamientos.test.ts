@@ -43,6 +43,8 @@ describe("generateVisitBook", () => {
     const { rows, check } = run(1.3);
     expect(check.errors).toEqual([]);
     expect(check.rowIssues.every((i) => Object.keys(i.errors).length === 0)).toBe(true);
+    // Ni siquiera avisos: las visuales quedan equilibradas.
+    expect(check.rowIssues.every((i) => !i.warnings.sightBalance)).toBe(true);
     expect(rows[0]).toMatchObject({ pointCode: "BM-1", pointType: "bm" });
     expect(rows.at(-1)).toMatchObject({ pointCode: "BM-1", pointType: "bm" });
     expect(rows.filter((r) => r.pointType === "pc").map((r) => r.pointCode)).toEqual(["CP-1"]);
