@@ -10,6 +10,7 @@ import {
   canPersistAngleFormat,
   evaluatePolygonalClosure,
   expectStationCapture,
+  validateLeastSquaresWeights,
   hasCaptureErrors,
   validatePolygonalStation,
   validateReadings,
@@ -550,5 +551,49 @@ describe("canPersistAngleFormat (Fase 13, P1)", () => {
   it("no lo guarda en uno cerrado o rechazado: ahí solo cambia la vista", () => {
     expect(canPersistAngleFormat("closed")).toBe(false);
     expect(canPersistAngleFormat("rejected")).toBe(false);
+  });
+});
+
+describe("validateLeastSquaresWeights (Fase 14)", () => {
+  const hoja = { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 };
+  const vacios = { sigmaAngleSeconds: null, sigmaDistanceM: null, distanceMeasurements: null };
+
+  it("no exige pesos con los otros métodos", () => {
+    expect(validateLeastSquaresWeights("bowditch", "closed", vacios)).toBeNull();
+  });
+
+  it("acepta los pesos de la hoja en cerrada y abierta con control", () => {
+    expect(validateLeastSquaresWeights("least_squares", "closed", hoja)).toBeNull();
+    expect(validateLeastSquaresWeights("least_squares", "open_controlled", hoja)).toBeNull();
+  });
+
+  it("rechaza el método en la abierta sin control", () => {
+    expect(validateLeastSquaresWeights("least_squares", "open_uncontrolled", hoja)).toMatch(
+      /sin control/,
+    );
+  });
+
+  it("exige los tres pesos, positivos, y un número entero de mediciones", () => {
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaDistanceM: null }),
+    ).toMatch(/Faltan los pesos/);
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaAngleSeconds: 0 }),
+    ).toMatch(/mayores que cero/);
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, distanceMeasurements: 1.5 }),
+    ).toMatch(/entero/);
+  });
+});
+
+describe("validateLeastSquaresWeights — límites de las columnas", () => {
+  it("rechaza un σ que la base redondearía a cero", () => {
+    const base = { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 };
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...base, sigmaDistanceM: 0.00001 }),
+    ).toMatch(/0.0001 m/);
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...base, sigmaAngleSeconds: 0.001 }),
+    ).toMatch(/0.01″/);
   });
 });

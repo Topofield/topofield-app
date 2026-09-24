@@ -108,3 +108,20 @@ export function adjustByConditions(
     converged,
   };
 }
+
+/**
+ * Banda en que σ₀ se lee como «≈ 1». Decisión con nombre y sin prueba
+ * estadística detrás (la χ² queda fuera de la fase): con pocas condiciones,
+ * σ₀ fluctúa mucho aunque los pesos sean los correctos, así que la banda es
+ * ancha. Solo cambia el texto que acompaña a σ₀; no decide nada.
+ */
+export const SIGMA0_BAND: readonly [number, number] = [0.5, 2];
+
+export type Sigma0Reading = "consistent" | "worse" | "pessimistic";
+
+/** Lectura de σ₀ frente a los pesos supuestos. */
+export function sigma0Reading(sigma0: number): Sigma0Reading {
+  if (sigma0 > SIGMA0_BAND[1]) return "worse";
+  if (sigma0 < SIGMA0_BAND[0]) return "pessimistic";
+  return "consistent";
+}

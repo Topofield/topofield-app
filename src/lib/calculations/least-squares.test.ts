@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { adjustByConditions, solveLinear } from "./least-squares";
+import {
+  adjustByConditions,
+  SIGMA0_BAND,
+  sigma0Reading,
+  solveLinear,
+} from "./least-squares";
 import { computePolygonal } from "./polygonal";
 import { azimuthFromCoordinates, dmsToDecimal } from "./angles";
 import { CARTERA_TT4, CARTERA_VIVERO, type Cartera } from "@/lib/demo/carteras";
@@ -268,5 +273,15 @@ describe("adjustByConditions — coeficientes analíticos contra diferencias fin
       expect(numerico.corrections[j]! * 206264.80624709636).toBeCloseTo(analitico.angleCorrectionsSec[j + 1]!, 4);
     }
     expect(numerico.sigma0).toBeCloseTo(analitico.sigma0, 6);
+  });
+});
+
+describe("sigma0Reading", () => {
+  it("lee σ₀ dentro, por encima y por debajo de la banda", () => {
+    expect(sigma0Reading(0.698)).toBe("consistent");
+    expect(sigma0Reading(SIGMA0_BAND[0])).toBe("consistent");
+    expect(sigma0Reading(SIGMA0_BAND[1])).toBe("consistent");
+    expect(sigma0Reading(3.1)).toBe("worse");
+    expect(sigma0Reading(0.2)).toBe("pessimistic");
   });
 });

@@ -259,3 +259,36 @@ export function validateReadings(
 export function canPersistAngleFormat(status: string): boolean {
   return status !== "closed" && status !== "rejected";
 }
+
+/**
+ * ¿Están completos y son válidos los pesos del ajuste por mínimos cuadrados?
+ * (Fase 14.) Solo se exigen con ese método, que además no aplica a la abierta
+ * sin control: no tiene redundancia que ajustar. Devuelve el motivo o null.
+ */
+export function validateLeastSquaresWeights(
+  method: string,
+  type: string,
+  weights: {
+    sigmaAngleSeconds: number | null;
+    sigmaDistanceM: number | null;
+    distanceMeasurements: number | null;
+  },
+): string | null {
+  if (method !== "least_squares") return null;
+  if (type === "open_uncontrolled") {
+    return "La abierta sin control no tiene nada que ajustar: elija otro método.";
+  }
+  const { sigmaAngleSeconds: a, sigmaDistanceM: d, distanceMeasurements: m } = weights;
+  if (a == null || d == null || m == null) {
+    return "Faltan los pesos del ajuste: σ angular, σ de distancia y número de mediciones.";
+  }
+  if (!(a > 0) || !(d > 0)) return "Los σ del ajuste deben ser mayores que cero.";
+  // Los límites de las columnas: decimal(6,2) y decimal(8,4). Un σ que la base
+  // redondeara a cero lo rechazaría su CHECK con un error opaco.
+  if (a < 0.01 || a > 9999.99) return "El σ angular debe estar entre 0.01″ y 9999.99″.";
+  if (d < 0.0001 || d > 9999.9999) {
+    return "El σ de distancia debe estar entre 0.0001 m y 9999.9999 m.";
+  }
+  if (!Number.isInteger(m) || m < 1) return "El número de mediciones debe ser un entero de 1 o más.";
+  return null;
+}

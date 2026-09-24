@@ -21,9 +21,12 @@ alter table public.polygonal_processes
   add column ls_sigma_angle_seconds   decimal(6,2),
   add column ls_sigma_distance_m      decimal(8,4),
   add column ls_distance_measurements int,
+  -- El coalesce no sobra: con un peso en NULL la conjunción da NULL, y un
+  -- CHECK que da NULL se da por cumplido. Sin él, el método se guardaba sin
+  -- pesos (hallado al verificar la fase).
   add constraint polygonal_processes_ls_weights_complete
     check (
       correction_method is distinct from 'least_squares'
-      or (ls_sigma_angle_seconds > 0 and ls_sigma_distance_m > 0
-          and ls_distance_measurements >= 1)
+      or coalesce(ls_sigma_angle_seconds > 0 and ls_sigma_distance_m > 0
+                  and ls_distance_measurements >= 1, false)
     );

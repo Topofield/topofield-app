@@ -242,6 +242,7 @@ function resultFieldsFor(spec, order) {
     angleType: spec.angle_type,
     hasOrientation: spec.hasOrientation ?? false,
     hasClosingRow: spec.hasClosingRow ?? false,
+    leastSquares: spec.leastSquares ?? null,
     stations: spec.stations.map((st) => ({
       pointCode: st.code,
       angle: st.angle ? dmsToDecimal(...st.angle) : Number.NaN,
@@ -301,6 +302,10 @@ async function insertPolygonal(projectId, siteId, spec, userId) {
       end_azimuth_min: endAz[1],
       end_azimuth_sec: endAz[2],
       correction_method: spec.correctionMethod ?? null,
+      // Fase 14: pesos del ajuste por mínimos cuadrados, solo con ese método.
+      ls_sigma_angle_seconds: spec.leastSquares?.sigmaAngleSeconds ?? null,
+      ls_sigma_distance_m: spec.leastSquares?.sigmaDistanceM ?? null,
+      ls_distance_measurements: spec.leastSquares?.distanceMeasurements ?? null,
       reference_point_id: spec.referencePointId ?? null,
       reference_point_code: spec.referencePointCode ?? null,
       // Los fixtures y las carteras se transcriben con UNA lectura por ángulo:
@@ -1285,8 +1290,9 @@ async function main() {
   }
 
   // Las dos carteras de campo reales. La TT4 se siembra con los tres métodos
-  // para poder compararlos lado a lado contra el Excel; la Vivero con Bowditch,
-  // porque su ajuste por mínimos cuadrados llega en la Fase 14.
+  // para poder compararlos lado a lado contra el Excel; la Vivero con Bowditch
+  // y con mínimos cuadrados (Fase 14), este con los pesos de la hoja de la
+  // universidad: 2″, 0.011 m y 2 mediciones por distancia.
   const carteraSpecs = [
     ...["bowditch", "transit", "crandall"].map((m) =>
       carteraToSpec(CARTERA_TT4, idPorCodigo.get(CARTERA_TT4.referencePointCode), m, "calculated"),
@@ -1297,6 +1303,15 @@ async function main() {
       "bowditch",
       "calculated",
     ),
+    {
+      ...carteraToSpec(
+        CARTERA_VIVERO,
+        idPorCodigo.get(CARTERA_VIVERO.referencePointCode),
+        "least_squares",
+        "calculated",
+      ),
+      leastSquares: { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 },
+    },
   ];
   for (const spec of carteraSpecs) {
     await insertPolygonal(

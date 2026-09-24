@@ -16,6 +16,7 @@ import {
   expectStationCapture,
   validatePolygonalStation,
   type CaptureIssues,
+  validateLeastSquaresWeights,
 } from "@/lib/validators/polygonal";
 import {
   savePolygonalProcessAction,
@@ -36,7 +37,13 @@ import { PolygonalPlotViewer } from "./polygonal-plot-viewer";
 import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
 import { StationsTable } from "./stations-table";
-import { buildInput, processToConfig, stationToDraft } from "./polygonal-draft";
+import {
+  buildInput,
+  processToConfig,
+  stationToDraft,
+  weightsFromDraft,
+  weightsToDraft,
+} from "./polygonal-draft";
 import { AngleFormatToggle } from "./angle-input";
 import type { AngleInputFormat } from "@/types/polygonal";
 
@@ -88,6 +95,7 @@ export function PolygonalEditor({
   const [method, setMethod] = useState<CorrectionMethod>(
     process.correction_method ?? "bowditch",
   );
+  const [weights, setWeights] = useState(() => weightsToDraft(process));
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -121,8 +129,15 @@ export function PolygonalEditor({
   // mismo valor que ve el usuario, no con el que tenía el proceso al cargar
   // la página.
   const input = useMemo(
-    () => buildInput(config, stations, method, config.precisionOrder),
-    [config, stations, method],
+    () =>
+      buildInput(
+        config,
+        stations,
+        method,
+        config.precisionOrder,
+        weightsFromDraft(weights),
+      ),
+    [config, stations, method, weights],
   );
   const result = useMemo(() => computePolygonal(input), [input]);
 
@@ -156,6 +171,14 @@ export function PolygonalEditor({
 
   const captureBlocked = issues.some((i) => Object.keys(i.errors).length > 0);
 
+  // Mínimos cuadrados sin pesos completos no se guarda (Fase 14): la misma
+  // regla que aplica el servidor, para decirlo antes de pulsar Guardar.
+  const weightsError = validateLeastSquaresWeights(method, config.type, {
+    sigmaAngleSeconds: parseNumber(weights.sigmaAngleSeconds),
+    sigmaDistanceM: parseNumber(weights.sigmaDistanceM),
+    distanceMeasurements: parseNumber(weights.distanceMeasurements),
+  });
+
   function handleSave() {
     setError(null);
     const controlled = config.type === "open_controlled";
@@ -177,6 +200,9 @@ export function PolygonalEditor({
         endAzimuthMin: controlled ? parseNumber(config.endAzimuth.min) : null,
         endAzimuthSec: controlled ? parseNumber(config.endAzimuth.sec) : null,
         correctionMethod: method,
+        lsSigmaAngleSeconds: parseNumber(weights.sigmaAngleSeconds),
+        lsSigmaDistanceM: parseNumber(weights.sigmaDistanceM),
+        lsDistanceMeasurements: parseNumber(weights.distanceMeasurements),
         angleType:
           config.angleType === "" ? "interior" : config.angleType,
         referencePointId: config.referencePointId || null,
@@ -378,6 +404,12 @@ export function PolygonalEditor({
             setDirty(true);
             setSaveMessage(null);
           }}
+          weights={weights}
+          onWeightsChange={(w) => {
+            setWeights(w);
+            setDirty(true);
+            setSaveMessage(null);
+          }}
         />
       </Card>
 
@@ -403,12 +435,17 @@ export function PolygonalEditor({
             }}
           />
           <div className="flex items-center gap-3">
-            {captureBlocked && (
+            {captureBlocked ? (
               <span className="text-sm text-danger-500">
                 Corrige las celdas con error para poder guardar.
               </span>
-            )}
-            <Button onClick={handleSave} disabled={isPending || captureBlocked}>
+            ) : weightsError ? (
+              <span className="text-sm text-danger-500">{weightsError}</span>
+            ) : null}
+            <Button
+              onClick={handleSave}
+              disabled={isPending || captureBlocked || weightsError != null}
+            >
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
             <span aria-hidden className="h-6 w-px bg-neutral-200" />

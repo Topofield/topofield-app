@@ -1,5 +1,6 @@
-import { Select } from "@/components/design-system";
+import { Alert, Input, Select } from "@/components/design-system";
 import { decimalToDms } from "@/lib/calculations/angles";
+import { SIGMA0_BAND, sigma0Reading } from "@/lib/calculations/least-squares";
 import { formatPrecision } from "@/lib/utils/format";
 import {
   CORRECTION_METHOD_OPTIONS,
@@ -7,6 +8,7 @@ import {
   type PolygonalResult,
   type PolygonalType,
 } from "@/types/polygonal";
+import type { LeastSquaresWeightsDraft } from "./polygonal-draft";
 
 function formatAngleSum(deg: number | null): string {
   if (deg == null) return "—";
@@ -31,11 +33,20 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+const SIGMA0_TEXT = {
+  consistent: "Los pesos supuestos describen bien las observaciones.",
+  worse: "Se midió peor de lo supuesto, o hay un error grueso en la cartera.",
+  pessimistic: "Los σ supuestos son pesimistas: se midió mejor de lo declarado.",
+} as const;
+
 interface ResultsPanelProps {
   result: PolygonalResult;
   type: PolygonalType;
   method: CorrectionMethod;
   onMethodChange: (method: CorrectionMethod) => void;
+  /** Pesos del ajuste por mínimos cuadrados (Fase 14). */
+  weights: LeastSquaresWeightsDraft;
+  onWeightsChange: (weights: LeastSquaresWeightsDraft) => void;
   disabled?: boolean;
 }
 
@@ -44,11 +55,20 @@ export function ResultsPanel({
   type,
   method,
   onMethodChange,
+  weights,
+  onWeightsChange,
   disabled,
 }: ResultsPanelProps) {
+  const leastSquares = method === "least_squares";
+  const adjustment = result.adjustment;
+  // La abierta sin control no tiene nada que corregir, así que no hay selector.
+  // Salvo si el proceso ya tiene mínimos cuadrados (se cambió el tipo después):
+  // entonces se muestra, para poder elegir otro método y guardar.
+  const showSelector = type !== "open_uncontrolled" || leastSquares;
+
   return (
     <div className="flex flex-col gap-5">
-      {type !== "open_uncontrolled" && (
+      {showSelector && (
         <div className="flex flex-wrap items-center justify-end gap-3">
           <Select
             label="Método de corrección"
@@ -57,6 +77,52 @@ export function ResultsPanel({
             disabled={disabled}
             onChange={(e) => onMethodChange(e.target.value as CorrectionMethod)}
           />
+        </div>
+      )}
+
+      {leastSquares && type !== "open_uncontrolled" && (
+        <div className="flex flex-col gap-3">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              label="σ angular (″)"
+              inputMode="decimal"
+              value={weights.sigmaAngleSeconds}
+              disabled={disabled}
+              onChange={(e) =>
+                onWeightsChange({ ...weights, sigmaAngleSeconds: e.target.value })
+              }
+            />
+            <Input
+              label="σ de distancia (m)"
+              inputMode="decimal"
+              value={weights.sigmaDistanceM}
+              disabled={disabled}
+              onChange={(e) =>
+                onWeightsChange({ ...weights, sigmaDistanceM: e.target.value })
+              }
+            />
+            <Input
+              label="Mediciones por distancia"
+              inputMode="numeric"
+              value={weights.distanceMeasurements}
+              disabled={disabled}
+              onChange={(e) =>
+                onWeightsChange({ ...weights, distanceMeasurements: e.target.value })
+              }
+            />
+          </div>
+          <p className="text-sm text-neutral-500">
+            La desviación típica que se supone para cada ángulo y cada
+            distancia; todas las observaciones pesan igual. La hoja de la
+            universidad usa, por ejemplo, 2″, 0.011 m y 2 mediciones. Una
+            distancia medida n veces pesa como σ/√n.
+          </p>
+          {adjustment?.status === "missing_weights" && (
+            <Alert variant="warning">
+              Faltan los pesos del ajuste: sin ellos no hay coordenadas
+              ajustadas, y el método no se puede guardar.
+            </Alert>
+          )}
         </div>
       )}
 
@@ -150,6 +216,77 @@ export function ResultsPanel({
           </table>
         </div>
       )}
+
+      {adjustment?.status === "adjusted" && (
+        <div className="flex flex-col gap-3">
+          <div className="overflow-x-auto">
+            <h3 className="mb-2 text-sm font-semibold">
+              Correcciones del ajuste
+            </h3>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+                  <th className="py-2 pr-3 font-medium">Estación</th>
+                  <th className="py-2 pr-3 font-medium">Ángulo (″)</th>
+                  <th className="py-2 pr-3 font-medium">Distancia (mm)</th>
+                  <th className="py-2 pr-3 font-medium">Distancia ajustada (m)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.stations.map((s, i) => (
+                  <tr key={i} className="border-b border-neutral-100">
+                    <td className="py-2 pr-3 font-medium text-neutral-900">
+                      {s.pointCode || `E${i + 1}`}
+                    </td>
+                    <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                      {signed(adjustment.angleCorrectionsSec[i], 3)}
+                    </td>
+                    <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                      {signed(mm(adjustment.distanceCorrectionsM[i]), 2)}
+                    </td>
+                    <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                      {formatMeters(adjustment.adjustedDistances[i] ?? null)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-xs text-neutral-500">
+              La orientación es el dato de partida y no se ajusta. Una celda con
+              «—» es una observación que no entra en el ajuste.
+            </p>
+          </div>
+          <div className="max-w-md">
+            <Row label="σ₀" value={adjustment.sigma0.toFixed(3)} />
+            <Row
+              label="Condiciones · iteraciones"
+              value={`${adjustment.conditions} · ${adjustment.iterations}`}
+            />
+            <p className="mt-1 text-sm text-neutral-700">
+              {SIGMA0_TEXT[sigma0Reading(adjustment.sigma0)]}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              σ₀ compara lo medido con los pesos supuestos: cerca de 1 (entre{" "}
+              {SIGMA0_BAND[0]} y {SIGMA0_BAND[1]}) es lo esperado. Es
+              información, no criterio: el veredicto de cierre es el mismo con
+              cualquier método.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function mm(meters: number | null | undefined): number | null {
+  return meters == null ? null : meters * 1000;
+}
+
+function signed(value: number | null | undefined, decimals: number): string {
+  if (value == null) return "—";
+  // Lo que redondea a cero se muestra sin signo: «-0.00» no es una corrección.
+  const rounded = Number(value.toFixed(decimals));
+  if (rounded === 0) return (0).toFixed(decimals);
+  const text = rounded.toFixed(decimals);
+  return rounded > 0 ? `+${text}` : text;
 }

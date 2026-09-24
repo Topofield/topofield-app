@@ -140,8 +140,8 @@ alter table public.polygonal_processes
   add constraint polygonal_processes_ls_weights_complete
     check (
       correction_method is distinct from 'least_squares'
-      or (ls_sigma_angle_seconds > 0 and ls_sigma_distance_m > 0
-          and ls_distance_measurements >= 1)
+      or coalesce(ls_sigma_angle_seconds > 0 and ls_sigma_distance_m > 0
+                  and ls_distance_measurements >= 1, false)
     );
 ```
 
