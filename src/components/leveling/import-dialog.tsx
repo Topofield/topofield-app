@@ -372,8 +372,8 @@ export function ImportDialog({
                 <strong>{LEVELING_TYPE_LABELS[proposedLevelingType(rows, currentType)]}</strong>
                 {rows.return ? " con recorrido de vuelta" : ""}, en modo{" "}
                 <strong>digital</strong>. Puede cambiarlo después en la
-                configuración. Revise el tipo de cada punto: el archivo no lo
-                trae y se deduce de su posición.
+                configuración. Revise el tipo de cada punto: el .L no lo trae
+                y se deduce de su posición; la plantilla CSV puede declararlo.
               </p>
 
               {hasReadings && (
