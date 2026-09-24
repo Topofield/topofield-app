@@ -75,7 +75,6 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Si hay dos enfoques posibles para una decisión arquitectónica, explicar ambos y dejar elegir.
 
 ## Out of scope
-- Ajuste por mínimos cuadrados (trabajo futuro)
 - Modo offline / PWA
 - Importación directa desde estación total
 - Firma digital criptográfica (solo cierre con timestamp)

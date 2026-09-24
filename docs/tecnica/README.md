@@ -66,7 +66,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 11 | Estado de los BMs | cerrada |
 | 12 | Alerta por lectura desfasada | cerrada |
 | 13 | Canvas de poligonal | cerrada |
-| 14 | Ajuste por mínimos cuadrados | pendiente |
+| 14 | Ajuste por mínimos cuadrados | en curso |
 | 15 | Georreferenciación de levantamientos | pendiente |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
