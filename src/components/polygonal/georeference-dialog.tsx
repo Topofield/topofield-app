@@ -42,6 +42,11 @@ function formatDms(deg: number): string {
   return formatRotation(d.deg, d.min, d.sec);
 }
 
+/** En mm mientras es pequeño; en m cuando ya no es un residuo sino un error. */
+function formatResidual(meters: number): string {
+  return meters < 1 ? `${(meters * 1000).toFixed(1)} mm` : `${meters.toFixed(3)} m`;
+}
+
 /**
  * Georreferencia la poligonal con dos de sus estaciones de coordenadas
  * conocidas (Fase 15). Se recalcula con la entrada transformada y se
@@ -213,7 +218,7 @@ export function GeoreferenceDialog({
                   {plan.pointCodes
                     .map(
                       (code, i) =>
-                        `${code} ${(Math.hypot(plan.residuals[i]!.north, plan.residuals[i]!.east) * 1000).toFixed(1)} mm`,
+                        `${code} ${formatResidual(Math.hypot(plan.residuals[i]!.north, plan.residuals[i]!.east))}`,
                     )
                     .join(" · ")}
                 </dd>

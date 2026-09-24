@@ -300,11 +300,13 @@ export function PolygonalEditor({
             { label: process.name },
           ]}
         />
-        <div className="mt-2 flex items-center justify-between gap-4">
+        {/* Envuelve en móvil: con tres acciones, en una sola fila la página
+            desbordaba a lo ancho a 390 px. */}
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h1 className="text-2xl font-bold">
             {process.name}
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Badge tone={STATUS_TONE[process.status]}>
               {PROCESS_STATUS_LABELS[process.status]}
             </Badge>
