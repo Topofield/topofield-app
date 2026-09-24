@@ -254,6 +254,15 @@ export function ImportDialog({
                 <dd className="font-mono tabular-nums">
                   {file.setups.length} · {file.rawSights}
                 </dd>
+                {file.instrumentSummary && (
+                  <>
+                    <dt className="text-neutral-500">Según el instrumento</dt>
+                    <dd className="font-mono tabular-nums">
+                      Δ {file.instrumentSummary.heightDifference.toFixed(4)} m ·{" "}
+                      {file.instrumentSummary.distance.toFixed(3)} m
+                    </dd>
+                  </>
+                )}
                 {file.quality.maxRepeatSpreadMm != null && (
                   <>
                     <dt className="text-neutral-500">Mayor dispersión entre repeticiones</dt>
