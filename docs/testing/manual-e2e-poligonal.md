@@ -161,6 +161,44 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 - Agregar un nuevo punto (`BM-03`, tipo BM, N=2000, E=2000, cota=2632.5).
 - ✓ Aparece en la tabla. Editar y borrar también funciona.
 
+### 15 bis. Dibujo de la poligonal (Fase 13)
+
+- Abrir **Poligonal V10 — cartera TT4 — bowditch**.
+- ✓ La tarjeta **Dibujo de la poligonal** muestra los vértices V10, D1…D5
+  rotulados, la grilla con coordenadas sin separador de miles (`N 100140`,
+  `E 101440`), la flecha de norte, la barra de escala y el amarre **TT4**
+  con su línea de orientación.
+- ✓ La leyenda dice **Sin compensar (desplazamientos ×100)** y el trazo
+  discontinuo no cierra: queda un hueco junto a V10.
+- Abrir el **Pentágono — Caso 1**. ✓ Factor **×1**: su error de 12 m ya se ve.
+- Abrir **Reconocimiento E1-E4**. ✓ Sin trazo discontinuo: «Abierta sin
+  control: no se compensa».
+- En la TT4, pulsar **Acercar** dos veces, arrastrar el dibujo y pulsar
+  **Restablecer**. ✓ Vuelve al encuadre completo. Los tres botones responden
+  al teclado (Tab y Enter).
+- Cambiar la distancia de la primera estación. ✓ El dibujo se mueve en vivo.
+  Restaurarla.
+- Con el navegador en ancho de teléfono (390 px), ✓ los rótulos del dibujo se
+  leen: no se encogen con la pantalla.
+- Abrir el **informe de poligonal** del proyecto e imprimir. ✓ Cada poligonal
+  lleva su dibujo bajo la tabla de coordenadas.
+
+### 15 ter. Ángulos en grados decimales (Fase 13, P1)
+
+- En la TT4, desplegar las lecturas de una estación y pulsar **Grados
+  decimales**. ✓ Todos los ángulos pasan a un solo campo con seis decimales
+  (`124.495000°`). La columna **Azimut** sigue en DMS.
+- Volver a **DMS (° ′ ″)**. ✓ Todos los valores son idénticos a los de
+  antes: cambiar de formato no altera ninguno.
+- En decimal, teclear `124.4950001` en una lectura. ✓ Aparece «Se guarda como
+  124°29′42″ (a la décima de segundo)». Restaurar el valor.
+- Recargar la página. ✓ El conmutador sigue en **Grados decimales**: el
+  formato se recuerda por proceso. Volver a DMS.
+- Abrir **Reconocimiento E1-E4**. ✓ Abre ya en **Grados decimales**.
+- Abrir un proceso **cerrado** y pulsar **Grados decimales**. ✓ Cambia la
+  vista y avisa «El proceso está cerrado: el formato solo cambia la vista y no
+  se guarda». Al recargar vuelve a DMS.
+
 ### 16. RLS — aislamiento entre usuarios
 
 - Cerrar sesión y registrar un segundo usuario nuevo (`otro@topofield.local`).
@@ -171,6 +209,7 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 ## Resultado esperado
 
 Si los 16 puntos pasan, el módulo poligonal cumple los criterios a-p del
-PRD-de-fase 3 en su uso real. Cualquier discrepancia entre los números de la
+PRD-de-fase 3 en su uso real. Los pasos 15 bis y 15 ter cubren el PRD-de-fase
+13: el dibujo de la poligonal y la captura en grados decimales. Cualquier discrepancia entre los números de la
 app, la hoja Excel y el reporte HTML debe documentarse y corregirse antes de
 pasar a Fase 4.
