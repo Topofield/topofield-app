@@ -20,6 +20,8 @@ function heightFor(width: number): number {
 }
 
 const ZOOM_STEP = 2;
+/** Cuánto desplaza cada botón de flecha, en fracción del ancho visible. */
+const PAN_FRACTION = 0.2;
 const MAX_ZOOM = 256;
 
 interface PolygonalPlotViewerProps {
@@ -88,6 +90,13 @@ export function PolygonalPlotViewer({ input, result, reference }: PolygonalPlotV
     drag.current = null;
   }
 
+  // Desplazar con botones: el arrastre no es accesible con el teclado.
+  // Mover la vista hacia el Norte baja el dibujo, de ahí el signo.
+  function panBy(dx: number, dy: number) {
+    const step = width * PAN_FRACTION;
+    setView((v) => ({ ...v, offsetX: v.offsetX - dx * step, offsetY: v.offsetY - dy * step }));
+  }
+
   const moved = view.zoom !== 1 || view.offsetX !== 0 || view.offsetY !== 0;
 
   return (
@@ -102,8 +111,14 @@ export function PolygonalPlotViewer({ input, result, reference }: PolygonalPlotV
         <Button size="sm" variant="ghost" onClick={() => setView(DEFAULT_VIEW)} disabled={!moved}>
           Restablecer
         </Button>
+        <span role="group" aria-label="Desplazar el dibujo" className="inline-flex gap-1">
+          <Button size="sm" variant="ghost" aria-label="Desplazar al oeste" onClick={() => panBy(-1, 0)}>←</Button>
+          <Button size="sm" variant="ghost" aria-label="Desplazar al norte" onClick={() => panBy(0, -1)}>↑</Button>
+          <Button size="sm" variant="ghost" aria-label="Desplazar al sur" onClick={() => panBy(0, 1)}>↓</Button>
+          <Button size="sm" variant="ghost" aria-label="Desplazar al este" onClick={() => panBy(1, 0)}>→</Button>
+        </span>
         <span className="text-xs text-neutral-500">
-          {view.zoom > 1 ? `Acercamiento ×${view.zoom}. ` : ""}Arrastra el dibujo para desplazarlo.
+          {view.zoom > 1 ? `Acercamiento ×${view.zoom}. ` : ""}Arrastra el dibujo o usa las flechas para desplazarlo.
         </span>
       </div>
       <div
