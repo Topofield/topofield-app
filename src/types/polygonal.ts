@@ -37,13 +37,26 @@ export const PROCESS_STATUSES = [
 ] as const;
 export type ProcessStatus = (typeof PROCESS_STATUSES)[number];
 
+/**
+ * Cómo se TECLEAN los ángulos del proceso (Fase 13, P1). El almacenamiento
+ * sigue siempre en DMS; esto solo elige la vista de los campos de captura.
+ */
+export const ANGLE_INPUT_FORMATS = ["dms", "decimal"] as const;
+export type AngleInputFormat = (typeof ANGLE_INPUT_FORMATS)[number];
+
 // --- Filas tipadas: estrechan los campos string de la DB a sus literales ---
 
 export type PolygonalProcess = Omit<
   Tables<"polygonal_processes">,
-  "type" | "angle_type" | "correction_method" | "status" | "precision_order"
+  | "type"
+  | "angle_type"
+  | "correction_method"
+  | "status"
+  | "precision_order"
+  | "angle_input_format"
 > & {
   type: PolygonalType;
+  angle_input_format: AngleInputFormat;
   angle_type: AngleType;
   correction_method: CorrectionMethod | null;
   status: ProcessStatus;

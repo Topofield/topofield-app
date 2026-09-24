@@ -277,6 +277,7 @@ export type Database = {
       }
       polygonal_processes: {
         Row: {
+          angle_input_format: string
           angle_readings_min: number
           angle_type: string
           angular_error_seconds: number | null
@@ -321,6 +322,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          angle_input_format?: string
           angle_readings_min?: number
           angle_type?: string
           angular_error_seconds?: number | null
@@ -365,6 +367,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          angle_input_format?: string
           angle_readings_min?: number
           angle_type?: string
           angular_error_seconds?: number | null
