@@ -193,6 +193,19 @@ real. Arreglarlo cambia avisos en procesos ya guardados y los tests de la
 Fase 9, así que no entró en la 18. El generador de libretas del seed lo
 esquiva con todas las distancias parecidas entre sí.
 
+**Confirmado con la cartera real de El Verjón** (importada en pantalla el
+2026-09-24, ida):
+
+| Armada (V+ → V−) | Distancias | Diferencia real | Aviso de hoy |
+|---|---|---|---|
+| C 1 → C 2 | 28.1 / 17.3 m | **10.8 m** | ninguno: la fila C 1 compara 28.1 con 28.5 |
+| C 2 → C 3 | 21.9 / 11.7 m | 10.2 m | 4.6 m en C 2 |
+| C 3 → C 4 | 25.5 / 15.1 m | 10.4 m | 13.8 m en C 3 |
+| C 7 → D3 | 24.2 / 8.4 m | **15.8 m** | 9.3 m en C 7 y 6.3 m en D3 |
+
+Calla un desequilibrio real y da magnitudes que no corresponden a ninguna
+armada.
+
 ### N8 · El BM de partida recibe compensación
 
 Hallado en la Fase 18: en el registro de nivelación de una visita, el BM de
