@@ -1,14 +1,35 @@
 # PRD-de-fase 13 — Dibujo de la poligonal y ángulos en grados decimales
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-23
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-23
 
 **Rama:** `fase-13-canvas-poligonal`
 **Peticiones que recoge:** el canvas de visualización que la Fase 7 difirió
 ([`06-motor-captura-poligonal.md`](./06-motor-captura-poligonal.md), «Fuera»)
 y P1 de [`pendientes.md`](../pendientes.md)
 **Módulo:** poligonal
+
+> **Confirmado por el usuario al aprobar:** el decimal conserva la precisión
+> de la décima de segundo del DMS; 6 decimales (0.0036″) la cubren.
+>
+> **Divergencias de la implementación:**
+>
+> - La función se llama `polygonalTraces` y devuelve las dos poligonales, la
+>   ajustada y la sin compensar, en vez de solo `unadjustedCoordinates`: el
+>   dibujo necesita las dos alineadas vértice a vértice.
+> - **`polygonal-draft.ts`**, no previsto: `processToConfig`, `stationToDraft` y
+>   `buildInput` vivían en el editor, que es de cliente, y el informe se
+>   renderiza en el servidor. Se movieron sin cambios a un módulo común para
+>   que el informe construya la entrada por el mismo camino que el editor.
+> - **`AngleInput` vive en `components/polygonal`**, no en el sistema de
+>   diseño: convierte con `@/lib/calculations/angles`, y la regla del sistema
+>   de diseño prohíbe conocer el dominio.
+> - **El dibujo del editor usa el ancho real de su contenedor.** Con un
+>   `viewBox` fijo de 720, en un teléfono el texto se reducía a unos 4 px. Se
+>   vio en la captura móvil del manual.
+> - Sin `clipPath`: con un id fijo se habría duplicado en un informe con
+>   varias poligonales, y el `<svg>` raíz ya recorta.
 
 ## Propósito
 

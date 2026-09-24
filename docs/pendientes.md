@@ -20,7 +20,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~N1~~ | **10** — Nomenclatura de nivelación | **cerrada** (2026-09-23) |
 | ~~A2~~ | **11** — Estado de los BMs | **cerrada** (2026-09-23) |
 | ~~A1~~ | **12** — Alerta por lectura desfasada | **cerrada** (2026-09-23) |
-| P1 | dentro de la **13** (canvas) | **en curso** — PRD commiteado |
+| ~~P1~~ | dentro de la **13** (canvas) | **cerrada** (2026-09-23) |
 | N4 | — | sin fase asignada · **desbloqueada** (crudo real descifrado) |
 | N6 | — | sin fase asignada |
 
@@ -40,6 +40,9 @@ justo los casos donde «la tendencia» está mal definida.
 ## Poligonales
 
 ### P1 · Captura de ángulos en grados decimales
+
+> **Resuelta en la Fase 13** ([`prds/12-canvas-poligonal.md`](./prds/12-canvas-poligonal.md)).
+> Se conserva el texto de la petición como registro.
 
 Hoy los ángulos se capturan solo en DMS (`DmsInput`, tres casillas). Se necesita
 poder digitarlos también en **grados decimales**, con las dos opciones

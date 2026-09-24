@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-23 · Fase 12 cerrada · 556 tests ·
+**Última actualización:** 2026-09-23 · Fase 13 cerrada · 584 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -65,7 +65,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 10 | Nomenclatura de nivelación | cerrada |
 | 11 | Estado de los BMs | cerrada |
 | 12 | Alerta por lectura desfasada | cerrada |
-| 13 | Canvas de poligonal | en curso |
+| 13 | Canvas de poligonal | cerrada |
 | 14 | Ajuste por mínimos cuadrados | pendiente |
 | 15 | Georreferenciación de levantamientos | pendiente |
 
@@ -351,6 +351,12 @@ Estas las escribe `savePolygonalProcessAction` tras cada cálculo:
 
 `status` puede ser `draft`, `in_progress`, `calculated`, `closed` o `rejected`.
 Los dos últimos son terminales.
+
+`angle_input_format` (`dms` o `decimal`, Fase 13) no es un resultado: recuerda
+cómo se **teclean** los ángulos del proceso. El almacenamiento sigue siendo DMS
+en tres columnas. Lo escribe `setAngleInputFormatAction` al conmutar, y la
+rechaza en un proceso cerrado o rechazado (`canPersistAngleFormat`); ahí el
+conmutador solo cambia la vista.
 
 ### `settlement_readings` — columnas de resultado
 
@@ -704,6 +710,49 @@ La dispersión (máx − mín) se contrasta con
 **proceso** desde la Fase 8, antes era la del proyecto— y no con la tolerancia
 del orden. El orden gobierna el cierre de la poligonal; repetir una lectura
 mide repetibilidad. El factor admitido vive en `READING_DISPERSION_FACTOR`.
+
+### Captura en grados decimales (Fase 13)
+
+`AngleInput` (`src/components/polygonal/angle-input.tsx`) recibe y emite el
+ángulo **siempre en DMS**. El formato decimal es una vista: se muestra con
+`DECIMAL_DEGREE_DIGITS = 6` decimales (0.0036″), muy por debajo de la décima de
+segundo que guardan las columnas `decimal(5,1)`, así que ir de DMS a decimal y
+volver es exacto. Un test barre 12 000 valores en pasos de 0.1″. Un decimal
+tecleado con más precisión se redondea a 0.1″ al emitirse, y el campo avisa de
+cómo se guardará (`roundsOnStorage`).
+
+No está en el sistema de diseño porque convierte con `@/lib/calculations/angles`
+(ver § 8, «Qué entra en el sistema de diseño»). El genérico, `DmsInput`, sí.
+
+### Trazas y dibujo (Fase 13)
+
+`polygonalTraces(input, result)` devuelve, vértice a vértice, la poligonal
+ajustada y la sin compensar. Las encadena desde el arranque con las
+proyecciones que el motor ya calculó —corregidas y originales—, sin matemática
+nueva. El invariante que la prueba, sobre las carteras reales: en una cerrada, el
+último punto sin compensar queda a `(errorNorth, errorEast)` del arranque; en
+una abierta con control, a esa misma distancia del punto de llegada.
+
+El dibujo (`polygonal-plot.tsx`, SVG propio) exagera la sin compensar ×k,
+porque a escala real 1.6 cm sobre 42 m (cartera TT4) ocupan 0.2 px.
+`src/lib/design/polygonal-plot.ts`, puro y con tests, decide la geometría:
+
+- `exaggerationFactor`: el mayor 1, 2 o 5 × 10ⁿ que lleva el mayor
+  desplazamiento al 5 % (`EXAGGERATION_TARGET_FRACTION`) de la extensión,
+  nunca menor que 1. Da TT4 ×100, Vivero ×200 y Pentágono ×1.
+- `plotFrame`: proporción **1:1** entre Norte y Este (es un plano; escalar los
+  ejes aparte deformaría los ángulos), Norte hacia arriba, zoom alrededor de un
+  centro.
+
+El editor usa `PolygonalPlotViewer`, que mide su contenedor y dibuja con el
+ancho real: con un `viewBox` fijo, en un teléfono el texto se reducía a unos
+4 px. El informe usa `PolygonalPlot` con el tamaño por defecto.
+
+**Un solo camino de filas a entrada.** `polygonal-draft.ts` (sin `"use
+client"`) contiene `processToConfig`, `stationToDraft` y `buildInput`, y
+`polygonalInputOf` los compone. El editor y el informe imprimible, que se
+renderiza en el servidor, construyen la entrada del cálculo por ahí, así que el
+dibujo del informe es por construcción el del editor.
 
 ### Métodos de corrección
 
@@ -1070,24 +1119,25 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-556 tests en 26 archivos, Vitest, entorno `node` **sin jsdom**.
+584 tests en 27 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 69 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
-| `lib/validators/polygonal.test.ts` | 52 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio |
+| `lib/validators/polygonal.test.ts` | 54 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
-| `lib/calculations/polygonal.test.ts` | 30 | Motor de cálculo, los tres tipos y métodos |
+| `lib/calculations/polygonal.test.ts` | 39 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
-| `lib/utils/format.test.ts` | 23 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12) |
+| `lib/utils/format.test.ts` | 24 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/export/polygonal-workbook.test.ts` | 18 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8) |
 | `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
+| `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
 | `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
 | `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
-| `lib/calculations/angles.test.ts` | 12 | Conversiones DMS ↔ decimal |
+| `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
 | `lib/export/settlement-workbook.test.ts` | 11 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
 | `components/polygonal/closure-verdict.test.tsx` | 10 | Decisión del veredicto |
@@ -1559,6 +1609,22 @@ registrada aquí.
 corto para una presa. Si un usuario lo pide, el paso natural es hacerlo un
 umbral editable del lugar, junto a los de velocidad y acumulado, lo que exige
 migración y resincronización.
+
+**Tres componentes del sistema de diseño conocen el dominio.** La § 8 dice que
+un componente del sistema de diseño no importa nada de `@/types/*` ni de
+`@/lib/*` salvo `cn`, y lo presenta como «criterio verificable leyendo los
+imports». Verificado al cerrar la Fase 13: `status-indicator.tsx` importa
+`AlertLevel`, y `precision-order-select.tsx` y `equipment-fields.tsx` importan
+tolerancias y tipos del proyecto. `AngleInput`, que iba a ser el cuarto, se
+movió a la poligonal. O se mueven los tres, o se matiza la regla para admitir
+componentes de formulario del dominio; lo que no puede seguir es la regla
+afirmando algo que el código contradice.
+
+**El campo de distancia de la tabla de estaciones no tiene nombre accesible en
+escritorio.** En la vista de tarjetas (móvil) lleva `aria-label="Distancia
+(m)"`; en la tabla de escritorio, ninguno, y un lector de pantalla lo anuncia
+como «campo numérico» sin más. Se vio al verificar la Fase 13 con Playwright,
+que no pudo localizarlo por su etiqueta.
 
 **CSP sin nonce (`'unsafe-inline'` en scripts y estilos).** La política que
 sirve la app permite código en línea porque Next lo inyecta y la app usa

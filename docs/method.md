@@ -22,7 +22,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 10 | Nomenclatura de nivelación | [`prds/09-nomenclatura-nivelacion.md`](./prds/09-nomenclatura-nivelacion.md) | cerrada |
 | 11 | Estado de los BMs | [`prds/10-estado-bms.md`](./prds/10-estado-bms.md) | cerrada |
 | 12 | Alerta por lectura desfasada | [`prds/11-lectura-desfasada.md`](./prds/11-lectura-desfasada.md) | cerrada |
-| 13 | Canvas de poligonal | [`prds/12-canvas-poligonal.md`](./prds/12-canvas-poligonal.md) | en curso |
+| 13 | Canvas de poligonal | [`prds/12-canvas-poligonal.md`](./prds/12-canvas-poligonal.md) | cerrada |
 | 14 | Ajuste por mínimos cuadrados | — | pendiente |
 | 15 | Georreferenciación de levantamientos | — | pendiente |
 
@@ -538,6 +538,42 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 13 — Dibujo de la poligonal y ángulos en decimal (2026-09-23)
+
+El editor y el informe dibujan la poligonal a escala, con la sin compensar
+exagerada ×k para que se vea un error de centímetros. Los ángulos se pueden
+teclear en grados decimales con un conmutador que se recuerda por proceso,
+mientras el almacenamiento sigue en DMS. 557 → 584 tests.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Medir con los datos reales antes de diseñar una visualización.** «Original
+  frente a ajustada» parecía una especificación completa y era invisible:
+  1,6 cm sobre 42 m son 0,2 px. Lo reveló consultar el error y la extensión en
+  la base antes de escribir el PRD, y el factor de exageración salió de ahí.
+  Los factores de la tabla del PRD pasaron a tests tal cual.
+- **Un SVG con `viewBox` fijo se ve bien en escritorio y roto en un teléfono.**
+  Nada falla: el texto se encoge proporcionalmente hasta 4 px. Solo lo delató
+  mirar la captura móvil del manual. **Todo lo que dibuje texto dentro de un
+  `viewBox` hay que mirarlo a 390 px.**
+- **Una regla escrita no protege si nadie la comprueba al añadir código.** La
+  § 8 prohíbe que el sistema de diseño conozca el dominio, y `AngleInput` la
+  incumplió sin que nada lo notara. El `grep` que lo confirmó encontró tres
+  componentes que ya la incumplían desde antes. La regla dice ser
+  «verificable leyendo los imports», pero nadie la verificaba. Quedó en la
+  § 11.
+- **Si la lógica vive en un componente de cliente, el servidor no puede
+  usarla.** El informe necesitaba la misma construcción de la entrada que el
+  editor, y estaba dentro de un archivo `"use client"`. La alternativa era una
+  segunda copia de las reglas (orientación, fila de cierre, promedio de
+  lecturas) que podía divergir. **Moverla a un módulo común antes de usarla**
+  cuesta un refactor sin cambios y evita esa divergencia.
+- **Los metadatos de las capturas caducan igual que los recuentos.** Nueve
+  entradas de `CAPTURAS` tenían un ancho o alto distinto de su PNG, seis de
+  ellas desde fases anteriores. Se sincronizaron leyendo los PNG. Es la misma
+  lección de la Fase 11 con la tabla de pruebas: lo que describe un artefacto
+  generado se regenera desde el artefacto.
 
 ### Cierre Fase 12 — Alerta por lectura desfasada (2026-09-23)
 
