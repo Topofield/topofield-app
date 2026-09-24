@@ -354,12 +354,19 @@ export function ThresholdLines({
   plotWidth,
   plotHeight,
   showLabels = true,
+  labelAlign = "end",
 }: {
   thresholds: PlacedThreshold[];
   yScale: (value: number) => number;
   plotWidth: number;
   plotHeight: number;
   showLabels?: boolean;
+  /**
+   * Dónde van los rótulos. `start` (a la izquierda) cuando el extremo derecho
+   * está ocupado: en el historial de un punto, el marcador de la visita actual
+   * cae siempre allí y tapaba el rótulo del umbral más cercano.
+   */
+  labelAlign?: "start" | "end";
 }) {
   const placed = placeThresholdLabels(thresholds, yScale, plotHeight);
 
@@ -380,9 +387,9 @@ export function ThresholdLines({
             />
             {showLabels && labelY !== null && (
               <text
-                x={plotWidth - 4}
+                x={labelAlign === "end" ? plotWidth - 4 : 4}
                 y={labelY}
-                textAnchor="end"
+                textAnchor={labelAlign}
                 fontSize={SMALL_FONT_SIZE}
                 className="fill-neutral-800"
                 {...HALO}

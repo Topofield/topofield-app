@@ -143,11 +143,14 @@ export function PointHistoryChart({
                 className="stroke-neutral-200"
               />
 
+              {/* Rótulos a la izquierda: el marcador de la visita actual
+                  está siempre en el extremo derecho. */}
               <ThresholdLines
                 thresholds={axis.thresholds}
                 yScale={yScale}
                 plotWidth={plotW}
                 plotHeight={plotH}
+                labelAlign="start"
               />
 
               {points.length > 1 && (
