@@ -30,6 +30,14 @@ analizado en [`carteras/analisis-crudo-nivel-digital.md`](../carteras/analisis-c
 > - **No había procesos cerrados afectados por el hallazgo 3** en la base
 >   local. La nube no se revisó: no hay acceso desde esta sesión.
 > - El resumen del diálogo se apila en móvil.
+> - **Hallado en la revisión:** el archivo se decodifica como UTF-8 y, si no
+>   lo es, como Windows-1252, que es como Excel en español guarda el CSV. La
+>   plantilla respeta las comillas y admite un punto de cambio escrito en dos
+>   filas sin correr los tipos declarados. Con una sola armada no se ofrece ida
+>   y vuelta. El BM va entero: si se conserva la cota del proceso, se conserva
+>   también su código. Editor y formulario comparten `configWithImport`. Las
+>   cotas de vuelta ya guardadas de una abierta no se recalculan hasta el
+>   siguiente guardado (anotado en la § 11 de la doc técnica).
 
 ## Propósito
 

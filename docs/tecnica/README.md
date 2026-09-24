@@ -1275,13 +1275,13 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-672 tests en 31 archivos, Vitest, entorno `node` **sin jsdom**.
+676 tests en 31 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 71 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16) |
-| `lib/import/leveling/import.test.ts` | 18 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones y vuelta declarada; detector (Fase 16) |
+| `lib/import/leveling/import.test.ts` | 22 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16) |
 | `lib/validators/polygonal.test.ts` | 66 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
@@ -1890,6 +1890,13 @@ los de un único crudo de un nivel Leica. Otro modelo, u otro modo de
 grabación, puede usar otras columnas; el lector comprueba la forma de cada
 línea y avisa, y la previsualización deja ver lo leído antes de aceptarlo,
 pero no hay un segundo archivo contra el que probarlo.
+
+**Cotas de vuelta guardadas antes de la Fase 16 (abiertas con vuelta).** El
+arreglo del motor cambia las cotas de la vuelta de una nivelación abierta,
+pero las filas ya guardadas conservan las viejas hasta el siguiente guardado:
+el editor muestra las nuevas y el Excel, que lee lo guardado, las viejas. Una
+abierta con vuelta cerrada antes de la fase las conserva para siempre. En la
+base local no había ninguna; la nube no se revisó.
 
 **Se pierden la σ del instrumento y las repeticiones (Fase 16).** La libreta
 guarda una lectura por visual, así que el import promedia. Llevar a

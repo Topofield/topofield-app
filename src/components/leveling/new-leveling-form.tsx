@@ -5,7 +5,7 @@ import { Alert, Button } from "@/components/design-system";
 import { parseNumber } from "@/lib/utils/parse";
 import type { ReferencePoint } from "@/types/project";
 import { createLevelingProcessAction } from "@/app/(app)/projects/[id]/leveling/new/actions";
-import { ImportDialog, type LevelingImport } from "./import-dialog";
+import { configWithImport, ImportDialog, type LevelingImport } from "./import-dialog";
 import {
   EMPTY_LEVELING_CONFIG,
   LevelingConfigFields,
@@ -31,16 +31,7 @@ export function NewLevelingForm({
 
   function applyImport(result: LevelingImport) {
     setImported(result);
-    setConfig({
-      ...config,
-      type: result.type,
-      hasReturnRun: result.return != null,
-      startBm: {
-        code: result.startBm.code,
-        elevation: result.startBm.elevation != null ? String(result.startBm.elevation) : "",
-      },
-      level: { ...config.level, levelType: "digital" },
-    });
+    setConfig(configWithImport(config, result));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -84,6 +75,7 @@ export function NewLevelingForm({
         </p>
         <ImportDialog
           currentType={config.type}
+          currentStartCode={config.startBm.code}
           currentStartElevation={parseNumber(config.startBm.elevation)}
           hasReadings={imported != null}
           onAccept={applyImport}

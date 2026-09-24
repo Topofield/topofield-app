@@ -5,6 +5,7 @@ import { Alert, Button, Modal, Select } from "@/components/design-system";
 import {
   CSV_TEMPLATE,
   FORMAT_LABELS,
+  decodeFileBytes,
   detectTurnSetup,
   proposedLevelingType,
   readLevelingFile,
@@ -13,6 +14,7 @@ import {
   type LibretaRow,
   type ReadResult,
 } from "@/lib/import/leveling";
+import type { LevelingConfigState } from "./leveling-config-fields";
 import {
   LEVELING_TYPE_LABELS,
   POINT_TYPES,
@@ -29,9 +31,31 @@ export interface LevelingImport {
   type: LevelingType;
 }
 
+/**
+ * La configuración con lo que trae la importación: tipo, vuelta, BM de
+ * partida y modo digital (el archivo es de un nivel digital). Una sola regla
+ * para el editor y el formulario de creación.
+ */
+export function configWithImport(
+  config: LevelingConfigState,
+  imported: LevelingImport,
+): LevelingConfigState {
+  return {
+    ...config,
+    type: imported.type,
+    hasReturnRun: imported.return != null,
+    startBm: {
+      code: imported.startBm.code,
+      elevation: imported.startBm.elevation != null ? String(imported.startBm.elevation) : "",
+    },
+    level: { ...config.level, levelType: "digital" },
+  };
+}
+
 interface ImportDialogProps {
-  /** Tipo y cota de partida actuales del proceso (o del formulario). */
+  /** Tipo y BM de partida actuales del proceso (o del formulario). */
   currentType: LevelingType;
+  currentStartCode: string;
   currentStartElevation: number | null;
   /** El proceso ya tiene lecturas: se reemplazan, y se avisa. */
   hasReadings: boolean;
@@ -114,6 +138,7 @@ function RunPreview({
  */
 export function ImportDialog({
   currentType,
+  currentStartCode,
   currentStartElevation,
   hasReadings,
   onAccept,
@@ -152,7 +177,7 @@ export function ImportDialog({
     const f = e.target.files?.[0];
     if (!f) return;
     setFileName(f.name);
-    const result = readLevelingFile(await f.text());
+    const result = readLevelingFile(decodeFileBytes(await f.arrayBuffer()));
     setRead(result);
     setOverrides({});
     if (result.ok) {
@@ -167,15 +192,18 @@ export function ImportDialog({
 
   function accept() {
     if (!file || !rows) return;
-    const startCode = rows.forward[0]?.pointCode ?? file.startPoint?.code ?? "";
-    const elevation =
-      fileElevation != null && (useFileElevation || currentStartElevation == null)
-        ? fileElevation
-        : currentStartElevation;
+    // El BM va entero, código y cota: quedarse con la cota del proceso y el
+    // código del archivo emparejaría la cota de un punto con el nombre de otro.
+    const takeFile = fileElevation == null
+      ? currentStartElevation == null || currentStartCode.trim() === ""
+      : useFileElevation || currentStartElevation == null;
+    const startBm = takeFile
+      ? { code: rows.forward[0]?.pointCode ?? file.startPoint?.code ?? "", elevation: fileElevation }
+      : { code: currentStartCode, elevation: currentStartElevation };
     onAccept({
       forward: rows.forward,
       return: rows.return,
-      startBm: { code: startCode, elevation },
+      startBm,
       type: proposedLevelingType(rows, currentType),
     });
     setOpen(false);
@@ -280,10 +308,15 @@ export function ImportDialog({
               <div className="grid gap-3 sm:grid-cols-2">
                 <Select
                   label="Cómo se lee el recorrido"
-                  options={[
-                    { value: "single", label: "Un recorrido" },
-                    { value: "split", label: "Ida y vuelta" },
-                  ]}
+                  options={
+                    // Con una sola armada no hay ida y vuelta que partir.
+                    file.setups.length < 2
+                      ? [{ value: "single", label: "Un recorrido" }]
+                      : [
+                          { value: "single", label: "Un recorrido" },
+                          { value: "split", label: "Ida y vuelta" },
+                        ]
+                  }
                   value={mode}
                   onChange={(e) => {
                     setMode(e.target.value as "single" | "split");
@@ -312,8 +345,14 @@ export function ImportDialog({
                 <Select
                   label="Cota del BM de partida"
                   options={[
-                    { value: "file", label: `La del archivo: ${fileElevation!.toFixed(4)}` },
-                    { value: "process", label: `La del proceso: ${currentStartElevation!.toFixed(4)}` },
+                    {
+                      value: "file",
+                      label: `La del archivo: ${file.startPoint?.code ?? ""} = ${fileElevation!.toFixed(4)}`,
+                    },
+                    {
+                      value: "process",
+                      label: `La del proceso: ${currentStartCode} = ${currentStartElevation!.toFixed(4)}`,
+                    },
                   ]}
                   value={useFileElevation ? "file" : "process"}
                   onChange={(e) => setUseFileElevation(e.target.value === "file")}

@@ -80,7 +80,8 @@ export function toLibreta(
   file: ImportedLevelingFile,
   mode: ImportMode,
 ): { forward: LibretaRow[]; return: LibretaRow[] | null } {
-  if (mode.kind === "single") {
+  // Con una sola armada no hay ida y vuelta que partir.
+  if (mode.kind === "single" || file.setups.length < 2) {
     // Un solo recorrido: los tipos declarados por la plantilla solo valen si
     // el archivo no traía vuelta.
     const declared =

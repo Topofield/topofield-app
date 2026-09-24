@@ -10,6 +10,7 @@ import { computeLeveling, totalDistanceFromReadings } from "@/lib/calculations/l
 import type { LevelingType, ReadingInput } from "@/types/leveling";
 import {
   CSV_TEMPLATE,
+  decodeFileBytes,
   detectTurnSetup,
   proposedLevelingType,
   readLevelingFile,
@@ -201,5 +202,50 @@ describe("detector", () => {
     const r = readLevelingFile("nombre,edad\nAna,30");
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/Leica.*Plantilla CSV/);
+  });
+});
+
+describe("revisión de la Fase 16", () => {
+  it("lee un CSV guardado por Excel en Windows-1252", () => {
+    // «radiación» en Windows-1252: la ó es el byte 0xF3, inválido en UTF-8.
+    const bytes = Uint8Array.from([..."ida,A,radiaci"].map((c) => c.charCodeAt(0)).concat([0xf3, 0x6e]));
+    expect(decodeFileBytes(bytes)).toBe("ida,A,radiación");
+    expect(decodeFileBytes(new TextEncoder().encode("ida,Ñ"))).toBe("ida,Ñ");
+  });
+
+  it("respeta las comillas: una celda con el separador no corre las columnas", () => {
+    const f = read(
+      [
+        "recorrido,punto,tipo,v_mas,v_menos,dist_mas,dist_menos",
+        'ida,"A,1",bm,1.5,,30,',
+        "ida,B,,,1.0,,30",
+      ].join("\n"),
+    );
+    expect(toLibreta(f, { kind: "single" }).forward[0]!.pointCode).toBe("A,1");
+  });
+
+  it("un punto de cambio en dos filas conserva los tipos declarados en su sitio", () => {
+    const f = read(
+      [
+        "recorrido,punto,tipo,v_mas,v_menos,dist_mas,dist_menos",
+        "ida,A,bm,1.5,,30,",
+        "ida,R1,radiacion,,1.2,,12",
+        "ida,B,pc,,1.1,,29",
+        "ida,B,,1.4,,31,",
+        "ida,A,bm,,1.8,,30",
+      ].join("\n"),
+    );
+    const rows = toLibreta(f, { kind: "single" }).forward;
+    expect(rows.map((r) => r.pointCode)).toEqual(["A", "R1", "B", "A"]);
+    expect(rows.map((r) => r.pointType)).toEqual(["bm", "intermediate", "pc", "bm"]);
+  });
+
+  it("con una sola armada, ida y vuelta se lee como un recorrido", () => {
+    const f = read(
+      ["recorrido,punto,tipo,v_mas,v_menos,dist_mas,dist_menos", "ida,A,,1.5,,30,", "ida,B,,,1.0,,30"].join("\n"),
+    );
+    const rows = toLibreta(f, { kind: "split", turnSetup: 2 });
+    expect(rows.forward).toHaveLength(2);
+    expect(rows.return).toBeNull();
   });
 });

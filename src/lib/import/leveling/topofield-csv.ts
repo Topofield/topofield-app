@@ -39,8 +39,32 @@ function separatorOf(header: string): "," | ";" {
   return header.includes(";") ? ";" : ",";
 }
 
+/**
+ * Celdas de una línea, respetando comillas: Excel entrecomilla una celda que
+ * contiene el separador («"PC,1"»), y partirla corría todas las columnas.
+ */
 function cells(line: string, sep: string): string[] {
-  return line.split(sep).map((c) => c.trim().replace(/^"(.*)"$/, "$1").trim());
+  const out: string[] = [];
+  let cur = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]!;
+    if (ch === '"') {
+      if (quoted && line[i + 1] === '"') {
+        cur += '"';
+        i += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (ch === sep && !quoted) {
+      out.push(cur.trim());
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur.trim());
+  return out;
 }
 
 /** ¿Es la plantilla de TopoField? Por su cabecera, que es obligatoria. */
@@ -68,6 +92,7 @@ export function readTopofieldCsv(text: string): ReadResult {
     vuelta: { setups: [], types: [] },
   };
   const open: Record<Run, Setup | null> = { ida: null, vuelta: null };
+  const lastWasForeOnly: Record<Run, boolean> = { ida: false, vuelta: false };
 
   for (const [i, line] of all.slice(1).entries()) {
     const fila = i + 2;
@@ -94,7 +119,19 @@ export function readTopofieldCsv(text: string): ReadResult {
     }
 
     const r = runs[run];
-    r.types.push(type);
+    // Un punto de cambio escrito en dos filas —V− en una, V+ en la siguiente,
+    // mismo punto— es una sola fila de libreta: `toLibreta` las junta, así
+    // que aquí se junta también su tipo, o los declarados se correrían.
+    const cur0 = open[run];
+    const splitChange =
+      back != null && fore == null && cur0 != null && cur0.fores.at(-1)?.point === punto &&
+      lastWasForeOnly[run];
+    if (splitChange) {
+      if (type != null) r.types[r.types.length - 1] = type;
+    } else {
+      r.types.push(type);
+    }
+    lastWasForeOnly[run] = fore != null && back == null;
     // La V− cierra una visual adelante de la armada abierta; la V+ abre la
     // siguiente. Una fila de punto de cambio trae las dos, en ese orden.
     if (fore != null) {

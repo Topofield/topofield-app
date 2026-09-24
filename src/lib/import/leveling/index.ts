@@ -44,6 +44,19 @@ export function readLevelingFile(text: string): ReadResult {
   return reader.read(text);
 }
 
+/**
+ * El texto de un archivo. Excel en español guarda el CSV en Windows-1252:
+ * leído como UTF-8, «radiación» llegaba como «radiaci�n» y la fila no se
+ * entendía. Se intenta UTF-8 estricto y, si no lo es, Windows-1252.
+ */
+export function decodeFileBytes(bytes: ArrayBuffer | Uint8Array): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
+}
+
 export type { ImportedLevelingFile, LibretaRow, ReadResult } from "./types";
 export { CSV_TEMPLATE } from "./topofield-csv";
 export { detectTurnSetup, proposedLevelingType, toLibreta, type ImportMode } from "./to-libreta";

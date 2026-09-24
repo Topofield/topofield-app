@@ -40,7 +40,7 @@ import { CloseProcessDialog } from "./close-process-dialog";
 import { ReadingsTable, type ReadingDraftState } from "./readings-table";
 import { ResultsPanel } from "./results-panel";
 import { RunTabs } from "./run-tabs";
-import { ImportDialog, type LevelingImport } from "./import-dialog";
+import { configWithImport, ImportDialog, type LevelingImport } from "./import-dialog";
 import type { LibretaRow } from "@/lib/import/leveling";
 
 const STATUS_TONE: Record<
@@ -249,16 +249,7 @@ export function LevelingEditor({
   // Importar (Fase 16) llena el borrador y la configuración; se guarda como
   // siempre. El archivo es de un nivel digital: la libreta pasa a ese modo.
   function applyImport(imported: LevelingImport) {
-    setConfig({
-      ...config,
-      type: imported.type,
-      hasReturnRun: imported.return != null,
-      startBm: {
-        code: imported.startBm.code,
-        elevation: imported.startBm.elevation != null ? String(imported.startBm.elevation) : "",
-      },
-      level: { ...config.level, levelType: "digital" },
-    });
+    setConfig(configWithImport(config, imported));
     setForward(imported.forward.map(importedToDraft));
     setBack((imported.return ?? []).map(importedToDraft));
     setActiveRun("forward");
@@ -443,6 +434,7 @@ export function LevelingEditor({
             <div className="flex justify-end">
               <ImportDialog
                 currentType={config.type}
+                currentStartCode={config.startBm.code}
                 currentStartElevation={parseNumber(config.startBm.elevation)}
                 hasReadings={forward.length > 0 || back.length > 0}
                 onAccept={applyImport}

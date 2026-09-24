@@ -546,7 +546,7 @@ La libreta de nivelación se puede importar del `.L` de un nivel digital Leica
 o de una plantilla CSV propia, en el editor y al crear, con una
 previsualización donde se elige cómo leer el recorrido y se corrigen los
 tipos de punto. De paso se corrigió la vuelta de una nivelación abierta.
-652 → 672 tests.
+652 → 676 tests.
 
 **Aprendizajes a llevar a fases siguientes:**
 
