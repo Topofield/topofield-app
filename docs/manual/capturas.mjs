@@ -42,13 +42,22 @@ mkdirSync(OUT, { recursive: true });
 
 const proyecto = sql("select id from public.projects where name='Lote catastral' limit 1;");
 const calculado = sql("select id from public.polygonal_processes where name like 'Cuadrado con error%';");
-const cerrado = sql("select id from public.polygonal_processes where status='closed';");
-const rechazado = sql("select id from public.polygonal_processes where status='rejected';");
+// Filtradas por proyecto: la aplicación crea el «Proyecto de ejemplo» la
+// primera vez que el usuario del seed inicia sesión, con su propio proceso
+// cerrado, y sin filtro la consulta devolvía dos ids y la URL salía rota.
+// Sin proyecto (base sin sembrar) no se consulta: `project_id=''` haría fallar
+// psql antes de que la guarda de abajo explique que falta el seed.
+const cerrado = proyecto
+  ? sql(`select id from public.polygonal_processes where status='closed' and project_id='${proyecto}';`)
+  : "";
+const rechazado = proyecto
+  ? sql(`select id from public.polygonal_processes where status='rejected' and project_id='${proyecto}';`)
+  : "";
 const nivelacion = sql("select id from public.leveling_processes where name like 'Circuito BM-1%';");
 const proyectoMonitoreo = sql("select id from public.projects where name='Edificio en monitoreo' limit 1;");
 const lugarMonitoreo = sql("select id from public.sites where name='Edificio Torre Central' limit 1;");
 const visitaCalculada = sql(
-  "select id from public.settlement_visits where site_id=(select id from public.sites where name='Edificio Torre Central') and visit_number=1;",
+  "select id from public.settlement_visits where site_id=(select id from public.sites where name='Edificio Torre Central') and visit_number=5;",
 );
 
 if (

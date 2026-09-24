@@ -21,7 +21,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 9 | Cadena de distancias de nivelación | [`prds/08-cadena-distancias-nivelacion.md`](./prds/08-cadena-distancias-nivelacion.md) | cerrada |
 | 10 | Nomenclatura de nivelación | [`prds/09-nomenclatura-nivelacion.md`](./prds/09-nomenclatura-nivelacion.md) | cerrada |
 | 11 | Estado de los BMs | [`prds/10-estado-bms.md`](./prds/10-estado-bms.md) | cerrada |
-| 12 | Alerta por lectura desfasada | — | pendiente |
+| 12 | Alerta por lectura desfasada | [`prds/11-lectura-desfasada.md`](./prds/11-lectura-desfasada.md) | cerrada |
 | 13 | Canvas de poligonal | — | pendiente |
 | 14 | Ajuste por mínimos cuadrados | — | pendiente |
 | 15 | Georreferenciación de levantamientos | — | pendiente |
@@ -538,6 +538,34 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 12 — Alerta por lectura desfasada (2026-09-23)
+
+Aviso, sin bloqueo, cuando una lectura va contra la tendencia de su punto o la
+supera más del doble. El margen sale del orden de la visita. 529 → 556 tests.
+Sin migración.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una regla estadística se prueba contra series reales antes de
+  escribirla en el PRD.** El criterio obvio —extrapolar la velocidad
+  anterior— parecía correcto y marcaba como error una lectura correcta del
+  punto más crítico del seed. Lo delató correr la regla, en el propio PRD,
+  sobre P-09 y las series del seed. Esas series pasaron a ser tests de
+  regresión con los cuatro márgenes: una regla que avisa de más deja de
+  leerse, y ese fallo no lo detecta ningún test que no use datos reales.
+- **Un dato de verificación que depende del orden de las pruebas oculta
+  defectos.** `capturas.mjs` elegía «el» proceso cerrado sin filtrar por
+  proyecto. Funcionó mientras nadie iniciaba sesión antes de capturar. Al
+  verificar en pantalla, el login creó el «Proyecto de ejemplo» con su propio
+  proceso cerrado, y la captura 09 salió como «Proyecto no encontrado». **Una
+  consulta que espera una fila tiene que filtrar hasta que solo pueda haber
+  una.**
+- **El entorno también se verifica.** Media sesión se fue en que Docker
+  Desktop se quedó con el socket del motor nativo: `docker ps` vacío con la
+  base viva. El diagnóstico está ahora en la § 2 de la doc técnica. **Antes de
+  verificar una fase, comprobar que `docker ps` lista el stack** en vez de
+  asumir que el CLI ve lo que responde en los puertos.
 
 ### Cierre Fase 11 — Estado de los BMs (2026-09-23)
 

@@ -584,6 +584,25 @@ instante:
 Un valor positivo es un **levantamiento**, no un asentamiento, y se muestra
 como tal: es un hallazgo que vale la pena revisar, no un error de signo.
 
+**Lecturas fuera de tendencia.** Desde la tercera lectura de un punto, la
+aplicación compara cada cota con la tendencia de ese punto y avisa bajo la
+casilla si la lectura:
+
+- va **contra** su tendencia más que el margen —por ejemplo, un punto que
+  viene bajando y de pronto sube—, o
+- lo mueve **más del doble** de lo que su ritmo anterior preveía, más el
+  margen.
+
+El margen absorbe el ruido de medición y depende del orden de precisión de la
+visita: 1,5 mm en primer orden, 3 en segundo, 6 en tercero y 12 en ordinario.
+Moverse **menos** de lo previsto nunca avisa, porque un asentamiento por
+consolidación frena con el tiempo.
+
+> **El aviso no bloquea.** Pide verificar la lectura en la libreta o volver a
+> medir; una lectura atípica también puede ser real. Si dos visitas seguidas
+> salen marcadas, casi siempre el error está en la primera: la segunda se
+> compara contra una velocidad ya contaminada.
+
 ### 7.4 El semáforo y la gráfica
 
 ![Panel de análisis: visitas, semáforo por punto, diferenciales y gráfica](../../public/manual/15-panel-asentamientos.png)
@@ -606,6 +625,13 @@ cuatro niveles:
 > **El semáforo no se distingue solo por color.** Cada nivel tiene además una
 > forma propia y su nombre escrito junto al indicador, así que se reconoce
 > igual con daltonismo o en una impresión en blanco y negro.
+
+La columna de estado del semáforo muestra además la marca **⚠ Lectura fuera
+de tendencia** cuando la lectura de la última visita la tuvo. No cambia el
+nivel del semáforo: es un aviso sobre la calidad del dato, no sobre la
+gravedad del movimiento. Es útil cuando el mismo punto sale en **Alerta** y
+**Acelerando**: la marca indica que lo más probable es una lectura mal tomada,
+no una aceleración real.
 
 **Un dato en alarma se registra con normalidad.** El semáforo es un
 diagnóstico, no un control de captura: la aplicación **nunca** impide guardar

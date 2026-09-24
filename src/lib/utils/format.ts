@@ -161,3 +161,36 @@ export function settlementPointLabel(point: {
   }
   return point.code;
 }
+
+/** mm con un decimal, en es-CO, sin signo. */
+function mmAbs(value: number): string {
+  return Math.abs(value).toLocaleString("es-CO", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}
+
+/**
+ * Mensaje del aviso de lectura fuera de tendencia (Fase 12). Dice qué se
+ * esperaba y qué se midió, para que quien verifica sepa qué buscar en la
+ * libreta.
+ */
+export function formatTrendDeviation(deviation: {
+  kind: "contrary" | "excessive";
+  partialMm: number;
+  previousVelocity: number;
+  expectedMm: number;
+}): string {
+  const moves = (mm: number) => (mm > 0 ? "subir" : "bajar");
+  if (deviation.kind === "contrary") {
+    // Con velocidad previa 0 la regla trata el punto como «bajando» (d = −1),
+    // pero decirlo así sería falso: el punto estaba quieto.
+    const venia =
+      deviation.previousVelocity === 0
+        ? "estable"
+        : `${deviation.previousVelocity > 0 ? "subiendo" : "bajando"} ${mmAbs(deviation.previousVelocity)} mm/mes`;
+    return `Se sale de la tendencia: el punto venía ${venia} y esta lectura lo hace ${moves(deviation.partialMm)} ${mmAbs(deviation.partialMm)} mm. Verifica la lectura.`;
+  }
+  const verbo = deviation.partialMm > 0 ? "sube" : "baja";
+  return `Se sale de la tendencia: ${verbo} ${mmAbs(deviation.partialMm)} mm cuando su ritmo anterior preveía unos ${mmAbs(deviation.expectedMm)} mm. Verifica la lectura.`;
+}

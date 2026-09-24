@@ -135,6 +135,36 @@ import type { Thresholds } from "@/types/settlement";
 export const DAYS_PER_MONTH = 365.25 / 12;
 
 /**
+ * Longitud de referencia de un circuito de monitoreo alrededor de una
+ * estructura, en km, para el margen del aviso de lectura fuera de tendencia
+ * (Fase 12).
+ *
+ * Es una DECISIÓN, no una norma: 250 m es razonable para un edificio y puede
+ * quedarse corto para una presa. Vive como constante con nombre para que se
+ * vea y se pueda discutir sin tocar la regla. Ver
+ * docs/prds/11-lectura-desfasada.md, «El margen».
+ */
+export const TREND_DEVIATION_REFERENCE_KM = 0.25;
+
+/**
+ * Cuánto puede superar una lectura el ritmo anterior de su punto antes de
+ * avisar como «excesiva»: el doble. Holgado a propósito — una aceleración real
+ * menor es asunto del indicador de aceleración y de los umbrales de
+ * velocidad, no de este aviso.
+ */
+export const TREND_DEVIATION_RATE_FACTOR = 2;
+
+/**
+ * Margen, en mm, que absorbe el ruido de medición en el aviso de lectura fuera
+ * de tendencia: la tolerancia de cierre `K·√D` de un circuito de referencia,
+ * con la K de nivelación del orden que declaró la visita. Da 1.5 / 3 / 6 / 12
+ * mm de primer orden a ordinario.
+ */
+export function trendDeviationMargin(order: PrecisionOrder): number {
+  return levelingTolerance(order, TREND_DEVIATION_REFERENCE_KM);
+}
+
+/**
  * Umbrales de alerta por tipo de estructura (marco teórico § 4.1).
  *
  * El § 3.2 del PRD principal daba un único default (10/25/50) que son los
