@@ -1,8 +1,8 @@
 # PRD-de-fase 18 — Libreta de nivelación y panel de asentamientos
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-24
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-24
 
 **Rama:** `fase-18-libreta-panel-asentamientos`
 **Origen:** prototipo del usuario
@@ -12,6 +12,50 @@ planificado en
 **Módulo:** control de asentamientos
 **Reutiliza:** motor y captura de nivelación (fases 4, 8, 9 y 10) e importación
 de libretas (fase 16)
+
+> **Divergencias de la implementación:**
+>
+> - **`analysis-panel.tsx` no sale.** Se quedó sin su gráfica, que la sustituye
+>   la evolución por punto, pero conserva el semáforo de la última visita con
+>   la **tendencia** (aceleración, criterio `j` de la Fase 5) y el aviso de la
+>   Fase 12, y los diferenciales. Quitarlo habría perdido el indicador de
+>   aceleración, que el prototipo no tiene. Salen `visits-list.tsx` y
+>   `settlement-chart.tsx`.
+> - **Una libreta a medias se calcula como recorrido abierto.** Capturando en
+>   vivo, antes de la V− de cierre, el motor cerrado comparaba el último punto
+>   de la cadena con el amarre y daba un cierre de metros que se habría
+>   guardado. Regla nueva en `computeVisitBook`, con test.
+> - **Códigos del seed `TA-01…TA-08`,** no `PC-01…` como en el prototipo:
+>   «PC» sigue siendo el punto de cambio (decisión 10). Torre Alameda tiene 14
+>   visitas, la 9 fuera de tolerancia.
+> - **El Excel** añade en «Datos Crudos» un bloque «Visitas» en lugar de
+>   columnas: esa tabla es de una fila por lectura, y el amarre y el cierre se
+>   repetirían en cada punto.
+> - **Consultas:** `getVisitBook` y `getSiteBooks` en `queries.ts`; la ruta del
+>   Excel lee la libreta directamente.
+> - **Hallado en la verificación en pantalla:**
+>   - `bm-selector` no reconocía el BM del catálogo en una visita: la copia
+>     guarda `100.0000` y el catálogo entrega `100`. Compara la cota como
+>     número; nivelación no cambia.
+>   - `KpiCard` pinta el valor en un `<div>`: un semáforo dentro de un `<p>`
+>     rompía la hidratación.
+>   - `formatDateShort` usa una lista fija de meses: `Intl` puede abreviar
+>     distinto en servidor y navegador («sep» / «sept»).
+>   - Un `sr-only` absoluto en la tabla de visitas ensanchaba el panel a 709 px
+>     en un teléfono: el contenedor con desplazamiento es `relative`.
+>   - El registro de nivelación resalta los puntos de control por `point_id`:
+>     tras renombrar un punto, las visitas cerradas conservan el código viejo
+>     (decisión 20) y dejaban de resaltarse.
+>   - El aviso «no aparece en la libreta» se daba también para puntos que sí
+>     aparecen sin V−: ahora dice que les falta la vista menos.
+> - **Hallado en la revisión de conjunto:** una llamada directa podía guardar
+>   cotas `NaN` (el protocolo de las Server Actions lo transporta y Postgres lo
+>   acepta en `numeric`). `validateVisitBook` rechaza números no finitos.
+> - **`Drawer`** mantiene Tab dentro del panel (no estaba pedido; lo exige el
+>   `aria-modal`). Un `Modal` abierto encima se cerraría con el mismo Esc:
+>   anotado en la § 11 de la doc técnica.
+> - La tabla de captura compartida gana también un `aria-label` en el campo de
+>   código, en nivelación incluida.
 
 ## Propósito
 

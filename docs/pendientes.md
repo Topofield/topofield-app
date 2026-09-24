@@ -14,8 +14,10 @@ que lo descartó.
 Fase 17. La tabla y los textos de abajo se conservan como registro.
 
 La Fase 18 (libreta de nivelación y panel de asentamientos, a partir del
-prototipo del usuario) dejó dos peticiones nuevas **sin fase**: UI1 y UI2, al
-final de este archivo.
+prototipo del usuario) dejó cuatro peticiones nuevas **sin fase**: N7 y N8 en
+«Nivelación» —dos sospechas sobre el motor y el validador de nivelación que la
+fase encontró y no tocó, porque cambian resultados de nivelación— y UI1 y UI2,
+al final de este archivo.
 
 ### Renumeración del 2026-09-22
 
@@ -174,6 +176,42 @@ comparten códigos.
 
 Análisis completo en
 [`carteras/analisis-nivelacion-verjon.md`](./carteras/analisis-nivelacion-verjon.md).
+
+### N7 · El equilibrado de visuales compara visuales de armadas distintas
+
+Hallado en la Fase 18, al generar las libretas del seed. La Fase 9 define el
+equilibrado **por armada** —`abs(d_atrás − d_adelante)`, y «una armada aporta
+`back_distance_m` + `fore_distance_m`»—, pero `validateSightBalance`
+(`src/lib/validators/leveling.ts`) compara la V+ y la V− de **una misma fila**.
+En la libreta, la fila de un punto de cambio lleva la V− que **cierra** la
+armada anterior y la V+ que **abre** la siguiente: son de armadas distintas.
+Una armada real es la V+ de una fila y la V− de la siguiente fila que propaga
+cota.
+
+Consecuencia: puede avisar de un desequilibrio que no existe y callar uno
+real. Arreglarlo cambia avisos en procesos ya guardados y los tests de la
+Fase 9, así que no entró en la 18. El generador de libretas del seed lo
+esquiva con todas las distancias parecidas entre sí.
+
+### N8 · El BM de partida recibe compensación
+
+Hallado en la Fase 18: en el registro de nivelación de una visita, el BM de
+amarre sale compensado (100.0003 en lugar de 100.0000). Pasa igual en
+nivelación desde la Fase 9: los tres circuitos cerrados del seed dejan su
+BM-1 en 100.0013.
+
+`accumulateDistances` (`src/lib/calculations/leveling.ts`) suma a cada fila
+**su propia** distancia V+, que es la visual que sale de ese punto hacia la
+armada siguiente. El BM de partida queda así con un acumulado mayor que cero y
+la compensación proporcional lo mueve, aunque su cota es conocida. Lo mismo
+desplaza un poco la de cada punto de cambio: su distancia desde el origen
+debería acabar en su V−. El punto de cierre no se ve afectado (su acumulado
+es el total) ni las intermedias (heredan el de su armada, que es lo
+correcto). Las cotas de los puntos de control de las visitas tampoco, salvo
+uno usado como punto de cambio.
+
+Es del motor compartido y cambia cotas de nivelación ya guardadas: fase
+propia, con su migración de recálculo si se decide corregirlo.
 
 ---
 
