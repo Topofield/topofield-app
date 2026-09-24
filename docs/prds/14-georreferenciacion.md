@@ -16,20 +16,21 @@ Un levantamiento suele arrancar en un **sistema local arbitrario**, por ejemplo
 el arranque en (1000, 2000) con un azimut supuesto. Las coordenadas reales
 llegan después, a veces meses después y con el proceso ya cerrado: se miden con
 GPS dos de sus estaciones. Esta fase lleva la poligonal al sistema real a partir
-de esas **dos estaciones con coordenadas conocidas**, deja **registro** de quién
-lo hizo, cuándo y con qué, y conserva las coordenadas locales.
+de esas **dos estaciones con coordenadas conocidas**, recalculándola, **esté o
+no cerrada**, y anota cuándo se hizo y con qué puntos.
+
+Criterio del usuario al revisar el PRD: **que sea fácil de recalcular aunque
+el proceso esté cerrado**. El producto todavía no se enfoca en una
+trazabilidad estricta, así que no se pone ceremonia alrededor de la acción.
 
 ## Cambio de reglas del proyecto
 
 `CLAUDE.md` dice: «Los procesos con status "closed" son inmutables. Nunca
 generar UPDATE sobre un proceso cerrado». El PRD principal (§ 4.6) dice lo
-mismo. Esta fase abre **una excepción estrecha**, decidida por el usuario:
-
-- **Solo** las columnas de posición: coordenadas, proyecciones, azimuts y los
-  datos de arranque y llegada. Nunca ángulos, distancias, lecturas, errores,
-  perímetro, precisión ni veredicto.
-- **Solo** a través de la función de base `georeference_polygonal_process`,
-  que deja un registro de auditoría en la misma transacción.
+mismo. Esta fase abre una excepción: **en un proceso cerrado se pueden
+reescribir las columnas de posición** —coordenadas, proyecciones, azimuts y los
+datos de arranque y llegada—. Lo que el cierre certificó sigue inmutable:
+ángulos, distancias, lecturas, errores, perímetro, precisión y veredicto.
 
 Las dos reglas se enmiendan en esta fase: `CLAUDE.md` y el § 4.6 del PRD
 principal.
@@ -70,52 +71,48 @@ parte, pondría el amarre en el sistema equivocado. Ver la decisión 7.
 `reject_update_on_closed_process()` protege a la vez las cabeceras de
 poligonal, nivelación, lugar y visita. La excepción no puede ir en esa
 función: poligonal pasa a tener **su propia función**, y las demás tablas no se
-tocan.
+tocan. Nivelación y asentamientos siguen igual de inmutables.
 
 ## Decisiones
 
-Las cuatro primeras las tomó el usuario al abrir la fase.
+Las cuatro primeras las tomó el usuario al abrir la fase, y la 3 la simplificó
+al revisar el PRD.
 
 | # | Decisión | Razón |
 |---|---|---|
 | 1 | **Solo poligonales** | Es lo que acordó la Fase 7, y hay carteras reales para probarlo. La nivelación con cota arbitraria queda fuera |
 | 2 | **Dos estaciones con coordenadas reales** definen la transformación | Es el caso típico: GPS a posteriori sobre dos puntos del levantamiento. El diálogo «Reasignar coordenadas» (arranque + azimut) sigue existiendo para procesos no cerrados, sin cambios |
-| 3 | **Recalcular y guardar**, con excepción estrecha en el trigger y las coordenadas anteriores guardadas en un registro propio | Decisión del usuario, y lo acordado en la Fase 7 |
-| 4 | Los **informes** muestran siempre las coordenadas **georreferenciadas**, con una nota de fecha y autor | Decisión del usuario. Un informe emitido deja de ser idéntico al reabrirlo: se enmienda esa afirmación en la doc técnica y en el comentario de la página imprimible |
+| 3 | **Recalcular y guardar**, esté o no cerrado, como un guardado más | Decisión del usuario: fácil de recalcular, sin limitar el uso. No hay función de base, ni bandera, ni registro de solo inserción |
+| 4 | Los **informes** muestran siempre las coordenadas **georreferenciadas**, con una nota de fecha | Decisión del usuario. Un informe emitido deja de ser idéntico al reabrirlo: se enmienda esa afirmación en la doc técnica y en el comentario de la página imprimible |
 | 5 | Se **recalcula** con la entrada transformada; no se rota lo calculado | Es lo que haría el topógrafo si hubiera tenido las coordenadas reales desde el principio. Y así el editor, el informe, el Excel y el dibujo —que recalculan desde la entrada (Fase 13)— coinciden con lo guardado. Con Tránsito las coordenadas se mueven hasta unos mm más allá de un movimiento rígido (hallazgo 1), y el diálogo lo advierte |
 | 6 | Transformación **rígida** (rotación + traslación, sin escala), ajustada a las dos estaciones por sus centroides. El **factor de escala** se calcula y se muestra, pero no se aplica | Una escala cambiaría las distancias medidas y, con ellas, el error lineal y el perímetro que certificó el cierre |
-| 7 | Al georreferenciar, un amarre del catálogo pasa a **amarre manual**: se conserva el código y se quita `reference_point_id` | Es la única forma de que el azimut rotado sobreviva al siguiente guardado (hallazgo 2). El registro guarda el `reference_point_id` anterior. El dibujo deja de mostrar el amarre, porque su posición real no se conoce |
+| 7 | Al georreferenciar, un amarre del catálogo pasa a **amarre manual**: se conserva el código y se quita `reference_point_id` | Es la única forma de que el azimut rotado sobreviva al siguiente guardado (hallazgo 2). El dibujo deja de mostrar el amarre, porque su posición real no se conoce |
 | 8 | La **rotación se redondea a 0.1″** y la traslación a 0.1 mm | Son las resoluciones de las columnas: el azimut de arranque rotado sigue siendo exacto en DMS, y la traslación cabe en `decimal(12,4)` sin redondear otra vez |
-| 9 | Se puede georreferenciar un proceso **calculado o cerrado**; no uno rechazado, en borrador ni en curso | Hacen falta coordenadas calculadas. Un rechazado no certifica ninguna posición. Un proceso no cerrado con cambios sin guardar exige guardar antes, como el cierre |
-| 10 | Se puede georreferenciar **más de una vez**, y cada vez queda registrada | Corregir una coordenada de GPS mal tecleada no puede exigir reabrir el proceso. Deshacer es georreferenciar de nuevo con las coordenadas anteriores, que el registro conserva |
+| 9 | Se puede georreferenciar **cualquier proceso con coordenadas calculadas**, en cualquier estado, también rechazado | Sin limitar el uso. Hacen falta coordenadas en las dos estaciones elegidas. Un proceso no cerrado con cambios sin guardar exige guardar antes, para no mezclar la edición en curso con la georreferenciación |
+| 10 | Se puede georreferenciar **más de una vez**. Se guarda **solo la última**, en columnas del proceso | Corregir un GPS mal tecleado es georreferenciar de nuevo, y deshacer es georreferenciar con las coordenadas anteriores. No hay historial: no se busca trazabilidad estricta |
 | 11 | El factor de escala fuera de la precisión del orden **avisa, no bloquea** | Con una proyección de factor ≠ 1 (p. ej. CTM12, k₀ = 0.9992) la diferencia entre distancia de terreno y de cuadrícula supera 1:5000 aunque todo esté bien. Decide el topógrafo |
 
 ### Cómo se abre la excepción en la base
 
-Se consideraron dos formas de hacerlo; se propone la primera.
+Los triggers de la cabecera de poligonal y de sus estaciones admiten un UPDATE
+sobre un proceso cerrado o rechazado **si lo que cambió está en la lista
+blanca de posición**. Se comparan las filas `to_jsonb(new) - lista` y
+`to_jsonb(old) - lista`: si difieren, se rechaza como hoy.
 
-- **Función de base con bandera de transacción (propuesta).**
-  `georeference_polygonal_process(...)` (`security invoker`, así que aplica la
-  RLS del usuario) marca la transacción con
-  `set_config('topofield.georeferencing', 'on', true)`, lee las coordenadas
-  actuales para el registro, inserta el registro y escribe las columnas
-  permitidas. Los triggers de la cabecera y de las estaciones admiten un UPDATE
-  sobre un proceso cerrado **solo** con la bandera activa y **solo** si lo que
-  cambió está en la lista blanca: se comparan las filas `to_jsonb(new) -
-  lista` y `to_jsonb(old) - lista`. PostgREST no deja al cliente fijar esa
-  bandera: solo se puede activar llamando a la función, y la función siempre
-  deja registro.
-- **Alternativa: lista blanca sin bandera.** El trigger admitiría cualquier
-  UPDATE de columnas de posición sobre un cerrado. Es más simple, pero
-  cualquier llamada directa a la API REST podría mover coordenadas sin dejar
-  registro. **Se descarta**: la trazabilidad es el tema de la aplicación.
+- **Cabecera:** `start_north`, `start_east`, `start_azimuth_*`, `end_north`,
+  `end_east`, `end_azimuth_*`, `reference_point_id` y las columnas
+  `georef_*` nuevas.
+- **Estaciones:** `azimuth_*`, `delta_north`, `delta_east`,
+  `corrected_delta_north`, `corrected_delta_east`, `north`, `east`.
 
-**Límite de la propuesta:** la función escribe los valores que le da la acción
-del servidor; no recalcula el motor en SQL. Un dueño que llame a la función
-directamente podría escribir coordenadas que no salen de una rotación, pero
-**no** podría tocar ángulos, distancias ni el veredicto, y el registro
-guardaría sus coordenadas anteriores leídas por la propia función. Recalcular
-el motor en SQL eliminaría ese límite a costa de duplicar el motor.
+Los ángulos corregidos no entran en la lista: una rotación no los cambia, y así
+la base garantiza que el cierre sigue siendo el mismo. Borrar un cerrado, o
+tocar sus lecturas, sigue prohibido.
+
+**Lo que se acepta:** cualquier sesión del dueño puede mover las coordenadas de
+un cerrado por la API REST sin pasar por la acción. Es coherente con la
+decisión 3: la garantía que se mantiene es la del **veredicto**, no la de la
+posición.
 
 ## La transformación
 
@@ -146,63 +143,32 @@ el efecto de Tránsito si es el método.
 ## Modelo de datos
 
 ```sql
-create table public.polygonal_georeferences (
-  id                        uuid primary key default gen_random_uuid(),
-  process_id                uuid not null references public.polygonal_processes(id) on delete cascade,
-  created_at                timestamptz not null default now(),
-  created_by                uuid not null default auth.uid() references auth.users(id),
-  -- Los dos puntos de control: estación, coordenadas locales y reales.
-  point_a_code              text not null,
-  point_a_local_north       decimal(12,4) not null,
-  point_a_local_east        decimal(12,4) not null,
-  point_a_north             decimal(12,4) not null,
-  point_a_east              decimal(12,4) not null,
-  point_b_code              text not null,
-  -- (mismas cuatro columnas para B)
-  -- La transformación aplicada. La rotación es un ángulo: DMS en tres campos.
-  rotation_deg              int not null,
-  rotation_min              int not null,
-  rotation_sec              decimal(5,1) not null,
-  shift_north               decimal(12,4) not null,
-  shift_east                decimal(12,4) not null,
-  scale_factor              decimal(12,9) not null,
-  -- Lo que había antes, leído por la función, no enviado por el cliente.
-  previous_start_north      decimal(12,4) not null,
-  previous_start_east       decimal(12,4) not null,
-  previous_start_azimuth_deg int, previous_start_azimuth_min int,
-  previous_start_azimuth_sec decimal(5,1),
-  previous_end_north        decimal(12,4), previous_end_east decimal(12,4),
-  previous_end_azimuth_deg  int, previous_end_azimuth_min int,
-  previous_end_azimuth_sec  decimal(5,1),
-  previous_reference_point_id uuid,
-  previous_coordinates      jsonb not null   -- [{station_order, point_code, north, east}]
-);
+alter table public.polygonal_processes
+  -- La última georreferenciación (decisión 10). Todas null si nunca se hizo.
+  add column georef_at            timestamptz,
+  add column georef_by            uuid references auth.users(id),
+  add column georef_point_a_code  text,
+  add column georef_point_b_code  text,
+  -- La rotación es un ángulo: DMS en tres campos.
+  add column georef_rotation_deg  int,
+  add column georef_rotation_min  int,
+  add column georef_rotation_sec  decimal(5,1),
+  add column georef_scale_factor  decimal(12,9);
 ```
 
-- **RLS**: `select` e `insert` para el dueño del proyecto, como el resto. Sin
-  políticas de `update` ni `delete`, y un trigger que los rechaza como defensa:
-  el registro es de solo inserción.
-- **Triggers**: la cabecera de poligonal pasa a su propia función
-  (`reject_update_on_closed_polygonal_process`), con la excepción de la lista
-  blanca; la de estaciones gana la misma excepción. Las listas blancas son:
-  - cabecera: `start_north`, `start_east`, `start_azimuth_*`, `end_north`,
-    `end_east`, `end_azimuth_*`, y `reference_point_id` solo hacia `null`;
-  - estaciones: `azimuth_*`, `delta_north`, `delta_east`,
-    `corrected_delta_north`, `corrected_delta_east`, `north`, `east`.
-
-  Los ángulos corregidos no entran en la lista: una rotación no los cambia, y
-  así la base garantiza que el cierre sigue siendo el mismo.
-- **Función** `georeference_polygonal_process(p_process_id uuid, p_record
-  jsonb, p_header jsonb, p_stations jsonb)`: rechaza procesos rechazados, en
-  borrador o en curso (decisión 9), y hace todo en una transacción.
+- Los triggers de la cabecera y de las estaciones admiten la lista blanca de
+  posición en un cerrado (arriba). La cabecera pasa a su propia función,
+  `reject_update_on_closed_polygonal_process`; la de estaciones se edita.
+- Sin tabla nueva y sin función de base: la acción del servidor escribe con el
+  mismo camino que el guardado.
 
 ## Superficie
 
 ### Editor
 
-- Botón **«Georreferenciar»**, también en un proceso cerrado. Deshabilitado,
-  con el motivo al lado, en un rechazado, en un proceso sin coordenadas y en
-  uno con cambios sin guardar.
+- Botón **«Georreferenciar»**, en cualquier estado, también cerrado.
+  Deshabilitado, con el motivo al lado, solo sin coordenadas calculadas o con
+  cambios sin guardar.
 - **Diálogo**:
   - Dos selectores de estación (vértices distintos con coordenadas) y, para
     cada uno, Norte y Este reales, tecleados o tomados de un punto del
@@ -215,37 +181,35 @@ create table public.polygonal_georeferences (
   - **Avisos** que no bloquean: el factor de escala fuera de la precisión del
     orden (decisión 11); el método es Tránsito (hallazgo 1); el proceso tiene
     un amarre del catálogo, que pasa a manual (decisión 7).
-  - En un proceso **cerrado**, la confirmación explica que solo se reescriben
-    coordenadas y azimuts, con registro, y que el veredicto no cambia.
-- Tras georreferenciar: una etiqueta «Georreferenciado el <fecha>» y una
-  sección **«Georreferenciación»** con el historial. Cada entrada muestra
-  fecha, autor, puntos, rotación, factor de escala y residuos.
+  - En un proceso **cerrado**, el texto del botón de confirmar lo dice: se
+    reescriben coordenadas y azimuts, y el veredicto no cambia. Sin un paso
+    de confirmación extra.
+- Tras georreferenciar, una línea bajo el título: «Georreferenciado el
+  <fecha> con <A> y <B> (rotación <θ>, factor de escala <k>)».
 
 ### Informe imprimible
 
 Las coordenadas actuales (decisión 4) y una nota en la sección de cada
-poligonal georreferenciada: «Coordenadas georreferenciadas el <fecha> por
-<autor>, con <A> y <B> (rotación <θ>, factor de escala <k>)».
+poligonal georreferenciada: «Coordenadas georreferenciadas el <fecha> con <A> y
+<B> (rotación <θ>, factor de escala <k>)».
 
 ### Excel
 
 - «Cálculos» lleva las coordenadas actuales, como hoy.
-- «Resumen» gana la sección «Georreferenciación» con la última: fecha, autor,
-  puntos, coordenadas locales y reales de cada uno, rotación, traslación,
-  factor de escala y número de georreferenciaciones.
+- «Resumen» gana la sección «Georreferenciación»: fecha, puntos, rotación y
+  factor de escala.
 
 ## Archivos
 
 | Archivo | Qué cambia |
 |---|---|
-| `supabase/migrations/<ts>_georreferenciacion.sql` | Tabla, RLS, función, triggers propios de la cabecera y de las estaciones |
+| `supabase/migrations/<ts>_georreferenciacion.sql` | Columnas `georef_*` y la lista blanca en los triggers de la cabecera y de las estaciones |
 | `src/types/database.ts` | Regenerado |
 | `src/lib/calculations/georeference.ts` | Nuevo, puro: transformación desde dos puntos, aplicar a la entrada, factor de escala |
-| `src/lib/validators/polygonal.ts` | Puntos de control válidos; estado admitido |
-| `src/app/(app)/projects/[id]/polygonal/[pid]/actions.ts` | `georeferencePolygonalProcessAction`: transforma, recalcula, comprueba el veredicto y llama a la función |
+| `src/lib/validators/polygonal.ts` | Puntos de control válidos |
+| `src/app/(app)/projects/[id]/polygonal/[pid]/actions.ts` | `georeferencePolygonalProcessAction`: transforma, recalcula, comprueba el veredicto y escribe por el camino del guardado |
 | `src/components/polygonal/georeference-dialog.tsx` | Nuevo |
-| `src/components/polygonal/polygonal-editor.tsx` | Botón, etiqueta e historial |
-| `src/lib/supabase/queries.ts` | Registro de georreferenciaciones |
+| `src/components/polygonal/polygonal-editor.tsx` | Botón y línea de la última georreferenciación |
 | `src/lib/export/polygonal-workbook.ts` · página imprimible | Sección y nota |
 | `scripts/seed.mjs` | La cartera Vivero en sistema local, cerrada |
 | `CLAUDE.md` · `PRD-TopoField.md` § 4.6 | La excepción a la inmutabilidad |
@@ -281,15 +245,15 @@ poligonal georreferenciada: «Coordenadas georreferenciadas el <fecha> por
 | Invariancia | Con los cuatro métodos, el veredicto es el mismo en local y en real. Bowditch, Crandall y mínimos cuadrados dan la rotación rígida de lo calculado en local (a 1e-6 m). Tránsito no, con una diferencia acotada: 2.66 mm en la Vivero |
 | Transformación | Recupera θ y t exactos de dos puntos sin ruido. Con ruido, residuos iguales y opuestos. Factor de escala. Redondeo a 0.1″ y 0.1 mm |
 | Abierta con control | Transforma también el punto y el azimut de llegada, y sigue llegando |
-| Validación | Mismo punto dos veces, puntos coincidentes, coordenadas no finitas, estado no admitido |
-| Seguridad | Probar la ruta: la acción rechaza un rechazado y un proceso con coordenadas sin calcular |
+| Validación | Mismo punto dos veces, puntos coincidentes, coordenadas no finitas, estación sin coordenadas |
+| Ruta | Probar la acción, no solo el módulo: georreferencia un cerrado y un rechazado, y rechaza un proceso sin coordenadas calculadas |
 
 **Contra la base**, con `psql` y registrado en el guion de pruebas:
 
-- Un UPDATE directo de `north` sobre un cerrado **falla**.
-- La función sobre un cerrado funciona y deja un registro.
-- Con la bandera activa, cambiar `angular_error_seconds` o un ángulo **falla**.
-- El registro rechaza UPDATE y DELETE.
+- Un UPDATE de `north` o de `start_north` sobre un cerrado **funciona**.
+- Un UPDATE de `angular_error_seconds`, de un ángulo, de una distancia o de
+  `status` sobre un cerrado **falla**.
+- Borrar un cerrado o sus lecturas sigue **fallando**.
 - Nivelación y asentamientos siguen igual de inmutables.
 
 **En pantalla, antes de cerrar:**
@@ -298,21 +262,22 @@ poligonal georreferenciada: «Coordenadas georreferenciadas el <fecha> por
    de la tabla.
 2. El aviso de escala con una coordenada mal tecleada (1 m de más en D3).
 3. Tránsito: el aviso y el veredicto sin cambios.
-4. El historial tras dos georreferenciaciones.
+4. Georreferenciar dos veces: la línea muestra la última.
 5. Un proceso con amarre del catálogo: el aviso y el amarre pasa a manual.
 6. El informe imprimible con la nota y el Excel con la sección.
 7. La ruta `/manual`.
 
 ## Criterios de aceptación
 
-1. Una poligonal calculada o cerrada se georreferencia con dos de sus
-   estaciones; una rechazada, en borrador o en curso no.
+1. Una poligonal con coordenadas calculadas se georreferencia con dos de sus
+   estaciones, en cualquier estado, también cerrada.
 2. Sobre la Vivero local reproduce las coordenadas reales de la tabla.
 3. El **veredicto no cambia** en ningún caso, y la base lo garantiza: ángulos,
    distancias, errores y precisión no se pueden escribir en un cerrado.
-4. Cada georreferenciación deja un registro de solo inserción con fecha, autor,
-   puntos, transformación y las coordenadas anteriores.
-5. Fuera de la función, un proceso cerrado sigue siendo inmutable.
+4. La última georreferenciación queda anotada en el proceso: fecha, puntos,
+   rotación y factor de escala.
+5. Fuera de las columnas de posición, un proceso cerrado sigue siendo
+   inmutable, y nivelación y asentamientos no cambian.
 6. El factor de escala, Tránsito y el amarre del catálogo se avisan antes de
    confirmar.
 7. El informe y el Excel muestran las coordenadas georreferenciadas con su
@@ -339,12 +304,14 @@ poligonal georreferenciada: «Coordenadas georreferenciadas el <fecha> por
 - **Georreferenciar el catálogo** de puntos de referencia, o añadir al catálogo
   las estaciones georreferenciadas.
 - **Snapshot de informes** emitidos (decisión 4).
+- **Historial** de georreferenciaciones y copia de las coordenadas locales
+  (decisión 10).
 - **Unificar** «Reasignar coordenadas» y «Georreferenciar».
 
 ## Riesgos
 
 - **Se cree que el informe emitido no cambia.** Lo decía la doc y lo decía el
-  comentario de la página imprimible. Mitigación: la nota con fecha y autor en
+  comentario de la página imprimible. Mitigación: la nota con la fecha en
   el informe, y se enmiendan las dos afirmaciones.
 - **Dos puntos cercanos amplifican el error.** Un centímetro de error en
   puntos separados 10 m gira la poligonal 3.4′. Mitigación: la ayuda del
@@ -352,6 +319,9 @@ poligonal georreferenciada: «Coordenadas georreferenciadas el <fecha> por
   de usar dos puntos.
 - **Coordenadas en una proyección con k ≠ 1** disparan el aviso de escala sin
   que haya error. Mitigación: el texto del aviso nombra esa causa.
+- **Se pierden las coordenadas locales.** Sin historial, lo único que queda es
+  la última transformación. Mitigación: la rotación y los puntos quedan
+  anotados, y la transformación inversa las reconstruye si hiciera falta.
 - **La excepción se ensancha con el tiempo.** Mitigación: la lista blanca vive
   en el trigger, con la prueba contra la base de que un ángulo o un error no se
   pueden escribir.
