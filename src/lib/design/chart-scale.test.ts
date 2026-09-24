@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { linearScale, niceTicks } from "./chart-scale";
+import { isoDay, linearScale, niceTicks, timeScale, timeTicks } from "./chart-scale";
 
 describe("linearScale", () => {
   it("mapea el dominio al rango linealmente", () => {
@@ -77,5 +77,49 @@ describe("niceTicks", () => {
   // Si algún día otro llamante pudiera invertirlo, este test lo delata.
   it("con el rango invertido no produce marcas (límite conocido)", () => {
     expect(niceTicks(100, 0, 5)).toEqual([]);
+  });
+});
+
+describe("isoDay", () => {
+  it("cuenta días de calendario en UTC", () => {
+    expect(isoDay("1970-01-02")).toBe(1);
+    expect(isoDay("2025-03-01") - isoDay("2025-02-01")).toBe(28);
+  });
+});
+
+describe("timeScale", () => {
+  it("es lineal en días, no en índice de visita", () => {
+    // Visitas irregulares: 1 mes y luego 3 meses. Con eje por índice la
+    // segunda quedaría a mitad de camino; en el tiempo, a un cuarto.
+    const s = timeScale(["2025-01-01", "2025-02-01", "2025-05-02"], [0, 121]);
+    expect(s("2025-01-01")).toBe(0);
+    expect(s("2025-02-01")).toBeCloseTo(31, 9);
+    expect(s("2025-05-02")).toBe(121);
+  });
+
+  it("ordena las fechas antes de fijar el dominio", () => {
+    const s = timeScale(["2025-05-02", "2025-01-01"], [0, 121]);
+    expect(s("2025-01-01")).toBe(0);
+  });
+
+  it("con un solo día no divide por cero", () => {
+    const s = timeScale(["2025-01-01"], [0, 100]);
+    expect(s("2025-01-01")).toBe(50);
+  });
+});
+
+describe("timeTicks", () => {
+  it("devuelve fechas ISO dentro del intervalo, en orden", () => {
+    const ticks = timeTicks("2025-01-07", "2025-12-20", 6);
+    expect(ticks.length).toBeGreaterThanOrEqual(3);
+    for (const t of ticks) {
+      expect(t >= "2025-01-07" && t <= "2025-12-20").toBe(true);
+      expect(t).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+    expect([...ticks].sort()).toEqual(ticks);
+  });
+
+  it("con un solo día devuelve ese día", () => {
+    expect(timeTicks("2025-01-07", "2025-01-07", 5)).toEqual(["2025-01-07"]);
   });
 });
