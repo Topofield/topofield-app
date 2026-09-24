@@ -20,9 +20,19 @@
 alter table public.polygonal_processes
   drop constraint if exists polygonal_processes_angle_type_check;
 
+-- El renombrado toca también los procesos CERRADOS, y el trigger de
+-- inmutabilidad lo rechazaría. Es un cambio de representación, no de datos:
+-- se desactiva el trigger solo alrededor del UPDATE, como hacen los backfills
+-- de las fases 8 y 9. En local nunca saltó porque `db reset` aplica las
+-- migraciones sobre una base vacía; saltó al aplicarla en la nube
+-- (2026-09-24), con procesos cerrados de antes de la Fase 7.
+alter table public.polygonal_processes disable trigger polygonal_processes_reject_update_when_closed;
+
 update public.polygonal_processes
   set angle_type = 'interior'
   where angle_type = 'internal';
+
+alter table public.polygonal_processes enable trigger polygonal_processes_reject_update_when_closed;
 
 alter table public.polygonal_processes
   alter column angle_type set default 'interior',
