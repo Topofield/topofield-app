@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Button, Input, Select } from "@/components/design-system";
 import type { ReadingCaptureIssues } from "@/lib/validators/leveling";
 import {
@@ -101,6 +101,16 @@ interface ReadingsTableProps {
   levelType: LevelType | null;
   /** Distancias reconstruidas por el backfill: el equilibrado no se evalúa. */
   distancesReconstructed?: boolean;
+  /**
+   * Opcionales, para capturar en campo (Fase 18, libreta de la visita). Sin
+   * ellas la tabla se comporta exactamente como en nivelación.
+   * - `codeSuggestions`: códigos que se ofrecen al teclear el punto.
+   * - `allowInsert`: un botón por fila para insertar otra debajo.
+   * - `rowNotes`: una nota bajo el código de cada fila (p. ej. «Punto de control»).
+   */
+  codeSuggestions?: string[];
+  allowInsert?: boolean;
+  rowNotes?: (ReactNode | null)[];
 }
 
 /**
@@ -120,8 +130,13 @@ export function ReadingsTable({
   disabled,
   levelType,
   distancesReconstructed = false,
+  codeSuggestions,
+  allowInsert = false,
+  rowNotes,
 }: ReadingsTableProps) {
   const [showWires, setShowWires] = useState(false);
+  const suggestionsId = useId();
+  const hasSuggestions = codeSuggestions != null && codeSuggestions.length > 0;
   // Los hilos son cosa del nivel automático: con uno digital el instrumento
   // entrega la distancia y no se leen hilos sobre la mira.
   const wiresAvailable = levelType === "automatico";
@@ -232,11 +247,16 @@ export function ReadingsTable({
                       value={reading.pointCode}
                       disabled={disabled}
                       error={issue?.errors.pointCode}
+                      aria-label={`Punto, fila ${i + 1}`}
+                      list={hasSuggestions ? suggestionsId : undefined}
                       onChange={(e) =>
                         update(i, { pointCode: e.target.value })
                       }
                       className="w-24"
                     />
+                    {rowNotes?.[i] && (
+                      <div className="mt-1 text-xs text-neutral-500">{rowNotes[i]}</div>
+                    )}
                   </td>
                   <td className="py-2 pr-3">
                     <Select
@@ -431,16 +451,35 @@ export function ReadingsTable({
                   </td>
                   {!disabled && (
                     <td className="py-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        type="button"
-                        onClick={() =>
-                          onChange(readings.filter((_, j) => j !== i))
-                        }
-                      >
-                        Eliminar
-                      </Button>
+                      <div className="flex gap-1">
+                        {allowInsert && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            type="button"
+                            aria-label={`Insertar una fila debajo de la fila ${i + 1}`}
+                            onClick={() =>
+                              onChange([
+                                ...readings.slice(0, i + 1),
+                                emptyReading(),
+                                ...readings.slice(i + 1),
+                              ])
+                            }
+                          >
+                            Insertar
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          type="button"
+                          onClick={() =>
+                            onChange(readings.filter((_, j) => j !== i))
+                          }
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -470,6 +509,13 @@ export function ReadingsTable({
             + Agregar lectura
           </Button>
         </div>
+      )}
+      {hasSuggestions && (
+        <datalist id={suggestionsId}>
+          {codeSuggestions.map((code) => (
+            <option key={code} value={code} />
+          ))}
+        </datalist>
       )}
     </div>
   );
