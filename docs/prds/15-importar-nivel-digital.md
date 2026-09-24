@@ -1,14 +1,35 @@
 # PRD-de-fase 16 — Importar lecturas de nivel digital
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-24
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-24
 
 **Rama:** `fase-16-importar-nivel-digital`
 **Petición:** N4 de [`pendientes.md`](../pendientes.md)
 **Archivo de referencia:** [`carteras/CRDUDO-TRAMO2.L`](../carteras/CRDUDO-TRAMO2.L),
 analizado en [`carteras/analisis-crudo-nivel-digital.md`](../carteras/analisis-crudo-nivel-digital.md)
 **Módulo:** nivelación
+
+> **Divergencias de la implementación:**
+>
+> - **La plantilla no es un archivo estático.** Se descarga desde el diálogo
+>   generada de `CSV_TEMPLATE`, la misma constante que prueban los tests: un
+>   `public/plantillas/nivelacion.csv` sería una segunda copia que podía
+>   divergir. Y sin la «línea de explicación»: el lector la rechazaría como
+>   fila. La explicación está en el diálogo y en el manual.
+> - **La forma intermedia** lleva `rawSights` y `declared` (la división y los
+>   tipos que declara la plantilla), no previstos. `declared` manda también
+>   cuando la plantilla **no** trae vuelta: un circuito corto A → B → A
+>   «vuelve» a A y la detección lo tomaba por ida y vuelta. Se vio en pantalla.
+> - **La vuelta se propone por defecto** cuando el archivo la trae o se
+>   detecta; el usuario elige igual (decisión 2).
+> - **La ruta de crear con lecturas se verificó en pantalla, no con un test**:
+>   es E/S de Server Actions, la deuda que la § 11 de la doc técnica ya
+>   registra. Si guardar las lecturas falla, se borra el proceso recién
+>   creado.
+> - **No había procesos cerrados afectados por el hallazgo 3** en la base
+>   local. La nube no se revisó: no hay acceso desde esta sesión.
+> - El resumen del diálogo se apila en móvil.
 
 ## Propósito
 

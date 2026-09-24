@@ -25,7 +25,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 13 | Canvas de poligonal | [`prds/12-canvas-poligonal.md`](./prds/12-canvas-poligonal.md) | cerrada |
 | 14 | Ajuste por mínimos cuadrados | [`prds/13-minimos-cuadrados.md`](./prds/13-minimos-cuadrados.md) | cerrada |
 | 15 | Georreferenciación de levantamientos | [`prds/14-georreferenciacion.md`](./prds/14-georreferenciacion.md) | cerrada |
-| 16 | Importar lecturas de nivel digital | [`prds/15-importar-nivel-digital.md`](./prds/15-importar-nivel-digital.md) | en curso |
+| 16 | Importar lecturas de nivel digital | [`prds/15-importar-nivel-digital.md`](./prds/15-importar-nivel-digital.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -539,6 +539,35 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 16 — Importar lecturas de nivel digital (2026-09-24)
+
+La libreta de nivelación se puede importar del `.L` de un nivel digital Leica
+o de una plantilla CSV propia, en el editor y al crear, con una
+previsualización donde se elige cómo leer el recorrido y se corrigen los
+tipos de punto. De paso se corrigió la vuelta de una nivelación abierta.
+652 → 672 tests.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un archivo real encuentra lo que los fixtures no.** Leer el crudo como
+  ida y vuelta destapó que la vuelta de una abierta arrancaba en la cota de
+  partida: un fallo del motor anterior a la fase, que ningún fixture cubría
+  porque todos cerraban.
+- **Los números esperados se calculan con la redondez del almacenamiento.**
+  El análisis del crudo daba el desnivel con promedios sin redondear; el PRD
+  los rehízo redondeando cada promedio a su columna, y los tests los
+  reproducen exactos. Es la lección de la Fase 15 con la georreferenciación,
+  en otro módulo.
+- **Promediar en enteros evita el redondeo de coma flotante.** 1.64895 no es
+  representable; 16489.5 décimas de mm sí, y redondea como se espera.
+- **Una heurística se prueba con el caso más pequeño que la engaña.** La
+  detección del giro acertaba con el crudo y fallaba con la propia plantilla
+  de ejemplo, un circuito de dos armadas. Lo mostró la pantalla, no los
+  tests: el test de la plantilla no preguntaba por el giro.
+- **`open(...).read()` en Python normaliza los finales de línea.** Separar un
+  CRLF tras leerlo en modo texto no encuentra nada; hay que abrir con
+  `newline=""`. Costó un cálculo de verificación en blanco.
 
 ### Cierre Fase 15 — Georreferenciación de poligonales (2026-09-24)
 

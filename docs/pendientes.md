@@ -21,7 +21,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~A2~~ | **11** — Estado de los BMs | **cerrada** (2026-09-23) |
 | ~~A1~~ | **12** — Alerta por lectura desfasada | **cerrada** (2026-09-23) |
 | ~~P1~~ | dentro de la **13** (canvas) | **cerrada** (2026-09-23) |
-| N4 | **16** — Importar lecturas de nivel digital | en curso (PRD redactado el 2026-09-24) |
+| ~~N4~~ | **16** — Importar lecturas de nivel digital | **cerrada** (2026-09-24) |
 | N6 | — | sin fase asignada |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
@@ -75,6 +75,9 @@ altura del instrumento, y la vista menos se resta. Toca la tabla de captura, el
 panel de resultados, el export, el informe y el manual en sus dos copias.
 
 ### N4 · Importar lecturas desde archivo (nivel electrónico)
+
+> **Resuelta en la Fase 16** ([`prds/15-importar-nivel-digital.md`](./prds/15-importar-nivel-digital.md)).
+> Se conserva el texto de la petición como registro.
 
 Con nivel electrónico las lecturas y las distancias deben poder **subirse desde
 un archivo**, además de digitarse. El instrumento ya entrega ambos valores,

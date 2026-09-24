@@ -68,7 +68,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 13 | Canvas de poligonal | cerrada |
 | 14 | Ajuste por mínimos cuadrados | cerrada |
 | 15 | Georreferenciación de levantamientos | cerrada |
-| 16 | Importar lecturas de nivel digital | en curso |
+| 16 | Importar lecturas de nivel digital | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -185,6 +185,7 @@ src/
 │   ├── validators/          reglas de validación
 │   ├── design/              escalas de gráfica, marcadores y contraste
 │   ├── export/              libros de Excel de los tres módulos (§ 4.8)
+│   ├── import/leveling/     lectores de libretas de nivel digital (Fase 16)
 │   ├── reports/             elegibilidad de procesos para informes (§ 4.7)
 │   ├── process-list.ts      filtrado y orden del listado de procesos
 │   ├── supabase/            clientes y consultas
@@ -769,6 +770,43 @@ cómo se guardará (`roundsOnStorage`).
 No está en el sistema de diseño porque convierte con `@/lib/calculations/angles`
 (ver § 8, «Qué entra en el sistema de diseño»). El genérico, `DmsInput`, sí.
 
+### Importación de libretas de nivelación (Fase 16)
+
+`src/lib/import/leveling/` es puro, como `calculations/`: texto de entrada,
+filas de libreta de salida.
+
+- **Detector con lectores intercambiables** (`index.ts`, `READERS`). Cada
+  lector declara `detect(text)` —por el contenido, no por la extensión— y
+  `read(text)`, y todos devuelven la misma forma intermedia
+  (`types.ts`): **armadas**, cada una con su visual atrás y sus visuales
+  adelante; la última adelante es la del punto de cambio y las anteriores,
+  radiaciones. Añadir un instrumento es escribir un lector y registrarlo.
+- `leica-l.ts` lee el `.L` de Leica con los offsets medidos en
+  `docs/carteras/analisis-crudo-nivel-digital.md`. Agrupa las repeticiones
+  por armada, sentido y punto y las promedia **en enteros** (décimas de mm y
+  mm) redondeando a la resolución de las columnas, para que el redondeo no
+  dependa de la coma flotante. Una línea desconocida o mal formada avisa; no
+  rompe.
+- `topofield-csv.ts` lee la plantilla (`CSV_TEMPLATE`, que el diálogo ofrece
+  como descarga): una fila por fila de libreta, `,` o `;` —con `;`, coma
+  decimal—. Declara la división ida/vuelta y los tipos, que mandan sobre lo
+  deducido.
+- `to-libreta.ts`: `toLibreta(file, mode)` con `mode` un recorrido, o ida y
+  vuelta con la armada de giro; `detectTurnSetup` propone el giro (la armada
+  cuya visual adelante es el punto desde el que se miró atrás en la
+  anterior); `proposedLevelingType` propone `closed` para un recorrido que
+  vuelve a su BM y `open` (o `link`, si ya lo era) para ida y vuelta.
+- El diálogo (`components/leveling/import-dialog.tsx`) no guarda: entrega
+  filas y configuración. En el editor llenan el borrador; al crear,
+  `createLevelingProcessAction` inserta el proceso y guarda las lecturas con
+  `saveLevelingProcessAction`, y si eso falla borra el proceso recién creado.
+
+**La vuelta de una abierta.** Hasta la Fase 16, `computeLeveling` arrancaba
+la vuelta en `startElevation` si no había cota de llegada conocida, y en una
+abierta con vuelta todas las cotas de la vuelta salían desplazadas por el
+desnivel de la ida. Ahora parte de la cota final calculada de la ida. La
+discrepancia no cambia: compara desniveles.
+
 ### Georreferenciación (Fase 15)
 
 Una poligonal medida en local se lleva al sistema real con dos de sus
@@ -1237,12 +1275,13 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-652 tests en 30 archivos, Vitest, entorno `node` **sin jsdom**.
+672 tests en 31 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
-| `lib/calculations/leveling.test.ts` | 69 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta |
+| `lib/calculations/leveling.test.ts` | 71 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16) |
+| `lib/import/leveling/import.test.ts` | 18 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones y vuelta declarada; detector (Fase 16) |
 | `lib/validators/polygonal.test.ts` | 66 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
@@ -1845,6 +1884,22 @@ estaciones.
 sistema local es georreferenciar con las coordenadas anteriores, que hay que
 conocer. Decisión del usuario: el producto no busca aún trazabilidad estricta
 de la posición.
+
+**El lector `.L` se probó con un solo archivo (Fase 16).** Los offsets son
+los de un único crudo de un nivel Leica. Otro modelo, u otro modo de
+grabación, puede usar otras columnas; el lector comprueba la forma de cada
+línea y avisa, y la previsualización deja ver lo leído antes de aceptarlo,
+pero no hay un segundo archivo contra el que probarlo.
+
+**Se pierden la σ del instrumento y las repeticiones (Fase 16).** La libreta
+guarda una lectura por visual, así que el import promedia. Llevar a
+nivelación el modelo de lecturas múltiples de la Fase 7 sería una fase
+propia.
+
+**«Abierta sin control» con vuelta se lee raro (Fase 16).** Es la etiqueta de
+`open`, y el crudo leído como ida y vuelta queda así aunque sí tenga un
+control: la discrepancia entre los dos recorridos. Cambiar la etiqueta toca
+el manual y el informe; quedó fuera de la fase.
 
 **Dos diálogos para mover una poligonal (Fase 15).** «Asignar coordenadas
 reales» (arranque + azimut, solo sin cerrar, sin anotación) y «Georreferenciar»

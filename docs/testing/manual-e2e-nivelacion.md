@@ -108,6 +108,30 @@ Los procesos de nivelación de la seed viven en el proyecto **Lote catastral**.
 - ✓ El panel añade la discrepancia ida−vuelta y su tolerancia, además del error
   de cierre.
 
+### 11. Importar desde archivo (Fase 16)
+
+- En el **Circuito BM-1**, pulsar **Importar desde archivo** y elegir
+  `docs/carteras/CRDUDO-TRAMO2.L`.
+- ✓ Formato «Archivo .L de nivel digital Leica», 16 armadas · 64 visuales,
+  mayor dispersión 1.5 mm, mayor σ 2.3 mm. Propone **Ida y vuelta** con la
+  vuelta en la **armada 9**, y la cota del BM ofrece la del archivo
+  (2541.7545) y la del proceso (100.0000). Avisa de que se reemplazan las
+  lecturas.
+- Elegir **Un recorrido** y **Usar estas lecturas**. ✓ 17 filas de C10 a C10,
+  tipo Cerrada, modo digital, error de cierre −0.4 mm, tolerancia 14.2 mm.
+- Importar otra vez con **Ida y vuelta** y la armada 9. ✓ Ida C10 → C18 y
+  vuelta C18 → C10; discrepancia 0.4 mm contra 14.2 mm. **Guardar** y
+  recargar: ✓ C18 tiene cota 2542.9181 en la ida y en la vuelta.
+- En **Nueva nivelación**, importar el mismo archivo como un recorrido. ✓ Se
+  rellenan BM C10, cota 2541.7545, tipo Cerrada y nivel digital. Poner
+  nombre y **Crear proceso**: ✓ el editor abre con las 17 filas y el cierre
+  −0.4 mm.
+- Importar un CSV cualquiera. ✓ «No se reconoce el formato del archivo. Se
+  leen: …», con el enlace a la plantilla.
+- **Descargar plantilla CSV**, rellenarla con `;` y coma decimal y una
+  radiación, e importarla. ✓ La radiación sale como Intermedio y el recorrido
+  no se toma por ida y vuelta.
+
 ## Resultado esperado
 
 Si los puntos pasan, el módulo de nivelación cumple los criterios del
