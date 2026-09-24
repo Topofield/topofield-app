@@ -172,6 +172,18 @@ await capturar("11-nueva-nivelacion");
 await page.goto(`${BASE}/projects/${proyecto}/leveling/${nivelacion}`, { waitUntil: "networkidle" });
 await capturar("12-editor-nivelacion", { fullPage: true });
 
+// Fase 16 — importar el crudo de nivel digital en la libreta del Circuito
+// BM-1. Se captura el diálogo con la previsualización, sin aceptar.
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.getByRole("button", { name: "Importar desde archivo" }).click();
+const importar = page.getByRole("dialog");
+await importar.locator('input[type="file"]').setInputFiles(join(AQUI, "..", "carteras", "CRDUDO-TRAMO2.L"));
+await page.waitForTimeout(600);
+await importar.screenshot({ path: join(OUT, "23-importar-nivelacion.png") });
+console.log("✓", "23-importar-nivelacion");
+await page.keyboard.press("Escape");
+await page.setViewportSize({ width: 1280, height: 800 });
+
 // Control de asentamientos
 await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/new`, { waitUntil: "networkidle" });
 await capturar("13-nuevo-lugar");

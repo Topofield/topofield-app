@@ -621,7 +621,44 @@ La aplicación compara los **desniveles totales** de ambos recorridos. La
 discrepancia entre ellos se contrasta contra **T·√2**, donde T es la misma
 tolerancia K·√D del cierre individual.
 
-### 6.7 Cierre irreversible
+### 6.7 Importar desde archivo
+
+Con un nivel digital, las lecturas y las distancias ya están en un archivo.
+**Importar desde archivo** —en la libreta de una nivelación sin cerrar, o al
+crear una nueva— las pasa a la libreta sin teclearlas.
+
+![Importar el crudo de un nivel digital Leica](../../public/manual/23-importar-nivelacion.png)
+
+Se leen:
+
+- el archivo **.L de un nivel digital Leica**;
+- la **plantilla CSV** de TopoField, que se descarga desde el mismo diálogo,
+  para cualquier otro instrumento: una fila por cada fila de la libreta, con
+  `;` y coma decimal si viene de Excel en español.
+
+El formato se reconoce por el contenido, no por el nombre del archivo. Si no
+se reconoce, el diálogo dice qué formatos se leen.
+
+Antes de usar las lecturas, la previsualización deja decidir:
+
+- **Cómo se lee el recorrido.** Un archivo que va y vuelve por los mismos
+  puntos puede ser **un recorrido cerrado** o **ida y vuelta**. Con ida y
+  vuelta, elija en qué armada empieza la vuelta; se propone la detectada.
+- **La cota del BM de partida**, si la del archivo no coincide con la del
+  proceso.
+- **El tipo de cada punto.** El instrumento no distingue un BM de un punto de
+  cambio o de una radiación: se deduce de su posición y usted lo corrige.
+
+El instrumento mide dos veces cada visual; se guarda el **promedio**,
+redondeado a 0.1 mm. El diálogo muestra la mayor diferencia entre las dos
+lecturas y la mayor desviación típica del instrumento, como control.
+
+Al aceptar, la libreta se reemplaza, el nivel pasa a **digital** y se propone
+el tipo de proceso: **cerrada** si el recorrido vuelve a su BM, **abierta con
+vuelta** si es ida y vuelta. En el editor **no se guarda nada hasta que pulse
+Guardar**; al crear, el proceso nace con sus lecturas.
+
+### 6.8 Cierre irreversible
 
 Igual que en poligonales, cerrar una nivelación es **irreversible**
 (§ 7). Un trabajo que no alcanza la tolerancia solo puede cerrarse como

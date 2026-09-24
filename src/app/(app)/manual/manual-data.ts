@@ -90,12 +90,18 @@ export const CAPTURAS = {
     width: 2560,
     height: 1600,
   },
+  importarNivelacion: {
+    src: "/manual/23-importar-nivelacion.png",
+    alt: "Diálogo Importar libreta desde archivo con el crudo de un nivel digital Leica: 16 armadas, ida y vuelta con la vuelta en la armada 9, la elección de la cota del BM y la libreta de ida con los tipos de punto.",
+    width: 1344,
+    height: 2736,
+  },
   editorNivelacion: {
     src: "/manual/12-editor-nivelacion.png",
     alt: "Editor de nivelación completo: libreta, comprobación aritmética, cierre y cotas corregidas.",
     pie: "Circuito cerrado que cumple la tolerancia: el BM final corrige exacto a su cota conocida.",
     width: 2560,
-    height: 2806,
+    height: 2902,
   },
   nuevoLugar: {
     src: "/manual/13-nuevo-lugar.png",
