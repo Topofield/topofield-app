@@ -22,7 +22,12 @@ export const ANGLE_TYPES = [
 ] as const;
 export type AngleType = (typeof ANGLE_TYPES)[number];
 
-export const CORRECTION_METHODS = ["bowditch", "transit", "crandall"] as const;
+export const CORRECTION_METHODS = [
+  "bowditch",
+  "transit",
+  "crandall",
+  "least_squares",
+] as const;
 export type CorrectionMethod = (typeof CORRECTION_METHODS)[number];
 
 export const DEFLECTION_DIRECTIONS = ["right", "left"] as const;
@@ -89,6 +94,7 @@ export const CORRECTION_METHOD_LABELS: Record<CorrectionMethod, string> = {
   bowditch: "Bowditch (brújula)",
   transit: "Tránsito",
   crandall: "Crandall",
+  least_squares: "Mínimos cuadrados",
 };
 
 export const PROCESS_STATUS_LABELS: Record<ProcessStatus, string> = {
@@ -188,7 +194,52 @@ export interface PolygonalInput {
   hasClosingRow: boolean;
   method: CorrectionMethod;
   stations: StationInput[];
+  /**
+   * Pesos del ajuste por mínimos cuadrados (Fase 14), tecleados por proceso
+   * como en la hoja de la universidad. Solo se usan con
+   * `method: "least_squares"`; `null` si el proceso no los declaró.
+   */
+  leastSquares?: LeastSquaresWeights | null;
 }
+
+export type LeastSquaresFailure = "one_side" | "singular" | "not_converged";
+
+/** Pesos a priori del ajuste: iguales para todas las observaciones. */
+export interface LeastSquaresWeights {
+  /** σ de cada ángulo, en segundos de arco. */
+  sigmaAngleSeconds: number;
+  /** σ de una medición de distancia, en metros. */
+  sigmaDistanceM: number;
+  /** Mediciones de cada distancia: su σ efectivo es σ / √mediciones. */
+  distanceMeasurements: number;
+}
+
+/**
+ * Resultado propio del ajuste por mínimos cuadrados (Fase 14). Las
+ * coordenadas ajustadas van en `stations`, como con los otros métodos.
+ */
+export type LeastSquaresAdjustment =
+  | { status: "missing_weights" }
+  /**
+   * Hay pesos pero no hay ajuste: la geometría no tiene redundancia (una
+   * abierta de un solo lado), el sistema es singular o no convergió. El motor
+   * no inventa coordenadas: las deja en `null` y lo dice.
+   */
+  | { status: "unadjustable"; reason: LeastSquaresFailure }
+  | {
+      status: "adjusted";
+      /** Corrección de cada ángulo, en segundos, por estación (`null` si no se ajusta). */
+      angleCorrectionsSec: (number | null)[];
+      /** Corrección de cada distancia, en metros, por estación (`null` si no es lado). */
+      distanceCorrectionsM: (number | null)[];
+      /** Distancia ajustada de cada lado, en metros, por estación. */
+      adjustedDistances: (number | null)[];
+      /** Desviación típica a posteriori de la unidad de peso. */
+      sigma0: number;
+      /** Número de condiciones (3, o 2 sin azimut de llegada). */
+      conditions: number;
+      iterations: number;
+    };
 
 /** Resultados por estación (columnas calculadas de polygonal_stations). */
 export interface StationResult {
@@ -228,4 +279,6 @@ export interface PolygonalResult {
   // Global
   meetsTolerance: boolean | null;
   stations: StationResult[];
+  /** Solo con `method: "least_squares"`. */
+  adjustment?: LeastSquaresAdjustment;
 }

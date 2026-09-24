@@ -27,7 +27,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/components/design-system/` → sistema de diseño propio (NO usar shadcn/ui)
 - `src/components/editors/` → componentes de los 3 editores
 - `src/lib/calculations/` → algoritmos topográficos puros (sin dependencias de React)
-- `src/lib/calculations/polygonal.ts` → Bowditch, Tránsito, Crandall
+- `src/lib/calculations/polygonal.ts` → Bowditch, Tránsito, Crandall, Mínimos cuadrados (con `least-squares.ts`)
 - `src/lib/calculations/leveling.ts` → corrección proporcional a distancia
 - `src/lib/calculations/settlement.ts` → asentamientos, velocidades, alertas
 - `src/lib/calculations/angles.ts` → conversiones DMS ↔ decimal, normalización
@@ -75,7 +75,6 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Si hay dos enfoques posibles para una decisión arquitectónica, explicar ambos y dejar elegir.
 
 ## Out of scope
-- Ajuste por mínimos cuadrados (trabajo futuro)
 - Modo offline / PWA
 - Importación directa desde estación total
 - Firma digital criptográfica (solo cierre con timestamp)

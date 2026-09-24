@@ -130,6 +130,18 @@ await page.goto(`${BASE}/projects/${proyecto}/polygonal/${tt4}`, { waitUntil: "n
 await page.locator("figure").first().screenshot({ path: join(OUT, "20-dibujo-poligonal.png") });
 console.log("✓", "20-dibujo-poligonal");
 
+// Fase 14 — la cartera Vivero con mínimos cuadrados y los pesos de la hoja:
+// la tarjeta de Resultados con las correcciones y σ₀.
+const vivero = sql(
+  `select id from public.polygonal_processes where name like '%Vivero%least_squares' and project_id='${proyecto}';`,
+);
+await page.goto(`${BASE}/projects/${proyecto}/polygonal/${vivero}`, { waitUntil: "networkidle" });
+await page
+  .getByRole("heading", { name: "Resultados", exact: true })
+  .locator("xpath=ancestor::*[contains(@class,'rounded')][1]")
+  .screenshot({ path: join(OUT, "21-minimos-cuadrados.png") });
+console.log("✓", "21-minimos-cuadrados");
+
 // Nivelación
 await page.goto(`${BASE}/projects/${proyecto}/leveling/new`, { waitUntil: "networkidle" });
 await capturar("11-nueva-nivelacion");

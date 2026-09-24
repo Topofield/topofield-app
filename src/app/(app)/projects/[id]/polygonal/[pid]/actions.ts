@@ -11,6 +11,7 @@ import { computePolygonal } from "@/lib/calculations/polygonal";
 import {
   canPersistAngleFormat,
   expectStationCapture,
+  validateLeastSquaresWeights,
   hasCaptureErrors,
   validatePolygonalStation,
 } from "@/lib/validators/polygonal";
@@ -86,6 +87,10 @@ export interface SavePolygonalPayload {
   angularPrecisionSeconds: number | null;
   distancePrecisionMm: number | null;
   distancePrecisionPpm: number | null;
+  /** Pesos del ajuste por mínimos cuadrados (Fase 14); solo con ese método. */
+  lsSigmaAngleSeconds: number | null;
+  lsSigmaDistanceM: number | null;
+  lsDistanceMeasurements: number | null;
 }
 
 export interface ClosePolygonalPayload {
@@ -148,6 +153,16 @@ function buildInput(payload: SavePolygonalPayload): PolygonalInput {
     hasOrientation:
       payload.referencePointId != null || payload.referencePointCode != null,
     hasClosingRow: payload.hasClosingRow,
+    leastSquares:
+      payload.lsSigmaAngleSeconds != null &&
+      payload.lsSigmaDistanceM != null &&
+      payload.lsDistanceMeasurements != null
+        ? {
+            sigmaAngleSeconds: payload.lsSigmaAngleSeconds,
+            sigmaDistanceM: payload.lsSigmaDistanceM,
+            distanceMeasurements: payload.lsDistanceMeasurements,
+          }
+        : null,
     stations: payload.stations.map((st) => ({
       pointCode: st.pointCode,
       angle: averageAngle(st),
@@ -249,6 +264,15 @@ export async function savePolygonalProcessAction(
     };
   }
 
+  // Pesos del ajuste por mínimos cuadrados (Fase 14): sin ellos el método no
+  // produce coordenadas y la base rechazaría el proceso.
+  const weightsError = validateLeastSquaresWeights(payload.correctionMethod, payload.type, {
+    sigmaAngleSeconds: payload.lsSigmaAngleSeconds,
+    sigmaDistanceM: payload.lsSigmaDistanceM,
+    distanceMeasurements: payload.lsDistanceMeasurements,
+  });
+  if (weightsError) return { ok: false, error: weightsError };
+
   const result = computePolygonal(buildInput(payload));
 
   const relPrec = result.relativePrecision;
@@ -292,6 +316,9 @@ export async function savePolygonalProcessAction(
       end_azimuth_min: payload.endAzimuthMin,
       end_azimuth_sec: payload.endAzimuthSec,
       correction_method: payload.correctionMethod,
+      ls_sigma_angle_seconds: payload.lsSigmaAngleSeconds,
+      ls_sigma_distance_m: payload.lsSigmaDistanceM,
+      ls_distance_measurements: payload.lsDistanceMeasurements,
       precision_order: payload.precisionOrder,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
@@ -476,6 +503,13 @@ export async function duplicatePolygonalProcessAction(
     end_azimuth_min: original.end_azimuth_min,
     end_azimuth_sec: original.end_azimuth_sec,
     correction_method: original.correction_method,
+    // Los pesos van con el método: sin ellos, el CHECK de la base rechaza un
+    // duplicado con mínimos cuadrados (Fase 14). Y el formato de captura de
+    // ángulos, que la Fase 13 olvidó copiar.
+    ls_sigma_angle_seconds: original.ls_sigma_angle_seconds,
+    ls_sigma_distance_m: original.ls_sigma_distance_m,
+    ls_distance_measurements: original.ls_distance_measurements,
+    angle_input_format: original.angle_input_format,
     precision_order: original.precision_order,
     equipment_brand: original.equipment_brand,
     equipment_model: original.equipment_model,

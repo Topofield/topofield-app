@@ -9,9 +9,13 @@
 //  - Abierta con control: Az_i = Az_{i-1} ± deflexión_i (+ derecha, − izquierda).
 
 import { cosDeg, degreesToSeconds, normalizeAzimuth, sinDeg } from "./angles";
+import { adjustByConditions, SingularSystemError } from "./least-squares";
 import { angularTolerance, minRelativePrecision } from "./tolerances";
 import type {
   CorrectionMethod,
+  LeastSquaresAdjustment,
+  LeastSquaresFailure,
+  LeastSquaresWeights,
   ReadingInput,
   PolygonalInput,
   PolygonalResult,
@@ -21,6 +25,11 @@ import type {
 
 function isNum(x: number | null | undefined): x is number {
   return typeof x === "number" && Number.isFinite(x);
+}
+
+/** `null` en vez de NaN o undefined: la ausencia de un dato no es un número. */
+function finiteOrNull(x: number | null | undefined): number | null {
+  return isNum(x) ? x : null;
 }
 
 /** Dispersión entre lecturas de un mismo ángulo, en segundos de arco. */
@@ -249,7 +258,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     linearError: Math.hypot(errorN, errorE),
   };
 
-  const { correctedDeltaN, correctedDeltaE } = correctDeltas(
+  const proportional = correctDeltas(
     input.method,
     base.deltaN,
     base.deltaE,
@@ -259,6 +268,21 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     base.errorE,
     perimeter,
   );
+
+  // Mínimos cuadrados (Fase 14): parte de las observaciones CRUDAS y sustituye
+  // ángulos, azimuts y proyecciones corregidas. El veredicto de arriba no
+  // cambia: se juzga con el error antes de ajustar. Sin pesos no hay ajuste ni
+  // coordenadas: se dice, no se inventan.
+  const ls = runLeastSquares(input, false, (w) =>
+    leastSquaresClosed(input, sideCount, firstParticipating, theoreticalSum, w),
+  );
+  const {
+    correctedDeltaN,
+    correctedDeltaE,
+    azimuths: finalAzimuths,
+  } = withLeastSquares(ls, sideCount, { ...proportional, azimuths: base.azimuths });
+  const finalAngles =
+    ls === null ? correctedAngles : ls.kind === "adjusted" ? ls.outcome.angles : [];
 
   // Coordenadas: la última estación cierra sobre el punto de partida, así que
   // solo se conservan las primeras coordenadas encadenadas.
@@ -283,14 +307,14 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
 
   const stationResults: StationResult[] = stations.map((s, i) => ({
     pointCode: s.pointCode,
-    correctedAngle: correctedAngles[i] ?? null,
-    azimuth: base.azimuths[i] ?? null,
+    correctedAngle: finalAngles[i] ?? null,
+    azimuth: finalAzimuths[i] ?? null,
     deltaNorth: base.deltaN[i] ?? null,
     deltaEast: base.deltaE[i] ?? null,
-    correctedDeltaNorth: correctedDeltaN[i] ?? null,
-    correctedDeltaEast: correctedDeltaE[i] ?? null,
-    north: coords.north[i] ?? null,
-    east: coords.east[i] ?? null,
+    correctedDeltaNorth: finiteOrNull(correctedDeltaN[i]),
+    correctedDeltaEast: finiteOrNull(correctedDeltaE[i]),
+    north: finiteOrNull(coords.north[i]),
+    east: finiteOrNull(coords.east[i]),
     readingDispersion: dispersionSeconds(s.readings),
   }));
 
@@ -309,6 +333,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     reorientationError,
     meetsTolerance: anglesMeetTolerance && meetsLinearTolerance,
     stations: stationResults,
+    ...adjustmentOf(ls),
   };
 }
 
@@ -405,7 +430,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   const errorE = (rawNorth.east[lastIdx] ?? 0) - (input.endEast ?? 0);
   const linearError = Math.hypot(errorN, errorE);
 
-  const { correctedDeltaN, correctedDeltaE } = correctDeltas(
+  const proportional = correctDeltas(
     input.method,
     deltaN,
     deltaE,
@@ -415,6 +440,20 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
     errorE,
     perimeter,
   );
+
+  // Mínimos cuadrados (Fase 14): igual que en la cerrada, desde las
+  // observaciones crudas; el veredicto de arriba no cambia.
+  // Con un solo lado no hay redundancia que ajustar: las condiciones de
+  // llegada en N y en E dependen de una sola distancia y el sistema es
+  // singular.
+  const ls = runLeastSquares(input, sideCount < 2, (w) =>
+    leastSquaresOpenControlled(input, doAngularClosure, w),
+  );
+  const {
+    correctedDeltaN,
+    correctedDeltaE,
+    azimuths: finalAzimuths,
+  } = withLeastSquares(ls, sideCount, { ...proportional, azimuths });
   const coords = chainCoordinates(
     input.startNorth,
     input.startEast,
@@ -430,14 +469,17 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   const stationResults: StationResult[] = stations.map((s, i) => ({
     pointCode: s.pointCode,
     readingDispersion: dispersionSeconds(s.readings),
+    // Como con los otros métodos, la abierta no publica deflexiones
+    // corregidas: el ajuste va en los azimuts, y la corrección de cada
+    // deflexión, con su signo, en `adjustment`.
     correctedAngle: null,
-    azimuth: azimuths[i] ?? null,
+    azimuth: finalAzimuths[i] ?? null,
     deltaNorth: deltaN[i] ?? null,
     deltaEast: deltaE[i] ?? null,
-    correctedDeltaNorth: correctedDeltaN[i] ?? null,
-    correctedDeltaEast: correctedDeltaE[i] ?? null,
-    north: coords.north[i] ?? null,
-    east: coords.east[i] ?? null,
+    correctedDeltaNorth: finiteOrNull(correctedDeltaN[i]),
+    correctedDeltaEast: finiteOrNull(correctedDeltaE[i]),
+    north: finiteOrNull(coords.north[i]),
+    east: finiteOrNull(coords.east[i]),
   }));
 
   return {
@@ -456,6 +498,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
     meetsTolerance:
       (anglesMeetTolerance ?? true) && meetsLinearTolerance,
     stations: stationResults,
+    ...adjustmentOf(ls),
   };
 }
 
@@ -596,14 +639,18 @@ export function polygonalTraces(
   // Lados con proyección, en orden. En una cerrada la fila de control (con
   // orientación) no abre lado y trae las proyecciones en null.
   const legs: { dN: number; dE: number; cN: number; cE: number }[] = [];
+  // Sin proyección corregida, la cruda hace de «ajustada», como siempre: la
+  // abierta sin control no se corrige, y un reparto proporcional degenerado
+  // (perímetro 0) da NaN. Con mínimos cuadrados no: si no hubo ajuste —sin
+  // pesos, o sin redundancia— no hay ajustada que dibujar, y no se inventa.
+  const uncorrected =
+    input.type === "open_uncontrolled" || input.method !== "least_squares";
   for (const s of stations) {
     if (!isNum(s.deltaNorth) || !isNum(s.deltaEast)) break;
-    legs.push({
-      dN: s.deltaNorth,
-      dE: s.deltaEast,
-      cN: isNum(s.correctedDeltaNorth) ? s.correctedDeltaNorth : s.deltaNorth,
-      cE: isNum(s.correctedDeltaEast) ? s.correctedDeltaEast : s.deltaEast,
-    });
+    const cN = isNum(s.correctedDeltaNorth) ? s.correctedDeltaNorth : uncorrected ? s.deltaNorth : null;
+    const cE = isNum(s.correctedDeltaEast) ? s.correctedDeltaEast : uncorrected ? s.deltaEast : null;
+    if (cN === null || cE === null) break;
+    legs.push({ dN: s.deltaNorth, dE: s.deltaEast, cN, cE });
   }
 
   // Una abierta tiene un punto por estación (la última no abre lado: su
@@ -631,4 +678,318 @@ export function polygonalTraces(
     }
   }
   return points;
+}
+
+// ----------------------------------------------------------------------------
+// Mínimos cuadrados por ecuaciones de condición (Fase 14)
+// ----------------------------------------------------------------------------
+
+const RHO_SECONDS = 206264.80624709636;
+const D2R = Math.PI / 180;
+
+/** Lo que el ajuste aporta a una poligonal: observaciones y geometría ajustadas. */
+interface LeastSquaresOutcome {
+  /**
+   * Ángulo ajustado de cada estación (grados); las fijas quedan como se
+   * midieron. Solo en la cerrada: la abierta publica azimuts, no deflexiones.
+   */
+  angles: number[];
+  /** Distancia ajustada de cada lado (m), por índice de lado. */
+  distances: number[];
+  azimuths: number[];
+  deltaN: number[];
+  deltaE: number[];
+  adjustment: Extract<LeastSquaresAdjustment, { status: "adjusted" }>;
+  converged: boolean;
+}
+
+type LeastSquaresRun =
+  | { kind: "adjusted"; outcome: LeastSquaresOutcome }
+  | {
+      kind: "failed";
+      adjustment: Exclude<LeastSquaresAdjustment, { status: "adjusted" }>;
+    };
+
+/**
+ * La rama del método, común a cerrada y abierta con control. `null` con otro
+ * método. Sin pesos, sin redundancia, con un sistema singular o sin
+ * convergencia no hay ajuste: se dice por qué, no se cae a otro método.
+ */
+function runLeastSquares(
+  input: PolygonalInput,
+  oneSide: boolean,
+  solve: (weights: LeastSquaresWeights) => LeastSquaresOutcome,
+): LeastSquaresRun | null {
+  if (input.method !== "least_squares") return null;
+  if (!weightsValid(input.leastSquares)) {
+    return { kind: "failed", adjustment: { status: "missing_weights" } };
+  }
+  const failed = (reason: LeastSquaresFailure): LeastSquaresRun => ({
+    kind: "failed",
+    adjustment: { status: "unadjustable", reason },
+  });
+  if (oneSide) return failed("one_side");
+  try {
+    const outcome = solve(input.leastSquares);
+    return outcome.converged ? { kind: "adjusted", outcome } : failed("not_converged");
+  } catch (e) {
+    if (e instanceof SingularSystemError) return failed("singular");
+    throw e;
+  }
+}
+
+/**
+ * Proyecciones corregidas y azimuts finales: los del ajuste, los del reparto
+ * proporcional con otro método, o NaN (que las estaciones publican como
+ * `null`) si el ajuste no se pudo hacer.
+ */
+function withLeastSquares(
+  ls: LeastSquaresRun | null,
+  sideCount: number,
+  proportional: {
+    correctedDeltaN: number[];
+    correctedDeltaE: number[];
+    azimuths: number[];
+  },
+): { correctedDeltaN: number[]; correctedDeltaE: number[]; azimuths: number[] } {
+  if (ls === null) return proportional;
+  if (ls.kind === "adjusted") {
+    return {
+      correctedDeltaN: ls.outcome.deltaN,
+      correctedDeltaE: ls.outcome.deltaE,
+      azimuths: ls.outcome.azimuths,
+    };
+  }
+  const missing = Array.from({ length: sideCount }, () => Number.NaN);
+  return { correctedDeltaN: missing, correctedDeltaE: missing, azimuths: [] };
+}
+
+function adjustmentOf(ls: LeastSquaresRun | null): { adjustment?: LeastSquaresAdjustment } {
+  if (ls === null) return {};
+  return { adjustment: ls.kind === "adjusted" ? ls.outcome.adjustment : ls.adjustment };
+}
+
+/** σ efectivos: el angular en radianes y el de distancia sobre √mediciones. */
+function sigmasOf(weights: LeastSquaresWeights) {
+  return {
+    angle: weights.sigmaAngleSeconds / RHO_SECONDS,
+    distance: weights.sigmaDistanceM / Math.sqrt(weights.distanceMeasurements),
+  };
+}
+
+function weightsValid(w: LeastSquaresWeights | null | undefined): w is LeastSquaresWeights {
+  return (
+    w != null &&
+    isNum(w.sigmaAngleSeconds) &&
+    w.sigmaAngleSeconds > 0 &&
+    isNum(w.sigmaDistanceM) &&
+    w.sigmaDistanceM > 0 &&
+    isNum(w.distanceMeasurements) &&
+    w.distanceMeasurements >= 1
+  );
+}
+
+/** Correcciones por estación a partir de las del ajuste. */
+function perStation<T>(n: number, pairs: [number, T][]): (T | null)[] {
+  const out: (T | null)[] = Array.from({ length: n }, () => null);
+  for (const [i, v] of pairs) out[i] = v;
+  return out;
+}
+
+/**
+ * Cerrada. Observaciones: los ángulos que entran en la condición angular salvo
+ * el de orientación, que es datum (PRD, decisión 6), y las distancias de los
+ * lados. Condiciones: suma angular, Σ ΔN = 0 y Σ ΔE = 0.
+ *
+ * El azimut del lado k es el de partida más los ángulos 1..k: un ángulo i ≥ 1
+ * arrastra los lados k ≥ i. El de la estación 0 solo cuenta si es el de
+ * orientación, que no se ajusta; sin orientación no arrastra ningún lado.
+ */
+function leastSquaresClosed(
+  input: PolygonalInput,
+  sideCount: number,
+  firstParticipating: number,
+  theoreticalSum: number,
+  weights: LeastSquaresWeights,
+): LeastSquaresOutcome {
+  const angles0 = input.stations.map((s) => s.angle);
+  const distances0 = input.stations.slice(0, sideCount).map((s) => s.distance ?? 0);
+  const adjustable: number[] = [];
+  for (let i = firstParticipating; i < angles0.length; i++) {
+    if (!(input.hasOrientation && i === 0)) adjustable.push(i);
+  }
+  const sig = sigmasOf(weights);
+  const na = adjustable.length;
+
+  const geometry = (l: number[]) => {
+    const angles = [...angles0];
+    adjustable.forEach((idx, j) => (angles[idx] = l[j]! / D2R));
+    const distances = l.slice(na);
+    const azimuths: number[] = [
+      input.hasOrientation
+        ? normalizeAzimuth(input.startAzimuth + (angles[0] ?? 0))
+        : input.startAzimuth,
+    ];
+    for (let i = 1; i < angles.length; i++) {
+      azimuths.push(normalizeAzimuth((azimuths[i - 1] ?? 0) + 180 + (angles[i] ?? 0)));
+    }
+    const deltaN = distances.map((d, k) => d * cosDeg(azimuths[k] ?? 0));
+    const deltaE = distances.map((d, k) => d * sinDeg(azimuths[k] ?? 0));
+    return { angles, distances, azimuths, deltaN, deltaE };
+  };
+
+  const result = adjustByConditions({
+    observations: [...adjustable.map((i) => angles0[i]! * D2R), ...distances0],
+    sigmas: [...adjustable.map(() => sig.angle), ...distances0.map(() => sig.distance)],
+    evaluate: (l) => {
+      const g = geometry(l);
+      const angleSum = g.angles.slice(firstParticipating).reduce((a, b) => a + b, 0);
+      const f = [
+        (angleSum - theoreticalSum) * D2R,
+        g.deltaN.reduce((a, b) => a + b, 0),
+        g.deltaE.reduce((a, b) => a + b, 0),
+      ];
+      const rowAngle = [...adjustable.map(() => 1), ...distances0.map(() => 0)];
+      const rowN: number[] = [];
+      const rowE: number[] = [];
+      for (const idx of adjustable) {
+        let sN = 0;
+        let sE = 0;
+        if (idx >= 1) {
+          for (let k = idx; k < sideCount; k++) {
+            sN -= g.deltaE[k] ?? 0;
+            sE += g.deltaN[k] ?? 0;
+          }
+        }
+        rowN.push(sN);
+        rowE.push(sE);
+      }
+      for (let k = 0; k < sideCount; k++) {
+        rowN.push(cosDeg(g.azimuths[k] ?? 0));
+        rowE.push(sinDeg(g.azimuths[k] ?? 0));
+      }
+      return { f, A: [rowAngle, rowN, rowE] };
+    },
+  });
+
+  const g = geometry(result.adjusted);
+  const n = input.stations.length;
+  return {
+    ...g,
+    adjustment: {
+      status: "adjusted",
+      angleCorrectionsSec: perStation(
+        n,
+        adjustable.map((idx, j) => [idx, (result.corrections[j] ?? 0) * RHO_SECONDS]),
+      ),
+      distanceCorrectionsM: perStation(
+        n,
+        distances0.map((_, k) => [k, result.corrections[na + k] ?? 0]),
+      ),
+      adjustedDistances: perStation(n, g.distances.map((d, k) => [k, d])),
+      sigma0: result.sigma0,
+      conditions: 3,
+      iterations: result.iterations,
+    },
+    converged: result.converged,
+  };
+}
+
+/**
+ * Abierta con control. Observaciones: las deflexiones con signo de las
+ * estaciones 1.. (la última solo si hay cierre angular) y las distancias de
+ * los lados. Condiciones: azimut final contra el de llegada (si lo hay) y
+ * llegada al punto conocido en N y en E.
+ */
+function leastSquaresOpenControlled(
+  input: PolygonalInput,
+  doAngularClosure: boolean,
+  weights: LeastSquaresWeights,
+): LeastSquaresOutcome {
+  const { stations } = input;
+  const n = stations.length;
+  const sideCount = n - 1;
+  const lastDeflection = doAngularClosure ? n - 1 : n - 2;
+  const deflIdx: number[] = [];
+  for (let i = 1; i <= lastDeflection; i++) deflIdx.push(i);
+  const dir = (i: number) => (stations[i]?.deflectionDirection === "left" ? -1 : 1);
+  const signed0 = deflIdx.map((i) => dir(i) * (stations[i]?.angle ?? 0));
+  const distances0 = stations.slice(0, sideCount).map((s) => s.distance ?? 0);
+  const sig = sigmasOf(weights);
+  const nd = deflIdx.length;
+
+  const geometry = (l: number[]) => {
+    const signed = l.slice(0, nd).map((x) => x / D2R);
+    const distances = l.slice(nd);
+    const azimuths: number[] = [input.startAzimuth];
+    for (let k = 1; k < sideCount; k++) {
+      azimuths.push(normalizeAzimuth((azimuths[k - 1] ?? 0) + (signed[k - 1] ?? 0)));
+    }
+    const deltaN = distances.map((d, k) => d * cosDeg(azimuths[k] ?? 0));
+    const deltaE = distances.map((d, k) => d * sinDeg(azimuths[k] ?? 0));
+    return { signed, distances, azimuths, deltaN, deltaE };
+  };
+
+  const result = adjustByConditions({
+    observations: [...signed0.map((s) => s * D2R), ...distances0],
+    sigmas: [...signed0.map(() => sig.angle), ...distances0.map(() => sig.distance)],
+    evaluate: (l) => {
+      const g = geometry(l);
+      const f: number[] = [];
+      const A: number[][] = [];
+      if (doAngularClosure) {
+        let az = input.startAzimuth + g.signed.reduce((a, b) => a + b, 0) - (input.endAzimuth ?? 0);
+        az = ((((az + 180) % 360) + 360) % 360) - 180;
+        f.push(az * D2R);
+        A.push([...deflIdx.map(() => 1), ...distances0.map(() => 0)]);
+      }
+      f.push(
+        input.startNorth + g.deltaN.reduce((a, b) => a + b, 0) - (input.endNorth ?? 0),
+        input.startEast + g.deltaE.reduce((a, b) => a + b, 0) - (input.endEast ?? 0),
+      );
+      const rowN: number[] = [];
+      const rowE: number[] = [];
+      for (const i of deflIdx) {
+        let sN = 0;
+        let sE = 0;
+        for (let k = i; k < sideCount; k++) {
+          sN -= g.deltaE[k] ?? 0;
+          sE += g.deltaN[k] ?? 0;
+        }
+        rowN.push(sN);
+        rowE.push(sE);
+      }
+      for (let k = 0; k < sideCount; k++) {
+        rowN.push(cosDeg(g.azimuths[k] ?? 0));
+        rowE.push(sinDeg(g.azimuths[k] ?? 0));
+      }
+      A.push(rowN, rowE);
+      return { f, A };
+    },
+  });
+
+  const g = geometry(result.adjusted);
+  return {
+    angles: [],
+    distances: g.distances,
+    azimuths: g.azimuths,
+    deltaN: g.deltaN,
+    deltaE: g.deltaE,
+    adjustment: {
+      status: "adjusted",
+      angleCorrectionsSec: perStation(
+        n,
+        deflIdx.map((i, j) => [i, dir(i) * (result.corrections[j] ?? 0) * RHO_SECONDS]),
+      ),
+      distanceCorrectionsM: perStation(
+        n,
+        distances0.map((_, k) => [k, result.corrections[nd + k] ?? 0]),
+      ),
+      adjustedDistances: perStation(n, g.distances.map((d, k) => [k, d])),
+      sigma0: result.sigma0,
+      conditions: doAngularClosure ? 3 : 2,
+      iterations: result.iterations,
+    },
+    converged: result.converged,
+  };
 }

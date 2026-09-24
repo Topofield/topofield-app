@@ -12,6 +12,7 @@ import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
 import { parseNumber } from "@/lib/utils/parse";
 import type {
   CorrectionMethod,
+  LeastSquaresWeights,
   PolygonalInput,
   PolygonalProcess,
   PolygonalStationWithReadings,
@@ -101,6 +102,41 @@ export function processToConfig(p: PolygonalProcess): PolygonalConfigState {
   };
 }
 
+/** Pesos del ajuste por mínimos cuadrados como los teclea el usuario (Fase 14). */
+export interface LeastSquaresWeightsDraft {
+  sigmaAngleSeconds: string;
+  sigmaDistanceM: string;
+  distanceMeasurements: string;
+}
+
+export function weightsToDraft(p: PolygonalProcess): LeastSquaresWeightsDraft {
+  return {
+    sigmaAngleSeconds:
+      p.ls_sigma_angle_seconds != null ? String(p.ls_sigma_angle_seconds) : "",
+    sigmaDistanceM:
+      p.ls_sigma_distance_m != null ? String(p.ls_sigma_distance_m) : "",
+    distanceMeasurements:
+      p.ls_distance_measurements != null ? String(p.ls_distance_measurements) : "",
+  };
+}
+
+/**
+ * Los pesos del borrador, o `null` si falta alguno. Sin validar el signo: eso
+ * lo decide el motor (que no ajusta con pesos no positivos) y el guardado.
+ */
+export function weightsFromDraft(
+  draft: LeastSquaresWeightsDraft,
+): LeastSquaresWeights | null {
+  const sigmaAngleSeconds = parseNumber(draft.sigmaAngleSeconds);
+  const sigmaDistanceM = parseNumber(draft.sigmaDistanceM);
+  const distanceMeasurements = parseNumber(draft.distanceMeasurements);
+  return sigmaAngleSeconds != null &&
+    sigmaDistanceM != null &&
+    distanceMeasurements != null
+    ? { sigmaAngleSeconds, sigmaDistanceM, distanceMeasurements }
+    : null;
+}
+
 export function stationToDraft(
   st: PolygonalStationWithReadings,
   readingsMin: number,
@@ -146,6 +182,7 @@ export function buildInput(
   stations: StationDraftState[],
   method: CorrectionMethod,
   order: PrecisionOrder,
+  leastSquares: LeastSquaresWeights | null = null,
 ): PolygonalInput {
   const controlled = config.type === "open_controlled";
   return {
@@ -165,6 +202,7 @@ export function buildInput(
     hasOrientation:
       config.referencePointId !== "" || config.referencePointCode !== "",
     hasClosingRow: config.hasClosingRow,
+    leastSquares,
     stations: stations.map((st) => ({
       pointCode: st.pointCode,
       angle: dmsToDecimalOrNaN(averageOf(st.readings) ?? st.angle),
@@ -189,5 +227,6 @@ export function polygonalInputOf(
     stations.map((st) => stationToDraft(st, process.angle_readings_min)),
     process.correction_method ?? "bowditch",
     process.precision_order,
+    weightsFromDraft(weightsToDraft(process)),
   );
 }
