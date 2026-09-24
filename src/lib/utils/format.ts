@@ -194,3 +194,43 @@ export function formatTrendDeviation(deviation: {
   const verbo = deviation.partialMm > 0 ? "sube" : "baja";
   return `Se sale de la tendencia: ${verbo} ${mmAbs(deviation.partialMm)} mm cuando su ritmo anterior preveía unos ${mmAbs(deviation.expectedMm)} mm. Verifica la lectura.`;
 }
+
+/** «7 ene 2025»: la fecha corta de tablas y ejes (Fase 18). Sin zona horaria. */
+export function formatDateShort(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return date;
+  return new Date(year, month - 1, day)
+    .toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" })
+    .replace(/\./g, "")
+    .replace(/ de /g, " ");
+}
+
+/** Milímetros con signo explícito: «+1.3», «-2.0», «0.0»; «—» sin valor. */
+export function formatSignedMm(value: number | null | undefined, decimals = 1): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const text = value.toFixed(decimals);
+  if (Number(text) === 0) return (0).toFixed(decimals);
+  return value > 0 ? `+${text}` : text;
+}
+
+/**
+ * El cierre de la libreta de una visita en palabras (Fase 18): el error y su
+ * veredicto frente a la tolerancia. Fuera de tolerancia es un aviso, no un
+ * bloqueo (decisión 5), así que el texto no dice «rechazada».
+ */
+export function formatBookClosure(
+  closureErrorMm: number | null | undefined,
+  toleranceMm: number | null | undefined,
+  meetsTolerance: boolean | null | undefined,
+): { value: string; detail: string; status: "ok" | "out" | "unknown" } {
+  if (closureErrorMm == null) {
+    return { value: "—", detail: "Libreta incompleta: falta cerrar en el amarre", status: "unknown" };
+  }
+  const value = `${formatSignedMm(closureErrorMm)} mm`;
+  if (toleranceMm == null || meetsTolerance == null) {
+    return { value, detail: "Sin tolerancia: faltan distancias", status: "unknown" };
+  }
+  return meetsTolerance
+    ? { value, detail: `Dentro de tolerancia (±${toleranceMm.toFixed(1)} mm)`, status: "ok" }
+    : { value, detail: `Fuera de tolerancia (±${toleranceMm.toFixed(1)} mm)`, status: "out" };
+}
