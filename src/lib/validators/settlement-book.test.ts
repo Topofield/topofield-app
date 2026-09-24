@@ -57,6 +57,16 @@ describe("validateVisitBook", () => {
     ]);
   });
 
+  it("rechaza números no finitos, que una llamada directa sí puede enviar", () => {
+    const rows = [{ ...BOOK[0]!, backsight: Number.NaN }, BOOK[1]!, BOOK[2]!];
+    expect(validateVisitBook(rows, AMARRE, "tercer_orden").errors).toContain(
+      "La libreta tiene un valor que no es un número.",
+    );
+    expect(
+      validateVisitBook(BOOK, { code: "BM-1", elevation: Infinity }, "tercer_orden").errors,
+    ).toContain("La libreta tiene un valor que no es un número.");
+  });
+
   it("exige al menos la fila del amarre y la de cierre", () => {
     const r = validateVisitBook([BOOK[0]!], AMARRE, "tercer_orden");
     expect(r.errors).toEqual([

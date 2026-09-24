@@ -41,6 +41,21 @@ export function validateVisitBook(
     errors.push("La libreta necesita al menos la fila del amarre y la de cierre.");
   }
 
+  // Un número no finito no llega desde el editor, pero sí en una llamada
+  // directa a la acción: el protocolo de las Server Actions transporta `NaN`,
+  // el validador de nivelación no lo filtra (sus comparaciones con `NaN` son
+  // falsas) y Postgres lo acepta en una columna `numeric`.
+  const numeric = [
+    "backsight", "foresight", "backUpperM", "backLowerM",
+    "foreUpperM", "foreLowerM", "backDistanceM", "foreDistanceM",
+  ] as const;
+  if (
+    (amarre.elevation != null && !Number.isFinite(amarre.elevation)) ||
+    rows.some((r) => numeric.some((k) => r[k] != null && !Number.isFinite(r[k])))
+  ) {
+    errors.push("La libreta tiene un valor que no es un número.");
+  }
+
   const rowIssues = validateRunCapture(rows, "closed", order, false);
   if (code !== "" && rows.length >= 2) {
     const last = rows.length - 1;
