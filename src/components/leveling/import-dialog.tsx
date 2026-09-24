@@ -71,7 +71,7 @@ function fmt(value: number | null, decimals: number): string {
   return value == null ? "" : value.toFixed(decimals);
 }
 
-function TemplateLink() {
+export function TemplateLink() {
   return (
     <a
       href={TEMPLATE_HREF}
@@ -83,15 +83,21 @@ function TemplateLink() {
   );
 }
 
-/** Tabla de una libreta importada, con el tipo de punto editable. */
-function RunPreview({
+/**
+ * Tabla de una libreta importada, con el tipo de punto editable. La reutiliza
+ * la importación de la visita de asentamientos (Fase 18), que pasa `notes`
+ * para marcar los puntos de control.
+ */
+export function RunPreview({
   title,
   rows,
   onType,
+  notes,
 }: {
   title: string;
   rows: LibretaRow[];
   onType: (index: number, type: PointType) => void;
+  notes?: (string | null)[];
 }) {
   return (
     <div className="overflow-x-auto">
@@ -105,6 +111,7 @@ function RunPreview({
             <th className="py-1.5 pr-3 font-medium">V−</th>
             <th className="py-1.5 pr-3 font-medium">Dist. V+</th>
             <th className="py-1.5 pr-3 font-medium">Dist. V−</th>
+            {notes && <th className="py-1.5 pr-3 font-medium">Nota</th>}
           </tr>
         </thead>
         <tbody>
@@ -123,6 +130,7 @@ function RunPreview({
               <td className="py-1 pr-3 font-mono tabular-nums">{fmt(r.foresight, 4)}</td>
               <td className="py-1 pr-3 font-mono tabular-nums">{fmt(r.backDistanceM, 3)}</td>
               <td className="py-1 pr-3 font-mono tabular-nums">{fmt(r.foreDistanceM, 3)}</td>
+              {notes && <td className="py-1 pr-3 text-neutral-500">{notes[i] ?? ""}</td>}
             </tr>
           ))}
         </tbody>

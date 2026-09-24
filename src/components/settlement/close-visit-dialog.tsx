@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Alert, Button, Modal } from "@/components/design-system";
+import { formatBookClosure } from "@/lib/utils/format";
 import { ALERT_LEVEL_LABELS, type AlertLevel } from "@/types/settlement";
 
 function formatDate(iso: string): string {
@@ -32,6 +33,16 @@ interface CloseVisitDialogProps {
    * congela el dato, así que se recuerdan aquí; no bloquean.
    */
   trendDeviationCodes: string[];
+  /**
+   * Resumen de la libreta de la visita (Fase 18); null en cotas directas. La
+   * comprobación aritmética fallida bloquea; la tolerancia solo avisa.
+   */
+  book?: {
+    closureErrorMm: number | null;
+    toleranceMm: number | null;
+    meetsTolerance: boolean | null;
+    arithmeticCheckOk: boolean;
+  } | null;
 }
 
 /**
@@ -54,12 +65,17 @@ export function CloseVisitDialog({
   worstAlert,
   dirty,
   trendDeviationCodes,
+  book = null,
 }: CloseVisitDialogProps) {
   const [confirmed, setConfirmed] = useState(false);
 
   if (!open) return null;
 
-  const canConfirm = !dirty && confirmed && !isPending;
+  const bookBlocked = book != null && !book.arithmeticCheckOk;
+  const canConfirm = !dirty && !bookBlocked && confirmed && !isPending;
+  const closure = book
+    ? formatBookClosure(book.closureErrorMm, book.toleranceMm, book.meetsTolerance)
+    : null;
 
   const now = new Intl.DateTimeFormat("es-CO", {
     dateStyle: "long",
@@ -115,6 +131,14 @@ export function CloseVisitDialog({
           <dd className="text-neutral-900">{ALERT_LEVEL_LABELS[worstAlert]}</dd>
           <dt className="text-neutral-500">Fecha y hora de cierre</dt>
           <dd className="text-neutral-900">{now}</dd>
+          {closure && (
+            <>
+              <dt className="text-neutral-500">Cierre de la libreta</dt>
+              <dd className="text-neutral-900">
+                {closure.value} · {closure.detail}
+              </dd>
+            </>
+          )}
           {trendDeviationCodes.length > 0 && (
             <>
               <dt className="text-neutral-500">Lecturas fuera de tendencia</dt>
@@ -124,6 +148,19 @@ export function CloseVisitDialog({
             </>
           )}
         </dl>
+
+        {bookBlocked && (
+          <Alert variant="error">
+            La comprobación aritmética de la libreta no cuadra. Corrige la
+            libreta antes de cerrar la visita.
+          </Alert>
+        )}
+        {closure?.status === "out" && (
+          <Alert variant="warning">
+            El cierre de la libreta supera la tolerancia. La visita se cierra
+            igual, con sus cotas sin compensar.
+          </Alert>
+        )}
 
         {worstAlert === "alarm" || worstAlert === "alert" ? (
           <Alert variant="warning">

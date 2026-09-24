@@ -22,6 +22,11 @@ interface ReadingsTableProps {
    * Avisa, no bloquea.
    */
   trendWarnings: Record<string, string | undefined>;
+  /**
+   * Las cotas salen de la libreta de nivelación (Fase 18): se muestran como
+   * texto, no como campo, porque no se teclean.
+   */
+  derived?: boolean;
 }
 
 /**
@@ -37,6 +42,7 @@ export function ReadingsTable({
   isBaseline,
   disabled,
   trendWarnings,
+  derived = false,
 }: ReadingsTableProps) {
   if (points.length === 0) {
     return (
@@ -54,7 +60,9 @@ export function ReadingsTable({
           <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
             <th className="py-2 pr-3 font-medium">Punto</th>
             <th className="py-2 pr-3 font-medium">Ubicación</th>
-            <th className="py-2 pr-3 font-medium">Cota medida (m)</th>
+            <th className="py-2 pr-3 font-medium">
+              {derived ? "Cota de la libreta (m)" : "Cota medida (m)"}
+            </th>
             <th className="py-2 pr-3 font-medium">Parcial (mm)</th>
             <th className="py-2 pr-3 font-medium">Acumulado (mm)</th>
             <th className="py-2 pr-3 font-medium">Velocidad (mm/mes)</th>
@@ -81,18 +89,24 @@ export function ReadingsTable({
                   {point.location_description}
                 </td>
                 <td className="py-2 pr-3">
-                  <Input
-                    aria-label={`Cota medida de ${point.code}`}
-                    type="number"
-                    step="any"
-                    inputMode="decimal"
-                    value={rawElevations[point.id] ?? ""}
-                    onChange={(event) =>
-                      onElevationChange(point.id, event.target.value)
-                    }
-                    disabled={disabled}
-                    className="w-32"
-                  />
+                  {derived ? (
+                    <span className="font-mono tabular-nums text-neutral-900">
+                      {rawElevations[point.id] || "—"}
+                    </span>
+                  ) : (
+                    <Input
+                      aria-label={`Cota medida de ${point.code}`}
+                      type="number"
+                      step="any"
+                      inputMode="decimal"
+                      value={rawElevations[point.id] ?? ""}
+                      onChange={(event) =>
+                        onElevationChange(point.id, event.target.value)
+                      }
+                      disabled={disabled}
+                      className="w-32"
+                    />
+                  )}
                   {trendWarnings[point.id] && (
                     <p className="mt-1 w-64 text-xs text-warning-500">
                       {trendWarnings[point.id]}
