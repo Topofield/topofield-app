@@ -114,7 +114,7 @@ export function DifferentialsTable({
                 key={`${pair.pointIdA}-${pair.pointIdB}`}
                 className="border-b border-neutral-100 last:border-0"
               >
-                <td className="py-2 pr-3 font-medium text-neutral-900">
+                <td className="whitespace-nowrap py-2 pr-3 font-medium text-neutral-900">
                   {(pointA?.code ?? "—")} – {(pointB?.code ?? "—")}
                   {fromLaterDate && (
                     <span className="block text-xs font-normal text-neutral-500">

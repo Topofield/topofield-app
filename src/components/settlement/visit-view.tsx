@@ -14,6 +14,7 @@ import {
 import { BookDrawer } from "@/components/settlement/book-drawer";
 import type { ChartThresholds } from "@/components/settlement/charts/trend-chart";
 import { PointBarsChart } from "@/components/settlement/charts/point-bars-chart";
+import { withUnit } from "@/components/settlement/site-kpis";
 import { PointHistoryChart } from "@/components/settlement/charts/point-history-chart";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import {
@@ -149,7 +150,9 @@ export function VisitView(props: VisitViewProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href={props.backHref} className="w-fit text-sm text-neutral-600 hover:text-neutral-900">
+      {/* Solo desde `md`: en un teléfono las migas ya colapsan en un
+          enlace al lugar, y dos enlaces de vuelta seguidos sobran. */}
+      <Link href={props.backHref} className="hidden w-fit text-sm text-neutral-600 hover:text-neutral-900 md:block">
         ← Volver a {props.siteName}
       </Link>
 
@@ -210,12 +213,18 @@ export function VisitView(props: VisitViewProps) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <KpiCard
           label="Asentamiento máximo"
-          value={summary.maxSettlement ? `${formatSignedMm(summary.maxSettlement.value)} mm` : "—"}
-          hint={summary.maxSettlement ? code(summary.maxSettlement.pointId) : "Sin lecturas"}
+          value={summary.maxSettlement ? withUnit(formatSignedMm(summary.maxSettlement.value), "mm") : "—"}
+          hint={
+            props.isBaseline
+              ? "Lectura base"
+              : summary.maxSettlement
+                ? code(summary.maxSettlement.pointId)
+                : "Sin lecturas"
+          }
         />
         <KpiCard
           label="Promedio"
-          value={summary.mean != null ? `${formatSignedMm(summary.mean)} mm` : "—"}
+          value={summary.mean != null ? withUnit(formatSignedMm(summary.mean), "mm") : "—"}
           hint={
             props.isBaseline
               ? "Lectura base"
@@ -226,7 +235,7 @@ export function VisitView(props: VisitViewProps) {
         />
         <KpiCard
           label="Mayor movimiento"
-          value={!props.isBaseline && summary.maxMove ? `${formatSignedMm(summary.maxMove.value)} mm` : "—"}
+          value={!props.isBaseline && summary.maxMove ? withUnit(formatSignedMm(summary.maxMove.value), "mm") : "—"}
           hint={!props.isBaseline && summary.maxMove ? `${code(summary.maxMove.pointId)} desde la visita anterior` : undefined}
         />
         <KpiCard
@@ -240,7 +249,15 @@ export function VisitView(props: VisitViewProps) {
         />
         <KpiCard
           label="Cierre de nivelación"
-          value={closure ? closure.value : props.closureErrorMm != null ? `${formatSignedMm(props.closureErrorMm)} mm` : "—"}
+          value={
+            closure && props.closureErrorMm != null
+              ? withUnit(formatSignedMm(props.closureErrorMm), "mm")
+              : closure
+                ? closure.value
+                : props.closureErrorMm != null
+                  ? withUnit(formatSignedMm(props.closureErrorMm), "mm")
+                  : "—"
+          }
           hint={closure ? closure.detail : "Cotas directas: cierre tecleado"}
           className={closure?.status === "out" ? "border-warning-500" : undefined}
         />

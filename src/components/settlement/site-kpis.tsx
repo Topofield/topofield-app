@@ -10,6 +10,16 @@ interface SiteKpisProps {
   distortionLimit: number;
 }
 
+/** Un valor con su unidad en letra menor, como en el prototipo: «−18.1 mm». */
+export function withUnit(value: string, unit: string) {
+  return (
+    <>
+      {value}
+      <span className="ml-1 whitespace-nowrap text-base font-normal text-neutral-500">{unit}</span>
+    </>
+  );
+}
+
 /** «1/1.234», o «1/∞» si los dos puntos se asientan igual. */
 export function formatDistortion(inverse: number): string {
   return Number.isFinite(inverse)
@@ -32,12 +42,12 @@ export function SiteKpis({ summary, codes, distortionLimit }: SiteKpisProps) {
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       <KpiCard
         label="Asentamiento máximo"
-        value={last?.maxSettlement ? `${formatSignedMm(last.maxSettlement.value)} mm` : "—"}
+        value={last?.maxSettlement ? withUnit(formatSignedMm(last.maxSettlement.value), "mm") : "—"}
         hint={last?.maxSettlement ? `${code(last.maxSettlement.pointId)} en la última visita` : "Sin lecturas"}
       />
       <KpiCard
         label="Promedio actual"
-        value={last?.mean != null ? `${formatSignedMm(last.mean)} mm` : "—"}
+        value={last?.mean != null ? withUnit(formatSignedMm(last.mean), "mm") : "—"}
         hint={last ? `${last.readingCount} puntos de control medidos` : undefined}
       />
       <KpiCard
@@ -53,7 +63,7 @@ export function SiteKpis({ summary, codes, distortionLimit }: SiteKpisProps) {
       />
       <KpiCard
         label="Velocidad máxima"
-        value={last?.maxVelocity ? `${last.maxVelocity.value.toFixed(2)} mm/mes` : "—"}
+        value={last?.maxVelocity ? withUnit(last.maxVelocity.value.toFixed(2), "mm/mes") : "—"}
         hint={last?.maxVelocity ? `${code(last.maxVelocity.pointId)}, última visita` : "Desde la segunda visita"}
       />
       <KpiCard
