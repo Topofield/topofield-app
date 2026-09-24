@@ -14,8 +14,8 @@ trazabilidad, los informes y la exportación a Excel.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-09-18 · Fase 8 (Precisión y equipo por
-proceso) cerrada.
+**Última actualización:** 2026-09-24 · Fase 18 (Libreta de nivelación y
+panel de asentamientos).
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -157,7 +157,8 @@ referencia.
 
 Los **puntos de referencia** son coordenadas conocidas (vértices geodésicos,
 mojones) que puede reutilizar como punto de partida o de llegada de sus
-poligonales, sin volver a teclearlas.
+poligonales, sin volver a teclearlas. Los que tienen cota sirven además como
+BM de sus nivelaciones y como **BM de amarre** de las visitas de asentamiento.
 
 ### 4.3 El listado de procesos
 
@@ -680,7 +681,7 @@ Guardar**; al crear, el proceso nace con sus lecturas.
 ### 6.8 Cierre irreversible
 
 Igual que en poligonales, cerrar una nivelación es **irreversible**
-(§ 7). Un trabajo que no alcanza la tolerancia solo puede cerrarse como
+(§ 8). Un trabajo que no alcanza la tolerancia solo puede cerrarse como
 **rechazado**; no hay forma de cerrarlo como conforme si no cumple.
 
 ---
@@ -722,8 +723,12 @@ La C0 es opcional. Si la deja vacía, la **línea base del punto es su primera
 lectura**: esa lectura queda con acumulado 0 y las siguientes se miden contra
 ella.
 
+**Renombrar un punto** cambia también su código en la libreta de las visitas
+**abiertas** (§ 7.3), para que su cota siga saliendo de su fila. Las visitas
+cerradas conservan el código con que se midieron.
+
 El catálogo puede cambiar a mitad del monitoreo —un punto se destruye, otro se
-instala—; ver [§ 7.6](#76-dar-de-baja-y-de-alta-un-punto).
+instala—; ver [§ 7.7](#77-dar-de-baja-y-de-alta-un-punto).
 
 ### 7.3 Registrar una visita
 
@@ -732,7 +737,25 @@ La primera visita registrada es la **visita 0 o línea base**: fija el punto
 de partida y no tiene asentamiento ni velocidad propios, porque no hay una
 visita anterior contra la que compararla.
 
-![Editor de visita con lecturas y semáforo por punto](../../public/manual/16-editor-visita.png)
+**Crear la visita.** En el panel del lugar (§ 7.4), **+ Nueva visita** pide:
+
+![Formulario de nueva visita](../../public/manual/25-nueva-visita.png)
+
+- **Fecha** y **Nivelador**.
+- **Captura** — cómo llegan las cotas: *digitar la libreta de nivelación*,
+  *importar la libreta desde un archivo* o *cotas directas*, para una
+  nivelación calculada fuera de la aplicación.
+- **BM de amarre** — el banco de nivel sobre el que se cierra la nivelación
+  de la visita. Elíjalo del catálogo de puntos de referencia del proyecto
+  (§ 4.2), que trae código y cota, o tecléelo con **Otro (entrada libre)** si
+  el proyecto no lo tiene registrado. Para digitar es obligatorio; al importar
+  puede dejarlo vacío, porque lo trae el archivo.
+- El **orden de precisión** y los datos del **nivel**.
+
+El nivelador, el amarre, el orden y el equipo **vienen de la visita
+anterior**: cambie solo lo que no sea igual. **Crear y abrir** lleva al
+editor de la visita, con el diálogo de importación ya abierto si eligió
+importar.
 
 Cada visita declara también el **orden de precisión** con que se midió y los
 datos del **nivel** usado: marca, modelo, número de serie, fecha de
@@ -746,12 +769,74 @@ equipo, no el lugar.
 > nivelación (§ 6.5): un nivel de 5.0 mm/km con primer orden (K = 3) avisa; uno
 > de 2.5 mm/km, ajustado pero posible, no. Es un aviso, no un bloqueo.
 
-La tabla pide los puntos **vigentes** en la fecha de la visita. Un punto de
-baja, o dado de alta después de esa fecha, no aparece, y una nota debajo de la
-tabla dice cuál falta y por qué, para que la ausencia no parezca un olvido.
+**La libreta de nivelación.** En una visita con libreta, las cotas de los
+puntos de control **no se teclean: salen de la libreta**. Es la misma tabla
+de la nivelación (§ 6.2 a § 6.5) —V+, V−, distancia a cada mira, hilos con
+nivel automático— y forma un **circuito cerrado sobre el BM de amarre**: la
+primera y la última fila son el amarre.
 
-Por cada punto se captura la **cota medida**. La aplicación calcula al
-instante:
+![Editor de la visita: cabecera, libreta de nivelación y cotas de los puntos de control](../../public/manual/16-editor-visita.png)
+
+Para capturar en campo, la libreta llega **precargada** con la secuencia de la
+visita anterior —códigos y tipos, sin lecturas— y el amarre de esta visita.
+Si no hay visita anterior con libreta, con el amarre, los puntos de control
+como intermedios y el amarre otra vez. Solo queda llenar las lecturas.
+Además:
+
+- la casilla del punto **sugiere** los códigos del catálogo y el del amarre;
+- **Insertar** añade una fila debajo de la actual, por ejemplo para un punto
+  de cambio que la secuencia no traía;
+- bajo el código, una nota marca las filas que son **Punto de control** o
+  **BM de amarre**.
+
+Debajo de la tabla, el resumen: ΣV+, ΣV−, el error de cierre y la tolerancia
+K·√D del orden de la visita.
+
+**De dónde sale la cota de cada punto.** De la fila de la libreta con su
+código y con **vista menos**. Si el cierre cumple la tolerancia, es la cota
+**compensada**, como en nivelación (§ 6.5); si no, la calculada. La tabla
+**Cotas de los puntos de control**, bajo la libreta, las muestra en solo
+lectura, y el servidor las recalcula al pulsar **Guardar visita**.
+
+La libreta avisa de lo que no cuadra:
+
+| Situación | Qué ocurre |
+|---|---|
+| El cierre supera la tolerancia | **Solo avisa.** La visita se guarda y se cierra igual, con sus cotas sin compensar |
+| Faltan las distancias por visual | Avisa: sin distancias no se evalúa la tolerancia ni se compensa |
+| Todavía no se leyó el amarre de cierre | «Libreta incompleta»: aún no hay error de cierre |
+| La primera o la última fila no es el BM de amarre | **No se puede guardar** |
+| Un punto de control sin vista menos | Avisa: el punto queda sin cota |
+| Un punto que no está vigente en la fecha | Avisa: su lectura no se usa |
+| El mismo punto con vista menos en dos filas | **No se puede guardar** hasta dejar una |
+| La comprobación aritmética no cuadra | **No se puede cerrar la visita** (§ 7.6) |
+
+> **Fuera de tolerancia solo avisa.** Un cierre que no alcanza la tolerancia
+> es un resultado de campo, no un error de captura: se registra, y el aviso
+> queda en el editor, en la columna Cierre del panel, en la vista de la visita
+> y al cerrarla. Conviene revisar la libreta o repetir la nivelación. La
+> comprobación aritmética sí bloquea el cierre, porque una suma que no cuadra
+> es un error de la libreta.
+
+**Importar la libreta.** Con un nivel digital, **Importar desde archivo** pasa
+a la libreta el archivo **.L de Leica** o la **plantilla CSV** de TopoField,
+como en nivelación (§ 6.7), con dos diferencias: el archivo se lee siempre
+como **un solo recorrido** —el circuito cerrado sobre el amarre, sin ida y
+vuelta— y **el amarre sale de su primera fila**: si la visita no tenía o
+tenía otro, se propone el del archivo. Si la visita ya tenía libreta, se
+reemplaza, con aviso. Nada se guarda hasta pulsar **Guardar visita**.
+
+![Importar la libreta de la visita desde la plantilla CSV](../../public/manual/26-importar-libreta-visita.png)
+
+**Cotas directas.** Para una nivelación procesada fuera de la aplicación,
+elija **Cotas directas** en *Captura de las cotas*: se teclea la **cota
+medida** de cada punto y el **error de cierre (mm)**, que se registra tal
+cual, sin tolerancia. Las visitas registradas antes de que existiera la
+libreta siguen en este modo. Al cambiar de modo, el editor avisa de lo que
+descartará al guardar: la libreta o las cotas tecleadas.
+
+**El cálculo.** En los dos modos, con la cota de cada punto, la aplicación
+calcula al instante:
 
 - **Parcial** — cuánto bajó (o subió) el punto desde la visita anterior, en mm.
 - **Acumulado** — cuánto ha bajado desde la línea base del punto —su C0 o,
@@ -761,14 +846,19 @@ instante:
   «un mes» genérico: una visita a 28 días y otra a 31 no dan la misma
   velocidad aunque el parcial fuera igual.
 - **Estado** — el nivel de alerta de ese punto, semáforo explicado en
-  [§ 7.4](#74-el-semáforo-y-la-gráfica).
+  [§ 7.4](#74-el-panel-del-lugar).
 
 Un valor positivo es un **levantamiento**, no un asentamiento, y se muestra
 como tal: es un hallazgo que vale la pena revisar, no un error de signo.
 
+La tabla de cotas pide los puntos **vigentes** en la fecha de la visita. Un
+punto de baja, o dado de alta después de esa fecha, no aparece, y una nota
+debajo de la tabla dice cuál falta y por qué, para que la ausencia no parezca
+un olvido.
+
 **Lecturas fuera de tendencia.** Desde la tercera lectura de un punto, la
 aplicación compara cada cota con la tendencia de ese punto y avisa bajo la
-casilla si la lectura:
+cota si la lectura:
 
 - va **contra** su tendencia más que el margen —por ejemplo, un punto que
   viene bajando y de pronto sube—, o
@@ -785,13 +875,51 @@ consolidación frena con el tiempo.
 > salen marcadas, casi siempre el error está en la primera: la segunda se
 > compara contra una velocidad ya contaminada.
 
-### 7.4 El semáforo y la gráfica
+### 7.4 El panel del lugar
 
-![Panel de análisis: visitas, semáforo por punto, diferenciales y gráfica](../../public/manual/15-panel-asentamientos.png)
+![Panel del lugar: indicadores, visitas, tendencia, evolución por punto y semáforo](../../public/manual/15-panel-asentamientos.png)
 
-El panel del lugar reúne el historial completo:
+Abrir el lugar desde el proyecto lleva a su panel, que reúne el historial
+completo. Arriba, cuántos puntos de control tiene, la fecha de la lectura base
+y la leyenda de los tres umbrales de acumulado que dibujan las gráficas. Las
+acciones: **+ Nueva visita** (§ 7.3), **Exportar a Excel** (§ 11) y **Editar
+lugar**, que lleva al catálogo.
 
-**Visitas.** La lista cronológica, con la peor alerta de cada una.
+**Indicadores.** Seis, sobre la última visita y el histórico:
+
+| Indicador | Qué muestra |
+|---|---|
+| Asentamiento máximo | El acumulado de mayor magnitud en la última visita, con su punto. Un levantamiento también cuenta |
+| Promedio actual | La media del acumulado de los puntos medidos en la última visita |
+| Distorsión angular | El par con la peor distorsión en la última visita, y si supera el límite del lugar |
+| Velocidad máxima | La de mayor magnitud en la última visita, en mm/mes, con su punto |
+| Visitas en alerta | Cuántas visitas tienen algún punto en precaución o más |
+| Visitas | El total, con la fecha de la lectura base y la de la última |
+
+Un punto dado de alta a mitad del monitoreo mide su acumulado desde su propia
+línea base, así que el promedio mezcla las dos.
+
+**Visitas.** De la más reciente a la más antigua; pulse una fila para abrir
+la visita (§ 7.5). Por visita: el promedio y el máximo del acumulado, el BM
+de amarre con su cota, el **mayor Δ** desde la anterior, el **cierre** de la
+libreta en mm —con **⚠** si supera la tolerancia; en cotas directas, el
+tecleado—, la peor alerta y el estado: borrador, calculada o cerrada.
+
+**Tendencia del asentamiento.** El promedio de los puntos en cada visita, con
+una banda que va del punto menos asentado al más asentado y las líneas de los
+umbrales. El eje horizontal es el **tiempo**, no el número de visita: si las
+visitas pasan de quincenales a mensuales, la pendiente no se exagera. Pulse
+una visita en la línea para abrirla.
+
+**Evolución por punto.** El acumulado de cada punto de control según los días
+desde la lectura base. Los chips de arriba muestran el último valor de cada
+punto; pulse uno para resaltarlo y atenuar los demás, y **Todos** para volver.
+Cada punto se distingue por **forma de marcador además de color** (círculo,
+cuadrado, triángulo, rombo, cruz), y las marcas «(de baja)» y «(alta …)»
+señalan los puntos que salieron o entraron a mitad del monitoreo.
+
+Bajo cada gráfica, **Ver datos en tabla** despliega los mismos valores en
+texto: la alternativa para cuando la gráfica no basta.
 
 **Semáforo por punto.** El estado de cada punto en la última visita, según
 sus umbrales de velocidad y de acumulado — gana el peor de los dos. Tiene
@@ -833,18 +961,52 @@ comparten— y la fila lo indica debajo del par («desde el 15 de marzo de
 2025»). Comparar un punto que lleva meses bajando con uno recién instalado
 daría una distorsión que no significa nada.
 
-**Gráfica de evolución.** El asentamiento acumulado de cada punto a lo largo
-de las visitas. Puede activar o desactivar puntos con las casillas de
-arriba. Cada serie se distingue por **forma de marcador además de color**
-(círculo, cuadrado, triángulo, rombo, cruz), así que sigue siendo legible sin
-color. Debajo, la misma información en una **tabla de datos**: la alternativa
-textual para cuando la gráfica no basta.
+### 7.5 La vista de una visita
 
-### 7.5 Cerrar una visita o el lugar
+![Vista de una visita con un punto seleccionado y su historial](../../public/manual/27-vista-visita.png)
+
+Abrir una visita, desde la tabla o desde la tendencia, lleva a su vista, en
+solo lectura. Arriba, **← Volver** al lugar, la fecha, el amarre, el
+nivelador y el equipo, y las flechas **← →** para pasar a la visita anterior
+o a la siguiente. Las acciones: **Ver registro de nivelación**, en las
+visitas con libreta, y **Editar** y **Cerrar visita** mientras siga abierta.
+Una visita cerrada no se edita.
+
+**Indicadores.** El asentamiento máximo; el promedio, con su diferencia
+frente a la visita anterior; el mayor movimiento desde la anterior; los puntos
+en alerta, de los medidos; el **cierre de nivelación**, con la tolerancia y si
+cumple; y la peor alerta junto al estado de la visita.
+
+**Puntos de control.** Por punto: la cota base (su C0 o su primera lectura),
+la cota actual, el acumulado, el Δ desde la anterior, la velocidad y la
+alerta, con la marca de lectura fuera de tendencia. Seleccione un punto para
+ver al lado —debajo, en pantallas angostas— su **historial**: el acumulado hasta esta
+visita frente a los umbrales, y cuánto le falta para el siguiente: «Le faltan
+21.3 mm para el umbral de alerta (−50 mm)», o si ya superó el de alarma.
+
+**Barras.** *Asentamiento acumulado por punto*, con las líneas de los
+umbrales, y *Movimiento desde la visita anterior*. Pulse una barra para
+seleccionar su punto.
+
+**Registro de nivelación.** Un panel lateral con la libreta tal como se
+guardó: la fecha, el nivelador, el equipo y el BM de amarre; por fila, la
+armada, el punto, V+, AI, la vista intermedia (V. int.), V−, la cota y la
+cota compensada; y al pie ΣV+, ΣV−, el error de cierre y la tolerancia. Las
+vistas intermedias de los puntos de control van resaltadas: de ellas sale la
+cota del punto. Se cierra con **Cerrar** o con Esc.
+
+![Registro de nivelación de una visita](../../public/manual/28-registro-nivelacion.png)
+
+### 7.6 Cerrar una visita o el lugar
 
 Cerrar una **visita** la deja en solo lectura: es el registro de campo de una
 fecha concreta, y una vez cerrada no admite más cambios. Se exige lectura de
 todos los puntos **vigentes** en su fecha; los de baja no.
+
+En una visita con libreta, el diálogo de cierre muestra además el cierre de la
+libreta. **Si la comprobación aritmética no cuadra, no se puede cerrar**:
+corrija la libreta. Si el cierre supera la tolerancia, solo avisa: la visita
+se cierra con sus cotas sin compensar.
 
 > **Cierre antes la visita de la línea base.** Si un punto sin C0 tiene su
 > primera lectura en una visita anterior que sigue abierta, la aplicación no
@@ -856,7 +1018,7 @@ Cerrar el **lugar** termina el monitoreo por completo: el lugar y todas sus
 visitas —cerradas o no— quedan en solo lectura. Use el cierre del lugar
 cuando el seguimiento del sitio haya concluido, no visita por visita.
 
-### 7.6 Dar de baja y de alta un punto
+### 7.7 Dar de baja y de alta un punto
 
 Los puntos que se miden no son siempre los mismos durante todo el monitoreo.
 Un BM se destruye, se tapa o se pierde; otro se instala cuando la obra avanza.
@@ -1005,7 +1167,7 @@ declaró su propio proceso (en asentamientos, el de la visita más reciente).
 ## 11. Exportar a Excel
 
 Cada proceso tiene un botón **Exportar a Excel** en su editor —y el control de
-asentamientos, en su panel de análisis—. Descarga un `.xlsx` con tres hojas:
+asentamientos, en el panel del lugar—. Descarga un `.xlsx` con tres hojas:
 
 | Hoja | Contiene |
 |---|---|
@@ -1018,6 +1180,11 @@ distancia ajustada, y «Resumen» los pesos y σ₀. El informe imprimible tambi
 indica los pesos y σ₀ de cada poligonal ajustada así.
 Si la poligonal se georreferenció, «Resumen» lleva además la sección
 «Georreferenciación», con la última.
+
+En control de asentamientos, «Datos Crudos» añade un bloque **«Visitas»**
+con el modo de captura, el BM de amarre, el cierre y la tolerancia de cada
+una, y el libro lleva una cuarta hoja, **«Libretas»**: la libreta de cada
+visita que la tiene, con sus cotas calculadas y compensadas.
 
 A diferencia del informe, la exportación funciona **en cualquier estado**:
 también sobre un borrador. Las celdas que aún no se han calculado salen
@@ -1076,14 +1243,26 @@ nivel descolimado. La calidad de la medición la juzga el error de cierre
 contra la tolerancia K·√D.
 
 **¿Por qué una fila de mi libreta de nivelación no admite corrección?**
-Le falta la distancia acumulada. Es obligatoria en los puntos BM y de cambio:
-sin ella la aplicación no sabe a qué distancia del origen está el punto y no
-puede repartirle su parte del error de cierre.
+Le falta la distancia a alguna de sus miras. Es obligatoria en los puntos BM y
+de cambio: sin ella el recorrido no acumula, la distancia total sale menor de
+la real y el punto de cierre queda mal corregido. La distancia acumulada no se
+teclea — la calcula la aplicación sumando las distancias por visual.
 
 **Un punto quedó en alarma. ¿Puedo seguir guardando y cerrando la visita?**
 Sí. El semáforo es un diagnóstico, no un bloqueo: un punto en alerta o alarma
 se guarda y se cierra igual que cualquier otro. Es justamente el dato que el
 control de asentamientos busca detectar y dejar documentado.
+
+**La libreta de una visita salió fuera de tolerancia. ¿Puedo cerrarla?**
+Sí. Fuera de tolerancia solo avisa: la visita se guarda y se cierra con sus
+cotas sin compensar, y el aviso queda en la columna Cierre del panel y en la
+vista de la visita. Lo que sí impide cerrarla es una comprobación aritmética
+que no cuadra, porque indica un error en la libreta.
+
+**¿Por qué no puedo teclear la cota de un punto en la visita?**
+Porque la visita se captura con libreta: la cota sale de la vista menos del
+punto en la libreta. Si nivelaron y calcularon fuera de la aplicación, cambie
+*Captura de las cotas* a **Cotas directas**.
 
 **¿Por qué la velocidad de dos visitas mensuales no me da el mismo número?**
 Porque se calcula con los días reales entre las dos fechas, no con «un mes»

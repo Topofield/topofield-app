@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import {
+  AVISOS_LIBRETA,
   CAPTURAS,
   COLUMNAS_LISTADO,
   DESENLACES_CIERRE,
@@ -9,6 +10,7 @@ import {
   METODOS_CORRECCION,
   CAMPOS_INFORME,
   HOJAS_EXCEL,
+  INDICADORES_LUGAR,
   NIVELES_SEMAFORO,
   ORDENES_PRECISION,
   PREGUNTAS,
@@ -43,7 +45,9 @@ export default function ManualPage() {
         <p className="mt-2 max-w-2xl text-neutral-800">
           Cómo registrar los datos de campo, calcularlos con validación en vivo
           y cerrarlos con trazabilidad. Cubre lo que la aplicación permite hacer
-          hoy; los módulos que faltan están listados al final.
+          hoy, que es el alcance completo del proyecto: los tres módulos de
+          proceso, el cierre con trazabilidad, los informes y la exportación a
+          Excel.
         </p>
       </header>
 
@@ -252,6 +256,8 @@ export default function ManualPage() {
           Los <strong>puntos de referencia</strong> son coordenadas conocidas
           (vértices geodésicos, mojones) que puede reutilizar como punto de
           partida o de llegada de sus poligonales, sin volver a teclearlas.
+          Los que tienen cota sirven además como BM de sus nivelaciones y
+          como <strong>BM de amarre</strong> de las visitas de asentamiento.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">
@@ -1163,15 +1169,28 @@ export default function ManualPage() {
         </p>
 
         <p>
+          <strong>Renombrar un punto</strong> cambia también su código en la
+          libreta de las visitas <strong>abiertas</strong> (
+          <a href="#registrar-visita" className="underline">
+            § 7.3
+          </a>
+          ), para que su cota siga saliendo de su fila. Las visitas cerradas
+          conservan el código con que se midieron.
+        </p>
+
+        <p>
           El catálogo puede cambiar a mitad del monitoreo —un punto se
           destruye, otro se instala—; ver{" "}
           <a href="#baja-alta" className="underline">
-            § 7.6
+            § 7.7
           </a>
           .
         </p>
 
-        <h3 className="mt-4 text-lg font-semibold">
+        <h3
+          id="registrar-visita"
+          className="mt-4 scroll-mt-6 text-lg font-semibold"
+        >
           7.3 Registrar una visita
         </h3>
 
@@ -1183,7 +1202,47 @@ export default function ManualPage() {
           visita anterior contra la que compararla.
         </p>
 
-        <Captura {...CAPTURAS.editorVisita} />
+        <p>
+          <strong>Crear la visita.</strong> En el panel del lugar (
+          <a href="#panel-lugar" className="underline">
+            § 7.4
+          </a>
+          ), <strong>+ Nueva visita</strong> pide:
+        </p>
+
+        <Captura {...CAPTURAS.nuevaVisita} />
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Fecha</strong> y <strong>Nivelador</strong>.
+          </li>
+          <li>
+            <strong>Captura</strong> — cómo llegan las cotas:{" "}
+            <em>digitar la libreta de nivelación</em>,{" "}
+            <em>importar la libreta desde un archivo</em> o{" "}
+            <em>cotas directas</em>, para una nivelación calculada fuera de la
+            aplicación.
+          </li>
+          <li>
+            <strong>BM de amarre</strong> — el banco de nivel sobre el que se
+            cierra la nivelación de la visita. Elíjalo del catálogo de puntos
+            de referencia del proyecto (§ 4.2), que trae código y cota, o
+            tecléelo con <strong>Otro (entrada libre)</strong> si el proyecto
+            no lo tiene registrado. Para digitar es obligatorio; al importar
+            puede dejarlo vacío, porque lo trae el archivo.
+          </li>
+          <li>
+            El <strong>orden de precisión</strong> y los datos del{" "}
+            <strong>nivel</strong>.
+          </li>
+        </ul>
+
+        <p>
+          El nivelador, el amarre, el orden y el equipo{" "}
+          <strong>vienen de la visita anterior</strong>: cambie solo lo que no
+          sea igual. <strong>Crear y abrir</strong> lleva al editor de la
+          visita, con el diálogo de importación ya abierto si eligió importar.
+        </p>
 
         <p>
           Cada visita declara también el <strong>orden de precisión</strong>{" "}
@@ -1204,15 +1263,106 @@ export default function ManualPage() {
         </Nota>
 
         <p>
-          La tabla pide los puntos <strong>vigentes</strong> en la fecha de la
-          visita. Un punto de baja, o dado de alta después de esa fecha, no
-          aparece, y una nota debajo de la tabla dice cuál falta y por qué,
-          para que la ausencia no parezca un olvido.
+          <strong>La libreta de nivelación.</strong> En una visita con
+          libreta, las cotas de los puntos de control{" "}
+          <strong>no se teclean: salen de la libreta</strong>. Es la misma
+          tabla de la nivelación (§ 6.2 a § 6.5) —V+, V−, distancia a cada
+          mira, hilos con nivel automático— y forma un{" "}
+          <strong>circuito cerrado sobre el BM de amarre</strong>: la primera
+          y la última fila son el amarre.
+        </p>
+
+        <Captura {...CAPTURAS.editorVisita} />
+
+        <p>
+          Para capturar en campo, la libreta llega{" "}
+          <strong>precargada</strong> con la secuencia de la visita anterior
+          —códigos y tipos, sin lecturas— y el amarre de esta visita. Si no
+          hay visita anterior con libreta, con el amarre, los puntos de
+          control como intermedios y el amarre otra vez. Solo queda llenar las
+          lecturas. Además:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            la casilla del punto <strong>sugiere</strong> los códigos del
+            catálogo y el del amarre;
+          </li>
+          <li>
+            <strong>Insertar</strong> añade una fila debajo de la actual, por
+            ejemplo para un punto de cambio que la secuencia no traía;
+          </li>
+          <li>
+            bajo el código, una nota marca las filas que son{" "}
+            <strong>Punto de control</strong> o <strong>BM de amarre</strong>.
+          </li>
+        </ul>
+
+        <p>
+          Debajo de la tabla, el resumen: ΣV+, ΣV−, el error de cierre y la
+          tolerancia K·√D del orden de la visita.
         </p>
 
         <p>
-          Por cada punto se captura la <strong>cota medida</strong>. La
-          aplicación calcula al instante:
+          <strong>De dónde sale la cota de cada punto.</strong> De la fila de
+          la libreta con su código y con <strong>vista menos</strong>. Si el
+          cierre cumple la tolerancia, es la cota{" "}
+          <strong>compensada</strong>, como en nivelación (§ 6.5); si no, la
+          calculada. La tabla{" "}
+          <strong>Cotas de los puntos de control</strong>, bajo la libreta,
+          las muestra en solo lectura, y el servidor las recalcula al pulsar{" "}
+          <strong>Guardar visita</strong>.
+        </p>
+
+        <p>La libreta avisa de lo que no cuadra:</p>
+
+        <Tabla
+          caption="Avisos de la libreta de la visita"
+          columnas={["Situación", "Qué ocurre"]}
+        >
+          {AVISOS_LIBRETA.map((a) => (
+            <Fila key={a.situacion} celdas={[a.situacion, a.ocurre]} />
+          ))}
+        </Tabla>
+
+        <Nota titulo="Fuera de tolerancia solo avisa">
+          Un cierre que no alcanza la tolerancia es un resultado de campo, no
+          un error de captura: se registra, y el aviso queda en el editor, en
+          la columna Cierre del panel, en la vista de la visita y al cerrarla.
+          Conviene revisar la libreta o repetir la nivelación. La comprobación
+          aritmética sí bloquea el cierre, porque una suma que no cuadra es un
+          error de la libreta.
+        </Nota>
+
+        <p>
+          <strong>Importar la libreta.</strong> Con un nivel digital,{" "}
+          <strong>Importar desde archivo</strong> pasa a la libreta el archivo{" "}
+          <strong>.L de Leica</strong> o la <strong>plantilla CSV</strong> de
+          TopoField, como en nivelación (§ 6.7), con dos diferencias: el
+          archivo se lee siempre como <strong>un solo recorrido</strong> —el
+          circuito cerrado sobre el amarre, sin ida y vuelta— y{" "}
+          <strong>el amarre sale de su primera fila</strong>: si la visita no
+          tenía o tenía otro, se propone el del archivo. Si la visita ya tenía
+          libreta, se reemplaza, con aviso. Nada se guarda hasta pulsar{" "}
+          <strong>Guardar visita</strong>.
+        </p>
+
+        <Captura {...CAPTURAS.importarLibretaVisita} />
+
+        <p>
+          <strong>Cotas directas.</strong> Para una nivelación procesada fuera
+          de la aplicación, elija <strong>Cotas directas</strong> en{" "}
+          <em>Captura de las cotas</em>: se teclea la{" "}
+          <strong>cota medida</strong> de cada punto y el{" "}
+          <strong>error de cierre (mm)</strong>, que se registra tal cual, sin
+          tolerancia. Las visitas registradas antes de que existiera la
+          libreta siguen en este modo. Al cambiar de modo, el editor avisa de
+          lo que descartará al guardar: la libreta o las cotas tecleadas.
+        </p>
+
+        <p>
+          <strong>El cálculo.</strong> En los dos modos, con la cota de cada
+          punto, la aplicación calcula al instante:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
@@ -1235,7 +1385,11 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Estado</strong> — el nivel de alerta de ese punto,
-            semáforo explicado a continuación.
+            semáforo explicado en{" "}
+            <a href="#panel-lugar" className="underline">
+              § 7.4
+            </a>
+            .
           </li>
         </ul>
 
@@ -1246,9 +1400,16 @@ export default function ManualPage() {
         </p>
 
         <p>
+          La tabla de cotas pide los puntos <strong>vigentes</strong> en la
+          fecha de la visita. Un punto de baja, o dado de alta después de esa
+          fecha, no aparece, y una nota debajo de la tabla dice cuál falta y
+          por qué, para que la ausencia no parezca un olvido.
+        </p>
+
+        <p>
           <strong>Lecturas fuera de tendencia.</strong> Desde la tercera
           lectura de un punto, la aplicación compara cada cota con la
-          tendencia de ese punto y avisa bajo la casilla si la lectura:
+          tendencia de ese punto y avisa bajo la cota si la lectura:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
@@ -1277,17 +1438,80 @@ export default function ManualPage() {
           segunda se compara contra una velocidad ya contaminada.
         </Nota>
 
-        <h3 className="mt-4 text-lg font-semibold">
-          7.4 El semáforo y la gráfica
+        <h3 id="panel-lugar" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.4 El panel del lugar
         </h3>
 
         <Captura {...CAPTURAS.panelAsentamientos} />
 
-        <p>El panel del lugar reúne el historial completo:</p>
+        <p>
+          Abrir el lugar desde el proyecto lleva a su panel, que reúne el
+          historial completo. Arriba, cuántos puntos de control tiene, la
+          fecha de la lectura base y la leyenda de los tres umbrales de
+          acumulado que dibujan las gráficas. Las acciones:{" "}
+          <strong>+ Nueva visita</strong> (§ 7.3),{" "}
+          <strong>Exportar a Excel</strong> (§ 11) y{" "}
+          <strong>Editar lugar</strong>, que lleva al catálogo.
+        </p>
 
         <p>
-          <strong>Visitas.</strong> La lista cronológica, con la peor alerta
-          de cada una.
+          <strong>Indicadores.</strong> Seis, sobre la última visita y el
+          histórico:
+        </p>
+
+        <Tabla
+          caption="Indicadores del panel del lugar"
+          columnas={["Indicador", "Qué muestra"]}
+        >
+          {INDICADORES_LUGAR.map((k) => (
+            <Fila key={k.indicador} celdas={[k.indicador, k.muestra]} />
+          ))}
+        </Tabla>
+
+        <p>
+          Un punto dado de alta a mitad del monitoreo mide su acumulado desde
+          su propia línea base, así que el promedio mezcla las dos.
+        </p>
+
+        <p>
+          <strong>Visitas.</strong> De la más reciente a la más antigua; pulse
+          una fila para abrir la visita (
+          <a href="#vista-visita" className="underline">
+            § 7.5
+          </a>
+          ). Por visita: el promedio y el máximo del acumulado, el BM de
+          amarre con su cota, el <strong>mayor Δ</strong> desde la anterior,
+          el <strong>cierre</strong> de la libreta en mm —con{" "}
+          <strong>⚠</strong> si supera la tolerancia; en cotas directas, el
+          tecleado—, la peor alerta y el estado: borrador, calculada o
+          cerrada.
+        </p>
+
+        <p>
+          <strong>Tendencia del asentamiento.</strong> El promedio de los
+          puntos en cada visita, con una banda que va del punto menos asentado
+          al más asentado y las líneas de los umbrales. El eje horizontal es
+          el <strong>tiempo</strong>, no el número de visita: si las visitas
+          pasan de quincenales a mensuales, la pendiente no se exagera. Pulse
+          una visita en la línea para abrirla.
+        </p>
+
+        <p>
+          <strong>Evolución por punto.</strong> El acumulado de cada punto de
+          control según los días desde la lectura base. Los chips de arriba
+          muestran el último valor de cada punto; pulse uno para resaltarlo y
+          atenuar los demás, y <strong>Todos</strong> para volver. Cada punto
+          se distingue por{" "}
+          <strong>forma de marcador además de color</strong> (círculo,
+          cuadrado, triángulo, rombo, cruz), y las marcas «(de baja)» y
+          «(alta …)» señalan los puntos que salieron o entraron a mitad del
+          monitoreo.
+        </p>
+
+        <p>
+          Bajo cada gráfica, <strong>Ver datos en tabla</strong> despliega los
+          mismos valores en texto: la alternativa para cuando la gráfica no
+          basta.
         </p>
 
         <p>
@@ -1349,19 +1573,63 @@ export default function ManualPage() {
           significa nada.
         </p>
 
+        <h3 id="vista-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.5 La vista de una visita
+        </h3>
+
+        <Captura {...CAPTURAS.vistaVisita} />
+
         <p>
-          <strong>Gráfica de evolución.</strong> El asentamiento acumulado de
-          cada punto a lo largo de las visitas. Puede activar o desactivar
-          puntos con las casillas de arriba. Cada serie se distingue por{" "}
-          <strong>forma de marcador además de color</strong> (círculo,
-          cuadrado, triángulo, rombo, cruz), así que sigue siendo legible sin
-          color. Debajo, la misma información en una{" "}
-          <strong>tabla de datos</strong>: la alternativa textual para cuando
-          la gráfica no basta.
+          Abrir una visita, desde la tabla o desde la tendencia, lleva a su
+          vista, en solo lectura. Arriba, <strong>← Volver</strong> al lugar,
+          la fecha, el amarre, el nivelador y el equipo, y las flechas{" "}
+          <strong>← →</strong> para pasar a la visita anterior o a la
+          siguiente. Las acciones: <strong>Ver registro de nivelación</strong>
+          , en las visitas con libreta, y <strong>Editar</strong> y{" "}
+          <strong>Cerrar visita</strong> mientras siga abierta. Una visita
+          cerrada no se edita.
         </p>
 
+        <p>
+          <strong>Indicadores.</strong> El asentamiento máximo; el promedio,
+          con su diferencia frente a la visita anterior; el mayor movimiento
+          desde la anterior; los puntos en alerta, de los medidos; el{" "}
+          <strong>cierre de nivelación</strong>, con la tolerancia y si
+          cumple; y la peor alerta junto al estado de la visita.
+        </p>
+
+        <p>
+          <strong>Puntos de control.</strong> Por punto: la cota base (su C0
+          o su primera lectura), la cota actual, el acumulado, el Δ desde la
+          anterior, la velocidad y la alerta, con la marca de lectura fuera de
+          tendencia. Seleccione un punto para ver al lado —debajo, en
+          pantallas angostas— su <strong>historial</strong>: el acumulado
+          hasta esta visita frente a los umbrales, y cuánto le falta para el
+          siguiente: «Le faltan 21.3 mm para el umbral de alerta (−50 mm)», o
+          si ya superó el de alarma.
+        </p>
+
+        <p>
+          <strong>Barras.</strong>{" "}
+          <em>Asentamiento acumulado por punto</em>, con las líneas de los
+          umbrales, y <em>Movimiento desde la visita anterior</em>. Pulse una
+          barra para seleccionar su punto.
+        </p>
+
+        <p>
+          <strong>Registro de nivelación.</strong> Un panel lateral con la
+          libreta tal como se guardó: la fecha, el nivelador, el equipo y el
+          BM de amarre; por fila, la armada, el punto, V+, AI, la vista
+          intermedia (V. int.), V−, la cota y la cota compensada; y al pie
+          ΣV+, ΣV−, el error de cierre y la tolerancia. Las vistas intermedias
+          de los puntos de control van resaltadas: de ellas sale la cota del
+          punto. Se cierra con <strong>Cerrar</strong> o con Esc.
+        </p>
+
+        <Captura {...CAPTURAS.registroNivelacion} />
+
         <h3 className="mt-4 text-lg font-semibold">
-          7.5 Cerrar una visita o el lugar
+          7.6 Cerrar una visita o el lugar
         </h3>
 
         <p>
@@ -1369,6 +1637,16 @@ export default function ManualPage() {
           registro de campo de una fecha concreta, y una vez cerrada no
           admite más cambios. Se exige lectura de todos los puntos{" "}
           <strong>vigentes</strong> en su fecha; los de baja no.
+        </p>
+
+        <p>
+          En una visita con libreta, el diálogo de cierre muestra además el
+          cierre de la libreta.{" "}
+          <strong>
+            Si la comprobación aritmética no cuadra, no se puede cerrar
+          </strong>
+          : corrija la libreta. Si el cierre supera la tolerancia, solo avisa:
+          la visita se cierra con sus cotas sin compensar.
         </p>
 
         <Nota titulo="Cierre antes la visita de la línea base">
@@ -1387,7 +1665,7 @@ export default function ManualPage() {
         </p>
 
         <h3 id="baja-alta" className="mt-4 scroll-mt-6 text-lg font-semibold">
-          7.6 Dar de baja y de alta un punto
+          7.7 Dar de baja y de alta un punto
         </h3>
 
         <p>
@@ -1605,7 +1883,7 @@ export default function ManualPage() {
       <Seccion id="export" titulo="11. Exportar a Excel">
         <p>
           Cada proceso tiene un botón <strong>Exportar a Excel</strong> en su
-          editor —y el control de asentamientos, en su panel de análisis—.
+          editor —y el control de asentamientos, en el panel del lugar—.
           Descarga un <code>.xlsx</code> con tres hojas:
         </p>
 
@@ -1625,6 +1903,14 @@ export default function ManualPage() {
           cada poligonal ajustada así. Si la poligonal se georreferenció,
           «Resumen» lleva además la sección «Georreferenciación», con la
           última.
+        </p>
+
+        <p>
+          En control de asentamientos, «Datos Crudos» añade un bloque{" "}
+          <strong>«Visitas»</strong> con el modo de captura, el BM de amarre,
+          el cierre y la tolerancia de cada una, y el libro lleva una cuarta
+          hoja, <strong>«Libretas»</strong>: la libreta de cada visita que la
+          tiene, con sus cotas calculadas y compensadas.
         </p>
 
         <p>
