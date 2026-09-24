@@ -978,16 +978,48 @@ export default function ManualPage() {
 
         <p>
           Al activar el recorrido de vuelta, la libreta muestra dos pestañas.
-          Ida y vuelta son <strong>mediciones independientes</strong>: cada
-          una tiene sus propios puntos de cambio, y no hace falta —de hecho
-          es mejor no— reocupar los mismos puntos en los dos sentidos.
+          Ida y vuelta son <strong>mediciones independientes</strong>. En campo
+          se hace de dos maneras: con puntos de cambio propios en cada
+          sentido, o <strong>volviendo por los mismos puntos</strong>. La
+          aplicación admite las dos.
         </p>
 
         <p>
           La aplicación compara los <strong>desniveles totales</strong> de
           ambos recorridos. La discrepancia entre ellos se contrasta contra{" "}
           <strong>T·√2</strong>, donde T es la misma tolerancia K·√D del
-          cierre individual.
+          cierre individual. Ese es el veredicto.
+        </p>
+
+        <p>
+          <strong>Puntos homólogos.</strong> Si la ida y la vuelta pasan por
+          los mismos puntos, Resultados añade una tabla que compara la cota de
+          cada punto en los dos recorridos: cota de la vuelta menos cota de la
+          ida, con las cotas sin compensar. Los códigos se emparejan sin
+          distinguir espacios ni mayúsculas (<code>AUX1</code> y{" "}
+          <code>AUX 1</code> son el mismo punto).
+        </p>
+
+        <Captura {...CAPTURAS.puntosHomologos} />
+
+        <p>Un único número de discrepancia esconde lo que la serie deja ver:</p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            si el residuo <strong>crece a lo largo del recorrido</strong>, hay
+            un error sistemático repartido;
+          </li>
+          <li>
+            si <strong>salta en un punto</strong>, revise ese punto.
+          </li>
+        </ul>
+
+        <p>
+          En la imagen, la discrepancia es de 0.4 mm, pero a mitad del recorrido
+          las dos mediciones difieren en 5 mm. La tabla es informativa: no
+          cambia el veredicto. Un código que se repite dentro de un recorrido
+          —el BM de partida de una cerrada— no se compara, porque no se sabe
+          con cuál de sus cotas.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">
