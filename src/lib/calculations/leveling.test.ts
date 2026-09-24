@@ -667,6 +667,35 @@ describe("applyProportionalCorrection", () => {
   });
 });
 
+describe("computeLeveling — abierta con vuelta (Fase 16, hallazgo 3)", () => {
+  // Ida BM-X → PC-2 (+0.5 m), vuelta PC-2 → BM-X (−0.5 m). Sin cota de llegada
+  // conocida, la vuelta arranca en la cota CALCULADA de PC-2, no en la de BM-X.
+  const result = computeLeveling({
+    type: "open",
+    startElevation: 500.0,
+    endElevation: null,
+    order: "tercer_orden",
+    forward: fromAccum([
+      r("BM-X", "bm", 1.5, null, 0.0),
+      r("PC-2", "bm", null, 1.0, 0.08),
+    ]),
+    return: fromAccum([
+      r("PC-2", "bm", 1.0, null, 0.0),
+      r("BM-X", "bm", null, 1.5, 0.08),
+    ]),
+  });
+
+  it("la vuelta parte de la cota final de la ida", () => {
+    expect(result.return!.readings[0]!.elevationCalculated).toBeCloseTo(500.5, 6);
+    expect(result.return!.readings.at(-1)!.elevationCalculated).toBeCloseTo(500.0, 6);
+  });
+
+  it("la discrepancia y el error de la vuelta no cambian", () => {
+    expect(result.discrepancyMm).toBeCloseTo(0, 6);
+    expect(result.return!.errorMm).toBeNull();
+  });
+});
+
 describe("computeLeveling — ida y vuelta", () => {
   // La vuelta es una medición INDEPENDIENTE: distintos puntos de cambio y
   // distinto número de armadas que la ida. Solo comparten los BM extremos.

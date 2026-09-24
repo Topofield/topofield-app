@@ -349,8 +349,13 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
   let adoptedHeightDifference: number | null = null;
 
   if (input.return != null && input.return.length > 0) {
-    // La vuelta parte de la cota conocida del extremo al que llegó la ida.
-    const returnStart = known ?? input.startElevation;
+    // La vuelta parte del extremo al que llegó la ida: su cota conocida en
+    // `closed` (el propio origen) y en `link` (el BM de llegada). En `open` no
+    // hay cota conocida y se parte de la calculada. Hasta la Fase 16 se partía
+    // de `startElevation`, y en una abierta todas las cotas de la vuelta
+    // salían desplazadas por el desnivel de la ida (1.1636 m en el crudo de
+    // nivel digital, PRD de la Fase 16, hallazgo 3).
+    const returnStart = known ?? forward.finalElevation;
     const back = computeRun(input.return, returnStart);
 
     discrepancyMm =
