@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   Alert,
   Badge,
@@ -99,13 +99,20 @@ export function PolygonalEditor({
   );
   const [formatError, setFormatError] = useState<string | null>(null);
 
+  // Se guardan en serie: con dos clics rápidos, dos peticiones en paralelo
+  // podían llegar en desorden y dejar en la base el formato que no se ve.
+  // Cada una espera a la anterior, y la última escrita es la última pedida.
+  const formatQueue = useRef<Promise<unknown>>(Promise.resolve());
+
   function changeAngleFormat(next: AngleInputFormat) {
     setAngleFormat(next);
     setFormatError(null);
     if (readOnly) return;
-    void setAngleInputFormatAction(process.id, next).then((r) => {
-      if (!r.ok) setFormatError(r.error ?? "No se pudo guardar el formato.");
-    });
+    formatQueue.current = formatQueue.current.then(() =>
+      setAngleInputFormatAction(process.id, next).then((r) => {
+        if (!r.ok) setFormatError(r.error ?? "No se pudo guardar el formato.");
+      }),
+    );
   }
 
   // El orden sale de `config.precisionOrder`, no de un prop aparte: el
