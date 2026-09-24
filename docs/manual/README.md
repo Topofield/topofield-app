@@ -366,8 +366,10 @@ actualiza en vivo mientras captura.
 > del dibujo, y nunca es menor que 1. Una abierta sin control no tiene nada que
 > compensar y no muestra trazo discontinuo.
 
-Con **Acercar**, **Alejar** y **Restablecer**, y arrastrando el dibujo, puede
-acercarse a un vértice. La rueda del ratón no hace zoom, para no interferir con
+Con **Acercar**, **Alejar** y **Restablecer**, y con las **flechas** o
+arrastrando el dibujo, puede acercarse a un vértice; todos los controles
+funcionan con el teclado. Si el amarre está lejos, queda fuera del encuadre y
+solo se ve su línea de orientación: la leyenda lo indica. La rueda del ratón no hace zoom, para no interferir con
 el desplazamiento de la página. El factor de exageración no cambia al
 acercarse.
 

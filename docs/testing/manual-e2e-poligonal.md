@@ -173,9 +173,11 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 - Abrir el **Pentágono — Caso 1**. ✓ Factor **×1**: su error de 12 m ya se ve.
 - Abrir **Reconocimiento E1-E4**. ✓ Sin trazo discontinuo: «Abierta sin
   control: no se compensa».
-- En la TT4, pulsar **Acercar** dos veces, arrastrar el dibujo y pulsar
-  **Restablecer**. ✓ Vuelve al encuadre completo. Los tres botones responden
-  al teclado (Tab y Enter).
+- En la TT4, pulsar **Acercar** dos veces, arrastrar el dibujo, usar las
+  **flechas** y pulsar **Restablecer**. ✓ Vuelve al encuadre completo. Todos
+  los botones responden al teclado (Tab y Enter).
+- Vaciar el **Norte** del arranque en Configuración. ✓ El dibujo dice
+  «Todavía no se puede dibujar». Restaurarlo.
 - Cambiar la distancia de la primera estación. ✓ El dibujo se mueve en vivo.
   Restaurarla.
 - Con el navegador en ancho de teléfono (390 px), ✓ los rótulos del dibujo se

@@ -144,7 +144,7 @@ export const CAPTURAS = {
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
     pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
     width: 780,
-    height: 6360,
+    height: 6472,
     angosta: true,
   },
 } as const satisfies Record<string, Captura>;

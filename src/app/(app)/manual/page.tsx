@@ -592,8 +592,11 @@ export default function ManualPage() {
 
         <p>
           Con <strong>Acercar</strong>, <strong>Alejar</strong> y{" "}
-          <strong>Restablecer</strong>, y arrastrando el dibujo, puede
-          acercarse a un vértice. La rueda del ratón no hace zoom, para no
+          <strong>Restablecer</strong>, y con las <strong>flechas</strong> o
+          arrastrando el dibujo, puede acercarse a un vértice; todos los
+          controles funcionan con el teclado. Si el amarre está lejos, queda
+          fuera del encuadre y solo se ve su línea de orientación: la leyenda
+          lo indica. La rueda del ratón no hace zoom, para no
           interferir con el desplazamiento de la página. El factor de
           exageración no cambia al acercarse.
         </p>
