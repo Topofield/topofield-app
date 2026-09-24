@@ -65,7 +65,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 10 | Nomenclatura de nivelación | cerrada |
 | 11 | Estado de los BMs | cerrada |
 | 12 | Alerta por lectura desfasada | cerrada |
-| 13 | Canvas de poligonal | pendiente |
+| 13 | Canvas de poligonal | en curso |
 | 14 | Ajuste por mínimos cuadrados | pendiente |
 | 15 | Georreferenciación de levantamientos | pendiente |
 
