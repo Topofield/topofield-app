@@ -31,10 +31,23 @@ export interface ConditionAdjustment {
   converged: boolean;
 }
 
-/** Resuelve un sistema lineal pequeño por eliminación con pivote parcial. */
+export class SingularSystemError extends Error {
+  constructor() {
+    super("Sistema singular");
+  }
+}
+
+/**
+ * Resuelve un sistema lineal pequeño por eliminación con pivote parcial.
+ * Lanza `SingularSystemError` si un pivote es despreciable frente a la mayor
+ * entrada de la matriz: con coma flotante, un sistema de rango incompleto rara
+ * vez da un pivote exactamente cero, y sin tolerancia relativa devolvería
+ * números enormes sin avisar.
+ */
 export function solveLinear(M: number[][], b: number[]): number[] {
   const n = b.length;
   const a = M.map((row, i) => [...row, b[i]!]);
+  const scale = Math.max(...M.flat().map(Math.abs), 0);
   for (let c = 0; c < n; c++) {
     let p = c;
     for (let r = c + 1; r < n; r++) {
@@ -42,7 +55,7 @@ export function solveLinear(M: number[][], b: number[]): number[] {
     }
     [a[c], a[p]] = [a[p]!, a[c]!];
     const pivot = a[c]![c]!;
-    if (Math.abs(pivot) < 1e-300) throw new Error("Sistema singular");
+    if (!(Math.abs(pivot) > 1e-12 * scale)) throw new SingularSystemError();
     for (let r = 0; r < n; r++) {
       if (r === c) continue;
       const k = a[r]![c]! / pivot;

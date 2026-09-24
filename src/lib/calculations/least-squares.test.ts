@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   adjustByConditions,
+  SingularSystemError,
   SIGMA0_BAND,
   sigma0Reading,
   solveLinear,
@@ -68,6 +69,14 @@ describe("solveLinear", () => {
   it("resuelve un sistema 3×3", () => {
     const x = solveLinear([[2, 1, -1], [-3, -1, 2], [-2, 1, 2]], [8, -11, -3]);
     expect(x.map((v) => Math.round(v * 1e9) / 1e9)).toEqual([2, 3, -1]);
+  });
+
+  // Con coma flotante un sistema de rango incompleto rara vez da un pivote
+  // exactamente cero: la tolerancia es relativa a la matriz.
+  it("detecta un sistema singular aunque el pivote no sea cero exacto", () => {
+    const c = Math.cos(0.3);
+    const s = Math.sin(0.3);
+    expect(() => solveLinear([[c * c, c * s], [c * s, s * s]], [1, 2])).toThrow(SingularSystemError);
   });
 });
 
@@ -186,6 +195,31 @@ describe("mínimos cuadrados — abierta con control", () => {
     expect(last.east).toBeCloseTo(99.98, 9);
   });
 
+  it("no publica deflexiones corregidas: el ajuste va en los azimuts", () => {
+    const r = computePolygonal(base);
+    expect(r.stations.every((s) => s.correctedAngle === null)).toBe(true);
+    // La corrección conserva el signo de la deflexión.
+    expect(adjusted(r).angleCorrectionsSec[1]).not.toBeNull();
+  });
+
+  // Un solo lado: las condiciones de llegada en N y en E dependen de una sola
+  // distancia. Antes el motor lanzaba «Sistema singular» y tumbaba el editor.
+  it("con un solo lado no hay ajuste, lo dice y no lanza", () => {
+    for (const endAzimuth of [null, 90]) {
+      const r = computePolygonal({
+        ...base,
+        startAzimuth: 90,
+        endNorth: 0.01,
+        endEast: 100.02,
+        endAzimuth,
+        stations: [st("A", 0, 100), st("B", 0.001, null, "right")],
+      });
+      expect(r.adjustment).toEqual({ status: "unadjustable", reason: "one_side" });
+      expect(r.stations.every((s) => s.north === null || s.pointCode === "A")).toBe(true);
+      expect(r.linearError).not.toBeNull();
+    }
+  });
+
   it("sin azimut de llegada: dos condiciones y también llega", () => {
     const r = computePolygonal({ ...base, endAzimuth: null });
     const a = adjusted(r);
@@ -283,5 +317,16 @@ describe("sigma0Reading", () => {
     expect(sigma0Reading(SIGMA0_BAND[1])).toBe("consistent");
     expect(sigma0Reading(3.1)).toBe("worse");
     expect(sigma0Reading(0.2)).toBe("pessimistic");
+  });
+});
+
+describe("adjustByConditions — convergencia", () => {
+  it("avisa si no converge dentro del máximo de iteraciones", () => {
+    // f(l) = l² − 2: no lineal, así que una sola iteración no basta.
+    const r = adjustByConditions(
+      { observations: [1], sigmas: [1], evaluate: (l) => ({ f: [l[0]! ** 2 - 2], A: [[2 * l[0]!]] }) },
+      { maxIterations: 1 },
+    );
+    expect(r.converged).toBe(false);
   });
 });

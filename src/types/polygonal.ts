@@ -202,6 +202,8 @@ export interface PolygonalInput {
   leastSquares?: LeastSquaresWeights | null;
 }
 
+export type LeastSquaresFailure = "one_side" | "singular" | "not_converged";
+
 /** Pesos a priori del ajuste: iguales para todas las observaciones. */
 export interface LeastSquaresWeights {
   /** σ de cada ángulo, en segundos de arco. */
@@ -218,6 +220,12 @@ export interface LeastSquaresWeights {
  */
 export type LeastSquaresAdjustment =
   | { status: "missing_weights" }
+  /**
+   * Hay pesos pero no hay ajuste: la geometría no tiene redundancia (una
+   * abierta de un solo lado), el sistema es singular o no convergió. El motor
+   * no inventa coordenadas: las deja en `null` y lo dice.
+   */
+  | { status: "unadjustable"; reason: LeastSquaresFailure }
   | {
       status: "adjusted";
       /** Corrección de cada ángulo, en segundos, por estación (`null` si no se ajusta). */
