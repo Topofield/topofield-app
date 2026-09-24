@@ -1,4 +1,5 @@
 import { Alert, Card, StatusIndicator } from "@/components/design-system";
+import { useMemo } from "react";
 import { compareHomologousPoints } from "@/lib/calculations/leveling";
 import { evaluateLevelingClosure } from "@/lib/validators/leveling";
 import {
@@ -36,7 +37,7 @@ interface ResultsPanelProps {
 export function ResultsPanel({ result, type }: ResultsPanelProps) {
   const closure = evaluateLevelingClosure(result);
   const arithmeticDifference = result.sumBacksights - result.sumForesights;
-  const homologous = compareHomologousPoints(result);
+  const homologous = useMemo(() => compareHomologousPoints(result), [result]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -260,13 +261,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                       </td>
                       <td className="py-2 pr-3 font-mono tabular-nums text-neutral-900">
                         {formatMm(p.residualMm)}
-                        {/* En una de enlace la vuelta arranca en la cota
-                            conocida del BM de llegada, no en la de la ida, y
-                            el último residuo ya no es la discrepancia: se
-                            rotula solo cuando lo es. */}
-                        {i === homologous.points.length - 1 &&
-                          result.discrepancyMm != null &&
-                          Math.abs(Math.abs(p.residualMm) - result.discrepancyMm) < 1e-6 && (
+                        {i === homologous.points.length - 1 && homologous.lastIsDiscrepancy && (
                           <span className="ml-2 font-sans text-xs text-neutral-500">
                             = discrepancia
                           </span>

@@ -546,7 +546,7 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 Cuando la ida y la vuelta pasan por los mismos puntos, el editor compara la
 cota de cada uno en los dos recorridos. Informativo: el veredicto sigue siendo
 la discrepancia de la sección. Con esta fase no quedan peticiones pendientes.
-676 → 685 tests.
+676 → 687 tests.
 
 **Aprendizajes a llevar a fases siguientes:**
 

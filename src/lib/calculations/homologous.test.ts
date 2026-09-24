@@ -91,6 +91,7 @@ describe("puntos homólogos — El Verjón", () => {
 
   it("el último residuo es la discrepancia de la sección", () => {
     expect(Math.abs(cmp.points.at(-1)!.residualMm)).toBeCloseTo(result.discrepancyMm!, 6);
+    expect(cmp.lastIsDiscrepancy).toBe(true);
     expect(cmp.skippedCodes).toEqual([]);
   });
 });
@@ -140,6 +141,17 @@ describe("puntos homólogos — cuándo no aparece", () => {
     expect(compareHomologousPoints(computeLeveling(input(VERJON_IDA, back)))).toBeNull();
   });
 
+  it("si la vuelta no empieza donde terminó la ida: los residuos saldrían desplazados", () => {
+    // La vuelta arranca en C 8, no en D4: el motor le daría la cota de D4.
+    expect(compareHomologousPoints(computeLeveling(input(VERJON_IDA, VERJON_VUELTA.slice(1))))).toBeNull();
+  });
+
+  it("una fila a medio capturar no se compara", () => {
+    const back = VERJON_VUELTA.map((r): Row => (r[0] === "C 5" ? [r[0], r[1], r[2], null] : r));
+    const cmp = compareHomologousPoints(computeLeveling(input(VERJON_IDA, back)));
+    expect(cmp?.points.every((p) => Number.isFinite(p.residualMm))).toBe(true);
+  });
+
   it("un código repetido en un recorrido no se empareja, y se dice", () => {
     // Cerrada: BM-1 abre y cierra la ida; la vuelta pasa por PC-1 y BM-1.
     const forward: Row[] = [
@@ -178,5 +190,6 @@ describe("puntos homólogos — de enlace", () => {
     const cmp = compareHomologousPoints(result)!;
     expect(cmp.points[0]!.residualMm).toBeCloseTo(-5, 6);
     expect(Math.abs(cmp.points.at(-1)!.residualMm)).not.toBeCloseTo(result.discrepancyMm!, 3);
+    expect(cmp.lastIsDiscrepancy).toBe(false);
   });
 });

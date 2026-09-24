@@ -23,6 +23,10 @@ y el crudo de nivel digital
 >   `leveling.ts`.
 > - La tercera comprobación en pantalla se hizo importando una plantilla con
 >   puntos de cambio propios, en vez de teclearla.
+> - **Hallado en la revisión:** no se compara si la vuelta no empieza en el
+>   punto donde terminó la ida —el motor la arranca en esa cota y todos los
+>   residuos saldrían desplazados—, ni una fila a medio capturar. La regla de
+>   «= discrepancia» pasa al motor (`lastIsDiscrepancy`), con su test.
 
 ## Propósito
 

@@ -169,6 +169,12 @@ export interface HomologousComparison {
   points: HomologousPoint[];
   /** Códigos compartidos que no se emparejan por repetirse dentro de un recorrido. */
   skippedCodes: string[];
+  /**
+   * El último residuo es la discrepancia de la sección. Lo es cuando la vuelta
+   * arranca en la cota a la que llegó la ida (cerrada, abierta); en una de
+   * enlace arranca en la cota conocida de llegada y no lo es.
+   */
+  lastIsDiscrepancy: boolean;
 }
 
 // --- Etiquetas en español ---

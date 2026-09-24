@@ -434,10 +434,13 @@ export function samePointCode(a: string, b: string): boolean {
  * CALCULADAS: la compensación reparte el error de la ida y escondería justo lo
  * que se quiere ver. En el orden de la vuelta.
  *
- * `null` si no hay vuelta, o si solo comparten los extremos de la vuelta: la
- * tabla repetiría la discrepancia. Un código que se repite dentro de un
- * recorrido —el BM de partida de una cerrada— no se empareja: no se sabe con
- * cuál de sus cotas comparar.
+ * `null` si no hay vuelta, si solo comparten los extremos de la vuelta —la
+ * tabla repetiría la discrepancia— o si la vuelta no empieza en el punto donde
+ * terminó la ida: el motor la arranca en esa cota, y todos los residuos
+ * saldrían desplazados por el desnivel entre los dos puntos. Un código que se
+ * repite dentro de un recorrido —el BM de partida de una cerrada— no se
+ * empareja: no se sabe con cuál de sus cotas comparar. Una fila a medio
+ * capturar, con cota no finita, tampoco.
  */
 export function compareHomologousPoints(
   result: LevelingResult,
@@ -445,6 +448,8 @@ export function compareHomologousPoints(
   const back = result.return?.readings;
   if (!back || back.length === 0) return null;
   const forward = result.forward.readings;
+  const lastForward = forward.at(-1);
+  if (!lastForward || !samePointCode(back[0]!.pointCode, lastForward.pointCode)) return null;
 
   const count = (rows: ComputedReading[]) => {
     const m = new Map<string, number>();
@@ -456,6 +461,7 @@ export function compareHomologousPoints(
   };
   const inForward = count(forward);
   const inReturn = count(back);
+  const forwardByCode = new Map(forward.map((r) => [normalizedCode(r.pointCode), r]));
 
   const skipped = new Set<string>();
   const points: HomologousPoint[] = [];
@@ -467,7 +473,8 @@ export function compareHomologousPoints(
       skipped.add(r.pointCode.trim());
       return;
     }
-    const f = forward.find((x) => normalizedCode(x.pointCode) === k)!;
+    const f = forwardByCode.get(k)!;
+    if (!Number.isFinite(f.elevationCalculated) || !Number.isFinite(r.elevationCalculated)) return;
     points.push({
       pointCode: r.pointCode.trim(),
       pointType: r.pointType,
@@ -479,5 +486,13 @@ export function compareHomologousPoints(
   });
 
   if (!sharesInterior) return null;
-  return { points, skippedCodes: [...skipped] };
+  const last = points.at(-1);
+  return {
+    points,
+    skippedCodes: [...skipped],
+    lastIsDiscrepancy:
+      last != null &&
+      result.discrepancyMm != null &&
+      Math.abs(Math.abs(last.residualMm) - result.discrepancyMm) < 1e-6,
+  };
 }
