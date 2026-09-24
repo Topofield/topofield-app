@@ -17,7 +17,10 @@ export type ImportMode = { kind: "single" } | { kind: "split"; turnSetup: number
  * el crudo, la 9 (C18 → C17 después de C17 → C18). `null` si no vuelve.
  */
 export function detectTurnSetup(file: ImportedLevelingFile): number | null {
-  if (file.declared?.turnSetup != null) return file.declared.turnSetup;
+  // Si el archivo declara sus recorridos —la plantilla CSV—, manda lo
+  // declarado, también cuando no trae vuelta: un circuito corto A → B → A
+  // «vuelve» a A y la detección lo tomaría por ida y vuelta.
+  if (file.declared) return file.declared.turnSetup;
   const s = file.setups;
   for (let k = 1; k < s.length; k++) {
     const fore = s[k]!.fores.at(-1)!.point;

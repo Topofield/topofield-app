@@ -167,6 +167,8 @@ describe("plantilla CSV de TopoField", () => {
         "ida;A;;;1,8000;;30,5",
       ].join("\r\n"),
     );
+    // Sin filas de vuelta no hay giro, aunque el circuito vuelva a A.
+    expect(detectTurnSetup(f)).toBeNull();
     const rows = toLibreta(f, { kind: "single" });
     expect(rows.forward.map((r) => r.pointType)).toEqual(["bm", "intermediate", "pc", "bm"]);
     expect(rows.forward[2]).toMatchObject({ backsight: 1.4, foresight: 1.1, backDistanceM: 31, foreDistanceM: 29 });
