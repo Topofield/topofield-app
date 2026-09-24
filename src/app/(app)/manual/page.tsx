@@ -560,6 +560,70 @@ export default function ManualPage() {
         <p>Cambiar el método recalcula las coordenadas al instante.</p>
 
         <p>
+          <strong>Mínimos cuadrados.</strong> Los otros tres métodos reparten el
+          error con una regla fija; este busca las correcciones más pequeñas
+          —pesadas por la precisión de cada observación— que hacen cerrar la
+          poligonal. Al elegirlo aparecen tres campos:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>σ angular (″)</strong>: la desviación típica que supone
+            para cada ángulo.
+          </li>
+          <li>
+            <strong>σ de distancia (m)</strong>: la de una medición de
+            distancia.
+          </li>
+          <li>
+            <strong>Mediciones por distancia</strong>: cuántas veces midió cada
+            lado. Una distancia medida <em>n</em> veces pesa como σ/√
+            <em>n</em>.
+          </li>
+        </ul>
+
+        <p>
+          Todas las observaciones pesan igual. Los campos{" "}
+          <strong>salen vacíos</strong>: la aplicación no supone pesos por
+          usted. La hoja de la universidad usa, por ejemplo, 2″, 0.011 m y 2
+          mediciones. Mientras falte alguno verá «Faltan los pesos del ajuste»,
+          sin coordenadas, y no podrá guardar.
+        </p>
+
+        <Captura {...CAPTURAS.minimosCuadrados} />
+
+        <p>
+          Con los pesos completos, <strong>Resultados</strong> suma una tabla
+          con la <strong>corrección de cada ángulo</strong>, en segundos, y de{" "}
+          <strong>cada distancia</strong>, en milímetros, junto a la distancia
+          ajustada. El ángulo de orientación no se ajusta: es el dato de
+          partida. Debajo aparece <strong>σ₀</strong>, que compara lo medido
+          con los pesos que supuso:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Cerca de 1</strong> (entre 0.5 y 2): los pesos describen
+            bien sus observaciones.
+          </li>
+          <li>
+            <strong>Mayor que 2</strong>: midió peor de lo supuesto, o hay un
+            error grueso en la cartera.
+          </li>
+          <li>
+            <strong>Menor que 0.5</strong>: sus σ son pesimistas; midió mejor
+            de lo declarado.
+          </li>
+        </ul>
+
+        <p>
+          σ₀ es información, no un criterio. El{" "}
+          <strong>veredicto de cierre es el mismo</strong> con cualquier
+          método: se juzga con el error de la cartera tal como se midió, antes
+          de corregir.
+        </p>
+
+        <p>
           <strong>Dibujo de la poligonal.</strong> La poligonal a escala sobre
           una grilla de coordenadas, con flecha de norte, barra de escala y el
           amarre si lo tiene. Se actualiza en vivo mientras captura.
@@ -1364,6 +1428,13 @@ export default function ManualPage() {
             <Fila key={h.hoja} celdas={[h.hoja, h.contiene]} />
           ))}
         </Tabla>
+
+        <p>
+          Con <strong>mínimos cuadrados</strong>, «Cálculos» añade la
+          corrección de cada ángulo y la distancia ajustada, y «Resumen» los
+          pesos y σ₀. El informe imprimible también indica los pesos y σ₀ de
+          cada poligonal ajustada así.
+        </p>
 
         <p>
           A diferencia del informe, la exportación funciona{" "}

@@ -45,7 +45,7 @@ export const CAPTURAS = {
     src: "/manual/04-hub-proyecto.png",
     alt: "Hub del proyecto: ficha de datos arriba y la pestaña de procesos con su listado.",
     width: 2560,
-    height: 3158,
+    height: 3320,
   },
   configuracionProyecto: {
     src: "/manual/05-configuracion-proyecto.png",
@@ -120,6 +120,12 @@ export const CAPTURAS = {
     alt: "Dibujo de la poligonal V10 de la cartera TT4: la ajustada en trazo continuo y la sin compensar exagerada ×100 en trazo discontinuo, con el hueco de cierre junto al vértice V10.",
     width: 1884,
     height: 1308,
+  },
+  minimosCuadrados: {
+    src: "/manual/21-minimos-cuadrados.png",
+    alt: "Resultados de la cartera Vivero con mínimos cuadrados: los tres pesos, la tabla de correcciones por ángulo y distancia, y σ₀ = 0.698 con su lectura.",
+    width: 1984,
+    height: 2580,
   },
   editorVisita: {
     src: "/manual/16-editor-visita.png",
@@ -269,6 +275,11 @@ export const METODOS_CORRECCION = [
     metodo: "Crandall",
     reparte:
       "Mínimos cuadrados sobre las distancias, conservando los ángulos ajustados",
+  },
+  {
+    metodo: "Mínimos cuadrados",
+    reparte:
+      "Ajusta a la vez ángulos y distancias según el peso que usted les da. Solo en cerrada y abierta con control",
   },
 ];
 

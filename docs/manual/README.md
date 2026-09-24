@@ -344,8 +344,41 @@ Aquí elige el **método de corrección**:
 | **Bowditch** (brújula) | Proporcional a la longitud de cada lado. El más usado |
 | **Tránsito** | Proporcional a las proyecciones. Útil si las distancias son menos fiables que los ángulos |
 | **Crandall** | Mínimos cuadrados sobre las distancias, conservando los ángulos ajustados |
+| **Mínimos cuadrados** | Ajusta a la vez ángulos y distancias según el peso que usted les da. Solo en cerrada y abierta con control |
 
 Cambiar el método recalcula las coordenadas al instante.
+
+**Mínimos cuadrados.** Los otros tres métodos reparten el error con una regla
+fija; este busca las correcciones más pequeñas —pesadas por la precisión de
+cada observación— que hacen cerrar la poligonal. Al elegirlo aparecen tres
+campos:
+
+- **σ angular (″)**: la desviación típica que supone para cada ángulo.
+- **σ de distancia (m)**: la de una medición de distancia.
+- **Mediciones por distancia**: cuántas veces midió cada lado. Una distancia
+  medida *n* veces pesa como σ/√*n*.
+
+Todas las observaciones pesan igual. Los campos **salen vacíos**: la
+aplicación no supone pesos por usted. La hoja de la universidad usa, por
+ejemplo, 2″, 0.011 m y 2 mediciones. Mientras falte alguno verá «Faltan los
+pesos del ajuste», sin coordenadas, y no podrá guardar.
+
+![Resultados de la cartera Vivero con mínimos cuadrados](../../public/manual/21-minimos-cuadrados.png)
+
+Con los pesos completos, **Resultados** suma una tabla con la **corrección de
+cada ángulo**, en segundos, y de **cada distancia**, en milímetros, junto a la
+distancia ajustada. El ángulo de orientación no se ajusta: es el dato de
+partida. Debajo aparece **σ₀**, que compara lo medido con los pesos que
+supuso:
+
+- **Cerca de 1** (entre 0.5 y 2): los pesos describen bien sus observaciones.
+- **Mayor que 2**: midió peor de lo supuesto, o hay un error grueso en la
+  cartera.
+- **Menor que 0.5**: sus σ son pesimistas; midió mejor de lo declarado.
+
+σ₀ es información, no un criterio. El **veredicto de cierre es el mismo** con
+cualquier método: se juzga con el error de la cartera tal como se midió, antes
+de corregir.
 
 **Dibujo de la poligonal.** La poligonal a escala sobre una grilla de
 coordenadas, con flecha de norte, barra de escala y el amarre si lo tiene. Se
@@ -870,6 +903,10 @@ asentamientos, en su panel de análisis—. Descarga un `.xlsx` con tres hojas:
 | Datos Crudos | Las lecturas de campo tal como se capturaron, sin modificar |
 | Cálculos | Lo que la aplicación derivó: cotas, coordenadas, correcciones |
 | Resumen | Equipo, método, precisión, tolerancia, estado y trazabilidad |
+
+Con **mínimos cuadrados**, «Cálculos» añade la corrección de cada ángulo y la
+distancia ajustada, y «Resumen» los pesos y σ₀. El informe imprimible también
+indica los pesos y σ₀ de cada poligonal ajustada así.
 
 A diferencia del informe, la exportación funciona **en cualquier estado**:
 también sobre un borrador. Las celdas que aún no se han calculado salen
