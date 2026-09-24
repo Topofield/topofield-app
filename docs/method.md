@@ -25,6 +25,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 13 | Canvas de poligonal | [`prds/12-canvas-poligonal.md`](./prds/12-canvas-poligonal.md) | cerrada |
 | 14 | Ajuste por mínimos cuadrados | [`prds/13-minimos-cuadrados.md`](./prds/13-minimos-cuadrados.md) | cerrada |
 | 15 | Georreferenciación de levantamientos | [`prds/14-georreferenciacion.md`](./prds/14-georreferenciacion.md) | cerrada |
+| 16 | Importar lecturas de nivel digital | [`prds/15-importar-nivel-digital.md`](./prds/15-importar-nivel-digital.md) | en curso |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 

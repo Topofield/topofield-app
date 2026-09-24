@@ -68,6 +68,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 13 | Canvas de poligonal | cerrada |
 | 14 | Ajuste por mínimos cuadrados | cerrada |
 | 15 | Georreferenciación de levantamientos | cerrada |
+| 16 | Importar lecturas de nivel digital | en curso |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).

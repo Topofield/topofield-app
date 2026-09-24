@@ -21,7 +21,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~A2~~ | **11** — Estado de los BMs | **cerrada** (2026-09-23) |
 | ~~A1~~ | **12** — Alerta por lectura desfasada | **cerrada** (2026-09-23) |
 | ~~P1~~ | dentro de la **13** (canvas) | **cerrada** (2026-09-23) |
-| N4 | — | sin fase asignada · **desbloqueada** (crudo real descifrado) |
+| N4 | **16** — Importar lecturas de nivel digital | en curso (PRD redactado el 2026-09-24) |
 | N6 | — | sin fase asignada |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
