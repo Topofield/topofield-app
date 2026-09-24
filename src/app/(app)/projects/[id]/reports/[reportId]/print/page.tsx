@@ -17,6 +17,7 @@ import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { PolygonalPlot } from "@/components/polygonal/polygonal-plot";
 import { polygonalInputOf } from "@/components/polygonal/polygonal-draft";
+import { georeferenceSummary } from "@/components/polygonal/georeference-plan";
 import {
   levelMeetsOrder,
   thresholdsOf,
@@ -424,6 +425,12 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
                   )}
                 </dd>
               </dl>
+              {georeferenceSummary(section.data.process) && (
+                <p className="report-note">
+                  Coordenadas georreferenciadas{" "}
+                  {georeferenceSummary(section.data.process)}.
+                </p>
+              )}
               <table className="report-table">
                 <thead>
                   <tr>

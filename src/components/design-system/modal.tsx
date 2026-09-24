@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { cn } from "@/lib/utils/cn";
 
 interface ModalProps {
   open: boolean;
@@ -9,9 +10,11 @@ interface ModalProps {
   children: ReactNode;
   /** Acciones del pie (p. ej. botones Cancelar / Confirmar). */
   footer?: ReactNode;
+  /** «lg» para diálogos con tablas; por defecto, el ancho de un formulario. */
+  size?: "md" | "lg";
 }
 
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, size = "md" }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -36,12 +39,16 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md rounded-lg border border-neutral-200 bg-white shadow-lg"
+        className={cn(
+          "relative flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-lg border border-neutral-200 bg-white shadow-lg",
+          size === "lg" ? "max-w-2xl" : "max-w-md",
+        )}
       >
         <header className="border-b border-neutral-100 px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
         </header>
-        <div className="px-6 py-4">{children}</div>
+        {/* El cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
+        <div className="overflow-y-auto px-6 py-4">{children}</div>
         {footer && (
           <footer className="flex justify-end gap-2 border-t border-neutral-100 px-6 py-4">
             {footer}

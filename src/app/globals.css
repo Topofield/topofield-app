@@ -256,6 +256,15 @@
     color: var(--color-danger-500);
   }
 
+  /* Nota de la sección de un proceso: p. ej., que sus coordenadas se
+     georreferenciaron después de cerrarlo (Fase 15). */
+  .report-note {
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-neutral-700);
+  }
+
   /* Nota al pie de una tabla del informe: aclara una marca de la tabla que
      está justo encima, así que va pegada a ella y en cuerpo menor. */
   .report-footnote {

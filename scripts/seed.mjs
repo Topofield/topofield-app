@@ -1312,6 +1312,18 @@ async function main() {
       ),
       leastSquares: { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 },
     },
+    // Fase 15: la misma cartera medida en un sistema local —arranque en
+    // (1000, 2000), azimut supuesto 0° hacia el amarre— y cerrada. Es el caso
+    // que se georreferencia con D1 y D3 (docs/prds/14-georreferenciacion.md).
+    {
+      ...carteraToSpec(CARTERA_VIVERO, null, "bowditch", "closed"),
+      name: "Poligonal Famarena — Sede Vivero — sistema local",
+      startNorth: 1000,
+      startEast: 2000,
+      startAz: [0, 0, 0],
+      notes:
+        "Cartera Vivero en sistema local, para georreferenciar con D1 (100117.462, 101515.6333) y D3 (100182.239, 101581.7814).",
+    },
   ];
   for (const spec of carteraSpecs) {
     await insertPolygonal(

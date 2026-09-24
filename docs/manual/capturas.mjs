@@ -48,7 +48,7 @@ const calculado = sql("select id from public.polygonal_processes where name like
 // Sin proyecto (base sin sembrar) no se consulta: `project_id=''` haría fallar
 // psql antes de que la guarda de abajo explique que falta el seed.
 const cerrado = proyecto
-  ? sql(`select id from public.polygonal_processes where status='closed' and project_id='${proyecto}';`)
+  ? sql(`select id from public.polygonal_processes where status='closed' and name like 'Cuadrado oficial%' and project_id='${proyecto}';`)
   : "";
 const rechazado = proyecto
   ? sql(`select id from public.polygonal_processes where status='rejected' and project_id='${proyecto}';`)
