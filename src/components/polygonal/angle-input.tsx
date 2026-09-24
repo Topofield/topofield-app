@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { Button, DmsInput, EMPTY_DMS, type DmsValue } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
 import {
   decimalToDms,
@@ -9,10 +10,17 @@ import {
   formatDecimalDegrees,
   roundsOnStorage,
 } from "@/lib/calculations/angles";
-import { Button } from "./button";
-import { DmsInput, EMPTY_DMS, type DmsValue } from "./dms-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
-export type AngleFormat = "dms" | "decimal";
+/**
+ * Captura de ángulos de poligonal en DMS o en grados decimales (Fase 13, P1).
+ *
+ * Vive con la poligonal y no en el sistema de diseño: convierte con
+ * `@/lib/calculations/angles`, y un componente del sistema de diseño no
+ * conoce el dominio (doc técnica, § 8, «Qué entra en el sistema de diseño»).
+ * El que sí es genérico, `DmsInput`, se queda allí y este lo reutiliza.
+ */
+type AngleFormat = AngleInputFormat;
 
 interface AngleInputProps {
   label?: string;

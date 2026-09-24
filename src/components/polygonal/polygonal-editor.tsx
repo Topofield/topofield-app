@@ -8,8 +8,6 @@ import {
   buttonClasses,
   Button,
   Card,
-  AngleFormatToggle,
-  type AngleFormat,
 } from "@/components/design-system";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { totalStationMeetsOrder } from "@/lib/calculations/tolerances";
@@ -39,6 +37,8 @@ import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
 import { StationsTable } from "./stations-table";
 import { buildInput, processToConfig, stationToDraft } from "./polygonal-draft";
+import { AngleFormatToggle } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 const STATUS_TONE: Record<
   ProcessStatus,
@@ -94,12 +94,12 @@ export function PolygonalEditor({
   const [isPending, startTransition] = useTransition();
   // Formato de captura de ángulos (Fase 13, P1). Se guarda al conmutar, no con
   // el botón Guardar; en un proceso cerrado solo cambia la vista.
-  const [angleFormat, setAngleFormat] = useState<AngleFormat>(
+  const [angleFormat, setAngleFormat] = useState<AngleInputFormat>(
     process.angle_input_format,
   );
   const [formatError, setFormatError] = useState<string | null>(null);
 
-  function changeAngleFormat(next: AngleFormat) {
+  function changeAngleFormat(next: AngleInputFormat) {
     setAngleFormat(next);
     setFormatError(null);
     if (readOnly) return;

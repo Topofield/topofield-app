@@ -1,11 +1,9 @@
 import {
-  AngleInput,
   EMPTY_DMS,
   Input,
   PrecisionOrderSelect,
   Select,
   TotalStationFieldset,
-  type AngleFormat,
   type DmsValue,
 } from "@/components/design-system";
 import {
@@ -24,6 +22,8 @@ import {
   type ReferencePoint,
   type TotalStationFields,
 } from "@/types/project";
+import { AngleInput } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 /** Estado de UI de la configuración de un proceso poligonal (todo texto). */
 export interface PolygonalConfigState {
@@ -79,7 +79,7 @@ interface PolygonalConfigFieldsProps {
   referencePoints?: ReferencePoint[];
   disabled?: boolean;
   /** Formato de captura de los ángulos (Fase 13, P1). */
-  angleFormat: AngleFormat;
+  angleFormat: AngleInputFormat;
 }
 
 /**

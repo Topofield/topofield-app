@@ -2,17 +2,17 @@
 
 import { useMemo, useState } from "react";
 import {
-  AngleInput,
   Button,
   Input,
   Modal,
-  type AngleFormat,
   type DmsValue,
 } from "@/components/design-system";
 import {
   azimuthFromCoordinates,
   decimalToDms,
 } from "@/lib/calculations/angles";
+import { AngleInput } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 interface ReassignCoordinatesDialogProps {
   startNorth: string;
@@ -32,7 +32,7 @@ interface ReassignCoordinatesDialogProps {
   ) => void;
   disabled?: boolean;
   /** Formato de captura de los ángulos (Fase 13, P1). */
-  angleFormat: AngleFormat;
+  angleFormat: AngleInputFormat;
 }
 
 /**

@@ -3,9 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import {
   Alert,
-  AngleFormatToggle,
   Button,
-  type AngleFormat,
 } from "@/components/design-system";
 import { parseNumber } from "@/lib/utils/parse";
 import { createPolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/new/actions";
@@ -15,6 +13,8 @@ import {
   type PolygonalConfigState,
 } from "./polygonal-config-fields";
 import type { ReferencePoint } from "@/types/project";
+import { AngleFormatToggle } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 export function NewPolygonalForm({
   projectId,
@@ -27,7 +27,7 @@ export function NewPolygonalForm({
     EMPTY_POLYGONAL_CONFIG,
   );
   const [error, setError] = useState<string | null>(null);
-  const [angleFormat, setAngleFormat] = useState<AngleFormat>("dms");
+  const [angleFormat, setAngleFormat] = useState<AngleInputFormat>("dms");
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

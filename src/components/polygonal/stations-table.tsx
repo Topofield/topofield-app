@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import {
-  AngleInput,
   Button,
   EMPTY_DMS,
   Input,
   Select,
-  type AngleFormat,
   type DmsValue,
 } from "@/components/design-system";
 import { decimalToDms, formatDecimalDegrees } from "@/lib/calculations/angles";
@@ -21,6 +19,8 @@ import {
   type DeflectionDirection,
   type PolygonalResult,
 } from "@/types/polygonal";
+import { AngleInput } from "./angle-input";
+import type { AngleInputFormat } from "@/types/polygonal";
 
 export interface StationDraftState {
   /** Clave estable para React (no se persiste). */
@@ -82,7 +82,7 @@ function AngleReadingsCell({
   issue?: CaptureIssues;
   readingIssue?: { error?: string; warning?: string };
   disabled?: boolean;
-  format: AngleFormat;
+  format: AngleInputFormat;
   onChange: (readings: DmsValue[]) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -173,7 +173,7 @@ interface StationsTableProps {
   angularPrecisionSeconds: number;
   disabled?: boolean;
   /** Formato de captura de los ángulos (Fase 13, P1). */
-  angleFormat: AngleFormat;
+  angleFormat: AngleInputFormat;
 }
 
 /** Tabla editable de estaciones con las columnas calculadas en vivo. */
