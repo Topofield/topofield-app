@@ -729,6 +729,90 @@ export type Database = {
           },
         ]
       }
+      settlement_book_readings: {
+        Row: {
+          back_distance_m: number | null
+          back_lower_m: number | null
+          back_upper_m: number | null
+          backsight: number | null
+          correction_applied: number | null
+          created_at: string
+          distance_accumulated_km: number | null
+          elevation_calculated: number | null
+          elevation_corrected: number | null
+          fore_distance_m: number | null
+          fore_lower_m: number | null
+          fore_upper_m: number | null
+          foresight: number | null
+          id: string
+          instrument_height: number | null
+          point_code: string
+          point_id: string | null
+          point_type: string
+          reading_order: number
+          visit_id: string
+        }
+        Insert: {
+          back_distance_m?: number | null
+          back_lower_m?: number | null
+          back_upper_m?: number | null
+          backsight?: number | null
+          correction_applied?: number | null
+          created_at?: string
+          distance_accumulated_km?: number | null
+          elevation_calculated?: number | null
+          elevation_corrected?: number | null
+          fore_distance_m?: number | null
+          fore_lower_m?: number | null
+          fore_upper_m?: number | null
+          foresight?: number | null
+          id?: string
+          instrument_height?: number | null
+          point_code: string
+          point_id?: string | null
+          point_type: string
+          reading_order: number
+          visit_id: string
+        }
+        Update: {
+          back_distance_m?: number | null
+          back_lower_m?: number | null
+          back_upper_m?: number | null
+          backsight?: number | null
+          correction_applied?: number | null
+          created_at?: string
+          distance_accumulated_km?: number | null
+          elevation_calculated?: number | null
+          elevation_corrected?: number | null
+          fore_distance_m?: number | null
+          fore_lower_m?: number | null
+          fore_upper_m?: number | null
+          foresight?: number | null
+          id?: string
+          instrument_height?: number | null
+          point_code?: string
+          point_id?: string | null
+          point_type?: string
+          reading_order?: number
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_book_readings_point_id_fkey"
+            columns: ["point_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_book_readings_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settlement_points: {
         Row: {
           active_from: string | null
@@ -832,6 +916,7 @@ export type Database = {
       }
       settlement_visits: {
         Row: {
+          capture_mode: string
           closed_at: string | null
           closed_by: string | null
           closure_error_mm: number | null
@@ -844,16 +929,22 @@ export type Database = {
           id: string
           km_precision_mm: number | null
           level_type: string | null
+          meets_tolerance: boolean | null
           notes: string | null
           operator: string | null
           precision_order: string
+          reference_bm_code: string | null
+          reference_bm_elevation: number | null
           site_id: string
           status: string
+          tolerance_mm: number | null
+          total_distance_km: number | null
           updated_at: string
           visit_number: number
           weather_conditions: string | null
         }
         Insert: {
+          capture_mode?: string
           closed_at?: string | null
           closed_by?: string | null
           closure_error_mm?: number | null
@@ -866,16 +957,22 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          meets_tolerance?: boolean | null
           notes?: string | null
           operator?: string | null
           precision_order?: string
+          reference_bm_code?: string | null
+          reference_bm_elevation?: number | null
           site_id: string
           status?: string
+          tolerance_mm?: number | null
+          total_distance_km?: number | null
           updated_at?: string
           visit_number: number
           weather_conditions?: string | null
         }
         Update: {
+          capture_mode?: string
           closed_at?: string | null
           closed_by?: string | null
           closure_error_mm?: number | null
@@ -888,11 +985,16 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          meets_tolerance?: boolean | null
           notes?: string | null
           operator?: string | null
           precision_order?: string
+          reference_bm_code?: string | null
+          reference_bm_elevation?: number | null
           site_id?: string
           status?: string
+          tolerance_mm?: number | null
+          total_distance_km?: number | null
           updated_at?: string
           visit_number?: number
           weather_conditions?: string | null
