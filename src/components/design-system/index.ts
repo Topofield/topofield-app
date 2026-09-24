@@ -4,6 +4,7 @@ export { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
 export { Button, buttonClasses } from "./button";
 export { Card } from "./card";
 export { DmsInput, EMPTY_DMS, type DmsValue } from "./dms-input";
+export { Drawer, type DrawerProps } from "./drawer";
 export { EmptyState } from "./empty-state";
 export { LevelFieldset, TotalStationFieldset } from "./equipment-fields";
 export {

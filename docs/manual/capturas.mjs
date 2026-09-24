@@ -56,9 +56,15 @@ const rechazado = proyecto
 const nivelacion = sql("select id from public.leveling_processes where name like 'Circuito BM-1%';");
 const proyectoMonitoreo = sql("select id from public.projects where name='Edificio en monitoreo' limit 1;");
 const lugarMonitoreo = sql("select id from public.sites where name='Edificio Torre Central' limit 1;");
-const visitaCalculada = sql(
-  "select id from public.settlement_visits where site_id=(select id from public.sites where name='Edificio Torre Central') and visit_number=5;",
-);
+// Fase 18 — el lugar con libreta de nivelación en cada visita. Se usa la
+// visita abierta más antigua: en el seed tiene libreta, visitas a los dos
+// lados para las flechas, y Editar y Cerrar visita a la vista.
+const lugarLibreta = sql("select id from public.sites where name='Torre Alameda' limit 1;");
+const visitaLibreta = lugarLibreta
+  ? sql(
+      `select id from public.settlement_visits where site_id='${lugarLibreta}' and status<>'closed' and capture_mode='book' order by date limit 1;`,
+    )
+  : "";
 
 if (
   !proyecto ||
@@ -68,15 +74,47 @@ if (
   !nivelacion ||
   !proyectoMonitoreo ||
   !lugarMonitoreo ||
-  !visitaCalculada
+  !lugarLibreta ||
+  !visitaLibreta
 ) {
   throw new Error("Faltan datos de seed. Corré: npm run seed");
+}
+
+/**
+ * La libreta de una visita en la plantilla CSV de TopoField (Fase 16), para
+ * capturar el diálogo de importación sin depender de un archivo en disco.
+ */
+function libretaCsv(visitId) {
+  const tipos = { bm: "bm", pc: "pc", intermediate: "radiacion" };
+  // `coalesce`: `concat_ws` salta los nulos, y una lectura vacía correría las
+  // columnas.
+  const vacio = (col) => `coalesce(${col}::text, '')`;
+  const columnas = ["backsight", "foresight", "back_distance_m", "fore_distance_m"].map(vacio);
+  const filas = sql(
+    `select string_agg(concat_ws(',', 'ida', point_code, point_type, ${columnas.join(", ")}), E'\\n' order by reading_order) from public.settlement_book_readings where visit_id='${visitId}';`,
+  );
+  const cuerpo = filas
+    .split("\n")
+    .map((linea) => {
+      const [recorrido, punto, tipo, ...resto] = linea.split(",");
+      return [recorrido, punto, tipos[tipo] ?? "", ...resto].join(",");
+    })
+    .join("\n");
+  return `recorrido,punto,tipo,v_mas,v_menos,dist_mas,dist_menos\n${cuerpo}\n`;
 }
 
 const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 2,
+});
+// Oculta el indicador de desarrollo de Next («1 Issue»), que no es de la app.
+await page.addInitScript(() => {
+  document.addEventListener("DOMContentLoaded", () => {
+    const estilo = document.createElement("style");
+    estilo.textContent = "nextjs-portal{display:none!important}";
+    document.head.appendChild(estilo);
+  });
 });
 
 async function capturar(nombre, opciones = {}) {
@@ -199,13 +237,60 @@ await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/new`, { waitUntil: 
 await capturar("13-nuevo-lugar");
 await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/${lugarMonitoreo}`, { waitUntil: "networkidle" });
 await capturar("14-editor-lugar", { fullPage: true });
-await page.goto(`${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarMonitoreo}`, { waitUntil: "networkidle" });
-await capturar("15-panel-asentamientos", { fullPage: true });
-await page.goto(
-  `${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarMonitoreo}/visits/${visitaCalculada}`,
-  { waitUntil: "networkidle" },
-);
+
+// Fase 18 — Torre Alameda, con libreta en cada visita. El panel se recorta al
+// final del semáforo: la tabla de diferenciales de 8 puntos (28 pares) solo
+// alargaba la imagen.
+const panelLibreta = `${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarLibreta}`;
+await page.goto(panelLibreta, { waitUntil: "networkidle" });
+await page.waitForTimeout(900);
+const semaforo = await page
+  .getByRole("heading", { name: "Semáforo por punto (última visita)" })
+  .locator("xpath=ancestor::*[contains(@class,'rounded')][1]")
+  .boundingBox();
+await capturar("15-panel-asentamientos", {
+  fullPage: true,
+  clip: { x: 0, y: 0, width: 1280, height: Math.ceil(semaforo.y + semaforo.height + 24) },
+});
+
+// El formulario de nueva visita, sin crearla. Alto para que quepa entero.
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.getByRole("button", { name: "+ Nueva visita" }).click();
+await page.waitForTimeout(500);
+await page.getByRole("dialog").screenshot({ path: join(OUT, "25-nueva-visita.png") });
+console.log("✓", "25-nueva-visita");
+await page.keyboard.press("Escape");
+await page.setViewportSize({ width: 1280, height: 800 });
+
+// La vista de la visita con el punto más asentado del seed seleccionado, y su
+// registro de nivelación.
+const vistaLibreta = `${panelLibreta}/visits/${visitaLibreta}`;
+await page.goto(vistaLibreta, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "TA-07", exact: true }).click();
+await capturar("27-vista-visita", { fullPage: true });
+await page.getByRole("button", { name: "Ver registro de nivelación" }).click();
+await page.waitForTimeout(600);
+await page.getByRole("dialog").screenshot({ path: join(OUT, "28-registro-nivelacion.png") });
+console.log("✓", "28-registro-nivelacion");
+await page.keyboard.press("Escape");
+
+// El editor con la libreta, y el diálogo de importación con la misma libreta
+// pasada a la plantilla CSV. Sin aceptar: el seed queda como estaba.
+await page.goto(`${vistaLibreta}/editar`, { waitUntil: "networkidle" });
 await capturar("16-editor-visita", { fullPage: true });
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.getByRole("button", { name: "Importar desde archivo" }).click();
+const importarVisita = page.getByRole("dialog");
+await importarVisita.locator('input[type="file"]').setInputFiles({
+  name: "libreta-visita.csv",
+  mimeType: "text/csv",
+  buffer: Buffer.from(libretaCsv(visitaLibreta), "utf8"),
+});
+await page.waitForTimeout(600);
+await importarVisita.screenshot({ path: join(OUT, "26-importar-libreta-visita.png") });
+console.log("✓", "26-importar-libreta-visita");
+await page.keyboard.press("Escape");
+await page.setViewportSize({ width: 1280, height: 800 });
 
 // Informes (fase 6). El alta y la ruta imprimible; el informe se crea aquí
 // mismo si el seed no dejó ninguno, para que la captura no dependa del estado.

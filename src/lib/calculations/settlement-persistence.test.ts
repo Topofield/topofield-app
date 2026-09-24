@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
+  bookRowsToPersist,
   readingChanged,
   visitsToRewrite,
   type PersistedReading,
 } from "./settlement-persistence";
-import type { AlertLevel, VisitResult } from "@/types/settlement";
+import { bookRowInputOf, bookRowOf, computeVisitBook } from "./settlement-book";
+import type { AlertLevel, BookRowPayload, VisitResult } from "@/types/settlement";
 
 /** Lectura recalculada, con valores por defecto que los tests van pisando. */
 function computed(over: Partial<{
@@ -238,5 +240,47 @@ describe("visitsToRewrite", () => {
       ]),
     });
     expect(out.map((v) => v.visitId)).toEqual(["v1", "v3"]);
+  });
+});
+
+describe("bookRowsToPersist (Fase 18)", () => {
+  const rows: BookRowPayload[] = [
+    { pointCode: "BM-1", pointType: "bm", backsight: 1.5, foresight: null, backUpperM: 1.6, backLowerM: 1.4, foreUpperM: null, foreLowerM: null, backDistanceM: null, foreDistanceM: null },
+    { pointCode: " pc-01", pointType: "intermediate", backsight: null, foresight: 1.2, backUpperM: null, backLowerM: null, foreUpperM: null, foreLowerM: null, backDistanceM: null, foreDistanceM: null },
+    { pointCode: "BM-1", pointType: "bm", backsight: null, foresight: 1.5, backUpperM: null, backLowerM: null, foreUpperM: null, foreLowerM: null, backDistanceM: null, foreDistanceM: 20 },
+  ];
+
+  it("numera desde 1, enlaza el punto por código y guarda las distancias resueltas", () => {
+    const result = computeVisitBook(rows.map(bookRowInputOf), 100, "tercer_orden");
+    const out = bookRowsToPersist("v1", rows, result.forward.readings, [
+      { id: "p1", code: "PC-01" },
+    ]);
+    expect(out.map((r) => r.reading_order)).toEqual([1, 2, 3]);
+    expect(out.map((r) => r.point_id)).toEqual([null, "p1", null]);
+    expect(out[1]!.point_code).toBe("pc-01");
+    // La distancia de la V+ sale de los hilos: (1.6 − 1.4) × 100 = 20 m.
+    expect(out[0]!.back_distance_m).toBeCloseTo(20, 9);
+    expect(out[1]!.elevation_calculated).toBeCloseTo(100.3, 9);
+    expect(out.every((r) => r.visit_id === "v1")).toBe(true);
+  });
+});
+
+describe("bookRowOf (Fase 18)", () => {
+  it("convierte las columnas DECIMAL que llegan como cadena", () => {
+    const r = bookRowOf({
+      point_code: "BM-1",
+      point_type: "bm",
+      backsight: "1.5000" as unknown as number,
+      foresight: null,
+      back_upper_m: null,
+      back_lower_m: null,
+      fore_upper_m: null,
+      fore_lower_m: null,
+      back_distance_m: "30.000" as unknown as number,
+      fore_distance_m: null,
+    });
+    expect(r.backsight).toBe(1.5);
+    expect(r.backDistanceM).toBe(30);
+    expect(r.foresight).toBeNull();
   });
 });

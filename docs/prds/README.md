@@ -23,6 +23,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 15 | Georreferenciación de levantamientos | `14-georreferenciacion.md` | cerrada |
 | 16 | Importar lecturas de nivel digital | `15-importar-nivel-digital.md` | cerrada |
 | 17 | Control ida-vuelta por puntos homólogos | `16-homologos-ida-vuelta.md` | cerrada |
+| 18 | Libreta de nivelación y panel de asentamientos | `17-libreta-panel-asentamientos.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

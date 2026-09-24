@@ -5,7 +5,6 @@ import {
   StatusIndicator,
 } from "@/components/design-system";
 import { DifferentialsTable } from "@/components/settlement/differentials-table";
-import { SettlementChart } from "@/components/settlement/settlement-chart";
 import {
   ALERT_LEVEL_LABELS,
   type DifferentialPair,
@@ -44,8 +43,9 @@ function formatMm(value: number | null): string {
 
 /**
  * Panel de análisis de un lugar: semáforo por punto de la última visita,
- * tendencia por punto, tabla de asentamientos diferenciales y gráfica de
- * evolución del acumulado por punto a lo largo de las visitas.
+ * tendencia por punto y tabla de asentamientos diferenciales. La gráfica de
+ * evolución por punto salió de aquí en la Fase 18: la sustituye la dispersión
+ * en el tiempo de `charts/points-scatter.tsx`.
  */
 export function AnalysisPanel({
   points,
@@ -136,16 +136,6 @@ export function AnalysisPanel({
         />
       </Card>
 
-      <Card title="Evolución del asentamiento acumulado">
-        {!hasReadings ? (
-          <EmptyState
-            title="Todavía no hay lecturas"
-            description="La gráfica se dibuja con el acumulado de cada visita. Registra al menos una visita con lecturas para verla."
-          />
-        ) : (
-          <SettlementChart points={points} visits={visits} />
-        )}
-      </Card>
     </div>
   );
 }

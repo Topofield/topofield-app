@@ -123,9 +123,33 @@ export const CAPTURAS = {
   },
   panelAsentamientos: {
     src: "/manual/15-panel-asentamientos.png",
-    alt: "Panel de análisis: lista de visitas, semáforo por punto, diferenciales y gráfica de evolución.",
+    alt: "Panel del lugar Torre Alameda: los seis indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
     width: 2560,
-    height: 5270,
+    height: 5368,
+  },
+  nuevaVisita: {
+    src: "/manual/25-nueva-visita.png",
+    alt: "Formulario Nueva visita: fecha, nivelador, captura «Digitar la libreta de nivelación», BM de amarre BM-1 con cota 100.0000, orden de precisión y equipo tomados de la visita anterior.",
+    width: 1344,
+    height: 2092,
+  },
+  importarLibretaVisita: {
+    src: "/manual/26-importar-libreta-visita.png",
+    alt: "Diálogo Importar la libreta de la visita con la plantilla CSV: dos armadas y doce visuales, BM de amarre BM-1, el aviso de que la libreta actual se reemplazará y la libreta con los puntos de control marcados.",
+    width: 1344,
+    height: 2176,
+  },
+  vistaVisita: {
+    src: "/manual/27-vista-visita.png",
+    alt: "Vista de la visita 12 de Torre Alameda: los seis indicadores, la tabla de puntos de control con TA-07 seleccionado, su historial con la nota «Le faltan 21.3 mm para el umbral de alerta» y las barras de acumulado y de movimiento por punto.",
+    width: 2560,
+    height: 3110,
+  },
+  registroNivelacion: {
+    src: "/manual/28-registro-nivelacion.png",
+    alt: "Panel lateral Registro de nivelación de la visita 12: la libreta en dos armadas con las vistas intermedias de los puntos de control resaltadas, ΣV+, ΣV−, error de cierre de −1.6 mm dentro de la tolerancia de ±4.5 mm.",
+    width: 1536,
+    height: 1600,
   },
   dibujoPoligonal: {
     src: "/manual/20-dibujo-poligonal.png",
@@ -147,9 +171,9 @@ export const CAPTURAS = {
   },
   editorVisita: {
     src: "/manual/16-editor-visita.png",
-    alt: "Editor de visita con la tabla de lecturas y el cálculo en vivo de parcial, acumulado, velocidad y semáforo.",
+    alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas y su resumen de cierre, y debajo las cotas de los puntos de control que salen de ella.",
     width: 2560,
-    height: 3194,
+    height: 5934,
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
@@ -351,6 +375,75 @@ export const TOLERANCIA_NIVELACION = [
   { orden: "Ordinario", k: "24" },
 ];
 
+// --- § 7.3 Avisos de la libreta de la visita ---
+
+export const AVISOS_LIBRETA = [
+  {
+    situacion: "El cierre supera la tolerancia",
+    ocurre:
+      "Solo avisa. La visita se guarda y se cierra igual, con sus cotas sin compensar",
+  },
+  {
+    situacion: "Faltan las distancias por visual",
+    ocurre: "Avisa: sin distancias no se evalúa la tolerancia ni se compensa",
+  },
+  {
+    situacion: "Todavía no se leyó el amarre de cierre",
+    ocurre: "«Libreta incompleta»: aún no hay error de cierre",
+  },
+  {
+    situacion: "La primera o la última fila no es el BM de amarre",
+    ocurre: "No se puede guardar",
+  },
+  {
+    situacion: "Un punto de control sin vista menos",
+    ocurre: "Avisa: el punto queda sin cota",
+  },
+  {
+    situacion: "Un punto que no está vigente en la fecha",
+    ocurre: "Avisa: su lectura no se usa",
+  },
+  {
+    situacion: "El mismo punto con vista menos en dos filas",
+    ocurre: "No se puede guardar hasta dejar una",
+  },
+  {
+    situacion: "La comprobación aritmética no cuadra",
+    ocurre: "No se puede cerrar la visita (§ 7.6)",
+  },
+];
+
+// --- § 7.4 Indicadores del panel del lugar ---
+
+export const INDICADORES_LUGAR = [
+  {
+    indicador: "Asentamiento máximo",
+    muestra:
+      "El acumulado de mayor magnitud en la última visita, con su punto. Un levantamiento también cuenta",
+  },
+  {
+    indicador: "Promedio actual",
+    muestra: "La media del acumulado de los puntos medidos en la última visita",
+  },
+  {
+    indicador: "Distorsión angular",
+    muestra:
+      "El par con la peor distorsión en la última visita, y si supera el límite del lugar",
+  },
+  {
+    indicador: "Velocidad máxima",
+    muestra: "La de mayor magnitud en la última visita, en mm/mes, con su punto",
+  },
+  {
+    indicador: "Visitas en alerta",
+    muestra: "Cuántas visitas tienen algún punto en precaución o más",
+  },
+  {
+    indicador: "Visitas",
+    muestra: "El total, con la fecha de la lectura base y la de la última",
+  },
+];
+
 // --- § 7.4 Niveles del semáforo de asentamientos ---
 
 export const NIVELES_SEMAFORO = [
@@ -393,8 +486,6 @@ export const DESENLACES_CIERRE = [
     ocurre: "No se puede cerrar. Corrija las celdas marcadas",
   },
 ];
-
-// --- § 10 Informes y § 11 Exportar a Excel ---
 
 // --- § 10 Informes y § 11 Exportar a Excel ---
 
@@ -487,6 +578,17 @@ export const PREGUNTAS: Pregunta[] = [
     pregunta: "¿Por qué una fila de mi libreta de nivelación no admite corrección?",
     respuesta:
       "Le falta la distancia a alguna de sus miras. Es obligatoria en los puntos BM y de cambio: sin ella el recorrido no acumula, la distancia total sale menor de la real y el punto de cierre queda mal corregido. La distancia acumulada no se teclea — la calcula la aplicación sumando las distancias por visual.",
+  },
+  {
+    pregunta:
+      "La libreta de una visita salió fuera de tolerancia. ¿Puedo cerrarla?",
+    respuesta:
+      "Sí. Fuera de tolerancia solo avisa: la visita se guarda y se cierra con sus cotas sin compensar, y el aviso queda en la columna Cierre del panel y en la vista de la visita. Lo que sí impide cerrarla es una comprobación aritmética que no cuadra, porque indica un error en la libreta.",
+  },
+  {
+    pregunta: "¿Por qué no puedo teclear la cota de un punto en la visita?",
+    respuesta:
+      "Porque la visita se captura con libreta: la cota sale de la vista menos del punto en la libreta. Si nivelaron y calcularon fuera de la aplicación, cambie Captura de las cotas a Cotas directas.",
   },
   {
     pregunta:

@@ -15,6 +15,7 @@ import type {
   AlertLevel,
   SettlementPoint,
   SettlementVisit,
+  SettlementBookReading,
   SettlementReading,
 } from "@/types/settlement";
 import { worst } from "@/lib/calculations/settlement";
@@ -467,6 +468,46 @@ export async function getSettlementReadingsBySite(
   const grouped: Record<string, SettlementReading[]> = {};
   for (const row of data ?? []) {
     const reading = row as unknown as SettlementReading;
+    (grouped[reading.visit_id] ??= []).push(reading);
+  }
+  return grouped;
+}
+
+/** La libreta de nivelación de una visita (Fase 18), en orden de captura. */
+export async function getVisitBook(
+  supabase: Client,
+  visitId: string,
+): Promise<SettlementBookReading[]> {
+  if (!UUID_RE.test(visitId)) return [];
+  const { data, error } = await supabase
+    .from("settlement_book_readings")
+    .select("*")
+    .eq("visit_id", visitId)
+    .order("reading_order", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as SettlementBookReading[];
+}
+
+/**
+ * Las libretas de todas las visitas de un lugar, indexadas por visita y en
+ * orden de captura. Una sola consulta con join, como
+ * `getSettlementReadingsBySite`.
+ */
+export async function getSiteBooks(
+  supabase: Client,
+  siteId: string,
+): Promise<Record<string, SettlementBookReading[]>> {
+  if (!UUID_RE.test(siteId)) return {};
+  const { data, error } = await supabase
+    .from("settlement_book_readings")
+    .select("*, settlement_visits!inner(site_id)")
+    .eq("settlement_visits.site_id", siteId)
+    .order("reading_order", { ascending: true });
+  if (error) throw error;
+
+  const grouped: Record<string, SettlementBookReading[]> = {};
+  for (const row of data ?? []) {
+    const reading = row as unknown as SettlementBookReading;
     (grouped[reading.visit_id] ??= []).push(reading);
   }
   return grouped;

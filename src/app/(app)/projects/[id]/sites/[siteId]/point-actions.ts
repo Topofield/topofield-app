@@ -262,6 +262,31 @@ export async function savePointAction(
     return { ok: false, error: error.message };
   }
 
+  // El código es la clave con que la libreta de una visita encuentra al punto
+  // (Fase 18): la cota se deriva de la fila cuyo código coincide. Si el código
+  // cambia y las filas no, el siguiente guardado de esa visita ya no
+  // encontraría el punto y su cota desaparecería sin aviso. Se renombran las
+  // filas de las visitas ABIERTAS; las cerradas son inmutables y conservan el
+  // código con que se midieron (PRD de la Fase 18, decisión 20).
+  const newCode = payload.code.trim();
+  if (newCode !== current.code) {
+    const { data: openVisits, error: visitsError } = await supabase
+      .from("settlement_visits")
+      .select("id")
+      .eq("site_id", payload.siteId)
+      .neq("status", "closed");
+    if (visitsError) return { ok: false, error: visitsError.message };
+    const openIds = (openVisits ?? []).map((v) => v.id);
+    if (openIds.length > 0) {
+      const { error: renameError } = await supabase
+        .from("settlement_book_readings")
+        .update({ point_code: newCode })
+        .eq("point_id", pointId)
+        .in("visit_id", openIds);
+      if (renameError) return { ok: false, error: renameError.message };
+    }
+  }
+
   // La C0 y las coordenadas del punto acaban de cambiar, y de ellas dependen
   // valores YA PERSISTIDOS en `settlement_readings`: el acumulado es
   // `(cota − C0) × 1000` y las coordenadas alimentan la distorsión angular.

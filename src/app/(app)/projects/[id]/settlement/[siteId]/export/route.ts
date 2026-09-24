@@ -9,7 +9,10 @@ import {
 } from "@/lib/supabase/queries";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
-import { buildSettlementWorkbook } from "@/lib/export/settlement-workbook";
+import {
+  buildSettlementWorkbook,
+  type BookReadingRow,
+} from "@/lib/export/settlement-workbook";
 import { safeFilename } from "@/lib/export/workbook";
 import type { PointInput, VisitInput } from "@/types/settlement";
 
@@ -59,6 +62,25 @@ export async function GET(
     })),
   }));
 
+  // Libretas de las visitas en modo `book`, para la hoja «Libretas» (Fase
+  // 18). Las `direct` no tienen libreta, así que no se consultan.
+  const bookVisitIds = visits
+    .filter((v) => v.capture_mode === "book")
+    .map((v) => v.id);
+  const bookByVisit: Record<string, BookReadingRow[]> = {};
+  if (bookVisitIds.length > 0) {
+    const { data: bookRows, error } = await supabase
+      .from("settlement_book_readings")
+      .select("*")
+      .in("visit_id", bookVisitIds)
+      .order("visit_id", { ascending: true })
+      .order("reading_order", { ascending: true });
+    if (error) throw error;
+    for (const row of bookRows ?? []) {
+      (bookByVisit[row.visit_id] ??= []).push(row);
+    }
+  }
+
   const thresholds = thresholdsOf(site);
   const history = computeHistory(points, visitInputs, thresholds);
 
@@ -69,6 +91,7 @@ export async function GET(
     history,
     thresholds,
     project,
+    bookByVisit,
   );
   const buffer = await workbook.xlsx.writeBuffer();
 

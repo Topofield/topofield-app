@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatBookClosure,
+  formatDateShort,
   formatPrecision,
   formatRelativeDate,
+  formatSignedMm,
   formatTrendDeviation,
 } from "./format";
 
@@ -154,5 +157,34 @@ describe("formatTrendDeviation (Fase 12)", () => {
     ).toBe(
       "Se sale de la tendencia: baja 18,0 mm cuando su ritmo anterior preveía unos 5,8 mm. Verifica la lectura.",
     );
+  });
+});
+
+describe("formatDateShort (Fase 18)", () => {
+  it("da día, mes abreviado y año", () => {
+    expect(formatDateShort("2025-01-07")).toBe("7 ene 2025");
+    expect(formatDateShort("2025-09-30")).toBe("30 sep 2025");
+  });
+});
+
+describe("formatSignedMm (Fase 18)", () => {
+  it("pone el signo + a los positivos y evita el -0.0", () => {
+    expect(formatSignedMm(1.26)).toBe("+1.3");
+    expect(formatSignedMm(-2)).toBe("-2.0");
+    expect(formatSignedMm(-0.01)).toBe("0.0");
+    expect(formatSignedMm(null)).toBe("—");
+  });
+});
+
+describe("formatBookClosure (Fase 18)", () => {
+  it("distingue dentro, fuera, sin tolerancia e incompleta", () => {
+    expect(formatBookClosure(1.3, 4.87, true)).toEqual({
+      value: "+1.3 mm",
+      detail: "Dentro de tolerancia (±4.9 mm)",
+      status: "ok",
+    });
+    expect(formatBookClosure(-6, 4.87, false).status).toBe("out");
+    expect(formatBookClosure(1.3, null, null).detail).toBe("Sin tolerancia: faltan distancias");
+    expect(formatBookClosure(null, null, null).status).toBe("unknown");
   });
 });

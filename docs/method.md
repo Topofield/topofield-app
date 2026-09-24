@@ -27,6 +27,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 15 | Georreferenciación de levantamientos | [`prds/14-georreferenciacion.md`](./prds/14-georreferenciacion.md) | cerrada |
 | 16 | Importar lecturas de nivel digital | [`prds/15-importar-nivel-digital.md`](./prds/15-importar-nivel-digital.md) | cerrada |
 | 17 | Control ida-vuelta por puntos homólogos | [`prds/16-homologos-ida-vuelta.md`](./prds/16-homologos-ida-vuelta.md) | cerrada |
+| 18 | Libreta de nivelación y panel de asentamientos | [`prds/17-libreta-panel-asentamientos.md`](./prds/17-libreta-panel-asentamientos.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -540,6 +541,56 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 18 — Libreta de nivelación y panel de asentamientos (2026-09-24)
+
+La visita de asentamientos tiene su libreta de nivelación —digitada en vivo o
+importada— y las cotas de los puntos de control salen de ella. El panel del
+lugar y la vista de la visita siguen el prototipo del usuario. Una sola fase
+por decisión del usuario, la más grande del proyecto. 687 → 765 tests.
+Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un estado que el seed no tiene esconde sus fallos.** El panel desbordaba a
+  709 px en un teléfono por un texto `sr-only` absoluto que solo existe en una
+  visita fuera de tolerancia. Torre Central no tiene ninguna, así que en ella
+  todo medía 390 px. Es el aprendizaje de la Fase 5 —verificar sobre datos
+  sembrados oculta el arranque en frío— visto desde el otro lado: el seed
+  tiene que ejercitar **cada estado** de la pantalla, no solo el feliz. Por
+  eso Torre Alameda trae una visita fuera de tolerancia a propósito.
+- **Una copia en otro formato rompe la igualdad.** El BM del catálogo no se
+  reconocía en la visita porque la copia guardaba `100.0000` y el catálogo
+  entrega `100`. Los números se comparan como números, nunca como el texto con
+  que alguien los formateó.
+- **Un código es una etiqueta, no una clave.** Renombrar un punto deja su
+  código viejo en las visitas cerradas, que son inmutables. La derivación y el
+  renombrado funcionan por código porque así lo escribe el topógrafo, pero lo
+  que **identifica** la fila —para resaltarla o para enlazarla— es `point_id`.
+- **La captura en vivo tiene estados intermedios del dominio.** Una libreta a
+  medias no es una libreta mal hecha: es la de alguien que todavía está
+  midiendo. Tratarla como circuito cerrado daba un cierre de metros; como
+  recorrido abierto, no hay cierre que decir. Diseñar para el dato terminado y
+  olvidar el dato en curso es otra forma de verificar solo el camino feliz.
+- **Generar hacia atrás preserva los escenarios.** El seed ya verificaba
+  series concretas (bajas, altas, lecturas fuera de tendencia). Construir cada
+  libreta desde la serie, en vez de inventar lecturas y aceptar la serie que
+  saliera, dejó intactos esos escenarios y dio un test útil: la libreta
+  reproduce la serie a 0.1 mm.
+- **El despliegue no migra, y `db reset` no prueba una migración de datos.**
+  Al integrar la fase, la nube llevaba ocho migraciones de atraso mientras
+  `main` desplegaba el código que las necesitaba. Al empujarlas, la de la Fase
+  7 chocó con el trigger de inmutabilidad (procesos cerrados reales) y la de
+  la Fase 8 con una precisión mal escrita: dos fallos que `db reset` nunca
+  enseña, porque aplica las migraciones antes de que existan datos. Una
+  migración que toca filas se prueba sobre una base **con** datos —incluidos
+  cerrados—, y cada merge a `main` que trae migración la empuja antes (§ 13 de
+  la doc técnica).
+- **Delegar piezas con archivos disjuntos funciona si nadie más commitea.**
+  Las gráficas, el `Drawer` y la hoja del Excel se hicieron en paralelo. Los
+  agentes no commitean; el que orquesta revisa y commitea. El precio: los
+  errores de tipos de un trabajo a medias aparecen en el typecheck de todos, y
+  hay que filtrar por archivo.
 
 ### Cierre Fase 17 — Control ida-vuelta por puntos homólogos (2026-09-24)
 

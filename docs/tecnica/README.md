@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-23 · Fase 13 cerrada · 584 tests ·
+**Última actualización:** 2026-09-24 · Fase 18 cerrada · 765 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -70,6 +70,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 15 | Georreferenciación de levantamientos | cerrada |
 | 16 | Importar lecturas de nivel digital | cerrada |
 | 17 | Control ida-vuelta por puntos homólogos | cerrada |
+| 18 | Libreta de nivelación y panel de asentamientos | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -167,7 +168,7 @@ src/
 │   │       ├── polygonal/[pid]/
 │   │       ├── leveling/[pid]/
 │   │       ├── sites/[siteId]/          alta y editor del lugar
-│   │       ├── settlement/[siteId]/     panel de análisis y visitas
+│   │       ├── settlement/[siteId]/     panel del lugar; visits/[visitId]/ vista y editar/
 │   │       └── reports/                 informes: alta, vista y ruta imprimible
 │   ├── design-system/       galería del sistema de diseño (404 en producción)
 │   ├── layout.tsx           layout raíz, carga de fuentes
@@ -232,7 +233,7 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/[id]/leveling/new/actions.ts` | `createLevelingProcessAction` |
 | `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction`, `closeLevelingProcessAction` |
 | `(app)/projects/[id]/sites/actions.ts` | `createSiteAction`, `saveSiteAction`, `closeSiteAction` |
-| `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction`, `saveVisitAction`, `closeVisitAction` |
+| `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (con el formulario completo, Fase 18), `saveVisitAction` (con libreta: ver § 4), `closeVisitAction` |
 | `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction`, `deletePointAction` |
 | `(app)/projects/[id]/reports/actions.ts` | `createReportAction`, `deleteReportAction` |
 
@@ -428,6 +429,50 @@ motivo), `undoRetirementBlocker` (la baja se deshace solo mientras ninguna
 visita cerrada tenga fecha igual o posterior) y `validateActiveFrom` (el alta
 es posterior a la última visita cerrada). Las Server Actions de
 `point-actions.ts` las aplican; un punto de baja no se edita.
+
+### La libreta de la visita (Fase 18)
+
+Una visita de asentamientos se captura de dos maneras, según
+`settlement_visits.capture_mode`:
+
+- **`book`** (las nuevas): la visita lleva su **libreta de nivelación** en
+  `settlement_book_readings` —espejo de `leveling_readings` sin `run_type`, con
+  `point_id` al punto de control— y las cotas de los puntos se **derivan** de
+  ella en el servidor. `settlement_readings.elevation` sigue siendo la cota
+  canónica: es una caché de la libreta.
+- **`direct`** (las anteriores a la Fase 18, o una nivelación procesada fuera):
+  la cota se teclea por punto, como antes. El `DEFAULT 'direct'` de la
+  migración dejó así todas las visitas existentes.
+
+La visita guarda una **copia** del BM de amarre (`reference_bm_code`,
+`reference_bm_elevation`), como `start_bm_*` en nivelación: corregir después el
+catálogo `reference_points` no cambia la cota con que se calculó. En `book`,
+`closure_error_mm`, `tolerance_mm`, `meets_tolerance` y `total_distance_km`
+son derivados; en `direct`, `closure_error_mm` es el tecleado y los otros van
+en `null`.
+
+La tabla nueva reutiliza sin cambios los triggers
+`reject_write_on_closed_visit_reading()` y
+`reject_write_on_closed_site_reading()`: solo leen `visit_id`, no el nombre de
+la tabla. No lleva el trigger de vigencia de la Fase 11: un punto de baja puede
+aparecer en la libreta; simplemente no produce lectura. `point_id` es
+`ON DELETE SET NULL`: si se borra un punto, su fila queda como radiación.
+
+**Orden de escritura de `saveVisitAction` en `book`**, impuesto por los
+triggers de vigencia: purga de las lecturas que ya no vienen → cabecera (con
+los derivados del cierre) → libreta con **upsert por `(visit_id,
+reading_order)` y purga de las filas sobrantes** —nunca borrado y
+reinserción— → upsert de lecturas → propagación a las visitas posteriores
+abiertas. En `direct` la purga se lleva la libreta entera.
+
+**Lo que invalida la cota derivada**, y quién la recalcula:
+
+| Entrada | Puerta |
+|---|---|
+| Filas de la libreta, amarre, orden de precisión | Guardar la visita (`saveVisitAction` recalcula y propaga) |
+| Código de un punto de control | `savePointAction` renombra sus filas de libreta en las visitas **abiertas**; las cerradas conservan el código con que se midieron |
+| Vigencia de un punto | Los triggers de la Fase 11; la derivación omite las filas fuera de vigencia |
+| Umbrales del lugar | `resyncSiteReadings` (no toca cotas) |
 
 ### Precisión y equipo, por proceso (Fase 8)
 
@@ -1071,6 +1116,48 @@ que comparar). Con menos, el punto queda sin indicador: devolver
 
 ---
 
+### Libreta de la visita de asentamientos (Fase 18)
+
+`lib/calculations/settlement-book.ts` no trae motor de nivelación propio:
+
+- `computeVisitBook(rows, cotaAmarre, orden)` llama a `computeLeveling` como
+  **circuito cerrado** sobre el amarre, sin vuelta. Una libreta **a medias**
+  —capturando en vivo, sin la V− de cierre— se calcula como **abierta**: como
+  cerrada, el motor compararía el último punto de la cadena con el amarre y
+  daría un cierre de metros.
+- `deriveControlElevations(result, puntos, fecha)`: la fila con V− cuyo código
+  coincide (`samePointCode`) con un punto de control da su cota, la
+  **compensada** —el motor la deja igual a la calculada si no compensó—,
+  redondeada a 4 decimales, la resolución de la base. Dos filas con V− para el
+  mismo punto son un error; un punto fuera de vigencia avisa y no da cota; uno
+  vigente sin V− avisa. Un código que no es punto de control es una radiación
+  normal.
+- `buildBookTemplate(anterior, puntos, fecha, amarre)`: la plantilla del editor
+  —la secuencia de la visita anterior con el amarre nuevo, sin los puntos de
+  baja y con los de alta antes del cierre; o, sin anterior, amarre → puntos
+  vigentes como intermedias → amarre—.
+
+`lib/calculations/settlement-summary.ts` resume el histórico para los KPIs del
+panel y de la visita (extremos con signo, promedio, mayor movimiento,
+velocidad, alertas, peor distorsión angular) y `nextAccumulatedThreshold` da
+la nota del historial del punto. Dos KPIs del prototipo se sustituyeron: su
+«velocidad reciente» dividía entre «un mes» el cambio de cuatro visitas —el
+error del marco teórico que encontró la Fase 5— y su «diferencial máximo»
+ignoraba la distancia; se usan la velocidad del motor y la peor distorsión.
+
+`lib/demo/libreta-asentamientos.ts` (`generateVisitBook`) construye una
+libreta **hacia atrás** desde una serie: elige las intermedias para que la cota
+compensada sea la de la serie (la compensación de una intermedia es −E·d/D con
+d la distancia acumulada de su armada). El seed y el demo lo usan, y el test
+comprueba la reproducción a 0.1 mm con varias semillas y cierres.
+
+Las gráficas del panel y de la visita (`components/settlement/charts/`) ponen
+el **tiempo real** en el eje X (`timeScale`, `timeTicks` en `chart-scale.ts`) y
+calculan el dominio Y con `lib/design/chart-domain.ts`: 0, los datos y el
+siguiente umbral por encima de ellos. El `viewBox` toma el ancho real del
+contenedor —la lección del `viewBox` de la Fase 13—, así que el texto no baja
+de 11 px en un teléfono.
+
 ## 7. Validación
 
 `src/lib/validators/polygonal.ts` implementa dos capas (PRD § 5). También son
@@ -1143,6 +1230,17 @@ bloquea nada**.
   bloquea nada.
 
 ---
+
+### `validators/settlement-book.ts` — la libreta de la visita (Fase 18)
+
+`validateVisitBook` hereda las reglas de captura de nivelación
+(`validateRunCapture` con tipo cerrado) y añade las del amarre: con lecturas,
+código y cota obligatorios, y la primera y la última fila son el amarre. Al
+cerrar, `validateVisitClose` recibe la comprobación aritmética de la libreta y
+**bloquea** si falla; la **tolerancia no bloquea**: una visita fuera de
+tolerancia se guarda y se cierra, con las cotas sin compensar y el aviso en el
+editor, la vista, el panel y el diálogo de cierre (decisión 5 del PRD de la
+fase). Todo se revalida en el servidor.
 
 ## 8. Sistema de diseño
 
@@ -1250,6 +1348,18 @@ alternativo resuelve — es una limitación estructural de intentar 4 niveles
 con contraste AA en una sola escala, no una mala elección de hexadecimales.
 Ver `docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
 
+**Panel lateral** — `Drawer` (Fase 18): lectura larga que acompaña a una
+pantalla sin sustituirla, como el registro de nivelación de una visita. Se
+cierra con Esc, con «Cerrar» o con el fondo; lleva el foco al abrir y lo
+devuelve al cerrar, y mantiene Tab dentro. Capturar datos no va en un
+`Drawer`: en tableta resulta estrecho, y para eso está la página completa.
+
+**Texto `sr-only` en una tabla con desplazamiento** — el contenedor con
+`overflow` lleva `relative`. El `sr-only` es absoluto: sin un contenedor
+posicionado escapa del recorte y ensancha la página entera. Se vio en la Fase
+18: el panel de asentamientos medía 709 px en un teléfono por un «(fuera de
+tolerancia)» invisible.
+
 **Tabla en escritorio, tarjetas en móvil** — corte en 768 px. La tarjeta y la
 fila muestran **los mismos campos y los mismos valores**; ya falló una vez
 (una mostraba `created_at` y la otra `updated_at`). Si la tarjeta necesita
@@ -1303,7 +1413,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-687 tests en 32 archivos, Vitest, entorno `node` **sin jsdom**.
+765 tests en 38 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1316,18 +1426,24 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
 | `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
-| `lib/utils/format.test.ts` | 24 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12) |
+| `lib/utils/format.test.ts` | 27 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
 | `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
-| `lib/calculations/settlement-persistence.test.ts` | 16 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna |
+| `lib/calculations/settlement-persistence.test.ts` | 18 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18) |
 | `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
 | `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
-| `lib/design/chart-scale.test.ts` | 12 | Escala lineal y marcas «nice», incluidos rangos degenerados |
+| `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
 | `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
-| `lib/export/settlement-workbook.test.ts` | 11 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8) |
+| `lib/export/settlement-workbook.test.ts` | 15 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18) |
+| `lib/calculations/settlement-book.test.ts` | 16 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18) |
+| `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
+| `lib/validators/settlement-book.test.ts` | 13 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18) |
+| `lib/calculations/settlement-summary.test.ts` | 10 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, peor distorsión `1/∞`, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
+| `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
+| `components/leveling/readings-table.test.ts` | 2 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
 | `components/polygonal/closure-verdict.test.tsx` | 10 | Decisión del veredicto |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
@@ -1347,9 +1463,13 @@ Actions; ver [deuda técnica](#11-deuda-técnica-conocida).
 
 ### Cómo se testea la interfaz
 
-Sin jsdom, no se testea el render. El patrón es **extraer la decisión como
-función pura** y testear esa función: `verdictFor` en `closure-verdict.tsx`,
-`resolveBreadcrumbs` en `breadcrumbs.tsx`, `tabHref` en `tabs.tsx`.
+Sin jsdom, no se testea el comportamiento en el navegador. El patrón es
+**extraer la decisión como función pura** y testear esa función: `verdictFor`
+en `closure-verdict.tsx`, `resolveBreadcrumbs` en `breadcrumbs.tsx`,
+`tabHref` en `tabs.tsx`. Cuando lo que importa es **qué se pinta**, sin
+eventos, basta `renderToStaticMarkup` de `react-dom/server` en el entorno
+`node`: así prueba `readings-table.test.ts` que la tabla compartida no cambia
+para nivelación (Fase 18).
 
 El comportamiento visual se verifica con Playwright contra la aplicación real,
 de forma manual durante el desarrollo.
@@ -1475,7 +1595,7 @@ Queda pendiente llevar poligonal y nivelación al mismo patrón.
 
 **Faltan `loading.tsx` en los editores.** Ni el de poligonal, ni el de
 nivelación, ni los de asentamientos (lugar en `sites/[siteId]`, visita en
-`settlement/[siteId]/visits/[visitId]`) tienen `loading.tsx` propio — tampoco
+`settlement/[siteId]/visits/[visitId]` y su `editar/`) tienen `loading.tsx` propio — tampoco
 «nuevo proyecto». Son las rutas con más trabajo de servidor y las que más se
 beneficiarían de un esqueleto durante la carga.
 
@@ -1746,9 +1866,10 @@ simulación por defecto; escribe solo con `--aplicar`.
 
 **Cerrado — el informe incluye la gráfica de asentamientos.**
 `components/reports/settlement-plot.tsx` dibuja la serie temporal en SVG
-estático, renderizado en el servidor. No reutiliza `settlement-chart.tsx`
-porque aquel es un Client Component con selección de puntos por checkbox, un
-estado que un documento impreso no puede tener; lo que **sí** comparte es todo
+estático, renderizado en el servidor. No reutiliza la gráfica del panel (desde
+la Fase 18, `charts/points-scatter.tsx`) porque aquella es un Client Component
+con selección de puntos por chips, un estado que un documento impreso no puede
+tener; lo que **sí** comparte es todo
 lo que decide la geometría —`chart-scale` y `series-markers`, funciones puras
 con tests—, de modo que el informe no puede dibujar una forma distinta de la
 que se ve en pantalla.
@@ -1773,15 +1894,12 @@ proyecto, la sección simplemente no se escribe.
 > con el orden y el equipo **del proceso** (de la visita más reciente en
 > asentamientos). Ver § 4, «Precisión y equipo, por proceso».
 
-**Las capturas del manual llevan el indicador «1 Issue» de Next.** En
-desarrollo, React usa `eval()` para reconstruir pilas de llamadas, y la CSP
-no incluye `'unsafe-eval'`: React lo avisa por consola y Next muestra el
-indicador rojo sobre la página. En producción no ocurre —React no usa `eval()`
-fuera de desarrollo—, pero `capturas.mjs` corre contra `npm run dev` y el
-indicador sale en las diecinueve capturas. Se vio al cerrar la Fase 10; ya
-estaba en las capturas commiteadas antes. El arreglo es de una línea en el
-script (ocultar `nextjs-portal` antes de capturar); relajar la CSP no, porque
-abriría `eval` en desarrollo solo por una captura.
+**Cerrado — las capturas del manual ya no llevan el indicador «1 Issue» de
+Next.** En desarrollo, React usa `eval()` para reconstruir pilas de llamadas y
+la CSP no incluye `'unsafe-eval'`, así que Next muestra un indicador rojo
+sobre la página. Desde la Fase 18, `capturas.mjs` oculta `nextjs-portal` antes
+de cada captura y todas se regeneraron sin él. La CSP no se relajó: abriría
+`eval` en desarrollo solo por una captura.
 
 **La C0 de un punto vigente sigue siendo editable aunque tenga lecturas
 cerradas (Fase 11, fuera de alcance).** El acumulado se recalcula en vivo
@@ -1954,6 +2072,45 @@ que ampliar la escala de la columna.
 
 ---
 
+**La gráfica del informe impreso sigue con la visita en el eje X (Fase 18,
+diferido).** El panel y la vista pasaron al tiempo real (`timeScale`), pero
+`components/reports/settlement-plot.tsx` espacia las visitas de forma
+uniforme: con visitas irregulares exagera la pendiente de los intervalos
+largos. Tampoco lleva el amarre ni el cierre de la libreta. La decisión 13 del
+PRD de la fase dejó el informe fuera; alinearlo es cambiar la escala X por
+`timeScale` y añadir las dos columnas a la tabla de visitas del informe.
+
+**El guardado de una visita con libreta no es atómico (Fase 18).**
+`saveVisitAction` escribe la cabecera, la libreta, su purga y las lecturas en
+peticiones separadas. Si falla una intermedia, la visita queda con la libreta
+nueva y las lecturas viejas hasta el siguiente guardado, que lo repara. Es el
+mismo patrón aceptado en el resto del módulo (upsert y purga, nunca borrado y
+reinserción); la salida limpia es una función de Postgres que haga todo en una
+transacción.
+
+**Dos formatos de número en la misma pantalla (Fase 18).** Las gráficas
+nuevas formatean con `es-CO` (coma decimal y signo menos tipográfico: «−9,3
+mm»), mientras las tablas y los KPIs usan `toFixed` (punto y guion: «-9.3»).
+Ya había mezcla antes —el semáforo de la última visita usaba coma—; unificar
+es decidir un formateador de milímetros y aplicarlo en todo el módulo.
+
+**Las filas vacías de la plantilla muestran cota (Fase 18).** La tabla de
+captura, compartida con nivelación, pinta la cota calculada en cada fila, y
+una fila sin lecturas hereda la del punto anterior. En la libreta precargada
+de una visita eso llena la columna de cotas repetidas antes de medir. Es
+cosmético y existe igual en nivelación; se resolvería mostrando «—» en las
+filas sin V+ ni V−.
+
+**El promedio mezcla líneas base cuando hay altas (Fase 18, aceptado).** El
+KPI «Promedio» y la línea de tendencia promedian los acumulados de la visita;
+un punto dado de alta a mitad del monitoreo parte de 0 y tira del promedio
+hacia arriba. El PRD de la fase lo acepta y lo dice; separar la serie por
+cohortes de puntos sería el siguiente paso si molesta.
+
+**Un `Modal` abierto sobre un `Drawer` se cierra con el mismo Esc (Fase
+18).** Los dos escuchan Escape en el documento. Hoy ninguna pantalla abre uno
+sobre otro; si pasa, `Modal` debe dejar de propagar el evento.
+
 ## 12. Manual de usuario en la app
 
 La ruta `/manual` (`src/app/(app)/manual/`) sirve el manual de usuario dentro de
@@ -2051,14 +2208,28 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-08-25):** la nube tiene aplicadas las ocho migraciones,
-incluidas las dos de la Fase 5 (`20260825175626_sites_and_settlement` y
-`20260825230000_reject_write_on_closed_site`). Verificado contra la base tras
-aplicarlas —no contra la interfaz—: `site_id` es `NOT NULL` en
-`polygonal_processes` y `leveling_processes`, ningún proceso quedó huérfano,
-ninguno apunta al lugar de otro proyecto, RLS está activo en las cuatro tablas
-nuevas y sus triggers de inmutabilidad existen. El backfill creó **un** lugar
-`General`, el número exacto que la auditoría previa había predicho.
+**Estado actual (2026-09-24):** la nube tiene aplicadas las **diecinueve**
+migraciones, hasta `20260926000000_libreta_visita` (Fase 18). Verificado contra
+la base con `migration list --linked` y consultas al esquema: columnas de las
+fases 8 a 18 presentes, RLS y los dos triggers de inmutabilidad en
+`settlement_book_readings`.
+
+**Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
+mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de
+Vercel no aplica migraciones**, y nadie las empujó. Al aplicarlas afloraron dos
+cosas que `db reset` nunca muestra, porque aplica las migraciones sobre una
+base vacía:
+
+- la de la Fase 7 hacía un `UPDATE` sobre procesos **cerrados** y el trigger
+  de inmutabilidad lo rechazó; se corrigió desactivándolo solo alrededor del
+  `UPDATE`, como ya hacían los backfills de las fases 8 y 9;
+- la de la Fase 8 se detuvo, como está diseñada, ante tres proyectos con
+  `linear_precision = '10+100'` (sin `ppm`).
+
+Como los datos de producción no importaban, se vaciaron los de trabajo
+(`TRUNCATE public.projects CASCADE`, que no dispara triggers de fila) y se
+dejó `profiles.demo_seeded_at` en nulo para que el dashboard recree el
+proyecto demo. La cuenta del usuario se conservó.
 
 **El orden importa cuando hay auto-deploy.** Vercel despliega solo al empujar a
 `main`, así que la migración va **primero** y el `git push` después: al revés,

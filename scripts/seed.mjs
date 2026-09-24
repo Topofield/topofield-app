@@ -43,6 +43,13 @@ import {
   totalDistanceFromReadings,
 } from "../src/lib/calculations/leveling.ts";
 import { computeHistory } from "../src/lib/calculations/settlement.ts";
+import {
+  bookRowInputOf,
+  computeVisitBook,
+  deriveControlElevations,
+} from "../src/lib/calculations/settlement-book.ts";
+import { bookRowsToPersist } from "../src/lib/calculations/settlement-persistence.ts";
+import { generateVisitBook } from "../src/lib/demo/libreta-asentamientos.ts";
 import { thresholdsFor } from "../src/lib/calculations/tolerances.ts";
 import { decimalToDms, dmsToDecimal } from "../src/lib/calculations/angles.ts";
 
@@ -1070,6 +1077,66 @@ const NORTE_PARTIALS_MM = {
 
 const NORTE_VISIT_DATES = ["2025-01-20", "2025-02-20", "2025-03-20"];
 
+// --- Torre Alameda (Fase 18): el lugar del prototipo, con libreta ----------
+//
+// Ocho puntos de control y dos BMs de amarre que se alternan, como en el
+// prototipo `docs/prototipos/Control de asentamientos, Torre Alameda.html`.
+// Cada visita lleva su libreta (dos armadas, punto de cambio, cierre en el
+// amarre) generada HACIA ATRÁS desde la serie: las cotas compensadas son las
+// de la serie (`generateVisitBook`). La visita 9 cierra fuera de tolerancia
+// para mostrar el aviso: se guarda y se cierra igual, sin compensar.
+
+const ALAMEDA_AMARRES = [
+  { code: "BM-1", type: "bm", north: 5000, east: 5000, elevation: 100.0, description: "BM de amarre de Torre Alameda (andén norte)" },
+  { code: "BM-2", type: "bm", north: 5040, east: 5060, elevation: 100.845, description: "BM de amarre alterno de Torre Alameda (portería)" },
+];
+
+const ALAMEDA_POINTS = [
+  { code: "TA-01", location_description: "Columna A1", northing: 5100.0, easting: 5100.0, c0: 100.612, finalMm: -18 },
+  { code: "TA-02", location_description: "Columna A2", northing: 5100.0, easting: 5118.0, c0: 100.587, finalMm: -22 },
+  { code: "TA-03", location_description: "Columna A3", northing: 5100.0, easting: 5136.0, c0: 100.534, finalMm: -27 },
+  { code: "TA-04", location_description: "Columna A4", northing: 5100.0, easting: 5154.0, c0: 100.498, finalMm: -19 },
+  { code: "TA-05", location_description: "Columna B1", northing: 5082.0, easting: 5100.0, c0: 100.455, finalMm: -15 },
+  { code: "TA-06", location_description: "Columna B2", northing: 5082.0, easting: 5118.0, c0: 100.521, finalMm: -24 },
+  { code: "TA-07", location_description: "Columna B3 (núcleo)", northing: 5082.0, easting: 5136.0, c0: 100.566, finalMm: -31 },
+  { code: "TA-08", location_description: "Columna B4", northing: 5082.0, easting: 5154.0, c0: 100.603, finalMm: -20 },
+];
+
+/** Días desde la lectura base: quincenal al principio, luego mensual. */
+const ALAMEDA_DAYS = [0, 14, 28, 42, 56, 84, 112, 140, 168, 196, 224, 252, 280, 308];
+const ALAMEDA_BASE = "2025-01-07";
+/** Visitas que cierran en BM-2 y la que cierra fuera de tolerancia. */
+const ALAMEDA_BM2 = new Set([5, 11]);
+const ALAMEDA_OUT_OF_TOLERANCE = 9;
+
+/** La serie de Torre Alameda: consolidación que se acelera con la carga (como el prototipo). */
+function alamedaVisits() {
+  let seed = 7;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647 - 0.5;
+  };
+  return ALAMEDA_DAYS.map((day, i) => {
+    const date = new Date(`${ALAMEDA_BASE}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + day);
+    const load = Math.min(1, day / 210);
+    const targets = ALAMEDA_POINTS.map((p) => {
+      const mm =
+        i === 0 ? 0 : p.finalMm * (1 - Math.exp(-day / 115)) * (0.55 + 0.45 * load) + rnd() * 0.8;
+      return { code: p.code, elevation: Number((p.c0 + mm / 1000).toFixed(4)) };
+    });
+    const closureMm =
+      i === ALAMEDA_OUT_OF_TOLERANCE ? 9.8 : Number((rnd() * 6).toFixed(1));
+    return {
+      date: date.toISOString().slice(0, 10),
+      targets,
+      closureMm,
+      amarre: ALAMEDA_AMARRES[ALAMEDA_BM2.has(i) ? 1 : 0],
+      operator: i % 2 === 0 ? "J. Rodríguez" : "L. Cárdenas",
+    };
+  });
+}
+
 /**
  * Cota de un punto en una visita: su cota base más el acumulado, o null si el
  * punto no se midió en esa visita. La base es la C0 o, en un punto de alta sin
@@ -1216,6 +1283,132 @@ async function insertSettlementSite(projectId, userId, cfg) {
 }
 
 // ----------------------------------------------------------------------------
+
+/**
+ * Un lugar con libreta en todas sus visitas (Fase 18). Mismo orden que el
+ * editor al guardar: visita → libreta → lecturas derivadas, y el cierre de
+ * las visitas al final, porque el trigger no deja escribir la libreta de una
+ * visita cerrada. Las lecturas salen de la libreta por el motor real
+ * (`computeVisitBook` + `deriveControlElevations`), nunca de la serie.
+ */
+async function insertBookSite(projectId, userId, cfg) {
+  const siteId = await createSite(projectId, {
+    name: cfg.name,
+    description: cfg.description,
+    structure_type: "edificio",
+  });
+
+  const { data: pointRows, error: pointsErr } = await admin
+    .from("settlement_points")
+    .insert(
+      cfg.points.map((p) => ({
+        site_id: siteId,
+        code: p.code,
+        location_description: p.location_description,
+        northing: p.northing,
+        easting: p.easting,
+        initial_elevation: p.c0,
+      })),
+    )
+    .select("id, code");
+  if (pointsErr) throw pointsErr;
+  const idByCode = new Map(pointRows.map((p) => [p.code, p.id]));
+  const points = cfg.points.map((p) => ({
+    id: idByCode.get(p.code),
+    code: p.code,
+    northing: p.northing,
+    easting: p.easting,
+    initialElevation: p.c0,
+    activeFrom: null,
+    retiredOn: null,
+  }));
+
+  const books = cfg.visits.map((v, i) => {
+    const rows = generateVisitBook({
+      amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
+      targets: v.targets,
+      closureMm: v.closureMm,
+      order: LEVEL_DIGITAL_MONITOREO.precision_order,
+      seed: 100 + i,
+    });
+    const result = computeVisitBook(
+      rows.map(bookRowInputOf),
+      v.amarre.elevation,
+      LEVEL_DIGITAL_MONITOREO.precision_order,
+    );
+    const derived = deriveControlElevations(result, points, v.date);
+    return { rows, result, readings: derived.readings };
+  });
+
+  const history = computeHistory(
+    points,
+    cfg.visits.map((v, i) => ({
+      id: `visita-${i}`,
+      visitNumber: i,
+      date: v.date,
+      readings: books[i].readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
+    })),
+    thresholdsFor("edificio"),
+  );
+
+  const visitIds = [];
+  for (const [i, v] of cfg.visits.entries()) {
+    const { rows, result } = books[i];
+    const visitResult = history.visits.find((r) => r.visitNumber === i);
+    const { data: visitRow, error: visitErr } = await admin
+      .from("settlement_visits")
+      .insert({
+        site_id: siteId,
+        visit_number: i,
+        date: v.date,
+        operator: v.operator,
+        ...equipmentOf(LEVEL_DIGITAL_MONITOREO),
+        capture_mode: "book",
+        reference_bm_code: v.amarre.code,
+        reference_bm_elevation: v.amarre.elevation,
+        closure_error_mm: Number(result.closureErrorMm.toFixed(1)),
+        tolerance_mm: Number(result.toleranceMm.toFixed(1)),
+        meets_tolerance: result.meetsTolerance,
+        total_distance_km: Number(
+          totalDistanceFromReadings(rows.map(bookRowInputOf)).toFixed(3),
+        ),
+        status: "calculated",
+      })
+      .select("id")
+      .single();
+    if (visitErr) throw visitErr;
+    visitIds.push(visitRow.id);
+
+    const { error: bookErr } = await admin
+      .from("settlement_book_readings")
+      .insert(bookRowsToPersist(visitRow.id, rows, result.forward.readings, points));
+    if (bookErr) throw bookErr;
+
+    const { error: readingsErr } = await admin.from("settlement_readings").insert(
+      visitResult.readings.map((r) => ({
+        visit_id: visitRow.id,
+        point_id: r.pointId,
+        elevation: r.elevation,
+        partial_settlement: r.partialSettlement,
+        accumulated_settlement: r.accumulatedSettlement,
+        velocity: r.velocity,
+        alert_status: r.alertStatus,
+      })),
+    );
+    if (readingsErr) throw readingsErr;
+  }
+
+  // Todas cerradas salvo las `openLast` últimas, que quedan para editar.
+  const toClose = visitIds.slice(0, visitIds.length - cfg.openLast);
+  if (toClose.length > 0) {
+    const { error: closeErr } = await admin
+      .from("settlement_visits")
+      .update({ status: "closed", closed_at: new Date().toISOString(), closed_by: userId })
+      .in("id", toClose);
+    if (closeErr) throw closeErr;
+  }
+  return siteId;
+}
 
 async function main() {
   console.log("Preparando seed de TopoField...");
@@ -1381,6 +1574,21 @@ async function main() {
   });
   console.log(
     `  ✓ Lugar "Edificio Torre Central" (abierto) con ${SETTLEMENT_POINTS.length} puntos (P-07 de alta, P-05 de baja) y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
+  );
+
+  // Tercer lugar, con libreta en cada visita (Fase 18): el del prototipo.
+  await insertReferencePoints(monitoreo, ALAMEDA_AMARRES);
+  const alamedaVisitsData = alamedaVisits();
+  const alamedaId = await insertBookSite(monitoreo, userId, {
+    name: "Torre Alameda",
+    description:
+      "Torre de 14 niveles sobre suelo aluvial, con 8 puntos de control en columnas. Cada visita lleva su libreta de nivelación.",
+    points: ALAMEDA_POINTS,
+    visits: alamedaVisitsData,
+    openLast: 2,
+  });
+  console.log(
+    `  ✓ Lugar "Torre Alameda" (libreta) con ${ALAMEDA_POINTS.length} puntos y ${alamedaVisitsData.length} visitas, la ${ALAMEDA_OUT_OF_TOLERANCE} fuera de tolerancia — ${alamedaId}`,
   );
 
   // Segundo lugar, cerrado, cuyo único fin es el informe de asentamientos.

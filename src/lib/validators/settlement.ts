@@ -22,7 +22,8 @@ export interface ReadingCaptureIssues {
 
 /** Issues de la visita completa, más los de cada lectura por punto. */
 export interface VisitCaptureIssues {
-  errors: Partial<Record<"date" | "readings", string>>;
+  /** `book`: la libreta de la visita (Fase 18), solo al cerrar. */
+  errors: Partial<Record<"date" | "readings" | "book", string>>;
   warnings: Partial<Record<"date" | "readings", string>>;
   readingIssues: Record<string, ReadingCaptureIssues>;
 }
@@ -171,15 +172,26 @@ function outsideValidityMessage(point: PointInput, date: string): string {
  *
  * NO evalúa los umbrales de alerta. Un punto en alarma se cierra con
  * normalidad; es el hallazgo que el monitoreo busca documentar.
+ *
+ * Con libreta (Fase 18), una comprobación aritmética fallida bloquea: no es un
+ * resultado de campo sino una libreta mal formada, como en nivelación. La
+ * tolerancia NO bloquea: fuera de ella la visita solo avisa (decisión 5 del
+ * PRD de la Fase 18).
  */
 export function validateVisitClose(
   visit: VisitInput,
   points: PointInput[],
   previousVisitDate: string | null,
   siteVisits: readonly SiteVisit[],
+  book: { arithmeticCheckOk: boolean } | null = null,
 ): VisitCaptureIssues {
   const issues = validateVisitCapture(visit, points, previousVisitDate);
   const messages: string[] = [];
+
+  if (book && !book.arithmeticCheckOk) {
+    issues.errors.book =
+      "La comprobación aritmética de la libreta no cuadra: ΣV+ − ΣV− no coincide con el desnivel.";
+  }
 
   const measured = new Set(visit.readings.map((r) => r.pointId));
   const missing = points.filter(

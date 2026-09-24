@@ -31,6 +31,7 @@ import {
   FiltroComparacion,
   ModalDemo,
 } from "./demos";
+import { DrawerDemo } from "./drawer-demo";
 
 export const metadata = {
   title: "Sistema de diseño — TopoField",
@@ -110,7 +111,7 @@ export default async function DesignSystemPage() {
         <h1 className="mt-4 text-3xl font-bold">Sistema de diseño</h1>
         <p className="mt-2 max-w-2xl text-neutral-800">
           Estado actual de los {Object.keys(tokens).length} tokens de color y
-          los 15 componentes de{" "}
+          los 16 componentes de{" "}
           <code className="text-sm">src/components/design-system/</code>. Los
           contrastes se miden en vivo desde{" "}
           <code className="text-sm">globals.css</code>.
@@ -369,7 +370,7 @@ export default async function DesignSystemPage() {
             <DmsInputDemo />
           </Demo>
 
-          <Demo titulo="Card · KpiCard" nota="">
+          <Demo titulo="Card · KpiCard" nota="La descripción es el subtítulo opcional de la cabecera.">
             <div className="space-y-4">
               <Card
                 title="Resultados del cierre"
@@ -377,6 +378,15 @@ export default async function DesignSystemPage() {
               >
                 <p className="text-sm text-neutral-800">
                   Contenido de la tarjeta.
+                </p>
+              </Card>
+              <Card
+                title="Control de asentamientos"
+                description="12 puntos · última visita el 14 mar 2026"
+                actions={<Button size="sm" variant="ghost">Exportar</Button>}
+              >
+                <p className="text-sm text-neutral-800">
+                  Con descripción bajo el título.
                 </p>
               </Card>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -422,6 +432,10 @@ export default async function DesignSystemPage() {
 
           <Demo titulo="Modal" nota="Cierre por Escape y por clic en el fondo.">
             <ModalDemo />
+          </Demo>
+
+          <Demo titulo="Drawer" nota="Panel lateral derecho. Cierre por Escape, por «Cerrar» y por clic en el fondo; el foco vuelve a quien lo abrió. Ocupa todo el ancho en móvil.">
+            <DrawerDemo />
           </Demo>
 
           <Demo titulo="Logo · LogoMark" nota="Isotipo dimensionado en em: el tamaño deriva del contexto tipográfico.">
