@@ -99,6 +99,19 @@ describe("computeVisitBook", () => {
   });
 });
 
+describe("computeVisitBook — libreta a medias", () => {
+  it("sin la V− de cierre no calcula cierre ni compensa", () => {
+    const rows = prototypeBook();
+    rows[rows.length - 1] = row("BM-1", "bm", null, null);
+    const r = computeVisitBook(rows, BM, "tercer_orden");
+    expect(r.closureErrorMm).toBeNull();
+    expect(r.toleranceMm).toBeNull();
+    expect(r.meetsTolerance).toBeNull();
+    const pc01 = r.forward.readings.find((x) => x.pointCode === "PC-01")!;
+    expect(pc01.elevationCorrected).toBe(pc01.elevationCalculated);
+  });
+});
+
 describe("deriveControlElevations", () => {
   const DATE = "2025-03-10";
 

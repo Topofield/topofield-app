@@ -66,14 +66,21 @@ export function bookRowInputOf(row: BookRowPayload): BookRowInput {
 /**
  * Calcula la libreta de una visita: circuito cerrado que arranca y termina en
  * el BM de amarre, sin vuelta (decisiones 7 y 9 del PRD de la Fase 18).
+ *
+ * Una libreta A MEDIAS —capturando en vivo, sin la V− de cierre todavía— se
+ * calcula como recorrido abierto: sin cierre ni compensación. Como cerrada,
+ * el motor compararía la cota del último punto de la cadena con la del amarre
+ * y daría un «error de cierre» de metros, que se guardaría y se pintaría como
+ * fuera de tolerancia.
  */
 export function computeVisitBook(
   rows: BookRowInput[],
   referenceElevation: number,
   order: PrecisionOrder,
 ): LevelingResult {
+  const closes = rows.length >= 2 && rows.at(-1)!.foresight != null;
   return computeLeveling({
-    type: "closed",
+    type: closes ? "closed" : "open",
     startElevation: referenceElevation,
     endElevation: null,
     order,
