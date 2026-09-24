@@ -241,6 +241,9 @@ término proporcional en ppm (ISO 17123-4).
 
 Si el tipo es *abierta con control*, deberá indicar además el punto de llegada.
 
+Arriba del formulario elige si tecleará los ángulos en **DMS** o en **grados
+decimales** (ver [§ 5.3](#53-el-editor)).
+
 > **El orden de precisión es la decisión más importante del proceso.** Define
 > las tolerancias que se le exigirán al cierre. Al elegirlo, el formulario le
 > muestra la tolerancia angular y la precisión relativa mínima que implica:
@@ -274,6 +277,21 @@ orden de precisión exigido.
 
 Muestra la precisión alcanzada junto a la requerida, el error de cierre y el
 perímetro. El color lo resume: verde cumple, rojo no cumple.
+
+**Ángulos en DMS o en grados decimales.** Bajo el veredicto, el conmutador
+**Ángulos en** elige cómo teclea los ángulos: en tres casillas (grados, minutos,
+segundos) o en un solo campo de grados decimales. Afecta a las lecturas de las
+estaciones, a los azimuts de partida y de llegada y al diálogo de reasignación.
+
+- Cambiar de formato **no altera ningún valor**: la aplicación guarda los
+  ángulos siempre en DMS y el decimal es solo otra forma de verlos, con seis
+  decimales.
+- Los ángulos se guardan a la **décima de segundo**. Si teclea un decimal con
+  más precisión, bajo el campo aparece cómo se guardará —«Se guarda como
+  124°29′42″»—.
+- El formato se recuerda por proceso: al volver a abrirlo, aparece como lo
+  dejó. En un proceso cerrado el conmutador solo cambia la vista.
+- Resultados, informe y Excel muestran siempre DMS.
 
 **Configuración.** Plegada cuando el proceso ya está calculado. Ábrala para
 cambiar el nombre, el tipo, el punto de partida, el orden de precisión o los
@@ -328,6 +346,30 @@ Aquí elige el **método de corrección**:
 | **Crandall** | Mínimos cuadrados sobre las distancias, conservando los ángulos ajustados |
 
 Cambiar el método recalcula las coordenadas al instante.
+
+**Dibujo de la poligonal.** La poligonal a escala sobre una grilla de
+coordenadas, con flecha de norte, barra de escala y el amarre si lo tiene. Se
+actualiza en vivo mientras captura.
+
+![Dibujo de la poligonal V10, cartera TT4](../../public/manual/20-dibujo-poligonal.png)
+
+- En **trazo continuo**, la poligonal **ajustada**.
+- En **trazo discontinuo**, la poligonal **sin compensar**, con los
+  desplazamientos **exagerados** por el factor que indica la leyenda (×100 en
+  la imagen). En una cerrada no llega a cerrar: el hueco del último vértice
+  es el error de cierre.
+
+> **Por qué se exagera.** En un buen levantamiento el error de cierre es de
+> centímetros sobre cientos de metros: dibujado a escala real, ocupa menos de
+> un píxel y las dos poligonales se verían idénticas. El factor se elige solo
+> —1, 2 o 5 × 10ⁿ— para que el mayor desplazamiento ocupe alrededor del 5 %
+> del dibujo, y nunca es menor que 1. Una abierta sin control no tiene nada que
+> compensar y no muestra trazo discontinuo.
+
+Con **Acercar**, **Alejar** y **Restablecer**, y arrastrando el dibujo, puede
+acercarse a un vértice. La rueda del ratón no hace zoom, para no interferir con
+el desplazamiento de la página. El factor de exageración no cambia al
+acercarse.
 
 ### 5.4 Reasignar coordenadas
 
@@ -805,7 +847,8 @@ navegador: elija «Guardar como PDF» como destino.
 ![Informe imprimible](../../public/manual/19-informe-imprimible.png)
 
 El documento lleva portada con los datos del proyecto, índice, una sección
-por proceso con sus resultados **y su equipo**, el resumen consolidado de
+por proceso con sus resultados **y su equipo** —en las poligonales, con su
+dibujo—, el resumen consolidado de
 precisiones —con una columna de equipo—, sus observaciones y el registro de
 cierre. El equipo ya no es un dato del proyecto: cada sección imprime el que
 declaró su propio proceso (en asentamientos, el de la visita más reciente).
