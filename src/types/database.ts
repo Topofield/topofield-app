@@ -301,6 +301,9 @@ export type Database = {
           has_closing_row: boolean
           id: string
           linear_error: number | null
+          ls_distance_measurements: number | null
+          ls_sigma_angle_seconds: number | null
+          ls_sigma_distance_m: number | null
           meets_tolerance: boolean | null
           name: string
           notes: string | null
@@ -346,6 +349,9 @@ export type Database = {
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null
+          ls_distance_measurements?: number | null
+          ls_sigma_angle_seconds?: number | null
+          ls_sigma_distance_m?: number | null
           meets_tolerance?: boolean | null
           name: string
           notes?: string | null
@@ -391,6 +397,9 @@ export type Database = {
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null
+          ls_distance_measurements?: number | null
+          ls_sigma_angle_seconds?: number | null
+          ls_sigma_distance_m?: number | null
           meets_tolerance?: boolean | null
           name?: string
           notes?: string | null
