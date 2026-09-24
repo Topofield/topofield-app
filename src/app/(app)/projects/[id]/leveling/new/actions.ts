@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { LevelingType } from "@/types/leveling";
+import type { LibretaRow } from "@/lib/import/leveling";
+import { saveLevelingProcessAction, type ReadingDraft } from "../[pid]/actions";
 import type { LevelType, PrecisionOrder } from "@/types/project";
 
 export interface CreateLevelingState {
@@ -26,6 +28,18 @@ export interface CreateLevelingPayload {
   equipmentCalibrationDate: string | null;
   levelType: LevelType | null;
   kmPrecisionMm: number | null;
+  /** Lecturas importadas desde archivo (Fase 16); null al crear vacío. */
+  readings: { forward: LibretaRow[]; return: LibretaRow[] } | null;
+}
+
+function toDraft(r: LibretaRow): ReadingDraft {
+  return {
+    ...r,
+    backUpperM: null,
+    backLowerM: null,
+    foreUpperM: null,
+    foreLowerM: null,
+  };
 }
 
 /**
@@ -95,6 +109,39 @@ export async function createLevelingProcessAction(
 
   if (error || !data) {
     return { error: "No se pudo crear el proceso. Intenta de nuevo." };
+  }
+
+  // Con lecturas importadas se guardan por el camino de siempre, que
+  // recalcula en el servidor. Si no se pueden guardar, el proceso recién
+  // creado sobra: se borra, para no dejar un borrador vacío que el usuario
+  // no pidió.
+  if (payload.readings) {
+    const saved = await saveLevelingProcessAction({
+      processId: data.id,
+      name,
+      type: payload.type,
+      startBmCode,
+      startBmElevation: payload.startBmElevation,
+      endBmCode: payload.endBmCode?.trim() || null,
+      endBmElevation: payload.type === "link" ? payload.endBmElevation : null,
+      hasReturnRun: payload.hasReturnRun,
+      notes: null,
+      forward: payload.readings.forward.map(toDraft),
+      return: payload.readings.return.map(toDraft),
+      precisionOrder: payload.precisionOrder,
+      equipmentBrand: payload.equipmentBrand,
+      equipmentModel: payload.equipmentModel,
+      equipmentSerial: payload.equipmentSerial,
+      equipmentCalibrationDate: payload.equipmentCalibrationDate,
+      levelType: payload.levelType,
+      kmPrecisionMm: payload.kmPrecisionMm,
+    });
+    if (!saved.ok) {
+      await supabase.from("leveling_processes").delete().eq("id", data.id);
+      return {
+        error: `No se pudieron guardar las lecturas importadas: ${saved.error ?? "error desconocido"}`,
+      };
+    }
   }
 
   redirect(`/projects/${payload.projectId}/leveling/${data.id}`);

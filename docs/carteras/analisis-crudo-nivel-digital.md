@@ -116,6 +116,11 @@ llevar a nivelación el modelo de lecturas múltiples de la Fase 7.
 
 ## Para N4
 
+> **Implementado en la Fase 16** ([`prds/15-importar-nivel-digital.md`](../prds/15-importar-nivel-digital.md)).
+> El PRD rehízo los valores con los promedios redondeados a las columnas de la
+> libreta y encontró que la vuelta de una nivelación abierta arrancaba en la
+> cota equivocada.
+
 **El archivo es parseable directamente**, así que el import no obliga al
 topógrafo a transcribir a mano lo que ya está en digital — que era el propósito
 de la petición.

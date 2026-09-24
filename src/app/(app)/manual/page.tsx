@@ -991,7 +991,76 @@ export default function ManualPage() {
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">
-          6.7 Cierre irreversible
+          6.7 Importar desde archivo
+        </h3>
+
+        <p>
+          Con un nivel digital, las lecturas y las distancias ya están en un
+          archivo. <strong>Importar desde archivo</strong> —en la libreta de
+          una nivelación sin cerrar, o al crear una nueva— las pasa a la
+          libreta sin teclearlas.
+        </p>
+
+        <Captura {...CAPTURAS.importarNivelacion} />
+
+        <p>Se leen:</p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            el archivo <strong>.L de un nivel digital Leica</strong>;
+          </li>
+          <li>
+            la <strong>plantilla CSV</strong> de TopoField, que se descarga
+            desde el mismo diálogo, para cualquier otro instrumento: una fila
+            por cada fila de la libreta, con <code>;</code> y coma decimal si
+            viene de Excel en español.
+          </li>
+        </ul>
+
+        <p>
+          El formato se reconoce por el contenido, no por el nombre del
+          archivo. Si no se reconoce, el diálogo dice qué formatos se leen.
+        </p>
+
+        <p>Antes de usar las lecturas, la previsualización deja decidir:</p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Cómo se lee el recorrido.</strong> Un archivo que va y
+            vuelve por los mismos puntos puede ser{" "}
+            <strong>un recorrido cerrado</strong> o{" "}
+            <strong>ida y vuelta</strong>. Con ida y vuelta, elija en qué
+            armada empieza la vuelta; se propone la detectada.
+          </li>
+          <li>
+            <strong>La cota del BM de partida</strong>, si la del archivo no
+            coincide con la del proceso.
+          </li>
+          <li>
+            <strong>El tipo de cada punto.</strong> El instrumento no distingue
+            un BM de un punto de cambio o de una radiación: se deduce de su
+            posición y usted lo corrige.
+          </li>
+        </ul>
+
+        <p>
+          El instrumento mide dos veces cada visual; se guarda el{" "}
+          <strong>promedio</strong>, redondeado a 0.1 mm. El diálogo muestra
+          la mayor diferencia entre las dos lecturas y la mayor desviación
+          típica del instrumento, como control.
+        </p>
+
+        <p>
+          Al aceptar, la libreta se reemplaza, el nivel pasa a{" "}
+          <strong>digital</strong> y se propone el tipo de proceso:{" "}
+          <strong>cerrada</strong> si el recorrido vuelve a su BM,{" "}
+          <strong>abierta con vuelta</strong> si es ida y vuelta. En el editor{" "}
+          <strong>no se guarda nada hasta que pulse Guardar</strong>; al crear,
+          el proceso nace con sus lecturas.
+        </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          6.8 Cierre irreversible
         </h3>
 
         <p>

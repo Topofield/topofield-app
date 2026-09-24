@@ -40,6 +40,8 @@ import { CloseProcessDialog } from "./close-process-dialog";
 import { ReadingsTable, type ReadingDraftState } from "./readings-table";
 import { ResultsPanel } from "./results-panel";
 import { RunTabs } from "./run-tabs";
+import { configWithImport, ImportDialog, type LevelingImport } from "./import-dialog";
+import type { LibretaRow } from "@/lib/import/leveling";
 
 const STATUS_TONE: Record<
   ProcessStatus,
@@ -95,6 +97,23 @@ function readingToDraft(r: LevelingReading): ReadingDraftState {
     foreLowerM: str(r.fore_lower_m),
     backDistanceM: str(r.back_distance_m),
     foreDistanceM: str(r.fore_distance_m),
+  };
+}
+
+/** Una fila importada (Fase 16) como fila del borrador: sin hilos. */
+function importedToDraft(r: LibretaRow): ReadingDraftState {
+  return {
+    id: crypto.randomUUID(),
+    pointCode: r.pointCode,
+    pointType: r.pointType,
+    backsight: r.backsight != null ? r.backsight.toFixed(4) : "",
+    foresight: r.foresight != null ? r.foresight.toFixed(4) : "",
+    backUpperM: "",
+    backLowerM: "",
+    foreUpperM: "",
+    foreLowerM: "",
+    backDistanceM: r.backDistanceM != null ? r.backDistanceM.toFixed(3) : "",
+    foreDistanceM: r.foreDistanceM != null ? r.foreDistanceM.toFixed(3) : "",
   };
 }
 
@@ -226,6 +245,17 @@ export function LevelingEditor({
       ),
     [back, config.type, config.precisionOrder, process.distances_reconstructed],
   );
+
+  // Importar (Fase 16) llena el borrador y la configuración; se guarda como
+  // siempre. El archivo es de un nivel digital: la libreta pasa a ese modo.
+  function applyImport(imported: LevelingImport) {
+    setConfig(configWithImport(config, imported));
+    setForward(imported.forward.map(importedToDraft));
+    setBack((imported.return ?? []).map(importedToDraft));
+    setActiveRun("forward");
+    setDirty(true);
+    setSaveMessage(null);
+  }
 
   const captureBlocked =
     hasReadingErrors(forwardIssues) ||
@@ -400,6 +430,17 @@ export function LevelingEditor({
         }
       >
         <div className="flex flex-col gap-4">
+          {!readOnly && (
+            <div className="flex justify-end">
+              <ImportDialog
+                currentType={config.type}
+                currentStartCode={config.startBm.code}
+                currentStartElevation={parseNumber(config.startBm.elevation)}
+                hasReadings={forward.length > 0 || back.length > 0}
+                onAccept={applyImport}
+              />
+            </div>
+          )}
           {config.hasReturnRun && (
             <RunTabs active={activeRun} onChange={setActiveRun} />
           )}

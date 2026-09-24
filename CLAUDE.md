@@ -33,6 +33,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/lib/calculations/angles.ts` → conversiones DMS ↔ decimal, normalización
 - `src/lib/calculations/georeference.ts` → transformación rígida desde dos puntos (georreferenciación)
 - `src/lib/validators/` → reglas de validación por capa (captura, cierre, estadística)
+- `src/lib/import/leveling/` → lectores de libretas de nivel digital (`.L` de Leica, plantilla CSV), puros
 - `src/lib/supabase/` → clientes Supabase (browser, server) y helper de sesión para `proxy.ts`
 - `src/types/` → tipos TypeScript e interfaces, incluye database.ts autogenerado
 - `src/proxy.ts` → protección de rutas con Supabase Auth (Next 16 renombró `middleware` → `proxy`)
