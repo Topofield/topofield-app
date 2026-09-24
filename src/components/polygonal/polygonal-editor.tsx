@@ -35,6 +35,7 @@ import {
 } from "./polygonal-config-fields";
 import { CloseProcessDialog } from "./close-process-dialog";
 import { ClosureVerdict } from "./closure-verdict";
+import { PolygonalPlotViewer } from "./polygonal-plot-viewer";
 import { ReassignCoordinatesDialog } from "./reassign-coordinates-dialog";
 import { ResultsPanel } from "./results-panel";
 import {
@@ -232,13 +233,17 @@ export function PolygonalEditor({
   // `config` en vivo, así que el veredicto de cierre debe recalcular con el
   // mismo valor que ve el usuario, no con el que tenía el proceso al cargar
   // la página.
-  const result = useMemo(
-    () =>
-      computePolygonal(
-        buildInput(config, stations, method, config.precisionOrder),
-      ),
+  const input = useMemo(
+    () => buildInput(config, stations, method, config.precisionOrder),
     [config, stations, method],
   );
+  const result = useMemo(() => computePolygonal(input), [input]);
+
+  // El amarre se dibuja solo si tiene coordenadas en el catálogo.
+  const plotReference =
+    amarre && amarre.north !== null && amarre.east !== null
+      ? { code: amarre.code, north: Number(amarre.north), east: Number(amarre.east) }
+      : null;
 
   const issues = useMemo<CaptureIssues[]>(
     () =>
@@ -449,6 +454,14 @@ export function PolygonalEditor({
             setDirty(true);
             setSaveMessage(null);
           }}
+        />
+      </Card>
+
+      <Card title="Dibujo de la poligonal">
+        <PolygonalPlotViewer
+          input={input}
+          result={result}
+          reference={plotReference}
         />
       </Card>
 
