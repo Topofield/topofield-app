@@ -3,8 +3,9 @@
 // A diferencia de poligonal y nivelación, la unidad no es un proceso con una
 // tabla de filas, sino un LUGAR con un catálogo de puntos y una serie de
 // visitas en el tiempo. Las hojas se organizan en consecuencia: las lecturas
-// crudas por visita y punto, los valores derivados con su alerta, y el resumen
-// con los umbrales vigentes.
+// crudas por visita y punto, los valores derivados con su alerta, el resumen
+// con los umbrales vigentes y, desde la Fase 18, la libreta de nivelación de
+// cada visita que se capturó con ella.
 
 import type ExcelJS from "exceljs";
 import {
@@ -21,9 +22,12 @@ import {
 } from "./workbook";
 import {
   ALERT_LEVEL_LABELS,
+  CAPTURE_MODE_LABELS,
   type AlertLevel,
+  type CaptureMode,
   type SettlementHistory,
 } from "@/types/settlement";
+import { POINT_TYPE_LABELS, type PointType } from "@/types/leveling";
 import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
 import {
   LEVEL_TYPE_LABELS,
@@ -80,6 +84,35 @@ export interface VisitRow {
   level_type: LevelType | null;
   /** ISO 17123-2: desviación típica en mm por km de doble nivelación. */
   km_precision_mm: number | string | null;
+  /**
+   * Captura y cierre de la visita (Fase 18). En `book`, el cierre, la
+   * tolerancia y el «cumple» se derivan de la libreta; en `direct`, el cierre
+   * es el tecleado y la tolerancia queda en null.
+   */
+  capture_mode: CaptureMode;
+  reference_bm_code: string | null;
+  reference_bm_elevation: number | string | null;
+  closure_error_mm: number | string | null;
+  tolerance_mm: number | string | null;
+  meets_tolerance: boolean | null;
+}
+
+/**
+ * Fila de `settlement_book_readings`, tal como llega de la base. Los
+ * calculados (AI, cota, cota compensada) se leen persistidos, sin recalcular,
+ * como hace la vista de la visita.
+ */
+export interface BookReadingRow {
+  reading_order: number;
+  point_code: string;
+  point_type: string;
+  backsight: number | string | null;
+  foresight: number | string | null;
+  back_distance_m: number | string | null;
+  fore_distance_m: number | string | null;
+  instrument_height: number | string | null;
+  elevation_calculated: number | string | null;
+  elevation_corrected: number | string | null;
 }
 
 function num(value: number | string | null | undefined): number | null {
@@ -93,6 +126,13 @@ function distortion(inverse: number): string {
   return Number.isFinite(inverse) ? `1/${Math.round(inverse)}` : "1/∞";
 }
 
+/** Milímetros a un decimal con signo explícito: `+1.2`, `-0.8`, `0.0`. */
+function signedMm(value: number): string {
+  const r = Math.round(value * 10) / 10;
+  if (r === 0) return "0.0";
+  return `${r > 0 ? "+" : ""}${r.toFixed(1)}`;
+}
+
 function sheetRawData(
   wb: ExcelJS.Workbook,
   site: SiteRow,
@@ -102,7 +142,7 @@ function sheetRawData(
 ): void {
   const s = wb.addWorksheet("Datos Crudos");
   s.columns = [
-    { width: 9 }, { width: 13 }, { width: 12 }, { width: 14 },
+    { width: 9 }, { width: 13 }, { width: 22 }, { width: 14 },
     { width: 13 }, { width: 22 }, { width: 14 }, { width: 18 },
   ];
 
@@ -141,6 +181,41 @@ function sheetRawData(
   });
 
   let row = 5 + points.length + 1;
+  // Una fila por visita con su modo de captura, su amarre y su cierre (Fase
+  // 18). Va en un bloque propio y no como columnas de la tabla de cotas, que
+  // es de una fila por lectura: ahí se repetiría en cada punto, y una visita
+  // sin cotas todavía no tendría fila donde mostrarlos.
+  writeSection(s, row, "Visitas");
+  row += 1;
+  setHeaders(s, row, [
+    "Visita",
+    "Fecha",
+    "Captura",
+    "BM de amarre",
+    "Cota amarre (m)",
+    "Cierre (mm)",
+    "Tolerancia (mm)",
+  ]);
+  row += 1;
+  for (const visit of visits) {
+    writeRow(
+      s,
+      row,
+      [
+        visit.visit_number,
+        visit.date,
+        CAPTURE_MODE_LABELS[visit.capture_mode],
+        visit.reference_bm_code,
+        num(visit.reference_bm_elevation),
+        num(visit.closure_error_mm),
+        num(visit.tolerance_mm),
+      ],
+      [null, null, null, null, DECIMALS.elevation, 1, 1],
+    );
+    row += 1;
+  }
+
+  row += 1;
   writeSection(s, row, "Cotas medidas por visita");
   row += 1;
   // El equipo va en ESTA tabla, a su propio grano (una fila por lectura,
@@ -383,7 +458,128 @@ function sheetSummary(
   ]);
 }
 
-/** Libro completo de un lugar de control de asentamientos. */
+/**
+ * Cabecera de la libreta de una visita, en una línea: visita, fecha, amarre y
+ * cierre con su veredicto. Sin tolerancia (libreta sin distancias) no hay
+ * veredicto posible y se dice así, en vez de callarlo.
+ */
+function bookTitle(visit: VisitRow): string {
+  const cota = num(visit.reference_bm_elevation);
+  const amarre = visit.reference_bm_code
+    ? `Amarre ${visit.reference_bm_code}` +
+      (cota === null ? "" : ` (${cota.toFixed(DECIMALS.elevation)})`)
+    : "Sin amarre";
+
+  const cierre = num(visit.closure_error_mm);
+  const tolerancia = num(visit.tolerance_mm);
+  const veredicto =
+    tolerancia === null
+      ? "sin tolerancia"
+      : visit.meets_tolerance === null
+        ? null
+        : visit.meets_tolerance
+          ? "cumple"
+          : "no cumple";
+  const cierreTexto = [
+    cierre === null ? "Sin cierre" : `Cierre ${signedMm(cierre)} mm`,
+    tolerancia === null ? null : `tolerancia ${tolerancia.toFixed(1)} mm`,
+    veredicto,
+  ]
+    .filter((t): t is string => t !== null)
+    .join(" · ");
+
+  return [`Visita ${visit.visit_number}`, visit.date, amarre, cierreTexto].join(
+    " — ",
+  );
+}
+
+/**
+ * La libreta de nivelación de cada visita en modo `book` (Fase 18, decisión
+ * 21): es el dato crudo del que salen sus cotas. Las visitas en `direct` no
+ * tienen libreta y no aparecen; la hoja existe siempre, con un aviso si
+ * ninguna la tiene, para que el libro no cambie de forma según el lugar.
+ */
+function sheetBooks(
+  wb: ExcelJS.Workbook,
+  site: SiteRow,
+  visits: VisitRow[],
+  bookByVisit: Record<string, BookReadingRow[]>,
+): void {
+  const s = wb.addWorksheet("Libretas");
+  s.columns = [
+    { width: 14 }, { width: 16 }, { width: 11 }, { width: 12 }, { width: 11 },
+    { width: 11 }, { width: 12 }, { width: 12 }, { width: 17 },
+  ];
+
+  setSheetTitle(s, `${site.name} — libretas de nivelación de las visitas`);
+
+  const conLibreta = visits.filter(
+    (v) => v.capture_mode === "book" && (bookByVisit[v.id]?.length ?? 0) > 0,
+  );
+  if (conLibreta.length === 0) {
+    s.getCell(3, 1).value =
+      "Ninguna visita de este lugar tiene libreta de nivelación.";
+    return;
+  }
+
+  const formats = [
+    null, null,
+    DECIMALS.elevation, DECIMALS.coordinate, DECIMALS.elevation,
+    DECIMALS.elevation, DECIMALS.coordinate,
+    DECIMALS.elevation, DECIMALS.elevation,
+  ];
+
+  let row = 3;
+  for (const visit of conLibreta) {
+    writeSection(s, row, bookTitle(visit));
+    row += 1;
+    setHeaders(s, row, [
+      "Punto",
+      "Tipo",
+      "V+ (m)",
+      "Dist. V+ (m)",
+      "AI (m)",
+      "V− (m)",
+      "Dist. V− (m)",
+      "Cota (m)",
+      "Cota compensada (m)",
+    ]);
+    row += 1;
+
+    const filas = [...bookByVisit[visit.id]!].sort(
+      (a, b) => a.reading_order - b.reading_order,
+    );
+    for (const r of filas) {
+      writeRow(
+        s,
+        row,
+        [
+          r.point_code,
+          POINT_TYPE_LABELS[r.point_type as PointType] ?? r.point_type,
+          num(r.backsight),
+          num(r.back_distance_m),
+          num(r.instrument_height),
+          num(r.foresight),
+          num(r.fore_distance_m),
+          num(r.elevation_calculated),
+          num(r.elevation_corrected),
+        ],
+        formats,
+      );
+      row += 1;
+    }
+    // Fila en blanco entre una visita y la siguiente.
+    row += 1;
+  }
+}
+
+/**
+ * Libro completo de un lugar de control de asentamientos.
+ *
+ * `bookByVisit` son las filas de libreta indexadas por `visit_id`. Es opcional
+ * porque un lugar solo con visitas en `direct` no tiene ninguna; la hoja
+ * «Libretas» sale igual, con su aviso.
+ */
 export function buildSettlementWorkbook(
   site: SiteRow,
   points: PointRow[],
@@ -391,11 +587,13 @@ export function buildSettlementWorkbook(
   history: SettlementHistory,
   thresholds: Thresholds,
   project: ProjectMetadata | null = null,
+  bookByVisit: Record<string, BookReadingRow[]> = {},
 ): ExcelJS.Workbook {
   const wb = newWorkbook();
   const ordered = [...visits].sort((a, b) => a.date.localeCompare(b.date));
   sheetRawData(wb, site, points, ordered, history);
   sheetCalculations(wb, site, points, ordered, history);
   sheetSummary(wb, site, points, ordered, history, thresholds, project);
+  sheetBooks(wb, site, ordered, bookByVisit);
   return wb;
 }
