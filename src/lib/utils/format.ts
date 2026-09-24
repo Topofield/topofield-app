@@ -195,14 +195,18 @@ export function formatTrendDeviation(deviation: {
   return `Se sale de la tendencia: ${verbo} ${mmAbs(deviation.partialMm)} mm cuando su ritmo anterior preveía unos ${mmAbs(deviation.expectedMm)} mm. Verifica la lectura.`;
 }
 
-/** «7 ene 2025»: la fecha corta de tablas y ejes (Fase 18). Sin zona horaria. */
+const SHORT_MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/**
+ * «7 ene 2025»: la fecha corta de tablas y ejes (Fase 18). Sin zona horaria.
+ * Con una lista fija y no con `Intl`: el servidor y el navegador pueden
+ * abreviar distinto («sep» / «sept») y romper la hidratación de un Client
+ * Component.
+ */
 export function formatDateShort(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
-  if (!year || !month || !day) return date;
-  return new Date(year, month - 1, day)
-    .toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" })
-    .replace(/\./g, "")
-    .replace(/ de /g, " ");
+  if (!year || !month || !day || month > 12) return date;
+  return `${day} ${SHORT_MONTHS[month - 1]} ${year}`;
 }
 
 /** Milímetros con signo explícito: «+1.3», «-2.0», «0.0»; «—» sin valor. */

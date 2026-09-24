@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { summarizeSite, summarizeVisit } from "./settlement-summary";
+import {
+  nextAccumulatedThreshold,
+  summarizeSite,
+  summarizeVisit,
+} from "./settlement-summary";
 import type {
   ComputedReading,
   DifferentialPair,
@@ -136,5 +140,28 @@ describe("summarizeSite", () => {
   it("si todos los pares se asientan igual, la peor distorsión es 1/∞", () => {
     const s = summarizeSite({ ...history, differentials: [pair("a", "b", Infinity)] });
     expect(s.worstDistortion!.distortionInverse).toBe(Infinity);
+  });
+});
+
+describe("nextAccumulatedThreshold", () => {
+  const T = { caution: 25, alert: 50, alarm: 75 };
+
+  it("dice cuánto falta para el siguiente umbral", () => {
+    expect(nextAccumulatedThreshold(-18.5, T)).toEqual({
+      kind: "below",
+      level: "caution",
+      thresholdMm: 25,
+      remainingMm: 6.5,
+    });
+    expect(nextAccumulatedThreshold(-30, T)).toMatchObject({ level: "alert", remainingMm: 20 });
+  });
+
+  it("la frontera cuenta como alcanzada, como en la clasificación", () => {
+    expect(nextAccumulatedThreshold(-25, T)).toMatchObject({ level: "alert", remainingMm: 25 });
+    expect(nextAccumulatedThreshold(-75, T)).toEqual({ kind: "beyondAlarm", thresholdMm: 75 });
+  });
+
+  it("un levantamiento se mide en valor absoluto", () => {
+    expect(nextAccumulatedThreshold(10, T)).toMatchObject({ level: "caution", remainingMm: 15 });
   });
 });

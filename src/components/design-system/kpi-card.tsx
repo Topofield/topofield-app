@@ -17,7 +17,9 @@ export function KpiCard({ label, value, hint, className }: KpiCardProps) {
       )}
     >
       <p className="text-sm font-medium text-neutral-500">{label}</p>
-      <p className="mt-1 text-3xl font-semibold text-neutral-900">{value}</p>
+      {/* <div> y no <p>: `value` puede traer bloques (un semáforo, una
+          etiqueta), y un <div> dentro de un <p> rompe la hidratación. */}
+      <div className="mt-1 text-3xl font-semibold text-neutral-900">{value}</div>
       {hint && <p className="mt-1 text-xs text-neutral-500">{hint}</p>}
     </div>
   );

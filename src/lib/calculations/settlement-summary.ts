@@ -120,3 +120,32 @@ export function summarizeSite(history: SettlementHistory): SiteSummary {
     worstDistortion,
   };
 }
+
+export type ThresholdStep =
+  | { kind: "below"; level: "caution" | "alert" | "alarm"; thresholdMm: number; remainingMm: number }
+  | { kind: "beyondAlarm"; thresholdMm: number };
+
+/**
+ * Cuánto le falta al acumulado de un punto para el siguiente umbral de
+ * acumulado del lugar, o si ya pasó el de alarma (la nota del historial del
+ * punto, Fase 18). Se mide en valor absoluto, como `classifyAlert`: un
+ * levantamiento también se acerca a los umbrales. La frontera cuenta como
+ * alcanzada (`>=`), igual que en la clasificación.
+ */
+export function nextAccumulatedThreshold(
+  accumulatedMm: number,
+  thresholds: { caution: number; alert: number; alarm: number },
+): ThresholdStep {
+  const magnitude = Math.abs(accumulatedMm);
+  const steps = [
+    ["caution", thresholds.caution],
+    ["alert", thresholds.alert],
+    ["alarm", thresholds.alarm],
+  ] as const;
+  for (const [level, value] of steps) {
+    if (magnitude < value) {
+      return { kind: "below", level, thresholdMm: value, remainingMm: value - magnitude };
+    }
+  }
+  return { kind: "beyondAlarm", thresholdMm: thresholds.alarm };
+}

@@ -162,8 +162,8 @@ describe("formatTrendDeviation (Fase 12)", () => {
 
 describe("formatDateShort (Fase 18)", () => {
   it("da día, mes abreviado y año", () => {
-    const s = formatDateShort("2025-01-07");
-    expect(s).toMatch(/^7 ene\.? 2025$/);
+    expect(formatDateShort("2025-01-07")).toBe("7 ene 2025");
+    expect(formatDateShort("2025-09-30")).toBe("30 sep 2025");
   });
 });
 
