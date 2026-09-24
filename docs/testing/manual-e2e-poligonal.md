@@ -232,6 +232,50 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 - En un informe que incluya una poligonal con el método, ✓ aparecen «Pesos
   del ajuste» y σ₀.
 
+### 15 quinquies. Georreferenciación (Fase 15)
+
+- Abrir **Poligonal Famarena — Sede Vivero — sistema local** (cerrada). ✓ El
+  aviso de solo lectura dice que la posición se puede georreferenciar, y el
+  botón **Georreferenciar** está activo.
+- Pulsarlo. Punto A: **D1**, Norte 100117.462, Este 101515.6333. Punto B:
+  **D3**, Norte 100182.239, Este 101581.7814.
+- ✓ Vista previa: rotación **35° 00′ 07.8″**, traslación N 100467.9285 · E
+  99279.5759, factor de escala 1.000000, residuos 0.0 mm. La tabla lleva
+  Famarena_5 de 1000.000 / 2000.000 a 100139.844 / 101491.444.
+- Cambiar el Norte de D3 a 100183.239. ✓ Aviso de factor de escala (1.007587).
+  Restaurarlo.
+- Pulsar **Reescribir coordenadas**. ✓ Bajo el título: «Georreferenciado el
+  <fecha> con D1 y D3 (rotación 35° 00′ 07.8″, factor de escala 1.000000)». El
+  veredicto sigue en 1:24.717 y 0.0100 m. D3 queda en 100182.239 / 101581.781.
+- Georreferenciar otra vez con D1 y **D4** (100193.8973, 101558.713). ✓ La
+  línea muestra la última: D1 y D4, rotación 0° 00′ 00.0″.
+- Abrir **Poligonal Famarena — Sede Vivero — bowditch** (calculada, amarre del
+  catálogo 14_IS1) y georreferenciar. ✓ Aviso de que el amarre pasa a manual.
+  Tras confirmar, **Guardar** y recargar: ✓ las coordenadas no vuelven atrás.
+- En la **TT4 con Tránsito**, abrir el diálogo con dos puntos. ✓ Aviso de
+  Tránsito. Cancelar.
+- Con cambios sin guardar en un proceso abierto, ✓ el botón está deshabilitado
+  y al lado dice «Guarde los cambios antes de georreferenciar».
+- Incluir la Vivero local en un informe e imprimirlo. ✓ Nota «Coordenadas
+  georreferenciadas el <fecha> con D1 y …». Exportar a Excel: ✓ «Resumen» trae
+  la sección «Georreferenciación».
+- A 390 px, ✓ la cabecera del editor envuelve y la página no desborda a lo
+  ancho.
+
+**Contra la base** (`psql -h 127.0.0.1 -p 55322 -U postgres`, sobre un proceso
+poligonal cerrado `<id>`):
+
+```sql
+update polygonal_stations set north = north where process_id = '<id>';          -- ✓ funciona
+update polygonal_processes set start_north = start_north + 1 where id = '<id>'; -- ✓ funciona
+update polygonal_processes set linear_error = linear_error + 1 where id = '<id>'; -- ✓ falla, 23001
+update polygonal_stations set angle_deg = 1 where process_id = '<id>';          -- ✓ falla
+update polygonal_processes set status = 'calculated' where id = '<id>';         -- ✓ falla
+delete from polygonal_stations where process_id = '<id>';                       -- ✓ falla
+```
+
+Una nivelación cerrada sigue rechazando cualquier `UPDATE`.
+
 ### 16. RLS — aislamiento entre usuarios
 
 - Cerrar sesión y registrar un segundo usuario nuevo (`otro@topofield.local`).

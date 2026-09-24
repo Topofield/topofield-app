@@ -24,7 +24,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 12 | Alerta por lectura desfasada | [`prds/11-lectura-desfasada.md`](./prds/11-lectura-desfasada.md) | cerrada |
 | 13 | Canvas de poligonal | [`prds/12-canvas-poligonal.md`](./prds/12-canvas-poligonal.md) | cerrada |
 | 14 | Ajuste por mínimos cuadrados | [`prds/13-minimos-cuadrados.md`](./prds/13-minimos-cuadrados.md) | cerrada |
-| 15 | Georreferenciación de levantamientos | [`prds/14-georreferenciacion.md`](./prds/14-georreferenciacion.md) | en curso |
+| 15 | Georreferenciación de levantamientos | [`prds/14-georreferenciacion.md`](./prds/14-georreferenciacion.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -538,6 +538,36 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 15 — Georreferenciación de poligonales (2026-09-24)
+
+Una poligonal medida en local se lleva al sistema real con dos de sus
+estaciones, esté o no cerrada: se recalcula con la entrada girada y
+trasladada, y la base admite en un cerrado solo las columnas de posición.
+618 → 651 tests.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una premisa heredada se comprueba con números antes de construir sobre
+  ella.** La Fase 7 dejó escrito que girar y trasladar «deja invariante» lo
+  que el cierre certifica. Es cierto para el veredicto, pero no para las
+  coordenadas de Tránsito (2.66 mm en la Vivero). Lo reveló un cálculo de diez
+  líneas al redactar el PRD, y cambió una decisión: recalcular, no rotar.
+- **Simplificar a petición del usuario es un cambio de diseño, no un recorte.**
+  Quitar la función de base y el historial dejó la excepción en una lista
+  blanca de columnas. El PRD lo registró como riesgo aceptado —mover
+  coordenadas de un cerrado por REST— en vez de dejarlo implícito.
+- **Un trigger compartido no admite excepciones de una tabla.** La función de
+  inmutabilidad de la cabecera la usaban cuatro tablas; la excepción obligó a
+  darle a poligonal la suya. Antes de tocar una función de trigger, buscar
+  todos sus `execute function`.
+- **Un botón más en una cabecera se prueba a 390 px.** Nada falló en
+  escritorio; la captura móvil del manual salió 160 px más ancha. Es la misma
+  lección de la Fase 13 con el `viewBox`, en otro componente.
+- **Los redondeos de almacenamiento marcan la tolerancia de las pruebas.**
+  «Invariante a 1e-6 m» era falso con un arranque guardado a 0.1 mm. La
+  tolerancia correcta sale de la resolución de la columna, no de la
+  aritmética del motor.
 
 ### Cierre Fase 14 — Ajuste de poligonales por mínimos cuadrados (2026-09-23)
 

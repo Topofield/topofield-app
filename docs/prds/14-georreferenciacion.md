@@ -1,14 +1,40 @@
 # PRD-de-fase 15 — Georreferenciación de poligonales
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-23
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-24
 
 **Rama:** `fase-15-georreferenciacion`
 **Origen:** diferida por la Fase 7
 ([`06-motor-captura-poligonal.md`](./06-motor-captura-poligonal.md), «Fuera»),
 con el mecanismo que allí quedó acordado: **recalcular y guardar**
 **Módulo:** poligonal
+
+> **Divergencias de la implementación:**
+>
+> - **Invariancia a 0.1 mm, no a 1e-6 m.** El arranque transformado se
+>   redondea a su columna, así que recalcular en real y rotar lo local difieren
+>   hasta 0.05 mm con Bowditch, Crandall y mínimos cuadrados.
+> - **El veredicto se compara a la resolución de las columnas.** En una abierta
+>   con control, arranque y llegada se redondean a 0.1 mm cada uno, y su
+>   posición relativa es el cierre: el error lineal recalculado se mueve unas
+>   centésimas de mm (0.02 mm en la prueba). No se reescribe, porque la base no
+>   deja: el guardado es el de antes.
+> - **`georeference-plan.ts`**, no previsto: la ruta completa desde las filas
+>   —validar, ajustar, recalcular, comprobar el veredicto y producir las
+>   columnas— en un módulo sin `"use client"`, que usan la vista previa y la
+>   acción. Así se escribe exactamente lo que se vio, y la ruta tiene tests.
+> - **La acción escribe fila a fila, sin transacción.** Queda en la § 11 de la
+>   doc técnica: si falla a medias, se georreferencia otra vez.
+> - **`Modal` gana `size="lg"` y cuerpo con desplazamiento**, para la tabla de
+>   la vista previa. La cabecera del editor **envuelve en móvil**: con el botón
+>   nuevo desbordaba a lo ancho a 390 px (lo delató la captura móvil).
+> - **El aviso de solo lectura** de un cerrado o rechazado dice que la posición
+>   se puede georreferenciar, y el **pie del informe** dice «mediciones y
+>   veredicto inmutables», no «inmutables» a secas.
+> - `capturas.mjs` buscaba «el» proceso cerrado del proyecto sin nombre; con la
+>   Vivero local cerrada había dos. Ahora filtra por nombre.
+> - Los residuos del diálogo pasan a metros cuando superan 1 m.
 
 ## Propósito
 
