@@ -139,6 +139,12 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
     (a, b) => a.order - b.order,
   );
 
+  // Catálogo de amarres, una sola vez por informe y solo si hay poligonales:
+  // el dibujo de cada una lo necesita para su punto de amarre.
+  const referencePoints = entries.some((e) => e.type === "polygonal")
+    ? await getReferencePoints(supabase, project.id)
+    : [];
+
   const sections: Section[] = await Promise.all(
     entries.map(async (entry): Promise<Section> => {
       if (entry.type === "polygonal") {
@@ -148,11 +154,9 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         }
         const stations = await getPolygonalStations(supabase, process.id);
         const input = polygonalInputOf(process, stations);
-        const amarre = process.reference_point_id
-          ? (await getReferencePoints(supabase, project.id)).find(
-              (p) => p.id === process.reference_point_id,
-            )
-          : undefined;
+        const amarre = referencePoints.find(
+          (p) => p.id === process.reference_point_id,
+        );
         const reference =
           amarre && amarre.north !== null && amarre.east !== null
             ? { code: amarre.code, north: Number(amarre.north), east: Number(amarre.east) }
