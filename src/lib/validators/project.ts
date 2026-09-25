@@ -5,6 +5,7 @@
 // Desde la Fase 8, el proyecto ya no captura equipo ni precisión: cada
 // proceso (poligonal, nivelación, asentamiento) los define por su cuenta.
 
+import { readNumberText } from "@/lib/utils/parse";
 import type { ValidationResult } from "./result";
 
 /** Campos de un proyecto que controla el usuario (sin id, user_id, timestamps). */
@@ -23,14 +24,17 @@ function emptyToNull(value: string): string | null {
   return value === "" ? null : value;
 }
 
-/** Parsea un número opcional. `""` → null. Devuelve `ok:false` si no es número. */
+/**
+ * Parsea un número opcional, con coma o punto decimal. `""` → null. Devuelve
+ * `ok:false` si no es número.
+ */
 function parseOptionalNumber(
   value: string,
 ): { ok: true; value: number | null } | { ok: false } {
-  if (value === "") return { ok: true, value: null };
-  const n = Number(value);
-  if (!Number.isFinite(n)) return { ok: false };
-  return { ok: true, value: n };
+  const read = readNumberText(value);
+  if (read.kind === "empty") return { ok: true, value: null };
+  if (read.kind === "invalid") return { ok: false };
+  return { ok: true, value: read.value };
 }
 
 export function validateProjectInput(

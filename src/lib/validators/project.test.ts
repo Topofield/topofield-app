@@ -83,6 +83,25 @@ describe("validateProjectInput", () => {
     }
   });
 
+  it("acepta la latitud y la longitud con coma decimal (Fase 20)", () => {
+    const r = validateProjectInput(
+      formulario({ ...COMPLETO, latitude: "4,6097", longitude: "-74,0817" }),
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.data.latitude).toBe(4.6097);
+      expect(r.data.longitude).toBe(-74.0817);
+    }
+  });
+
+  it("rechaza una latitud con separador de miles: no se adivina", () => {
+    const r = validateProjectInput(
+      formulario({ ...COMPLETO, latitude: "1.234,5" }),
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.latitude).toBeDefined();
+  });
+
   it("rechaza una latitud fuera de rango", () => {
     const r = validateProjectInput(
       formulario({ ...COMPLETO, latitude: "95" }),
