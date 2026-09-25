@@ -132,8 +132,8 @@ describe("validación de distancia por visual", () => {
 });
 
 describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
-  // validateSightBalance existía, estaba probada y NO la llamaba nadie: el
-  // criterio de aceptación 8 de la fase no se cumplía. Estos tests van por
+  // En la Fase 9 la función del equilibrado existía, estaba probada y NO la
+  // llamaba nadie: el criterio de aceptación 8 de la fase no se cumplía. Estos tests van por
   // validateRunCapture, que es la puerta por la que pasan las filas de verdad
   // (la usan el editor y el Server Action).
   const armada = (over: Partial<ReadingInput> = {}) => [

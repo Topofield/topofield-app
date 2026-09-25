@@ -28,7 +28,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 16 | Importar lecturas de nivel digital | [`prds/15-importar-nivel-digital.md`](./prds/15-importar-nivel-digital.md) | cerrada |
 | 17 | Control ida-vuelta por puntos homólogos | [`prds/16-homologos-ida-vuelta.md`](./prds/16-homologos-ida-vuelta.md) | cerrada |
 | 18 | Libreta de nivelación y panel de asentamientos | [`prds/17-libreta-panel-asentamientos.md`](./prds/17-libreta-panel-asentamientos.md) | cerrada |
-| 19 | Equilibrado por armada y compensación desde el origen | [`prds/18-equilibrado-y-compensacion.md`](./prds/18-equilibrado-y-compensacion.md) | en curso |
+| 19 | Equilibrado por armada y compensación desde el origen | [`prds/18-equilibrado-y-compensacion.md`](./prds/18-equilibrado-y-compensacion.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -542,6 +542,39 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 19 — Equilibrado por armada y compensación desde el origen (2026-09-25)
+
+El aviso de visuales desequilibradas compara las dos visuales de una armada
+(N7) y la compensación usa la distancia desde el origen, así que el BM de
+partida ya no se corrige (N8). Lo guardado se recalculó con una migración,
+cerrados incluidos, por decisión del usuario. 765 → 774 tests. Divergencias
+en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una fórmula verificada en una muestra no está verificada.** La resta del
+  PRD coincidía con el motor en las 21 filas del seed y fallaba en 29 de 866
+  comparaciones sobre la base completa: el acumulado y el total guardados
+  vienen redondeados, y restar sobre ellos redondea dos veces. Un recálculo en
+  SQL parte de los **datos medidos** (las distancias por visual), nunca de
+  columnas derivadas, y se compara fila a fila contra el motor sobre todo lo
+  que hay.
+- **Antes de probar una migración de datos, foto de las filas.** `db reset`
+  borra justo los datos de la regla vieja que la migración necesita. Con una
+  copia en JSON de las columnas que toca, arreglar la migración y volver a
+  probarla fue restaurar, desmarcarla en `schema_migrations` y aplicarla otra
+  vez, sin perder la base.
+- **Un fixture que codifica una convención esconde el fallo de esa
+  convención.** `fromAccum` repartía cada tramo dentro de la misma fila, como
+  el backfill de la Fase 9; con esa forma la regla vieja del acumulado cuadra
+  por construcción, y N8 pasó de la Fase 9 a la 18 sin que un test lo viera. Los fixtures se escriben con
+  la forma del dato real —aquí, la V+ de un punto y la V− del siguiente—, no
+  con la del cálculo que prueban.
+- **La hoja de campo es la especificación.** La regla de la armada no salió
+  de discutirla: la hoja de El Verjón suma la V+ de una fila con la V− de la
+  siguiente (`M4 = I3 + K6`). Leer las fórmulas de la cartera del usuario
+  zanjó N7 antes de escribir código.
 
 ### Cierre Fase 18 — Libreta de nivelación y panel de asentamientos (2026-09-24)
 

@@ -24,7 +24,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 16 | Importar lecturas de nivel digital | `15-importar-nivel-digital.md` | cerrada |
 | 17 | Control ida-vuelta por puntos homólogos | `16-homologos-ida-vuelta.md` | cerrada |
 | 18 | Libreta de nivelación y panel de asentamientos | `17-libreta-panel-asentamientos.md` | cerrada |
-| 19 | Equilibrado por armada y compensación desde el origen | `18-equilibrado-y-compensacion.md` | en curso |
+| 19 | Equilibrado por armada y compensación desde el origen | `18-equilibrado-y-compensacion.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

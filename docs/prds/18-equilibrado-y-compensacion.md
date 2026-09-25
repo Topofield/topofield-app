@@ -1,14 +1,42 @@
 # PRD-de-fase 19 — Equilibrado por armada y compensación desde el origen
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-25
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-25
 
 **Rama:** `fase-19-equilibrado-compensacion`
 **Peticiones:** N7 y N8 de [`pendientes.md`](../pendientes.md), halladas en la
 Fase 18
 **Módulo:** nivelación (y la libreta de la visita de asentamientos, que usa el
 mismo motor)
+
+> **Divergencias de la implementación:**
+>
+> - **La migración no resta la V+ al acumulado guardado** (hallazgo 5). Esa
+>   fórmula coincidía en las 21 filas del seed, pero sobre la base local
+>   completa —53 lecturas de nivelación y 208 de libreta, cerradas incluidas,
+>   866 comparaciones— movía en ±1 el último decimal en 29: el acumulado y el
+>   total guardados ya vienen redondeados al metro, y la resta redondeaba dos
+>   veces. La migración recalcula la cadena desde las distancias por visual con
+>   funciones de ventana, como el motor, y coincide en todas salvo dos empates
+>   exactos del acumulado (164.5 m), donde el motor suma en coma flotante y
+>   redondea abajo. Anotado en la § 11 de la doc técnica.
+> - **La vuelta sí cambia su «Dist acum».** La decisión 8 se cumple —la vuelta
+>   no se compensa—, pero el motor le aplica la misma regla de acumulado, así
+>   que la migración reescribe su acumulado para que lo guardado diga lo mismo
+>   que el editor. «Vuelta intacta» (sección «La migración») era inexacto.
+> - **La guarda es más estrecha**: además de lo que dice la decisión 7, exige
+>   error de cierre distinto de 0 y V+ en la fila, porque sin ellos la cota no
+>   se mueve. Probada con un caso fabricado en una transacción revertida. Su
+>   pista no propone volver a guardar la visita: no saca el caso de la
+>   condición, y una visita cerrada no se puede guardar.
+> - **Verificación en pantalla, además de lo previsto:** el crudo Leica da dos
+>   avisos por armada (C16 → C17, 8.7 m; C17 → C16, 9.4 m), comprobados contra
+>   sus distancias; y el registro de la visita 7 del demo deja el amarre en
+>   100.0000 compensada.
+> - **Capturas del manual:** además de las cuatro que cambian por la fase, se
+>   regeneraron tres desfasadas desde fases anteriores (el texto del diálogo de
+>   importación y las unidades de los KPIs de la Fase 18).
 
 ## Propósito
 
