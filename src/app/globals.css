@@ -178,7 +178,7 @@
     max-width: 52rem;
     margin: 0 auto;
     padding: 2rem 1.5rem 4rem;
-    color: var(--color-neutral-900);
+    color: var(--color-ink);
   }
 
   .report-actions {
@@ -188,7 +188,7 @@
   }
 
   .report-cover {
-    border-bottom: 2px solid var(--color-primary-500);
+    border-bottom: 2px solid var(--color-mira-strong);
     padding-bottom: 2rem;
     margin-bottom: 2.5rem;
   }
@@ -197,7 +197,8 @@
     font-size: 0.8125rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--color-primary-500);
+    /* Texto: mira-ink, no mira-strong, que como texto no llega a 4.5:1. */
+    color: var(--color-mira-ink);
     font-weight: 600;
   }
 
@@ -218,7 +219,7 @@
 
   .report-cover-grid dt,
   .report-pairs dt {
-    color: var(--color-neutral-500);
+    color: var(--color-ink-2);
   }
 
   .report-section {
@@ -230,14 +231,14 @@
     font-weight: 600;
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--color-neutral-200);
+    border-bottom: 1px solid var(--color-rule);
   }
 
   .report-kind-tag {
     margin-left: 0.75rem;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--color-neutral-500);
+    color: var(--color-ink-2);
   }
 
   .report-index {
@@ -251,16 +252,16 @@
     grid-template-columns: 12rem 1fr auto;
     gap: 1rem;
     padding: 0.4rem 0;
-    border-bottom: 1px dotted var(--color-neutral-200);
+    border-bottom: 1px dotted var(--color-rule);
   }
 
   .report-index-kind {
-    color: var(--color-neutral-500);
+    color: var(--color-ink-2);
   }
 
   .report-index-num {
     font-variant-numeric: tabular-nums;
-    color: var(--color-neutral-500);
+    color: var(--color-ink-2);
   }
 
   .report-table {
@@ -273,12 +274,12 @@
   .report-table th {
     text-align: left;
     font-weight: 600;
-    border-bottom: 1px solid var(--color-neutral-400);
+    border-bottom: 1px solid var(--color-rule-strong);
     padding: 0.4rem 0.5rem;
   }
 
   .report-table td {
-    border-bottom: 1px solid var(--color-neutral-200);
+    border-bottom: 1px solid var(--color-rule);
     padding: 0.35rem 0.5rem;
   }
 
@@ -289,7 +290,7 @@
 
   .report-table .mono {
     font-size: 0.75rem;
-    color: var(--color-neutral-500);
+    color: var(--color-ink-2);
   }
 
   .report-plot {
@@ -310,7 +311,7 @@
     padding: 0;
     margin-top: 0.5rem;
     font-size: 0.8125rem;
-    color: var(--color-neutral-700);
+    color: var(--color-ink-2);
   }
 
   .report-plot-legend li {
@@ -327,7 +328,7 @@
 
   .report-missing {
     font-size: 0.9375rem;
-    color: var(--color-danger-500);
+    color: var(--color-danger);
   }
 
   /* Nota de la sección de un proceso: p. ej., que sus coordenadas se
@@ -336,7 +337,7 @@
     margin-bottom: 0.75rem;
     font-size: 0.875rem;
     line-height: 1.5;
-    color: var(--color-neutral-700);
+    color: var(--color-ink-2);
   }
 
   /* Nota al pie de una tabla del informe: aclara una marca de la tabla que
@@ -345,13 +346,13 @@
     margin-top: 0.5rem;
     font-size: 0.8125rem;
     line-height: 1.5;
-    color: var(--color-neutral-500);
+    color: var(--color-ink-2);
   }
 
   .report-footer {
     margin-top: 1.5rem;
     font-size: 0.8125rem;
-    color: var(--color-neutral-500);
+    color: var(--color-ink-2);
   }
 }
 
