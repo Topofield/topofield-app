@@ -80,10 +80,11 @@ export function contrastRatio(colorA: string, colorB: string): number {
 /**
  * Color efectivo de `color` aplicado con transparencia `alpha` sobre `base`.
  *
- * Es la pieza que faltaba en las revisiones manuales: `bg-success-500/10` no
- * es un fondo blanco, y medir el texto contra blanco da un resultado
- * optimista. `composite("#1a7a42", 0.1, "#ffffff")` devuelve el fondo real
- * que ve el usuario.
+ * Es la pieza que faltaba en las revisiones manuales: un tinte al 10 % no es
+ * un fondo blanco, y medir el texto contra blanco da un resultado optimista.
+ * `composite("#1a7a42", 0.1, "#ffffff")` devuelve el fondo real que ve el
+ * usuario. Desde la Fase 20 los estados usan tintes explícitos (`success-bg`),
+ * pero la función sigue sirviendo para declarar un tinte en `pairings.ts`.
  */
 export function composite(color: string, alpha: number, base: string): string {
   if (alpha < 0 || alpha > 1) {

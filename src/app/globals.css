@@ -4,6 +4,12 @@
    estas también se leen con `var(--color-…)` en línea —las muestras de
    `/design-system`, los colores de las series de las gráficas—. */
 @theme static {
+  /* Sin la paleta por defecto de Tailwind (Fase 20): solo existen los tokens
+     de este bloque. Una clase de esa paleta, o de las escalas retiradas, no
+     tomaría el tema oscuro; así no genera nada, y `tokens-retirados.test.ts`
+     la detecta antes. Va primero: el reinicio borra lo declarado antes. */
+  --color-*: initial;
+
   /* --- Tokens por rol (Fase 20, UI1) ----------------------------------------
      La identidad del prototipo de asentamientos: papel/tinta y el acento
      «mira». Cada token lleva sus dos valores, claro y oscuro, en un
@@ -35,39 +41,16 @@
   --color-danger: light-dark(#c0392b, #ef7466);
   --color-danger-bg: light-dark(#fbe6e3, #3d1c19);
   --color-on-danger: light-dark(#ffffff, #1d0f0d); /* texto sobre danger */
-}
 
-@theme {
-  /* --- Tokens anteriores ----------------------------------------------------
-     Se retiran al terminar la migración (tarea 7 del PRD de la fase 20). */
-
-  /* Marca TopoField */
-  --color-primary-50: #e8f4fa;
-  --color-primary-100: #c5e4f3;
-  --color-primary-200: #9dd1eb;
-  --color-primary-500: #187aae;
-  --color-primary-600: #0b3d5c;
-  --color-primary-700: #082d44;
-
-  --color-success-500: #1a7a42;
-  --color-warning-500: #8a5806;
-  --color-danger-500: #c0392b;
-
-  --color-neutral-50: #f8f9fa;
-  --color-neutral-100: #f2f3f4;
-  --color-neutral-200: #d5d8dc;
-  --color-neutral-400: #828c98;
-  --color-neutral-500: #5d6d7e;
-  --color-neutral-800: #2c3e50;
-  --color-neutral-900: #1a252f;
-
-  /* Semáforo de asentamientos. Oscurecidos para cumplir 3:1 como indicador
-     gráfico: los valores vivos originales daban 2.87, 1.66 y 2.85. */
+  /* Semáforo de asentamientos (Fase 5): oscurecidos para cumplir 3:1 como
+     indicador gráfico; cumplen también sobre la tarjeta oscura, así que
+     tienen un solo valor. */
   --color-semaphore-green: #1e8e4e;
   --color-semaphore-yellow: #8a6d0b;
   --color-semaphore-orange: #c25e08;
   --color-semaphore-red: #d94436;
 
+  --color-black: #000000; /* velo de Modal y Drawer (`bg-black/50`) */
 }
 
 @theme {

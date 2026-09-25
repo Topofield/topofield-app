@@ -555,8 +555,8 @@ export default async function DesignSystemPage() {
               d: "Se midieron los cuatro tokens: verde, amarillo y naranja fallaban como indicador gráfico (2.87, 1.66 y 2.85). Los cuatro se oscurecieron a #1e8e4e, #8a6d0b, #c25e08 y #d94436, y ahora cumplen 3:1. Deuda pendiente: los niveles contiguos quedan poco separados entre sí (1.18, 1.15, 1.01), por lo que el color solo no basta para distinguirlos — el módulo debe apoyarse en la etiqueta de texto, no en el matiz. La alternativa considerada, anillos oscuros sobre el mismo relleno claro, se descartó por ahora: exige un segundo canal gráfico (el anillo) además del texto, más costoso que oscurecer el relleno.",
             },
             {
-              t: "Borde de los campos de formulario: neutral-400",
-              d: "neutral-200 (1.43:1) no alcanzaba el 3:1 que exige WCAG 1.4.11 para el límite de un control. Input, Select y Textarea usan ahora neutral-400 (3.41:1 sobre blanco, 3.24:1 sobre neutral-50). Los bordes decorativos, que no delimitan un control interactivo, se quedan en neutral-200.",
+              t: "Borde de los campos de formulario: un token propio de 3:1",
+              d: "El borde decorativo (1.43:1) no alcanzaba el 3:1 que exige WCAG 1.4.11 para el límite de un control, y los campos pasaron a un gris más oscuro. Desde la Fase 20 ese papel tiene nombre: rule-strong, medido en los dos temas; rule queda para los separadores, que no delimitan un control.",
             },
           ].map((item, i) => (
             <li

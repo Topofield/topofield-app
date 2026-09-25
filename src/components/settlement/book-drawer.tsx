@@ -126,7 +126,7 @@ export function BookDrawer({
                   key={r.id}
                   className={cn(
                     "border-b border-rule font-mono tabular-nums",
-                    newSetup && i > 0 && "border-t-2 border-t-neutral-200",
+                    newSetup && i > 0 && "border-t-2 border-t-rule",
                     isSelected && "bg-sel",
                   )}
                 >
