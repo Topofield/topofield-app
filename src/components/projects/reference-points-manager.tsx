@@ -87,7 +87,7 @@ export function ReferencePointsManager({
       }
     >
       {points.length === 0 ? (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           Aún no hay puntos de referencia. Agrega los BMs y puntos de control
           del proyecto.
         </p>
@@ -95,7 +95,7 @@ export function ReferencePointsManager({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+              <tr className="border-b border-rule text-left text-xs text-ink-2">
                 <th className="py-2 pr-3 font-medium">Código</th>
                 <th className="py-2 pr-3 font-medium">Tipo</th>
                 <th className="py-2 pr-3 font-medium">Norte</th>
@@ -108,9 +108,9 @@ export function ReferencePointsManager({
               {points.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-b border-neutral-100 last:border-0"
+                  className="border-b border-rule last:border-0"
                 >
-                  <td className="py-2 pr-3 font-medium text-neutral-900">
+                  <td className="py-2 pr-3 font-medium text-ink">
                     {item.code}
                   </td>
                   <td className="py-2 pr-3">
@@ -118,13 +118,13 @@ export function ReferencePointsManager({
                       {REFERENCE_POINT_TYPE_LABELS[item.type]}
                     </Badge>
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 text-ink-2">
                     {item.north ?? "—"}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 text-ink-2">
                     {item.east ?? "—"}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 text-ink-2">
                     {item.elevation ?? "—"}
                   </td>
                   <td className="py-2 pr-3">

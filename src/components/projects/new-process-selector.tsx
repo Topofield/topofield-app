@@ -20,7 +20,7 @@ export function NewProcessSelector({ projectId }: { projectId: string }) {
         title="Nuevo proceso"
       >
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-ink-2">
             Elige el tipo de proceso topográfico.
           </p>
           <Link

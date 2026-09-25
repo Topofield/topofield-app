@@ -50,8 +50,8 @@ function SortLink({
     <Link
       href={`/projects/${projectId}?${params.toString()}`}
       className={cn(
-        "inline-flex items-center gap-1 transition-colors hover:text-primary-600",
-        activa && "text-neutral-900",
+        "inline-flex items-center gap-1 transition-colors hover:text-ink",
+        activa && "text-ink",
       )}
     >
       {etiqueta}
@@ -101,7 +101,7 @@ function SortableHeader({
 function ToleranceMark({ meets }: { meets: boolean | null }) {
   if (meets === true) {
     return (
-      <span className="text-success-500">
+      <span className="text-success">
         <span aria-hidden>✓</span>
         <span className="sr-only">Cumple la tolerancia</span>
       </span>
@@ -109,14 +109,14 @@ function ToleranceMark({ meets }: { meets: boolean | null }) {
   }
   if (meets === false) {
     return (
-      <span className="text-danger-500">
+      <span className="text-danger">
         <span aria-hidden>✕</span>
         <span className="sr-only">No cumple la tolerancia</span>
       </span>
     );
   }
   return (
-    <span className="text-neutral-500">
+    <span className="text-ink-2">
       <span aria-hidden>—</span>
       <span className="sr-only">Sin verificación</span>
     </span>
@@ -135,10 +135,10 @@ export function ProcessTable({
   return (
     <>
       {/* Escritorio */}
-      <div className="hidden overflow-x-auto rounded-lg border border-neutral-200 bg-white md:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-rule bg-card md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+            <tr className="border-b border-rule text-left text-xs text-ink-2">
               <SortableHeader
                 columna="nombre"
                 etiqueta="Proceso"
@@ -171,16 +171,16 @@ export function ProcessTable({
               return (
                 <tr
                   key={p.id}
-                  className="border-b border-neutral-100 last:border-0 transition-colors hover:bg-primary-50"
+                  className="border-b border-rule last:border-0 transition-colors hover:bg-sel"
                 >
                   <td className="px-4 py-3">
                     <Link
                       href={`/projects/${projectId}/polygonal/${p.id}`}
-                      className="font-medium text-neutral-900 hover:text-primary-600"
+                      className="font-medium text-ink underline-offset-2 hover:underline"
                     >
                       {p.name}
                     </Link>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-ink-2">
                       Poligonal · {POLYGONAL_TYPE_LABELS[p.type]}
                     </p>
                   </td>
@@ -195,14 +195,14 @@ export function ProcessTable({
                         : PROCESS_STATUS_LABELS[p.status]}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 font-mono tabular-nums text-neutral-700">
+                  <td className="px-4 py-3 font-mono tabular-nums text-ink-2">
                     {formatPrecision(p.relative_precision)}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <ToleranceMark meets={p.meets_tolerance} />
                   </td>
                   <td
-                    className="whitespace-nowrap px-4 py-3 text-neutral-500"
+                    className="whitespace-nowrap px-4 py-3 text-ink-2"
                     title={formatDate(p.updated_at)}
                   >
                     {formatRelativeDate(p.updated_at)}

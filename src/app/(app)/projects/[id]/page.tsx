@@ -204,8 +204,8 @@ export default async function ProjectHubPage({
                   className={cn(
                     "rounded-full border px-3 py-1 text-sm transition-colors",
                     active
-                      ? "border-primary-500 bg-primary-500 text-white"
-                      : "border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800",
+                      ? "border-mira bg-mira text-on-mira"
+                      : "border-rule bg-card text-ink-2 hover:text-ink",
                   )}
                 >
                   {st.label} <span className="tabular-nums">({count})</span>
@@ -298,10 +298,10 @@ export default async function ProjectHubPage({
                 <li key={r.id}>
                   <Link
                     href={`/projects/${project.id}/reports/${r.id}`}
-                    className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
+                    className="flex items-center justify-between gap-4 rounded-lg border border-rule px-4 py-3 transition-colors hover:bg-paper"
                   >
                     <span className="font-medium">{r.title}</span>
-                    <span className="text-sm text-neutral-500">
+                    <span className="text-sm text-ink-2">
                       {r.included_processes.length}{" "}
                       {r.included_processes.length === 1
                         ? "proceso"
@@ -350,7 +350,7 @@ function LevelingProcessSection({
     <div className="flex flex-col gap-4">
       {enProgreso.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h4 className="text-xs font-medium text-neutral-500">
+          <h4 className="text-xs font-medium text-ink-2">
             En progreso
           </h4>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -367,7 +367,7 @@ function LevelingProcessSection({
       )}
       {cerrados.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h4 className="text-xs font-medium text-neutral-500">Cerrados</h4>
+          <h4 className="text-xs font-medium text-ink-2">Cerrados</h4>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {cerrados.map((p) => (
               <ProcessCard

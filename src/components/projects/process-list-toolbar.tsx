@@ -184,8 +184,8 @@ export function ProcessListToolbar({
               className={cn(
                 "rounded-full border px-3 py-1 text-sm transition-colors",
                 activo
-                  ? "border-primary-500 bg-primary-500 text-white"
-                  : "border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800",
+                  ? "border-mira bg-mira text-on-mira"
+                  : "border-rule bg-card text-ink-2 hover:text-ink",
               )}
             >
               {chip.label}{" "}

@@ -26,11 +26,11 @@ export function SiteCard({ projectId, site, visitCount, worstAlert }: SiteCardPr
   return (
     <Link
       href={`/projects/${projectId}/settlement/${site.id}`}
-      className="block rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-colors hover:border-primary-200 hover:bg-primary-50"
+      className="block rounded-lg border border-rule bg-card p-5 shadow-sm transition-colors hover:border-rule-strong hover:bg-sel"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-2">
             {STRUCTURE_TYPE_LABELS[site.structure_type]}
           </p>
           <h3 className="mt-0.5 font-semibold">{site.name}</h3>
@@ -39,7 +39,7 @@ export function SiteCard({ projectId, site, visitCount, worstAlert }: SiteCardPr
           {SITE_STATUS_LABELS[site.status]}
         </Badge>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-neutral-500">
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-ink-2">
         <StatusIndicator level={worstAlert} label={ALERT_LEVEL_LABELS[worstAlert]} />
         <span>
           {visitCount} {visitCount === 1 ? "visita" : "visitas"}

@@ -7,7 +7,7 @@ export default function ProjectNotFound() {
       <h1 className="text-2xl font-bold">
         Proyecto no encontrado
       </h1>
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-ink-2">
         El proyecto no existe o no tienes acceso a él.
       </p>
       <Link href="/dashboard" className={buttonClasses()}>
