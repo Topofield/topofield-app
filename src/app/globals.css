@@ -68,9 +68,17 @@
   --color-semaphore-orange: #c25e08;
   --color-semaphore-red: #d94436;
 
+}
+
+@theme {
+  /* Tipografía del prototipo (Fase 20): Barlow en el cuerpo, Barlow Semi
+     Condensed en los títulos; las cargan `next/font` en `layout.tsx`. */
+  --font-sans: var(--font-sans-src), system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-display: var(--font-display-src), var(--font-sans-src), system-ui,
+    sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
     "DejaVu Sans Mono", Consolas, monospace;
-  --font-display: var(--font-display-src), ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -100,24 +108,20 @@
   }
 
   body {
-    @apply bg-neutral-50 text-neutral-900 antialiased;
-    font-family:
-      system-ui,
-      -apple-system,
-      "Segoe UI",
-      Roboto,
-      "Helvetica Neue",
-      Arial,
-      sans-serif;
+    @apply bg-paper text-ink antialiased;
+    font-family: var(--font-sans);
+    /* Cifras de ancho fijo y alineadas, como el prototipo: las tablas de
+       cotas y coordenadas se leen en columna. */
+    font-variant-numeric: tabular-nums lining-nums;
     background-image:
       linear-gradient(
         to right,
-        color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
+        color-mix(in srgb, var(--color-rule) 45%, transparent) 1px,
         transparent 1px
       ),
       linear-gradient(
         to bottom,
-        color-mix(in srgb, var(--color-neutral-200) 25%, transparent) 1px,
+        color-mix(in srgb, var(--color-rule) 45%, transparent) 1px,
         transparent 1px
       );
     background-size: 32px 32px;
@@ -128,12 +132,12 @@
   h2,
   h3 {
     font-family: var(--font-display);
-    color: var(--color-primary-600);
+    color: var(--color-ink);
     letter-spacing: -0.01em;
   }
 
   :where(a, button, summary, input, select, textarea):focus-visible {
-    outline: 2px solid var(--color-primary-500);
+    outline: 2px solid var(--color-mira-strong);
     outline-offset: 2px;
     border-radius: 0.25rem;
   }

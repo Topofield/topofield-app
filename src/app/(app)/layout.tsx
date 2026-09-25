@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, Logo } from "@/components/design-system";
+import { Button, Logo, ThemeSelect } from "@/components/design-system";
 import { createClient } from "@/lib/supabase/server";
+import { readThemeChoice } from "@/lib/theme-server";
 import { signOutAction } from "./actions";
 
 /**
@@ -24,6 +25,8 @@ export default async function AppLayout({
     redirect("/sign-in");
   }
 
+  const theme = await readThemeChoice();
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 bg-white">
@@ -35,7 +38,7 @@ export default async function AppLayout({
           >
             <Logo />
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span className="hidden text-sm text-neutral-500 sm:inline">
               {user.email}
             </span>
@@ -47,6 +50,7 @@ export default async function AppLayout({
             >
               Manual
             </Link>
+            <ThemeSelect initial={theme} />
             <form action={signOutAction}>
               <Button type="submit" variant="ghost" size="sm">
                 Cerrar sesión

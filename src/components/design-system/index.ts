@@ -25,3 +25,4 @@ export { Select, type SelectOption } from "./select";
 export { StatusIndicator } from "./status-indicator";
 export { Tabs, type SearchParams, type TabItem } from "./tabs";
 export { Textarea } from "./textarea";
+export { ThemeSelect } from "./theme-select";
