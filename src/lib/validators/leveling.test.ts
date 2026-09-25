@@ -14,7 +14,7 @@ import {
   hasReadingErrors,
   validateReadingCapture,
   validateRunCapture,
-  validateSightBalance,
+  validateSightBalances,
 } from "./leveling";
 import type { LevelingResult, ReadingInput } from "@/types/leveling";
 
@@ -184,50 +184,87 @@ describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
   });
 });
 
-describe("equilibrado de visuales", () => {
-  it("avisa cuando la diferencia pasa del límite del orden", () => {
+describe("equilibrado de visuales, por armada (Fase 19, N7)", () => {
+  // Una armada es la V+ de un punto y la V− del siguiente punto que no sea
+  // intermedio. Hasta la Fase 19 se comparaban la V+ y la V− de UNA MISMA fila,
+  // que en un punto de cambio son de armadas distintas.
+  const armada = (back: number, fore: number) => [
+    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: back }),
+    bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: fore }),
+  ];
+
+  it("avisa en la V− que cierra la armada, y la nombra", () => {
     // tercer_orden admite 4 m; aquí hay 20.
-    const issues = validateSightBalance(
-      bare({
-        backsight: 1.5,
-        foresight: 1.2,
-        backDistanceM: 40,
-        foreDistanceM: 20,
-      }),
-      "tercer_orden",
-      false,
+    const w = validateSightBalances(armada(40, 20), "tercer_orden", false);
+    expect(w[0]).toBeUndefined();
+    expect(w[1]).toBe(
+      "Armada BM-1 → BM-2: visuales desequilibradas, 20.0 m de diferencia; el límite del orden es 4 m.",
     );
-    expect(issues.warnings.sightBalance).toBeDefined();
   });
 
   it("no avisa dentro del límite", () => {
-    const issues = validateSightBalance(
-      bare({
-        backsight: 1.5,
-        foresight: 1.2,
-        backDistanceM: 31.5,
-        foreDistanceM: 28.5,
-      }),
-      "tercer_orden",
-      false,
-    );
-    expect(issues.warnings.sightBalance).toBeUndefined();
+    expect(validateSightBalances(armada(31.5, 28.5), "tercer_orden", false)).toEqual([undefined, undefined]);
   });
 
   it("NO evalúa en un proceso reconstruido por el backfill", () => {
-    // Allí las distancias se repartieron por mitades, así que el equilibrado
-    // saldría perfecto siempre — un aviso falso de conformidad.
-    const issues = validateSightBalance(
+    // Allí las distancias se repartieron por mitades: el equilibrado saldría
+    // de un reparto inventado, un aviso (o un silencio) sin fundamento.
+    expect(validateSightBalances(armada(40, 20), "tercer_orden", true)).toEqual([undefined, undefined]);
+  });
+
+  it("una intermedia no abre ni cierra armada", () => {
+    const rows = [
+      bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: 30 }),
+      bare({ pointCode: "RAD", pointType: "intermediate", foresight: 1.0, foreDistanceM: 5 }),
+      bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: 29 }),
+    ];
+    expect(validateSightBalances(rows, "tercer_orden", false)).toEqual([undefined, undefined, undefined]);
+  });
+
+  it("sin la distancia de una de las dos visuales no se evalúa", () => {
+    const rows = [
+      bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5 }),
+      bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: 29 }),
+    ];
+    expect(validateSightBalances(rows, "tercer_orden", false)).toEqual([undefined, undefined]);
+  });
+
+  it("la ida de El Verjón: avisa en C 2, C 3, C 4, C 7, D3 y C 8, no en C 1, C 5, C 6 ni D4", () => {
+    // docs/carteras/TRABAJO NIVELACION EL VERJON-corregido.xlsx: la hoja de
+    // campo calcula cada armada como V+ del punto i + V− del punto i+1
+    // (M4 = I3 + K6…). La fila C 1 compara 28.1 con 28.5 y parecía equilibrada;
+    // su armada con C 2 difiere 10.8 m.
+    const rows: ReadingInput[] = [
+      ["D1", "bm", 1.209, null, 31.5, null],
+      ["C 1", "pc", 3.275, 0.268, 28.1, 28.5],
+      ["C 2", "pc", 3.469, 0.224, 21.9, 17.3],
+      ["C 3", "pc", 3.952, 0.092, 25.5, 11.7],
+      ["AUX1", "intermediate", null, 0.194, null, null],
+      ["C 4", "pc", 3.314, 0.244, 19.6, 15.1],
+      ["C 5", "pc", 3.013, 0.124, 18.1, 16.6],
+      ["C 6", "pc", 3.549, 0.145, 23.1, 15.5],
+      ["C 7", "pc", 3.16, 0.132, 24.2, 14.9],
+      ["D3", "pc", 2.395, 0.87, 14.7, 8.4],
+      ["C 8", "pc", 2.349, 0.195, 12.1, 21.8],
+      ["D4", "bm", null, 0.808, null, 15.7],
+    ].map(([pointCode, pointType, backsight, foresight, backDistanceM, foreDistanceM]) =>
       bare({
-        backsight: 1.5,
-        foresight: 1.2,
-        backDistanceM: 40,
-        foreDistanceM: 20,
+        pointCode: pointCode as string,
+        pointType: pointType as ReadingInput["pointType"],
+        backsight: backsight as number | null,
+        foresight: foresight as number | null,
+        backDistanceM: backDistanceM as number | null,
+        foreDistanceM: foreDistanceM as number | null,
       }),
-      "tercer_orden",
-      true,
     );
-    expect(issues.warnings.sightBalance).toBeUndefined();
+    const w = validateSightBalances(rows, "tercer_orden", false);
+    const flagged = rows.filter((_, i) => w[i]).map((r) => r.pointCode);
+    expect(flagged).toEqual(["C 2", "C 3", "C 4", "C 7", "D3", "C 8"]);
+    expect(w[2]).toContain("Armada C 1 → C 2");
+    expect(w[2]).toContain("10.8 m");
+    expect(w[5]).toContain("Armada C 3 → C 4");
+    expect(w[9]).toContain("Armada C 7 → D3");
+    expect(w[9]).toContain("15.8 m");
   });
 });
 
