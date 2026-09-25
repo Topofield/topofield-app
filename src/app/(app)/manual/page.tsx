@@ -935,12 +935,16 @@ export default function ManualPage() {
         </p>
 
         <p>
-          <strong>Equilibrado de visuales.</strong> Con las dos distancias de
-          una armada, la aplicación avisa si la V+ y la V− quedaron a
-          distancias muy distintas. Equilibrarlas cancela el error
-          de colimación del nivel, así que es la regla de campo más importante
-          de la nivelación de precisión. El límite depende del orden: 2 m en
-          primer orden, 3 en segundo, 4 en tercero y 6 en ordinario.
+          <strong>Equilibrado de visuales.</strong> Una armada son las dos
+          visuales de una misma puesta del nivel:{" "}
+          <strong>la V+ de un punto y la V− del siguiente</strong>. Con sus dos
+          distancias, la aplicación avisa si quedaron muy distintas. El aviso
+          aparece en la distancia V− que cierra la armada y la nombra
+          —«Armada C 1 → C 2»—; las vistas intermedias no abren ni cierran
+          armada. Equilibrarlas cancela el error de colimación del nivel, así
+          que es la regla de campo más importante de la nivelación de
+          precisión. El límite depende del orden: 2 m en primer orden, 3 en
+          segundo, 4 en tercero y 6 en ordinario.
         </p>
 
         <Nota titulo="Con nivel digital no se leen hilos">
@@ -974,10 +978,13 @@ export default function ManualPage() {
         <p>
           <strong>Corrección proporcional a la distancia.</strong> Si el
           cierre cumple la tolerancia, la aplicación reparte el error entre
-          los puntos según su distancia acumulada: a mayor distancia del
-          origen, mayor corrección. El resultado es que el{" "}
-          <strong>BM final cierra exacto</strong> contra su cota conocida, con
-          corrección igual y de signo opuesto al error de cierre.
+          los puntos según su distancia acumulada, que es el recorrido{" "}
+          <strong>desde el origen hasta el punto</strong>: llega hasta su V− y
+          no cuenta la V+ que sale de él hacia la armada siguiente. A mayor
+          distancia del origen, mayor corrección.{" "}
+          <strong>El BM de partida no se corrige</strong>: su cota es
+          conocida. Y el <strong>BM final cierra exacto</strong> contra la
+          suya, con corrección igual y de signo opuesto al error de cierre.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">6.6 Ida y vuelta</h3>
