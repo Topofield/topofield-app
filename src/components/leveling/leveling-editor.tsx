@@ -396,15 +396,15 @@ export function LevelingEditor({
 
         <details
           open={process.status === "draft" || process.status === "in_progress"}
-          className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
+          className="group rounded-lg border border-rule bg-card shadow-sm"
         >
-          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-ink marker:content-none">
             <h2 className="text-base font-semibold">Configuración</h2>
             <svg
               aria-hidden="true"
               viewBox="0 0 20 20"
               fill="none"
-              className="h-4 w-4 shrink-0 rotate-0 text-neutral-500 transition-transform group-open:rotate-90 motion-reduce:transition-none"
+              className="h-4 w-4 shrink-0 rotate-0 text-ink-2 transition-transform group-open:rotate-90 motion-reduce:transition-none"
             >
               <path
                 d="M7.5 4.5L13 10l-5.5 5.5"
@@ -415,7 +415,7 @@ export function LevelingEditor({
               />
             </svg>
           </summary>
-          <div className="flex flex-col gap-4 border-t border-neutral-100 px-5 py-4">
+          <div className="flex flex-col gap-4 border-t border-rule px-5 py-4">
             <LevelingConfigFields
               value={config}
               disabled={readOnly}
@@ -423,13 +423,13 @@ export function LevelingEditor({
               onChange={handleConfigChange}
             />
             <div className="max-w-xs">
-              <span className="flex flex-col gap-1 text-sm font-medium text-neutral-800">
+              <span className="flex flex-col gap-1 text-sm font-medium text-ink">
                 Distancia total del recorrido (km)
-                <output className="flex h-10 items-center rounded-md bg-neutral-100 px-3 font-mono text-base tabular-nums text-neutral-900">
+                <output className="flex h-10 items-center rounded-md bg-sel px-3 font-mono text-base tabular-nums text-ink">
                   {derivedTotalKm.toFixed(3)}
                 </output>
               </span>
-              <p className="mt-1 text-xs text-neutral-600">
+              <p className="mt-1 text-xs text-ink-2">
                 Se calcula sumando las distancias por visual de la libreta.
               </p>
             </div>
@@ -459,7 +459,7 @@ export function LevelingEditor({
               <RunTabs active={activeRun} onChange={setActiveRun} />
             )}
             {levelType == null ? (
-              <p className="rounded-md bg-neutral-100 px-4 py-3 text-sm text-neutral-700">
+              <p className="rounded-md bg-sel px-4 py-3 text-sm text-ink-2">
                 Elige el <strong>tipo de nivel</strong> en la configuración antes
                 de capturar la libreta: decide si la distancia se obtiene leyendo
                 los tres hilos sobre la mira (nivel automático) o la entrega el
@@ -507,19 +507,19 @@ export function LevelingEditor({
         {!readOnly && (
           <div className="flex flex-wrap items-center justify-end gap-3">
             {configBlocked && (
-              <span className="text-sm text-danger-500">
+              <span className="text-sm text-danger">
                 {startElevationInvalid
                   ? "La cota del BM de partida es obligatoria y debe ser un número."
                   : "La cota del BM de llegada es obligatoria y debe ser un número."}
               </span>
             )}
             {!configBlocked && captureBlocked && (
-              <span className="text-sm text-danger-500">
+              <span className="text-sm text-danger">
                 Corrige las celdas con error para poder guardar.
               </span>
             )}
             {!configBlocked && !captureBlocked && dirty && (
-              <span className="text-sm text-neutral-500">
+              <span className="text-sm text-ink-2">
                 Hay cambios sin guardar.
               </span>
             )}
@@ -529,7 +529,7 @@ export function LevelingEditor({
             >
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
-            <span aria-hidden className="h-6 w-px bg-neutral-200" />
+            <span aria-hidden className="h-6 w-px bg-rule" />
             <CloseProcessDialog
               processId={process.id}
               type={config.type}

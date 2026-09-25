@@ -123,8 +123,8 @@ export function BmSelector({
   }
 
   return (
-    <fieldset className="flex flex-col gap-4 rounded-md border border-neutral-200 p-4">
-      <legend className="px-1 text-sm font-medium text-neutral-800">
+    <fieldset className="flex flex-col gap-4 rounded-md border border-rule p-4">
+      <legend className="px-1 text-sm font-medium text-ink">
         {label}
       </legend>
       <Select

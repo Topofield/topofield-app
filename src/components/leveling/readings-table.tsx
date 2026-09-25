@@ -163,20 +163,20 @@ export function ReadingsTable({
   // `Input` ya pinta el borde rojo vía `error`; el amarillo de advertencia no
   // tiene prop propia, así que se aplica por className cuando no hay error.
   function warningClass(hasError?: string, hasWarning?: string) {
-    return !hasError && hasWarning ? "border-warning-500" : undefined;
+    return !hasError && hasWarning ? "border-warning" : undefined;
   }
 
   return (
     <div className="flex flex-col gap-3">
       {distancesReconstructed && (
-        <p className="text-sm text-warning-500">
+        <p className="text-sm text-warning">
           Las distancias por visual de este proceso las reconstruyó la
           migración repartiendo por mitades; el equilibrado de visuales no se
           evalúa.
         </p>
       )}
       {wiresAvailable && (
-        <label className="flex items-center gap-2 text-sm text-neutral-700">
+        <label className="flex items-center gap-2 text-sm text-ink-2">
           <input
             type="checkbox"
             checked={showWires}
@@ -192,7 +192,7 @@ export function ReadingsTable({
             hace scroll horizontal. */}
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+            <tr className="border-b border-rule text-left text-xs text-ink-2">
               <th className="py-2 pr-3 font-medium">Punto</th>
               <th className="py-2 pr-3 font-medium">Tipo</th>
               {wiresVisible && (
@@ -242,7 +242,7 @@ export function ReadingsTable({
               return (
                 <tr
                   key={reading.id}
-                  className="border-b border-neutral-100 align-top"
+                  className="border-b border-rule align-top"
                 >
                   <td className="py-2 pr-3">
                     <Input
@@ -257,7 +257,7 @@ export function ReadingsTable({
                       className="w-24"
                     />
                     {rowNotes?.[i] && (
-                      <div className="mt-1 text-xs text-neutral-500">{rowNotes[i]}</div>
+                      <div className="mt-1 text-xs text-ink-2">{rowNotes[i]}</div>
                     )}
                   </td>
                   <td className="py-2 pr-3">
@@ -317,7 +317,7 @@ export function ReadingsTable({
                       }
                     />
                     {issue?.warnings.backsight && (
-                      <p className="mt-1 text-xs text-warning-500">
+                      <p className="mt-1 text-xs text-warning">
                         {issue.warnings.backsight}
                       </p>
                     )}
@@ -334,7 +334,7 @@ export function ReadingsTable({
                       }
                     />
                   </td>
-                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {showInstrumentHeight
                       ? formatElevation(row?.instrumentHeight)
                       : "—"}
@@ -382,7 +382,7 @@ export function ReadingsTable({
                       }
                     />
                     {issue?.warnings.foresight && (
-                      <p className="mt-1 text-xs text-warning-500">
+                      <p className="mt-1 text-xs text-warning">
                         {issue.warnings.foresight}
                       </p>
                     )}
@@ -408,7 +408,7 @@ export function ReadingsTable({
                         así que el aviso se pinta en la celda de la V−, que
                         es la segunda que el usuario teclea. */}
                     {issue?.warnings.sightBalance && (
-                      <p className="mt-1 w-48 text-xs text-warning-500">
+                      <p className="mt-1 w-48 text-xs text-warning">
                         {issue.warnings.sightBalance}
                       </p>
                     )}
@@ -416,15 +416,15 @@ export function ReadingsTable({
                   {/* Derivada: la calcula el motor desde las distancias por
                       visual. Solo lectura — que se teclease era la causa de
                       que el punto de cierre pudiera quedar sin compensar. */}
-                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {row?.distanceAccumulatedKm == null
                       ? "—"
                       : row.distanceAccumulatedKm.toFixed(3)}
                   </td>
-                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatElevation(row?.elevationCalculated)}
                   </td>
-                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums font-medium text-neutral-900">
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums font-medium text-ink">
                     {formatElevation(row?.elevationCorrected)}
                   </td>
                   {!disabled && (
@@ -467,7 +467,7 @@ export function ReadingsTable({
               <tr>
                 <td
                   colSpan={disabled ? 9 : 10}
-                  className="py-6 text-center text-sm text-neutral-500"
+                  className="py-6 text-center text-sm text-ink-2"
                 >
                   Aún no hay lecturas. Agrega la primera para empezar.
                 </td>

@@ -19,7 +19,7 @@ interface RunTabsProps {
  */
 export function RunTabs({ active, onChange }: RunTabsProps) {
   return (
-    <div role="tablist" className="flex gap-1 border-b border-neutral-200">
+    <div role="tablist" className="flex gap-1 border-b border-rule">
       {RUN_TYPES.map((runType) => {
         const isActive = runType === active;
         return (
@@ -32,8 +32,8 @@ export function RunTabs({ active, onChange }: RunTabsProps) {
             className={cn(
               "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
               isActive
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-neutral-500 hover:text-neutral-800",
+                ? "border-mira-strong text-ink"
+                : "border-transparent text-ink-2 hover:text-ink",
             )}
           >
             {RUN_TYPE_LABELS[runType]}

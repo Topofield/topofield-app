@@ -67,8 +67,8 @@ export function NewLevelingForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && <Alert variant="error">{error}</Alert>}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-5 py-4">
-        <p className="text-sm text-neutral-700">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rule bg-card px-5 py-4">
+        <p className="text-sm text-ink-2">
           {imported
             ? `Libreta importada: ${imported.forward.length} filas de ida${imported.return ? ` y ${imported.return.length} de vuelta` : ""}. Se guardará al crear el proceso.`
             : "¿Trae la libreta de un nivel digital? Impórtela y se rellenan el BM, el tipo y el modo."}

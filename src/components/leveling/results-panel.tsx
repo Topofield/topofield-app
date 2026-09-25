@@ -55,26 +55,26 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
           )}
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
             <div>
-              <dt className="text-neutral-500">ΣV+</dt>
-              <dd className="font-mono tabular-nums text-neutral-900">
+              <dt className="text-ink-2">ΣV+</dt>
+              <dd className="font-mono tabular-nums text-ink">
                 {formatElevation(result.sumBacksights)}
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-500">ΣV−</dt>
-              <dd className="font-mono tabular-nums text-neutral-900">
+              <dt className="text-ink-2">ΣV−</dt>
+              <dd className="font-mono tabular-nums text-ink">
                 {formatElevation(result.sumForesights)}
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Diferencia</dt>
-              <dd className="font-mono tabular-nums text-neutral-900">
+              <dt className="text-ink-2">Diferencia</dt>
+              <dd className="font-mono tabular-nums text-ink">
                 {formatElevation(arithmeticDifference)}
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Desnivel total (ida)</dt>
-              <dd className="font-mono tabular-nums text-neutral-900">
+              <dt className="text-ink-2">Desnivel total (ida)</dt>
+              <dd className="font-mono tabular-nums text-ink">
                 {formatElevation(result.forward.heightDifference)}
               </dd>
             </div>
@@ -88,8 +88,8 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
           <div className="flex flex-col gap-4">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-neutral-500">Error de cierre</dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dt className="text-ink-2">Error de cierre</dt>
+                <dd className="font-mono tabular-nums text-ink">
                   {formatMm(result.closureErrorMm)} mm
                 </dd>
               </div>
@@ -98,13 +98,13 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               {result.toleranceMm != null && result.meetsTolerance != null && (
                 <>
                   <div>
-                    <dt className="text-neutral-500">Tolerancia (K·√D)</dt>
-                    <dd className="font-mono tabular-nums text-neutral-900">
+                    <dt className="text-ink-2">Tolerancia (K·√D)</dt>
+                    <dd className="font-mono tabular-nums text-ink">
                       {formatMm(result.toleranceMm)} mm
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-neutral-500">Cumplimiento</dt>
+                    <dt className="text-ink-2">Cumplimiento</dt>
                     <dd>
                       <StatusIndicator
                         status={result.meetsTolerance ? "ok" : "danger"}
@@ -116,7 +116,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               )}
             </dl>
             {result.toleranceMm == null && (
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-ink-2">
                 Indica la distancia total del recorrido para evaluar la
                 tolerancia.
               </p>
@@ -139,69 +139,69 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
           <div className="flex flex-col gap-4">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-neutral-500">
+                <dt className="text-ink-2">
                   Desnivel {RUN_TYPE_LABELS.forward.toLowerCase()}
                 </dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dd className="font-mono tabular-nums text-ink">
                   {formatElevation(result.forward.heightDifference)}
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500">
+                <dt className="text-ink-2">
                   Desnivel {RUN_TYPE_LABELS.return.toLowerCase()}
                 </dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dd className="font-mono tabular-nums text-ink">
                   {formatElevation(result.return.heightDifference)}
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500">
+                <dt className="text-ink-2">
                   Error de cierre {RUN_TYPE_LABELS.forward.toLowerCase()}
                 </dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dd className="font-mono tabular-nums text-ink">
                   {result.forward.errorMm != null
                     ? `${formatMm(result.forward.errorMm)} mm`
                     : "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500">
+                <dt className="text-ink-2">
                   Error de cierre {RUN_TYPE_LABELS.return.toLowerCase()}
                 </dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dd className="font-mono tabular-nums text-ink">
                   {result.return.errorMm != null
                     ? `${formatMm(result.return.errorMm)} mm`
                     : "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500">Discrepancia</dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dt className="text-ink-2">Discrepancia</dt>
+                <dd className="font-mono tabular-nums text-ink">
                   {result.discrepancyMm != null
                     ? `${formatMm(result.discrepancyMm)} mm`
                     : "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500">Tolerancia (T·√2)</dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dt className="text-ink-2">Tolerancia (T·√2)</dt>
+                <dd className="font-mono tabular-nums text-ink">
                   {result.discrepancyToleranceMm != null
                     ? `${formatMm(result.discrepancyToleranceMm)} mm`
                     : "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500">
+                <dt className="text-ink-2">
                   Desnivel adoptado (promedio)
                 </dt>
-                <dd className="font-mono tabular-nums text-neutral-900">
+                <dd className="font-mono tabular-nums text-ink">
                   {result.adoptedHeightDifference != null
                     ? formatElevation(result.adoptedHeightDifference)
                     : "—"}
                 </dd>
               </div>
             </dl>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-ink-2">
               El desnivel adoptado es el promedio informativo de ida y vuelta
               (§ 6.9). Hoy no alimenta la compensación: las cotas corregidas se
               calculan con el error de cierre de la ida.
@@ -216,7 +216,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                 }
               />
             ) : (
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-ink-2">
                 Indica la distancia total del recorrido para evaluar la
                 tolerancia.
               </p>
@@ -230,7 +230,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
       {homologous && (
         <Card title="Puntos homólogos">
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-neutral-700">
+            <p className="text-sm text-ink-2">
               La ida y la vuelta pasan por los mismos puntos, así que se compara
               la cota de cada uno en los dos recorridos. Si el residuo{" "}
               <strong>crece a lo largo del recorrido</strong>, hay un error
@@ -240,7 +240,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+                  <tr className="border-b border-rule text-left text-xs text-ink-2">
                     <th className="py-2 pr-3 font-medium">Punto</th>
                     <th className="py-2 pr-3 font-medium">Tipo</th>
                     <th className="py-2 pr-3 font-medium">Cota ida</th>
@@ -250,19 +250,19 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                 </thead>
                 <tbody>
                   {homologous.points.map((p, i) => (
-                    <tr key={`${p.pointCode}-${i}`} className="border-b border-neutral-100">
-                      <td className="py-2 pr-3 text-neutral-900">{p.pointCode}</td>
-                      <td className="py-2 pr-3 text-neutral-700">{POINT_TYPE_LABELS[p.pointType]}</td>
-                      <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                    <tr key={`${p.pointCode}-${i}`} className="border-b border-rule">
+                      <td className="py-2 pr-3 text-ink">{p.pointCode}</td>
+                      <td className="py-2 pr-3 text-ink-2">{POINT_TYPE_LABELS[p.pointType]}</td>
+                      <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                         {formatElevation(p.forwardElevation)}
                       </td>
-                      <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                      <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                         {formatElevation(p.returnElevation)}
                       </td>
-                      <td className="py-2 pr-3 font-mono tabular-nums text-neutral-900">
+                      <td className="py-2 pr-3 font-mono tabular-nums text-ink">
                         {formatMm(p.residualMm)}
                         {i === homologous.points.length - 1 && homologous.lastIsDiscrepancy && (
-                          <span className="ml-2 font-sans text-xs text-neutral-500">
+                          <span className="ml-2 font-sans text-xs text-ink-2">
                             = discrepancia
                           </span>
                         )}
@@ -272,7 +272,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-ink-2">
               Con las cotas calculadas, sin compensar. Es una lectura
               informativa: el veredicto sigue siendo la discrepancia de la
               sección. Los códigos se emparejan sin distinguir espacios ni
@@ -289,7 +289,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+              <tr className="border-b border-rule text-left text-xs text-ink-2">
                 <th className="py-2 pr-3 font-medium">Punto</th>
                 <th className="py-2 pr-3 font-medium">Dist. acum. (km)</th>
                 <th className="py-2 pr-3 font-medium">Corrección (mm)</th>
@@ -300,25 +300,25 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               {result.forward.readings.map((reading, i) => (
                 <tr
                   key={`${reading.pointCode}-${i}`}
-                  className="border-b border-neutral-100"
+                  className="border-b border-rule"
                 >
-                  <td className="py-2 pr-3 text-neutral-900">
+                  <td className="py-2 pr-3 text-ink">
                     {reading.pointCode}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatKm(reading.distanceAccumulatedKm)}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatMm(reading.correctionApplied * 1000)}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums font-medium text-neutral-900">
+                  <td className="py-2 pr-3 font-mono tabular-nums font-medium text-ink">
                     {formatElevation(reading.elevationCorrected)}
                   </td>
                 </tr>
               ))}
               {result.forward.readings.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-neutral-500">
+                  <td colSpan={4} className="py-6 text-center text-ink-2">
                     Aún no hay lecturas.
                   </td>
                 </tr>

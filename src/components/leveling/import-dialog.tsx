@@ -76,7 +76,7 @@ export function TemplateLink() {
     <a
       href={TEMPLATE_HREF}
       download="plantilla-nivelacion.csv"
-      className="text-sm font-medium text-primary-700 underline underline-offset-2"
+      className="text-sm font-medium text-ink underline underline-offset-2"
     >
       Descargar plantilla CSV
     </a>
@@ -104,7 +104,7 @@ export function RunPreview({
       <h3 className="mb-1 text-sm font-semibold">{title}</h3>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+          <tr className="border-b border-rule text-left text-xs text-ink-2">
             <th className="py-1.5 pr-3 font-medium">Punto</th>
             <th className="py-1.5 pr-3 font-medium">Tipo</th>
             <th className="py-1.5 pr-3 font-medium">V+</th>
@@ -116,7 +116,7 @@ export function RunPreview({
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-b border-neutral-100">
+            <tr key={i} className="border-b border-rule">
               <td className="py-1 pr-3 font-medium">{r.pointCode}</td>
               <td className="py-1 pr-3">
                 <Select
@@ -130,7 +130,7 @@ export function RunPreview({
               <td className="py-1 pr-3 font-mono tabular-nums">{fmt(r.foresight, 4)}</td>
               <td className="py-1 pr-3 font-mono tabular-nums">{fmt(r.backDistanceM, 3)}</td>
               <td className="py-1 pr-3 font-mono tabular-nums">{fmt(r.foreDistanceM, 3)}</td>
-              {notes && <td className="py-1 pr-3 text-neutral-500">{notes[i] ?? ""}</td>}
+              {notes && <td className="py-1 pr-3 text-ink-2">{notes[i] ?? ""}</td>}
             </tr>
           ))}
         </tbody>
@@ -256,18 +256,18 @@ export function ImportDialog({
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-ink-2">
             Se leen el archivo <strong>.L de un nivel digital Leica</strong> y
             la <strong>plantilla CSV</strong> de TopoField. Las dos lecturas de
             cada visual se promedian. Nada se guarda hasta que pulse Guardar.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <label className="text-sm font-medium text-neutral-800">
+            <label className="text-sm font-medium text-ink">
               <span className="sr-only">Archivo</span>
               <input
                 type="file"
                 onChange={onFile}
-                className="text-sm file:mr-3 file:rounded-md file:border file:border-neutral-300 file:bg-white file:px-3 file:py-1.5 file:text-sm"
+                className="text-sm file:mr-3 file:rounded-md file:border file:border-rule-strong file:bg-card file:px-3 file:py-1.5 file:text-sm"
               />
             </label>
             <TemplateLink />
@@ -284,15 +284,15 @@ export function ImportDialog({
           {file && rows && (
             <div className="flex flex-col gap-4">
               <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-                <dt className="text-neutral-500">Formato</dt>
+                <dt className="text-ink-2">Formato</dt>
                 <dd>{FORMAT_LABELS[file.format]}</dd>
-                <dt className="text-neutral-500">Armadas · visuales leídas</dt>
+                <dt className="text-ink-2">Armadas · visuales leídas</dt>
                 <dd className="font-mono tabular-nums">
                   {file.setups.length} · {file.rawSights}
                 </dd>
                 {file.instrumentSummary && (
                   <>
-                    <dt className="text-neutral-500">Según el instrumento</dt>
+                    <dt className="text-ink-2">Según el instrumento</dt>
                     <dd className="font-mono tabular-nums">
                       Δ {file.instrumentSummary.heightDifference.toFixed(4)} m ·{" "}
                       {file.instrumentSummary.distance.toFixed(3)} m
@@ -301,13 +301,13 @@ export function ImportDialog({
                 )}
                 {file.quality.maxRepeatSpreadMm != null && (
                   <>
-                    <dt className="text-neutral-500">Mayor dispersión entre repeticiones</dt>
+                    <dt className="text-ink-2">Mayor dispersión entre repeticiones</dt>
                     <dd className="font-mono tabular-nums">{file.quality.maxRepeatSpreadMm.toFixed(1)} mm</dd>
                   </>
                 )}
                 {file.quality.maxSigmaMm != null && (
                   <>
-                    <dt className="text-neutral-500">Mayor σ del instrumento</dt>
+                    <dt className="text-ink-2">Mayor σ del instrumento</dt>
                     <dd className="font-mono tabular-nums">{file.quality.maxSigmaMm.toFixed(1)} mm</dd>
                   </>
                 )}
@@ -367,7 +367,7 @@ export function ImportDialog({
                 />
               )}
 
-              <p className="text-sm text-neutral-700">
+              <p className="text-sm text-ink-2">
                 El proceso quedará como{" "}
                 <strong>{LEVELING_TYPE_LABELS[proposedLevelingType(rows, currentType)]}</strong>
                 {rows.return ? " con recorrido de vuelta" : ""}, en modo{" "}
