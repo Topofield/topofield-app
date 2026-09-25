@@ -328,10 +328,10 @@ export function PolygonalEditor({
             </div>
           </div>
           {georefBlocked && (
-            <p className="mt-1 text-right text-xs text-neutral-500">{georefBlocked}</p>
+            <p className="mt-1 text-right text-xs text-ink-2">{georefBlocked}</p>
           )}
           {georeferenceSummary(process) && (
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="mt-1 text-sm text-ink-2">
               Georreferenciado {georeferenceSummary(process)}.
             </p>
           )}
@@ -374,21 +374,21 @@ export function PolygonalEditor({
         <div className="flex flex-wrap items-center gap-3">
           <AngleFormatToggle value={angleFormat} onChange={changeAngleFormat} />
           {readOnly && (
-            <span className="text-xs text-neutral-500">
+            <span className="text-xs text-ink-2">
               El proceso está cerrado: el formato solo cambia la vista y no se
               guarda.
             </span>
           )}
           {formatError && (
-            <span className="text-xs text-danger-500">{formatError}</span>
+            <span className="text-xs text-danger">{formatError}</span>
           )}
         </div>
 
         <details
           open={process.status === "draft" || process.status === "in_progress"}
-          className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
+          className="group rounded-lg border border-rule bg-card shadow-sm"
         >
-          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-ink marker:content-none">
             <h2 className="text-base font-semibold">
               Configuración
             </h2>
@@ -396,7 +396,7 @@ export function PolygonalEditor({
               aria-hidden="true"
               viewBox="0 0 20 20"
               fill="none"
-              className="h-4 w-4 shrink-0 rotate-0 text-neutral-500 transition-transform group-open:rotate-90 motion-reduce:transition-none"
+              className="h-4 w-4 shrink-0 rotate-0 text-ink-2 transition-transform group-open:rotate-90 motion-reduce:transition-none"
             >
               <path
                 d="M7.5 4.5L13 10l-5.5 5.5"
@@ -407,7 +407,7 @@ export function PolygonalEditor({
               />
             </svg>
           </summary>
-          <div className="border-t border-neutral-100 px-5 py-4">
+          <div className="border-t border-rule px-5 py-4">
             <PolygonalConfigFields
               value={config}
               angleFormat={angleFormat}
@@ -494,11 +494,11 @@ export function PolygonalEditor({
             />
             <div className="flex items-center gap-3">
               {captureBlocked ? (
-                <span className="text-sm text-danger-500">
+                <span className="text-sm text-danger">
                   Corrige las celdas con error para poder guardar.
                 </span>
               ) : weightsError ? (
-                <span className="text-sm text-danger-500">{weightsError}</span>
+                <span className="text-sm text-danger">{weightsError}</span>
               ) : null}
               <Button
                 onClick={handleSave}
@@ -506,7 +506,7 @@ export function PolygonalEditor({
               >
                 {isPending ? "Guardando…" : "Guardar"}
               </Button>
-              <span aria-hidden className="h-6 w-px bg-neutral-200" />
+              <span aria-hidden className="h-6 w-px bg-rule" />
               <CloseProcessDialog
                 processId={process.id}
                 type={config.type}

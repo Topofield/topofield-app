@@ -80,7 +80,7 @@ export function PolygonalPlot({
   const traces = polygonalTraces(input, result);
   if (!traces) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-ink-2">
         Todavía no se puede dibujar: faltan ángulos o distancias en alguna
         estación, o las coordenadas y el azimut de partida. El dibujo aparece
         en cuanto el cálculo tenga coordenadas.
@@ -154,7 +154,7 @@ export function PolygonalPlot({
     <figure className="flex flex-col gap-2">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="h-auto w-full max-w-full touch-none select-none rounded-md border border-neutral-200 bg-white"
+        className="h-auto w-full max-w-full touch-none select-none rounded-md border border-rule bg-card"
         role="img"
         aria-label={summary}
       >
@@ -169,7 +169,7 @@ export function PolygonalPlot({
                 x2={frame.toX(e)}
                 y1={0}
                 y2={H}
-                stroke="var(--color-neutral-200)"
+                stroke="var(--color-rule)"
                 strokeWidth={1}
               />
               <text
@@ -177,7 +177,7 @@ export function PolygonalPlot({
                 y={H - 6}
                 textAnchor="middle"
                 fontSize={10}
-                fill="var(--color-neutral-500)"
+                fill="var(--color-ink-2)"
               >
                 E {coord(e)}
               </text>
@@ -190,14 +190,14 @@ export function PolygonalPlot({
                 x2={W}
                 y1={frame.toY(n)}
                 y2={frame.toY(n)}
-                stroke="var(--color-neutral-200)"
+                stroke="var(--color-rule)"
                 strokeWidth={1}
               />
               <text
                 x={6}
                 y={frame.toY(n) - 4}
                 fontSize={10}
-                fill="var(--color-neutral-500)"
+                fill="var(--color-ink-2)"
               >
                 N {coord(n)}
               </text>
@@ -212,7 +212,7 @@ export function PolygonalPlot({
                 y1={frame.toY(reference.north)}
                 x2={frame.toX(adjusted[0].east)}
                 y2={frame.toY(adjusted[0].north)}
-                stroke="var(--color-neutral-500)"
+                stroke="var(--color-ink-2)"
                 strokeWidth={1}
                 strokeDasharray="2 3"
               />
@@ -222,13 +222,13 @@ export function PolygonalPlot({
                   const y = frame.toY(reference.north);
                   return `${x},${y - 7} ${x + 6},${y + 5} ${x - 6},${y + 5}`;
                 })()}
-                fill="var(--color-neutral-900)"
+                fill="var(--color-ink)"
               />
               <text
                 x={frame.toX(reference.east) + 9}
                 y={frame.toY(reference.north) + 4}
                 fontSize={11}
-                fill="var(--color-neutral-900)"
+                fill="var(--color-ink)"
               >
                 {reference.code} (amarre)
               </text>
@@ -241,7 +241,7 @@ export function PolygonalPlot({
               <polyline
                 points={toPoints(exaggerated)}
                 fill="none"
-                stroke="var(--color-warning-500)"
+                stroke="var(--color-warning)"
                 strokeWidth={1.5}
                 strokeDasharray="6 4"
               />
@@ -251,8 +251,8 @@ export function PolygonalPlot({
                   cx={frame.toX(p.east)}
                   cy={frame.toY(p.north)}
                   r={3}
-                  fill="white"
-                  stroke="var(--color-warning-500)"
+                  fill="var(--color-card)"
+                  stroke="var(--color-warning)"
                   strokeWidth={1.5}
                 />
               ))}
@@ -263,7 +263,7 @@ export function PolygonalPlot({
           <polyline
             points={toPoints(adjusted)}
             fill="none"
-            stroke="var(--color-primary-500)"
+            stroke="var(--color-mira-strong)"
             strokeWidth={2}
           />
           {labelled.map((t, i) => (
@@ -272,14 +272,14 @@ export function PolygonalPlot({
                 cx={frame.toX(t.adjusted.east)}
                 cy={frame.toY(t.adjusted.north)}
                 r={4}
-                fill="var(--color-primary-600)"
+                fill="var(--color-ink)"
               />
               <text
                 x={frame.toX(t.adjusted.east) + 7}
                 y={frame.toY(t.adjusted.north) - 7}
                 fontSize={12}
                 fontWeight={600}
-                fill="var(--color-neutral-900)"
+                fill="var(--color-ink)"
               >
                 {t.code}
               </text>
@@ -289,32 +289,32 @@ export function PolygonalPlot({
 
         {/* Flecha de norte */}
         <g transform={`translate(${W - 30}, 18)`}>
-          <polygon points="0,0 7,18 0,13 -7,18" fill="var(--color-neutral-900)" />
-          <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--color-neutral-900)">
+          <polygon points="0,0 7,18 0,13 -7,18" fill="var(--color-ink)" />
+          <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--color-ink)">
             N
           </text>
         </g>
 
         {/* Barra de escala */}
         <g transform={`translate(12, ${H - 28})`}>
-          <rect x={0} y={0} width={barPixels} height={4} fill="var(--color-neutral-900)" />
-          <text x={barPixels / 2} y={-4} textAnchor="middle" fontSize={10} fill="var(--color-neutral-900)">
+          <rect x={0} y={0} width={barPixels} height={4} fill="var(--color-ink)" />
+          <text x={barPixels / 2} y={-4} textAnchor="middle" fontSize={10} fill="var(--color-ink)">
             {barMeters.toLocaleString("es-CO")} m
           </text>
         </g>
       </svg>
 
-      <figcaption className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-neutral-700">
+      <figcaption className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-2">
         <span className="inline-flex items-center gap-2">
           <svg width={24} height={8} aria-hidden>
-            <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-primary-500)" strokeWidth={2} />
+            <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-mira-strong)" strokeWidth={2} />
           </svg>
           Ajustada
         </span>
         {exaggerated && k ? (
           <span className="inline-flex items-center gap-2">
             <svg width={24} height={8} aria-hidden>
-              <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-warning-500)" strokeWidth={1.5} strokeDasharray="6 4" />
+              <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-warning)" strokeWidth={1.5} strokeDasharray="6 4" />
             </svg>
             Sin compensar (desplazamientos {factorLabel(k)})
           </span>

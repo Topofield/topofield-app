@@ -131,7 +131,7 @@ export function ReassignCoordinatesDialog({
           }
         >
           <div className="flex flex-col gap-4">
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-ink-2">
               Las coordenadas de todas las estaciones se recalculan manteniendo
               los ángulos y las distancias.
             </p>
@@ -173,7 +173,7 @@ export function ReassignCoordinatesDialog({
               onChange={setAzimuth}
             />
             {azimutCalculado != null && (
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-ink-2">
                 El error angular, el error lineal y la precisión relativa no
                 cambian: girar y trasladar la poligonal no altera nada de lo que
                 el cierre certifica.

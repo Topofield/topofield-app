@@ -121,7 +121,7 @@ export function AngleInput({
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-neutral-800">
+        <label htmlFor={id} className="text-sm font-medium text-ink">
           {label}
         </label>
       )}
@@ -136,24 +136,24 @@ export function AngleInput({
           aria-label={label ? undefined : "Grados decimales"}
           aria-invalid={invalid || error ? true : undefined}
           className={cn(
-            "h-9 min-h-11 w-36 rounded-md border border-neutral-400 bg-white px-1.5 text-right text-sm text-neutral-900",
-            "disabled:bg-neutral-100 disabled:text-neutral-500",
-            (invalid || error) && "border-danger-500",
+            "h-9 min-h-11 w-36 rounded-md border border-rule-strong bg-card px-1.5 text-right text-sm text-ink",
+            "disabled:bg-sel disabled:text-ink-2",
+            (invalid || error) && "border-danger",
           )}
           value={text}
           disabled={disabled}
           onChange={(e) => handleChange(e.target.value)}
         />
-        <span className="text-sm text-neutral-500">°</span>
+        <span className="text-sm text-ink-2">°</span>
       </div>
       {stored && (
-        <p className="text-xs text-warning-500">
+        <p className="text-xs text-warning">
           Se guarda como {stored.deg}°{stored.min}′{stored.sec}″ (a la décima de
           segundo).
         </p>
       )}
       {(invalid || error) && (
-        <p className="text-sm text-danger-500">{invalid ? NOT_A_NUMBER : error}</p>
+        <p className="text-sm text-danger">{invalid ? NOT_A_NUMBER : error}</p>
       )}
     </div>
   );
@@ -178,7 +178,7 @@ export function AngleFormatToggle({
 }) {
   return (
     <div role="group" aria-label="Formato de los ángulos" className="inline-flex items-center gap-1">
-      <span className="mr-1 text-sm text-neutral-700">Ángulos en</span>
+      <span className="mr-1 text-sm text-ink-2">Ángulos en</span>
       {(["dms", "decimal"] as const).map((format) => (
         <Button
           key={format}

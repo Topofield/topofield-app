@@ -105,7 +105,7 @@ function AngleReadingsCell({
         onClick={() => setOpen((o) => !o)}
         className="flex items-baseline gap-2 text-left tabular-nums"
       >
-        <span className={average ? "font-medium" : "text-neutral-400"}>
+        <span className={average ? "font-medium" : "text-ink-3"}>
           {average
             ? format === "decimal"
               ? // El promedio en decimal sale de las lecturas, no del DMS ya
@@ -114,30 +114,30 @@ function AngleReadingsCell({
               : `${average.deg}°${average.min}′${average.sec}″`
             : "Sin lecturas"}
         </span>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-ink-2">
           {dispersion != null ? `±${dispersion.toFixed(1)}″` : ""}
           {` · ${values.length}/${station.readings.length}`}
         </span>
-        <span aria-hidden className="text-xs text-neutral-400">
+        <span aria-hidden className="text-xs text-ink-3">
           {open ? "▴" : "▾"}
         </span>
       </button>
 
       {issue?.errors.angle && (
-        <p className="text-xs text-danger-500">{issue.errors.angle}</p>
+        <p className="text-xs text-danger">{issue.errors.angle}</p>
       )}
       {readingIssue?.error && (
-        <p className="text-xs text-warning-500">{readingIssue.error}</p>
+        <p className="text-xs text-warning">{readingIssue.error}</p>
       )}
       {readingIssue?.warning && (
-        <p className="text-xs text-warning-500">{readingIssue.warning}</p>
+        <p className="text-xs text-warning">{readingIssue.warning}</p>
       )}
 
       {open && (
-        <div className="mt-1 flex flex-col gap-1 rounded-md bg-neutral-50 p-2">
+        <div className="mt-1 flex flex-col gap-1 rounded-md bg-paper p-2">
           {station.readings.map((reading, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="w-4 text-xs text-neutral-500">{index + 1}</span>
+              <span className="w-4 text-xs text-ink-2">{index + 1}</span>
               <AngleInput
                 format={format}
                 value={reading}
@@ -210,7 +210,7 @@ export function StationsTable({
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+            <tr className="border-b border-rule text-left text-xs text-ink-2">
               <th className="py-2 pr-3 font-medium">Estación</th>
               <th className="py-2 pr-3 font-medium">Ángulo</th>
               {showDeflection && (
@@ -230,7 +230,7 @@ export function StationsTable({
               return (
                 <tr
                   key={station.id}
-                  className="border-b border-neutral-100 align-top"
+                  className="border-b border-rule align-top"
                 >
                   <td className="py-2 pr-3">
                     <Input
@@ -288,13 +288,13 @@ export function StationsTable({
                       className="w-28"
                     />
                   </td>
-                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatAngle(computed?.azimuth ?? null)}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatCoord(computed?.deltaNorth ?? null)}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatCoord(computed?.deltaEast ?? null)}
                   </td>
                   {!disabled && (
@@ -318,7 +318,7 @@ export function StationsTable({
               <tr>
                 <td
                   colSpan={showDeflection ? 8 : 7}
-                  className="py-6 text-center text-sm text-neutral-500"
+                  className="py-6 text-center text-sm text-ink-2"
                 >
                   Aún no hay estaciones. Agrega la primera para empezar.
                 </td>
@@ -334,7 +334,7 @@ export function StationsTable({
           return (
             <li
               key={station.id}
-              className="rounded-lg border border-neutral-200 p-4"
+              className="rounded-lg border border-rule p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <Input
@@ -359,7 +359,7 @@ export function StationsTable({
 
               <div className="mt-3 flex flex-col gap-3">
                 <div>
-                  <p className="mb-1 text-xs font-medium text-neutral-500">Ángulo</p>
+                  <p className="mb-1 text-xs font-medium text-ink-2">Ángulo</p>
                   <AngleReadingsCell
                     station={station}
                     issue={issue}
@@ -377,7 +377,7 @@ export function StationsTable({
 
                 {showDeflection && (
                   <div>
-                    <p className="mb-1 text-xs font-medium text-neutral-500">
+                    <p className="mb-1 text-xs font-medium text-ink-2">
                       Sentido
                     </p>
                     <Select
@@ -399,7 +399,7 @@ export function StationsTable({
                 )}
 
                 <div>
-                  <p className="mb-1 text-xs font-medium text-neutral-500">
+                  <p className="mb-1 text-xs font-medium text-ink-2">
                     Distancia (m)
                   </p>
                   <NumberInput
@@ -412,22 +412,22 @@ export function StationsTable({
                 </div>
               </div>
 
-              <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-neutral-100 pt-3">
+              <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-rule pt-3">
                 <div>
-                  <dt className="text-xs text-neutral-500">Azimut</dt>
-                  <dd className="font-mono text-sm tabular-nums text-neutral-700">
+                  <dt className="text-xs text-ink-2">Azimut</dt>
+                  <dd className="font-mono text-sm tabular-nums text-ink-2">
                     {formatAngle(computed?.azimuth ?? null)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-neutral-500">ΔN</dt>
-                  <dd className="font-mono text-sm tabular-nums text-neutral-700">
+                  <dt className="text-xs text-ink-2">ΔN</dt>
+                  <dd className="font-mono text-sm tabular-nums text-ink-2">
                     {formatCoord(computed?.deltaNorth ?? null)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-neutral-500">ΔE</dt>
-                  <dd className="font-mono text-sm tabular-nums text-neutral-700">
+                  <dt className="text-xs text-ink-2">ΔE</dt>
+                  <dd className="font-mono text-sm tabular-nums text-ink-2">
                     {formatCoord(computed?.deltaEast ?? null)}
                   </dd>
                 </div>
@@ -436,7 +436,7 @@ export function StationsTable({
           );
         })}
         {stations.length === 0 && (
-          <li className="py-6 text-center text-sm text-neutral-500">
+          <li className="py-6 text-center text-sm text-ink-2">
             Aún no hay estaciones. Agrega la primera para empezar.
           </li>
         )}

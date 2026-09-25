@@ -95,15 +95,15 @@ export function verdictFor(
 }
 
 const TONE_CLASSES: Record<Tone, string> = {
-  ok: "border-success-500/30 bg-success-500/5",
-  danger: "border-danger-500/30 bg-danger-500/5",
-  neutral: "border-neutral-200 bg-neutral-50",
+  ok: "border-success/30 bg-success-bg",
+  danger: "border-danger/30 bg-danger-bg",
+  neutral: "border-rule bg-paper",
 };
 
 const TITLE_CLASSES: Record<Tone, string> = {
-  ok: "text-success-500",
-  danger: "text-danger-500",
-  neutral: "text-neutral-500",
+  ok: "text-success",
+  danger: "text-danger",
+  neutral: "text-ink-2",
 };
 
 function formatMeters(value: number | null, decimals = 3): string {
@@ -149,11 +149,11 @@ export function ClosureVerdict({
 
       {v.achieved && (
         <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-          <span className="font-mono text-3xl font-semibold tabular-nums text-neutral-900">
+          <span className="font-mono text-3xl font-semibold tabular-nums text-ink">
             {v.achieved}
           </span>
           {v.required && (
-            <span className="font-mono text-sm tabular-nums text-neutral-500">
+            <span className="font-mono text-sm tabular-nums text-ink-2">
               requerido {v.required}
             </span>
           )}
@@ -161,14 +161,14 @@ export function ClosureVerdict({
       )}
 
       {result.linearError != null && (
-        <p className="mt-2 font-mono text-sm tabular-nums text-neutral-500">
+        <p className="mt-2 font-mono text-sm tabular-nums text-ink-2">
           Error de cierre {formatMeters(result.linearError, 4)} m · Perímetro{" "}
           {formatMeters(result.perimeter)} m
         </p>
       )}
 
       {v.caveat && (
-        <p className="mt-3 border-t border-neutral-200 pt-3 text-sm text-neutral-600">
+        <p className="mt-3 border-t border-rule pt-3 text-sm text-ink-2">
           {v.caveat}
         </p>
       )}

@@ -27,8 +27,8 @@ function formatMeters(value: number | null, decimals = 3): string {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
-      <span className="text-sm text-neutral-500">{label}</span>
-      <span className="font-mono text-sm tabular-nums text-neutral-900">{value}</span>
+      <span className="text-sm text-ink-2">{label}</span>
+      <span className="font-mono text-sm tabular-nums text-ink">{value}</span>
     </div>
   );
 }
@@ -120,7 +120,7 @@ export function ResultsPanel({
               }
             />
           </div>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-ink-2">
             La desviación típica que se supone para cada ángulo y cada
             distancia; todas las observaciones pesan igual. La hoja de la
             universidad usa, por ejemplo, 2″, 0.011 m y 2 mediciones. Una
@@ -167,7 +167,7 @@ export function ResultsPanel({
                   label="Control de reorientación"
                   value={formatSeconds(result.reorientationError)}
                 />
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-ink-2">
                   El último azimut debe volver al azimut de amarre. Es control
                   de calidad del levantamiento, no criterio de tolerancia.
                 </p>
@@ -200,7 +200,7 @@ export function ResultsPanel({
           </h3>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+              <tr className="border-b border-rule text-left text-xs text-ink-2">
                 <th className="py-2 pr-3 font-medium">Estación</th>
                 <th className="py-2 pr-3 font-medium">ΔN corr.</th>
                 <th className="py-2 pr-3 font-medium">ΔE corr.</th>
@@ -210,20 +210,20 @@ export function ResultsPanel({
             </thead>
             <tbody>
               {result.stations.map((s, i) => (
-                <tr key={i} className="border-b border-neutral-100">
-                  <td className="py-2 pr-3 font-medium text-neutral-900">
+                <tr key={i} className="border-b border-rule">
+                  <td className="py-2 pr-3 font-medium text-ink">
                     {s.pointCode || `E${i + 1}`}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatMeters(s.correctedDeltaNorth)}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatMeters(s.correctedDeltaEast)}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatMeters(s.north)}
                   </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {formatMeters(s.east)}
                   </td>
                 </tr>
@@ -241,7 +241,7 @@ export function ResultsPanel({
             </h3>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+                <tr className="border-b border-rule text-left text-xs text-ink-2">
                   <th className="py-2 pr-3 font-medium">Estación</th>
                   <th className="py-2 pr-3 font-medium">Ángulo (″)</th>
                   <th className="py-2 pr-3 font-medium">Distancia (mm)</th>
@@ -250,24 +250,24 @@ export function ResultsPanel({
               </thead>
               <tbody>
                 {result.stations.map((s, i) => (
-                  <tr key={i} className="border-b border-neutral-100">
-                    <td className="py-2 pr-3 font-medium text-neutral-900">
+                  <tr key={i} className="border-b border-rule">
+                    <td className="py-2 pr-3 font-medium text-ink">
                       {s.pointCode || `E${i + 1}`}
                     </td>
-                    <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                    <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                       {signed(adjustment.angleCorrectionsSec[i], 3)}
                     </td>
-                    <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                    <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                       {signed(mm(adjustment.distanceCorrectionsM[i]), 2)}
                     </td>
-                    <td className="py-2 pr-3 font-mono tabular-nums text-neutral-700">
+                    <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                       {formatMeters(adjustment.adjustedDistances[i] ?? null)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-xs text-neutral-500">
+            <p className="mt-2 text-xs text-ink-2">
               La orientación es el dato de partida y no se ajusta. Una celda con
               «—» es una observación que no entra en el ajuste.
             </p>
@@ -278,10 +278,10 @@ export function ResultsPanel({
               label="Condiciones · iteraciones"
               value={`${adjustment.conditions} · ${adjustment.iterations}`}
             />
-            <p className="mt-1 text-sm text-neutral-700">
+            <p className="mt-1 text-sm text-ink-2">
               {SIGMA0_TEXT[sigma0Reading(adjustment.sigma0)]}
             </p>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-ink-2">
               σ₀ compara lo medido con los pesos supuestos: cerca de 1 (entre{" "}
               {SIGMA0_BAND[0]} y {SIGMA0_BAND[1]}) es lo esperado. Es
               información, no criterio: el veredicto de cierre es el mismo con

@@ -108,8 +108,8 @@ export function GeoreferenceDialog({
     onChange: (p: PointDraft) => void,
   ) {
     return (
-      <fieldset className="flex flex-col gap-3 rounded-md border border-neutral-200 p-3">
-        <legend className="px-1 text-sm font-semibold text-neutral-800">{label}</legend>
+      <fieldset className="flex flex-col gap-3 rounded-md border border-rule p-3">
+        <legend className="px-1 text-sm font-semibold text-ink">{label}</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <Select
             label="Estación"
@@ -185,7 +185,7 @@ export function GeoreferenceDialog({
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-ink-2">
             Dos estaciones del levantamiento con sus coordenadas reales llevan
             la poligonal al sistema real: se gira y se traslada, sin cambiar
             ángulos ni distancias. Use las dos estaciones más alejadas entre
@@ -198,22 +198,22 @@ export function GeoreferenceDialog({
           {/* El error, solo cuando ya está todo tecleado: antes es el paso
               siguiente, no un fallo. */}
           {planned && !planned.ok && [a, b].every((p) => p.index !== "" && p.north !== "" && p.east !== "") && (
-            <p className="text-sm text-danger-500">{planned.error}</p>
+            <p className="text-sm text-danger">{planned.error}</p>
           )}
 
           {plan && (
             <div className="flex flex-col gap-3">
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <dt className="text-neutral-500">Rotación</dt>
+                <dt className="text-ink-2">Rotación</dt>
                 <dd className="font-mono tabular-nums">{formatDms(plan.fit.transform.rotation)}</dd>
-                <dt className="text-neutral-500">Traslación</dt>
+                <dt className="text-ink-2">Traslación</dt>
                 <dd className="font-mono tabular-nums">
                   N {plan.fit.transform.shiftNorth.toFixed(4)} · E{" "}
                   {plan.fit.transform.shiftEast.toFixed(4)}
                 </dd>
-                <dt className="text-neutral-500">Factor de escala</dt>
+                <dt className="text-ink-2">Factor de escala</dt>
                 <dd className="font-mono tabular-nums">{plan.fit.scaleFactor.toFixed(6)}</dd>
-                <dt className="text-neutral-500">Residuos</dt>
+                <dt className="text-ink-2">Residuos</dt>
                 <dd className="font-mono tabular-nums">
                   {plan.pointCodes
                     .map(
@@ -250,7 +250,7 @@ export function GeoreferenceDialog({
                 </Alert>
               )}
               {closed && (
-                <p className="text-sm text-neutral-700">
+                <p className="text-sm text-ink-2">
                   El proceso está cerrado: se reescriben solo coordenadas y
                   azimuts. El veredicto de cierre no cambia.
                 </p>
@@ -260,7 +260,7 @@ export function GeoreferenceDialog({
                 <table className="w-full text-sm">
                   <caption className="sr-only">Coordenadas actuales y georreferenciadas</caption>
                   <thead>
-                    <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+                    <tr className="border-b border-rule text-left text-xs text-ink-2">
                       <th className="py-2 pr-3 font-medium">Estación</th>
                       <th className="py-2 pr-3 font-medium">Norte actual</th>
                       <th className="py-2 pr-3 font-medium">Este actual</th>
@@ -270,12 +270,12 @@ export function GeoreferenceDialog({
                   </thead>
                   <tbody>
                     {plan.after.stations.map((s, i) => (
-                      <tr key={i} className="border-b border-neutral-100">
+                      <tr key={i} className="border-b border-rule">
                         <td className="py-1.5 pr-3 font-medium">{s.pointCode}</td>
-                        <td className="py-1.5 pr-3 font-mono tabular-nums text-neutral-500">
+                        <td className="py-1.5 pr-3 font-mono tabular-nums text-ink-2">
                           {plan.before.stations[i]?.north?.toFixed(3) ?? "—"}
                         </td>
-                        <td className="py-1.5 pr-3 font-mono tabular-nums text-neutral-500">
+                        <td className="py-1.5 pr-3 font-mono tabular-nums text-ink-2">
                           {plan.before.stations[i]?.east?.toFixed(3) ?? "—"}
                         </td>
                         <td className="py-1.5 pr-3 font-mono tabular-nums">{s.north?.toFixed(3) ?? "—"}</td>
