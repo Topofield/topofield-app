@@ -1,14 +1,54 @@
 # PRD-de-fase 20 — Identidad visual del prototipo y coma decimal
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-25
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-25
 
 **Rama:** `fase-20-identidad-visual-coma-decimal`
 **Peticiones:** UI1 y UI2 de [`pendientes.md`](../pendientes.md), anotadas en
 la Fase 18
 **Módulo:** toda la interfaz (sistema de diseño, las pantallas de los tres
 módulos, informe imprimible y manual)
+
+> **Divergencias de la implementación:**
+>
+> - **Un solo bloque de tokens con `light-dark()`**, no un bloque oscuro
+>   duplicado bajo la media query y bajo `data-theme`: el tema lo decide
+>   `color-scheme`. Va en `@theme static`, porque Tailwind v4 solo emite las
+>   variables que usa alguna utilidad y estas también se leen con `var()`. Se
+>   reinicia además la paleta por defecto de Tailwind (`--color-*: initial`).
+> - **El semáforo no cambia de valor** (decisión 5): los cuatro colores de la
+>   Fase 5 cumplen 3:1 también sobre la tarjeta oscura. Van al bloque de los
+>   tokens por rol, con un solo valor.
+> - **UI2: la celda se marca a sí misma**, no el validador (decisión 11): así
+>   funciona en las 45 celdas sin tocar ningún validador. Bloqueo con
+>   `InvalidNumbersContext` en los editores y `setCustomValidity` en los
+>   `<form>`. Más allá del inventario: cinco `Number()` sobre texto tecleado,
+>   los umbrales —que guardaban números y borraban el separador— y cinco
+>   celdas de texto que no marcaban lo inválido (pesos de mínimos cuadrados,
+>   georreferenciación).
+> - **El selector** es un icono con un `<select>` nativo transparente encima:
+>   un `<select>` visible no cabe en la cabecera en 390 px. En las páginas de
+>   acceso va arriba a la derecha.
+> - **Hallado en la verificación en pantalla:**
+>   - la poligonal ajustada se dibuja en **tinta**, no en `mira-strong`: con
+>     el acento quedaba en el mismo tono que la sin compensar (`warning`);
+>   - `text-rendering: geometricPrecision` en el `body`: Chromium en Linux
+>     abría huecos dentro de las palabras con Barlow («Client e Demo»). Se vio
+>     en las capturas del manual a doble densidad;
+>   - las casillas nativas toman el acento con `accent-color` global: las
+>     clases de color de texto que tenían no hacían nada;
+>   - el aviso de hidratación en la pantalla de acceso durante el recorrido
+>     era de Playwright: la captura añade `caret-color` a los campos y, si se
+>     hace antes de hidratar, React lo ve como un atributo que el servidor no
+>     puso. No es de la app.
+> - **`/design-system`** muestra tokens y contraste por tema, y su registro de
+>   decisiones anota que el contraste es ya un test.
+> - **Manual:** además de los textos, una captura nueva del panel en el
+>   teléfono con el tema oscuro (29), tomada con la cookie del selector.
+> - **Doc técnica:** la regla de «qué entra en el sistema de diseño» se matizó
+>   (cierra una entrada de la § 11 de la Fase 13); el Excel, que conserva la
+>   paleta anterior, pasa a la § 11.
 
 ## Propósito
 

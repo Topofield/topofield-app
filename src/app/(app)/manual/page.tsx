@@ -2050,7 +2050,7 @@ function Captura({
         alt={alt}
         width={width}
         height={height}
-        // Solo la primera se carga de inmediato; las otras diez suman 2,8 MB.
+        // Solo la primera se carga de inmediato; las otras veintiocho suman 8,4 MB.
         loading={prioridad ? "eager" : "lazy"}
         decoding="async"
         className={cn(
