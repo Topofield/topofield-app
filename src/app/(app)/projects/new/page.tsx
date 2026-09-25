@@ -13,7 +13,7 @@ export default function NewProjectPage() {
       <h1 className="mt-2 text-2xl font-bold">
         Nuevo proyecto
       </h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="mt-1 text-sm text-ink-2">
         Registra los datos del proyecto y del equipo en dos pasos.
       </p>
       <Card className="mt-6">

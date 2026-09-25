@@ -29,7 +29,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-neutral-200 bg-white">
+      <header className="border-b border-rule bg-card">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
@@ -39,14 +39,14 @@ export default async function AppLayout({
             <Logo />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="hidden text-sm text-neutral-500 sm:inline">
+            <span className="hidden text-sm text-ink-2 sm:inline">
               {user.email}
             </span>
             {/* Visible también en móvil, al contrario que el correo: la ayuda
                 hace falta sobre todo en el teléfono, en campo. */}
             <Link
               href="/manual"
-              className="text-sm font-medium text-primary-600 transition-colors hover:text-primary-700"
+              className="text-sm font-medium text-ink underline-offset-2 hover:underline"
             >
               Manual
             </Link>

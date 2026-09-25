@@ -11,7 +11,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
         <h1>
           <Logo className="justify-center text-2xl" />
         </h1>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           Plataforma para procesos topográficos
         </p>
       </header>
