@@ -96,6 +96,10 @@
     /* Cifras de ancho fijo y alineadas, como el prototipo: las tablas de
        cotas y coordenadas se leen en columna. */
     font-variant-numeric: tabular-nums lining-nums;
+    /* Sin esto, Chromium en Linux redondea al píxel el avance de los glifos
+       de Barlow según su hinting, y abre huecos dentro de las palabras
+       («Client e Demo», «mo nitoreo»). Visto en las capturas del manual. */
+    text-rendering: geometricPrecision;
     background-image:
       linear-gradient(
         to right,
