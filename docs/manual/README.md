@@ -84,9 +84,21 @@ Ingrese con su correo y contraseña. Si aún no tiene cuenta, use **Regístrate*
 pide, junto con su nombre, correo y contraseña. Después recibirá un mensaje para
 confirmar su dirección: hasta que pulse ese enlace no podrá entrar.
 
-La primera vez que entre encontrará un **proyecto de ejemplo** con cuatro
-poligonales ya calculadas, para que pueda ver cómo funciona la aplicación sin
-capturar nada. Puede modificarlo o eliminarlo cuando quiera.
+La primera vez que entre encontrará un **proyecto de ejemplo** hecho con
+**carteras de campo reales**, ya calculadas, para que pueda ver cómo funciona la
+aplicación sin capturar nada:
+
+- Tres poligonales: la **V10**, amarrada a TT4 y ya cerrada; la de la **Sede
+  Vivero**, ajustada por mínimos cuadrados, y la misma en un sistema local,
+  lista para **georreferenciar** con los vértices D1 y D3 del catálogo.
+- Dos nivelaciones: la de **El Verjón**, con ida y vuelta por los mismos puntos
+  —verá sus puntos homólogos y los avisos de equilibrado—, y el **tramo 2**,
+  leído del archivo de un nivel digital Leica.
+- **Torre Alameda**, un control de asentamientos simulado con catorce visitas
+  y su libreta de nivelación en cada una.
+- Un informe de cierre por módulo.
+
+Puede modificarlo o eliminarlo cuando quiera.
 
 Cada usuario ve únicamente sus propios proyectos.
 
@@ -116,9 +128,10 @@ Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
 Use **+ Nuevo Proyecto** para crear uno.
 
 > **Empieza con un proyecto de ejemplo.** La primera vez que entra, su cuenta ya
-> trae un **«Proyecto de ejemplo»** con poligonales, una nivelación, un lugar de
-> control de asentamientos y sus informes, para que explore la aplicación con
-> datos reales. Puede modificarlo o eliminarlo cuando quiera.
+> trae un **«Proyecto de ejemplo»** con carteras de campo reales —poligonales y
+> nivelaciones—, un lugar de control de asentamientos simulado y sus informes,
+> para que explore la aplicación con datos reales (§ 2). Puede modificarlo o
+> eliminarlo cuando quiera.
 
 ---
 

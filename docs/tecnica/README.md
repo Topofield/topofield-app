@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-25 · Fase 20 cerrada · 817 tests ·
+**Última actualización:** 2026-09-25 · Fase 21 cerrada · 817 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -73,6 +73,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 18 | Libreta de nivelación y panel de asentamientos | cerrada |
 | 19 | Equilibrado por armada y compensación desde el origen | cerrada |
 | 20 | Identidad visual del prototipo y coma decimal | cerrada |
+| 21 | La demo con las carteras reales | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -187,6 +188,7 @@ src/
 ├── lib/
 │   ├── calculations/        algoritmos puros
 │   ├── validators/          reglas de validación
+│   ├── demo/                proyecto de ejemplo y carteras reales (Fase 21)
 │   ├── design/              escalas de gráfica, marcadores y contraste
 │   ├── export/              libros de Excel de los tres módulos (§ 4.8)
 │   ├── import/leveling/     lectores de libretas de nivel digital (Fase 16)
@@ -698,6 +700,21 @@ Dos detalles que rompen el flujo en silencio si se olvidan:
   error: redirige a `site_url` y el canje nunca ocurre.
 - `/auth/callback` no puede sufrir el desvío del proxy que manda al dashboard a
   quien ya tiene sesión. Por eso está en `RUTAS_SIN_DESVIO` en `src/proxy.ts`.
+
+**Qué trae la demo (Fase 21).** Desde la Fase 21 el «Proyecto de ejemplo» son
+las carteras de campo reales con que se validó el motor, no datos sintéticos:
+la poligonal V10 de la cartera TT4 (cerrada, con su informe), la Famarena de
+la Sede Vivero ajustada por mínimos cuadrados y su versión en sistema local
+para georreferenciar, la nivelación de El Verjón con ida y vuelta y el tramo 2
+leído del crudo de un nivel digital Leica (cerrado, con su informe), más Torre
+Alameda, la simulación del prototipo de asentamientos (cerrada, con su
+informe). Los datos de campo viven **una sola vez** en `src/lib/demo/`
+—`carteras.ts`, `crudo-tramo2.ts` (el `.L` como texto, porque `docs/` no se
+despliega), `torre-alameda.ts`— y los usan la demo, el seed y los tests. Los
+resultados los calcula el motor al crearla; el lugar escribe sus catorce
+visitas agrupadas, una escritura por tabla, porque todo esto corre en el primer
+acceso del usuario. En local, crearla añade unos 0.6 s a ese primer dashboard.
+Quien ya tiene la demo conserva la suya: no se recrea.
 
 **El dashboard reintenta la demo si falta.** El callback es el camino normal,
 pero si falla —o nunca se ejecuta, que fue lo que pasó al desplegar con el
@@ -1562,7 +1579,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-817 tests en 46 archivos, Vitest, entorno `node` **sin jsdom**.
+817 tests en 47 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1583,7 +1600,8 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
 | `lib/calculations/settlement-persistence.test.ts` | 18 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18) |
 | `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
-| `lib/demo/fixtures.test.ts` | 14 | Fixtures del proyecto de ejemplo: poligonal, nivelación y asentamientos cumplen contra el motor real |
+| `lib/demo/fixtures.test.ts` | 13 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo |
+| `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
 | `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
 | `lib/export/settlement-workbook.test.ts` | 15 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18) |
@@ -1947,6 +1965,12 @@ haya creado ningún trabajo nuevo. No se corrige aquí porque distinguir «lugar
 artefacto del backfill» de «lugar real sin visitas todavía» no tiene una
 señal limpia en el esquema actual (los dos son un lugar `active` sin
 visitas).
+
+> **Visto de nuevo en la Fase 21.** El proyecto de ejemplo cuelga sus
+> poligonales y nivelaciones de un lugar «Levantamientos de campo», y el hub lo
+> cuenta como un control de asentamientos más: «Control de Asentamientos (2)»
+> con uno solo real. Es la misma raíz —todo proceso tiene lugar, y el conteo
+> no distingue un lugar de monitoreo de uno que solo agrupa—.
 
 **Cerrado — `niceTicks` y `computeDifferentials` cubren sus casos extremos.**
 `niceTicks` tiene tests de rango degenerado (min = max dentro y fuera de cero,

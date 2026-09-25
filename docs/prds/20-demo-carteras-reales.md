@@ -1,8 +1,8 @@
 # PRD-de-fase 21 — La demo con las carteras reales
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-25
-**Fecha de cierre:** —
+**Fecha de cierre:** 2026-09-25
 
 **Rama:** `fase-21-demo-carteras-reales`
 **Petición:** del usuario, 2026-09-25: «que la demo tenga su homólogo con las
@@ -10,6 +10,31 @@ carteras reales que hemos trabajado, exceptuando control de asentamientos,
 donde usaremos la simulación del prototipo»; y revisar la app en producción
 con capturas en los dos temas.
 **Módulo:** el proyecto de ejemplo (`src/lib/demo/`), el seed y el manual
+
+> **Divergencias de la implementación:**
+>
+> - **Equipo de las nivelaciones** (decisión 6): ni la hoja de El Verjón ni el
+>   `.L` declaran el modelo del nivel. No se inventa: El Verjón queda como
+>   nivel automático —lo dicen los tres hilos— y el tramo 2 como digital
+>   Leica, sin modelo ni precisión. Las poligonales usan la estación del seed.
+> - **El Verjón se transcribió desde el CSV verificado** de la Fase 17, y se
+>   contrastó visual a visual con la hoja: cada distancia es (HS − HI)·100, y
+>   las dos V+ de la vuelta sin hilo inferior toman el que la hoja extrapola.
+> - **`insertar-poligonal` tampoco guardaba las lecturas de ángulo** (Fase 7),
+>   que el seed sí guarda: ahora las guarda, con `angle_readings_min` 1.
+> - **Las visitas de Torre Alameda se cierran** antes que el lugar, en una sola
+>   escritura; la demo anterior dejaba sus visitas calculadas bajo un lugar
+>   cerrado.
+> - **Riesgo de la primera carga, medido:** en local, crear la demo añade unos
+>   0.6 s al primer dashboard (3.3 s frente a 2.7 s de una recarga).
+> - **Hallado en la verificación en pantalla:** el resumen de precisiones del
+>   informe imprimible desbordaba 5 px a 390 px; se estrecha el relleno de sus
+>   celdas en pantallas estrechas. Y el hub cuenta «Levantamientos de campo»
+>   como un control de asentamientos más: es la entrada del lugar «General» de
+>   la § 11, anotada allí.
+> - **La revisión en producción (tarea 6) va después del merge:** necesita el
+>   código desplegado. Su resultado se informa al usuario; este PRD no lo
+>   recoge.
 
 ## Propósito
 
