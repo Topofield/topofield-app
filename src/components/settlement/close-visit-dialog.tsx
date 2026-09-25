@@ -176,7 +176,7 @@ export function CloseVisitDialog({
             type="checkbox"
             checked={confirmed}
             onChange={(event) => setConfirmed(event.target.checked)}
-            className="h-4 w-4 rounded border-rule-strong text-mira-ink focus:ring-mira-strong"
+            className="h-4 w-4 rounded border-rule-strong"
           />
           Confirmo que los datos son correctos
         </label>

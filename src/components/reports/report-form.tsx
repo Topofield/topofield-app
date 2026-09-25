@@ -139,7 +139,7 @@ export function ReportForm({ projectId, candidates }: ReportFormProps) {
                     checked={selected.includes(clave)}
                     onChange={() => toggle(clave)}
                     disabled={isPending}
-                    className="h-4 w-4 rounded border-rule-strong text-mira-ink"
+                    className="h-4 w-4 rounded border-rule-strong"
                   />
                   <span className="text-ink-2">
                     {CANDIDATE_KIND_LABELS[c.kind]}

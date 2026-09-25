@@ -136,6 +136,11 @@
     letter-spacing: -0.01em;
   }
 
+  /* Casillas y radios nativos: el acento de la marca, en los dos temas. */
+  :where(input[type="checkbox"], input[type="radio"]) {
+    accent-color: var(--color-mira-strong);
+  }
+
   :where(a, button, summary, input, select, textarea):focus-visible {
     outline: 2px solid var(--color-mira-strong);
     outline-offset: 2px;
