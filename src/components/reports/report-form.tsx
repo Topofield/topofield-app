@@ -123,7 +123,7 @@ export function ReportForm({ projectId, candidates }: ReportFormProps) {
         />
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium text-neutral-800">
+          <legend className="text-sm font-medium text-ink">
             Procesos cerrados a incluir
           </legend>
           <div className="flex flex-col gap-1">
@@ -132,16 +132,16 @@ export function ReportForm({ projectId, candidates }: ReportFormProps) {
               return (
                 <label
                   key={clave}
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink hover:bg-paper"
                 >
                   <input
                     type="checkbox"
                     checked={selected.includes(clave)}
                     onChange={() => toggle(clave)}
                     disabled={isPending}
-                    className="h-4 w-4 rounded border-neutral-300 text-primary-500"
+                    className="h-4 w-4 rounded border-rule-strong text-mira-ink"
                   />
-                  <span className="text-neutral-500">
+                  <span className="text-ink-2">
                     {CANDIDATE_KIND_LABELS[c.kind]}
                   </span>
                   <span>{c.name}</span>
@@ -153,7 +153,7 @@ export function ReportForm({ projectId, candidates }: ReportFormProps) {
 
         {selected.length > 0 && (
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium text-neutral-800">
+            <legend className="text-sm font-medium text-ink">
               Orden de las secciones
             </legend>
             <ol className="flex flex-col gap-1">
@@ -163,10 +163,10 @@ export function ReportForm({ projectId, candidates }: ReportFormProps) {
                 return (
                   <li
                     key={clave}
-                    className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-3 rounded-md border border-rule px-3 py-2 text-sm"
                   >
                     <span>
-                      <span className="mr-2 tabular-nums text-neutral-500">
+                      <span className="mr-2 tabular-nums text-ink-2">
                         {i + 1}.
                       </span>
                       {c.name}
