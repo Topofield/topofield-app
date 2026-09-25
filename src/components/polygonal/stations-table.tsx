@@ -3,10 +3,11 @@
 import { useState } from "react";
 import {
   Button,
+  type DmsValue,
   EMPTY_DMS,
   Input,
+  NumberInput,
   Select,
-  type DmsValue,
 } from "@/components/design-system";
 import { decimalToDms, formatDecimalDegrees } from "@/lib/calculations/angles";
 import { averageOf, readingValues } from "./polygonal-draft";
@@ -277,9 +278,7 @@ export function StationsTable({
                     </td>
                   )}
                   <td className="py-2 pr-3">
-                    <Input
-                      type="number"
-                      step="any"
+                    <NumberInput
                       value={station.distance}
                       disabled={disabled}
                       error={issue?.errors.distance}
@@ -403,10 +402,7 @@ export function StationsTable({
                   <p className="mb-1 text-xs font-medium text-neutral-500">
                     Distancia (m)
                   </p>
-                  <Input
-                    type="number"
-                    step="any"
-                    inputMode="decimal"
+                  <NumberInput
                     value={station.distance}
                     disabled={disabled}
                     error={issue?.errors.distance}

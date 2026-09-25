@@ -32,8 +32,9 @@
 // un BM real ni reintroducir el problema de hidratación descrito arriba.
 
 import { useState } from "react";
-import { Input, Select } from "@/components/design-system";
+import { Input, NumberInput, Select } from "@/components/design-system";
 import type { ReferencePoint } from "@/types/project";
+import { isInvalidNumber, parseNumber } from "@/lib/utils/parse";
 
 const OTHER_VALUE = "__other__";
 
@@ -62,7 +63,10 @@ function matchingPoint(
   // (`100`) y quien guardó una copia puede traerla formateada (`100.0000`, el
   // BM de amarre de una visita, Fase 18). Como texto no coincidirían y el BM
   // del catálogo aparecería como «Otro».
-  const elevation = value.elevation.trim() === "" ? null : Number(value.elevation);
+  // Con coma o punto decimal (Fase 20). Un texto que no es número no coincide
+  // con ningún BM, ni siquiera con uno sin cota.
+  if (isInvalidNumber(value.elevation)) return undefined;
+  const elevation = parseNumber(value.elevation);
   return points.find(
     (p) =>
       p.code === value.code &&
@@ -142,10 +146,8 @@ export function BmSelector({
           disabled={disabled || (!isOther && !isFromCatalog)}
           onChange={(e) => onChange({ ...value, code: e.target.value })}
         />
-        <Input
+        <NumberInput
           label="Cota"
-          type="number"
-          step="any"
           value={value.elevation}
           readOnly={isFromCatalog}
           disabled={disabled || (!isOther && !isFromCatalog)}

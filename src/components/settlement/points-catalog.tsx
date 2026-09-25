@@ -8,6 +8,7 @@ import {
   Card,
   Input,
   Modal,
+  NumberInput,
   Textarea,
 } from "@/components/design-system";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/app/(app)/projects/[id]/sites/[siteId]/point-actions";
 import { formatDateOnly } from "@/lib/utils/format";
 import type { SettlementPoint } from "@/types/settlement";
+import { readNumberText } from "@/lib/utils/parse";
 
 /** Hoy en Bogotá, como `YYYY-MM-DD` (`en-CA` da ese formato). */
 function todayInBogota(): string {
@@ -105,18 +107,19 @@ function PointState({ point }: { point: SettlementPoint }) {
 }
 
 /**
- * Parsea una coordenada opcional a número redondeado, o null si viene vacía.
- * Devuelve `ok:false` si el texto no es un número.
+ * Parsea una coordenada opcional, con coma o punto decimal, a número
+ * redondeado, o null si viene vacía. Devuelve `ok:false` si el texto no es un
+ * número.
  */
 function parseOptionalNumber(
   raw: string,
   decimals: number,
 ): { ok: true; value: number | null } | { ok: false } {
-  if (raw.trim() === "") return { ok: true, value: null };
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return { ok: false };
+  const read = readNumberText(raw);
+  if (read.kind === "empty") return { ok: true, value: null };
+  if (read.kind === "invalid") return { ok: false };
   const factor = 10 ** decimals;
-  return { ok: true, value: Math.round(n * factor) / factor };
+  return { ok: true, value: Math.round(read.value * factor) / factor };
 }
 
 /**
@@ -452,27 +455,21 @@ export function PointsCatalog({
               />
             </div>
             <div className={isAltaForm ? "grid gap-4 sm:grid-cols-2" : "grid gap-4 sm:grid-cols-3"}>
-              <Input
+              <NumberInput
                 label="Norte"
-                type="number"
-                step="any"
                 value={form.northing}
                 onChange={set("northing")}
                 error={errors.northing}
               />
-              <Input
+              <NumberInput
                 label="Este"
-                type="number"
-                step="any"
                 value={form.easting}
                 onChange={set("easting")}
                 error={errors.easting}
               />
               {!isAltaForm && (
-                <Input
+                <NumberInput
                   label="Cota C0"
-                  type="number"
-                  step="any"
                   value={form.initialElevation}
                   onChange={set("initialElevation")}
                   error={errors.initialElevation}

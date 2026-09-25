@@ -1,4 +1,4 @@
-import { Alert, Input, Select } from "@/components/design-system";
+import { Alert, NumberInput, Select } from "@/components/design-system";
 import { decimalToDms } from "@/lib/calculations/angles";
 import { SIGMA0_BAND, sigma0Reading } from "@/lib/calculations/least-squares";
 import { formatPrecision } from "@/lib/utils/format";
@@ -95,27 +95,24 @@ export function ResultsPanel({
       {leastSquares && type !== "open_uncontrolled" && (
         <div className="flex flex-col gap-3">
           <div className="grid gap-4 sm:grid-cols-3">
-            <Input
+            <NumberInput
               label="σ angular (″)"
-              inputMode="decimal"
               value={weights.sigmaAngleSeconds}
               disabled={disabled}
               onChange={(e) =>
                 onWeightsChange({ ...weights, sigmaAngleSeconds: e.target.value })
               }
             />
-            <Input
+            <NumberInput
               label="σ de distancia (m)"
-              inputMode="decimal"
               value={weights.sigmaDistanceM}
               disabled={disabled}
               onChange={(e) =>
                 onWeightsChange({ ...weights, sigmaDistanceM: e.target.value })
               }
             />
-            <Input
+            <NumberInput integer
               label="Mediciones por distancia"
-              inputMode="numeric"
               value={weights.distanceMeasurements}
               disabled={disabled}
               onChange={(e) =>

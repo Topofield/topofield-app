@@ -1,4 +1,4 @@
-import { Input, StatusIndicator } from "@/components/design-system";
+import { NumberInput, StatusIndicator } from "@/components/design-system";
 import { ALERT_LEVEL_LABELS } from "@/types/settlement";
 import type { ComputedReading, SettlementPoint } from "@/types/settlement";
 
@@ -94,11 +94,8 @@ export function ReadingsTable({
                       {rawElevations[point.id] || "—"}
                     </span>
                   ) : (
-                    <Input
+                    <NumberInput
                       aria-label={`Cota medida de ${point.code}`}
-                      type="number"
-                      step="any"
-                      inputMode="decimal"
                       value={rawElevations[point.id] ?? ""}
                       onChange={(event) =>
                         onElevationChange(point.id, event.target.value)

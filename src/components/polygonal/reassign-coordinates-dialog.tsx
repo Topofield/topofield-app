@@ -3,14 +3,17 @@
 import { useMemo, useState } from "react";
 import {
   Button,
-  Input,
-  Modal,
   type DmsValue,
+  InvalidNumbersContext,
+  Modal,
+  NumberInput,
+  useInvalidNumbers,
 } from "@/components/design-system";
 import {
   azimuthFromCoordinates,
   decimalToDms,
 } from "@/lib/calculations/angles";
+import { parseNumber } from "@/lib/utils/parse";
 import { AngleInput } from "./angle-input";
 import type { AngleInputFormat } from "@/types/polygonal";
 
@@ -64,13 +67,18 @@ export function ReassignCoordinatesDialog({
   const [azimuth, setAzimuth] = useState<DmsValue>(startAzimuth);
   const [refNorth, setRefNorth] = useState(referenceNorth ?? "");
   const [refEast, setRefEast] = useState(referenceEast ?? "");
+  // Contador propio: estas celdas no deben bloquear el guardado del editor, y
+  // «Aplicar» no debe aceptar un texto que no es número (Fase 20, UI2).
+  const invalidNumbers = useInvalidNumbers();
 
   const amarrado = referenceNorth != null && referenceEast != null;
 
   const azimutCalculado = useMemo(() => {
     if (!amarrado) return null;
-    const values = [north, east, refNorth, refEast].map(Number);
-    if (!values.every(Number.isFinite)) return null;
+    // `parseNumber` y no `Number`: con coma decimal (Fase 20), `Number("1000,5")`
+    // es `NaN` y el azimut no se calcularía.
+    const values = [north, east, refNorth, refEast].map(parseNumber);
+    if (!values.every((v) => v !== null)) return null;
     const [n, e, rn, re] = values as [number, number, number, number];
     const dms = decimalToDms(azimuthFromCoordinates(n, e, rn, re));
     return { deg: String(dms.deg), min: String(dms.min), sec: String(dms.sec) };
@@ -106,78 +114,74 @@ export function ReassignCoordinatesDialog({
       >
         Asignar coordenadas reales
       </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Asignar coordenadas reales"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={apply}>Aplicar</Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-neutral-500">
-            Las coordenadas de todas las estaciones se recalculan manteniendo
-            los ángulos y las distancias.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="Norte de partida"
-              type="number"
-              step="any"
-              value={north}
-              onChange={(e) => setNorth(e.target.value)}
-            />
-            <Input
-              label="Este de partida"
-              type="number"
-              step="any"
-              value={east}
-              onChange={(e) => setEast(e.target.value)}
-            />
-          </div>
-          {amarrado && (
+      <InvalidNumbersContext.Provider value={invalidNumbers.report}>
+        <Modal
+          open={open}
+          onClose={() => setOpen(false)}
+          title="Asignar coordenadas reales"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={apply} disabled={invalidNumbers.count > 0}>
+                Aplicar
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-neutral-500">
+              Las coordenadas de todas las estaciones se recalculan manteniendo
+              los ángulos y las distancias.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label={`Norte de ${referencePointCode ?? "amarre"}`}
-                type="number"
-                step="any"
-                value={refNorth}
-                onChange={(e) => setRefNorth(e.target.value)}
+              <NumberInput
+                label="Norte de partida"
+                value={north}
+                onChange={(e) => setNorth(e.target.value)}
               />
-              <Input
-                label={`Este de ${referencePointCode ?? "amarre"}`}
-                type="number"
-                step="any"
-                value={refEast}
-                onChange={(e) => setRefEast(e.target.value)}
+              <NumberInput
+                label="Este de partida"
+                value={east}
+                onChange={(e) => setEast(e.target.value)}
               />
             </div>
-          )}
-          <AngleInput
-            format={angleFormat}
-            label={
-              azimutCalculado
-                ? "Azimut hacia el amarre (calculado)"
-                : "Azimut de partida"
-            }
-            value={azimutCalculado ?? azimuth}
-            disabled={azimutCalculado != null}
-            onChange={setAzimuth}
-          />
-          {azimutCalculado != null && (
-            <p className="text-sm text-neutral-500">
-              El error angular, el error lineal y la precisión relativa no
-              cambian: girar y trasladar la poligonal no altera nada de lo que
-              el cierre certifica.
-            </p>
-          )}
-        </div>
-      </Modal>
+            {amarrado && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <NumberInput
+                  label={`Norte de ${referencePointCode ?? "amarre"}`}
+                  value={refNorth}
+                  onChange={(e) => setRefNorth(e.target.value)}
+                />
+                <NumberInput
+                  label={`Este de ${referencePointCode ?? "amarre"}`}
+                  value={refEast}
+                  onChange={(e) => setRefEast(e.target.value)}
+                />
+              </div>
+            )}
+            <AngleInput
+              format={angleFormat}
+              label={
+                azimutCalculado
+                  ? "Azimut hacia el amarre (calculado)"
+                  : "Azimut de partida"
+              }
+              value={azimutCalculado ?? azimuth}
+              disabled={azimutCalculado != null}
+              onChange={setAzimuth}
+            />
+            {azimutCalculado != null && (
+              <p className="text-sm text-neutral-500">
+                El error angular, el error lineal y la precisión relativa no
+                cambian: girar y trasladar la poligonal no altera nada de lo que
+                el cierre certifica.
+              </p>
+            )}
+          </div>
+        </Modal>
+      </InvalidNumbersContext.Provider>
     </>
   );
 }

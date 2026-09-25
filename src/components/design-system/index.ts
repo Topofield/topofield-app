@@ -12,6 +12,12 @@ export {
   type PrecisionOrderKind,
 } from "./precision-order-select";
 export { Input } from "./input";
+export {
+  InvalidNumbersContext,
+  NOT_A_NUMBER,
+  NumberInput,
+  useInvalidNumbers,
+} from "./number-input";
 export { KpiCard } from "./kpi-card";
 export { Logo, LogoMark } from "./logo";
 export { Modal } from "./modal";

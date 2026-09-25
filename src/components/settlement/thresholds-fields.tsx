@@ -1,12 +1,63 @@
 "use client";
 
-import { Input } from "@/components/design-system";
+import { useState } from "react";
+import { NumberInput } from "@/components/design-system";
+import { parseNumber } from "@/lib/utils/parse";
 import type { Thresholds } from "@/types/settlement";
 
 interface ThresholdsFieldsProps {
   value: Thresholds;
   onChange: (value: Thresholds) => void;
   disabled?: boolean;
+}
+
+const cellText = (n: number) => (Number.isFinite(n) ? String(n) : "");
+
+/**
+ * Un umbral. El formulario guarda números, pero la celda guarda el **texto**:
+ * reconvertir en cada pulsación borraría el separador de «2,» o «2.» y no se
+ * podría teclear un decimal (Fase 20, UI2). Si el número cambia desde fuera
+ * —el preset de otro tipo de estructura—, el texto se recalcula; si es el que
+ * esta celda acaba de emitir, se respeta lo tecleado. Es el patrón de
+ * `AngleInput`: ajustar el estado a partir del render anterior, sin efecto.
+ * Vacío o inválido se emite como `NaN`, que el validador del lugar rechaza.
+ */
+function ThresholdCell({
+  label,
+  helperText,
+  value,
+  onChange,
+  disabled,
+  integer,
+}: {
+  label: string;
+  helperText?: string;
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+  integer?: boolean;
+}) {
+  const [text, setText] = useState(() => cellText(value));
+  const [known, setKnown] = useState(value);
+  if (!Object.is(value, known)) {
+    setKnown(value);
+    setText(cellText(value));
+  }
+  return (
+    <NumberInput
+      label={label}
+      helperText={helperText}
+      integer={integer}
+      value={text}
+      disabled={disabled}
+      onChange={(e) => {
+        const next = parseNumber(e.target.value) ?? Number.NaN;
+        setText(e.target.value);
+        setKnown(next);
+        onChange(next);
+      }}
+    />
+  );
 }
 
 /**
@@ -21,8 +72,8 @@ export function ThresholdsFields({
   onChange,
   disabled,
 }: ThresholdsFieldsProps) {
-  const set = (key: keyof Thresholds) => (raw: string) =>
-    onChange({ ...value, [key]: raw === "" ? Number.NaN : Number(raw) });
+  const set = (key: keyof Thresholds) => (n: number) =>
+    onChange({ ...value, [key]: n });
 
   return (
     <div className="flex flex-col gap-4">
@@ -31,40 +82,22 @@ export function ThresholdsFields({
           Velocidad (mm/mes)
         </legend>
         <div className="grid grid-cols-3 gap-2">
-          <Input
+          <ThresholdCell
             label="Precaución"
-            type="number"
-            step="0.1"
-            value={
-              Number.isFinite(value.velocityCaution)
-                ? String(value.velocityCaution)
-                : ""
-            }
-            onChange={(e) => set("velocityCaution")(e.target.value)}
+            value={value.velocityCaution}
+            onChange={set("velocityCaution")}
             disabled={disabled}
           />
-          <Input
+          <ThresholdCell
             label="Alerta"
-            type="number"
-            step="0.1"
-            value={
-              Number.isFinite(value.velocityAlert)
-                ? String(value.velocityAlert)
-                : ""
-            }
-            onChange={(e) => set("velocityAlert")(e.target.value)}
+            value={value.velocityAlert}
+            onChange={set("velocityAlert")}
             disabled={disabled}
           />
-          <Input
+          <ThresholdCell
             label="Alarma"
-            type="number"
-            step="0.1"
-            value={
-              Number.isFinite(value.velocityAlarm)
-                ? String(value.velocityAlarm)
-                : ""
-            }
-            onChange={(e) => set("velocityAlarm")(e.target.value)}
+            value={value.velocityAlarm}
+            onChange={set("velocityAlarm")}
             disabled={disabled}
           />
         </div>
@@ -75,56 +108,33 @@ export function ThresholdsFields({
           Asentamiento acumulado (mm)
         </legend>
         <div className="grid grid-cols-3 gap-2">
-          <Input
+          <ThresholdCell
             label="Precaución"
-            type="number"
-            step="0.1"
-            value={
-              Number.isFinite(value.accumulatedCaution)
-                ? String(value.accumulatedCaution)
-                : ""
-            }
-            onChange={(e) => set("accumulatedCaution")(e.target.value)}
+            value={value.accumulatedCaution}
+            onChange={set("accumulatedCaution")}
             disabled={disabled}
           />
-          <Input
+          <ThresholdCell
             label="Alerta"
-            type="number"
-            step="0.1"
-            value={
-              Number.isFinite(value.accumulatedAlert)
-                ? String(value.accumulatedAlert)
-                : ""
-            }
-            onChange={(e) => set("accumulatedAlert")(e.target.value)}
+            value={value.accumulatedAlert}
+            onChange={set("accumulatedAlert")}
             disabled={disabled}
           />
-          <Input
+          <ThresholdCell
             label="Alarma"
-            type="number"
-            step="0.1"
-            value={
-              Number.isFinite(value.accumulatedAlarm)
-                ? String(value.accumulatedAlarm)
-                : ""
-            }
-            onChange={(e) => set("accumulatedAlarm")(e.target.value)}
+            value={value.accumulatedAlarm}
+            onChange={set("accumulatedAlarm")}
             disabled={disabled}
           />
         </div>
       </fieldset>
 
-      <Input
+      <ThresholdCell
+        integer
         label="Límite de distorsión angular (1/X)"
-        type="number"
-        step="1"
         helperText="Un X menor es más severo: 1/300 es peor que 1/500."
-        value={
-          Number.isFinite(value.angularDistortionLimit)
-            ? String(value.angularDistortionLimit)
-            : ""
-        }
-        onChange={(e) => set("angularDistortionLimit")(e.target.value)}
+        value={value.angularDistortionLimit}
+        onChange={set("angularDistortionLimit")}
         disabled={disabled}
       />
     </div>

@@ -197,26 +197,29 @@ export function ReferencePointsManager({
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
                 label="Norte"
                 name="north"
-                type="number"
-                step="any"
                 defaultValue={point?.north ?? undefined}
                 error={errors.north}
               />
               <Input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
                 label="Este"
                 name="east"
-                type="number"
-                step="any"
                 defaultValue={point?.east ?? undefined}
                 error={errors.east}
               />
               <Input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
                 label="Cota"
                 name="elevation"
-                type="number"
-                step="any"
                 defaultValue={point?.elevation ?? undefined}
                 error={errors.elevation}
               />

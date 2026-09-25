@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Alert, Button, Input, Modal, Select } from "@/components/design-system";
+import { Alert, Button, Modal, NumberInput, Select } from "@/components/design-system";
 import { georeferencePolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { decimalToDms } from "@/lib/calculations/angles";
@@ -132,15 +132,13 @@ export function GeoreferenceDialog({
           )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input
+          <NumberInput
             label="Norte real"
-            inputMode="decimal"
             value={value.north}
             onChange={(e) => onChange({ ...value, north: e.target.value })}
           />
-          <Input
+          <NumberInput
             label="Este real"
-            inputMode="decimal"
             value={value.east}
             onChange={(e) => onChange({ ...value, east: e.target.value })}
           />

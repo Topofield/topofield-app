@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
-import { Button, Input, Select } from "@/components/design-system";
+import { Button, Input, NumberInput, Select } from "@/components/design-system";
 import type { ReadingCaptureIssues } from "@/lib/validators/leveling";
 import {
   POINT_TYPE_LABELS,
@@ -9,6 +9,7 @@ import {
 } from "@/types/leveling";
 import type { LevelType } from "@/types/project";
 import { cn } from "@/lib/utils/cn";
+import { parseNumber } from "@/lib/utils/parse";
 
 /** Fila editable de la libreta de campo (todo texto, sin parsear). */
 export interface ReadingDraftState {
@@ -44,12 +45,13 @@ export function emptyReading(): ReadingDraftState {
   };
 }
 
-/** Parseo laxo: la celda vacía o a medio teclear no es un número. */
+/**
+ * Parseo laxo: la celda vacía o a medio teclear no es un número. Con coma o
+ * punto decimal (Fase 20, UI2): `Number("1,523")` es `NaN`, y un hilo tecleado
+ * con coma no autocompletaría la distancia.
+ */
 function parseCell(value: string): number | null {
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-  const n = Number(trimmed);
-  return Number.isFinite(n) ? n : null;
+  return parseNumber(value);
 }
 
 /**
@@ -275,10 +277,7 @@ export function ReadingsTable({
                   {wiresVisible && (
                     <>
                       <td className="py-2 pr-3">
-                        <Input
-                          type="number"
-                          step="any"
-                          inputMode="decimal"
+                        <NumberInput
                           aria-label="Hilo superior V+"
                           value={reading.backUpperM}
                           disabled={backsightDisabled}
@@ -290,10 +289,7 @@ export function ReadingsTable({
                         />
                       </td>
                       <td className="py-2 pr-3">
-                        <Input
-                          type="number"
-                          step="any"
-                          inputMode="decimal"
+                        <NumberInput
                           aria-label="Hilo inferior V+"
                           value={reading.backLowerM}
                           disabled={backsightDisabled}
@@ -307,10 +303,7 @@ export function ReadingsTable({
                     </>
                   )}
                   <td className="py-2 pr-3">
-                    <Input
-                      type="number"
-                      step="any"
-                      inputMode="decimal"
+                    <NumberInput
                       aria-label="Vista más (V+)"
                       value={reading.backsight}
                       disabled={backsightDisabled}
@@ -330,10 +323,7 @@ export function ReadingsTable({
                     )}
                   </td>
                   <td className="min-w-40 py-2 pr-3">
-                    <Input
-                      type="number"
-                      step="any"
-                      inputMode="decimal"
+                    <NumberInput
                       aria-label="Distancia V+ (m)"
                       value={reading.backDistanceM}
                       disabled={backsightDisabled}
@@ -352,10 +342,7 @@ export function ReadingsTable({
                   {wiresVisible && (
                     <>
                       <td className="py-2 pr-3">
-                        <Input
-                          type="number"
-                          step="any"
-                          inputMode="decimal"
+                        <NumberInput
                           aria-label="Hilo superior V−"
                           value={reading.foreUpperM}
                           disabled={foresightDisabled}
@@ -367,10 +354,7 @@ export function ReadingsTable({
                         />
                       </td>
                       <td className="py-2 pr-3">
-                        <Input
-                          type="number"
-                          step="any"
-                          inputMode="decimal"
+                        <NumberInput
                           aria-label="Hilo inferior V−"
                           value={reading.foreLowerM}
                           disabled={foresightDisabled}
@@ -384,10 +368,7 @@ export function ReadingsTable({
                     </>
                   )}
                   <td className="py-2 pr-3">
-                    <Input
-                      type="number"
-                      step="any"
-                      inputMode="decimal"
+                    <NumberInput
                       aria-label="Vista menos (V−)"
                       value={reading.foresight}
                       disabled={foresightDisabled}
@@ -407,10 +388,7 @@ export function ReadingsTable({
                     )}
                   </td>
                   <td className="min-w-40 py-2 pr-3">
-                    <Input
-                      type="number"
-                      step="any"
-                      inputMode="decimal"
+                    <NumberInput
                       aria-label="Distancia V− (m)"
                       value={reading.foreDistanceM}
                       disabled={distanceDisabled}

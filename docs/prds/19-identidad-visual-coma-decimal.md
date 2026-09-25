@@ -168,13 +168,33 @@ no por nombre):
 
 ### UI2 (analizador y celdas)
 
-- `parseNumber` acepta `"1,5"`, `"1.5"`, `" -0,25 "`; devuelve `null` para
-  vacío. Una función hermana informa de si el texto es **inválido**, para que
-  el validador de captura pinte «No es un número» en vez de «falta el dato».
-- `parseCoordinate` (servidor, puntos de referencia) acepta lo mismo.
-- `DmsInput`: grados y minutos siguen siendo enteros; los segundos admiten
-  coma.
-- El borrador del editor guarda el texto tal cual; el motor recibe números.
+- `readNumberText` (`lib/utils/parse.ts`) distingue vacío, número e inválido;
+  acepta un solo separador, coma o punto, y los estados intermedios de quien
+  teclea (`1,`, `,5`). `parseNumber` conserva su contrato: `null` para vacío
+  **y** para inválido, nunca `NaN`, porque los validadores comparan con `null`
+  y un `NaN` pasaría sin aviso (ya lo advertía `validators/settlement-book.ts`).
+- **La celda se marca a sí misma**, no el validador de captura: `NumberInput`
+  (sistema de diseño) es `type="text"` + `inputMode="decimal"` y, si el texto
+  no es número, muestra «No es un número.» en lugar del error del validador.
+  Así funciona igual en las 45 celdas sin tocar ningún validador.
+- **Bloqueo del guardado.** Donde hay `<form>` (altas, catálogo, lugar),
+  `setCustomValidity` hace que el navegador no envíe. Donde se guarda con un
+  botón (editores de nivelación, poligonal y visita; diálogo de reasignar
+  coordenadas), `InvalidNumbersContext` cuenta las celdas inválidas y el
+  botón se desactiva. Una celda inválida y opcional —un hilo— se perdería
+  sin aviso si no bloqueara.
+- Las cinco celdas no controladas (coordenadas del proyecto y puntos de
+  referencia) van por `FormData`: pasan a `type="text"` y las valida el
+  servidor, con el mismo analizador.
+- `DmsInput`: grados y minutos enteros; segundos con coma.
+- **Hallado al migrar**, además de las 45 celdas: cinco sitios convertían el
+  texto con `Number()`, que da `NaN` con coma —el azimut de reasignar
+  coordenadas y el derivado del amarre, el autocompletado de distancia desde
+  los hilos, el catálogo de puntos y la cota del BM—; tres celdas de pesos de
+  mínimos cuadrados y dos de georreferenciación ya eran de texto pero no
+  marcaban lo inválido; y los umbrales guardaban **números** en el estado, así
+  que con una celda de texto el separador se borraba al teclearlo: cada
+  umbral guarda ahora su texto.
 
 ## Archivos
 
@@ -198,9 +218,9 @@ no por nombre):
 
 | Qué | Casos |
 |---|---|
-| `parseNumber` y el aviso de inválido | coma, punto, signo, espacios, vacío; `1,2,3`, `1.234,5`, `abc`, `1,` inválidos |
+| `parseNumber` y el aviso de inválido | coma, punto, signo, espacios, vacío, `1,` y `,5`; `1,2,3`, `1.234,5`, `abc`, `1e3` inválidos |
 | `parseCoordinate` | coma en norte, este y cota |
-| Captura | una celda con texto inválido marca error y no «falta el dato»; con coma calcula igual que con punto (libreta de nivelación y poligonal) |
+| Captura | `NumberInput`: texto con teclado decimal, lo inválido se marca en lugar del error del validador; el contador de celdas inválidas; `DmsInput` (render sin jsdom). En pantalla: con coma calcula igual que con punto, y lo inválido bloquea el guardado |
 | Contraste | cada pareja de `pairings.ts`, en claro y en oscuro, sobre el `globals.css` real |
 | Tokens retirados | ningún `.tsx`/`.ts` de `src/` usa `primary-*`, `neutral-*` ni la escala vieja de estado |
 | Tema | cookie `light`, `dark`, ausente y valor desconocido |

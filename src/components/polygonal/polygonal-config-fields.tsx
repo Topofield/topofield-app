@@ -1,10 +1,11 @@
 import {
+  type DmsValue,
   EMPTY_DMS,
   Input,
+  NumberInput,
   PrecisionOrderSelect,
   Select,
   TotalStationFieldset,
-  type DmsValue,
 } from "@/components/design-system";
 import {
   azimuthFromCoordinates,
@@ -24,6 +25,7 @@ import {
 } from "@/types/project";
 import { AngleInput } from "./angle-input";
 import type { AngleInputFormat } from "@/types/polygonal";
+import { parseNumber } from "@/lib/utils/parse";
 
 /** Estado de UI de la configuración de un proceso poligonal (todo texto). */
 export interface PolygonalConfigState {
@@ -96,9 +98,10 @@ function derivedAzimuth(
   const point = referencePoints.find((p) => p.id === value.referencePointId);
   if (point?.north == null || point?.east == null) return null;
 
-  const north = Number(value.startNorth);
-  const east = Number(value.startEast);
-  if (!Number.isFinite(north) || !Number.isFinite(east)) return null;
+  // `parseNumber` y no `Number`: con coma decimal (Fase 20) daría `NaN`.
+  const north = parseNumber(value.startNorth);
+  const east = parseNumber(value.startEast);
+  if (north === null || east === null) return null;
 
   const dms = decimalToDms(
     azimuthFromCoordinates(north, east, Number(point.north), Number(point.east)),
@@ -174,11 +177,8 @@ export function PolygonalConfigFields({
               set("angleType", e.target.value as AngleType | "")
             }
           />
-          <Input
+          <NumberInput integer
             label="Lecturas mínimas por ángulo"
-            type="number"
-            min="1"
-            step="1"
             value={value.angleReadingsMin}
             disabled={disabled}
             onChange={(e) => set("angleReadingsMin", e.target.value)}
@@ -197,18 +197,14 @@ export function PolygonalConfigFields({
             disabled={disabled}
             onChange={(e) => set("startPointCode", e.target.value)}
           />
-          <Input
+          <NumberInput
             label="Norte"
-            type="number"
-            step="any"
             value={value.startNorth}
             disabled={disabled}
             onChange={(e) => set("startNorth", e.target.value)}
           />
-          <Input
+          <NumberInput
             label="Este"
-            type="number"
-            step="any"
             value={value.startEast}
             disabled={disabled}
             onChange={(e) => set("startEast", e.target.value)}
@@ -266,18 +262,14 @@ export function PolygonalConfigFields({
               disabled={disabled}
               onChange={(e) => set("endPointCode", e.target.value)}
             />
-            <Input
+            <NumberInput
               label="Norte"
-              type="number"
-              step="any"
               value={value.endNorth}
               disabled={disabled}
               onChange={(e) => set("endNorth", e.target.value)}
             />
-            <Input
+            <NumberInput
               label="Este"
-              type="number"
-              step="any"
               value={value.endEast}
               disabled={disabled}
               onChange={(e) => set("endEast", e.target.value)}

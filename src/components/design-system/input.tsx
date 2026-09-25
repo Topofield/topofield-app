@@ -1,7 +1,10 @@
-import { useId, type InputHTMLAttributes } from "react";
+import { useId, type ComponentPropsWithRef } from "react";
 import { cn } from "@/lib/utils/cn";
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+// `ComponentPropsWithRef` y no `InputHTMLAttributes`: en React 19 `ref` es una
+// prop más y llega al `<input>` con el resto. `NumberInput` la usa para
+// `setCustomValidity`.
+interface InputProps extends ComponentPropsWithRef<"input"> {
   label?: string;
   error?: string;
   helperText?: string;

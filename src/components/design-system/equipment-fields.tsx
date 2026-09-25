@@ -1,4 +1,5 @@
 import { Input } from "./input";
+import { NumberInput } from "./number-input";
 import { Select } from "./select";
 import {
   ANGULAR_TOLERANCE_K,
@@ -86,10 +87,8 @@ export function TotalStationFieldset({
         />
       </div>
 
-      <Input
+      <NumberInput
         label="Precisión angular (″)"
-        type="number"
-        step="any"
         value={value.angularPrecisionSeconds}
         disabled={disabled}
         onChange={(e) => set("angularPrecisionSeconds", e.target.value)}
@@ -105,18 +104,14 @@ export function TotalStationFieldset({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input
+        <NumberInput
           label="Precisión de distancia — término constante (mm)"
-          type="number"
-          step="any"
           value={value.distancePrecisionMm}
           disabled={disabled}
           onChange={(e) => set("distancePrecisionMm", e.target.value)}
         />
-        <Input
+        <NumberInput
           label="Precisión de distancia — término proporcional (ppm)"
-          type="number"
-          step="any"
           value={value.distancePrecisionPpm}
           disabled={disabled}
           onChange={(e) => set("distancePrecisionPpm", e.target.value)}
@@ -194,10 +189,8 @@ export function LevelFieldset({
           disabled={disabled}
           onChange={(e) => set("levelType", e.target.value as LevelType | "")}
         />
-        <Input
+        <NumberInput
           label="Desviación típica (mm/km, doble nivelación)"
-          type="number"
-          step="any"
           value={value.kmPrecisionMm}
           disabled={disabled}
           onChange={(e) => set("kmPrecisionMm", e.target.value)}

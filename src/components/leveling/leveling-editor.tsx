@@ -8,6 +8,8 @@ import {
   Button,
   buttonClasses,
   Card,
+  InvalidNumbersContext,
+  useInvalidNumbers,
 } from "@/components/design-system";
 import { PROCESS_STATUS_LABELS, type ProcessStatus } from "@/types/polygonal";
 import {
@@ -263,9 +265,14 @@ export function LevelingEditor({
     setSaveMessage(null);
   }
 
+  // Una celda con texto que no es número también bloquea (Fase 20, UI2):
+  // `parseNumber` la lee como vacía, y en una celda opcional —un hilo, una
+  // distancia de intermedia— se perdería sin aviso.
+  const invalidNumbers = useInvalidNumbers();
   const captureBlocked =
     hasReadingErrors(forwardIssues) ||
-    (config.hasReturnRun && hasReadingErrors(backIssues));
+    (config.hasReturnRun && hasReadingErrors(backIssues)) ||
+    invalidNumbers.count > 0;
 
   // La cota del BM de partida (y, en `link`, la de llegada) es el único dato
   // de entrada que ninguna validación posterior puede atrapar: desplaza todas
@@ -341,196 +348,198 @@ export function LevelingEditor({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: projectName, href: `/projects/${projectId}?tab=processes` },
-            { label: process.name },
-          ]}
-        />
-        <div className="mt-2 flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold">{process.name}</h1>
-          <div className="flex items-center gap-3">
-            <Badge tone={STATUS_TONE[process.status]}>
-              {PROCESS_STATUS_LABELS[process.status]}
-            </Badge>
-            <a
-              href={`/projects/${projectId}/leveling/${process.id}/export`}
-              className={buttonClasses({ variant: "secondary", size: "sm" })}
-              download
-            >
-              Exportar a Excel
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {readOnly &&
-        process.status === "closed" &&
-        process.meets_tolerance === false && (
-          <Alert variant="warning">
-            Este proceso se cerró sin alcanzar la tolerancia del orden de
-            precisión. Los datos son de solo lectura.
-          </Alert>
-        )}
-      {readOnly &&
-        !(process.status === "closed" && process.meets_tolerance === false) && (
-          <Alert variant="info">
-            {process.status === "rejected"
-              ? "Este proceso fue rechazado; los datos son de solo lectura."
-              : "Este proceso está cerrado; los datos son de solo lectura."}
-          </Alert>
-        )}
-      {error && <Alert variant="error">{error}</Alert>}
-      {saveMessage && <Alert variant="success">{saveMessage}</Alert>}
-
-      <details
-        open={process.status === "draft" || process.status === "in_progress"}
-        className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
-      >
-        <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
-          <h2 className="text-base font-semibold">Configuración</h2>
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 20 20"
-            fill="none"
-            className="h-4 w-4 shrink-0 rotate-0 text-neutral-500 transition-transform group-open:rotate-90 motion-reduce:transition-none"
-          >
-            <path
-              d="M7.5 4.5L13 10l-5.5 5.5"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </summary>
-        <div className="flex flex-col gap-4 border-t border-neutral-100 px-5 py-4">
-          <LevelingConfigFields
-            value={config}
-            disabled={readOnly}
-            points={points}
-            onChange={handleConfigChange}
+    <InvalidNumbersContext.Provider value={invalidNumbers.report}>
+      <div className="flex flex-col gap-6">
+        <div>
+          <Breadcrumbs
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: projectName, href: `/projects/${projectId}?tab=processes` },
+              { label: process.name },
+            ]}
           />
-          <div className="max-w-xs">
-            <span className="flex flex-col gap-1 text-sm font-medium text-neutral-800">
-              Distancia total del recorrido (km)
-              <output className="flex h-10 items-center rounded-md bg-neutral-100 px-3 font-mono text-base tabular-nums text-neutral-900">
-                {derivedTotalKm.toFixed(3)}
-              </output>
-            </span>
-            <p className="mt-1 text-xs text-neutral-600">
-              Se calcula sumando las distancias por visual de la libreta.
-            </p>
-          </div>
-        </div>
-      </details>
-
-      <Card
-        title={
-          config.hasReturnRun
-            ? "Libreta"
-            : `Libreta — ${RUN_TYPE_LABELS.forward}`
-        }
-      >
-        <div className="flex flex-col gap-4">
-          {!readOnly && (
-            <div className="flex justify-end">
-              <ImportDialog
-                currentType={config.type}
-                currentStartCode={config.startBm.code}
-                currentStartElevation={parseNumber(config.startBm.elevation)}
-                hasReadings={forward.length > 0 || back.length > 0}
-                onAccept={applyImport}
-              />
+          <div className="mt-2 flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold">{process.name}</h1>
+            <div className="flex items-center gap-3">
+              <Badge tone={STATUS_TONE[process.status]}>
+                {PROCESS_STATUS_LABELS[process.status]}
+              </Badge>
+              <a
+                href={`/projects/${projectId}/leveling/${process.id}/export`}
+                className={buttonClasses({ variant: "secondary", size: "sm" })}
+                download
+              >
+                Exportar a Excel
+              </a>
             </div>
-          )}
-          {config.hasReturnRun && (
-            <RunTabs active={activeRun} onChange={setActiveRun} />
-          )}
-          {levelType == null ? (
-            <p className="rounded-md bg-neutral-100 px-4 py-3 text-sm text-neutral-700">
-              Elige el <strong>tipo de nivel</strong> en la configuración antes
-              de capturar la libreta: decide si la distancia se obtiene leyendo
-              los tres hilos sobre la mira (nivel automático) o la entrega el
-              instrumento (nivel digital).
-            </p>
-          ) : null}
-          {levelType != null &&
-            (!config.hasReturnRun || activeRun === "forward") && (
-            <ReadingsTable
-              readings={forward}
-              computed={result.forward.readings}
-              issues={forwardIssues}
-              disabled={readOnly}
-              levelType={levelType}
-              distancesReconstructed={process.distances_reconstructed}
-              onChange={(v) => {
-                setForward(v);
-                setDirty(true);
-                setSaveMessage(null);
-              }}
-            />
-          )}
-          {levelType != null &&
-            config.hasReturnRun &&
-            activeRun === "return" && (
-            <ReadingsTable
-              readings={back}
-              computed={result.return?.readings ?? []}
-              issues={backIssues}
-              disabled={readOnly}
-              levelType={levelType}
-              distancesReconstructed={process.distances_reconstructed}
-              onChange={(v) => {
-                setBack(v);
-                setDirty(true);
-                setSaveMessage(null);
-              }}
-            />
-          )}
+          </div>
         </div>
-      </Card>
 
-      <ResultsPanel result={result} type={config.type} />
+        {readOnly &&
+          process.status === "closed" &&
+          process.meets_tolerance === false && (
+            <Alert variant="warning">
+              Este proceso se cerró sin alcanzar la tolerancia del orden de
+              precisión. Los datos son de solo lectura.
+            </Alert>
+          )}
+        {readOnly &&
+          !(process.status === "closed" && process.meets_tolerance === false) && (
+            <Alert variant="info">
+              {process.status === "rejected"
+                ? "Este proceso fue rechazado; los datos son de solo lectura."
+                : "Este proceso está cerrado; los datos son de solo lectura."}
+            </Alert>
+          )}
+        {error && <Alert variant="error">{error}</Alert>}
+        {saveMessage && <Alert variant="success">{saveMessage}</Alert>}
 
-      {!readOnly && (
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {configBlocked && (
-            <span className="text-sm text-danger-500">
-              {startElevationInvalid
-                ? "La cota del BM de partida es obligatoria y debe ser un número."
-                : "La cota del BM de llegada es obligatoria y debe ser un número."}
-            </span>
-          )}
-          {!configBlocked && captureBlocked && (
-            <span className="text-sm text-danger-500">
-              Corrige las celdas con error para poder guardar.
-            </span>
-          )}
-          {!configBlocked && !captureBlocked && dirty && (
-            <span className="text-sm text-neutral-500">
-              Hay cambios sin guardar.
-            </span>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={isPending || captureBlocked || configBlocked}
-          >
-            {isPending ? "Guardando…" : "Guardar"}
-          </Button>
-          <span aria-hidden className="h-6 w-px bg-neutral-200" />
-          <CloseProcessDialog
-            processId={process.id}
-            type={config.type}
-            result={result}
-            captureBlocked={captureBlocked || configBlocked}
-            dirty={dirty}
-          />
-        </div>
-      )}
-    </div>
+        <details
+          open={process.status === "draft" || process.status === "in_progress"}
+          className="group rounded-lg border border-neutral-200 bg-white shadow-sm"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-base font-semibold text-neutral-900 marker:content-none">
+            <h2 className="text-base font-semibold">Configuración</h2>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              className="h-4 w-4 shrink-0 rotate-0 text-neutral-500 transition-transform group-open:rotate-90 motion-reduce:transition-none"
+            >
+              <path
+                d="M7.5 4.5L13 10l-5.5 5.5"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-neutral-100 px-5 py-4">
+            <LevelingConfigFields
+              value={config}
+              disabled={readOnly}
+              points={points}
+              onChange={handleConfigChange}
+            />
+            <div className="max-w-xs">
+              <span className="flex flex-col gap-1 text-sm font-medium text-neutral-800">
+                Distancia total del recorrido (km)
+                <output className="flex h-10 items-center rounded-md bg-neutral-100 px-3 font-mono text-base tabular-nums text-neutral-900">
+                  {derivedTotalKm.toFixed(3)}
+                </output>
+              </span>
+              <p className="mt-1 text-xs text-neutral-600">
+                Se calcula sumando las distancias por visual de la libreta.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <Card
+          title={
+            config.hasReturnRun
+              ? "Libreta"
+              : `Libreta — ${RUN_TYPE_LABELS.forward}`
+          }
+        >
+          <div className="flex flex-col gap-4">
+            {!readOnly && (
+              <div className="flex justify-end">
+                <ImportDialog
+                  currentType={config.type}
+                  currentStartCode={config.startBm.code}
+                  currentStartElevation={parseNumber(config.startBm.elevation)}
+                  hasReadings={forward.length > 0 || back.length > 0}
+                  onAccept={applyImport}
+                />
+              </div>
+            )}
+            {config.hasReturnRun && (
+              <RunTabs active={activeRun} onChange={setActiveRun} />
+            )}
+            {levelType == null ? (
+              <p className="rounded-md bg-neutral-100 px-4 py-3 text-sm text-neutral-700">
+                Elige el <strong>tipo de nivel</strong> en la configuración antes
+                de capturar la libreta: decide si la distancia se obtiene leyendo
+                los tres hilos sobre la mira (nivel automático) o la entrega el
+                instrumento (nivel digital).
+              </p>
+            ) : null}
+            {levelType != null &&
+              (!config.hasReturnRun || activeRun === "forward") && (
+              <ReadingsTable
+                readings={forward}
+                computed={result.forward.readings}
+                issues={forwardIssues}
+                disabled={readOnly}
+                levelType={levelType}
+                distancesReconstructed={process.distances_reconstructed}
+                onChange={(v) => {
+                  setForward(v);
+                  setDirty(true);
+                  setSaveMessage(null);
+                }}
+              />
+            )}
+            {levelType != null &&
+              config.hasReturnRun &&
+              activeRun === "return" && (
+              <ReadingsTable
+                readings={back}
+                computed={result.return?.readings ?? []}
+                issues={backIssues}
+                disabled={readOnly}
+                levelType={levelType}
+                distancesReconstructed={process.distances_reconstructed}
+                onChange={(v) => {
+                  setBack(v);
+                  setDirty(true);
+                  setSaveMessage(null);
+                }}
+              />
+            )}
+          </div>
+        </Card>
+
+        <ResultsPanel result={result} type={config.type} />
+
+        {!readOnly && (
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {configBlocked && (
+              <span className="text-sm text-danger-500">
+                {startElevationInvalid
+                  ? "La cota del BM de partida es obligatoria y debe ser un número."
+                  : "La cota del BM de llegada es obligatoria y debe ser un número."}
+              </span>
+            )}
+            {!configBlocked && captureBlocked && (
+              <span className="text-sm text-danger-500">
+                Corrige las celdas con error para poder guardar.
+              </span>
+            )}
+            {!configBlocked && !captureBlocked && dirty && (
+              <span className="text-sm text-neutral-500">
+                Hay cambios sin guardar.
+              </span>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={isPending || captureBlocked || configBlocked}
+            >
+              {isPending ? "Guardando…" : "Guardar"}
+            </Button>
+            <span aria-hidden className="h-6 w-px bg-neutral-200" />
+            <CloseProcessDialog
+              processId={process.id}
+              type={config.type}
+              result={result}
+              captureBlocked={captureBlocked || configBlocked}
+              dirty={dirty}
+            />
+          </div>
+        )}
+      </div>
+    </InvalidNumbersContext.Provider>
   );
 }
