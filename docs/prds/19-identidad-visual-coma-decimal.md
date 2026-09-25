@@ -42,6 +42,11 @@ módulos, informe imprimible y manual)
 >     era de Playwright: la captura añade `caret-color` a los campos y, si se
 >     hace antes de hidratar, React lo ve como un atributo que el servidor no
 >     puso. No es de la app.
+> - **Hallado en la revisión de código:** un halo de texto y un círculo de
+>   las gráficas de asentamientos seguían en blanco literal (atributos SVG,
+>   no clases), y en oscuro rodeaban el texto de un contorno claro. Pasan a
+>   `var(--color-card)`, y `tokens-retirados.test.ts` prohíbe ya los colores
+>   literales en `fill` y `stroke`.
 > - **`/design-system`** muestra tokens y contraste por tema, y su registro de
 >   decisiones anota que el contraste es ya un test.
 > - **Manual:** además de los textos, una captura nueva del panel en el

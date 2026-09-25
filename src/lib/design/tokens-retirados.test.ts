@@ -18,6 +18,10 @@ const PROHIBIDOS: [string, RegExp][] = [
   ["escala primary, neutral o paleta de Tailwind", new RegExp(`(?<![\\w-])${UTILIDAD}-(?:primary|${PALETA_POR_DEFECTO})(?:-\\d+)?(?:/\\d+)?(?![\\w-])`, "g")],
   ["escala numerada de estado", new RegExp(`(?<![\\w-])${UTILIDAD}-(?:success|warning|danger)-\\d+(?:/\\d+)?(?![\\w-])`, "g")],
   ["var() de un token retirado", /var\(--color-(?:primary|neutral|(?:success|warning|danger)-\d+)[\w-]*\)/g],
+  // Un color literal en un atributo SVG o en un objeto de estilo no sigue al
+  // tema: la revisión de la Fase 20 encontró dos (un halo y un círculo
+  // blancos en las gráficas) que las reglas de clases no veían.
+  ["color literal en fill o stroke", /\b(?:fill|stroke|stopColor)(?:=|:\s*)["'](?:white|black|#[0-9a-fA-F]{3,8})["']/g],
 ];
 
 function fuentes(): string[] {

@@ -308,9 +308,11 @@ export function thresholdLabel(threshold: PlacedThreshold): string {
   return `${ALERT_LEVEL_LABELS[threshold.level]} ${formatThresholdMm(threshold.value)} mm`;
 }
 
-/** Halo blanco del texto que cae sobre la rejilla o los datos. */
+/** Halo del texto que cae sobre la rejilla o los datos, del color de la tarjeta. */
 export const HALO = {
-  stroke: "white",
+  // La tarjeta del tema, no blanco: en oscuro un halo blanco rodearía el
+  // texto claro de un contorno visible (Fase 20).
+  stroke: "var(--color-card)",
   strokeWidth: 3,
   strokeLinejoin: "round" as const,
   paintOrder: "stroke" as const,

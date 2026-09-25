@@ -175,7 +175,7 @@ export function PointHistoryChart({
                     cx={currentPoint.x}
                     cy={currentPoint.y}
                     r={11}
-                    fill="white"
+                    fill="var(--color-card)"
                     stroke={color}
                     strokeWidth={1.5}
                   />
