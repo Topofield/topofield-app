@@ -58,7 +58,7 @@ function DmsCell({
       spellCheck={false}
       aria-label={label}
       aria-invalid={invalid ? true : undefined}
-      className={cn(className, invalid && "border-danger-500")}
+      className={cn(className, invalid && "border-danger")}
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
@@ -83,15 +83,15 @@ export function DmsInput({
   const message = anyInvalid ? NOT_A_NUMBER : error;
 
   const cell = cn(
-    "h-9 min-h-11 w-16 md:w-14 rounded-md border border-neutral-400 bg-white px-1.5 text-center text-sm text-neutral-900",
-    "disabled:bg-neutral-100 disabled:text-neutral-500",
-    error && "border-danger-500",
+    "h-9 min-h-11 w-16 md:w-14 rounded-md border border-rule-strong bg-card px-1.5 text-center text-sm text-ink",
+    "disabled:bg-sel disabled:text-ink-2",
+    error && "border-danger",
   );
 
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={`${id}-deg`} className="text-sm font-medium text-neutral-800">
+        <label htmlFor={`${id}-deg`} className="text-sm font-medium text-ink">
           {label}
         </label>
       )}
@@ -106,7 +106,7 @@ export function DmsInput({
           onInvalid={markDeg}
           onChange={(deg) => onChange({ ...value, deg })}
         />
-        <span className="text-sm text-neutral-500">°</span>
+        <span className="text-sm text-ink-2">°</span>
         <DmsCell
           label="Minutos"
           value={value.min}
@@ -116,7 +116,7 @@ export function DmsInput({
           onInvalid={markMin}
           onChange={(min) => onChange({ ...value, min })}
         />
-        <span className="text-sm text-neutral-500">′</span>
+        <span className="text-sm text-ink-2">′</span>
         <DmsCell
           label="Segundos"
           value={value.sec}
@@ -126,9 +126,9 @@ export function DmsInput({
           onInvalid={markSec}
           onChange={(sec) => onChange({ ...value, sec })}
         />
-        <span className="text-sm text-neutral-500">″</span>
+        <span className="text-sm text-ink-2">″</span>
       </div>
-      {message && <p className="text-sm text-danger-500">{message}</p>}
+      {message && <p className="text-sm text-danger">{message}</p>}
     </div>
   );
 }

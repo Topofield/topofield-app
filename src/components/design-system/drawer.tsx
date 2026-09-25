@@ -96,7 +96,7 @@ export function Drawer({
         aria-label="Cerrar panel"
         tabIndex={-1}
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-neutral-900/50 transition-opacity duration-200 starting:opacity-0 motion-reduce:transition-none"
+        className="absolute inset-0 cursor-default bg-black/50 transition-opacity duration-200 starting:opacity-0 motion-reduce:transition-none"
       />
       <div
         ref={panelRef}
@@ -108,17 +108,17 @@ export function Drawer({
         className={cn(
           // `starting:` (@starting-style) anima la entrada sin estado extra;
           // la salida es inmediata porque el panel se desmonta al cerrar.
-          "absolute top-0 right-0 flex h-dvh w-full flex-col border-l border-neutral-200 bg-white pr-[env(safe-area-inset-right)] shadow-lg transition-transform duration-200 ease-out starting:translate-x-full motion-reduce:transition-none",
+          "absolute top-0 right-0 flex h-dvh w-full flex-col border-l border-rule bg-card pr-[env(safe-area-inset-right)] shadow-lg transition-transform duration-200 ease-out starting:translate-x-full motion-reduce:transition-none",
           size === "lg" ? "max-w-3xl" : "max-w-xl",
         )}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-neutral-100 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-6">
+        <header className="flex items-start justify-between gap-4 border-b border-rule px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-6">
           <div className="min-w-0">
             <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
             {description && (
-              <p id={descriptionId} className="mt-1 text-sm text-neutral-500">
+              <p id={descriptionId} className="mt-1 text-sm text-ink-2">
                 {description}
               </p>
             )}
@@ -142,7 +142,7 @@ export function Drawer({
           {children}
         </div>
         {footer && (
-          <footer className="flex flex-wrap justify-end gap-2 border-t border-neutral-100 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+          <footer className="flex flex-wrap justify-end gap-2 border-t border-rule px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
             {footer}
           </footer>
         )}

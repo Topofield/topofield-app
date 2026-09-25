@@ -14,19 +14,19 @@ export function Card({ title, description, actions, children, className }: CardP
   return (
     <section
       className={cn(
-        "rounded-lg border border-neutral-200 bg-white shadow-sm",
+        "rounded-lg border border-rule bg-card shadow-sm",
         className,
       )}
     >
       {(title || description || actions) && (
-        <header className="flex items-center justify-between gap-4 border-b border-neutral-100 px-6 py-4">
+        <header className="flex items-center justify-between gap-4 border-b border-rule px-6 py-4">
           {(title || description) && (
             <div>
               {title && (
                 <h2 className="text-lg font-semibold">{title}</h2>
               )}
               {description && (
-                <p className="mt-1 text-sm text-neutral-500">{description}</p>
+                <p className="mt-1 text-sm text-ink-2">{description}</p>
               )}
             </div>
           )}

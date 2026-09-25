@@ -5,9 +5,9 @@ import type { AlertLevel } from "@/types/settlement";
 type Status = "ok" | "warning" | "danger";
 
 const DOT_CLASSES: Record<Status, string> = {
-  ok: "bg-success-500",
-  warning: "bg-warning-500",
-  danger: "bg-danger-500",
+  ok: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger",
 };
 
 /**
@@ -98,7 +98,7 @@ export function StatusIndicator({
             : cn(DOT_CLASSES[status as Status], "rounded-full"),
         )}
       />
-      <span className="text-sm font-medium text-neutral-800">{label}</span>
+      <span className="text-sm font-medium text-ink">{label}</span>
     </div>
   );
 }

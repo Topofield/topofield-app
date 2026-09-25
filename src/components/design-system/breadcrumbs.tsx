@@ -54,7 +54,7 @@ export function Breadcrumbs({
       {parent?.href && (
         <Link
           href={parent.href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 sm:hidden"
+          className="inline-flex items-center gap-1 text-sm font-medium text-ink underline-offset-2 hover:underline sm:hidden"
         >
           <span aria-hidden>‹</span>
           <span className="truncate">{parent.label}</span>
@@ -72,7 +72,7 @@ export function Breadcrumbs({
         {trail.map((item, i) => (
           <li key={`${item.label}-${i}`} className="flex min-w-0 items-center gap-1.5">
             {i > 0 && (
-              <span aria-hidden className="text-neutral-200">
+              <span aria-hidden className="text-ink-3">
                 ›
               </span>
             )}
@@ -80,7 +80,7 @@ export function Breadcrumbs({
               <Link
                 href={item.href}
                 title={item.label}
-                className="max-w-[16rem] truncate text-neutral-500 transition-colors hover:text-primary-600"
+                className="max-w-[16rem] truncate text-ink-2 transition-colors hover:text-ink"
               >
                 {item.label}
               </Link>
@@ -88,7 +88,7 @@ export function Breadcrumbs({
               <span
                 aria-current="page"
                 title={item.label}
-                className="max-w-[20rem] truncate font-medium text-neutral-900"
+                className="max-w-[20rem] truncate font-medium text-ink"
               >
                 {item.label}
               </span>

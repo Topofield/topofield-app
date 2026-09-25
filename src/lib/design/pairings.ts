@@ -98,6 +98,8 @@ export const PAIRINGS: Pairing[] = [
   texto("danger", "card", "Mensaje de error de un campo"),
   texto("success", "card", "Veredicto de cierre conforme"),
   texto("warning", "card", "Avisos de tolerancia y de captura"),
+  texto("mira-ink", "card", "Acento en texto: antetítulos, cifras destacadas"),
+  texto("mira-ink", "paper", "Acento en texto sobre el fondo de página"),
 
   // ── Texto sobre un tinte de estado ──────────────────────────────────────
   tinte("success", "success-bg", "Badge y Alert de éxito"),
@@ -123,6 +125,17 @@ export const PAIRINGS: Pairing[] = [
     contexto: "texto-sobre-relleno",
     umbral: AA_TEXTO,
     donde: "Button variante danger",
+  },
+
+  {
+    fg: "ink-3",
+    bg: "rule",
+    contexto: "texto-sobre-relleno",
+    umbral: AA_TEXTO,
+    donde: "Button deshabilitado (texto ink-3 sobre rule)",
+    informativo: true,
+    exencion:
+      "WCAG 1.4.3 exime los componentes de interfaz inactivos: un control deshabilitado no tiene requisito de contraste. Se mide para saber el dato, no para corregirlo.",
   },
 
   // ── Elementos gráficos: umbral 3:1 ──────────────────────────────────────

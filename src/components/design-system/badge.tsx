@@ -9,12 +9,14 @@ interface BadgeProps {
   className?: string;
 }
 
+// «primary» conserva el nombre para no tocar a los llamadores; desde la Fase
+// 20 es el tinte del acento mira. Los estados usan su tinte explícito, no /10.
 const TONE_CLASSES: Record<Tone, string> = {
-  neutral: "bg-neutral-100 text-neutral-800",
-  primary: "bg-primary-50 text-primary-700",
-  success: "bg-success-500/10 text-success-500",
-  warning: "bg-warning-500/10 text-warning-500",
-  danger: "bg-danger-500/10 text-danger-500",
+  neutral: "bg-sel text-ink-2",
+  primary: "bg-mira-bg text-mira-ink",
+  success: "bg-success-bg text-success",
+  warning: "bg-warning-bg text-warning",
+  danger: "bg-danger-bg text-danger",
 };
 
 export function Badge({ tone = "neutral", children, className }: BadgeProps) {

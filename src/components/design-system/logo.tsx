@@ -46,13 +46,13 @@ export function Logo({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 text-lg text-primary-700",
+        "inline-flex items-center gap-2 text-lg text-ink",
         className,
       )}
     >
       <LogoMark
         className={cn(
-          "h-[calc(4/3*1em)] w-[calc(4/3*1em)] text-primary-500",
+          "h-[calc(4/3*1em)] w-[calc(4/3*1em)] text-mira-strong",
           markClassName,
         )}
       />

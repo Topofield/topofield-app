@@ -38,7 +38,7 @@ export function Select({
       {label && (
         <label
           htmlFor={selectId}
-          className="text-sm font-medium text-neutral-800"
+          className="text-sm font-medium text-ink"
         >
           {label}
         </label>
@@ -48,9 +48,9 @@ export function Select({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn(
-          "h-10 rounded-md border border-neutral-400 bg-white px-3 text-base text-neutral-900",
-          "disabled:bg-neutral-100 disabled:text-neutral-500",
-          error && "border-danger-500",
+          "h-10 rounded-md border border-rule-strong bg-card px-3 text-base text-ink",
+          "disabled:bg-sel disabled:text-ink-2",
+          error && "border-danger",
           className,
         )}
         {...rest}
@@ -63,11 +63,11 @@ export function Select({
         ))}
       </select>
       {error ? (
-        <p id={`${selectId}-error`} className="text-sm text-danger-500">
+        <p id={`${selectId}-error`} className="text-sm text-danger">
           {error}
         </p>
       ) : helperText ? (
-        <p id={`${selectId}-helper`} className="text-sm text-neutral-500">
+        <p id={`${selectId}-helper`} className="text-sm text-ink-2">
           {helperText}
         </p>
       ) : null}

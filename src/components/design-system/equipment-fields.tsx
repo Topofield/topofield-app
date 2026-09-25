@@ -53,8 +53,8 @@ export function TotalStationFieldset({
   const meetsOrder = totalStationMeetsOrder(order, angularPrecisionSeconds);
 
   return (
-    <fieldset className="flex flex-col gap-4 rounded-md border border-neutral-200 p-4">
-      <legend className="px-1 text-sm font-medium text-neutral-800">
+    <fieldset className="flex flex-col gap-4 rounded-md border border-rule p-4">
+      <legend className="px-1 text-sm font-medium text-ink">
         Equipo: estación total
       </legend>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -95,7 +95,7 @@ export function TotalStationFieldset({
         helperText="ISO 17123-3."
       />
       {!meetsOrder && (
-        <p className="text-sm text-warning-500">
+        <p className="text-sm text-warning">
           Una precisión de {value.angularPrecisionSeconds}″ no alcanza para{" "}
           {PRECISION_ORDER_LABELS[order].toLowerCase()}, cuya tolerancia parte
           de {ANGULAR_TOLERANCE_K[order]}″. Puede capturar igual: es un aviso,
@@ -148,8 +148,8 @@ export function LevelFieldset({
   const meetsOrder = levelMeetsOrder(order, kmPrecisionMm);
 
   return (
-    <fieldset className="flex flex-col gap-4 rounded-md border border-neutral-200 p-4">
-      <legend className="px-1 text-sm font-medium text-neutral-800">
+    <fieldset className="flex flex-col gap-4 rounded-md border border-rule p-4">
+      <legend className="px-1 text-sm font-medium text-ink">
         Equipo: nivel
       </legend>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -198,7 +198,7 @@ export function LevelFieldset({
         />
       </div>
       {!meetsOrder && (
-        <p className="text-sm text-warning-500">
+        <p className="text-sm text-warning">
           Una precisión de {value.kmPrecisionMm} mm/km no alcanza para{" "}
           {PRECISION_ORDER_LABELS[order].toLowerCase()}, cuya tolerancia parte
           de {LEVELING_TOLERANCE_K[order]} mm/km. Puede capturar igual: es un
