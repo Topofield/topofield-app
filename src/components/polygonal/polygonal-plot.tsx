@@ -259,11 +259,13 @@ export function PolygonalPlot({
             </g>
           )}
 
-          {/* Ajustada: continua, con vértices rotulados */}
+          {/* Ajustada: continua, con vértices rotulados. En tinta, como la
+              serie principal del prototipo: en mira quedaba en el mismo tono
+              que la sin compensar (warning) y solo las separaba el trazo. */}
           <polyline
             points={toPoints(adjusted)}
             fill="none"
-            stroke="var(--color-mira-strong)"
+            stroke="var(--color-ink)"
             strokeWidth={2}
           />
           {labelled.map((t, i) => (
@@ -307,7 +309,7 @@ export function PolygonalPlot({
       <figcaption className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-2">
         <span className="inline-flex items-center gap-2">
           <svg width={24} height={8} aria-hidden>
-            <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-mira-strong)" strokeWidth={2} />
+            <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-ink)" strokeWidth={2} />
           </svg>
           Ajustada
         </span>
