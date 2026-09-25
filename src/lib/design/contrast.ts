@@ -103,23 +103,40 @@ export function formatRatio(ratio: number): string {
   return `${ratio.toFixed(2)}:1`;
 }
 
+/** Los tokens de color de cada tema, por nombre sin el prefijo `--color-`. */
+export interface ThemeTokens {
+  claro: Record<string, string>;
+  oscuro: Record<string, string>;
+}
+
 /**
- * Extrae los tokens de color del bloque `@theme` de una hoja de estilos.
+ * Extrae los tokens de color de una hoja de estilos, para los dos temas.
  *
  * Los tokens viven en `src/app/globals.css`, que es su única fuente de verdad.
  * Duplicar los valores hexadecimales en TypeScript los dejaría desincronizados
  * en el primer ajuste de paleta, que es justo el momento en que hay que medir.
  *
- * Devuelve el nombre sin el prefijo `--color-`: `{ "primary-500": "#187aae" }`.
+ * Un token `--color-x: light-dark(#claro, #oscuro);` da un valor a cada tema
+ * (Fase 20); uno con un hexadecimal a secas, el mismo a los dos.
+ *
+ * Devuelve el nombre sin el prefijo `--color-`: `{ claro: { "ink": "#1c2427" } }`.
  */
-export function parseThemeColors(css: string): Record<string, string> {
-  const colores: Record<string, string> = {};
-  const patron = /--color-([a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,8})\s*;/g;
-  for (const coincidencia of css.matchAll(patron)) {
-    const nombre = coincidencia[1];
-    const valor = coincidencia[2];
-    if (nombre === undefined || valor === undefined) continue;
-    colores[nombre] = valor.toLowerCase();
+export function parseThemeTokens(css: string): ThemeTokens {
+  const claro: Record<string, string> = {};
+  const oscuro: Record<string, string> = {};
+  const hex = "#[0-9a-fA-F]{3,8}";
+  const patron = new RegExp(
+    `--color-([a-z0-9-]+)\\s*:\\s*(?:(${hex})|light-dark\\(\\s*(${hex})\\s*,\\s*(${hex})\\s*\\))\\s*;`,
+    "g",
+  );
+  for (const m of css.matchAll(patron)) {
+    const [, nombre, solo, enClaro, enOscuro] = m;
+    if (nombre === undefined) continue;
+    const c = solo ?? enClaro;
+    const o = solo ?? enOscuro;
+    if (c === undefined || o === undefined) continue;
+    claro[nombre] = c.toLowerCase();
+    oscuro[nombre] = o.toLowerCase();
   }
-  return colores;
+  return { claro, oscuro };
 }

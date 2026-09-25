@@ -18,7 +18,7 @@ import {
   Tabs,
   Textarea,
 } from "@/components/design-system";
-import { formatRatio, parseThemeColors } from "@/lib/design/contrast";
+import { formatRatio, parseThemeTokens } from "@/lib/design/contrast";
 import {
   CONTEXTO_LABELS,
   medirPairings,
@@ -37,41 +37,26 @@ export const metadata = {
   title: "Sistema de diseño — TopoField",
 };
 
-/** Grupos de tokens y el rol de cada escalón, según § 2.1 de la spec. */
+/** Grupos de tokens por rol (Fase 20). Cada uno tiene un valor por tema. */
 const GRUPOS: { titulo: string; nota: string; tokens: string[] }[] = [
   {
-    titulo: "Marca",
-    nota: "-50/-100/-200 solo fondo y bordes · -500 base accesible · -600/-700 texto y profundidad",
-    tokens: [
-      "primary-50",
-      "primary-100",
-      "primary-200",
-      "primary-500",
-      "primary-600",
-      "primary-700",
-    ],
+    titulo: "Superficies y tinta",
+    nota: "papel es el fondo de página y tarjeta el de tarjetas, tablas y modales · tinta, tinta 2 y tinta 3 son el texto principal, el secundario y el terciario · regla separa y regla fuerte es el borde de un control (3:1).",
+    tokens: ["paper", "card", "sel", "ink", "ink-2", "ink-3", "rule", "rule-strong"],
+  },
+  {
+    titulo: "Acento «mira»",
+    nota: "mira es la acción principal, con texto on-mira encima · mira-strong es el foco y el acento gráfico: el amarillo del prototipo no llegaba a 3:1 sobre blanco.",
+    tokens: ["mira", "mira-strong", "mira-bg", "mira-ink", "on-mira"],
   },
   {
     titulo: "Estado",
-    nota: "Cada uno se usa en tres contextos distintos. Cumplir en uno no implica cumplir en los otros.",
-    tokens: ["success-500", "warning-500", "danger-500"],
-  },
-  {
-    titulo: "Neutrales",
-    nota: "neutral-400 es el borde de control · neutral-500 es la excepción: se usa como texto secundario sobre blanco y cumple AA ahí.",
-    tokens: [
-      "neutral-50",
-      "neutral-100",
-      "neutral-200",
-      "neutral-400",
-      "neutral-500",
-      "neutral-800",
-      "neutral-900",
-    ],
+    nota: "Texto sobre tarjeta y sobre su propio tinte (-bg): cumplir en uno no implica cumplir en el otro.",
+    tokens: ["success", "success-bg", "warning", "warning-bg", "danger", "danger-bg", "on-danger"],
   },
   {
     titulo: "Semáforo de asentamientos",
-    nota: "Reservado para la fase 5. Ya cumple 3:1 como indicador gráfico, pero los niveles contiguos quedaron a luminancia parecida (1.18, 1.15, 1.01): el semáforo debe ir siempre con texto.",
+    nota: "Un solo valor para los dos temas: cumple 3:1 sobre la tarjeta clara y la oscura. Los niveles contiguos quedan a luminancia parecida, así que el semáforo va siempre con forma y texto (Fase 5).",
     tokens: [
       "semaphore-green",
       "semaphore-yellow",
@@ -82,11 +67,16 @@ const GRUPOS: { titulo: string; nota: string; tokens: string[] }[] = [
 ];
 
 const ORDEN_CONTEXTOS: Contexto[] = [
-  "texto-sobre-blanco",
+  "texto-sobre-superficie",
   "texto-sobre-tinte",
-  "fondo-bajo-texto-blanco",
+  "texto-sobre-relleno",
   "grafico",
 ];
+
+const TEMAS = [
+  ["claro", "Tema claro"],
+  ["oscuro", "Tema oscuro"],
+] as const;
 
 export default async function DesignSystemPage() {
   // Herramienta de desarrollo: no forma parte del producto.
@@ -98,11 +88,20 @@ export default async function DesignSystemPage() {
     join(process.cwd(), "src/app/globals.css"),
     "utf8",
   );
-  const tokens = parseThemeColors(css);
-  const medidas = medirPairings(tokens);
+  const temas = parseThemeTokens(css);
+  const medidasPorTema = {
+    claro: medirPairings(temas.claro),
+    oscuro: medirPairings(temas.oscuro),
+  };
+  const medidas = [...medidasPorTema.claro, ...medidasPorTema.oscuro];
   // Las parejas informativas se miden pero no cuentan: WCAG las exime.
-  const fallos = medidas.filter((m) => !m.cumple && !m.informativo);
+  const fallos = TEMAS.flatMap(([tema]) =>
+    medidasPorTema[tema]
+      .filter((m) => !m.cumple && !m.informativo)
+      .map((m) => ({ ...m, tema })),
+  );
   const exentas = medidas.filter((m) => m.informativo);
+  const tokens = temas.claro;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
@@ -110,8 +109,8 @@ export default async function DesignSystemPage() {
         <Logo className="text-2xl" />
         <h1 className="mt-4 text-3xl font-bold">Sistema de diseño</h1>
         <p className="mt-2 max-w-2xl text-neutral-800">
-          Estado actual de los {Object.keys(tokens).length} tokens de color y
-          los 16 componentes de{" "}
+          Estado actual de los {Object.keys(tokens).length} tokens de color,
+          en claro y en oscuro, y los componentes de{" "}
           <code className="text-sm">src/components/design-system/</code>. Los
           contrastes se miden en vivo desde{" "}
           <code className="text-sm">globals.css</code>.
@@ -147,7 +146,7 @@ export default async function DesignSystemPage() {
           <KpiCard
             label="Parejas medidas"
             value={medidas.length}
-            hint="Umbral 4.5:1 en texto, 3:1 en gráficos"
+            hint="En los dos temas. Umbral 4.5:1 en texto, 3:1 en gráficos"
           />
           <KpiCard
             label="Cumplen"
@@ -166,8 +165,9 @@ export default async function DesignSystemPage() {
 
         {fallos.length === 0 ? (
           <Alert variant="success" title="Todas las parejas declaradas cumplen AA">
-            Los cuatro tokens corregidos durante las fases 1–3 se sostienen en
-            los tres contextos.
+            En claro y en oscuro. Lo comprueba también{" "}
+            <code>pairings.test.ts</code>: una pareja que deje de cumplir hace
+            fallar <code>npm test</code>.
           </Alert>
         ) : (
           <Alert
@@ -177,6 +177,7 @@ export default async function DesignSystemPage() {
             <ul className="mt-2 space-y-2">
               {fallos.map((m, i) => (
                 <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-xs font-semibold">{m.tema}</span>
                   <span className="font-mono text-xs tabular-nums font-semibold">
                     {formatRatio(m.ratio)}
                   </span>
@@ -208,7 +209,12 @@ export default async function DesignSystemPage() {
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {grupo.tokens.map((token) => (
-                  <Swatch key={token} token={token} hex={tokens[token]} />
+                  <Swatch
+                    key={token}
+                    token={token}
+                    claro={temas.claro[token]}
+                    oscuro={temas.oscuro[token]}
+                  />
                 ))}
               </div>
             </div>
@@ -238,23 +244,30 @@ export default async function DesignSystemPage() {
         titulo="Contraste por contexto"
         descripcion="Un color que cumple sobre blanco puede fallar sobre su propio fondo teñido, porque el fondo efectivo ya no es blanco. Ese fue el fallo que ninguna revisión manual detectaba."
       >
-        <div className="space-y-8">
-          {ORDEN_CONTEXTOS.map((contexto) => {
-            const filas = medidas.filter((m) => m.contexto === contexto);
-            const primera = filas[0];
-            if (primera === undefined) return null;
-            return (
-              <div key={contexto}>
-                <h3 className="text-base font-semibold">
-                  {CONTEXTO_LABELS[contexto]}
-                </h3>
-                <p className="mt-1 mb-3 text-sm text-neutral-500">
-                  Umbral {primera.umbral}:1
-                </p>
-                <TablaMediciones filas={filas} />
-              </div>
-            );
-          })}
+        <div className="space-y-12">
+          {TEMAS.map(([tema, titulo]) => (
+            <div key={tema} className="space-y-8">
+              <h3 className="text-lg font-semibold">{titulo}</h3>
+              {ORDEN_CONTEXTOS.map((contexto) => {
+                const filas = medidasPorTema[tema].filter(
+                  (m) => m.contexto === contexto,
+                );
+                const primera = filas[0];
+                if (primera === undefined) return null;
+                return (
+                  <div key={contexto}>
+                    <h4 className="text-base font-semibold">
+                      {CONTEXTO_LABELS[contexto]}
+                    </h4>
+                    <p className="mt-1 mb-3 text-sm text-neutral-500">
+                      Umbral {primera.umbral}:1
+                    </p>
+                    <TablaMediciones filas={filas} />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </Seccion>
 
@@ -530,8 +543,12 @@ export default async function DesignSystemPage() {
               d: "Se convergió en <Link> + aria-current. Los chips del listado de procesos (process-list-toolbar.tsx) ya son enlaces: eso es lo que cambió. La persistencia en localStorage se conservó intacta, con sus dos useEffect (restauración y guardado) en el mismo orden — invertirlo reintroduce un bug ya corregido. Un botón con router.push exige \"use client\" y no se puede abrir en pestaña nueva ni compartir — coste que no se justifica cuando el control no necesita estado de cliente.",
             },
             {
-              t: "Prueba de contraste: no se añade, la página es la verificación",
-              d: "La tabla de parejas (pairings.ts) y las funciones puras de contrast.ts ya existen; /design-system las mide en vivo contra globals.css en cada carga. Convertirla en prueba de Vitest exigiría jsdom, que el proyecto no usa (environment: \"node\"). Al tocar la paleta o añadir una pareja, abrir la página es el paso de verificación — no hay gate automático en npm test.",
+              t: "Tokens por rol y modo oscuro (Fase 20)",
+              d: "La identidad del prototipo de asentamientos —papel, tinta y el acento «mira»— sustituye a las escalas primary y neutral. Cada token lleva su valor claro y oscuro en un light-dark(), y el tema lo decide color-scheme: sin un bloque oscuro paralelo y sin un solo dark: en los componentes. Los seis valores del prototipo que no llegaban a su umbral se ajustaron conservando el tono; el amarillo, por ejemplo, no sirve de foco sobre blanco (2.06:1), y el foco usa mira-strong.",
+            },
+            {
+              t: "Prueba de contraste: desde la Fase 20, es un test",
+              d: "Hasta la Fase 20 la verificación era abrir esta página: se creyó que convertirla en prueba de Vitest exigía jsdom. No es así: parseThemeTokens es pura y Vitest lee globals.css con fs en el entorno node. pairings.test.ts mide cada pareja en los dos temas y falla si una no cumple. Con dos temas las parejas se duplicaron, y mirarlas a mano había dejado de ser fiable.",
             },
             {
               t: "Semáforo de asentamientos: rellenos oscurecidos",
@@ -613,8 +630,16 @@ function Demo({
  * Tailwind v4 extrae las clases estáticamente del código fuente: una clase
  * construida como `bg-${token}` no existiría en el CSS generado.
  */
-function Swatch({ token, hex }: { token: string; hex?: string }) {
-  if (!hex) return null;
+function Swatch({
+  token,
+  claro,
+  oscuro,
+}: {
+  token: string;
+  claro?: string;
+  oscuro?: string;
+}) {
+  if (!claro) return null;
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
       <div
@@ -626,7 +651,9 @@ function Swatch({ token, hex }: { token: string; hex?: string }) {
         <p className="font-mono text-xs font-medium text-neutral-900">
           {token}
         </p>
-        <p className="font-mono text-xs tabular-nums text-neutral-500">{hex}</p>
+        <p className="font-mono text-xs tabular-nums text-neutral-500">
+          {claro === oscuro ? claro : `${claro} · ${oscuro}`}
+        </p>
       </div>
     </div>
   );

@@ -124,15 +124,41 @@ porque el aviso sería «falta el dato» cuando el dato está mal escrito.
 
 ### Tokens (`globals.css`)
 
-- `@theme` declara los valores del tema claro. El oscuro redefine las mismas
-  variables en `@media screen and (prefers-color-scheme: dark)` sobre
-  `:root:not([data-theme="light"])`, y en `:root[data-theme="dark"]` dentro de
-  `@media screen`. Es el esquema del prototipo más la restricción de pantalla
-  de la decisión 7.
-- Tailwind v4 genera `bg-card`, `text-ink`, `border-rule`… como
+- Cada token lleva sus dos valores en un **`light-dark(claro, oscuro)`**, en
+  un bloque `@theme static`. El tema lo decide `color-scheme`: `light dark`
+  en `:root` (sigue al sistema), `light` o `dark` con `data-theme` dentro de
+  `@media screen`, y `light` en `@media print`. Es un solo bloque de tokens:
+  la primera redacción duplicaba el oscuro bajo una media query y bajo
+  `data-theme`, y dos copias paralelas acaban divergiendo.
+- `static` porque Tailwind v4 solo emite las variables que usa alguna
+  utilidad, y estas también se leen con `var(--color-…)` en línea (muestras de
+  `/design-system`, colores de las series).
+- Lightning CSS transpila `light-dark()` a un polyfill con variables
+  `--lightningcss-light/-dark` que sigue a `color-scheme`. Verificado en el
+  navegador: sistema claro y oscuro, cada tema forzado contra el sistema
+  contrario, e impresión con el oscuro forzado (sale en claro).
+- Tailwind genera `bg-card`, `text-ink`, `border-rule`… como
   `var(--color-…)`, así que el cambio de tema no necesita ni un `dark:`.
-- `/10` sigue siendo la única transparencia sancionada, ahora medida sobre la
-  tarjeta de cada tema.
+- Los estados usan tintes explícitos (`success-bg`…) y no `/10`.
+
+**Valores finales** (claro · oscuro). Parten del prototipo; los marcados
+se ajustaron conservando el tono hasta su umbral, con un paso de margen:
+
+| Token | Claro | Oscuro |
+|---|---|---|
+| `paper` · `card` | `#f4f6f5` · `#ffffff` | `#151a1c` · `#1d2427` |
+| `ink` · `ink-2` | `#1c2427` · `#56636a` | `#e8edec` · `#a9b5b9` |
+| `ink-3` | **`#677277`** (era `#8a969c`, 3.03) | **`#838f95`** (era `#76838a`, 4.04) |
+| `rule` · `rule-strong` | `#dde3e2` · **`#838b8c`** (nuevo, 3:1) | `#2c3538` · **`#666f71`** |
+| `sel` | `#eef3f2` | `#243034` |
+| `mira` · `mira-strong` | `#e2ad0b` · **`#ab8308`** (nuevo: foco) | `#f0bd22` · `#f0bd22` |
+| `mira-bg` · `mira-ink` · `on-mira` | `#fbf1d3` · `#6b5100` · `#231b00` | `#3a300f` · `#f5d67a` · `#231b00` |
+| `success` · `-bg` | **`#2c7866`** (era `#2d7a68`) · `#e1f1ec` | `#5cc0a6` · `#16332c` |
+| `warning` · `-bg` | **`#9e5f00`** (era `#b86e00`) · `#fcefd9` | `#f0a53a` · `#3b2b12` |
+| `danger` · `-bg` · `on-danger` | `#c0392b` · `#fbe6e3` · `#ffffff` | `#ef7466` · `#3d1c19` · **`#1d0f0d`** |
+| semáforo | los de la Fase 5, sin cambio | los mismos: cumplen 3:1 también en oscuro |
+
+`on-danger` es nuevo: el blanco sobre el rojo claro del tema oscuro da 2.85.
 
 **Correspondencia orientativa** para migrar (se revisa caso a caso, por rol y
 no por nombre):

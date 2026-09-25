@@ -1,6 +1,46 @@
 @import "tailwindcss";
 
+/* `static`: Tailwind v4 solo emite las variables que usa alguna utilidad, y
+   estas también se leen con `var(--color-…)` en línea —las muestras de
+   `/design-system`, los colores de las series de las gráficas—. */
+@theme static {
+  /* --- Tokens por rol (Fase 20, UI1) ----------------------------------------
+     La identidad del prototipo de asentamientos: papel/tinta y el acento
+     «mira». Cada token lleva sus dos valores, claro y oscuro, en un
+     `light-dark()`: el tema lo decide `color-scheme` (ver `@layer base`), así
+     que no hay un bloque oscuro que mantener en paralelo ni un solo `dark:` en
+     los componentes. Los valores parten del prototipo; los que no llegaban a
+     su umbral se ajustaron conservando el tono, y `pairings.test.ts` mide
+     cada pareja en los dos temas (PRD de la fase 20, decisión 2). */
+
+  --color-paper: light-dark(#f4f6f5, #151a1c); /* fondo de página */
+  --color-card: light-dark(#ffffff, #1d2427); /* tarjetas, tablas, modales */
+  --color-ink: light-dark(#1c2427, #e8edec); /* texto y títulos */
+  --color-ink-2: light-dark(#56636a, #a9b5b9); /* texto secundario */
+  --color-ink-3: light-dark(#677277, #838f95); /* terciario (prototipo: #8a969c / #76838a) */
+  --color-rule: light-dark(#dde3e2, #2c3538); /* separadores: decorativos */
+  --color-rule-strong: light-dark(#838b8c, #666f71); /* borde de control, 3:1 */
+  --color-sel: light-dark(#eef3f2, #243034); /* fila seleccionada o resaltada */
+
+  --color-mira: light-dark(#e2ad0b, #f0bd22); /* acción principal */
+  --color-mira-strong: light-dark(#ab8308, #f0bd22); /* foco y acento gráfico, 3:1 */
+  --color-mira-bg: light-dark(#fbf1d3, #3a300f);
+  --color-mira-ink: light-dark(#6b5100, #f5d67a); /* texto sobre mira-bg */
+  --color-on-mira: light-dark(#231b00, #231b00); /* texto sobre mira */
+
+  --color-success: light-dark(#2c7866, #5cc0a6); /* prototipo: #2d7a68 */
+  --color-success-bg: light-dark(#e1f1ec, #16332c);
+  --color-warning: light-dark(#9e5f00, #f0a53a); /* prototipo: #b86e00 */
+  --color-warning-bg: light-dark(#fcefd9, #3b2b12);
+  --color-danger: light-dark(#c0392b, #ef7466);
+  --color-danger-bg: light-dark(#fbe6e3, #3d1c19);
+  --color-on-danger: light-dark(#ffffff, #1d0f0d); /* texto sobre danger */
+}
+
 @theme {
+  /* --- Tokens anteriores ----------------------------------------------------
+     Se retiran al terminar la migración (tarea 7 del PRD de la fase 20). */
+
   /* Marca TopoField */
   --color-primary-50: #e8f4fa;
   --color-primary-100: #c5e4f3;
@@ -34,6 +74,31 @@
 }
 
 @layer base {
+  /* El tema (Fase 20). Sin `data-theme`, sigue al sistema; el selector de la
+     cabecera fija `light` o `dark`. Los `light-dark()` de los tokens eligen
+     su valor según este `color-scheme`, que además tiñe los controles nativos
+     y las barras de desplazamiento. Solo en pantalla: el papel es blanco, y el
+     informe impreso sale siempre en claro (PRD, decisión 7). */
+  :root {
+    color-scheme: light dark;
+  }
+
+  @media screen {
+    :root[data-theme="light"] {
+      color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+    }
+  }
+
+  @media print {
+    :root {
+      color-scheme: light;
+    }
+  }
+
   body {
     @apply bg-neutral-50 text-neutral-900 antialiased;
     font-family:
