@@ -73,24 +73,38 @@ export function resolveVisualDistances(reading: ReadingInput): {
 }
 
 /**
- * Distancia acumulada por fila, en METROS, desde las distancias por visual.
+ * Distancia acumulada por fila, en METROS: el recorrido desde el origen HASTA
+ * cada punto, que es lo que la compensación proporcional necesita (§ 6.8).
  *
- * Una armada aporta la distancia de su V+ más la de su V−. Los
- * puntos `intermediate` aportan 0 y HEREDAN el acumulado de la armada de la
- * que cuelgan — que es lo que `applyProportionalCorrection` necesita para
- * interpolarles la corrección—, y la cadena continúa detrás de ellos.
+ * - Un `bm` o `pc` acumula hasta su V−, la visual con la que se LLEGA a él.
+ *   Su V+ es la visual hacia la armada siguiente: se suma después, para las
+ *   filas que vienen. Hasta la Fase 19 la fila la incluía, y el BM de partida
+ *   recibía compensación aunque su cota es conocida (N8).
+ * - Un `intermediate` no aporta y HEREDA el acumulado de su armada —hasta el
+ *   instrumento—, que es lo que `applyProportionalCorrection` le interpola; la
+ *   cadena continúa detrás de él. En la cartera de El Verjón una vista
+ *   intermedia rompió la suma de la hoja y dejó 24.7 m fuera del total.
+ * - El total (el acumulado de la última fila) es el mismo con cualquier regla.
  *
- * Que la cadena continúe no es un detalle: en la cartera de El Verjón una
- * vista intermedia rompió la suma de la hoja de cálculo y dejó 24.7 m fuera
- * del total, con el veredicto de cierre emitido sobre el número equivocado.
+ * `reconstructed`: los procesos cuyas distancias repartió el backfill de la
+ * Fase 9 partieron cada tramo entre la V− y la V+ de la MISMA fila; allí la V+
+ * es la mitad del tramo que llega al punto, y conservan la regla anterior.
  */
-export function accumulateDistances(readings: ReadingInput[]): number[] {
+export function accumulateDistances(
+  readings: ReadingInput[],
+  { reconstructed = false }: { reconstructed?: boolean } = {},
+): number[] {
   let running = 0;
   return readings.map((reading) => {
     if (reading.pointType === "intermediate") return running;
     const { back, fore } = resolveVisualDistances(reading);
-    running += (fore ?? 0) + (back ?? 0);
-    return running;
+    if (reconstructed) {
+      running += (fore ?? 0) + (back ?? 0);
+      return running;
+    }
+    const here = running + (fore ?? 0);
+    running = here + (back ?? 0);
+    return here;
   });
 }
 
@@ -145,6 +159,7 @@ export interface RunComputation {
 export function computeRun(
   readings: ReadingInput[],
   startElevation: number,
+  { reconstructed = false }: { reconstructed?: boolean } = {},
 ): RunComputation {
   let instrumentHeight: number | null = null;
   let currentElevation = startElevation;
@@ -155,7 +170,7 @@ export function computeRun(
   // El acumulado se DERIVA de las distancias por visual; ya no viene tecleado.
   // Eso hace que el acumulado de la fila terminal y el total del recorrido
   // sean el mismo número por construcción.
-  const accumulated = accumulateDistances(readings);
+  const accumulated = accumulateDistances(readings, { reconstructed });
 
   const computed: ComputedReading[] = readings.map((reading, index) => {
     const isIntermediate = reading.pointType === "intermediate";
@@ -256,7 +271,8 @@ export function applyProportionalCorrection(
 
   return readings.map((reading) => {
     const accumulated = reading.distanceAccumulatedKm ?? 0;
-    const correction = -errorM * (accumulated / totalDistanceKm);
+    // `+ 0` normaliza el −0 que da un error positivo en el origen (acumulado 0).
+    const correction = -errorM * (accumulated / totalDistanceKm) + 0;
     return {
       ...reading,
       correctionApplied: correction,
@@ -293,7 +309,8 @@ function knownClosingElevation(input: LevelingInput): number | null {
  * igual.
  */
 export function computeLeveling(input: LevelingInput): LevelingResult {
-  const forward = computeRun(input.forward, input.startElevation);
+  const reconstructed = input.distancesReconstructed ?? false;
+  const forward = computeRun(input.forward, input.startElevation, { reconstructed });
   const known = knownClosingElevation(input);
 
   // La distancia ya no se teclea: se deriva de las distancias por visual de la
@@ -358,7 +375,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     // salían desplazadas por el desnivel de la ida (1.1636 m en el crudo de
     // nivel digital, PRD de la Fase 16, hallazgo 3).
     const returnStart = known ?? forward.finalElevation;
-    const back = computeRun(input.return, returnStart);
+    const back = computeRun(input.return, returnStart, { reconstructed });
 
     discrepancyMm =
       Math.abs(forward.heightDifference + back.heightDifference) * 1000;

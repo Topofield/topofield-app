@@ -84,6 +84,29 @@ describe("computeVisitBook", () => {
     expect(r.return).toBeNull();
   });
 
+  it("el amarre no se compensa y el punto de cambio se compensa hasta su V− (Fase 19)", () => {
+    const r = computeVisitBook(prototypeBook(), BM, "tercer_orden");
+    const amarre = r.forward.readings[0]!;
+    expect(amarre.correctionApplied).toBe(0);
+    expect(amarre.elevationCorrected).toBe(BM);
+    // CP-1 está a 40 + 42 m del origen, no a 40 + 42 + 45.
+    expect(r.forward.readings[5]!.distanceAccumulatedKm).toBeCloseTo(0.082, 9);
+  });
+
+  it("las intermedias heredan el acumulado de su armada: sus cotas no cambian (Fase 19)", () => {
+    const r = computeVisitBook(prototypeBook(), BM, "tercer_orden");
+    const acc = r.forward.readings.map((x) => x.distanceAccumulatedKm);
+    // Armada 1 hasta el instrumento: 40 m. Armada 2: 40 + 42 + 45 m. Es lo
+    // mismo que daba la regla anterior, así que las cotas derivadas de los
+    // puntos de control no se mueven.
+    for (const k of [1, 2, 3, 4]) expect(acc[k]).toBeCloseTo(0.04, 9);
+    for (const k of [6, 7, 8, 9]) expect(acc[k]).toBeCloseTo(0.127, 9);
+    const pc05 = r.forward.readings[6]!;
+    expect(pc05.correctionApplied).toBeCloseTo((-0.0013 * 127) / 165, 9);
+    // El cierre recibe la corrección entera y vuelve a la cota del amarre.
+    expect(r.forward.readings[10]!.elevationCorrected).toBeCloseTo(BM, 9);
+  });
+
   it("sin distancias calcula el cierre pero no la tolerancia ni la compensación", () => {
     const rows = prototypeBook().map((x) => ({
       ...x,

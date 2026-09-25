@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-24 · Fase 18 cerrada · 765 tests ·
+**Última actualización:** 2026-09-25 · Fase 19 cerrada · 774 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -71,6 +71,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 16 | Importar lecturas de nivel digital | cerrada |
 | 17 | Control ida-vuelta por puntos homólogos | cerrada |
 | 18 | Libreta de nivelación y panel de asentamientos | cerrada |
+| 19 | Equilibrado por armada y compensación desde el origen | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -1041,6 +1042,42 @@ punto flotante (~1e-14) que producía precisiones absurdas como
 `1:17222920531038532`. Un nanómetro está diez órdenes de magnitud por debajo de
 cualquier precisión instrumental real.
 
+### Nivelación: acumulado desde el origen (Fase 19)
+
+La corrección proporcional (§ 6.8 del PRD) reparte el error de cierre según
+`Dist_acumulada_i / Dist_total`. `accumulateDistances` define ese acumulado
+como el recorrido **desde el origen hasta el punto**:
+
+- una fila `bm`/`pc` acumula **hasta su V−**; su V+ —la visual hacia la armada
+  siguiente— se suma después, para las filas que vienen;
+- una `intermediate` no aporta y hereda el acumulado de su armada hasta el
+  instrumento;
+- el total, que es el acumulado de la última fila, no cambia.
+
+Así el BM de partida queda en 0 y **no recibe corrección**. Hasta la Fase 19
+la fila incluía su propia V+, y el BM de partida se movía aunque su cota es
+conocida: en el circuito del seed, BM-1 quedaba en 100.0013 y PC-1 en
+100.3040, en vez de 100.0000 y 100.3027 (N8, `docs/pendientes.md`). Las
+intermedias no cambian, y con ellas tampoco las cotas de los puntos de control
+de asentamientos.
+
+**Los procesos reconstruidos conservan la regla anterior.** El backfill de la
+Fase 9 repartió cada tramo a medias entre la V− y la V+ **de la misma fila**,
+así que en esos procesos la V+ de una fila es media visual de llegada, no la
+que sale del punto. `LevelingInput.distancesReconstructed` lleva la marca al
+motor: el editor la pasa desde `process.distances_reconstructed`, y la acción
+de guardado calcula siempre con la regla nueva porque guardar deja la marca en
+`false` (Fase 9).
+
+**Lo ya guardado se migró** con
+`20260927000000_compensacion_desde_el_origen.sql`, cerrados incluidos: solo
+derivados (acumulado, corrección y cota compensada), con los triggers de
+inmutabilidad desactivados alrededor de cada `UPDATE`. Recalcula la cadena
+desde las distancias por visual con funciones de ventana, igual que el motor,
+y se verificó fila a fila contra él. Una guarda aborta si un punto de control
+de asentamientos es punto de cambio en una libreta compensada: su cota
+cambiaría y la serie solo la recalcula `computeHistory`.
+
 ### `computeSettlements`, `computeDifferentials`, `classifyAlert`
 
 El motor de asentamientos, en `settlement.ts`, se apoya en tres piezas
@@ -1413,17 +1450,17 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-765 tests en 38 archivos, Vitest, entorno `node` **sin jsdom**.
+774 tests en 38 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
-| `lib/calculations/leveling.test.ts` | 71 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16) |
+| `lib/calculations/leveling.test.ts` | 75 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 22 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16) |
 | `lib/validators/polygonal.test.ts` | 66 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15) |
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
-| `lib/validators/leveling.test.ts` | 39 | Captura y cierre de nivelación |
+| `lib/validators/leveling.test.ts` | 42 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19) |
 | `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
 | `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
 | `lib/utils/format.test.ts` | 27 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18) |
@@ -1438,7 +1475,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
 | `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
 | `lib/export/settlement-workbook.test.ts` | 15 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18) |
-| `lib/calculations/settlement-book.test.ts` | 16 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18) |
+| `lib/calculations/settlement-book.test.ts` | 18 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18); el amarre no se compensa y las intermedias conservan su acumulado (Fase 19) |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
 | `lib/validators/settlement-book.test.ts` | 13 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18) |
 | `lib/calculations/settlement-summary.test.ts` | 10 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, peor distorsión `1/∞`, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
@@ -1642,9 +1679,18 @@ la V+ con la de la V− dentro de una armada.
 
 La Fase 9 sustituyó esa columna por `back_distance_m` y `fore_distance_m`, una
 por visual, que es justo lo que la comparación necesitaba.
-`validateSightBalance` (`src/lib/validators/leveling.ts`) avisa —no bloquea—
+`validateSightBalances` (`src/lib/validators/leveling.ts`) avisa —no bloquea—
 cuando la diferencia pasa del límite del orden, definido en
 `SIGHT_BALANCE_LIMIT_M` (`tolerances.ts`).
+
+**Por armada desde la Fase 19 (N7).** La Fase 9 comparaba la V+ y la V− de
+una **misma fila**, que en un punto de cambio son de armadas distintas: sobre
+la ida de El Verjón avisaba en filas equivocadas con magnitudes de ninguna
+armada. Ahora se compara la V+ de una fila `bm`/`pc` con la V− de la
+**siguiente fila no intermedia**, que es lo que calcula la hoja de campo; las
+intermedias no abren ni cierran armada. El aviso va en la celda de la V− que
+cierra la armada y la nombra: «Armada C 1 → C 2: visuales desequilibradas,
+10.8 m de diferencia; el límite del orden es 4 m».
 
 **Salvedad:** en procesos con `distances_reconstructed = true` el equilibrado
 **no se evalúa**. Son los que existían antes de la Fase 9, cuyas distancias por
@@ -2044,6 +2090,17 @@ pero las filas ya guardadas conservan las viejas hasta el siguiente guardado:
 el editor muestra las nuevas y el Excel, que lee lo guardado, las viejas. Una
 abierta con vuelta cerrada antes de la fase las conserva para siempre. En la
 base local no había ninguna; la nube no se revisó.
+
+> **Cerrado sin datos afectados (revisado en la Fase 19).** La nube se vació en
+> la Fase 18 y todo lo que hay se calculó con el motor posterior a la Fase 16.
+
+**El acumulado del motor se suma en coma flotante (Fase 19).** En un empate
+exacto al metro —164.5 m en la ida de El Verjón— el motor llega a
+164.49999999999997 y la columna `decimal(8,3)` guarda 0.164, mientras que la
+suma decimal de la migración de la Fase 19 guarda 0.165. Solo afecta a «Dist
+acum», que es informativa: la corrección se calcula con el valor sin
+redondear y coincide. Sumar en milímetros enteros lo resolvería; no se hizo
+por acotado.
 
 **Se pierden la σ del instrumento y las repeticiones (Fase 16).** La libreta
 guarda una lectura por visual, así que el import promedia. Llevar a

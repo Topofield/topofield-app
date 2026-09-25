@@ -89,6 +89,10 @@ function buildInput(payload: SaveLevelingPayload): LevelingInput {
     order: payload.precisionOrder,
     forward: payload.forward.map(toReadingInput),
     return: payload.hasReturnRun ? payload.return.map(toReadingInput) : null,
+    // Guardar deja `distances_reconstructed = false` (las distancias pasan a
+    // ser las de la libreta), así que se calcula con la regla del acumulado
+    // desde el origen (Fase 19), la de un proceso no reconstruido.
+    distancesReconstructed: false,
   };
 }
 

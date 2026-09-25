@@ -51,7 +51,7 @@ const MAX_READING = 4;
 // distancia por visual, que es lo que la comparación necesita. La deuda que la
 // Fase 4 registró —una sola `distance_m` por fila no bastaba— queda pagada.
 // Avisa, no bloquea: es un juicio sobre la calidad de una medición correcta en
-// su forma. Ver `validateSightBalance`, más abajo.
+// su forma. Ver `validateSightBalances`, más abajo: por armada desde la Fase 19.
 
 /**
  * Tipos de punto que entran en la comprobación aritmética y en la
@@ -141,41 +141,51 @@ export function validateReadingCapture(
 }
 
 /**
- * Equilibrado de visuales de una armada (§ 5.1; deuda de la Fase 4 pagada en
- * la Fase 9).
+ * Equilibrado de visuales por armada (§ 5.1; deuda de la Fase 4 pagada en la
+ * Fase 9, corregida en la 19).
  *
  * Equilibrar las visuales cancela el error de colimación: si la visual sale
  * inclinada, el mismo error entra con signo opuesto en las dos lecturas y se
  * anula al restarlas. Avisa, no bloquea — es un juicio sobre la calidad de una
  * medición correcta en su forma.
  *
+ * Una ARMADA es la V+ de un punto y la V− del siguiente punto que no sea
+ * intermedio: es lo que calcula la hoja de campo de El Verjón (`M4 = I3 + K6`).
+ * Hasta la Fase 19 se comparaban la V+ y la V− de una misma fila, que en un
+ * punto de cambio son de armadas distintas: callaba desequilibrios reales y
+ * daba magnitudes de ninguna armada (N7). Las intermedias no abren ni cierran
+ * armada.
+ *
+ * Devuelve el aviso por fila, en la fila cuya V− cierra la armada.
+ *
  * `distancesReconstructed` viene de `leveling_processes`: en los procesos que
- * el backfill de la Fase 9 reconstruyó, las dos distancias salen de repartir
- * por mitades la diferencia del acumulado, así que el equilibrado saldría
- * perfecto por construcción. Evaluarlo allí sería emitir una conformidad que
- * el dato no respalda.
+ * el backfill de la Fase 9 reconstruyó, las distancias salen de repartir por
+ * mitades, así que el equilibrado no diría nada del campo. No se evalúa.
  */
-export function validateSightBalance(
-  reading: ReadingInput,
+export function validateSightBalances(
+  readings: ReadingInput[],
   order: PrecisionOrder,
   distancesReconstructed: boolean,
-): ReadingCaptureIssues {
-  const errors: ReadingCaptureIssues["errors"] = {};
-  const warnings: ReadingCaptureIssues["warnings"] = {};
-
-  if (distancesReconstructed) return { errors, warnings };
-
-  const { back, fore } = resolveVisualDistances(reading);
-  if (back == null || fore == null) return { errors, warnings };
+): (string | undefined)[] {
+  const warnings: (string | undefined)[] = readings.map(() => undefined);
+  if (distancesReconstructed) return warnings;
 
   const limit = SIGHT_BALANCE_LIMIT_M[order];
-  const diff = Math.abs(back - fore);
-  if (diff > limit) {
-    warnings.sightBalance =
-      `Visuales desequilibradas: ${diff.toFixed(1)} m de diferencia, el límite del orden es ${limit} m.`;
-  }
-
-  return { errors, warnings };
+  let opener: { code: string; back: number | null } | null = null;
+  readings.forEach((reading, index) => {
+    if (reading.pointType === "intermediate") return;
+    const { back, fore } = resolveVisualDistances(reading);
+    if (opener && reading.foresight != null && opener.back != null && fore != null) {
+      const diff = Math.abs(opener.back - fore);
+      if (diff > limit) {
+        warnings[index] =
+          `Armada ${opener.code} → ${reading.pointCode.trim()}: visuales desequilibradas, ` +
+          `${diff.toFixed(1)} m de diferencia; el límite del orden es ${limit} m.`;
+      }
+    }
+    opener = reading.backsight != null ? { code: reading.pointCode.trim(), back } : null;
+  });
+  return warnings;
 }
 
 /** ¿Tiene la lista de issues de captura algún error bloqueante? */
@@ -226,13 +236,9 @@ export function validateRunCapture(
 ): ReadingCaptureIssues[] {
   const lastIndex = readings.length - 1;
   const mustEndInBm = levelingType !== "open";
+  const balance = validateSightBalances(readings, order, distancesReconstructed);
   return readings.map((reading, index) => {
     const issues = validateReadingCapture(reading);
-    const balance = validateSightBalance(
-      reading,
-      order,
-      distancesReconstructed,
-    );
     let errors = issues.errors;
 
     // Toda fila `bm` que no sea la última de cierre abre una armada y por
@@ -261,7 +267,9 @@ export function validateRunCapture(
 
     return {
       errors,
-      warnings: { ...issues.warnings, ...balance.warnings },
+      warnings: balance[index]
+        ? { ...issues.warnings, sightBalance: balance[index] }
+        : issues.warnings,
     };
   });
 }

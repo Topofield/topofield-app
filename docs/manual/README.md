@@ -579,11 +579,14 @@ Cuando están los tres, la aplicación comprueba que el hilo medio sea el
 promedio de los otros dos. Si no cuadra, avisa: es un error de lectura o de
 transcripción.
 
-**Equilibrado de visuales.** Con las dos distancias de una armada, la
-aplicación avisa si la V+ y la V− quedaron a distancias muy distintas. Equilibrarlas cancela el error de colimación del nivel, así que
-es la regla de campo más importante de la nivelación de precisión. El límite
-depende del orden: 2 m en primer orden, 3 en segundo, 4 en tercero y 6 en
-ordinario.
+**Equilibrado de visuales.** Una armada son las dos visuales de una misma
+puesta del nivel: **la V+ de un punto y la V− del siguiente**. Con sus dos
+distancias, la aplicación avisa si quedaron muy distintas. El aviso aparece en
+la distancia V− que cierra la armada y la nombra —«Armada C 1 → C 2»—; las
+vistas intermedias no abren ni cierran armada. Equilibrarlas cancela el error
+de colimación del nivel, así que es la regla de campo más importante de la
+nivelación de precisión. El límite depende del orden: 2 m en primer orden, 3
+en segundo, 4 en tercero y 6 en ordinario.
 
 > Con **nivel digital** el instrumento entrega la distancia y no se leen
 > hilos: se teclean la lectura y la distancia.
@@ -607,9 +610,11 @@ depende del orden de precisión que declaró el proceso:
 
 **Corrección proporcional a la distancia.** Si el cierre cumple la
 tolerancia, la aplicación reparte el error entre los puntos según su
-distancia acumulada: a mayor distancia del origen, mayor corrección. El
-resultado es que el **BM final cierra exacto** contra su cota conocida, con
-corrección igual y de signo opuesto al error de cierre.
+distancia acumulada, que es el recorrido **desde el origen hasta el punto**:
+llega hasta su V− y no cuenta la V+ que sale de él hacia la armada siguiente.
+A mayor distancia del origen, mayor corrección. **El BM de partida no se
+corrige**: su cota es conocida. Y el **BM final cierra exacto** contra la suya,
+con corrección igual y de signo opuesto al error de cierre.
 
 ### 6.6 Ida y vuelta
 

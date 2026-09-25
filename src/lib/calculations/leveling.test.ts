@@ -62,45 +62,46 @@ function r(
 /**
  * Traduce filas por acumulado a filas con distancias por visual.
  *
- * El tramo de cada fila es la diferencia con el acumulado anterior, y se
- * reparte entre la V− (que cierra la armada previa) y la V+ (que abre la
- * siguiente), según cuáles tenga la fila. Con las dos, se
- * parte por mitades: los fixtures antiguos no distinguían, y su geometría de
- * cotas no depende del reparto — solo el acumulado total, que se conserva.
+ * El tramo de cada fila es la diferencia con el acumulado del punto anterior,
+ * y ese tramo es UNA ARMADA: la V+ del punto anterior y la V− de este. Se parte
+ * por mitades entre esas dos visuales (o entero a la que exista). Hasta la
+ * Fase 19 se repartía entre la V− y la V+ de la MISMA fila —el reparto de los
+ * procesos reconstruidos por el backfill de la Fase 9—, y con él la regla
+ * vieja del acumulado cuadraba por casualidad y ocultaba N8.
  */
 function fromAccum(rows: AccumRow[]): ReadingInput[] {
-  let prev = 0;
-  return rows.map((row) => {
-    const accum = row.accumKm ?? prev;
-    const tramoM = Math.max((accum - prev) * 1000, 0);
-    prev = accum;
-
-    const isIntermediate = row.pointType === "intermediate";
-    const hasFore = row.foresight != null;
-    const hasBack = row.backsight != null;
-
-    let foreDistanceM: number | null = null;
-    let backDistanceM: number | null = null;
-    if (!isIntermediate && tramoM > 0) {
-      if (hasFore && hasBack) {
-        foreDistanceM = tramoM / 2;
-        backDistanceM = tramoM / 2;
-      } else if (hasFore) {
-        foreDistanceM = tramoM;
-      } else if (hasBack) {
-        backDistanceM = tramoM;
-      }
-    }
-
-    return bare({
+  const out = rows.map((row) =>
+    bare({
       pointCode: row.pointCode,
       pointType: row.pointType,
       backsight: row.backsight,
       foresight: row.foresight,
-      backDistanceM,
-      foreDistanceM,
-    });
+    }),
+  );
+  let prevIndex: number | null = null;
+  let prevAccum = 0;
+  rows.forEach((row, i) => {
+    if (row.pointType === "intermediate") return;
+    const accum = row.accumKm ?? prevAccum;
+    const tramoM = Math.max((accum - prevAccum) * 1000, 0);
+    if (prevIndex !== null && tramoM > 0) {
+      const opener = out[prevIndex]!;
+      const closer = out[i]!;
+      const hasBack = opener.backsight != null;
+      const hasFore = closer.foresight != null;
+      if (hasBack && hasFore) {
+        opener.backDistanceM = (opener.backDistanceM ?? 0) + tramoM / 2;
+        closer.foreDistanceM = tramoM / 2;
+      } else if (hasFore) {
+        closer.foreDistanceM = tramoM;
+      } else if (hasBack) {
+        opener.backDistanceM = (opener.backDistanceM ?? 0) + tramoM;
+      }
+    }
+    prevIndex = i;
+    prevAccum = accum;
   });
+  return out;
 }
 
 describe("stadiaDistance", () => {
@@ -197,7 +198,9 @@ describe("computeLeveling con la cadena derivada", () => {
       ],
       return: null,
     });
-    expect(result.forward.readings[0]?.distanceAccumulatedKm).toBeCloseTo(0.3, 9);
+    // Desde la Fase 19 (N8) el acumulado de un punto es el recorrido HASTA él:
+    // el BM de partida está en 0, aunque ya tenga su V+ de 300 m.
+    expect(result.forward.readings[0]?.distanceAccumulatedKm).toBeCloseTo(0, 9);
     expect(result.forward.readings[1]?.distanceAccumulatedKm).toBeCloseTo(0.6, 9);
   });
 });
@@ -213,7 +216,9 @@ describe("las distancias de un intermedio no cuentan", () => {
       bare({ pointType: "intermediate", foresight: 1.0, foreDistanceM: 50 }),
       bare({ pointType: "bm", foresight: 1.5, foreDistanceM: 150 }),
     ];
-    expect(accumulateDistances(rows)).toEqual([150, 450, 450, 600]);
+    // La radiación hereda el acumulado de su armada (hasta el instrumento,
+    // 450 m); el punto de cambio está a 300 m del origen (Fase 19, N8).
+    expect(accumulateDistances(rows)).toEqual([0, 300, 450, 600]);
   });
 
   it("tampoco entran en el total", () => {
@@ -292,12 +297,24 @@ describe("resolveVisualDistances", () => {
 });
 
 describe("accumulateDistances", () => {
-  it("una armada acumula sus dos visuales", () => {
+  it("el acumulado de un punto es el recorrido hasta él, sin su propia V+ (N8)", () => {
+    // El primer punto está en el origen. El segundo, a su armada entera
+    // (30 + 30 m); sus 25 m de V+ son la visual hacia la armada siguiente.
     const rows = [
       bare({ backDistanceM: 30 }),
       bare({ foreDistanceM: 30, backDistanceM: 25 }),
     ];
-    expect(accumulateDistances(rows)).toEqual([30, 85]);
+    expect(accumulateDistances(rows)).toEqual([0, 60]);
+  });
+
+  it("un proceso reconstruido conserva la regla anterior", () => {
+    // El backfill de la Fase 9 partió cada tramo entre la V− y la V+ de la
+    // MISMA fila: allí la V+ es la mitad del tramo que llega al punto.
+    const rows = [
+      bare({ backDistanceM: 30 }),
+      bare({ foreDistanceM: 30, backDistanceM: 25 }),
+    ];
+    expect(accumulateDistances(rows, { reconstructed: true })).toEqual([30, 85]);
   });
 
   it("un intermedio no acumula, hereda, y LA CADENA CONTINÚA", () => {
@@ -310,7 +327,8 @@ describe("accumulateDistances", () => {
       bare({ foreDistanceM: 20, backDistanceM: 25 }),
       bare({ foreDistanceM: 15 }),
     ];
-    expect(accumulateDistances(rows)).toEqual([30, 30, 75, 90]);
+    // El intermedio hereda la distancia hasta el instrumento de su armada.
+    expect(accumulateDistances(rows)).toEqual([0, 30, 50, 90]);
   });
 
   it("una fila sin distancias no rompe la cadena: aporta 0", () => {
@@ -319,7 +337,7 @@ describe("accumulateDistances", () => {
       bare({}),
       bare({ foreDistanceM: 20 }),
     ];
-    expect(accumulateDistances(rows)).toEqual([30, 30, 50]);
+    expect(accumulateDistances(rows)).toEqual([0, 30, 50]);
   });
 
   it("libreta vacía devuelve lista vacía", () => {
@@ -528,6 +546,34 @@ describe("computeLeveling — cerrada", () => {
     const corrections = result.forward.readings.map((x) =>
       Number((x.correctionApplied * 1000).toFixed(2)),
     );
+    expect(corrections).toEqual([0.0, 2.67, 5.33, 8.0]);
+  });
+
+  it("el BM de partida no se compensa: su cota es conocida (Fase 19, N8)", () => {
+    const first = result.forward.readings[0]!;
+    expect(first.correctionApplied).toBe(0);
+    expect(first.elevationCorrected).toBe(100.0);
+  });
+
+  it("cotas compensadas del circuito del seed con la distancia desde el origen", () => {
+    // Hasta la Fase 19: 100.0013 / 100.3040 / 99.8067 / 100.0000. El cambio
+    // es la V+ de cada punto, que el acumulado ya no incluye.
+    const corrected = result.forward.readings.map((x) => Number(x.elevationCorrected.toFixed(4)));
+    expect(corrected).toEqual([100.0, 100.3027, 99.8053, 100.0]);
+  });
+
+  it("un proceso reconstruido conserva la compensación anterior", () => {
+    // Mismas filas, reparto de la Fase 9: el tramo, entre la V− y la V+ de la
+    // misma fila. Con la marca, el acumulado —y la compensación— son los de
+    // antes de la Fase 19.
+    const halves: ReadingInput[] = [
+      bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5 }),
+      bare({ pointCode: "PC-1", pointType: "pc", backsight: 2.0, foresight: 1.2, foreDistanceM: 150, backDistanceM: 150 }),
+      bare({ pointCode: "PC-2", pointType: "pc", backsight: 1.0, foresight: 2.5, foreDistanceM: 150, backDistanceM: 150 }),
+      bare({ pointCode: "BM-1", pointType: "bm", foresight: 0.808, foreDistanceM: 300 }),
+    ];
+    const r = computeLeveling({ ...CLOSED_INPUT, forward: halves, distancesReconstructed: true });
+    const corrections = r.forward.readings.map((x) => Number((x.correctionApplied * 1000).toFixed(2)));
     expect(corrections).toEqual([0.0, 2.67, 5.33, 8.0]);
   });
 

@@ -8,7 +8,7 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-09-24)
+## Estado (2026-09-25)
 
 **Todas las peticiones recogidas están resueltas.** La última, N6, cerró en la
 Fase 17. La tabla y los textos de abajo se conservan como registro.
@@ -17,7 +17,8 @@ La Fase 18 (libreta de nivelación y panel de asentamientos, a partir del
 prototipo del usuario) dejó cuatro peticiones nuevas **sin fase**: N7 y N8 en
 «Nivelación» —dos sospechas sobre el motor y el validador de nivelación que la
 fase encontró y no tocó, porque cambian resultados de nivelación— y UI1 y UI2,
-al final de este archivo.
+al final de este archivo. **N7 y N8 cerraron en la Fase 19**; siguen
+pendientes UI1 y UI2.
 
 ### Renumeración del 2026-09-22
 
@@ -34,6 +35,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~P1~~ | dentro de la **13** (canvas) | **cerrada** (2026-09-23) |
 | ~~N4~~ | **16** — Importar lecturas de nivel digital | **cerrada** (2026-09-24) |
 | ~~N6~~ | **17** — Control ida-vuelta por puntos homólogos | **cerrada** (2026-09-24) |
+| ~~N7 + N8~~ | **19** — Equilibrado por armada y compensación desde el origen | **cerrada** (2026-09-25) |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
 Es falso: sí la crea, vía `src/lib/demo/insertar-nivelacion.ts`. El grep que
@@ -179,6 +181,10 @@ Análisis completo en
 
 ### N7 · El equilibrado de visuales compara visuales de armadas distintas
 
+> **Resuelta en la Fase 19** ([`prds/18-equilibrado-y-compensacion.md`](./prds/18-equilibrado-y-compensacion.md)).
+> El equilibrado se evalúa por armada y el aviso la nombra. Se conserva el
+> texto de la petición como registro.
+
 Hallado en la Fase 18, al generar las libretas del seed. La Fase 9 define el
 equilibrado **por armada** —`abs(d_atrás − d_adelante)`, y «una armada aporta
 `back_distance_m` + `fore_distance_m`»—, pero `validateSightBalance`
@@ -207,6 +213,11 @@ Calla un desequilibrio real y da magnitudes que no corresponden a ninguna
 armada.
 
 ### N8 · El BM de partida recibe compensación
+
+> **Resuelta en la Fase 19** ([`prds/18-equilibrado-y-compensacion.md`](./prds/18-equilibrado-y-compensacion.md)).
+> El acumulado llega hasta la V− de cada punto y lo guardado se recalculó con
+> una migración, cerrados incluidos. Se conserva el texto de la petición como
+> registro.
 
 Hallado en la Fase 18: en el registro de nivelación de una visita, el BM de
 amarre sale compensado (100.0003 en lugar de 100.0000). Pasa igual en

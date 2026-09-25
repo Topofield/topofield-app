@@ -105,6 +105,11 @@ export interface LevelingInput {
   forward: ReadingInput[];
   /** Recorrido de vuelta, independiente de la ida (decisión #2). */
   return: ReadingInput[] | null;
+  /**
+   * Distancias repartidas por el backfill de la Fase 9: conservan la regla
+   * anterior del acumulado (ver `accumulateDistances`, Fase 19).
+   */
+  distancesReconstructed?: boolean;
 }
 
 export interface ComputedReading extends ReadingInput {

@@ -154,6 +154,7 @@ function buildInput(
   forward: ReadingDraftState[],
   back: ReadingDraftState[],
   order: PrecisionOrder,
+  distancesReconstructed: boolean,
 ): LevelingInput {
   return {
     type: config.type,
@@ -163,6 +164,9 @@ function buildInput(
     order,
     forward: forward.map(draftToReadingInput),
     return: config.hasReturnRun ? back.map(draftToReadingInput) : null,
+    // Un proceso reconstruido por la Fase 9 conserva su regla de acumulado
+    // (Fase 19): se muestra con los valores con que se guardó.
+    distancesReconstructed,
   };
 }
 
@@ -204,8 +208,10 @@ export function LevelingEditor({
   // página (mismo problema que se corrigió en polygonal-editor.tsx).
   const result = useMemo(
     () =>
-      computeLeveling(buildInput(config, forward, back, config.precisionOrder)),
-    [config, forward, back],
+      computeLeveling(
+        buildInput(config, forward, back, config.precisionOrder, process.distances_reconstructed),
+      ),
+    [config, forward, back, process.distances_reconstructed],
   );
 
   // La distancia total se DERIVA de las distancias por visual de la libreta.

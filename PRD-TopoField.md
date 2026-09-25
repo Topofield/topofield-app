@@ -1043,6 +1043,17 @@ Para cada punto i:
   Cota_corregida_i = Cota_calculada_i + Corrección_i
 ```
 
+> **Aclarado en la Fase 19** (2026-09-25, N8). `Dist_acumulada_i` es el
+> recorrido **desde el origen hasta el punto i**: para un BM o punto de cambio
+> llega hasta su V−, y su V+ —la visual hacia la armada siguiente— se suma
+> después, para los puntos que vienen. Una vista intermedia toma el acumulado
+> de su armada hasta el instrumento. Así el BM de partida tiene
+> `Dist_acumulada = 0` y **no recibe corrección**, que es lo correcto: su cota
+> es conocida. Hasta la Fase 19 la fila incluía su propia V+ y el BM de partida
+> se corregía. `Dist_total` no cambia. Los procesos cuyas distancias
+> reconstruyó la Fase 9 conservan la regla anterior. Ver
+> `docs/prds/18-equilibrado-y-compensacion.md`.
+
 ### 6.9 Nivelación Ida y Vuelta
 
 > **Enmendado en la Fase 4** (2026-08-11). La versión original promediaba
