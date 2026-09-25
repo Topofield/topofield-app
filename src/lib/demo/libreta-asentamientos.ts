@@ -77,9 +77,7 @@ export function generateVisitBook(spec: GeneratedBookSpec): BookRowPayload[] {
   // Visuales equilibradas: todas las distancias de la libreta difieren menos
   // de 1.5 m entre sí, dentro del límite de cualquier orden (2 m en primer
   // orden, Fase 9). Sorteadas por separado, la libreta del seed avisaba de
-  // desequilibrios de 8 m. «Todas» y no solo las de una armada: el validador
-  // compara la V+ y la V− de una MISMA fila, que en un punto de cambio son de
-  // armadas distintas (anotado en `docs/pendientes.md`, N7).
+  // desequilibrios de 8 m.
   const base = 28 + rnd() * 17;
   const distance = () => round(base + (rnd() - 0.5) * 1.5, 3);
   const back = chunks.map(distance);
