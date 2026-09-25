@@ -35,12 +35,12 @@ function aReadingInput(r: LecturaNivelacionDemo): ReadingInput {
 }
 
 /**
- * Inserta la nivelación, sus lecturas, y la cierra en diferido.
+ * Inserta la nivelación y sus lecturas —ida y, si la hay, vuelta—, y la cierra
+ * en diferido si el fixture lo pide.
  *
  * Nace `calculated` y se cierra al final (no de entrada) porque los triggers
  * de inmutabilidad rechazan escribir lecturas bajo un proceso ya cerrado —
- * mismo motivo que en `insertarPoligonal`. El demo la deja cerrada para que
- * alimente el informe de nivelación. Devuelve el `id` del proceso creado.
+ * mismo motivo que en `insertarPoligonal`. Devuelve el `id` del proceso.
  */
 export async function insertarNivelacion(
   supabase: Client,
@@ -99,45 +99,60 @@ export async function insertarNivelacion(
 
   if (error) throw error;
 
-  const filas = nivelacion.forward.map((draft, i) => {
-    const r = result.forward.readings[i];
-    return {
-      process_id: proc.id,
-      run_type: "forward" as const,
-      reading_order: i + 1,
-      point_code: draft.code,
-      point_type: draft.type,
-      backsight: draft.back ?? null,
-      foresight: draft.fore ?? null,
-      back_upper_m: draft.backUpperM ?? null,
-      back_lower_m: draft.backLowerM ?? null,
-      fore_upper_m: draft.foreUpperM ?? null,
-      fore_lower_m: draft.foreLowerM ?? null,
-      back_distance_m: r?.backDistanceResolvedM ?? null,
-      fore_distance_m: r?.foreDistanceResolvedM ?? null,
-      // Derivado por el motor, no por el fixture.
-      distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
-      instrument_height: r?.instrumentHeight ?? null,
-      elevation_calculated: r?.elevationCalculated ?? null,
-      elevation_corrected: r?.elevationCorrected ?? null,
-      correction_applied: r?.correctionApplied ?? null,
-    };
-  });
+  // Una fila por lectura de cada recorrido, con lo que calculó el motor. La
+  // vuelta también se persiste: el informe y el Excel leen lo guardado.
+  const filasDe = (
+    runType: "forward" | "return",
+    lecturas: NivelacionDemo["forward"],
+    calculadas: typeof result.forward.readings,
+  ) =>
+    lecturas.map((draft, i) => {
+      const r = calculadas[i];
+      return {
+        process_id: proc.id,
+        run_type: runType,
+        reading_order: i + 1,
+        point_code: draft.code,
+        point_type: draft.type,
+        backsight: draft.back ?? null,
+        foresight: draft.fore ?? null,
+        back_upper_m: draft.backUpperM ?? null,
+        back_lower_m: draft.backLowerM ?? null,
+        fore_upper_m: draft.foreUpperM ?? null,
+        fore_lower_m: draft.foreLowerM ?? null,
+        back_distance_m: r?.backDistanceResolvedM ?? null,
+        fore_distance_m: r?.foreDistanceResolvedM ?? null,
+        // Derivado por el motor, no por el fixture.
+        distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
+        instrument_height: r?.instrumentHeight ?? null,
+        elevation_calculated: r?.elevationCalculated ?? null,
+        elevation_corrected: r?.elevationCorrected ?? null,
+        correction_applied: r?.correctionApplied ?? null,
+      };
+    });
+  const filas = [
+    ...filasDe("forward", nivelacion.forward, result.forward.readings),
+    ...(nivelacion.return && result.return
+      ? filasDe("return", nivelacion.return, result.return.readings)
+      : []),
+  ];
 
   const { error: errFilas } = await supabase
     .from("leveling_readings")
     .insert(filas);
   if (errFilas) throw errFilas;
 
-  const { error: errCierre } = await supabase
-    .from("leveling_processes")
-    .update({
-      status: "closed",
-      closed_at: new Date().toISOString(),
-      closed_by: userId,
-    })
-    .eq("id", proc.id);
-  if (errCierre) throw errCierre;
+  if (nivelacion.status === "closed") {
+    const { error: errCierre } = await supabase
+      .from("leveling_processes")
+      .update({
+        status: "closed",
+        closed_at: new Date().toISOString(),
+        closed_by: userId,
+      })
+      .eq("id", proc.id);
+    if (errCierre) throw errCierre;
+  }
 
   return proc.id;
 }

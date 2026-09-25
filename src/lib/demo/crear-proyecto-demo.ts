@@ -15,9 +15,11 @@ import type { Database } from "@/types/database";
 import type { IncludedProcess } from "@/types/report";
 import {
   ASENTAMIENTO_DEMO,
-  NIVELACION_DEMO,
+  NIVELACION_VERJON,
+  nivelacionTramo2,
   PROCESOS_DEMO,
   PROYECTO_DEMO,
+  REFERENCIAS_DEMO,
 } from "./fixtures";
 import { insertarAsentamiento } from "./insertar-asentamiento";
 import { insertarInforme } from "./insertar-informe";
@@ -71,9 +73,11 @@ export async function faltaProyectoDemo(
 /**
  * Crea el proyecto de ejemplo si a este usuario todavía no se le ha creado.
  *
- * Un proyecto con dos lugares que recorre los tres módulos: el lote levantado
- * (poligonales + nivelación) y un edificio en monitoreo (asentamientos). Uno de
- * cada módulo queda cerrado para poder emitir sus tres informes.
+ * Un proyecto con dos lugares que recorre los tres módulos con carteras de
+ * campo reales (Fase 21): los levantamientos (poligonales TT4 y Sede Vivero,
+ * nivelaciones de El Verjón y del tramo 2) y Torre Alameda, la simulación del
+ * prototipo de asentamientos. Uno de cada módulo queda cerrado para emitir sus
+ * tres informes.
  *
  * Devuelve `true` si lo creó, `false` si ya lo tenía. Quien la llama debe
  * envolverla en try/catch: un fallo aquí no puede dejar al usuario fuera de su
@@ -104,15 +108,34 @@ export async function crearProyectoDemo(
 
   if (error) throw error;
 
-  // Lugar del levantamiento: las poligonales y la nivelación cuelgan de aquí.
-  // Es un lote de control sin construcción levantada todavía, así que "otro"
-  // es el tipo que le corresponde.
+  // Catálogo de puntos de referencia: los amarres de las poligonales, los
+  // vértices para georreferenciar, el BM del tramo 2 y los de Torre Alameda.
+  const { data: referencias, error: errRef } = await supabase
+    .from("reference_points")
+    .insert(
+      REFERENCIAS_DEMO.map((r) => ({
+        project_id: proyecto.id,
+        code: r.code,
+        type: r.type,
+        north: r.north ?? null,
+        east: r.east ?? null,
+        elevation: r.elevation ?? null,
+        description: r.description,
+      })),
+    )
+    .select("id, code");
+  if (errRef) throw errRef;
+  const idReferencia = new Map(referencias.map((r) => [r.code, r.id]));
+
+  // Lugar de los levantamientos: las poligonales y las nivelaciones cuelgan de
+  // aquí. No es una construcción, así que "otro" es el tipo que le corresponde.
   const { data: lote, error: errLote } = await supabase
     .from("sites")
     .insert({
       project_id: proyecto.id,
-      name: "Lote de ejemplo",
-      description: "Lote delimitado por el levantamiento del proyecto de ejemplo.",
+      name: "Levantamientos de campo",
+      description:
+        "Poligonales y nivelaciones de carteras de campo reales (docs/carteras/).",
       structure_type: "otro",
     })
     .select("id")
@@ -130,22 +153,29 @@ export async function crearProyectoDemo(
       lote.id,
       userId,
       proceso,
+      idReferencia,
     );
     if (proceso.status === "closed") {
       poligonalCerrada = { id, name: proceso.name };
     }
   }
 
-  // --- Nivelación (cerrada) sobre el mismo lote. ----------------------------
-  const nivelacionId = await insertarNivelacion(
-    supabase,
-    proyecto.id,
-    lote.id,
-    userId,
-    NIVELACION_DEMO,
-  );
+  // --- Nivelaciones: El Verjón (calculada) y el tramo 2 (cerrada). ----------
+  let nivelacionCerrada: { id: string; name: string } | null = null;
+  for (const nivelacion of [NIVELACION_VERJON, nivelacionTramo2()]) {
+    const id = await insertarNivelacion(
+      supabase,
+      proyecto.id,
+      lote.id,
+      userId,
+      nivelacion,
+    );
+    if (nivelacion.status === "closed") {
+      nivelacionCerrada = { id, name: nivelacion.name };
+    }
+  }
 
-  // --- Asentamientos: su propio lugar (edificio), cerrado tras las visitas. --
+  // --- Asentamientos: Torre Alameda, cerrada tras sus catorce visitas. ------
   const { siteId, siteName } = await insertarAsentamiento(
     supabase,
     proyecto.id,
@@ -164,7 +194,7 @@ export async function crearProyectoDemo(
           {
             title: "Informe de cierre — Poligonal",
             observations:
-              "Levantamiento poligonal conforme a las tolerancias de tercer orden.",
+              "Poligonal V10 amarrada a TT4, conforme a las tolerancias de tercer orden.",
             included: [
               {
                 type: "polygonal" as const,
@@ -176,23 +206,27 @@ export async function crearProyectoDemo(
           },
         ]
       : []),
-    {
-      title: "Informe de cierre — Nivelación",
-      observations:
-        "Nivelación en circuito cerrado dentro de la tolerancia de tercer orden.",
-      included: [
-        {
-          type: "leveling" as const,
-          id: nivelacionId,
-          name: NIVELACION_DEMO.name,
-          order: 0,
-        },
-      ],
-    },
+    ...(nivelacionCerrada
+      ? [
+          {
+            title: "Informe de cierre — Nivelación",
+            observations:
+              "Tramo 2 medido con nivel digital, de C10 a C10, dentro de la tolerancia de tercer orden.",
+            included: [
+              {
+                type: "leveling" as const,
+                id: nivelacionCerrada.id,
+                name: nivelacionCerrada.name,
+                order: 0,
+              },
+            ],
+          },
+        ]
+      : []),
     {
       title: "Informe de cierre — Control de asentamientos",
       observations:
-        "Seguimiento de asentamientos del edificio tras seis visitas mensuales.",
+        "Seguimiento de asentamientos de Torre Alameda tras catorce visitas.",
       included: [
         { type: "site" as const, id: siteId, name: siteName, order: 0 },
       ],

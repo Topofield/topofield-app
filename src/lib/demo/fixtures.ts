@@ -1,18 +1,20 @@
 // Contenido del proyecto de ejemplo que recibe cada usuario nuevo al confirmar
 // su cuenta.
 //
-// Datos puros: sin Supabase, sin cálculo. Los resultados que se persisten los
-// deriva `crear-proyecto-demo.ts` del motor real (`computePolygonal`), nunca se
-// escriben a mano.
+// Desde la Fase 21 son las CARTERAS DE CAMPO REALES con las que se validó el
+// motor (`docs/carteras/`), no datos sintéticos: la TT4 con su fila de cierre,
+// la Vivero ajustada por mínimos cuadrados y en sistema local para
+// georreferenciar, El Verjón con ida y vuelta por los mismos puntos y el crudo
+// de un nivel digital Leica. El control de asentamientos no tiene cartera real:
+// usa la simulación del prototipo del usuario, Torre Alameda.
 //
-// Adaptados de los fixtures de `scripts/seed.mjs`, que están verificados a
-// mano, pero con nombres presentables: los del seed son de depuración
-// («Cuadrado con error 0.4 m (fixture clave)») y aquí los ve un usuario real.
-//
-// Cubre los tres módulos: poligonal (`PROCESOS_DEMO`), nivelación
-// (`NIVELACION_DEMO`) y control de asentamientos (`ASENTAMIENTO_DEMO`). Uno de
-// cada queda cerrado para alimentar los tres informes del proyecto de ejemplo.
+// Puro: sin Supabase. Los resultados que se persisten los calcula el motor en
+// `crear-proyecto-demo.ts` y los `insertar-*.ts`, nunca se escriben aquí. Los
+// datos de campo se leen de `carteras.ts`, `crudo-tramo2.ts` y
+// `torre-alameda.ts`, la misma copia que usan el seed y los tests.
 
+import { azimuthFromCoordinates, decimalToDms } from "@/lib/calculations/angles";
+import { readLevelingFile, toLibreta } from "@/lib/import/leveling";
 import type {
   AngleType,
   CorrectionMethod,
@@ -20,6 +22,101 @@ import type {
 } from "@/types/polygonal";
 import type { LevelingType, PointType } from "@/types/leveling";
 import type { PrecisionOrder } from "@/types/project";
+import {
+  CARTERA_TT4,
+  CARTERA_VERJON,
+  CARTERA_VIVERO,
+  type Cartera,
+  type LecturaCartera,
+} from "./carteras";
+import { CRUDO_TRAMO2 } from "./crudo-tramo2";
+import {
+  ALAMEDA_AMARRES,
+  ALAMEDA_POINTS,
+  alamedaVisits,
+  type PuntoAlameda,
+  type VisitaAlameda,
+} from "./torre-alameda";
+
+// ---------------------------------------------------------------------------
+// Proyecto y catálogo
+// ---------------------------------------------------------------------------
+
+export const PROYECTO_DEMO = {
+  name: "Proyecto de ejemplo",
+  client: "Carteras de campo reales",
+  location: "Bogotá",
+  description:
+    "Proyecto de muestra con carteras de campo reales: las poligonales TT4 y Sede Vivero, la nivelación de El Verjón y el crudo de un nivel digital Leica; el control de asentamientos es la simulación de Torre Alameda. Puede modificarlo o eliminarlo cuando quiera.",
+  datum: "MAGNA-SIRGAS",
+  projection: "Origen Bogotá",
+} as const;
+
+/** Un punto del catálogo de referencia del proyecto. */
+export interface ReferenciaDemo {
+  code: string;
+  type: "bm" | "control";
+  north?: number;
+  east?: number;
+  elevation?: number;
+  description: string;
+}
+
+/**
+ * Solo los puntos que la demo usa. Las carteras reales vienen de lugares
+ * distintos y repiten códigos —la Vivero tiene D1 a D4 y El Verjón usa D1, D3
+ * y D4 como BMs—, así que los BMs de El Verjón no entran: su nivelación arranca
+ * en un BM de entrada libre. D1 y D3 son los vértices de la Vivero con los que
+ * se georreferencia su versión en sistema local (Fase 15).
+ */
+export const REFERENCIAS_DEMO: ReferenciaDemo[] = [
+  {
+    code: CARTERA_TT4.referencePointCode,
+    type: "control",
+    north: CARTERA_TT4.referenceNorth,
+    east: CARTERA_TT4.referenceEast,
+    description: "Amarre de la poligonal V10 (cartera TT4)",
+  },
+  {
+    code: CARTERA_VIVERO.referencePointCode,
+    type: "control",
+    north: CARTERA_VIVERO.referenceNorth,
+    east: CARTERA_VIVERO.referenceEast,
+    description: "Amarre de la poligonal Famarena (Sede Vivero)",
+  },
+  {
+    code: "D1",
+    type: "control",
+    north: 100117.462,
+    east: 101515.6333,
+    description: "Vértice D1 de la Sede Vivero, para georreferenciar la versión en sistema local",
+  },
+  {
+    code: "D3",
+    type: "control",
+    north: 100182.239,
+    east: 101581.7814,
+    description: "Vértice D3 de la Sede Vivero, para georreferenciar la versión en sistema local",
+  },
+  {
+    code: "C10",
+    type: "bm",
+    elevation: 2541.7545,
+    description: "BM de arranque y cierre del tramo 2 (crudo del nivel digital Leica)",
+  },
+  ...ALAMEDA_AMARRES.map((a) => ({
+    code: a.code,
+    type: a.type,
+    north: a.north,
+    east: a.east,
+    elevation: a.elevation,
+    description: a.description,
+  })),
+];
+
+// ---------------------------------------------------------------------------
+// Poligonales
+// ---------------------------------------------------------------------------
 
 /** Una estación del levantamiento. El ángulo va en grados, minutos y segundos. */
 export interface EstacionDemo {
@@ -27,8 +124,8 @@ export interface EstacionDemo {
   angle?: [number, number, number];
   /** Solo en poligonales por deflexión. */
   dir?: "left" | "right";
-  /** Distancia al punto siguiente. La última estación no la lleva. */
-  distance?: number;
+  /** Distancia al punto siguiente. `null`/ausente en la última o en la fila de cierre. */
+  distance?: number | null;
 }
 
 export interface ProcesoDemo {
@@ -43,12 +140,26 @@ export interface ProcesoDemo {
   endNorth?: number;
   endEast?: number;
   correctionMethod?: CorrectionMethod;
-  /** `closed` obliga al cierre diferido: ver `crear-proyecto-demo.ts`. */
+  /**
+   * Amarre: con código hay orientación —la primera estación lleva el ángulo
+   * de orientación—, como en la aplicación. `referenceFromCatalog` enlaza el
+   * proceso con el punto del catálogo de ese código.
+   */
+  referencePointCode?: string;
+  referenceFromCatalog?: boolean;
+  /** La cartera cierra contra el amarre con una fila de cierre (TT4). */
+  hasClosingRow?: boolean;
+  /** Pesos del ajuste por mínimos cuadrados (Fase 14). */
+  leastSquares?: {
+    sigmaAngleSeconds: number;
+    sigmaDistanceM: number;
+    distanceMeasurements: number;
+  };
+  /** `closed` obliga al cierre diferido: ver `insertar-poligonal.ts`. */
   status: "calculated" | "closed";
   stations: EstacionDemo[];
   notes: string;
-  // Orden de precisión y equipo (Fase 8): antes vivían en `PROYECTO_DEMO`,
-  // ahora los declara cada proceso, igual que en la aplicación real.
+  // Orden de precisión y equipo (Fase 8): los declara cada proceso.
   precisionOrder: PrecisionOrder;
   equipmentBrand: string;
   equipmentModel: string;
@@ -59,24 +170,10 @@ export interface ProcesoDemo {
   distancePrecisionPpm: number;
 }
 
-export const PROYECTO_DEMO = {
-  name: "Proyecto de ejemplo",
-  client: "Cliente de ejemplo",
-  location: "Bogotá",
-  description:
-    "Proyecto de muestra creado automáticamente para que pueda explorar TopoField. Puede modificarlo o eliminarlo cuando quiera.",
-  datum: "MAGNA-SIRGAS",
-  projection: "Origen Bogotá",
-} as const;
-
-// Tercer orden (1:5.000) es el caso didáctico habitual: exige lo suficiente
-// para que se vea la diferencia entre un cierre conforme y uno que no lo es.
-// El equipo (Fase 8) vive en cada proceso, no en el proyecto, pero los cuatro
-// procesos demo comparten el mismo instrumento: una Leica FlexLine TS06plus,
-// coherente con el orden declarado (5″ ≤ K=15″ de tercer orden). 5″ es una de
-// sus clases de precisión angular de catálogo (2″/3″/5″); 1.5 mm + 2 ppm es
-// su EDM con prisma publicada — mismas cifras que `scripts/seed.mjs`.
-const EQUIPO_DEMO = {
+// Las carteras no declaran su estación total. Se usa la misma que el seed para
+// ellas: una Leica FlexLine TS06plus, coherente con tercer orden (5″ ≤ K=15″);
+// 5″ es una de sus clases de catálogo y 1.5 mm + 2 ppm su EDM con prisma.
+const EQUIPO_POLIGONAL = {
   precisionOrder: "tercer_orden",
   equipmentBrand: "Leica",
   equipmentModel: "TS06 Plus",
@@ -87,101 +184,76 @@ const EQUIPO_DEMO = {
   distancePrecisionPpm: 2,
 } as const;
 
+function dmsTuple(decimal: number): [number, number, number] {
+  const { deg, min, sec } = decimalToDms(decimal);
+  return [deg, min, sec];
+}
+
+/** Una cartera real como proceso: amarre y azimut desde sus coordenadas. */
+function desdeCartera(cartera: Cartera): Omit<ProcesoDemo, "name" | "status" | "notes"> {
+  return {
+    type: "closed",
+    angleType: cartera.angleType,
+    startPointCode: cartera.startPointCode,
+    startNorth: cartera.startNorth,
+    startEast: cartera.startEast,
+    startAz: dmsTuple(
+      azimuthFromCoordinates(
+        cartera.startNorth,
+        cartera.startEast,
+        cartera.referenceNorth,
+        cartera.referenceEast,
+      ),
+    ),
+    referencePointCode: cartera.referencePointCode,
+    referenceFromCatalog: true,
+    hasClosingRow: cartera.hasClosingRow,
+    correctionMethod: "bowditch",
+    stations: cartera.stations.map((st) => ({
+      code: st.pointCode,
+      angle: st.readings[0],
+      distance: st.distance,
+    })),
+    ...EQUIPO_POLIGONAL,
+  };
+}
+
 /**
- * Cuatro procesos, no los siete del seed: el objetivo es entender la
- * aplicación, no cubrir la matriz completa de métodos de corrección.
- *
- * Entre los cuatro se ve lo que distingue a TopoField: un cierre conforme, uno
- * que no alcanza la tolerancia, la verificación contra un punto conocido y el
- * caso sin verificación posible.
+ * Tres procesos con las dos carteras de poligonal. La TT4 nace cerrada: cumple
+ * (12″ de error angular, 1:7045) y alimenta el informe de poligonal.
  */
 export const PROCESOS_DEMO: ProcesoDemo[] = [
   {
-    name: "Lote rectangular — cierre conforme",
-    type: "closed",
-    angleType: "interior",
-    startPointCode: "A",
-    startNorth: 1000,
-    startEast: 1000,
-    startAz: [0, 0, 0],
-    correctionMethod: "bowditch",
-    // Cerrada a propósito: es el trabajo que alimenta el informe de poligonal
-    // del proyecto de ejemplo, y de paso le muestra al usuario nuevo cómo se ve
-    // un proceso ya cerrado (inmutable, en solo lectura).
+    ...desdeCartera(CARTERA_TT4),
+    name: "Poligonal V10 — cartera TT4",
     status: "closed",
-    ...EQUIPO_DEMO,
-    stations: [
-      { code: "A", angle: [90, 0, 0], distance: 100 },
-      { code: "B", angle: [90, 0, 0], distance: 100 },
-      { code: "C", angle: [90, 0, 0], distance: 100 },
-      { code: "D", angle: [90, 0, 0], distance: 100 },
-    ],
     notes:
-      "Cuadrado de 100 m de lado que cierra exacto. El veredicto sale en verde: cumple la tolerancia de tercer orden.",
+      "Cartera de campo real (docs/carteras/poligonales.xlsx). Seis vértices amarrados a TT4, con la fila de cierre de vuelta al amarre. Compensada por Bowditch.",
   },
   {
-    name: "Lote rectangular — error de cierre",
-    type: "closed",
-    angleType: "interior",
-    startPointCode: "A",
+    ...desdeCartera(CARTERA_VIVERO),
+    name: "Poligonal Famarena — Sede Vivero",
+    correctionMethod: "least_squares",
+    // Los pesos de la hoja de la universidad: 2″, 0.011 m, 2 mediciones.
+    leastSquares: { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 },
+    status: "calculated",
+    notes:
+      "Cartera de campo real de la Universidad Distrital, Sede Vivero (2021-11-04). Cierra contra el primer lado. Ajustada por mínimos cuadrados con los pesos de la hoja.",
+  },
+  {
+    ...desdeCartera(CARTERA_VIVERO),
+    name: "Poligonal Famarena — Sede Vivero — sistema local",
+    // La misma cartera medida en un sistema local: arranque en (1000, 2000) y
+    // azimut supuesto 0°. Conserva el código del amarre sin enlazarlo al
+    // catálogo, como en el seed: el punto del catálogo está en coordenadas
+    // reales y este proceso todavía no.
     startNorth: 1000,
-    startEast: 1000,
+    startEast: 2000,
     startAz: [0, 0, 0],
-    correctionMethod: "bowditch",
+    referenceFromCatalog: false,
     status: "calculated",
-    ...EQUIPO_DEMO,
-    stations: [
-      { code: "A", angle: [90, 0, 0], distance: 100.4 },
-      { code: "B", angle: [90, 0, 0], distance: 100 },
-      { code: "C", angle: [90, 0, 0], distance: 100 },
-      { code: "D", angle: [90, 0, 0], distance: 100 },
-    ],
     notes:
-      "El mismo lote, pero el primer lado se midió 40 cm más largo. El error de cierre da una precisión de 1:1001, que no alcanza el 1:5.000 exigido: el veredicto sale en rojo. Es el caso que conviene saber leer.",
-  },
-  {
-    name: "Enlace entre puntos de control",
-    type: "open_controlled",
-    angleType: "deflection",
-    startPointCode: "P1",
-    startNorth: 1000,
-    startEast: 1000,
-    startAz: [90, 0, 0],
-    endPointCode: "P3",
-    endNorth: 950,
-    // 1000 + 100·sen(90°) + 100·sen(120°) = 1186.6025403…, irracional. Se
-    // guarda a 3 decimales, que es la precisión de coordenadas del proyecto:
-    // el error residual (≈0.4 mm) es el de un dato de campo real, no un fallo.
-    endEast: 1186.603,
-    correctionMethod: "bowditch",
-    status: "calculated",
-    ...EQUIPO_DEMO,
-    stations: [
-      { code: "P1", distance: 100 },
-      { code: "P2", angle: [30, 0, 0], dir: "right", distance: 100 },
-      { code: "P3" },
-    ],
-    notes:
-      "Arranca en un punto conocido apuntando al este, gira 30° a la derecha en P2 y llega a otro punto conocido. Al haber punto de llegada, el cierre se verifica contra sus coordenadas.",
-  },
-  {
-    name: "Levantamiento de reconocimiento",
-    type: "open_uncontrolled",
-    angleType: "interior",
-    startPointCode: "E1",
-    startNorth: 1000,
-    startEast: 1000,
-    startAz: [150, 0, 0],
-    status: "calculated",
-    ...EQUIPO_DEMO,
-    stations: [
-      { code: "E1", distance: 45.8 },
-      { code: "E2", angle: [175, 30, 0], distance: 62.3 },
-      { code: "E3", angle: [192, 15, 0], distance: 38.5 },
-      { code: "E4" },
-    ],
-    notes:
-      "No regresa al punto de partida ni llega a uno conocido, así que no hay contra qué contrastar el resultado. La aplicación calcula las coordenadas pero avisa: «sin verificación de cierre».",
+      "La cartera Vivero en sistema local, para georreferenciar con los vértices D1 y D3 del catálogo (Georreferenciar, en el editor).",
   },
 ];
 
@@ -189,25 +261,21 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
 // Nivelación
 // ---------------------------------------------------------------------------
 
-/** Una fila de la libreta de nivelación. */
+/** Una lectura de la libreta de nivelación. */
 export interface LecturaNivelacionDemo {
   code: string;
   type: PointType;
-  /** Vista más (V+): abre la armada siguiente. Es el hilo medio. */
-  back?: number;
-  /** Vista menos (V−): cierra la armada vigente. Es el hilo medio. */
-  fore?: number;
-  /**
-   * Hilos estadimétricos. El demo usa un nivel automático, así que captura
-   * los tres y la distancia sale por taquimetría: D = (HS − HI)·100.
-   */
-  backUpperM?: number;
-  backLowerM?: number;
-  foreUpperM?: number;
-  foreLowerM?: number;
-  /** Distancia por visual, en metros. Derivada de los hilos cuando los hay. */
-  backDistanceM?: number;
-  foreDistanceM?: number;
+  /** Vista más (V+): el hilo medio. */
+  back?: number | null;
+  /** Vista menos (V−): el hilo medio; en una radiación, su vista intermedia. */
+  fore?: number | null;
+  backUpperM?: number | null;
+  backLowerM?: number | null;
+  foreUpperM?: number | null;
+  foreLowerM?: number | null;
+  /** Distancia por visual, en metros. */
+  backDistanceM?: number | null;
+  foreDistanceM?: number | null;
 }
 
 export interface NivelacionDemo {
@@ -217,174 +285,134 @@ export interface NivelacionDemo {
   startElevation: number;
   endBmCode?: string;
   endElevation?: number;
-  /** Distancia del recorrido en un solo sentido, en km. */
+  status: "calculated" | "closed";
   precisionOrder: PrecisionOrder;
-  equipmentBrand: string;
-  equipmentModel: string;
-  equipmentSerial: string;
-  equipmentCalibrationDate: string;
+  /** Las carteras no siempre declaran su equipo: lo que no dicen va vacío. */
+  equipmentBrand: string | null;
+  equipmentModel: string | null;
+  equipmentSerial: string | null;
+  equipmentCalibrationDate: string | null;
   levelType: "automatico" | "digital";
   /** Desviación típica en mm por km de doble nivelación (ISO 17123-2). */
-  kmPrecisionMm: number;
+  kmPrecisionMm: number | null;
   forward: LecturaNivelacionDemo[];
-  /** Recorrido de vuelta; el demo no lo usa. */
   return?: LecturaNivelacionDemo[];
   notes: string;
 }
 
+const deCartera = (r: LecturaCartera): LecturaNivelacionDemo => ({
+  code: r.code,
+  type: r.type,
+  back: r.backsight,
+  fore: r.foresight,
+  backDistanceM: r.backDistanceM,
+  foreDistanceM: r.foreDistanceM,
+});
+
 /**
- * Un solo circuito, cerrado a propósito para que alimente el informe de
- * nivelación del proyecto de ejemplo. Sale y vuelve al BM-1: error de cierre
- * −8.0 mm contra 11.4 mm de tolerancia (K=12·√0.9 km), así que es conforme.
- * Números verificados a mano; son los mismos de `scripts/seed.mjs`.
+ * El Verjón: abierta de D1 a D4, con ida y vuelta por los mismos puntos. Queda
+ * calculada: una abierta no cierra contra nada, y lo que enseña es la
+ * discrepancia de la sección, los puntos homólogos y los avisos de equilibrado.
+ * La hoja no declara el nivel; los tres hilos dicen que es automático.
  */
-export const NIVELACION_DEMO: NivelacionDemo = {
-  name: "Nivelación de control — circuito cerrado",
-  type: "closed",
-  startBmCode: "BM-1",
-  startElevation: 100.0,
-  // Mismo nivel que el control de asentamientos: un NA2 de 0.7 mm/km sobra
-  // para tercer orden, cuyo coeficiente de tolerancia es 12 mm.
+export const NIVELACION_VERJON: NivelacionDemo = {
+  name: CARTERA_VERJON.name,
+  type: "open",
+  startBmCode: CARTERA_VERJON.startCode,
+  startElevation: CARTERA_VERJON.startElevation,
+  status: "calculated",
   precisionOrder: "tercer_orden",
-  equipmentBrand: "Leica",
-  equipmentModel: "NA2",
-  equipmentSerial: "NA2-DEMO-01",
-  equipmentCalibrationDate: "2025-11-10",
+  equipmentBrand: null,
+  equipmentModel: null,
+  equipmentSerial: null,
+  equipmentCalibrationDate: null,
   levelType: "automatico",
-  kmPrecisionMm: 0.7,
-  // Los tres hilos de cada visual, como los captura un nivel automático. El
-  // hilo medio ES la lectura (`back` / `fore`), y la distancia sale por
-  // taquimetría: (HS − HI)·100 = 150 m en todas las visuales.
-  forward: [
-    {
-      code: "BM-1",
-      type: "bm",
-      back: 1.5,
-      backUpperM: 2.25,
-      backLowerM: 0.75,
-    },
-    {
-      code: "PC-1",
-      type: "pc",
-      fore: 1.2,
-      foreUpperM: 1.95,
-      foreLowerM: 0.45,
-      back: 2.0,
-      backUpperM: 2.75,
-      backLowerM: 1.25,
-    },
-    {
-      code: "PC-2",
-      type: "pc",
-      fore: 2.5,
-      foreUpperM: 3.25,
-      foreLowerM: 1.75,
-      back: 1.0,
-      backUpperM: 1.75,
-      backLowerM: 0.25,
-    },
-    {
-      code: "BM-1",
-      type: "bm",
-      fore: 0.808,
-      foreUpperM: 1.558,
-      foreLowerM: 0.058,
-    },
-  ],
+  kmPrecisionMm: null,
+  forward: CARTERA_VERJON.ida.map(deCartera),
+  return: CARTERA_VERJON.vuelta.map(deCartera),
   notes:
-    "Circuito cerrado que sale y regresa al BM-1. El error de cierre (−8 mm) queda dentro de la tolerancia de tercer orden: el resultado es conforme.",
+    "Cartera de campo real (docs/carteras/TRABAJO NIVELACION EL VERJON-corregido.xlsx): nivelación y contranivelación por los mismos puntos, con nivel automático de tres hilos.",
 };
+
+/**
+ * El tramo 2, leído del crudo del nivel digital Leica con el importador de la
+ * Fase 16, como un solo recorrido: sale de C10 y vuelve a C10. Cierra en
+ * −0.4 mm sobre 1.397 km y nace cerrada, para el informe de nivelación. El
+ * archivo no declara el modelo del nivel: solo que es un digital Leica.
+ */
+export function nivelacionTramo2(): NivelacionDemo {
+  const leido = readLevelingFile(CRUDO_TRAMO2);
+  if (!leido.ok) throw new Error(`El crudo del tramo 2 no se pudo leer: ${leido.error}`);
+  const { file } = leido;
+  const filas = toLibreta(file, { kind: "single" }).forward;
+  const inicio = file.startPoint;
+  if (!inicio || inicio.elevation == null) {
+    throw new Error("El crudo del tramo 2 no trae el punto de arranque con su cota.");
+  }
+  return {
+    name: "Tramo 2 — crudo del nivel digital Leica",
+    type: "closed",
+    startBmCode: inicio.code,
+    startElevation: inicio.elevation,
+    status: "closed",
+    precisionOrder: "tercer_orden",
+    equipmentBrand: "Leica",
+    equipmentModel: null,
+    equipmentSerial: null,
+    equipmentCalibrationDate: null,
+    levelType: "digital",
+    kmPrecisionMm: null,
+    forward: filas.map((r) => ({
+      code: r.pointCode,
+      type: r.pointType,
+      back: r.backsight,
+      fore: r.foresight,
+      backDistanceM: r.backDistanceM,
+      foreDistanceM: r.foreDistanceM,
+    })),
+    notes:
+      "Crudo nativo de un nivel digital Leica (docs/carteras/CRDUDO-TRAMO2.L), importado como un solo recorrido. El instrumento mide dos veces cada visual; la libreta guarda el promedio.",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Control de asentamientos
 // ---------------------------------------------------------------------------
 
-export interface PuntoAsentamientoDemo {
-  code: string;
-  locationDescription: string;
-  northing: number;
-  easting: number;
-  initialElevation: number;
-}
-
 export interface AsentamientoDemo {
   name: string;
   description: string;
-  operator: string;
   precisionOrder: PrecisionOrder;
   equipmentBrand: string;
   equipmentModel: string;
   equipmentSerial: string;
   equipmentCalibrationDate: string;
   levelType: "automatico" | "digital";
-  /** Desviación típica en mm por km de doble nivelación (ISO 17123-2). */
   kmPrecisionMm: number;
-  points: PuntoAsentamientoDemo[];
-  /** Fechas de las visitas (ISO). La 0 es la línea base. */
-  visitDates: string[];
-  /**
-   * Asentamiento parcial mensual, en mm, por código de punto (visita 0 = 0).
-   * Las cotas de cada visita se derivan restando el acumulado a la cota
-   * inicial; nunca se escriben a mano. Igual estrategia que `scripts/seed.mjs`:
-   * los parciales, acumulados, velocidad y nivel de alerta los calcula
-   * `computeHistory`, no el fixture.
-   */
-  partialsMm: Record<string, number[]>;
-  /**
-   * BM de amarre de las libretas (Fase 18): el demo lo crea en el catálogo
-   * del proyecto, y cada visita cierra en él con `closuresMm` de error.
-   */
-  amarre: { code: string; elevation: number; description: string };
-  /** Error de cierre de la libreta de cada visita, en mm (múltiplos de 0.1). */
-  closuresMm: number[];
+  points: PuntoAlameda[];
+  /** Cotas, BM de amarre y cierre de la libreta de cada visita. */
+  visits: VisitaAlameda[];
   notes: string;
 }
 
 /**
- * Serie de consolidación sobre arcilla blanda: asentamiento rápido que
- * desacelera hasta converger. P-06 (esquina más cargada) llega a alarma y su
- * acumulado cruza a alerta; P-05 pasa por alerta; el resto queda en
- * precaución/normal — así el semáforo no sale todo verde. Los mismos números
- * verificados del seed.
+ * Torre Alameda, la simulación del prototipo: ocho puntos, catorce visitas con
+ * libreta, BM-1 y BM-2 alternados y la visita 9 fuera de tolerancia. El mismo
+ * nivel digital que el seed le asigna. Queda cerrada para su informe.
  */
 export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
-  name: "Edificio de ejemplo",
+  name: "Torre Alameda",
   description:
-    "Edificio de 6 niveles sobre arcilla blanda, con 6 puntos de control en grilla.",
-  operator: "Equipo de monitoreo",
-  precisionOrder: "tercer_orden" as PrecisionOrder,
-  equipmentBrand: "Leica",
-  equipmentModel: "NA2",
-  equipmentSerial: "NA2-DEMO-01",
-  equipmentCalibrationDate: "2025-11-10",
-  levelType: "automatico" as const,
-  kmPrecisionMm: 0.7,
-  points: [
-    { code: "P-01", locationDescription: "Esquina NW", northing: 2000.0, easting: 1000.0, initialElevation: 100.0 },
-    { code: "P-02", locationDescription: "Esquina NE", northing: 2000.0, easting: 1030.0, initialElevation: 100.0 },
-    { code: "P-03", locationDescription: "Centro", northing: 1985.0, easting: 1015.0, initialElevation: 100.0 },
-    { code: "P-04", locationDescription: "Esquina SW", northing: 1970.0, easting: 1000.0, initialElevation: 100.0 },
-    { code: "P-05", locationDescription: "Borde sur, intermedio", northing: 1970.0, easting: 1015.0, initialElevation: 100.0 },
-    { code: "P-06", locationDescription: "Esquina SE (mayor carga)", northing: 1970.0, easting: 1030.0, initialElevation: 100.0 },
-  ],
-  visitDates: [
-    "2025-01-15",
-    "2025-02-15",
-    "2025-03-15",
-    "2025-04-15",
-    "2025-05-15",
-    "2025-06-15",
-  ],
-  partialsMm: {
-    "P-01": [0, -3.5, -2.2, -1.4, -0.9, -0.5],
-    "P-02": [0, -4.2, -2.6, -1.6, -1.0, -0.6],
-    "P-03": [0, -3.8, -2.3, -1.3, -0.8, -0.5],
-    "P-04": [0, -4.5, -2.8, -1.7, -1.1, -0.7],
-    "P-05": [0, -9.0, -5.0, -3.0, -1.8, -1.0],
-    "P-06": [0, -24.0, -13.0, -7.0, -4.0, -2.5],
-  },
-  amarre: { code: "BM-E1", elevation: 99.65, description: "BM de amarre del edificio de ejemplo" },
-  closuresMm: [0.8, -1.2, 0.5, 1.9, -0.7, 1.1],
+    "Torre de 14 niveles sobre suelo aluvial, con 8 puntos de control en columnas. Cada visita lleva su libreta de nivelación. Simulación del prototipo de control de asentamientos.",
+  precisionOrder: "tercer_orden",
+  equipmentBrand: "Trimble",
+  equipmentModel: "DiNi 12",
+  equipmentSerial: "TDN-2025-014",
+  equipmentCalibrationDate: "2024-12-20",
+  levelType: "digital",
+  kmPrecisionMm: 1.0,
+  points: ALAMEDA_POINTS,
+  visits: alamedaVisits(),
   notes:
-    "Lugar cerrado tras seis visitas mensuales: su informe de asentamientos ya es reproducible.",
+    "Lugar cerrado tras catorce visitas: su informe de asentamientos ya es reproducible.",
 };
