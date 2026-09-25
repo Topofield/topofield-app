@@ -47,7 +47,7 @@ interface PointBarsChartProps {
 
 /** Relleno por nivel del semáforo. El valor rotulado es el segundo canal. */
 const LEVEL_FILL: Record<AlertLevel, string> = {
-  normal: "fill-primary-500",
+  normal: "fill-ink-2",
   caution: "fill-semaphore-yellow",
   alert: "fill-semaphore-orange",
   alarm: "fill-semaphore-red",
@@ -146,7 +146,7 @@ export function PointBarsChart({
   const isMuted = (bar: PointBar) => hasSelection && bar.pointId !== selectedPointId;
 
   if (bars.length === 0) {
-    return <p className="text-sm text-neutral-500">No hay puntos para dibujar.</p>;
+    return <p className="text-sm text-ink-2">No hay puntos para dibujar.</p>;
   }
 
   return (
@@ -178,7 +178,7 @@ export function PointBarsChart({
                       y={0}
                       width={band}
                       height={PLOT_HEIGHT + bottom - 4}
-                      className="fill-transparent group-hover:fill-primary-500/10"
+                      className="fill-transparent group-hover:fill-sel"
                     />
                     <rect
                       x={band * i + 1}
@@ -188,7 +188,7 @@ export function PointBarsChart({
                       rx={4}
                       fill="none"
                       strokeWidth={2}
-                      className="stroke-primary-600 opacity-0 group-focus-visible:opacity-100"
+                      className="stroke-mira-strong opacity-0 group-focus-visible:opacity-100"
                     />
                   </g>
                 ))}
@@ -215,13 +215,13 @@ export function PointBarsChart({
                 <path
                   key={bar.pointId}
                   d={barPath(x, barW, y0, y1)}
-                  className={isMuted(bar) ? "fill-neutral-300" : LEVEL_FILL[bar.level ?? "normal"]}
+                  className={isMuted(bar) ? "fill-rule-strong" : LEVEL_FILL[bar.level ?? "normal"]}
                 />
               );
             })}
 
             {/* El 0 otra vez, encima de las bases de las barras */}
-            <line x1={0} x2={plotW} y1={y0} y2={y0} strokeWidth={1.5} className="stroke-neutral-400" />
+            <line x1={0} x2={plotW} y1={y0} y2={y0} strokeWidth={1.5} className="stroke-rule-strong" />
 
             {/* Sin rótulos en la línea: chocarían con los valores de las
                 barras. Van en la leyenda de abajo. */}
@@ -238,7 +238,7 @@ export function PointBarsChart({
               const cx = band * i + band / 2;
               const text = valueTexts[i] ?? "—";
               const muted = isMuted(bar);
-              const fill = muted ? "fill-neutral-500" : "fill-neutral-800";
+              const fill = muted ? "fill-ink-3" : "fill-ink";
               const below = bar.value !== null && bar.value < 0;
               const tip = bar.value === null ? y0 : yScale(bar.value);
               // «—» no se gira: es un solo carácter y girado parecería una barra.
@@ -276,7 +276,7 @@ export function PointBarsChart({
               const cx = band * i + band / 2;
               const selected = hasSelection && bar.pointId === selectedPointId;
               const className = cn(
-                selected ? "fill-neutral-900" : isMuted(bar) ? "fill-neutral-500" : "fill-neutral-800",
+                selected ? "fill-ink" : isMuted(bar) ? "fill-ink-3" : "fill-ink-2",
               );
               return rotateLabels ? (
                 <text
@@ -308,7 +308,7 @@ export function PointBarsChart({
       </div>
 
       {axis.thresholds.length > 0 && (
-        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-700">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-2">
           <ThresholdLegendItems thresholds={axis.thresholds} />
         </ul>
       )}

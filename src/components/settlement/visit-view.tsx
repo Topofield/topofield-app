@@ -152,17 +152,17 @@ export function VisitView(props: VisitViewProps) {
     <div className="flex flex-col gap-6">
       {/* Solo desde `md`: en un teléfono las migas ya colapsan en un
           enlace al lugar, y dos enlaces de vuelta seguidos sobran. */}
-      <Link href={props.backHref} className="hidden w-fit text-sm text-neutral-600 hover:text-neutral-900 md:block">
+      <Link href={props.backHref} className="hidden w-fit text-sm text-ink-2 hover:text-ink md:block">
         ← Volver a {props.siteName}
       </Link>
 
-      <header className="flex flex-col gap-3 border-b-2 border-neutral-900 pb-4 md:flex-row md:items-end md:justify-between">
+      <header className="flex flex-col gap-3 border-b-2 border-ink pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">
             {props.visitLabel}
-            {props.isBaseline && <span className="text-neutral-500"> (lectura base)</span>}
+            {props.isBaseline && <span className="text-ink-2"> (lectura base)</span>}
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-ink-2">
             {formatDateOnly(props.date)}.
             {props.amarre && ` Amarre en ${props.amarre.code}.`}
             {props.operator && ` Nivelación por ${props.operator}`}
@@ -259,7 +259,7 @@ export function VisitView(props: VisitViewProps) {
                   : "—"
           }
           hint={closure ? closure.detail : "Cotas directas: cierre tecleado"}
-          className={closure?.status === "out" ? "border-warning-500" : undefined}
+          className={closure?.status === "out" ? "border-warning" : undefined}
         />
         <KpiCard
           label="Estado"
@@ -285,7 +285,7 @@ export function VisitView(props: VisitViewProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+                <tr className="border-b border-rule text-left text-xs text-ink-2">
                   <th className="py-2 pr-3 font-medium">Punto</th>
                   <th className="py-2 pr-3 text-right font-medium">Cota base (m)</th>
                   <th className="py-2 pr-3 text-right font-medium">Cota actual (m)</th>
@@ -303,8 +303,8 @@ export function VisitView(props: VisitViewProps) {
                       key={r.pointId}
                       onClick={() => select(r.pointId)}
                       className={cn(
-                        "cursor-pointer border-b border-neutral-100 align-top last:border-0 hover:bg-neutral-50",
-                        on && "bg-primary-50 shadow-[inset_3px_0_0_var(--color-primary-500)]",
+                        "cursor-pointer border-b border-rule align-top last:border-0 hover:bg-paper",
+                        on && "bg-sel shadow-[inset_3px_0_0_var(--color-mira-strong)]",
                       )}
                     >
                       <td className="py-2 pr-3">
@@ -315,12 +315,12 @@ export function VisitView(props: VisitViewProps) {
                             e.stopPropagation();
                             select(r.pointId);
                           }}
-                          className="whitespace-nowrap text-left font-medium text-primary-600 hover:underline"
+                          className="whitespace-nowrap text-left font-medium text-ink hover:underline"
                         >
                           {r.code}
                         </button>
                         {r.note && (
-                          <div className="whitespace-nowrap text-xs text-neutral-500">{r.note}</div>
+                          <div className="whitespace-nowrap text-xs text-ink-2">{r.note}</div>
                         )}
                       </td>
                       <td className="py-2 pr-3 text-right font-mono tabular-nums">
@@ -342,14 +342,14 @@ export function VisitView(props: VisitViewProps) {
                         {r.level ? (
                           <StatusIndicator level={r.level} label={ALERT_LEVEL_LABELS[r.level]} />
                         ) : (
-                          <span className="text-neutral-500">Sin lectura</span>
+                          <span className="text-ink-2">Sin lectura</span>
                         )}
                         {r.trendWarning && (
                           <div className="mt-1 flex max-w-xs flex-col gap-1">
                             <Badge tone="warning" className="w-fit whitespace-nowrap">
                               ⚠ Lectura fuera de tendencia
                             </Badge>
-                            <span className="text-xs text-neutral-600">{r.trendWarning}</span>
+                            <span className="text-xs text-ink-2">{r.trendWarning}</span>
                           </div>
                         )}
                       </td>
@@ -371,19 +371,19 @@ export function VisitView(props: VisitViewProps) {
             }
           >
             <dl className="mb-4 grid grid-cols-3 gap-3 text-sm">
-              <div className="border-t-2 border-neutral-200 pt-1">
-                <dt className="text-neutral-500">Acumulado</dt>
+              <div className="border-t-2 border-rule pt-1">
+                <dt className="text-ink-2">Acumulado</dt>
                 <dd className="text-lg font-semibold">{formatSignedMm(current.accumulated)} mm</dd>
               </div>
-              <div className="border-t-2 border-neutral-200 pt-1">
-                <dt className="text-neutral-500">Velocidad</dt>
+              <div className="border-t-2 border-rule pt-1">
+                <dt className="text-ink-2">Velocidad</dt>
                 <dd className="text-lg font-semibold">
                   {current.velocity == null || props.isBaseline ? "—" : `${current.velocity.toFixed(2)}`}
-                  <span className="text-sm font-normal text-neutral-500"> mm/mes</span>
+                  <span className="text-sm font-normal text-ink-2"> mm/mes</span>
                 </dd>
               </div>
-              <div className="border-t-2 border-neutral-200 pt-1">
-                <dt className="text-neutral-500">Desde la anterior</dt>
+              <div className="border-t-2 border-rule pt-1">
+                <dt className="text-ink-2">Desde la anterior</dt>
                 <dd className="text-lg font-semibold">
                   {props.isBaseline ? "—" : `${formatSignedMm(current.partial)} mm`}
                 </dd>
@@ -398,9 +398,9 @@ export function VisitView(props: VisitViewProps) {
                 thresholds={thresholds}
               />
             ) : (
-              <p className="text-sm text-neutral-500">El punto no tiene lecturas hasta esta visita.</p>
+              <p className="text-sm text-ink-2">El punto no tiene lecturas hasta esta visita.</p>
             )}
-            {note && <p className="mt-3 text-sm text-neutral-600">{note}</p>}
+            {note && <p className="mt-3 text-sm text-ink-2">{note}</p>}
           </Card>
         )}
       </div>
@@ -423,7 +423,7 @@ export function VisitView(props: VisitViewProps) {
         </Card>
         <Card title="Movimiento desde la visita anterior">
           {props.isBaseline ? (
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-ink-2">
               La lectura base no tiene visita anterior con la que comparar.
             </p>
           ) : (

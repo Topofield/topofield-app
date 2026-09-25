@@ -95,20 +95,20 @@ export function CloseSiteDialog({
           </Alert>
         )}
 
-        <p className="text-sm text-neutral-700">
+        <p className="text-sm text-ink-2">
           Cerrar el lugar finaliza el monitoreo: queda en solo lectura, con
           responsable y fecha de registro. Esta acción no se puede deshacer.
         </p>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <dt className="text-neutral-500">Lugar</dt>
-          <dd className="text-neutral-900">{siteName}</dd>
-          <dt className="text-neutral-500">Puntos del catálogo</dt>
-          <dd className="text-neutral-900 tabular-nums">{pointsCount}</dd>
-          <dt className="text-neutral-500">Visitas registradas</dt>
-          <dd className="text-neutral-900 tabular-nums">{visitsTotal}</dd>
-          <dt className="text-neutral-500">Fecha y hora de cierre</dt>
-          <dd className="text-neutral-900">{now}</dd>
+          <dt className="text-ink-2">Lugar</dt>
+          <dd className="text-ink">{siteName}</dd>
+          <dt className="text-ink-2">Puntos del catálogo</dt>
+          <dd className="text-ink tabular-nums">{pointsCount}</dd>
+          <dt className="text-ink-2">Visitas registradas</dt>
+          <dd className="text-ink tabular-nums">{visitsTotal}</dd>
+          <dt className="text-ink-2">Fecha y hora de cierre</dt>
+          <dd className="text-ink">{now}</dd>
         </dl>
 
         {visitsOpen > 0 && (
@@ -119,12 +119,12 @@ export function CloseSiteDialog({
           </Alert>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-neutral-700">
+        <label className="flex items-center gap-2 text-sm text-ink-2">
           <input
             type="checkbox"
             checked={confirmed}
             onChange={(event) => setConfirmed(event.target.checked)}
-            className="h-4 w-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+            className="h-4 w-4 rounded border-rule-strong text-mira-ink focus:ring-mira-strong"
           />
           Confirmo que los datos son correctos
         </label>

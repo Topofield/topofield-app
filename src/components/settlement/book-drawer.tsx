@@ -78,19 +78,19 @@ export function BookDrawer({
     >
       <dl className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div>
-          <dt className="text-neutral-500">Fecha</dt>
+          <dt className="text-ink-2">Fecha</dt>
           <dd className="font-medium">{formatDateOnly(date)}</dd>
         </div>
         <div>
-          <dt className="text-neutral-500">Nivelador</dt>
+          <dt className="text-ink-2">Nivelador</dt>
           <dd className="font-medium">{operator ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-neutral-500">Equipo</dt>
+          <dt className="text-ink-2">Equipo</dt>
           <dd className="font-medium">{equipment}</dd>
         </div>
         <div>
-          <dt className="text-neutral-500">BM de amarre</dt>
+          <dt className="text-ink-2">BM de amarre</dt>
           <dd className="font-medium">
             {amarre ? `${amarre.code}, cota ${m4(amarre.elevation)}` : "—"}
           </dd>
@@ -101,7 +101,7 @@ export function BookDrawer({
       <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+            <tr className="border-b border-rule text-left text-xs text-ink-2">
               <th className="py-2 pr-3 font-medium">Arm.</th>
               <th className="py-2 pr-3 font-medium">Punto</th>
               <th className="py-2 pr-3 text-right font-medium">V+ (m)</th>
@@ -125,12 +125,12 @@ export function BookDrawer({
                 <tr
                   key={r.id}
                   className={cn(
-                    "border-b border-neutral-100 font-mono tabular-nums",
+                    "border-b border-rule font-mono tabular-nums",
                     newSetup && i > 0 && "border-t-2 border-t-neutral-200",
-                    isSelected && "bg-primary-50",
+                    isSelected && "bg-sel",
                   )}
                 >
-                  <td className="py-1.5 pr-3 font-sans text-neutral-500">
+                  <td className="py-1.5 pr-3 font-sans text-ink-2">
                     {newSetup && r.backsight != null ? setups[i] : ""}
                   </td>
                   <td className="whitespace-nowrap py-1.5 pr-3 font-sans">
@@ -142,7 +142,7 @@ export function BookDrawer({
                   <td
                     className={cn(
                       "py-1.5 pr-3 text-right",
-                      intermediate && isControl && "bg-warning-500/10 font-semibold text-neutral-900",
+                      intermediate && isControl && "bg-warning-bg font-semibold text-ink",
                     )}
                   >
                     {intermediate ? m4(r.foresight) : "—"}
@@ -164,12 +164,12 @@ export function BookDrawer({
           ["Error de cierre", closure.value],
           ["Tolerancia", closure.detail],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-md border border-neutral-200 px-3 py-2">
-            <dt className="text-neutral-500">{label}</dt>
+          <div key={label} className="rounded-md border border-rule px-3 py-2">
+            <dt className="text-ink-2">{label}</dt>
             <dd
               className={cn(
                 "font-medium",
-                label === "Tolerancia" && closure.status === "out" && "text-warning-500",
+                label === "Tolerancia" && closure.status === "out" && "text-warning",
               )}
             >
               {value}
@@ -177,7 +177,7 @@ export function BookDrawer({
           </div>
         ))}
       </dl>
-      <p className="mt-3 text-sm text-neutral-500">
+      <p className="mt-3 text-sm text-ink-2">
         Tolerancia de cierre K·√D según el orden de la visita, con D la
         longitud del circuito en km. Las cotas de los puntos de control se
         toman de la columna de cotas compensadas; si el cierre no cumple la

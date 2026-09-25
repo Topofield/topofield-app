@@ -161,19 +161,19 @@ export function VisitBookEditor({
         {result && (
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
             <div>
-              <dt className="text-neutral-500">Σ vistas más</dt>
+              <dt className="text-ink-2">Σ vistas más</dt>
               <dd className="font-mono tabular-nums">{result.sumBacksights.toFixed(4)}</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Σ vistas menos</dt>
+              <dt className="text-ink-2">Σ vistas menos</dt>
               <dd className="font-mono tabular-nums">{result.sumForesights.toFixed(4)}</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Error de cierre</dt>
+              <dt className="text-ink-2">Error de cierre</dt>
               <dd className="font-mono tabular-nums">{closure?.value}</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Tolerancia</dt>
+              <dt className="text-ink-2">Tolerancia</dt>
               <dd>{closure?.detail}</dd>
             </div>
           </dl>
@@ -203,7 +203,7 @@ export function VisitBookEditor({
             {derivationIssues.map((issue) => (
               <li
                 key={`${issue.kind}-${issue.pointId}`}
-                className={issue.level === "error" ? "text-danger-500" : "text-warning-500"}
+                className={issue.level === "error" ? "text-danger" : "text-warning"}
               >
                 {bookIssueMessage(issue)}
               </li>

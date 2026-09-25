@@ -117,12 +117,12 @@ export function PointsScatter({ series, baseDate, thresholds }: PointsScatterPro
     cn(
       "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition-colors motion-reduce:transition-none",
       pressed
-        ? "border-primary-500 bg-primary-50 text-primary-700"
-        : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50",
+        ? "border-mira-strong bg-sel text-ink"
+        : "border-rule bg-card text-ink-2 hover:bg-paper",
     );
 
   if (series.length === 0) {
-    return <p className="text-sm text-neutral-500">El catálogo todavía no tiene puntos.</p>;
+    return <p className="text-sm text-ink-2">El catálogo todavía no tiene puntos.</p>;
   }
 
   return (
@@ -152,7 +152,7 @@ export function PointsScatter({ series, baseDate, thresholds }: PointsScatterPro
                 <Marker shape={s.shape} cx={7} cy={7} color={s.color} />
               </svg>
               <span>{s.label}</span>
-              <span className="tabular-nums text-neutral-500">
+              <span className="tabular-nums text-ink-2">
                 {last === null ? "—" : `${formatMm(last)} mm`}
               </span>
             </button>
@@ -170,7 +170,7 @@ export function PointsScatter({ series, baseDate, thresholds }: PointsScatterPro
       )}
 
       {!hasData ? (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           Todavía no hay lecturas para dibujar la gráfica.
         </p>
       ) : (
@@ -200,7 +200,7 @@ export function PointsScatter({ series, baseDate, thresholds }: PointsScatterPro
 
               {/* Atenuadas primero, para que la resaltada quede encima */}
               {activeSeries && (
-                <g className="text-neutral-300">
+                <g className="text-ink-3">
                   {styled
                     .filter((s) => s.pointId !== active)
                     .map((s) =>

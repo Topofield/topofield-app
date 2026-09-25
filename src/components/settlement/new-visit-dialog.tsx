@@ -187,7 +187,7 @@ export function NewVisitDialog({
           <PrecisionOrderSelect kind="leveling" value={order} onChange={setOrder} />
           <LevelFieldset value={level} onChange={setLevel} order={order} />
           {previous && (
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-ink-2">
               El nivelador, el amarre, el orden y el equipo vienen de la visita{" "}
               {previous.visit_number}. Cámbialos si no son los de esta.
             </p>

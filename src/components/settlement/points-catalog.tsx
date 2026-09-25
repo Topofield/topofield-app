@@ -92,7 +92,7 @@ function PointState({ point }: { point: SettlementPoint }) {
         <Badge tone="warning" className="w-fit whitespace-nowrap">
           De baja desde el {formatDateOnly(point.retired_on)}
         </Badge>
-        <span className="text-xs text-neutral-500">{point.retirement_reason}</span>
+        <span className="text-xs text-ink-2">{point.retirement_reason}</span>
       </div>
     );
   }
@@ -331,7 +331,7 @@ export function PointsCatalog({
       )}
 
       {points.length === 0 ? (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           Aún no hay puntos en el catálogo. Agrega los puntos de control que
           se leerán en cada visita.
         </p>
@@ -339,7 +339,7 @@ export function PointsCatalog({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+              <tr className="border-b border-rule text-left text-xs text-ink-2">
                 <th className="py-2 pr-3 font-medium">Código</th>
                 <th className="py-2 pr-3 font-medium">Ubicación</th>
                 <th className="py-2 pr-3 font-medium">Norte</th>
@@ -353,21 +353,21 @@ export function PointsCatalog({
               {points.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-b border-neutral-100 last:border-0"
+                  className="border-b border-rule last:border-0"
                 >
-                  <td className="py-2 pr-3 font-medium text-neutral-900">
+                  <td className="py-2 pr-3 font-medium text-ink">
                     {item.code}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 text-ink-2">
                     {item.location_description}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 text-ink-2">
                     {item.northing ?? "—"}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 text-ink-2">
                     {item.easting ?? "—"}
                   </td>
-                  <td className="py-2 pr-3 text-neutral-700">
+                  <td className="py-2 pr-3 text-ink-2">
                     {item.initial_elevation ??
                       (item.active_from !== null ? "Primera lectura" : "—")}
                   </td>
@@ -380,7 +380,7 @@ export function PointsCatalog({
                         // Un punto de baja no se edita (su historia está
                         // cerrada). Solo se deshace la baja, mientras se pueda.
                         undoBlockers[item.id] ? (
-                          <p className="max-w-56 text-right text-xs text-neutral-500">
+                          <p className="max-w-56 text-right text-xs text-ink-2">
                             {undoBlockers[item.id]}
                           </p>
                         ) : (
@@ -486,7 +486,7 @@ export function PointsCatalog({
               />
             )}
             {isAltaForm && (
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-ink-2">
                 El monitoreo ya está en curso: el punto se da de alta y su
                 línea base será su <strong>primera lectura</strong>, no la
                 visita 0 del lugar. Por eso no lleva cota C0.
@@ -513,7 +513,7 @@ export function PointsCatalog({
         >
           <form onSubmit={confirmRetire} className="flex flex-col gap-4">
             {retireError && <Alert variant="error">{retireError}</Alert>}
-            <p className="text-sm text-neutral-700">
+            <p className="text-sm text-ink-2">
               El punto deja de medirse desde esta fecha. Sus lecturas
               anteriores se conservan y siguen contando en el análisis.
             </p>

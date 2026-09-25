@@ -623,7 +623,7 @@ export function VisitEditor({
             derived={isBook}
           />
           {notMeasured.length > 0 && (
-            <p className="mt-3 text-sm text-neutral-500">
+            <p className="mt-3 text-sm text-ink-2">
               No se miden en esta visita:{" "}
               {notMeasured
                 .map((p) =>

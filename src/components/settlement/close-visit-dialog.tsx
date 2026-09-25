@@ -117,32 +117,32 @@ export function CloseVisitDialog({
           </Alert>
         )}
 
-        <p className="text-sm text-neutral-700">
+        <p className="text-sm text-ink-2">
           El cierre deja la visita en solo lectura, con responsable y fecha
           de registro. Esta acción no se puede deshacer.
         </p>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <dt className="text-neutral-500">Fecha de la visita</dt>
-          <dd className="text-neutral-900">{formatDate(visitDate)}</dd>
-          <dt className="text-neutral-500">Puntos medidos</dt>
-          <dd className="text-neutral-900">{pointsMeasured}</dd>
-          <dt className="text-neutral-500">Peor nivel de alerta</dt>
-          <dd className="text-neutral-900">{ALERT_LEVEL_LABELS[worstAlert]}</dd>
-          <dt className="text-neutral-500">Fecha y hora de cierre</dt>
-          <dd className="text-neutral-900">{now}</dd>
+          <dt className="text-ink-2">Fecha de la visita</dt>
+          <dd className="text-ink">{formatDate(visitDate)}</dd>
+          <dt className="text-ink-2">Puntos medidos</dt>
+          <dd className="text-ink">{pointsMeasured}</dd>
+          <dt className="text-ink-2">Peor nivel de alerta</dt>
+          <dd className="text-ink">{ALERT_LEVEL_LABELS[worstAlert]}</dd>
+          <dt className="text-ink-2">Fecha y hora de cierre</dt>
+          <dd className="text-ink">{now}</dd>
           {closure && (
             <>
-              <dt className="text-neutral-500">Cierre de la libreta</dt>
-              <dd className="text-neutral-900">
+              <dt className="text-ink-2">Cierre de la libreta</dt>
+              <dd className="text-ink">
                 {closure.value} · {closure.detail}
               </dd>
             </>
           )}
           {trendDeviationCodes.length > 0 && (
             <>
-              <dt className="text-neutral-500">Lecturas fuera de tendencia</dt>
-              <dd className="text-warning-500">
+              <dt className="text-ink-2">Lecturas fuera de tendencia</dt>
+              <dd className="text-warning">
                 {trendDeviationCodes.join(", ")}
               </dd>
             </>
@@ -171,12 +171,12 @@ export function CloseVisitDialog({
           </Alert>
         ) : null}
 
-        <label className="flex items-center gap-2 text-sm text-neutral-700">
+        <label className="flex items-center gap-2 text-sm text-ink-2">
           <input
             type="checkbox"
             checked={confirmed}
             onChange={(event) => setConfirmed(event.target.checked)}
-            className="h-4 w-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+            className="h-4 w-4 rounded border-rule-strong text-mira-ink focus:ring-mira-strong"
           />
           Confirmo que los datos son correctos
         </label>

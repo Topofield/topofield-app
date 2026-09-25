@@ -53,7 +53,7 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
 
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-ink-2">
         Aún no hay visitas registradas en este lugar.
       </p>
     );
@@ -65,8 +65,8 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
     // en un teléfono.
     <div className="relative max-h-[28rem] overflow-auto">
       <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10 bg-white">
-          <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+        <thead className="sticky top-0 z-10 bg-card">
+          <tr className="border-b border-rule text-left text-xs text-ink-2">
             <th className="py-2 pr-3 font-medium">Visita</th>
             <th className="py-2 pr-3 font-medium">Fecha</th>
             <th className="py-2 pr-3 text-right font-medium">Promedio (mm)</th>
@@ -89,21 +89,21 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
               <tr
                 key={row.visitId}
                 onClick={() => router.push(href)}
-                className="cursor-pointer border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
+                className="cursor-pointer border-b border-rule last:border-0 hover:bg-paper"
               >
                 <td className="whitespace-nowrap py-2 pr-3">
                   <Link
                     href={href}
                     onClick={(e) => e.stopPropagation()}
-                    className="font-medium text-primary-600 hover:underline"
+                    className="font-medium text-ink hover:underline"
                   >
                     Visita {row.visitNumber}
                   </Link>
                   {row.visitNumber === 0 && (
-                    <span className="ml-1 text-neutral-500">(base)</span>
+                    <span className="ml-1 text-ink-2">(base)</span>
                   )}
                 </td>
-                <td className="whitespace-nowrap py-2 pr-3 text-neutral-700">
+                <td className="whitespace-nowrap py-2 pr-3 text-ink-2">
                   {formatDateShort(row.date)}
                 </td>
                 <td className="py-2 pr-3 text-right font-mono tabular-nums">
@@ -113,7 +113,7 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                   {row.maxSettlement ? (
                     <>
                       {formatSignedMm(row.maxSettlement.value)}{" "}
-                      <span className="font-sans text-neutral-500">{row.maxSettlement.code}</span>
+                      <span className="font-sans text-ink-2">{row.maxSettlement.code}</span>
                     </>
                   ) : (
                     "—"
@@ -124,20 +124,20 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                     <>
                       {row.amarre.code}{" "}
                       {row.amarre.elevation != null && (
-                        <span className="font-mono tabular-nums text-neutral-500">
+                        <span className="font-mono tabular-nums text-ink-2">
                           {row.amarre.elevation.toFixed(4)}
                         </span>
                       )}
                     </>
                   ) : (
-                    <span className="text-neutral-500">—</span>
+                    <span className="text-ink-2">—</span>
                   )}
                 </td>
                 <td className="whitespace-nowrap py-2 pr-3 text-right font-mono tabular-nums">
                   {row.visitNumber !== 0 && row.maxMove ? (
                     <>
                       {formatSignedMm(row.maxMove.value)}{" "}
-                      <span className="font-sans text-neutral-500">{row.maxMove.code}</span>
+                      <span className="font-sans text-ink-2">{row.maxMove.code}</span>
                     </>
                   ) : (
                     "—"
@@ -146,7 +146,7 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                 <td className="whitespace-nowrap py-2 pr-3 text-right font-mono tabular-nums">
                   {closure ? (
                     <span
-                      className={closure.status === "out" ? "font-semibold text-warning-500" : undefined}
+                      className={closure.status === "out" ? "font-semibold text-warning" : undefined}
                       title={closure.detail}
                     >
                       {closure.status === "out" && <span aria-hidden>⚠ </span>}

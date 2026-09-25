@@ -46,7 +46,7 @@ export function ReadingsTable({
 }: ReadingsTableProps) {
   if (points.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-ink-2">
         Este lugar todavía no tiene puntos en su catálogo. Agrégalos desde la
         ficha del lugar antes de capturar una visita.
       </p>
@@ -57,7 +57,7 @@ export function ReadingsTable({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+          <tr className="border-b border-rule text-left text-xs text-ink-2">
             <th className="py-2 pr-3 font-medium">Punto</th>
             <th className="py-2 pr-3 font-medium">Ubicación</th>
             <th className="py-2 pr-3 font-medium">
@@ -80,17 +80,17 @@ export function ReadingsTable({
             return (
               <tr
                 key={point.id}
-                className="border-b border-neutral-100 last:border-0"
+                className="border-b border-rule last:border-0"
               >
-                <td className="py-2 pr-3 font-medium text-neutral-900">
+                <td className="py-2 pr-3 font-medium text-ink">
                   {point.code}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {point.location_description}
                 </td>
                 <td className="py-2 pr-3">
                   {derived ? (
-                    <span className="font-mono tabular-nums text-neutral-900">
+                    <span className="font-mono tabular-nums text-ink">
                       {rawElevations[point.id] || "—"}
                     </span>
                   ) : (
@@ -105,18 +105,18 @@ export function ReadingsTable({
                     />
                   )}
                   {trendWarnings[point.id] && (
-                    <p className="mt-1 w-64 text-xs text-warning-500">
+                    <p className="mt-1 w-64 text-xs text-warning">
                       {trendWarnings[point.id]}
                     </p>
                   )}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {fmt(partial, 1)}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {fmt(accumulated, 1)}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {fmt(velocity, 2)}
                 </td>
                 <td className="py-2 pr-3">

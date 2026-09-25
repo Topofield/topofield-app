@@ -78,7 +78,7 @@ export function ThresholdsFields({
   return (
     <div className="flex flex-col gap-4">
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium text-neutral-800">
+        <legend className="text-sm font-medium text-ink">
           Velocidad (mm/mes)
         </legend>
         <div className="grid grid-cols-3 gap-2">
@@ -104,7 +104,7 @@ export function ThresholdsFields({
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium text-neutral-800">
+        <legend className="text-sm font-medium text-ink">
           Asentamiento acumulado (mm)
         </legend>
         <div className="grid grid-cols-3 gap-2">

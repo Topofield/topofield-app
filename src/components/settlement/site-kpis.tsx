@@ -15,7 +15,7 @@ export function withUnit(value: string, unit: string) {
   return (
     <>
       {value}
-      <span className="ml-1 whitespace-nowrap text-base font-normal text-neutral-500">{unit}</span>
+      <span className="ml-1 whitespace-nowrap text-base font-normal text-ink-2">{unit}</span>
     </>
   );
 }
