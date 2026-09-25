@@ -84,6 +84,15 @@ describe("computeVisitBook", () => {
     expect(r.return).toBeNull();
   });
 
+  it("el amarre no se compensa y el punto de cambio se compensa hasta su V− (Fase 19)", () => {
+    const r = computeVisitBook(prototypeBook(), BM, "tercer_orden");
+    const amarre = r.forward.readings[0]!;
+    expect(amarre.correctionApplied).toBe(0);
+    expect(amarre.elevationCorrected).toBe(BM);
+    // CP-1 está a 40 + 42 m del origen, no a 40 + 42 + 45.
+    expect(r.forward.readings[5]!.distanceAccumulatedKm).toBeCloseTo(0.082, 9);
+  });
+
   it("sin distancias calcula el cierre pero no la tolerancia ni la compensación", () => {
     const rows = prototypeBook().map((x) => ({
       ...x,
