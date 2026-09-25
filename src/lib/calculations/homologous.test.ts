@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { compareHomologousPoints, computeLeveling, samePointCode } from "./leveling";
 import { readLevelingFile, toLibreta, type LibretaRow } from "@/lib/import/leveling";
+import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
 import type { LevelingInput, PointType, ReadingInput } from "@/types/leveling";
 
 type Row = [string, PointType, number | null, number | null];
@@ -39,37 +40,13 @@ function input(forward: Row[], back: Row[] | null, over: Partial<LevelingInput> 
   };
 }
 
-// Hoja corregida de El Verjón: V+ y V− son el hilo medio; la radiación AUX1
-// lleva su vista intermedia como V−. Los códigos van como en la hoja, con el
+// Hoja corregida de El Verjón (`lib/demo/carteras.ts`, la misma que usa el
+// proyecto de ejemplo): V+ y V− son el hilo medio; la radiación AUX1 lleva su
+// vista intermedia como V−. Los códigos van como en la hoja, con el
 // `AUX1` / `AUX 1` de la ida y la vuelta y un espacio final en la vuelta.
-const VERJON_IDA: Row[] = [
-  ["D1", "bm", 1.209, null],
-  ["C 1", "pc", 3.275, 0.268],
-  ["C 2", "pc", 3.469, 0.224],
-  ["C 3", "pc", 3.952, 0.092],
-  ["AUX1", "intermediate", null, 0.194],
-  ["C 4", "pc", 3.314, 0.244],
-  ["C 5", "pc", 3.013, 0.124],
-  ["C 6", "pc", 3.549, 0.145],
-  ["C 7", "pc", 3.16, 0.132],
-  ["D3", "pc", 2.395, 0.87],
-  ["C 8", "pc", 2.349, 0.195],
-  ["D4", "bm", null, 0.808],
-];
-const VERJON_VUELTA: Row[] = [
-  ["D4", "bm", 0.865, null],
-  ["C 8", "pc", 0.802, 2.407],
-  ["D3", "pc", 0.531, 3.003],
-  ["C 7", "pc", 0.092, 2.821],
-  ["C 6", "pc", 0.083, 3.51],
-  ["C 5", "pc", 0.266, 2.953],
-  ["C 4", "pc", 0.157, 3.456],
-  ["AUX 1", "intermediate", null, 0.107],
-  ["C 3 ", "pc", 0.022, 3.865],
-  ["C 2", "pc", 0.134, 3.4],
-  ["C 1", "pc", 0.452, 3.186],
-  ["D1", "bm", null, 1.391],
-];
+const aRow = (r: LecturaCartera): Row => [r.code, r.type, r.backsight, r.foresight];
+const VERJON_IDA: Row[] = CARTERA_VERJON.ida.map(aRow);
+const VERJON_VUELTA: Row[] = CARTERA_VERJON.vuelta.map(aRow);
 
 describe("puntos homólogos — El Verjón", () => {
   const result = computeLeveling(input(VERJON_IDA, VERJON_VUELTA));
