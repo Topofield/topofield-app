@@ -32,7 +32,7 @@ export function ModalDemo() {
           </>
         }
       >
-        <p className="text-sm text-neutral-800">
+        <p className="text-sm text-ink">
           Un proceso cerrado es inmutable. Esta acción no se puede deshacer.
         </p>
       </Modal>
@@ -80,10 +80,10 @@ const ESTADOS = [
 export function FiltroComparacion() {
   return (
     <div>
-      <p className="mb-2 text-sm font-medium text-neutral-800">
+      <p className="mb-2 text-sm font-medium text-ink">
         <code>&lt;Link&gt;</code> + <code>aria-current</code>
       </p>
-      <p className="mb-3 max-w-2xl text-xs text-neutral-500">
+      <p className="mb-3 max-w-2xl text-xs text-ink-2">
         Como en <code>dashboard-filter.tsx</code> y ya también en el listado
         de procesos. El filtro es navegación: se puede abrir en pestaña
         nueva, compartir por URL y no exige{" "}
@@ -92,7 +92,7 @@ export function FiltroComparacion() {
         ambas cosas; se reserva solo para controles que necesiten estado de
         cliente que un enlace no pueda expresar.
       </p>
-      <div className="inline-flex rounded-md border border-neutral-200 bg-white p-0.5">
+      <div className="inline-flex rounded-md border border-rule bg-card p-0.5">
         {ESTADOS.map((opcion) => {
           const activo = opcion.value === "todos";
           return (
@@ -103,8 +103,8 @@ export function FiltroComparacion() {
               className={cn(
                 "rounded px-3 py-1.5 text-sm font-medium transition-colors",
                 activo
-                  ? "bg-primary-500 text-white"
-                  : "text-neutral-500 hover:text-neutral-800",
+                  ? "bg-mira text-on-mira"
+                  : "text-ink-2 hover:text-ink",
               )}
             >
               {opcion.label}
@@ -138,7 +138,7 @@ export function EstadoCargaDemo() {
       <Button onClick={simular} disabled={pending}>
         {pending ? "Guardando…" : "Guardar proceso"}
       </Button>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-ink-2">
         Pulse para ver la transición. El ancho no salta porque ambos textos
         ocupan un espacio parecido; cuando no sea así, se fija con{" "}
         <code>min-w-*</code>.

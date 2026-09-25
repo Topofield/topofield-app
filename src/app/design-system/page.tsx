@@ -108,14 +108,14 @@ export default async function DesignSystemPage() {
       <header className="mb-10">
         <Logo className="text-2xl" />
         <h1 className="mt-4 text-3xl font-bold">Sistema de diseño</h1>
-        <p className="mt-2 max-w-2xl text-neutral-800">
+        <p className="mt-2 max-w-2xl text-ink">
           Estado actual de los {Object.keys(tokens).length} tokens de color,
           en claro y en oscuro, y los componentes de{" "}
           <code className="text-sm">src/components/design-system/</code>. Los
           contrastes se miden en vivo desde{" "}
           <code className="text-sm">globals.css</code>.
         </p>
-        <p className="mt-2 text-sm text-neutral-500">
+        <p className="mt-2 text-sm text-ink-2">
           Página de desarrollo — devuelve 404 en producción. Spec:{" "}
           <code>docs/specs/2026-07-28-sistema-diseno-design.md</code>
         </p>
@@ -133,7 +133,7 @@ export default async function DesignSystemPage() {
           <a
             key={href}
             href={href}
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50"
+            className="rounded-full border border-rule bg-card px-3 py-1 text-sm font-medium text-ink transition-colors hover:bg-sel"
           >
             {label}
           </a>
@@ -181,16 +181,16 @@ export default async function DesignSystemPage() {
                   <span className="font-mono text-xs tabular-nums font-semibold">
                     {formatRatio(m.ratio)}
                   </span>
-                  <span className="text-xs text-neutral-500">
+                  <span className="text-xs text-ink-2">
                     (mín. {m.umbral}:1)
                   </span>
                   <code className="text-xs">{m.fg}</code>
-                  <span className="text-xs text-neutral-500">sobre</span>
+                  <span className="text-xs text-ink-2">sobre</span>
                   <code className="text-xs">
                     {m.bg}
                     {m.bgAlpha !== undefined ? `/${m.bgAlpha * 100}` : ""}
                   </code>
-                  <span className="text-xs text-neutral-500">— {m.donde}</span>
+                  <span className="text-xs text-ink-2">— {m.donde}</span>
                 </li>
               ))}
             </ul>
@@ -204,7 +204,7 @@ export default async function DesignSystemPage() {
           {GRUPOS.map((grupo) => (
             <div key={grupo.titulo}>
               <h3 className="text-base font-semibold">{grupo.titulo}</h3>
-              <p className="mt-1 mb-3 max-w-2xl text-sm text-neutral-500">
+              <p className="mt-1 mb-3 max-w-2xl text-sm text-ink-2">
                 {grupo.nota}
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -223,12 +223,12 @@ export default async function DesignSystemPage() {
 
         <div className="mt-8">
           <h3 className="text-base font-semibold">Tipografía</h3>
-          <div className="mt-3 space-y-3 rounded-lg border border-neutral-200 bg-white p-5">
-            <p className="font-display text-2xl font-bold text-primary-600">
-              Space Grotesk · títulos h1–h3
+          <div className="mt-3 space-y-3 rounded-lg border border-rule bg-card p-5">
+            <p className="font-display text-2xl font-bold text-ink">
+              Barlow Semi Condensed · títulos h1–h3
             </p>
             <p className="text-base">
-              system-ui · cuerpo de texto. El paso de estación 4 a la 5 cerró
+              Barlow · cuerpo de texto. El paso de estación 4 a la 5 cerró
               con error angular de 12″.
             </p>
             <p className="font-mono tabular-nums text-base">
@@ -259,7 +259,7 @@ export default async function DesignSystemPage() {
                     <h4 className="text-base font-semibold">
                       {CONTEXTO_LABELS[contexto]}
                     </h4>
-                    <p className="mt-1 mb-3 text-sm text-neutral-500">
+                    <p className="mt-1 mb-3 text-sm text-ink-2">
                       Umbral {primera.umbral}:1
                     </p>
                     <TablaMediciones filas={filas} />
@@ -389,7 +389,7 @@ export default async function DesignSystemPage() {
                 title="Resultados del cierre"
                 actions={<Button size="sm" variant="ghost">Exportar</Button>}
               >
-                <p className="text-sm text-neutral-800">
+                <p className="text-sm text-ink">
                   Contenido de la tarjeta.
                 </p>
               </Card>
@@ -398,7 +398,7 @@ export default async function DesignSystemPage() {
                 description="12 puntos · última visita el 14 mar 2026"
                 actions={<Button size="sm" variant="ghost">Exportar</Button>}
               >
-                <p className="text-sm text-neutral-800">
+                <p className="text-sm text-ink">
                   Con descripción bajo el título.
                 </p>
               </Card>
@@ -455,10 +455,10 @@ export default async function DesignSystemPage() {
             <div className="flex flex-wrap items-end gap-8">
               <Logo />
               <Logo className="text-2xl" />
-              <div className="rounded-md bg-primary-700 p-4">
-                <Logo className="text-white" markClassName="text-white" />
+              <div className="rounded-md bg-ink p-4">
+                <Logo className="text-paper" markClassName="text-paper" />
               </div>
-              <LogoMark className="h-10 w-10 text-primary-500" />
+              <LogoMark className="h-10 w-10 text-mira-strong" />
             </div>
           </Demo>
         </div>
@@ -486,19 +486,19 @@ export default async function DesignSystemPage() {
               <Button variant="secondary">Botón</Button>
               <a
                 href="#patrones"
-                className="text-sm font-medium text-primary-600 underline"
+                className="text-sm font-medium text-ink underline"
               >
                 Enlace
               </a>
               <button
                 type="button"
-                className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-500"
+                className="rounded-full border border-rule bg-card px-3 py-1 text-sm text-ink-2"
               >
                 Chip
               </button>
               <Input aria-label="Campo de prueba" placeholder="Campo" />
             </div>
-            <p className="mt-4 max-w-2xl text-sm text-neutral-500">
+            <p className="mt-4 max-w-2xl text-sm text-ink-2">
               El selector base es{" "}
               <code>
                 :where(a, button, summary, input, select,
@@ -561,12 +561,12 @@ export default async function DesignSystemPage() {
           ].map((item, i) => (
             <li
               key={i}
-              className="rounded-lg border border-neutral-200 bg-white p-5"
+              className="rounded-lg border border-rule bg-card p-5"
             >
-              <p className="font-semibold text-neutral-900">
+              <p className="font-semibold text-ink">
                 {i + 1}. {item.t}
               </p>
-              <p className="mt-1 text-sm text-neutral-800">{item.d}</p>
+              <p className="mt-1 text-sm text-ink">{item.d}</p>
             </li>
           ))}
         </ol>
@@ -590,11 +590,11 @@ function Seccion({
 }) {
   return (
     <section id={id} className="mb-14 scroll-mt-6">
-      <h2 className="border-b border-neutral-200 pb-2 text-2xl font-bold">
+      <h2 className="border-b border-rule pb-2 text-2xl font-bold">
         {titulo}
       </h2>
       {descripcion && (
-        <p className="mt-3 mb-6 max-w-2xl text-neutral-800">{descripcion}</p>
+        <p className="mt-3 mb-6 max-w-2xl text-ink">{descripcion}</p>
       )}
       <div className={descripcion ? "" : "mt-6"}>{children}</div>
     </section>
@@ -611,12 +611,12 @@ function Demo({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
-      <h3 className="font-display text-base font-semibold text-primary-600">
+    <div className="rounded-lg border border-rule bg-card p-5">
+      <h3 className="font-display text-base font-semibold text-ink">
         {titulo}
       </h3>
       {nota ? (
-        <p className="mt-1 mb-4 max-w-2xl text-sm text-neutral-500">{nota}</p>
+        <p className="mt-1 mb-4 max-w-2xl text-sm text-ink-2">{nota}</p>
       ) : (
         <div className="mb-4" />
       )}
@@ -641,17 +641,17 @@ function Swatch({
 }) {
   if (!claro) return null;
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-rule bg-card">
       <div
         className="h-16 w-full"
         style={{ backgroundColor: `var(--color-${token})` }}
         aria-hidden
       />
       <div className="px-3 py-2">
-        <p className="font-mono text-xs font-medium text-neutral-900">
+        <p className="font-mono text-xs font-medium text-ink">
           {token}
         </p>
-        <p className="font-mono text-xs tabular-nums text-neutral-500">
+        <p className="font-mono text-xs tabular-nums text-ink-2">
           {claro === oscuro ? claro : `${claro} · ${oscuro}`}
         </p>
       </div>
@@ -661,13 +661,13 @@ function Swatch({
 
 function TablaMediciones({ filas }: { filas: Medicion[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+    <div className="overflow-x-auto rounded-lg border border-rule bg-card">
       <table className="w-full text-sm">
         <caption className="sr-only">
           Contraste medido de cada pareja de colores
         </caption>
         <thead>
-          <tr className="border-b border-neutral-200 text-left">
+          <tr className="border-b border-rule text-left">
             <th scope="col" className="px-4 py-2 font-semibold">
               Muestra
             </th>
@@ -687,7 +687,7 @@ function TablaMediciones({ filas }: { filas: Medicion[] }) {
         </thead>
         <tbody>
           {filas.map((m, i) => (
-            <tr key={i} className="border-b border-neutral-100 last:border-0">
+            <tr key={i} className="border-b border-rule last:border-0">
               <td className="px-4 py-2">
                 <span
                   className="inline-flex items-center rounded px-2 py-1 text-xs font-semibold"
@@ -698,7 +698,7 @@ function TablaMediciones({ filas }: { filas: Medicion[] }) {
               </td>
               <td className="px-4 py-2">
                 <code className="text-xs">{m.fg}</code>
-                <span className="text-neutral-500"> / </span>
+                <span className="text-ink-2"> / </span>
                 <code className="text-xs">
                   {m.bg}
                   {m.bgAlpha !== undefined ? `/${m.bgAlpha * 100}` : ""}
@@ -716,7 +716,7 @@ function TablaMediciones({ filas }: { filas: Medicion[] }) {
                   <Badge tone="danger">Falla</Badge>
                 )}
               </td>
-              <td className="px-4 py-2 text-xs text-neutral-500">
+              <td className="px-4 py-2 text-xs text-ink-2">
                 {m.donde}
                 {m.exencion && (
                   <span className="mt-1 block italic">{m.exencion}</span>
@@ -740,10 +740,10 @@ function TablaResponsivaDemo() {
   return (
     <>
       {/* Escritorio */}
-      <div className="hidden overflow-x-auto rounded-lg border border-neutral-200 md:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-rule md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-left">
+            <tr className="border-b border-rule text-left">
               <th scope="col" className="px-4 py-2 font-semibold">
                 Proceso
               </th>
@@ -760,11 +760,11 @@ function TablaResponsivaDemo() {
           </thead>
           <tbody>
             {FILAS_DEMO.map((f) => (
-              <tr key={f.nombre} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-2 font-medium text-neutral-900">
+              <tr key={f.nombre} className="border-b border-rule last:border-0">
+                <td className="px-4 py-2 font-medium text-ink">
                   {f.nombre}
                 </td>
-                <td className="px-4 py-2 text-neutral-800">{f.tipo}</td>
+                <td className="px-4 py-2 text-ink">{f.tipo}</td>
                 <td className="px-4 py-2 text-right font-mono tabular-nums">
                   {f.precision}
                 </td>
@@ -785,10 +785,10 @@ function TablaResponsivaDemo() {
         {FILAS_DEMO.map((f) => (
           <li
             key={f.nombre}
-            className="rounded-lg border border-neutral-200 p-4"
+            className="rounded-lg border border-rule p-4"
           >
-            <p className="font-medium text-neutral-900">{f.nombre}</p>
-            <p className="mt-0.5 text-sm text-neutral-800">{f.tipo}</p>
+            <p className="font-medium text-ink">{f.nombre}</p>
+            <p className="mt-0.5 text-sm text-ink">{f.tipo}</p>
             <p className="mt-1 font-mono tabular-nums text-sm">{f.precision}</p>
             <div className="mt-2">
               <StatusIndicator
