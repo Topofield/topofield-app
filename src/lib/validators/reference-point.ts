@@ -5,6 +5,7 @@ import {
   REFERENCE_POINT_TYPES,
   type ReferencePointType,
 } from "@/types/project";
+import { readNumberText } from "@/lib/utils/parse";
 import type { ValidationResult } from "./result";
 
 /** Campos de un punto de referencia que controla el usuario. */
@@ -28,17 +29,17 @@ function round(value: number, decimals: number): number {
 }
 
 /**
- * Parsea una coordenada opcional y la redondea. `""` → null.
- * Devuelve `ok:false` si el texto no es un número.
+ * Parsea una coordenada opcional, con coma o punto decimal, y la redondea.
+ * `""` → null. Devuelve `ok:false` si el texto no es un número.
  */
 function parseCoordinate(
   value: string,
   decimals: number,
 ): { ok: true; value: number | null } | { ok: false } {
-  if (value === "") return { ok: true, value: null };
-  const n = Number(value);
-  if (!Number.isFinite(n)) return { ok: false };
-  return { ok: true, value: round(n, decimals) };
+  const read = readNumberText(value);
+  if (read.kind === "empty") return { ok: true, value: null };
+  if (read.kind === "invalid") return { ok: false };
+  return { ok: true, value: round(read.value, decimals) };
 }
 
 export function validateReferencePointInput(

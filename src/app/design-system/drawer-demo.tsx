@@ -32,13 +32,13 @@ export function DrawerDemo() {
           </>
         }
       >
-        <p className="text-sm text-neutral-800">
+        <p className="text-sm text-ink">
           El cuerpo desplaza por su cuenta; la cabecera y el pie quedan a la
           vista. A 390 px el panel ocupa todo el ancho.
         </p>
         <table className="mt-4 w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-left">
+            <tr className="border-b border-rule text-left">
               <th scope="col" className="py-2 font-semibold">
                 Punto
               </th>
@@ -49,7 +49,7 @@ export function DrawerDemo() {
           </thead>
           <tbody>
             {LECTURAS.map((fila) => (
-              <tr key={fila.punto} className="border-b border-neutral-100">
+              <tr key={fila.punto} className="border-b border-rule">
                 <td className="py-2">{fila.punto}</td>
                 <td className="py-2 text-right tabular-nums">{fila.cota}</td>
               </tr>

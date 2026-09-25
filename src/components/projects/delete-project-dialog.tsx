@@ -17,10 +17,10 @@ export function DeleteProjectDialog({ project }: { project: Project }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-neutral-800">
+          <p className="text-sm font-medium text-ink">
             {isActive ? "Archivar proyecto" : "Restaurar proyecto"}
           </p>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-ink-2">
             {isActive
               ? "El proyecto se oculta de la lista activa. Puedes restaurarlo cuando quieras."
               : "El proyecto vuelve a la lista de proyectos activos."}
@@ -34,12 +34,12 @@ export function DeleteProjectDialog({ project }: { project: Project }) {
         </form>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4">
         <div>
-          <p className="text-sm font-medium text-neutral-800">
+          <p className="text-sm font-medium text-ink">
             Eliminar proyecto
           </p>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-ink-2">
             Borra el proyecto y sus puntos de referencia de forma permanente.
           </p>
         </div>
@@ -69,7 +69,7 @@ export function DeleteProjectDialog({ project }: { project: Project }) {
           </>
         }
       >
-        <p className="text-sm text-neutral-700">
+        <p className="text-sm text-ink-2">
           ¿Seguro que quieres eliminar{" "}
           <span className="font-medium">{project.name}</span>? Esta acción no
           se puede deshacer y borra también sus puntos de referencia.

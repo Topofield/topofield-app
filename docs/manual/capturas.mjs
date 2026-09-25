@@ -324,5 +324,12 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUntil: "networkidle" });
 await capturar("17-editor-movil", { fullPage: true });
 
+// Tema oscuro (Fase 20): el panel de Torre Alameda en el teléfono, con el tema
+// forzado por la cookie del selector, como si el usuario lo hubiera elegido.
+await page.context().addCookies([{ name: "topofield-theme", value: "dark", url: BASE }]);
+await page.goto(panelLibreta, { waitUntil: "networkidle" });
+await capturar("29-tema-oscuro");
+await page.context().clearCookies({ name: "topofield-theme" });
+
 await browser.close();
 console.log(`\nCapturas actualizadas en ${OUT}`);

@@ -185,7 +185,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
                 x2={PLOT_WIDTH}
                 y1={yScale(tick)}
                 y2={yScale(tick)}
-                stroke="#e5e7eb"
+                stroke="var(--color-rule)"
                 strokeWidth={1}
               />
               <text
@@ -194,7 +194,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
                 textAnchor="end"
                 dominantBaseline="middle"
                 fontSize={10}
-                fill="#5d6d7e"
+                fill="var(--color-ink-2)"
               >
                 {mm(tick)}
               </text>
@@ -206,7 +206,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
             x2={PLOT_WIDTH}
             y1={yScale(0)}
             y2={yScale(0)}
-            stroke="#828c98"
+            stroke="var(--color-rule-strong)"
             strokeWidth={1.4}
           />
 
@@ -219,7 +219,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
                 i === 0 ? "start" : i === visits.length - 1 ? "end" : "middle"
               }
               fontSize={10}
-              fill="#5d6d7e"
+              fill="var(--color-ink-2)"
             >
               {fecha(visit.date)}
             </text>
@@ -229,7 +229,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
             transform={`translate(${-MARGIN.left + 12},${PLOT_HEIGHT / 2}) rotate(-90)`}
             textAnchor="middle"
             fontSize={10}
-            fill="#5d6d7e"
+            fill="var(--color-ink-2)"
           >
             Acumulado (mm)
           </text>

@@ -152,7 +152,7 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
 
   if (visits.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-ink-2">
         Todavía no hay visitas para dibujar la tendencia.
       </p>
     );
@@ -161,7 +161,7 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
   return (
     <div ref={ref} className="flex min-w-0 flex-col gap-3">
       {!hasData ? (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           Todavía no hay lecturas para dibujar la tendencia.
         </p>
       ) : (
@@ -192,7 +192,7 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
                         r={8}
                         fill="none"
                         strokeWidth={2}
-                        className="stroke-primary-600 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                        className="stroke-mira-strong opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
                       />
                     </g>
                   ))}
@@ -239,14 +239,14 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
                       y2={low[0].y}
                       strokeWidth={8}
                       strokeLinecap="round"
-                      className="stroke-primary-500/15"
+                      className="stroke-mira-strong/15"
                     />
                   );
                 }
                 const points = [...top, ...[...low].reverse()]
                   .map((p) => `${p.x},${p.y}`)
                   .join(" ");
-                return <polygon key={i} points={points} className="fill-primary-500/15" />;
+                return <polygon key={i} points={points} className="fill-mira-strong/15" />;
               })}
 
               <ThresholdLines
@@ -264,7 +264,7 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
                   fill="none"
                   strokeWidth={2}
                   strokeLinejoin="round"
-                  className="stroke-primary-600"
+                  className="stroke-ink"
                 />
               ))}
               {marks.map(({ visit, x, y }) => (
@@ -274,7 +274,7 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
                   cy={y}
                   r={4}
                   strokeWidth={1.5}
-                  className="fill-primary-600 stroke-white"
+                  className="fill-ink stroke-card"
                 />
               ))}
             </g>
@@ -283,17 +283,17 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
       )}
 
       {hasData && (
-        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-700">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-2">
           <li className="inline-flex items-center gap-2">
             <svg width={24} height={10} aria-hidden className="shrink-0">
-              <line x1={0} x2={24} y1={5} y2={5} strokeWidth={2} className="stroke-primary-600" />
-              <circle cx={12} cy={5} r={3.5} className="fill-primary-600" />
+              <line x1={0} x2={24} y1={5} y2={5} strokeWidth={2} className="stroke-ink" />
+              <circle cx={12} cy={5} r={3.5} className="fill-ink" />
             </svg>
             Promedio
           </li>
           <li className="inline-flex items-center gap-2">
             <svg width={24} height={10} aria-hidden className="shrink-0">
-              <rect x={0} y={0} width={24} height={10} rx={2} className="fill-primary-500/15" />
+              <rect x={0} y={0} width={24} height={10} rx={2} className="fill-mira-strong/15" />
             </svg>
             Rango entre puntos
           </li>
@@ -367,7 +367,7 @@ function Tooltip({
         width={boxW}
         height={boxH}
         rx={6}
-        className="fill-white stroke-neutral-200"
+        className="fill-card stroke-rule"
       />
       {lines.map((line, i) => (
         <text
@@ -376,7 +376,7 @@ function Tooltip({
           y={top + 4 + LINE * (i + 1) - 4}
           fontSize={FONT_SIZE}
           fontWeight={i === 0 ? 600 : 400}
-          className={i === 0 ? "fill-neutral-900" : "fill-neutral-800"}
+          className={i === 0 ? "fill-ink" : "fill-ink-2"}
         >
           {line}
         </text>

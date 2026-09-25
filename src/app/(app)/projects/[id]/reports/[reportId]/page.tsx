@@ -45,11 +45,11 @@ export default async function ReportPage({ params }: ReportPageProps) {
 
       <Card title="Contenido del informe">
         <dl className="grid grid-cols-[10rem_1fr] gap-y-2 text-sm">
-          <dt className="text-neutral-500">Emitido</dt>
+          <dt className="text-ink-2">Emitido</dt>
           <dd>
             {report.generated_at ? formatDate(report.generated_at) : "—"}
           </dd>
-          <dt className="text-neutral-500">Procesos incluidos</dt>
+          <dt className="text-ink-2">Procesos incluidos</dt>
           <dd>{entries.length}</dd>
         </dl>
 
@@ -57,9 +57,9 @@ export default async function ReportPage({ params }: ReportPageProps) {
           {entries.map((e) => (
             <li
               key={`${e.type}:${e.id}`}
-              className="flex gap-3 border-b border-neutral-100 py-1.5 last:border-0"
+              className="flex gap-3 border-b border-rule py-1.5 last:border-0"
             >
-              <span className="w-48 shrink-0 text-neutral-500">
+              <span className="w-48 shrink-0 text-ink-2">
                 {CANDIDATE_KIND_LABELS[e.type]}
               </span>
               <span>{e.name}</span>
@@ -69,10 +69,10 @@ export default async function ReportPage({ params }: ReportPageProps) {
 
         {report.observations && (
           <div className="mt-4">
-            <p className="text-sm font-medium text-neutral-800">
+            <p className="text-sm font-medium text-ink">
               Observaciones
             </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">
+            <p className="mt-1 whitespace-pre-wrap text-sm text-ink-2">
               {report.observations}
             </p>
           </div>

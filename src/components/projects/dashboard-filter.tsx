@@ -14,7 +14,7 @@ export function DashboardFilter({
   activeStatus: ProjectStatus;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-neutral-200 bg-white p-0.5">
+    <div className="inline-flex rounded-md border border-rule bg-card p-0.5">
       {OPTIONS.map((option) => {
         const active = option.value === activeStatus;
         return (
@@ -25,8 +25,8 @@ export function DashboardFilter({
             className={cn(
               "rounded px-3 py-1.5 text-sm font-medium transition-colors",
               active
-                ? "bg-primary-500 text-white"
-                : "text-neutral-500 hover:text-neutral-800",
+                ? "bg-mira text-on-mira"
+                : "text-ink-2 hover:text-ink",
             )}
           >
             {option.label}

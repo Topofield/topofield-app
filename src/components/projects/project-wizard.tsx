@@ -44,15 +44,15 @@ export function ProjectWizard() {
       <ol className="flex items-center gap-2 text-sm">
         <li
           className={
-            step === 1 ? "font-semibold text-primary-600" : "text-neutral-500"
+            step === 1 ? "font-semibold text-ink" : "text-ink-2"
           }
         >
           1. Datos básicos
         </li>
-        <li className="text-neutral-300">›</li>
+        <li className="text-ink-3">›</li>
         <li
           className={
-            step === 2 ? "font-semibold text-primary-600" : "text-neutral-500"
+            step === 2 ? "font-semibold text-ink" : "text-ink-2"
           }
         >
           2. Datum y proyección

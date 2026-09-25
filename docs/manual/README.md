@@ -90,6 +90,12 @@ capturar nada. Puede modificarlo o eliminarlo cuando quiera.
 
 Cada usuario ve únicamente sus propios proyectos.
 
+**Tema claro u oscuro.** El icono de la cabecera, junto a **Manual** —también
+arriba a la derecha en la pantalla de inicio de sesión—, elige el tema:
+**Sistema** sigue la configuración del teléfono o del computador, y **Claro** u
+**Oscuro** lo fijan. La elección se recuerda en ese navegador. El informe
+impreso sale siempre en claro.
+
 ---
 
 ## 3. El dashboard
@@ -1106,6 +1112,18 @@ amplios para usarse con guantes.
 La navegación se reduce a un retorno al nivel anterior, en lugar de la ruta
 completa.
 
+**Coma o punto decimal.** Las celdas numéricas aceptan los dos: `2541,7545` y
+`2541.7545` son el mismo número, y el teclado del teléfono ofrece el separador
+de su idioma. Lo que no se acepta es un separador de miles: `1.234,5` no se
+adivina. Si lo tecleado no es un número, la celda lo dice —**«No es un
+número»**— y la aplicación no guarda hasta corregirlo, para que un dato mal
+escrito no se pierda como si la celda estuviera vacía.
+
+**A pleno sol**, el tema claro se lee mejor; de noche o bajo techo, el oscuro
+cansa menos. Se cambia con el icono de la cabecera (§ 2).
+
+![Panel en tema oscuro, en un teléfono](../../public/manual/29-tema-oscuro.png)
+
 ---
 
 ## 10. Informes
@@ -1199,6 +1217,10 @@ falta.
 ---
 
 ## 12. Preguntas frecuentes
+
+**La aplicación se ve oscura (o clara). ¿Cómo la cambio?**
+Con el icono de la cabecera: **Sistema**, **Claro** u **Oscuro** (§ 2). Con
+**Sistema**, sigue la configuración del teléfono o del computador.
 
 **Cerré un proceso por error. ¿Puedo reabrirlo?**
 No. El cierre es definitivo por diseño: es lo que da valor probatorio al

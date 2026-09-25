@@ -45,13 +45,13 @@ export const CAPTURAS = {
     src: "/manual/04-hub-proyecto.png",
     alt: "Hub del proyecto: ficha de datos arriba y la pestaña de procesos con su listado.",
     width: 2560,
-    height: 3482,
+    height: 3288,
   },
   configuracionProyecto: {
     src: "/manual/05-configuracion-proyecto.png",
     alt: "Pestaña de configuración del proyecto, con la edición de datos y los puntos de referencia.",
     width: 2560,
-    height: 3590,
+    height: 3596,
   },
   nuevaPoligonal: {
     src: "/manual/06-nueva-poligonal.png",
@@ -64,25 +64,25 @@ export const CAPTURAS = {
     alt: "Editor de poligonal completo: veredicto, configuración, tabla de estaciones y resultados.",
     pie: "El editor de una poligonal que no alcanza la precisión exigida.",
     width: 2560,
-    height: 4692,
+    height: 4698,
   },
   veredicto: {
     src: "/manual/08-veredicto.png",
     alt: "Banda del veredicto de cierre, con la precisión alcanzada frente a la requerida.",
     width: 1984,
-    height: 262,
+    height: 260,
   },
   procesoCerrado: {
     src: "/manual/09-proceso-cerrado.png",
     alt: "Editor de un proceso cerrado, en solo lectura y sin botones de guardado.",
     width: 2560,
-    height: 4616,
+    height: 4622,
   },
   procesoRechazado: {
     src: "/manual/10-proceso-rechazado.png",
     alt: "Editor de un proceso rechazado, también en solo lectura.",
     width: 2560,
-    height: 4616,
+    height: 4622,
   },
   nuevaNivelacion: {
     src: "/manual/11-nueva-nivelacion.png",
@@ -100,14 +100,14 @@ export const CAPTURAS = {
     src: "/manual/24-puntos-homologos.png",
     alt: "Tabla de puntos homólogos del crudo de nivel digital leído como ida y vuelta: los residuos crecen hasta −5.2 mm a mitad del recorrido y vuelven a −0.4 mm, la discrepancia.",
     width: 1984,
-    height: 1116,
+    height: 1114,
   },
   editorNivelacion: {
     src: "/manual/12-editor-nivelacion.png",
     alt: "Editor de nivelación completo: libreta, comprobación aritmética, cierre y cotas corregidas.",
     pie: "Circuito cerrado que cumple la tolerancia: el BM final corrige exacto a su cota conocida.",
     width: 2560,
-    height: 2902,
+    height: 2906,
   },
   nuevoLugar: {
     src: "/manual/13-nuevo-lugar.png",
@@ -119,19 +119,19 @@ export const CAPTURAS = {
     src: "/manual/14-editor-lugar.png",
     alt: "Editor del lugar: datos generales, umbrales y catálogo de puntos de control.",
     width: 2560,
-    height: 3062,
+    height: 3036,
   },
   panelAsentamientos: {
     src: "/manual/15-panel-asentamientos.png",
     alt: "Panel del lugar Torre Alameda: los seis indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
     width: 2560,
-    height: 5368,
+    height: 5290,
   },
   nuevaVisita: {
     src: "/manual/25-nueva-visita.png",
     alt: "Formulario Nueva visita: fecha, nivelador, captura «Digitar la libreta de nivelación», BM de amarre BM-1 con cota 100.0000, orden de precisión y equipo tomados de la visita anterior.",
     width: 1344,
-    height: 2092,
+    height: 2012,
   },
   importarLibretaVisita: {
     src: "/manual/26-importar-libreta-visita.png",
@@ -143,7 +143,7 @@ export const CAPTURAS = {
     src: "/manual/27-vista-visita.png",
     alt: "Vista de la visita 12 de Torre Alameda: los seis indicadores, la tabla de puntos de control con TA-07 seleccionado, su historial con la nota «Le faltan 21.3 mm para el umbral de alerta» y las barras de acumulado y de movimiento por punto.",
     width: 2560,
-    height: 3110,
+    height: 3022,
   },
   registroNivelacion: {
     src: "/manual/28-registro-nivelacion.png",
@@ -155,13 +155,13 @@ export const CAPTURAS = {
     src: "/manual/20-dibujo-poligonal.png",
     alt: "Dibujo de la poligonal V10 de la cartera TT4: la ajustada en trazo continuo y la sin compensar exagerada ×100 en trazo discontinuo, con el hueco de cierre junto al vértice V10.",
     width: 1884,
-    height: 1308,
+    height: 1306,
   },
   georreferenciar: {
     src: "/manual/22-georreferenciar.png",
     alt: "Diálogo Georreferenciar sobre la cartera Vivero en sistema local: D1 y D3 con sus coordenadas reales, rotación 35° 00′ 07.8″, factor de escala 1.000000 y la tabla de coordenadas actuales frente a reales.",
     width: 1344,
-    height: 2108,
+    height: 2028,
   },
   minimosCuadrados: {
     src: "/manual/21-minimos-cuadrados.png",
@@ -173,7 +173,7 @@ export const CAPTURAS = {
     src: "/manual/16-editor-visita.png",
     alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas y su resumen de cierre, y debajo las cotas de los puntos de control que salen de ella.",
     width: 2560,
-    height: 5934,
+    height: 5644,
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
@@ -185,14 +185,22 @@ export const CAPTURAS = {
     src: "/manual/19-informe-imprimible.png",
     alt: "Informe maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados, resumen consolidado y registro de cierre.",
     width: 2560,
-    height: 3544,
+    height: 3466,
+  },
+  temaOscuro: {
+    src: "/manual/29-tema-oscuro.png",
+    alt: "El panel de Torre Alameda en un teléfono con el tema oscuro: papel y tarjetas oscuras, la acción principal en amarillo y el icono de la luna en la cabecera.",
+    pie: "El icono de la cabecera elige el tema: aquí, Oscuro.",
+    width: 780,
+    height: 1688,
+    angosta: true,
   },
   editorMovil: {
     src: "/manual/17-editor-movil.png",
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
     pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
     width: 780,
-    height: 6576,
+    height: 6462,
     angosta: true,
   },
 } as const satisfies Record<string, Captura>;
@@ -527,6 +535,11 @@ export interface Pregunta {
 }
 
 export const PREGUNTAS: Pregunta[] = [
+  {
+    pregunta: "La aplicación se ve oscura (o clara). ¿Cómo la cambio?",
+    respuesta:
+      "Con el icono de la cabecera: Sistema, Claro u Oscuro (§ 2). Con Sistema, sigue la configuración del teléfono o del computador.",
+  },
   {
     pregunta: "Cerré un proceso por error. ¿Puedo reabrirlo?",
     respuesta:

@@ -2,12 +2,13 @@
  * Las parejas color-sobre-color que el sistema de diseño usa realmente.
  *
  * Esta tabla es el contrato de tokens en forma de datos: cada fila declara un
- * primer plano, su fondo y el umbral que debe cumplir. La página
- * `/design-system` la mide y la muestra.
+ * primer plano, su fondo y el umbral que debe cumplir, y vale para los dos
+ * temas. `pairings.test.ts` la mide en claro y en oscuro contra el
+ * `globals.css` real y falla si una pareja no cumple (Fase 20); la página
+ * `/design-system` la muestra.
  *
  * Al añadir una pareja nueva —un `Badge` con un tono nuevo, un botón sobre un
- * fondo teñido— se declara aquí. Ver
- * `docs/specs/2026-07-28-sistema-diseno-design.md` § 2.2.
+ * fondo teñido— se declara aquí.
  */
 
 import {
@@ -17,28 +18,32 @@ import {
   contrastRatio,
 } from "./contrast";
 
-/** Los tres contextos de la regla, más el de elementos gráficos. */
+/**
+ * Los contextos de la regla (Fase 20: tokens por rol). Antes el fondo de
+ * referencia era el blanco; ahora cada pareja nombra su superficie —papel,
+ * tarjeta, selección— porque cambia con el tema.
+ */
 export type Contexto =
-  | "texto-sobre-blanco"
+  | "texto-sobre-superficie"
   | "texto-sobre-tinte"
-  | "fondo-bajo-texto-blanco"
+  | "texto-sobre-relleno"
   | "grafico";
 
 export const CONTEXTO_LABELS: Record<Contexto, string> = {
-  "texto-sobre-blanco": "Texto sobre blanco",
-  "texto-sobre-tinte": "Texto sobre su propio fondo teñido",
-  "fondo-bajo-texto-blanco": "Fondo bajo texto blanco",
-  grafico: "Elemento gráfico (punto, borde)",
+  "texto-sobre-superficie": "Texto sobre papel, tarjeta o selección",
+  "texto-sobre-tinte": "Texto sobre un fondo teñido de estado",
+  "texto-sobre-relleno": "Texto sobre un relleno (botones)",
+  grafico: "Elemento gráfico (punto, borde, foco)",
 };
 
 export interface Pairing {
-  /** Token o hexadecimal literal del primer plano. */
+  /** Token (sin `--color-`) o hexadecimal literal del primer plano. */
   fg: string;
   /** Token o hexadecimal literal del fondo. */
   bg: string;
   /** Si el fondo es un tinte, su alfa; se compone sobre `bgBase`. */
   bgAlpha?: number;
-  /** Base del tinte. Por omisión, blanco. */
+  /** Base del tinte. Por omisión, la tarjeta del tema. */
   bgBase?: string;
   contexto: Contexto;
   umbral: number;
@@ -52,293 +57,97 @@ export interface Pairing {
   exencion?: string;
 }
 
-export const BLANCO = "#ffffff";
+const texto = (fg: string, bg: string, donde: string): Pairing => ({
+  fg,
+  bg,
+  contexto: "texto-sobre-superficie",
+  umbral: AA_TEXTO,
+  donde,
+});
+const tinte = (fg: string, bg: string, donde: string): Pairing => ({
+  fg,
+  bg,
+  contexto: "texto-sobre-tinte",
+  umbral: AA_TEXTO,
+  donde,
+});
+const grafico = (fg: string, bg: string, donde: string): Pairing => ({
+  fg,
+  bg,
+  contexto: "grafico",
+  umbral: AA_GRAFICO,
+  donde,
+});
 
+const SEMAFORO = ["semaphore-green", "semaphore-yellow", "semaphore-orange", "semaphore-red"];
+
+/**
+ * Se miden en los DOS temas con la misma tabla: `pairings.test.ts` lee
+ * `globals.css` y exige que todas cumplan en claro y en oscuro.
+ */
 export const PAIRINGS: Pairing[] = [
-  // ── Texto sobre blanco ──────────────────────────────────────────────────
-  {
-    fg: "primary-500",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Enlaces, Breadcrumbs (hover)",
-  },
-  {
-    fg: "primary-600",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Títulos h1–h3, Tabs activa, Button secundario",
-  },
-  {
-    fg: "primary-700",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Logo (palabra)",
-  },
-  {
-    fg: "danger-500",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Input/Select/Textarea (mensaje de error)",
-  },
-  {
-    fg: "success-500",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Veredicto de cierre conforme",
-  },
-  {
-    fg: "warning-500",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Avisos de tolerancia",
-  },
-  {
-    fg: "neutral-500",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "KpiCard (etiqueta), Tabs inactiva, texto secundario",
-  },
-  {
-    fg: "neutral-800",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Etiquetas de formulario, StatusIndicator",
-  },
-  {
-    fg: "neutral-900",
-    bg: BLANCO,
-    contexto: "texto-sobre-blanco",
-    umbral: AA_TEXTO,
-    donde: "Valor de KpiCard, texto de campos",
-  },
+  // ── Texto sobre superficie ──────────────────────────────────────────────
+  texto("ink", "card", "Cuerpo, títulos, valores de tabla y de KPI"),
+  texto("ink", "paper", "Cuerpo y títulos sobre el fondo de página"),
+  texto("ink-2", "card", "Texto secundario, etiquetas, cabeceras de tabla"),
+  texto("ink-2", "paper", "Texto secundario sobre el fondo de página"),
+  texto("ink-3", "card", "Texto terciario: notas, marcas de tiempo"),
+  texto("ink-3", "paper", "Texto terciario sobre el fondo de página"),
+  texto("ink", "sel", "Fila seleccionada o resaltada"),
+  texto("ink-2", "sel", "Texto secundario en una fila seleccionada"),
+  texto("danger", "card", "Mensaje de error de un campo"),
+  texto("success", "card", "Veredicto de cierre conforme"),
+  texto("warning", "card", "Avisos de tolerancia y de captura"),
+  texto("mira-ink", "card", "Acento en texto: antetítulos, cifras destacadas"),
+  texto("mira-ink", "paper", "Acento en texto sobre el fondo de página"),
 
-  // ── Texto sobre su propio fondo teñido ──────────────────────────────────
-  // El caso que falló: el fondo efectivo es el token al 10 % sobre blanco.
-  {
-    fg: "success-500",
-    bg: "success-500",
-    bgAlpha: 0.1,
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Badge tono success",
-  },
-  {
-    fg: "warning-500",
-    bg: "warning-500",
-    bgAlpha: 0.1,
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Badge tono warning",
-  },
-  {
-    fg: "danger-500",
-    bg: "danger-500",
-    bgAlpha: 0.1,
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Badge tono danger, Alert variante error",
-  },
-  {
-    fg: "primary-700",
-    bg: "primary-50",
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Badge tono primary, Alert variante info",
-  },
-  {
-    fg: "neutral-800",
-    bg: "neutral-100",
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Badge tono neutral",
-  },
-  {
-    fg: "neutral-900",
-    bg: "success-500",
-    bgAlpha: 0.1,
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Alert variante success (texto neutro sobre tinte verde)",
-  },
-  {
-    fg: "neutral-900",
-    bg: "warning-500",
-    bgAlpha: 0.1,
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Alert variante warning",
-  },
-  {
-    fg: "neutral-900",
-    bg: "neutral-50",
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Cuerpo de la aplicación (body)",
-  },
-  {
-    fg: "neutral-900",
-    bg: "primary-50",
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Manual — cuerpo de las notas destacadas",
-  },
-  {
-    fg: "neutral-800",
-    bg: "neutral-50",
-    contexto: "texto-sobre-tinte",
-    umbral: AA_TEXTO,
-    donde: "Manual — tarjetas de módulos pendientes",
-  },
+  // ── Texto sobre un tinte de estado ──────────────────────────────────────
+  tinte("success", "success-bg", "Badge y Alert de éxito"),
+  tinte("warning", "warning-bg", "Badge y Alert de aviso"),
+  tinte("danger", "danger-bg", "Badge y Alert de error"),
+  tinte("ink", "success-bg", "Cuerpo de un Alert de éxito"),
+  tinte("ink", "warning-bg", "Cuerpo de un Alert de aviso"),
+  tinte("ink", "danger-bg", "Cuerpo de un Alert de error"),
+  tinte("mira-ink", "mira-bg", "Badge destacado, título de nota del manual"),
+  tinte("ink", "mira-bg", "Cuerpo de las notas destacadas del manual"),
 
-  // ── Fondo bajo texto blanco ─────────────────────────────────────────────
+  // ── Texto sobre un relleno ──────────────────────────────────────────────
   {
-    fg: BLANCO,
-    bg: "primary-500",
-    contexto: "fondo-bajo-texto-blanco",
+    fg: "on-mira",
+    bg: "mira",
+    contexto: "texto-sobre-relleno",
     umbral: AA_TEXTO,
     donde: "Button primario, chip de filtro activo",
   },
   {
-    fg: BLANCO,
-    bg: "primary-600",
-    contexto: "fondo-bajo-texto-blanco",
-    umbral: AA_TEXTO,
-    donde: "Button primario (hover)",
-  },
-  {
-    fg: BLANCO,
-    bg: "primary-700",
-    contexto: "fondo-bajo-texto-blanco",
-    umbral: AA_TEXTO,
-    donde: "Button primario (active)",
-  },
-  {
-    fg: BLANCO,
-    bg: "danger-500",
-    contexto: "fondo-bajo-texto-blanco",
+    fg: "on-danger",
+    bg: "danger",
+    contexto: "texto-sobre-relleno",
     umbral: AA_TEXTO,
     donde: "Button variante danger",
   },
+
   {
-    fg: "neutral-500",
-    bg: "neutral-200",
-    contexto: "fondo-bajo-texto-blanco",
+    fg: "ink-3",
+    bg: "rule",
+    contexto: "texto-sobre-relleno",
     umbral: AA_TEXTO,
-    donde: "Button deshabilitado (texto neutral-500 sobre neutral-200)",
+    donde: "Button deshabilitado (texto ink-3 sobre rule)",
     informativo: true,
     exencion:
       "WCAG 1.4.3 exime los componentes de interfaz inactivos: un control deshabilitado no tiene requisito de contraste. Se mide para saber el dato, no para corregirlo.",
   },
 
   // ── Elementos gráficos: umbral 3:1 ──────────────────────────────────────
-  {
-    fg: "success-500",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "StatusIndicator punto «ok»",
-  },
-  {
-    fg: "warning-500",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "StatusIndicator punto «warning»",
-  },
-  {
-    fg: "danger-500",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "StatusIndicator punto «danger»",
-  },
-  {
-    fg: "primary-500",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Foco visible (outline), borde de Tabs activa",
-  },
-  {
-    fg: "neutral-400",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Borde de Input/Select/Textarea/DmsInput — límite del control",
-  },
-  {
-    fg: "neutral-400",
-    bg: "neutral-50",
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Borde de control sobre el fondo de página",
-  },
-
-  // ── Semáforo de asentamientos (fase 5, ya cumple 3:1) ───────────────────
-  {
-    fg: "semaphore-green",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo de asentamientos — fase 5",
-  },
-  {
-    fg: "semaphore-yellow",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo de asentamientos — fase 5",
-  },
-  {
-    fg: "semaphore-orange",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo de asentamientos — fase 5",
-  },
-  {
-    fg: "semaphore-red",
-    bg: BLANCO,
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo de asentamientos — fase 5",
-  },
-  {
-    fg: "semaphore-green",
-    bg: "neutral-50",
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo sobre el fondo de página — fase 5",
-  },
-  {
-    fg: "semaphore-yellow",
-    bg: "neutral-50",
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo sobre el fondo de página — fase 5",
-  },
-  {
-    fg: "semaphore-orange",
-    bg: "neutral-50",
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo sobre el fondo de página — fase 5",
-  },
-  {
-    fg: "semaphore-red",
-    bg: "neutral-50",
-    contexto: "grafico",
-    umbral: AA_GRAFICO,
-    donde: "Semáforo sobre el fondo de página — fase 5",
-  },
+  grafico("rule-strong", "card", "Borde de Input/Select/Textarea/DmsInput — límite del control"),
+  grafico("rule-strong", "paper", "Borde de control sobre el fondo de página"),
+  grafico("mira-strong", "card", "Foco visible (outline), pestaña activa, filete de selección"),
+  grafico("mira-strong", "paper", "Foco visible sobre el fondo de página"),
+  grafico("success", "card", "StatusIndicator punto «ok»"),
+  grafico("warning", "card", "StatusIndicator punto «warning»"),
+  grafico("danger", "card", "StatusIndicator punto «danger»"),
+  ...SEMAFORO.map((t) => grafico(t, "card", "Semáforo de asentamientos (Fase 5)")),
+  ...SEMAFORO.map((t) => grafico(t, "paper", "Semáforo sobre el fondo de página")),
 ];
 
 export interface Medicion extends Pairing {
@@ -369,7 +178,7 @@ export function medirPairings(
     const bgBruto = resolver(p.bg);
     if (!fgHex || !bgBruto) continue;
 
-    const base = resolver(p.bgBase ?? BLANCO) ?? BLANCO;
+    const base = resolver(p.bgBase ?? "card") ?? "#ffffff";
     const bgHex =
       p.bgAlpha === undefined
         ? bgBruto

@@ -87,7 +87,7 @@ export function DifferentialsTable({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+          <tr className="border-b border-rule text-left text-xs text-ink-2">
             <th className="py-2 pr-3 font-medium">Par</th>
             <th className="py-2 pr-3 font-medium">Asent. P1 (mm)</th>
             <th className="py-2 pr-3 font-medium">Asent. P2 (mm)</th>
@@ -112,29 +112,29 @@ export function DifferentialsTable({
             return (
               <tr
                 key={`${pair.pointIdA}-${pair.pointIdB}`}
-                className="border-b border-neutral-100 last:border-0"
+                className="border-b border-rule last:border-0"
               >
-                <td className="whitespace-nowrap py-2 pr-3 font-medium text-neutral-900">
+                <td className="whitespace-nowrap py-2 pr-3 font-medium text-ink">
                   {(pointA?.code ?? "—")} – {(pointB?.code ?? "—")}
                   {fromLaterDate && (
-                    <span className="block text-xs font-normal text-neutral-500">
+                    <span className="block text-xs font-normal text-ink-2">
                       desde el {formatDateOnly(pair.sinceDate)}
                     </span>
                   )}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {formatMm(pair.settlementAMm)}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {formatMm(pair.settlementBMm)}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {formatMm(pair.differentialMm)}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {formatM(pair.distanceM)}
                 </td>
-                <td className="py-2 pr-3 text-neutral-700">
+                <td className="py-2 pr-3 text-ink-2">
                   {formatDistortion(pair.distortionInverse)}
                 </td>
                 <td className="py-2 pr-3">

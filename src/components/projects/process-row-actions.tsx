@@ -155,7 +155,7 @@ export function ProcessRowActions({
           </>
         }
       >
-        <p className="text-sm text-neutral-700">
+        <p className="text-sm text-ink-2">
           Se eliminará «{process.name}» y todas sus estaciones. Esta acción no se
           puede deshacer.
         </p>

@@ -69,7 +69,7 @@ export function AnalysisPanel({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
+                <tr className="border-b border-rule text-left text-xs text-ink-2">
                   <th className="py-2 pr-3 font-medium">Punto</th>
                   <th className="py-2 pr-3 font-medium">Acumulado (mm)</th>
                   <th className="py-2 pr-3 font-medium">Velocidad (mm/mes)</th>
@@ -84,15 +84,15 @@ export function AnalysisPanel({
                   return (
                     <tr
                       key={reading.pointId}
-                      className="border-b border-neutral-100 last:border-0"
+                      className="border-b border-rule last:border-0"
                     >
-                      <td className="py-2 pr-3 font-medium text-neutral-900">
+                      <td className="py-2 pr-3 font-medium text-ink">
                         {point?.code ?? "—"}
                       </td>
-                      <td className="py-2 pr-3 text-neutral-700">
+                      <td className="py-2 pr-3 text-ink-2">
                         {formatMm(reading.accumulatedSettlement)}
                       </td>
-                      <td className="py-2 pr-3 text-neutral-700">
+                      <td className="py-2 pr-3 text-ink-2">
                         {formatMm(reading.velocity)}
                       </td>
                       <td className="py-2 pr-3">
@@ -109,13 +109,13 @@ export function AnalysisPanel({
                             <Badge tone="warning" className="w-fit whitespace-nowrap">
                               ⚠ Lectura fuera de tendencia
                             </Badge>
-                            <span className="text-xs text-neutral-600">
+                            <span className="text-xs text-ink-2">
                               {lastVisitTrendWarnings[reading.pointId]}
                             </span>
                           </div>
                         )}
                       </td>
-                      <td className="py-2 pr-3 text-neutral-700">
+                      <td className="py-2 pr-3 text-ink-2">
                         {trend ? TREND_LABELS[trend] : "—"}
                       </td>
                     </tr>

@@ -149,7 +149,7 @@ export function VisitImportDialog({
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-ink-2">
             Se leen el archivo <strong>.L de un nivel digital Leica</strong> y
             la <strong>plantilla CSV</strong> de TopoField, como un solo
             recorrido: el circuito cerrado sobre el BM de amarre. Las dos
@@ -157,12 +157,12 @@ export function VisitImportDialog({
             pulse Guardar.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <label className="text-sm font-medium text-neutral-800">
+            <label className="text-sm font-medium text-ink">
               <span className="sr-only">Archivo</span>
               <input
                 type="file"
                 onChange={onFile}
-                className="text-sm file:mr-3 file:rounded-md file:border file:border-neutral-300 file:bg-white file:px-3 file:py-1.5 file:text-sm"
+                className="text-sm file:mr-3 file:rounded-md file:border file:border-rule-strong file:bg-card file:px-3 file:py-1.5 file:text-sm"
               />
             </label>
             <TemplateLink />
@@ -179,13 +179,13 @@ export function VisitImportDialog({
           {file && rows && (
             <div className="flex flex-col gap-4">
               <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-                <dt className="text-neutral-500">Formato</dt>
+                <dt className="text-ink-2">Formato</dt>
                 <dd>{FORMAT_LABELS[file.format]}</dd>
-                <dt className="text-neutral-500">Armadas · visuales leídas</dt>
+                <dt className="text-ink-2">Armadas · visuales leídas</dt>
                 <dd className="font-mono tabular-nums">
                   {file.setups.length} · {file.rawSights}
                 </dd>
-                <dt className="text-neutral-500">BM de amarre</dt>
+                <dt className="text-ink-2">BM de amarre</dt>
                 <dd>
                   {fileCode || "—"}
                   {fileElevation != null && (
@@ -239,7 +239,7 @@ export function VisitImportDialog({
                 </Alert>
               ))}
 
-              <p className="text-sm text-neutral-700">
+              <p className="text-sm text-ink-2">
                 Revise el tipo de cada punto: el .L no lo trae y se deduce de
                 su posición; la plantilla CSV puede declararlo. Los puntos de
                 control suelen ser radiaciones (intermedios).

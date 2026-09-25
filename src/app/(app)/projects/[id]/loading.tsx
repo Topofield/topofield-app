@@ -1,5 +1,5 @@
 function Block({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-lg bg-neutral-100 ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-sel ${className}`} />;
 }
 
 export default function ProjectLoading() {

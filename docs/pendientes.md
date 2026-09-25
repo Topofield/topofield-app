@@ -10,15 +10,16 @@ que lo descartó.
 
 ## Estado (2026-09-25)
 
-**Todas las peticiones recogidas están resueltas.** La última, N6, cerró en la
-Fase 17. La tabla y los textos de abajo se conservan como registro.
+**Todas las peticiones recogidas están resueltas.** Las últimas, UI1 y UI2,
+cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
+registro.
 
 La Fase 18 (libreta de nivelación y panel de asentamientos, a partir del
 prototipo del usuario) dejó cuatro peticiones nuevas **sin fase**: N7 y N8 en
 «Nivelación» —dos sospechas sobre el motor y el validador de nivelación que la
 fase encontró y no tocó, porque cambian resultados de nivelación— y UI1 y UI2,
-al final de este archivo. **N7 y N8 cerraron en la Fase 19**; siguen
-pendientes UI1 y UI2.
+al final de este archivo. **N7 y N8 cerraron en la Fase 19; UI1 y UI2, en la
+Fase 20.**
 
 ### Renumeración del 2026-09-22
 
@@ -36,6 +37,7 @@ commitee, que es lo que marca el inicio del trabajo de la fase.
 | ~~N4~~ | **16** — Importar lecturas de nivel digital | **cerrada** (2026-09-24) |
 | ~~N6~~ | **17** — Control ida-vuelta por puntos homólogos | **cerrada** (2026-09-24) |
 | ~~N7 + N8~~ | **19** — Equilibrado por armada y compensación desde el origen | **cerrada** (2026-09-25) |
+| ~~UI1 + UI2~~ | **20** — Identidad visual del prototipo y coma decimal | **cerrada** (2026-09-25) |
 
 **N5 retirada.** Decía que el generador de proyecto demo no crea nivelación.
 Es falso: sí la crea, vía `src/lib/demo/insertar-nivelacion.ts`. El grep que
@@ -285,6 +287,10 @@ retirado a media serie, qué muestra la gráfica, y si el informe lo lista.
 
 ### UI1 · Identidad visual del prototipo de asentamientos
 
+> **Resuelta en la Fase 20** ([`prds/19-identidad-visual-coma-decimal.md`](./prds/19-identidad-visual-coma-decimal.md)).
+> Toda la app, con modo oscuro que sigue al sistema y se fuerza con un
+> selector. Se conserva el texto de la petición como registro.
+
 El prototipo `docs/prototipos/Control de asentamientos, Torre Alameda.html`
 trae una identidad propia: las fuentes **Barlow** y **Barlow Semi Condensed**,
 un acento amarillo «mira» (`#e2ad0b`), la paleta paper/ink y **modo oscuro**
@@ -298,6 +304,10 @@ modo oscuro (hoy no existe ni un `dark:`), y cada pareja nueva medida en
 blanco: hará falta una variante oscura para texto y bordes.
 
 ### UI2 · Coma decimal en las celdas de captura
+
+> **Resuelta en la Fase 20** ([`prds/19-identidad-visual-coma-decimal.md`](./prds/19-identidad-visual-coma-decimal.md)).
+> Coma o punto al teclear; la presentación sigue con punto. Se conserva el
+> texto de la petición como registro.
 
 Las celdas numéricas de captura son `type="number"`, que no acepta la coma
 decimal que teclea un usuario en español. La importación de la Fase 16 sí la

@@ -9,15 +9,18 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: Size;
 }
 
+// Identidad del prototipo (Fase 20): la acción principal es el amarillo
+// «mira» con texto oscuro; el resto, tinta sobre tarjeta con el borde de un
+// control. `brightness` en vez de un token de hover: vale en los dos temas.
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    "bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 disabled:bg-neutral-200 disabled:text-neutral-500",
+    "bg-mira text-on-mira hover:brightness-95 active:brightness-90 disabled:bg-rule disabled:text-ink-3 disabled:brightness-100",
   secondary:
-    "bg-white text-primary-600 border border-primary-500 hover:bg-primary-50 disabled:bg-neutral-100 disabled:text-neutral-500 disabled:border-neutral-200",
+    "bg-card text-ink border border-rule-strong hover:bg-sel disabled:bg-paper disabled:text-ink-3 disabled:border-rule",
   danger:
-    "bg-danger-500 text-white hover:opacity-90 disabled:bg-neutral-200 disabled:text-neutral-500",
+    "bg-danger text-on-danger hover:opacity-90 disabled:bg-rule disabled:text-ink-3",
   ghost:
-    "bg-transparent text-primary-600 hover:bg-primary-50 disabled:text-neutral-500",
+    "bg-transparent text-ink hover:bg-sel disabled:text-ink-3",
 };
 
 const SIZE_CLASSES: Record<Size, string> = {

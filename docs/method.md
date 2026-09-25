@@ -29,6 +29,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 17 | Control ida-vuelta por puntos homólogos | [`prds/16-homologos-ida-vuelta.md`](./prds/16-homologos-ida-vuelta.md) | cerrada |
 | 18 | Libreta de nivelación y panel de asentamientos | [`prds/17-libreta-panel-asentamientos.md`](./prds/17-libreta-panel-asentamientos.md) | cerrada |
 | 19 | Equilibrado por armada y compensación desde el origen | [`prds/18-equilibrado-y-compensacion.md`](./prds/18-equilibrado-y-compensacion.md) | cerrada |
+| 20 | Identidad visual del prototipo y coma decimal | [`prds/19-identidad-visual-coma-decimal.md`](./prds/19-identidad-visual-coma-decimal.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -542,6 +543,38 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 20 — Identidad visual del prototipo y coma decimal (2026-09-25)
+
+La app adopta la identidad del prototipo de asentamientos —Barlow, papel y
+tinta, acento mira— con modo oscuro, que sigue al sistema y se fuerza con un
+selector; las celdas numéricas aceptan coma decimal. 774 → 817 tests.
+Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **La red de una migración masiva va con la migración, no después.** 800
+  clases en 88 archivos se pasaron con un script de correspondencias, módulo a
+  módulo. El test que prohíbe los tokens retirados encontró al escribirlo un
+  `border-t-neutral-200` que el script no cubría (un borde con dirección). Sin
+  el test, habría quedado un borde claro en el tema oscuro que nadie mira.
+- **Una imposibilidad escrita en la doc hay que probarla.** La doc y
+  `/design-system` decían que el contraste no podía ser un test «sin jsdom».
+  Bastaba `fs` en el entorno `node`. La afirmación sobrevivió desde la primera
+  versión del sistema de diseño porque nadie la intentó.
+- **Mirar sigue encontrando lo que los tests no.** Con todo en verde —contraste
+  en los dos temas, tokens, tipos—, las capturas mostraron dos fallos: la
+  poligonal ajustada en el mismo tono que la sin compensar, y huecos dentro de
+  las palabras con Barlow en Chromium. Es el aprendizaje de la Fase 7, otra vez.
+- **Cambiar el tipo de una primitiva obliga a auditar a sus consumidores.**
+  Pasar las celdas de `type="number"` a texto destapó cinco `Number()` sobre
+  texto tecleado y unos umbrales que guardaban números en el estado: el
+  navegador los había estado protegiendo. Es la lección de la Fase 8 sobre
+  hacer editable lo que no lo era, desde el otro lado.
+- **Cuando la salida no refleja un cambio, una sonda antes que una teoría.** El
+  servidor de desarrollo se saltó una escritura de `globals.css`, y parecía que
+  el compilador descartaba la regla. Una variable testigo junto a ella lo
+  aclaró en un paso; probar el compilador por separado costó tres.
 
 ### Cierre Fase 19 — Equilibrado por armada y compensación desde el origen (2026-09-25)
 

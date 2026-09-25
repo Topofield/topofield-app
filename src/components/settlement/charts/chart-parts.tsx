@@ -182,7 +182,7 @@ export function XAxis({
         x2={plotWidth}
         y1={plotHeight}
         y2={plotHeight}
-        className="stroke-neutral-200"
+        className="stroke-rule"
         strokeWidth={1}
       />
       {fitted.map((tick) => (
@@ -192,7 +192,7 @@ export function XAxis({
             x2={tick.x}
             y1={plotHeight}
             y2={plotHeight + 4}
-            className="stroke-neutral-400"
+            className="stroke-rule-strong"
             strokeWidth={1}
           />
           <text
@@ -200,7 +200,7 @@ export function XAxis({
             y={plotHeight + 18}
             textAnchor={tick.anchor}
             fontSize={FONT_SIZE}
-            className="fill-neutral-500"
+            className="fill-ink-3"
           >
             {tick.label}
           </text>
@@ -212,7 +212,7 @@ export function XAxis({
           y={plotHeight + 38}
           textAnchor="middle"
           fontSize={FONT_SIZE}
-          className="fill-neutral-500"
+          className="fill-ink-3"
         >
           {title}
         </text>
@@ -252,7 +252,7 @@ export function YAxis({
               x2={plotWidth}
               y1={y}
               y2={y}
-              className="stroke-neutral-100"
+              className="stroke-rule"
               strokeWidth={1}
             />
             <text
@@ -261,7 +261,7 @@ export function YAxis({
               textAnchor="end"
               dominantBaseline="middle"
               fontSize={FONT_SIZE}
-              className="fill-neutral-500"
+              className="fill-ink-3"
             >
               {formatTick(tick, step)}
             </text>
@@ -273,14 +273,14 @@ export function YAxis({
         x2={plotWidth}
         y1={yScale(0)}
         y2={yScale(0)}
-        className="stroke-neutral-400"
+        className="stroke-rule-strong"
         strokeWidth={1.5}
       />
       <text
         transform={`translate(${-marginLeft + 14},${plotHeight / 2}) rotate(-90)`}
         textAnchor="middle"
         fontSize={FONT_SIZE}
-        className="fill-neutral-500"
+        className="fill-ink-3"
       >
         {title}
       </text>
@@ -308,9 +308,11 @@ export function thresholdLabel(threshold: PlacedThreshold): string {
   return `${ALERT_LEVEL_LABELS[threshold.level]} ${formatThresholdMm(threshold.value)} mm`;
 }
 
-/** Halo blanco del texto que cae sobre la rejilla o los datos. */
+/** Halo del texto que cae sobre la rejilla o los datos, del color de la tarjeta. */
 export const HALO = {
-  stroke: "white",
+  // La tarjeta del tema, no blanco: en oscuro un halo blanco rodearía el
+  // texto claro de un contorno visible (Fase 20).
+  stroke: "var(--color-card)",
   strokeWidth: 3,
   strokeLinejoin: "round" as const,
   paintOrder: "stroke" as const,
@@ -391,7 +393,7 @@ export function ThresholdLines({
                 y={labelY}
                 textAnchor={labelAlign}
                 fontSize={SMALL_FONT_SIZE}
-                className="fill-neutral-800"
+                className="fill-ink"
                 {...HALO}
               >
                 {thresholdLabel(t)}
@@ -613,10 +615,10 @@ export function pressableProps(label: string, onActivate: () => void) {
 }
 
 /** Clases de la tabla alternativa, las de `settlement-chart.tsx`. */
-export const TABLE_HEAD_ROW = "border-b border-neutral-100 text-left text-xs text-neutral-500";
+export const TABLE_HEAD_ROW = "border-b border-rule text-left text-xs text-ink-2";
 export const TABLE_TH = "py-2 pr-3 font-medium";
-export const TABLE_ROW = "border-b border-neutral-100 last:border-0";
-export const TABLE_TD = "py-2 pr-3 text-neutral-700 tabular-nums";
+export const TABLE_ROW = "border-b border-rule last:border-0";
+export const TABLE_TD = "py-2 pr-3 text-ink-2 tabular-nums";
 
 /**
  * Alternativa textual: la misma información que la gráfica, en una tabla
@@ -631,7 +633,7 @@ export function DataTableDetails({
 }) {
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer select-none font-medium text-primary-600 hover:underline">
+      <summary className="cursor-pointer select-none font-medium text-ink hover:underline">
         Ver datos en tabla
       </summary>
       <div className="mt-2 overflow-x-auto">

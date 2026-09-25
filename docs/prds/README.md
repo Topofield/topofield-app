@@ -25,6 +25,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 17 | Control ida-vuelta por puntos homólogos | `16-homologos-ida-vuelta.md` | cerrada |
 | 18 | Libreta de nivelación y panel de asentamientos | `17-libreta-panel-asentamientos.md` | cerrada |
 | 19 | Equilibrado por armada y compensación desde el origen | `18-equilibrado-y-compensacion.md` | cerrada |
+| 20 | Identidad visual del prototipo y coma decimal | `19-identidad-visual-coma-decimal.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

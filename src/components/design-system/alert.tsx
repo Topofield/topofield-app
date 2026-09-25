@@ -11,10 +11,10 @@ interface AlertProps {
 }
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  info: "border-primary-200 bg-primary-50 text-primary-700",
-  success: "border-success-500/30 bg-success-500/10 text-neutral-900",
-  warning: "border-warning-500/30 bg-warning-500/10 text-neutral-900",
-  error: "border-danger-500/30 bg-danger-500/10 text-danger-500",
+  info: "border-rule bg-sel text-ink",
+  success: "border-success/30 bg-success-bg text-ink",
+  warning: "border-warning/30 bg-warning-bg text-ink",
+  error: "border-danger/30 bg-danger-bg text-danger",
 };
 
 export function Alert({

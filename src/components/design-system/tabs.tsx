@@ -48,7 +48,7 @@ export function tabHref(
  */
 export function Tabs({ items, activeId, basePath, searchParams }: TabsProps) {
   return (
-    <nav className="flex gap-1 border-b border-neutral-200">
+    <nav className="flex gap-1 border-b border-rule">
       {items.map((item) => {
         const active = item.id === activeId;
         return (
@@ -59,8 +59,8 @@ export function Tabs({ items, activeId, basePath, searchParams }: TabsProps) {
             className={cn(
               "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
               active
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-neutral-500 hover:text-neutral-800",
+                ? "border-mira-strong text-ink"
+                : "border-transparent text-ink-2 hover:text-ink",
             )}
           >
             {item.label}

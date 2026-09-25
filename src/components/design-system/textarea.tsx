@@ -29,7 +29,7 @@ export function Textarea({
       {label && (
         <label
           htmlFor={textareaId}
-          className="text-sm font-medium text-neutral-800"
+          className="text-sm font-medium text-ink"
         >
           {label}
         </label>
@@ -40,19 +40,19 @@ export function Textarea({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn(
-          "rounded-md border border-neutral-400 bg-white px-3 py-2 text-base text-neutral-900 placeholder:text-neutral-500",
-          "disabled:bg-neutral-100 disabled:text-neutral-500",
-          error && "border-danger-500",
+          "rounded-md border border-rule-strong bg-card px-3 py-2 text-base text-ink placeholder:text-ink-3",
+          "disabled:bg-sel disabled:text-ink-2",
+          error && "border-danger",
           className,
         )}
         {...rest}
       />
       {error ? (
-        <p id={`${textareaId}-error`} className="text-sm text-danger-500">
+        <p id={`${textareaId}-error`} className="text-sm text-danger">
           {error}
         </p>
       ) : helperText ? (
-        <p id={`${textareaId}-helper`} className="text-sm text-neutral-500">
+        <p id={`${textareaId}-helper`} className="text-sm text-ink-2">
           {helperText}
         </p>
       ) : null}

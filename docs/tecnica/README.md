@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-25 · Fase 19 cerrada · 774 tests ·
+**Última actualización:** 2026-09-25 · Fase 20 cerrada · 817 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -72,6 +72,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 17 | Control ida-vuelta por puntos homólogos | cerrada |
 | 18 | Libreta de nivelación y panel de asentamientos | cerrada |
 | 19 | Equilibrado por armada y compensación desde el origen | cerrada |
+| 20 | Identidad visual del prototipo y coma decimal | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -635,10 +636,12 @@ desactiva `poweredByHeader`.
 
 La CSP lleva `'unsafe-inline'` en `script-src` y `style-src` **a propósito**:
 Next inyecta el arranque de React y los estilos críticos en línea, y la app usa
-`style={{…}}` en tres componentes. La alternativa —un nonce por petición—
-obliga a generarlo en `src/proxy.ts`, propagarlo y volver dinámicas rutas hoy
-estáticas; no compensa mientras no entre HTML de terceros (hoy hay **cero**
-`dangerouslySetInnerHTML` en `src/`).
+`style={{…}}` en `/design-system` (muestras de color). La alternativa —un nonce
+por petición— obliga a generarlo en `src/proxy.ts` y propagarlo; no compensa
+mientras no entre HTML de terceros (hoy hay **cero** `dangerouslySetInnerHTML`
+en `src/`). Hasta la Fase 20 costaba además volver dinámicas las rutas
+estáticas; desde que el layout raíz lee la cookie del tema, ya no queda
+ninguna.
 
 Lo que sí cierra, y antes estaba abierto: `frame-ancestors` (clickjacking),
 `base-uri` (inyección de `<base>`), `object-src` y `form-action` (envío de
@@ -1200,6 +1203,31 @@ de 11 px en un teléfono.
 `src/lib/validators/polygonal.ts` implementa dos capas (PRD § 5). También son
 funciones puras.
 
+### Números tecleados (Fase 20)
+
+Toda celda numérica es texto hasta que la lee `lib/utils/parse.ts`:
+
+- `readNumberText` distingue **vacío**, **número** e **inválido**. Acepta signo,
+  dígitos y **un** separador decimal, coma o punto (`1,5` = `1.5`), y los
+  estados intermedios de quien teclea (`1,`, `,5`). Rechaza separadores de
+  miles (`1.234,5` no se adivina), exponentes e `Infinity`.
+- `parseNumber` devuelve `null` para vacío **y** para inválido, nunca `NaN`:
+  los validadores de captura comparan con `null`, y un `NaN` pasaría por ellos
+  sin aviso (ya lo advertía `validators/settlement-book.ts`).
+- Lo inválido lo marca la **celda**, no el validador: `NumberInput` muestra «No
+  es un número.» en lugar del error que el validador daría a una celda vacía.
+  El guardado se bloquea con `InvalidNumbersContext` en los editores que
+  guardan con un botón (nivelación, poligonal, visita, reasignar coordenadas) y
+  con `setCustomValidity` en los `<form>` (altas, catálogo, lugar). Sin ese
+  bloqueo, un texto inválido en una celda opcional —un hilo— se perdería.
+- En el servidor, las coordenadas del proyecto y los puntos de referencia (que
+  llegan por `FormData`) usan el mismo analizador.
+- **Nada convierte texto con `Number()`**: `Number("1000,5")` es `NaN`. La
+  migración encontró cinco sitios así (azimut al amarre y al reasignar,
+  distancia desde los hilos, catálogo de puntos, cota del BM) y los umbrales
+  del lugar, que guardaban números en el estado y borraban el separador al
+  teclearlo; cada umbral guarda ahora su texto.
+
 ### Capa 1 — captura
 
 `validatePolygonalStation(station, expect)` valida una estación mientras se
@@ -1286,68 +1314,124 @@ usar shadcn/ui ni librerías de componentes o iconos.** Los SVG se escriben a
 mano, inline.
 
 `Alert` · `Badge` · `Breadcrumbs` · `Button` · `Card` · `DmsInput` ·
-`EmptyState` · `Input` · `KpiCard` · `Logo` · `Modal` · `Select` ·
-`StatusIndicator` · `Tabs` · `Textarea`
+`Drawer` · `EmptyState` · `Input` · `KpiCard` · `Logo` · `Modal` ·
+`NumberInput` · `Select` · `StatusIndicator` · `Tabs` · `Textarea` ·
+`ThemeSelect`, más `LevelFieldset`/`TotalStationFieldset` y
+`PrecisionOrderSelect`.
 
 ### Contrato de tokens
 
-| Escalón | Rol | Uso válido |
+Desde la Fase 20 los tokens son **por rol**, con la identidad del prototipo de
+asentamientos (`docs/prototipos/`): papel/tinta y el acento amarillo «mira».
+Las escalas `primary` y `neutral` se retiraron, y también la paleta por
+defecto de Tailwind (`--color-*: initial`): en la app solo existen estos
+tokens, el semáforo y el negro del velo de los diálogos.
+
+| Token | Rol | Uso válido |
 |---|---|---|
-| `-50` | Fondo teñido claro | Solo fondo. Nunca texto. |
-| `-100`, `-200` | Fondo y bordes decorativos | Nunca texto sobre blanco. No sirve como límite de un control. |
-| `-400` | Borde de control | Límite de campos de formulario: cumple 3:1. |
-| `-500` | Base accesible | Texto sobre blanco · fondo bajo texto blanco · borde · punto de estado. |
-| `-600` | Texto y profundidad | Texto sobre blanco y sobre `-50` · `hover:` de un fondo `-500`. |
-| `-700` | Texto de máximo contraste | Texto sobre `-50` · `active:` de un fondo `-500`. |
+| `paper` | Fondo de página | Solo fondo, con la retícula del `body`. |
+| `card` | Superficie | Tarjetas, tablas, modales, campos. |
+| `sel` | Selección y resalte | Fila seleccionada o con hover, `Badge` neutro, `Alert` informativo. |
+| `ink` · `ink-2` · `ink-3` | Tinta | Texto principal, secundario y terciario; los tres cumplen 4.5:1 sobre `card` y `paper`. |
+| `rule` | Separador | Decorativo: bordes de tarjeta, divisiones de tabla. **Nunca** límite de un control. |
+| `rule-strong` | Borde de control | Límite de Input/Select/Textarea/DmsInput: 3:1. |
+| `mira` + `on-mira` | Acción principal | Botón primario, chip activo: relleno amarillo con texto oscuro. |
+| `mira-strong` | Acento gráfico | Foco, pestaña activa, filete de selección, isotipo: 3:1. El amarillo no llega en claro (2.06:1). |
+| `mira-bg` + `mira-ink` | Tinte del acento | `Badge` «primary», notas del manual, texto de acento. |
+| `success` · `warning` · `danger` y su `-bg` | Estado | Texto sobre `card` y sobre su propio tinte; punto de estado. |
+| `on-danger` | Texto sobre `danger` | Botón de peligro: blanco en claro, oscuro en oscuro (el blanco daba 2.85). |
+| `semaphore-*` | Semáforo de 4 niveles | Un solo valor: cumple 3:1 en los dos temas. |
 
-`neutral-500` es la excepción deliberada: se usa como texto secundario sobre
-blanco y cumple AA en ese uso.
+Cada token lleva su valor claro y oscuro en un `light-dark()` (ver «Tema claro
+y oscuro»). Los valores parten del prototipo; los seis que no llegaban a su
+umbral se ajustaron conservando el tono. La tabla completa, con los valores
+originales, está en `docs/prds/19-identidad-visual-coma-decimal.md`.
 
-`--font-display` (Space Grotesk) para títulos, `--font-mono` para datos
-numéricos.
+`--font-display` (Barlow Semi Condensed) para títulos, `--font-sans` (Barlow)
+para el cuerpo y `--font-mono` para datos numéricos.
 
-### La regla de los tres contextos
+### Los contextos de contraste
 
-Un token de estado se usa de tres maneras, y **cumplir en una no implica cumplir
-en las otras**:
+Un color se usa de varias maneras, y **cumplir en una no implica cumplir en
+las otras** — ni en un tema implica cumplir en el otro:
 
-1. **Texto sobre blanco** — 4.5:1.
-2. **Texto sobre su propio fondo teñido** — 4.5:1. `Badge` usa
-   `bg-success-500/10 text-success-500`: el fondo efectivo es el token al 10 %
-   sobre blanco, no blanco. *Este es el contexto que falló y que ninguna
-   revisión manual medía.*
-3. **Fondo bajo texto blanco** — 4.5:1.
+1. **Texto sobre superficie** (`card`, `paper`, `sel`) — 4.5:1.
+2. **Texto sobre su propio tinte** (`success` sobre `success-bg`…) — 4.5:1.
+   *Es el contexto que falló antes de la Fase 5 y que ninguna revisión manual
+   medía.*
+3. **Texto sobre un relleno** (`on-mira` sobre `mira`, `on-danger` sobre
+   `danger`) — 4.5:1.
+4. **Elemento gráfico** (punto, borde de control, foco) — 3:1.
 
-Puntos y bordes de control son elementos gráficos: 3:1.
-
-`/10` es la única transparencia sancionada. Otra crea un contexto nuevo que hay
-que declarar y medir.
+Los estados usan tintes explícitos (`-bg`) y no transparencias: una
+transparencia crea un contexto nuevo que habría que declarar y medir en cada
+tema. `/15` sobrevive solo en rellenos decorativos de las gráficas.
 
 **Excepción de WCAG 1.4.3:** los componentes de interfaz inactivos no tienen
-requisito de contraste. El botón deshabilitado da 3.71:1 y es correcto así.
+requisito de contraste. El botón deshabilitado (`ink-3` sobre `rule`) se mide
+como dato informativo.
 
 ### Cómo se verifica el contraste
 
-`src/lib/design/contrast.ts` son funciones puras (hex → RGB, luminancia, razón,
-y `composite()` para resolver un fondo teñido antes de medirlo).
-`src/lib/design/pairings.ts` declara las parejas que el sistema usa de verdad.
+`src/lib/design/contrast.ts` son funciones puras: hex → RGB, luminancia, razón,
+`composite()` para resolver un tinte y `parseThemeTokens()`, que lee los dos
+temas de `globals.css`. `src/lib/design/pairings.ts` declara las parejas que el
+sistema usa de verdad, una sola vez para los dos temas.
 
-La ruta `/design-system` las mide y las muestra. Es herramienta de desarrollo:
-devuelve 404 en producción y hace falta sesión para abrirla.
+**Es un test** (Fase 20): `pairings.test.ts` lee el `globals.css` real y exige
+que todas las parejas cumplan en claro y en oscuro, y que todos sus tokens
+existan. Hasta la Fase 20 el paso era abrir `/design-system`, porque se creyó
+que un test exigiría jsdom; no hace falta, `fs` basta en el entorno `node`. Y
+`tokens-retirados.test.ts` recorre `src/` y falla si una clase o un `var()`
+usa una escala retirada o la paleta de Tailwind: al escribirlo encontró un
+`border-t-neutral-200` que la migración había dejado.
 
-Los tokens se **leen de `globals.css` en tiempo de render**, no se duplican en
-TypeScript: la hoja de estilos sigue siendo la única fuente de verdad, así que
-las mediciones no pueden desincronizarse de la paleta real.
+La ruta `/design-system` sigue midiendo y mostrando las parejas, ahora por
+tema. Es herramienta de desarrollo: devuelve 404 en producción y hace falta
+sesión para abrirla.
 
-**Al tocar la paleta o añadir una pareja nueva** —un `Badge` con un tono nuevo,
-un fondo teñido distinto— hay que declararla en `pairings.ts` y abrir la página.
-No hay prueba automática que lo obligue.
+**Al añadir un color o una pareja nueva** se declara en `pairings.ts`; `npm
+test` dice si cumple en los dos temas.
+
+### Tema claro y oscuro
+
+- **Mecanismo.** Cada token es `light-dark(claro, oscuro)` y el tema lo decide
+  `color-scheme`: `light dark` en `:root` (sigue al sistema), `light` o `dark`
+  con `data-theme` dentro de `@media screen`, y `light` en `@media print`: el
+  informe impreso sale siempre en claro. Un solo bloque de tokens y ni un
+  `dark:` en los componentes.
+- **Lightning CSS** (el compilador de CSS de Next) transpila `light-dark()` a un
+  polyfill con `--lightningcss-light/-dark` que sigue a `color-scheme`. Se
+  verificó en el navegador: sistema claro y oscuro, cada tema forzado contra el
+  sistema contrario, e impresión con el oscuro forzado.
+- **`@theme static`.** Tailwind v4 solo emite las variables que usa alguna
+  utilidad, y estas también se leen con `var(--color-…)` en línea (muestras de
+  `/design-system`, colores de las series, SVG del dibujo de la poligonal).
+- **Selector.** `ThemeSelect` (Sistema / Claro / Oscuro) va en la cabecera de
+  la app y en las páginas de acceso: un icono con un `<select>` nativo
+  transparente encima, porque en 390 px no cabe uno visible. Escribe la cookie
+  `topofield-theme` (un año, `SameSite=Lax`; «Sistema» la borra) y aplica el
+  tema al instante sobre `<html>`.
+- **Sin parpadeo.** El layout raíz lee la cookie con `cookies()` (`lib/theme-
+  server.ts`) y pone `data-theme` en `<html>`: la página llega pintada con el
+  tema elegido, sin script en línea. Precio: ya no quedan rutas estáticas (ver
+  § 5, cabeceras de seguridad).
+- **Casillas y radios** toman `accent-color: mira-strong` en `@layer base`.
 
 ### Qué entra en el sistema de diseño
 
 **Un componente pertenece al sistema de diseño si no conoce el dominio de
 TopoField.** Recibe cadenas, `href`s y uniones definidas en su propio archivo.
-No importa nada de `@/types/*` ni de `@/lib/*` salvo `cn`.
+No importa nada de `@/types/*` ni del dominio en `@/lib/*`; sí utilidades
+genéricas: `cn`, el analizador de números (`lib/utils/parse`, que usan
+`NumberInput` y `DmsInput`) y la cookie de tema (`lib/theme`, en
+`ThemeSelect`).
+
+Excepciones conocidas, anteriores a la Fase 20 y comprobadas al revisarla:
+`PrecisionOrderSelect` y los `…Fieldset` de equipo (Fase 8) importan las
+tolerancias y los tipos del proyecto, y `StatusIndicator` el tipo de los
+niveles del semáforo. Son controles de formulario del dominio que se
+quedaron aquí porque los usan los tres módulos.
 
 Es un criterio verificable leyendo los imports, y explica la separación que ya
 existe: `Breadcrumbs` recibe `{ label, href }[]` y sirve a cualquier jerarquía;
@@ -1364,9 +1448,23 @@ debe poder abrirse en pestaña nueva y compartirse. Referencia:
 `dashboard-filter.tsx`. Usar `<button>` + `router.push` solo si el control
 necesita estado de cliente que un enlace no pueda expresar.
 
-**Foco visible** — un solo sistema: el `outline` de `@layer base`, que cubre
-`a`, `button`, `summary`, `input`, `select` y `textarea` con `:where()`
-(especificidad cero). Los componentes **no declaran su propio `ring`**.
+**Foco visible** — un solo sistema: el `outline` `mira-strong` de `@layer
+base`, que cubre `a`, `button`, `summary`, `input`, `select` y `textarea` con
+`:where()` (especificidad cero). Los componentes **no declaran su propio
+`ring`**. Excepción: `ThemeSelect`, cuyo `<select>` es transparente, dibuja el
+foco en su contenedor con `has-[select:focus-visible]`.
+
+**Celda numérica** — `NumberInput` (Fase 20, UI2), nunca `type="number"`, que
+rechaza la coma decimal. Es `type="text"` con `inputMode="decimal"` (o
+`numeric` con `integer`); acepta coma o punto y, si el texto no es número, se
+marca a sí misma con «No es un número.» en lugar del error del validador. Los
+editores que guardan con un botón envuelven su contenido en
+`InvalidNumbersContext` y no guardan con celdas inválidas; en un `<form>`,
+`setCustomValidity` impide el envío. Ver § 7.
+
+**Enlace dentro de una frase** — `text-ink` subrayado con
+`decoration-mira-strong`: con la tinta, el color ya no lo distingue del
+texto.
 
 **Estado de carga** — se deshabilita el control y cambia su texto
 («Guardando…»), sin spinner: el cambio de texto lo anuncia el lector de
@@ -1405,11 +1503,15 @@ de un `<a>` es HTML inválido.
 
 ### Reglas tipográficas
 
-- **Títulos** (`h1`–`h3`): Space Grotesk en `primary-600`, aplicado en
+- **Títulos** (`h1`–`h3`): Barlow Semi Condensed en `ink`, aplicado en
   `@layer base`.
-- **Cuerpo**: `system-ui`.
+- **Cuerpo**: Barlow, con `tabular-nums lining-nums` en el `body`, como el
+  prototipo.
 - **Datos numéricos**: `font-mono` con `tabular-nums`, para que los dígitos
   alineen en columna.
+- **`text-rendering: geometricPrecision`** en el `body`: sin él, Chromium en
+  Linux redondea al píxel el avance de los glifos de Barlow y abre huecos
+  dentro de las palabras («Client e Demo»). Se vio en las capturas del manual.
 
 > **Toda regla CSS global debe ir dentro de `@layer`.** Una regla fuera de capa
 > gana sobre todas las utilidades de Tailwind y las anula en silencio. Ya
@@ -1418,8 +1520,11 @@ de un `<a>` es HTML inválido.
 
 ### Fuentes
 
-Space Grotesk se carga con `next/font/google`, que la descarga durante el build
-y la **autohospeda**. No hay peticiones a terceros en tiempo de ejecución.
+Barlow (400–700) y Barlow Semi Condensed (500–700) se cargan con
+`next/font/google`, que las descarga durante el build y las **autohospeda**.
+No hay peticiones a terceros en tiempo de ejecución, y la CSP (`font-src
+'self'`) no cambió. El 700 se carga porque la app usa `font-bold`; sin él el
+navegador lo sintetizaría.
 
 ### Responsive
 
@@ -1445,12 +1550,19 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 >
 > Al elegir un tono no basta con medirlo sobre blanco. Verifique los tres
 > contextos.
+>
+> **Fase 20.** La identidad del prototipo sustituyó a la paleta azul. Seis de
+> sus valores no cumplían: el texto terciario (3.03:1 en claro, 4.04:1 en
+> oscuro), el borde de control (1.57 / 1.59), el amarillo como foco (2.06 en
+> claro), el éxito sobre su tinte (4.39) y la alerta como texto (3.99) y sobre
+> su tinte (3.51). Se ajustaron conservando el tono, y desde entonces lo
+> comprueba un test en los dos temas.
 
 ---
 
 ## 9. Pruebas
 
-774 tests en 38 archivos, Vitest, entorno `node` **sin jsdom**.
+817 tests en 46 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1481,6 +1593,14 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/calculations/settlement-summary.test.ts` | 10 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, peor distorsión `1/∞`, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
 | `components/leveling/readings-table.test.ts` | 2 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18) |
+| `lib/utils/parse.test.ts` | 10 | **Coma o punto decimal**: signo, espacios, estados intermedios (`1,`, `,5`); vacío es `null` y lo inválido también, nunca `NaN`; separador de miles, exponentes y letras inválidos (Fase 20) |
+| `components/design-system/number-input.test.ts` | 8 | `NumberInput`: texto con teclado decimal, lo inválido se marca en vez del error del validador; el contador de celdas inválidas; `DmsInput` con segundos decimales (Fase 20) |
+| `lib/theme.test.ts` | 6 | Cookie del tema: claro, oscuro, ausente y desconocido; atributo `data-theme`; cabecera de la cookie (Fase 20) |
+| `lib/design/contrast.test.ts` | 5 | `parseThemeTokens`: `light-dark()` y hexadecimal a secas; razón y tinte (Fase 20) |
+| `lib/design/pairings.test.ts` | 4 | **Contraste como test**: cada pareja cumple en claro y en oscuro sobre el `globals.css` real, y sus tokens existen (Fase 20) |
+| `lib/validators/reference-point.test.ts` | 4 | Coordenadas y cota con coma, redondeo igual que con punto, vacío y mensajes de inválido (Fase 20) |
+| `components/design-system/theme-select.test.ts` | 2 | El selector de tema: etiqueta, tres opciones, arranque en la elección de la cookie (Fase 20) |
+| `lib/design/tokens-retirados.test.ts` | 2 | **Ninguna clase ni `var()` usa un token retirado** ni la paleta de Tailwind en todo `src/`, ni un color literal en `fill` o `stroke` (Fase 20) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
 | `components/polygonal/closure-verdict.test.tsx` | 10 | Decisión del veredicto |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
@@ -1490,7 +1610,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
-| `lib/validators/project.test.ts` | 5 | El proyecto ya no valida equipo ni orden de precisión (Fase 8) |
+| `lib/validators/project.test.ts` | 7 | El proyecto ya no valida equipo ni orden de precisión (Fase 8); latitud y longitud con coma decimal, y un separador de miles rechazado (Fase 20) |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
@@ -1973,6 +2093,11 @@ movió a la poligonal. O se mueven los tres, o se matiza la regla para admitir
 componentes de formulario del dominio; lo que no puede seguir es la regla
 afirmando algo que el código contradice.
 
+> **Cerrado en la Fase 20: se matizó la regla.** La § 8 admite ahora
+> utilidades genéricas (`cn`, el analizador de números, la cookie de tema) y
+> nombra estos tres como excepciones: controles de formulario del dominio que
+> usan los tres módulos.
+
 **El campo de distancia de la tabla de estaciones no tiene nombre accesible en
 escritorio.** En la vista de tarjetas (móvil) lleva `aria-label="Distancia
 (m)"`; en la tabla de escritorio, ninguno, y un lector de pantalla lo anuncia
@@ -1982,7 +2107,8 @@ que no pudo localizarlo por su etiqueta.
 **CSP sin nonce (`'unsafe-inline'` en scripts y estilos).** La política que
 sirve la app permite código en línea porque Next lo inyecta y la app usa
 `style={{…}}`. Endurecerla con un nonce por petición exigiría generarlo en
-`src/proxy.ts`, propagarlo por el árbol y volver dinámicas rutas hoy estáticas.
+`src/proxy.ts` y propagarlo por el árbol (las rutas ya son todas dinámicas
+desde la Fase 20, por la cookie del tema).
 No se hizo porque hoy no hay superficie que lo justifique: **cero**
 `dangerouslySetInnerHTML` en `src/`. Si algún día se renderiza HTML de
 terceros, esto pasa a ser prioritario. Ver § 5 de `docs/auditoria-seguridad.md`.
@@ -2149,7 +2275,16 @@ transacción.
 nuevas formatean con `es-CO` (coma decimal y signo menos tipográfico: «−9,3
 mm»), mientras las tablas y los KPIs usan `toFixed` (punto y guion: «-9.3»).
 Ya había mezcla antes —el semáforo de la última visita usaba coma—; unificar
-es decidir un formateador de milímetros y aplicarlo en todo el módulo.
+es decidir un formateador de milímetros y aplicarlo en todo el módulo. La Fase
+20 fijó la dirección (decisión del usuario): la presentación va con **punto**,
+y la coma solo se acepta al teclear; al unificar, son las gráficas las que
+cambian.
+
+**El Excel conserva la paleta anterior (Fase 20).** `lib/export/workbook.ts`
+pinta los títulos y las cabeceras con el azul y los grises de antes de la
+identidad del prototipo. Quedó fuera de alcance, como los correos de Supabase
+Auth: son documentos fuera de la app. Llevarlo a la paleta nueva es cambiar
+`ACCENT` y dos rellenos grises; el Excel no tiene tema oscuro.
 
 **Las filas vacías de la plantilla muestran cota (Fase 18).** La tabla de
 captura, compartida con nivelación, pinta la cota calculada en cada fila, y
@@ -2198,8 +2333,8 @@ compense su coste, y se factura por uso. El riesgo real de `<img>` —el salto d
 layout— se evita con `width`/`height` reales en cada imagen. Hay un
 `eslint-disable` puntual con esa explicación.
 
-**`loading="lazy"` en todas menos la primera.** Las diecinueve capturas suman
-5,7 MB; sin esto la página las descargaría de golpe.
+**`loading="lazy"` en todas menos la primera.** Las veintinueve capturas
+suman 8,4 MB; sin esto la página las descargaría de golpe.
 
 **`Nota` propia en lugar de `Alert`.** `Alert` lleva `role="alert"` siempre, lo
 que anuncia el contenido con prioridad al lector de pantalla. Una nota

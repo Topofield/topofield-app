@@ -32,9 +32,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           Entrar
         </Button>
       </form>
-      <p className="mt-4 text-sm text-neutral-500">
+      <p className="mt-4 text-sm text-ink-2">
         ¿No tienes cuenta?{" "}
-        <Link href="/sign-up" className="font-medium text-primary-600">
+        <Link href="/sign-up" className="font-medium text-ink underline decoration-mira-strong underline-offset-2">
           Regístrate
         </Link>
       </p>

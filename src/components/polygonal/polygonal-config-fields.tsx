@@ -1,10 +1,11 @@
 import {
+  type DmsValue,
   EMPTY_DMS,
   Input,
+  NumberInput,
   PrecisionOrderSelect,
   Select,
   TotalStationFieldset,
-  type DmsValue,
 } from "@/components/design-system";
 import {
   azimuthFromCoordinates,
@@ -24,6 +25,7 @@ import {
 } from "@/types/project";
 import { AngleInput } from "./angle-input";
 import type { AngleInputFormat } from "@/types/polygonal";
+import { parseNumber } from "@/lib/utils/parse";
 
 /** Estado de UI de la configuración de un proceso poligonal (todo texto). */
 export interface PolygonalConfigState {
@@ -96,9 +98,10 @@ function derivedAzimuth(
   const point = referencePoints.find((p) => p.id === value.referencePointId);
   if (point?.north == null || point?.east == null) return null;
 
-  const north = Number(value.startNorth);
-  const east = Number(value.startEast);
-  if (!Number.isFinite(north) || !Number.isFinite(east)) return null;
+  // `parseNumber` y no `Number`: con coma decimal (Fase 20) daría `NaN`.
+  const north = parseNumber(value.startNorth);
+  const east = parseNumber(value.startEast);
+  if (north === null || east === null) return null;
 
   const dms = decimalToDms(
     azimuthFromCoordinates(north, east, Number(point.north), Number(point.east)),
@@ -174,11 +177,8 @@ export function PolygonalConfigFields({
               set("angleType", e.target.value as AngleType | "")
             }
           />
-          <Input
+          <NumberInput integer
             label="Lecturas mínimas por ángulo"
-            type="number"
-            min="1"
-            step="1"
             value={value.angleReadingsMin}
             disabled={disabled}
             onChange={(e) => set("angleReadingsMin", e.target.value)}
@@ -186,8 +186,8 @@ export function PolygonalConfigFields({
         </div>
       )}
 
-      <fieldset className="flex flex-col gap-4 rounded-md border border-neutral-200 p-4">
-        <legend className="px-1 text-sm font-medium text-neutral-800">
+      <fieldset className="flex flex-col gap-4 rounded-md border border-rule p-4">
+        <legend className="px-1 text-sm font-medium text-ink">
           Punto de partida
         </legend>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -197,18 +197,14 @@ export function PolygonalConfigFields({
             disabled={disabled}
             onChange={(e) => set("startPointCode", e.target.value)}
           />
-          <Input
+          <NumberInput
             label="Norte"
-            type="number"
-            step="any"
             value={value.startNorth}
             disabled={disabled}
             onChange={(e) => set("startNorth", e.target.value)}
           />
-          <Input
+          <NumberInput
             label="Este"
-            type="number"
-            step="any"
             value={value.startEast}
             disabled={disabled}
             onChange={(e) => set("startEast", e.target.value)}
@@ -235,7 +231,7 @@ export function PolygonalConfigFields({
         />
 
         {azimutCalculado != null && (
-          <label className="flex items-start gap-2 text-sm text-neutral-700">
+          <label className="flex items-start gap-2 text-sm text-ink-2">
             <input
               type="checkbox"
               className="mt-0.5 size-4"
@@ -245,7 +241,7 @@ export function PolygonalConfigFields({
             />
             <span>
               La cartera cierra contra el punto de amarre
-              <span className="block text-neutral-500">
+              <span className="block text-ink-2">
                 La última fila es el ángulo del último lado de vuelta al amarre
                 y no lleva distancia.
               </span>
@@ -255,8 +251,8 @@ export function PolygonalConfigFields({
       </fieldset>
 
       {value.type === "open_controlled" && (
-        <fieldset className="flex flex-col gap-4 rounded-md border border-neutral-200 p-4">
-          <legend className="px-1 text-sm font-medium text-neutral-800">
+        <fieldset className="flex flex-col gap-4 rounded-md border border-rule p-4">
+          <legend className="px-1 text-sm font-medium text-ink">
             Punto de llegada conocido
           </legend>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -266,18 +262,14 @@ export function PolygonalConfigFields({
               disabled={disabled}
               onChange={(e) => set("endPointCode", e.target.value)}
             />
-            <Input
+            <NumberInput
               label="Norte"
-              type="number"
-              step="any"
               value={value.endNorth}
               disabled={disabled}
               onChange={(e) => set("endNorth", e.target.value)}
             />
-            <Input
+            <NumberInput
               label="Este"
-              type="number"
-              step="any"
               value={value.endEast}
               disabled={disabled}
               onChange={(e) => set("endEast", e.target.value)}

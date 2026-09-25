@@ -112,7 +112,7 @@ export function PointHistoryChart({
   return (
     <div ref={ref} className="flex min-w-0 flex-col gap-3">
       {sorted.length === 0 ? (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           Este punto todavía no tiene lecturas para dibujar su historial.
         </p>
       ) : (
@@ -140,7 +140,7 @@ export function PointHistoryChart({
                 y1={0}
                 y2={plotH}
                 strokeWidth={1}
-                className="stroke-neutral-200"
+                className="stroke-rule"
               />
 
               {/* Rótulos a la izquierda: el marcador de la visita actual
@@ -175,7 +175,7 @@ export function PointHistoryChart({
                     cx={currentPoint.x}
                     cy={currentPoint.y}
                     r={11}
-                    fill="white"
+                    fill="var(--color-card)"
                     stroke={color}
                     strokeWidth={1.5}
                   />
@@ -185,7 +185,7 @@ export function PointHistoryChart({
                     y={labelY}
                     textAnchor={labelRight ? "start" : "end"}
                     fontWeight={600}
-                    className="fill-neutral-900"
+                    className="fill-ink"
                   >
                     {formatMm(currentPoint.value)} mm
                   </HaloText>
@@ -206,7 +206,7 @@ export function PointHistoryChart({
         <tbody>
           {sorted.map((v) => {
             const isCurrent = v.date === currentDate;
-            const td = cn(TABLE_TD, isCurrent && "font-medium text-neutral-900");
+            const td = cn(TABLE_TD, isCurrent && "font-medium text-ink");
             return (
               <tr key={v.date} className={TABLE_ROW}>
                 <td className={td}>
@@ -221,7 +221,7 @@ export function PointHistoryChart({
           })}
           {sorted.length === 0 && (
             <tr>
-              <td className="py-4 text-center text-neutral-500" colSpan={2}>
+              <td className="py-4 text-center text-ink-2" colSpan={2}>
                 Sin lecturas registradas.
               </td>
             </tr>

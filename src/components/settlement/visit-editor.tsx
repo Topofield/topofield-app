@@ -9,10 +9,13 @@ import {
   buttonClasses,
   Card,
   Input,
+  InvalidNumbersContext,
   LevelFieldset,
+  NumberInput,
   PrecisionOrderSelect,
   Select,
   Textarea,
+  useInvalidNumbers,
 } from "@/components/design-system";
 import { BmSelector, type BmValue } from "@/components/leveling/bm-selector";
 import type { ReadingDraftState } from "@/components/leveling/readings-table";
@@ -405,9 +408,18 @@ export function VisitEditor({
     }));
   }
 
+  // Una celda con texto que no es número bloquea el guardado (Fase 20, UI2):
+  // `parseNumber` la lee como vacía y se perdería sin aviso.
+  const invalidNumbers = useInvalidNumbers();
+
   function handleSave() {
     setServerError(null);
     setSaved(false);
+
+    if (invalidNumbers.count > 0) {
+      setServerError("Corrige las celdas que no son un número para poder guardar.");
+      return;
+    }
 
     const closureErrorMm = parseNumber(header.closureErrorMm);
     if (!isBook && header.closureErrorMm.trim() !== "" && closureErrorMm === null) {
@@ -473,199 +485,199 @@ export function VisitEditor({
     isBook && visit.capture_mode === "direct" && Object.keys(initialElevations).length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card
-        title={isBaseline ? "Visita 0 — Línea base" : `Visita ${visit.visit_number}`}
-        actions={
-          <Link href={viewHref} className={buttonClasses({ variant: "ghost", size: "sm" })}>
-            Ver la visita
-          </Link>
-        }
-      >
-        {serverError && (
-          <Alert variant="error" className="mb-4">
-            {serverError}
-          </Alert>
-        )}
-        {saved && !serverError && (
-          <Alert variant="success" className="mb-4">
-            Visita guardada.
-          </Alert>
-        )}
-        {isBaseline && (
-          <Alert variant="info" className="mb-4">
-            Esta es la línea base del lugar: no tiene visita anterior, así que
-            no muestra asentamiento parcial ni velocidad.
-          </Alert>
-        )}
-        {siteClosed && (
-          <Alert variant="info" className="mb-4">
-            El lugar está cerrado; esta visita quedó en solo lectura.
-          </Alert>
-        )}
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Input label="Fecha" type="date" value={header.date} onChange={setField("date")} disabled={disabled} />
-          <Input label="Nivelador" value={header.operator} onChange={setField("operator")} disabled={disabled} />
-          <Input
-            label="Condiciones climáticas"
-            value={header.weatherConditions}
-            onChange={setField("weatherConditions")}
-            disabled={disabled}
-          />
-          <Select
-            label="Captura de las cotas"
-            options={CAPTURE_MODE_OPTIONS}
-            value={header.captureMode}
-            onChange={(e) => handleModeChange(e.target.value as CaptureMode)}
-            disabled={disabled}
-          />
-          {!isBook && (
-            <Input
-              label="Error de cierre (mm)"
-              type="number"
-              step="any"
-              value={header.closureErrorMm}
-              onChange={setField("closureErrorMm")}
-              disabled={disabled}
-            />
+    <InvalidNumbersContext.Provider value={invalidNumbers.report}>
+      <div className="flex flex-col gap-6">
+        <Card
+          title={isBaseline ? "Visita 0 — Línea base" : `Visita ${visit.visit_number}`}
+          actions={
+            <Link href={viewHref} className={buttonClasses({ variant: "ghost", size: "sm" })}>
+              Ver la visita
+            </Link>
+          }
+        >
+          {serverError && (
+            <Alert variant="error" className="mb-4">
+              {serverError}
+            </Alert>
           )}
-        </div>
-        {discardsBook && (
-          <Alert variant="warning" className="mt-4">
-            Al guardar en cotas directas se descarta la libreta de esta visita.
-          </Alert>
-        )}
-        {replacesTyped && (
-          <Alert variant="warning" className="mt-4">
-            Al guardar con libreta, las cotas tecleadas se reemplazan por las
-            que salen de la libreta.
-          </Alert>
-        )}
-        <div className="mt-4 max-w-xl">
-          <BmSelector
-            label="BM de amarre"
-            points={referencePoints.filter((p) => p.elevation != null)}
-            value={header.amarre}
-            onChange={handleAmarreChange}
-            disabled={disabled}
-          />
-        </div>
-        <div className="mt-4">
-          <PrecisionOrderSelect
-            kind="leveling"
-            value={header.precisionOrder}
-            disabled={disabled}
-            onChange={(v) => updateHeader("precisionOrder", v)}
-          />
-        </div>
-        <div className="mt-4">
-          <LevelFieldset
-            value={header.level}
-            onChange={(v) => updateHeader("level", v)}
-            order={header.precisionOrder}
-            disabled={disabled}
-          />
-        </div>
-        <div className="mt-4">
-          <Textarea label="Notas" value={header.notes} onChange={setField("notes")} disabled={disabled} />
-        </div>
-      </Card>
+          {saved && !serverError && (
+            <Alert variant="success" className="mb-4">
+              Visita guardada.
+            </Alert>
+          )}
+          {isBaseline && (
+            <Alert variant="info" className="mb-4">
+              Esta es la línea base del lugar: no tiene visita anterior, así que
+              no muestra asentamiento parcial ni velocidad.
+            </Alert>
+          )}
+          {siteClosed && (
+            <Alert variant="info" className="mb-4">
+              El lugar está cerrado; esta visita quedó en solo lectura.
+            </Alert>
+          )}
 
-      {isBook && (
-        <VisitBookEditor
-          rows={bookRows}
-          onChange={handleBookChange}
-          result={bookResult}
-          rowIssues={bookCheck.rowIssues}
-          errors={bookCheck.errors}
-          derivationIssues={derivation.issues}
-          levelType={header.level.levelType === "" ? null : header.level.levelType}
-          disabled={disabled}
-          pointCodes={pointCodes}
-          amarreCode={header.amarre.code}
-          importButton={
-            <VisitImportDialog
-              pointCodes={pointCodes}
-              amarre={{ code: header.amarre.code, elevation: amarreElevation }}
-              hasRows={bookRows.some((r) => r.backsight.trim() !== "" || r.foresight.trim() !== "")}
-              onAccept={handleImport}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Input label="Fecha" type="date" value={header.date} onChange={setField("date")} disabled={disabled} />
+            <Input label="Nivelador" value={header.operator} onChange={setField("operator")} disabled={disabled} />
+            <Input
+              label="Condiciones climáticas"
+              value={header.weatherConditions}
+              onChange={setField("weatherConditions")}
               disabled={disabled}
-              defaultOpen={openImport}
             />
+            <Select
+              label="Captura de las cotas"
+              options={CAPTURE_MODE_OPTIONS}
+              value={header.captureMode}
+              onChange={(e) => handleModeChange(e.target.value as CaptureMode)}
+              disabled={disabled}
+            />
+            {!isBook && (
+              <NumberInput
+                label="Error de cierre (mm)"
+                value={header.closureErrorMm}
+                onChange={setField("closureErrorMm")}
+                disabled={disabled}
+              />
+            )}
+          </div>
+          {discardsBook && (
+            <Alert variant="warning" className="mt-4">
+              Al guardar en cotas directas se descarta la libreta de esta visita.
+            </Alert>
+          )}
+          {replacesTyped && (
+            <Alert variant="warning" className="mt-4">
+              Al guardar con libreta, las cotas tecleadas se reemplazan por las
+              que salen de la libreta.
+            </Alert>
+          )}
+          <div className="mt-4 max-w-xl">
+            <BmSelector
+              label="BM de amarre"
+              points={referencePoints.filter((p) => p.elevation != null)}
+              value={header.amarre}
+              onChange={handleAmarreChange}
+              disabled={disabled}
+            />
+          </div>
+          <div className="mt-4">
+            <PrecisionOrderSelect
+              kind="leveling"
+              value={header.precisionOrder}
+              disabled={disabled}
+              onChange={(v) => updateHeader("precisionOrder", v)}
+            />
+          </div>
+          <div className="mt-4">
+            <LevelFieldset
+              value={header.level}
+              onChange={(v) => updateHeader("level", v)}
+              order={header.precisionOrder}
+              disabled={disabled}
+            />
+          </div>
+          <div className="mt-4">
+            <Textarea label="Notas" value={header.notes} onChange={setField("notes")} disabled={disabled} />
+          </div>
+        </Card>
+
+        {isBook && (
+          <VisitBookEditor
+            rows={bookRows}
+            onChange={handleBookChange}
+            result={bookResult}
+            rowIssues={bookCheck.rowIssues}
+            errors={bookCheck.errors}
+            derivationIssues={derivation.issues}
+            levelType={header.level.levelType === "" ? null : header.level.levelType}
+            disabled={disabled}
+            pointCodes={pointCodes}
+            amarreCode={header.amarre.code}
+            importButton={
+              <VisitImportDialog
+                pointCodes={pointCodes}
+                amarre={{ code: header.amarre.code, elevation: amarreElevation }}
+                hasRows={bookRows.some((r) => r.backsight.trim() !== "" || r.foresight.trim() !== "")}
+                onAccept={handleImport}
+                disabled={disabled}
+                defaultOpen={openImport}
+              />
+            }
+          />
+        )}
+
+        <Card
+          title={isBook ? "Cotas de los puntos de control" : "Lecturas"}
+          description={isBook ? "Salen de la libreta: se recalculan al guardar." : undefined}
+        >
+          <ReadingsTable
+            points={rowPoints}
+            rawElevations={displayedElevations}
+            onElevationChange={handleElevationChange}
+            computedByPoint={computedByPoint}
+            isBaseline={isBaseline}
+            disabled={disabled}
+            trendWarnings={trendWarnings}
+            derived={isBook}
+          />
+          {notMeasured.length > 0 && (
+            <p className="mt-3 text-sm text-ink-2">
+              No se miden en esta visita:{" "}
+              {notMeasured
+                .map((p) =>
+                  p.retired_on !== null
+                    ? `${p.code} (de baja desde el ${formatDateOnly(p.retired_on)})`
+                    : `${p.code} (alta el ${formatDateOnly(p.active_from ?? "")})`,
+                )
+                .join(", ")}
+              .
+            </p>
+          )}
+        </Card>
+
+        {!disabled && (
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCloseError(null);
+                setCloseDialogOpen(true);
+              }}
+              disabled={isPending}
+            >
+              Cerrar visita
+            </Button>
+            <Button onClick={handleSave} disabled={isPending || invalidNumbers.count > 0}>
+              {isPending ? "Guardando…" : "Guardar visita"}
+            </Button>
+          </div>
+        )}
+
+        <CloseVisitDialog
+          open={closeDialogOpen}
+          onClose={() => setCloseDialogOpen(false)}
+          onConfirm={handleConfirmClose}
+          isPending={isClosing}
+          error={closeError}
+          visitDate={header.date}
+          pointsMeasured={pointsMeasured}
+          worstAlert={worstAlert}
+          dirty={dirty}
+          trendDeviationCodes={trendDeviationCodes}
+          book={
+            isBook && bookResult
+              ? {
+                  closureErrorMm: bookResult.closureErrorMm,
+                  toleranceMm: bookResult.toleranceMm,
+                  meetsTolerance: bookResult.meetsTolerance,
+                  arithmeticCheckOk: bookResult.arithmeticCheckOk,
+                }
+              : null
           }
         />
-      )}
-
-      <Card
-        title={isBook ? "Cotas de los puntos de control" : "Lecturas"}
-        description={isBook ? "Salen de la libreta: se recalculan al guardar." : undefined}
-      >
-        <ReadingsTable
-          points={rowPoints}
-          rawElevations={displayedElevations}
-          onElevationChange={handleElevationChange}
-          computedByPoint={computedByPoint}
-          isBaseline={isBaseline}
-          disabled={disabled}
-          trendWarnings={trendWarnings}
-          derived={isBook}
-        />
-        {notMeasured.length > 0 && (
-          <p className="mt-3 text-sm text-neutral-500">
-            No se miden en esta visita:{" "}
-            {notMeasured
-              .map((p) =>
-                p.retired_on !== null
-                  ? `${p.code} (de baja desde el ${formatDateOnly(p.retired_on)})`
-                  : `${p.code} (alta el ${formatDateOnly(p.active_from ?? "")})`,
-              )
-              .join(", ")}
-            .
-          </p>
-        )}
-      </Card>
-
-      {!disabled && (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setCloseError(null);
-              setCloseDialogOpen(true);
-            }}
-            disabled={isPending}
-          >
-            Cerrar visita
-          </Button>
-          <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "Guardando…" : "Guardar visita"}
-          </Button>
-        </div>
-      )}
-
-      <CloseVisitDialog
-        open={closeDialogOpen}
-        onClose={() => setCloseDialogOpen(false)}
-        onConfirm={handleConfirmClose}
-        isPending={isClosing}
-        error={closeError}
-        visitDate={header.date}
-        pointsMeasured={pointsMeasured}
-        worstAlert={worstAlert}
-        dirty={dirty}
-        trendDeviationCodes={trendDeviationCodes}
-        book={
-          isBook && bookResult
-            ? {
-                closureErrorMm: bookResult.closureErrorMm,
-                toleranceMm: bookResult.toleranceMm,
-                meetsTolerance: bookResult.meetsTolerance,
-                arithmeticCheckOk: bookResult.arithmeticCheckOk,
-              }
-            : null
-        }
-      />
-    </div>
+      </div>
+    </InvalidNumbersContext.Provider>
   );
 }

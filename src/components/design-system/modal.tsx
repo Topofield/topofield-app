@@ -33,26 +33,26 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-neutral-900/50"
+        className="absolute inset-0 cursor-default bg-black/50"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative w-full rounded-lg border border-neutral-200 bg-white shadow-lg",
+          "relative w-full rounded-lg border border-rule bg-card shadow-lg",
           // Solo el grande limita su alto y desplaza el cuerpo: los diálogos
           // de formulario quedan como estaban, sin recortar nada.
           size === "lg" ? "flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col" : "max-w-md",
         )}
       >
-        <header className="border-b border-neutral-100 px-6 py-4">
+        <header className="border-b border-rule px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
         </header>
         {/* En el grande, el cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
         <div className={cn("px-6 py-4", size === "lg" && "overflow-y-auto")}>{children}</div>
         {footer && (
-          <footer className="flex justify-end gap-2 border-t border-neutral-100 px-6 py-4">
+          <footer className="flex justify-end gap-2 border-t border-rule px-6 py-4">
             {footer}
           </footer>
         )}

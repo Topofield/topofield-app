@@ -173,14 +173,14 @@ export default async function SettlementAnalysisPage({
           { label: "Análisis" },
         ]}
       />
-      <header className="flex flex-col gap-3 border-b-2 border-neutral-900 pb-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-3 border-b-2 border-ink pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{site.name}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-ink-2">
             Control de asentamientos en {activeCount} puntos de control.
             {summary.baseDate && ` Lectura base el ${formatDateOnly(summary.baseDate)}.`}
           </p>
-          <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-600">
+          <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2">
             <li className="flex items-center gap-1.5">
               <ThresholdSwatch level="caution" /> Precaución −{chartThresholds.caution} mm
             </li>

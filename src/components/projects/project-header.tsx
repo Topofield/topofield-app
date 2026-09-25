@@ -6,8 +6,8 @@ import { PROJECT_STATUS_LABELS, type Project } from "@/types/project";
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-neutral-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutral-900">{value || "—"}</dd>
+      <dt className="text-xs font-medium text-ink-2">{label}</dt>
+      <dd className="mt-0.5 text-sm text-ink">{value || "—"}</dd>
     </div>
   );
 }
@@ -19,11 +19,11 @@ export function ProjectHeader({ project }: { project: Project }) {
       : null;
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+    <div className="relative overflow-hidden rounded-lg border border-rule bg-card p-6 shadow-sm">
       <svg
         aria-hidden="true"
         viewBox="0 0 200 120"
-        className="pointer-events-none absolute -right-8 -top-6 h-40 w-64 text-primary-500 opacity-[0.04]"
+        className="pointer-events-none absolute -right-8 -top-6 h-40 w-64 text-mira-ink opacity-[0.04]"
         fill="none"
       >
         <path d="M-10 90C30 90 40 60 80 60s50 30 90 30" stroke="currentColor" strokeWidth="2" />
@@ -38,7 +38,7 @@ export function ProjectHeader({ project }: { project: Project }) {
             <h1 className="text-2xl font-bold">
               {project.name}
             </h1>
-            <p className="mt-1 text-sm text-neutral-500">{project.client}</p>
+            <p className="mt-1 text-sm text-ink-2">{project.client}</p>
           </div>
           <Badge tone={project.status === "active" ? "success" : "neutral"}>
             {PROJECT_STATUS_LABELS[project.status]}
@@ -46,7 +46,7 @@ export function ProjectHeader({ project }: { project: Project }) {
         </div>
 
         {project.description && (
-          <p className="mt-3 text-sm text-neutral-700">{project.description}</p>
+          <p className="mt-3 text-sm text-ink-2">{project.description}</p>
         )}
 
         <dl className="mt-5 grid gap-4 sm:grid-cols-3">

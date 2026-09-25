@@ -130,13 +130,13 @@ export function LevelingConfigFields({
         />
       )}
 
-      <label className="flex items-center gap-2 text-sm text-neutral-800">
+      <label className="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
           checked={value.hasReturnRun}
           disabled={disabled}
           onChange={(e) => set("hasReturnRun", e.target.checked)}
-          className="h-4 w-4 rounded border-neutral-400"
+          className="h-4 w-4 rounded border-rule-strong"
         />
         Incluye recorrido de vuelta (ida y vuelta)
       </label>

@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, Logo } from "@/components/design-system";
+import { Button, Logo, ThemeSelect } from "@/components/design-system";
 import { createClient } from "@/lib/supabase/server";
+import { readThemeChoice } from "@/lib/theme-server";
 import { signOutAction } from "./actions";
 
 /**
@@ -24,9 +25,11 @@ export default async function AppLayout({
     redirect("/sign-in");
   }
 
+  const theme = await readThemeChoice();
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-neutral-200 bg-white">
+      <header className="border-b border-rule bg-card">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
@@ -35,18 +38,19 @@ export default async function AppLayout({
           >
             <Logo />
           </Link>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-neutral-500 sm:inline">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden text-sm text-ink-2 sm:inline">
               {user.email}
             </span>
             {/* Visible también en móvil, al contrario que el correo: la ayuda
                 hace falta sobre todo en el teléfono, en campo. */}
             <Link
               href="/manual"
-              className="text-sm font-medium text-primary-600 transition-colors hover:text-primary-700"
+              className="text-sm font-medium text-ink underline-offset-2 hover:underline"
             >
               Manual
             </Link>
+            <ThemeSelect initial={theme} />
             <form action={signOutAction}>
               <Button type="submit" variant="ghost" size="sm">
                 Cerrar sesión

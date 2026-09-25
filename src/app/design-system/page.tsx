@@ -18,7 +18,7 @@ import {
   Tabs,
   Textarea,
 } from "@/components/design-system";
-import { formatRatio, parseThemeColors } from "@/lib/design/contrast";
+import { formatRatio, parseThemeTokens } from "@/lib/design/contrast";
 import {
   CONTEXTO_LABELS,
   medirPairings,
@@ -37,41 +37,26 @@ export const metadata = {
   title: "Sistema de diseño — TopoField",
 };
 
-/** Grupos de tokens y el rol de cada escalón, según § 2.1 de la spec. */
+/** Grupos de tokens por rol (Fase 20). Cada uno tiene un valor por tema. */
 const GRUPOS: { titulo: string; nota: string; tokens: string[] }[] = [
   {
-    titulo: "Marca",
-    nota: "-50/-100/-200 solo fondo y bordes · -500 base accesible · -600/-700 texto y profundidad",
-    tokens: [
-      "primary-50",
-      "primary-100",
-      "primary-200",
-      "primary-500",
-      "primary-600",
-      "primary-700",
-    ],
+    titulo: "Superficies y tinta",
+    nota: "papel es el fondo de página y tarjeta el de tarjetas, tablas y modales · tinta, tinta 2 y tinta 3 son el texto principal, el secundario y el terciario · regla separa y regla fuerte es el borde de un control (3:1).",
+    tokens: ["paper", "card", "sel", "ink", "ink-2", "ink-3", "rule", "rule-strong"],
+  },
+  {
+    titulo: "Acento «mira»",
+    nota: "mira es la acción principal, con texto on-mira encima · mira-strong es el foco y el acento gráfico: el amarillo del prototipo no llegaba a 3:1 sobre blanco.",
+    tokens: ["mira", "mira-strong", "mira-bg", "mira-ink", "on-mira"],
   },
   {
     titulo: "Estado",
-    nota: "Cada uno se usa en tres contextos distintos. Cumplir en uno no implica cumplir en los otros.",
-    tokens: ["success-500", "warning-500", "danger-500"],
-  },
-  {
-    titulo: "Neutrales",
-    nota: "neutral-400 es el borde de control · neutral-500 es la excepción: se usa como texto secundario sobre blanco y cumple AA ahí.",
-    tokens: [
-      "neutral-50",
-      "neutral-100",
-      "neutral-200",
-      "neutral-400",
-      "neutral-500",
-      "neutral-800",
-      "neutral-900",
-    ],
+    nota: "Texto sobre tarjeta y sobre su propio tinte (-bg): cumplir en uno no implica cumplir en el otro.",
+    tokens: ["success", "success-bg", "warning", "warning-bg", "danger", "danger-bg", "on-danger"],
   },
   {
     titulo: "Semáforo de asentamientos",
-    nota: "Reservado para la fase 5. Ya cumple 3:1 como indicador gráfico, pero los niveles contiguos quedaron a luminancia parecida (1.18, 1.15, 1.01): el semáforo debe ir siempre con texto.",
+    nota: "Un solo valor para los dos temas: cumple 3:1 sobre la tarjeta clara y la oscura. Los niveles contiguos quedan a luminancia parecida, así que el semáforo va siempre con forma y texto (Fase 5).",
     tokens: [
       "semaphore-green",
       "semaphore-yellow",
@@ -82,11 +67,16 @@ const GRUPOS: { titulo: string; nota: string; tokens: string[] }[] = [
 ];
 
 const ORDEN_CONTEXTOS: Contexto[] = [
-  "texto-sobre-blanco",
+  "texto-sobre-superficie",
   "texto-sobre-tinte",
-  "fondo-bajo-texto-blanco",
+  "texto-sobre-relleno",
   "grafico",
 ];
+
+const TEMAS = [
+  ["claro", "Tema claro"],
+  ["oscuro", "Tema oscuro"],
+] as const;
 
 export default async function DesignSystemPage() {
   // Herramienta de desarrollo: no forma parte del producto.
@@ -98,25 +88,34 @@ export default async function DesignSystemPage() {
     join(process.cwd(), "src/app/globals.css"),
     "utf8",
   );
-  const tokens = parseThemeColors(css);
-  const medidas = medirPairings(tokens);
+  const temas = parseThemeTokens(css);
+  const medidasPorTema = {
+    claro: medirPairings(temas.claro),
+    oscuro: medirPairings(temas.oscuro),
+  };
+  const medidas = [...medidasPorTema.claro, ...medidasPorTema.oscuro];
   // Las parejas informativas se miden pero no cuentan: WCAG las exime.
-  const fallos = medidas.filter((m) => !m.cumple && !m.informativo);
+  const fallos = TEMAS.flatMap(([tema]) =>
+    medidasPorTema[tema]
+      .filter((m) => !m.cumple && !m.informativo)
+      .map((m) => ({ ...m, tema })),
+  );
   const exentas = medidas.filter((m) => m.informativo);
+  const tokens = temas.claro;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
       <header className="mb-10">
         <Logo className="text-2xl" />
         <h1 className="mt-4 text-3xl font-bold">Sistema de diseño</h1>
-        <p className="mt-2 max-w-2xl text-neutral-800">
-          Estado actual de los {Object.keys(tokens).length} tokens de color y
-          los 16 componentes de{" "}
+        <p className="mt-2 max-w-2xl text-ink">
+          Estado actual de los {Object.keys(tokens).length} tokens de color,
+          en claro y en oscuro, y los componentes de{" "}
           <code className="text-sm">src/components/design-system/</code>. Los
           contrastes se miden en vivo desde{" "}
           <code className="text-sm">globals.css</code>.
         </p>
-        <p className="mt-2 text-sm text-neutral-500">
+        <p className="mt-2 text-sm text-ink-2">
           Página de desarrollo — devuelve 404 en producción. Spec:{" "}
           <code>docs/specs/2026-07-28-sistema-diseno-design.md</code>
         </p>
@@ -134,7 +133,7 @@ export default async function DesignSystemPage() {
           <a
             key={href}
             href={href}
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50"
+            className="rounded-full border border-rule bg-card px-3 py-1 text-sm font-medium text-ink transition-colors hover:bg-sel"
           >
             {label}
           </a>
@@ -147,7 +146,7 @@ export default async function DesignSystemPage() {
           <KpiCard
             label="Parejas medidas"
             value={medidas.length}
-            hint="Umbral 4.5:1 en texto, 3:1 en gráficos"
+            hint="En los dos temas. Umbral 4.5:1 en texto, 3:1 en gráficos"
           />
           <KpiCard
             label="Cumplen"
@@ -166,8 +165,9 @@ export default async function DesignSystemPage() {
 
         {fallos.length === 0 ? (
           <Alert variant="success" title="Todas las parejas declaradas cumplen AA">
-            Los cuatro tokens corregidos durante las fases 1–3 se sostienen en
-            los tres contextos.
+            En claro y en oscuro. Lo comprueba también{" "}
+            <code>pairings.test.ts</code>: una pareja que deje de cumplir hace
+            fallar <code>npm test</code>.
           </Alert>
         ) : (
           <Alert
@@ -177,19 +177,20 @@ export default async function DesignSystemPage() {
             <ul className="mt-2 space-y-2">
               {fallos.map((m, i) => (
                 <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-xs font-semibold">{m.tema}</span>
                   <span className="font-mono text-xs tabular-nums font-semibold">
                     {formatRatio(m.ratio)}
                   </span>
-                  <span className="text-xs text-neutral-500">
+                  <span className="text-xs text-ink-2">
                     (mín. {m.umbral}:1)
                   </span>
                   <code className="text-xs">{m.fg}</code>
-                  <span className="text-xs text-neutral-500">sobre</span>
+                  <span className="text-xs text-ink-2">sobre</span>
                   <code className="text-xs">
                     {m.bg}
                     {m.bgAlpha !== undefined ? `/${m.bgAlpha * 100}` : ""}
                   </code>
-                  <span className="text-xs text-neutral-500">— {m.donde}</span>
+                  <span className="text-xs text-ink-2">— {m.donde}</span>
                 </li>
               ))}
             </ul>
@@ -203,12 +204,17 @@ export default async function DesignSystemPage() {
           {GRUPOS.map((grupo) => (
             <div key={grupo.titulo}>
               <h3 className="text-base font-semibold">{grupo.titulo}</h3>
-              <p className="mt-1 mb-3 max-w-2xl text-sm text-neutral-500">
+              <p className="mt-1 mb-3 max-w-2xl text-sm text-ink-2">
                 {grupo.nota}
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {grupo.tokens.map((token) => (
-                  <Swatch key={token} token={token} hex={tokens[token]} />
+                  <Swatch
+                    key={token}
+                    token={token}
+                    claro={temas.claro[token]}
+                    oscuro={temas.oscuro[token]}
+                  />
                 ))}
               </div>
             </div>
@@ -217,12 +223,12 @@ export default async function DesignSystemPage() {
 
         <div className="mt-8">
           <h3 className="text-base font-semibold">Tipografía</h3>
-          <div className="mt-3 space-y-3 rounded-lg border border-neutral-200 bg-white p-5">
-            <p className="font-display text-2xl font-bold text-primary-600">
-              Space Grotesk · títulos h1–h3
+          <div className="mt-3 space-y-3 rounded-lg border border-rule bg-card p-5">
+            <p className="font-display text-2xl font-bold text-ink">
+              Barlow Semi Condensed · títulos h1–h3
             </p>
             <p className="text-base">
-              system-ui · cuerpo de texto. El paso de estación 4 a la 5 cerró
+              Barlow · cuerpo de texto. El paso de estación 4 a la 5 cerró
               con error angular de 12″.
             </p>
             <p className="font-mono tabular-nums text-base">
@@ -238,23 +244,30 @@ export default async function DesignSystemPage() {
         titulo="Contraste por contexto"
         descripcion="Un color que cumple sobre blanco puede fallar sobre su propio fondo teñido, porque el fondo efectivo ya no es blanco. Ese fue el fallo que ninguna revisión manual detectaba."
       >
-        <div className="space-y-8">
-          {ORDEN_CONTEXTOS.map((contexto) => {
-            const filas = medidas.filter((m) => m.contexto === contexto);
-            const primera = filas[0];
-            if (primera === undefined) return null;
-            return (
-              <div key={contexto}>
-                <h3 className="text-base font-semibold">
-                  {CONTEXTO_LABELS[contexto]}
-                </h3>
-                <p className="mt-1 mb-3 text-sm text-neutral-500">
-                  Umbral {primera.umbral}:1
-                </p>
-                <TablaMediciones filas={filas} />
-              </div>
-            );
-          })}
+        <div className="space-y-12">
+          {TEMAS.map(([tema, titulo]) => (
+            <div key={tema} className="space-y-8">
+              <h3 className="text-lg font-semibold">{titulo}</h3>
+              {ORDEN_CONTEXTOS.map((contexto) => {
+                const filas = medidasPorTema[tema].filter(
+                  (m) => m.contexto === contexto,
+                );
+                const primera = filas[0];
+                if (primera === undefined) return null;
+                return (
+                  <div key={contexto}>
+                    <h4 className="text-base font-semibold">
+                      {CONTEXTO_LABELS[contexto]}
+                    </h4>
+                    <p className="mt-1 mb-3 text-sm text-ink-2">
+                      Umbral {primera.umbral}:1
+                    </p>
+                    <TablaMediciones filas={filas} />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </Seccion>
 
@@ -376,7 +389,7 @@ export default async function DesignSystemPage() {
                 title="Resultados del cierre"
                 actions={<Button size="sm" variant="ghost">Exportar</Button>}
               >
-                <p className="text-sm text-neutral-800">
+                <p className="text-sm text-ink">
                   Contenido de la tarjeta.
                 </p>
               </Card>
@@ -385,7 +398,7 @@ export default async function DesignSystemPage() {
                 description="12 puntos · última visita el 14 mar 2026"
                 actions={<Button size="sm" variant="ghost">Exportar</Button>}
               >
-                <p className="text-sm text-neutral-800">
+                <p className="text-sm text-ink">
                   Con descripción bajo el título.
                 </p>
               </Card>
@@ -442,10 +455,10 @@ export default async function DesignSystemPage() {
             <div className="flex flex-wrap items-end gap-8">
               <Logo />
               <Logo className="text-2xl" />
-              <div className="rounded-md bg-primary-700 p-4">
-                <Logo className="text-white" markClassName="text-white" />
+              <div className="rounded-md bg-ink p-4">
+                <Logo className="text-paper" markClassName="text-paper" />
               </div>
-              <LogoMark className="h-10 w-10 text-primary-500" />
+              <LogoMark className="h-10 w-10 text-mira-strong" />
             </div>
           </Demo>
         </div>
@@ -473,19 +486,19 @@ export default async function DesignSystemPage() {
               <Button variant="secondary">Botón</Button>
               <a
                 href="#patrones"
-                className="text-sm font-medium text-primary-600 underline"
+                className="text-sm font-medium text-ink underline"
               >
                 Enlace
               </a>
               <button
                 type="button"
-                className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-500"
+                className="rounded-full border border-rule bg-card px-3 py-1 text-sm text-ink-2"
               >
                 Chip
               </button>
               <Input aria-label="Campo de prueba" placeholder="Campo" />
             </div>
-            <p className="mt-4 max-w-2xl text-sm text-neutral-500">
+            <p className="mt-4 max-w-2xl text-sm text-ink-2">
               El selector base es{" "}
               <code>
                 :where(a, button, summary, input, select,
@@ -530,26 +543,30 @@ export default async function DesignSystemPage() {
               d: "Se convergió en <Link> + aria-current. Los chips del listado de procesos (process-list-toolbar.tsx) ya son enlaces: eso es lo que cambió. La persistencia en localStorage se conservó intacta, con sus dos useEffect (restauración y guardado) en el mismo orden — invertirlo reintroduce un bug ya corregido. Un botón con router.push exige \"use client\" y no se puede abrir en pestaña nueva ni compartir — coste que no se justifica cuando el control no necesita estado de cliente.",
             },
             {
-              t: "Prueba de contraste: no se añade, la página es la verificación",
-              d: "La tabla de parejas (pairings.ts) y las funciones puras de contrast.ts ya existen; /design-system las mide en vivo contra globals.css en cada carga. Convertirla en prueba de Vitest exigiría jsdom, que el proyecto no usa (environment: \"node\"). Al tocar la paleta o añadir una pareja, abrir la página es el paso de verificación — no hay gate automático en npm test.",
+              t: "Tokens por rol y modo oscuro (Fase 20)",
+              d: "La identidad del prototipo de asentamientos —papel, tinta y el acento «mira»— sustituye a las escalas primary y neutral. Cada token lleva su valor claro y oscuro en un light-dark(), y el tema lo decide color-scheme: sin un bloque oscuro paralelo y sin un solo dark: en los componentes. Los seis valores del prototipo que no llegaban a su umbral se ajustaron conservando el tono; el amarillo, por ejemplo, no sirve de foco sobre blanco (2.06:1), y el foco usa mira-strong.",
+            },
+            {
+              t: "Prueba de contraste: desde la Fase 20, es un test",
+              d: "Hasta la Fase 20 la verificación era abrir esta página: se creyó que convertirla en prueba de Vitest exigía jsdom. No es así: parseThemeTokens es pura y Vitest lee globals.css con fs en el entorno node. pairings.test.ts mide cada pareja en los dos temas y falla si una no cumple. Con dos temas las parejas se duplicaron, y mirarlas a mano había dejado de ser fiable.",
             },
             {
               t: "Semáforo de asentamientos: rellenos oscurecidos",
               d: "Se midieron los cuatro tokens: verde, amarillo y naranja fallaban como indicador gráfico (2.87, 1.66 y 2.85). Los cuatro se oscurecieron a #1e8e4e, #8a6d0b, #c25e08 y #d94436, y ahora cumplen 3:1. Deuda pendiente: los niveles contiguos quedan poco separados entre sí (1.18, 1.15, 1.01), por lo que el color solo no basta para distinguirlos — el módulo debe apoyarse en la etiqueta de texto, no en el matiz. La alternativa considerada, anillos oscuros sobre el mismo relleno claro, se descartó por ahora: exige un segundo canal gráfico (el anillo) además del texto, más costoso que oscurecer el relleno.",
             },
             {
-              t: "Borde de los campos de formulario: neutral-400",
-              d: "neutral-200 (1.43:1) no alcanzaba el 3:1 que exige WCAG 1.4.11 para el límite de un control. Input, Select y Textarea usan ahora neutral-400 (3.41:1 sobre blanco, 3.24:1 sobre neutral-50). Los bordes decorativos, que no delimitan un control interactivo, se quedan en neutral-200.",
+              t: "Borde de los campos de formulario: un token propio de 3:1",
+              d: "El borde decorativo (1.43:1) no alcanzaba el 3:1 que exige WCAG 1.4.11 para el límite de un control, y los campos pasaron a un gris más oscuro. Desde la Fase 20 ese papel tiene nombre: rule-strong, medido en los dos temas; rule queda para los separadores, que no delimitan un control.",
             },
           ].map((item, i) => (
             <li
               key={i}
-              className="rounded-lg border border-neutral-200 bg-white p-5"
+              className="rounded-lg border border-rule bg-card p-5"
             >
-              <p className="font-semibold text-neutral-900">
+              <p className="font-semibold text-ink">
                 {i + 1}. {item.t}
               </p>
-              <p className="mt-1 text-sm text-neutral-800">{item.d}</p>
+              <p className="mt-1 text-sm text-ink">{item.d}</p>
             </li>
           ))}
         </ol>
@@ -573,11 +590,11 @@ function Seccion({
 }) {
   return (
     <section id={id} className="mb-14 scroll-mt-6">
-      <h2 className="border-b border-neutral-200 pb-2 text-2xl font-bold">
+      <h2 className="border-b border-rule pb-2 text-2xl font-bold">
         {titulo}
       </h2>
       {descripcion && (
-        <p className="mt-3 mb-6 max-w-2xl text-neutral-800">{descripcion}</p>
+        <p className="mt-3 mb-6 max-w-2xl text-ink">{descripcion}</p>
       )}
       <div className={descripcion ? "" : "mt-6"}>{children}</div>
     </section>
@@ -594,12 +611,12 @@ function Demo({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
-      <h3 className="font-display text-base font-semibold text-primary-600">
+    <div className="rounded-lg border border-rule bg-card p-5">
+      <h3 className="font-display text-base font-semibold text-ink">
         {titulo}
       </h3>
       {nota ? (
-        <p className="mt-1 mb-4 max-w-2xl text-sm text-neutral-500">{nota}</p>
+        <p className="mt-1 mb-4 max-w-2xl text-sm text-ink-2">{nota}</p>
       ) : (
         <div className="mb-4" />
       )}
@@ -613,20 +630,30 @@ function Demo({
  * Tailwind v4 extrae las clases estáticamente del código fuente: una clase
  * construida como `bg-${token}` no existiría en el CSS generado.
  */
-function Swatch({ token, hex }: { token: string; hex?: string }) {
-  if (!hex) return null;
+function Swatch({
+  token,
+  claro,
+  oscuro,
+}: {
+  token: string;
+  claro?: string;
+  oscuro?: string;
+}) {
+  if (!claro) return null;
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-rule bg-card">
       <div
         className="h-16 w-full"
         style={{ backgroundColor: `var(--color-${token})` }}
         aria-hidden
       />
       <div className="px-3 py-2">
-        <p className="font-mono text-xs font-medium text-neutral-900">
+        <p className="font-mono text-xs font-medium text-ink">
           {token}
         </p>
-        <p className="font-mono text-xs tabular-nums text-neutral-500">{hex}</p>
+        <p className="font-mono text-xs tabular-nums text-ink-2">
+          {claro === oscuro ? claro : `${claro} · ${oscuro}`}
+        </p>
       </div>
     </div>
   );
@@ -634,13 +661,13 @@ function Swatch({ token, hex }: { token: string; hex?: string }) {
 
 function TablaMediciones({ filas }: { filas: Medicion[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+    <div className="overflow-x-auto rounded-lg border border-rule bg-card">
       <table className="w-full text-sm">
         <caption className="sr-only">
           Contraste medido de cada pareja de colores
         </caption>
         <thead>
-          <tr className="border-b border-neutral-200 text-left">
+          <tr className="border-b border-rule text-left">
             <th scope="col" className="px-4 py-2 font-semibold">
               Muestra
             </th>
@@ -660,7 +687,7 @@ function TablaMediciones({ filas }: { filas: Medicion[] }) {
         </thead>
         <tbody>
           {filas.map((m, i) => (
-            <tr key={i} className="border-b border-neutral-100 last:border-0">
+            <tr key={i} className="border-b border-rule last:border-0">
               <td className="px-4 py-2">
                 <span
                   className="inline-flex items-center rounded px-2 py-1 text-xs font-semibold"
@@ -671,7 +698,7 @@ function TablaMediciones({ filas }: { filas: Medicion[] }) {
               </td>
               <td className="px-4 py-2">
                 <code className="text-xs">{m.fg}</code>
-                <span className="text-neutral-500"> / </span>
+                <span className="text-ink-2"> / </span>
                 <code className="text-xs">
                   {m.bg}
                   {m.bgAlpha !== undefined ? `/${m.bgAlpha * 100}` : ""}
@@ -689,7 +716,7 @@ function TablaMediciones({ filas }: { filas: Medicion[] }) {
                   <Badge tone="danger">Falla</Badge>
                 )}
               </td>
-              <td className="px-4 py-2 text-xs text-neutral-500">
+              <td className="px-4 py-2 text-xs text-ink-2">
                 {m.donde}
                 {m.exencion && (
                   <span className="mt-1 block italic">{m.exencion}</span>
@@ -713,10 +740,10 @@ function TablaResponsivaDemo() {
   return (
     <>
       {/* Escritorio */}
-      <div className="hidden overflow-x-auto rounded-lg border border-neutral-200 md:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-rule md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-left">
+            <tr className="border-b border-rule text-left">
               <th scope="col" className="px-4 py-2 font-semibold">
                 Proceso
               </th>
@@ -733,11 +760,11 @@ function TablaResponsivaDemo() {
           </thead>
           <tbody>
             {FILAS_DEMO.map((f) => (
-              <tr key={f.nombre} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-2 font-medium text-neutral-900">
+              <tr key={f.nombre} className="border-b border-rule last:border-0">
+                <td className="px-4 py-2 font-medium text-ink">
                   {f.nombre}
                 </td>
-                <td className="px-4 py-2 text-neutral-800">{f.tipo}</td>
+                <td className="px-4 py-2 text-ink">{f.tipo}</td>
                 <td className="px-4 py-2 text-right font-mono tabular-nums">
                   {f.precision}
                 </td>
@@ -758,10 +785,10 @@ function TablaResponsivaDemo() {
         {FILAS_DEMO.map((f) => (
           <li
             key={f.nombre}
-            className="rounded-lg border border-neutral-200 p-4"
+            className="rounded-lg border border-rule p-4"
           >
-            <p className="font-medium text-neutral-900">{f.nombre}</p>
-            <p className="mt-0.5 text-sm text-neutral-800">{f.tipo}</p>
+            <p className="font-medium text-ink">{f.nombre}</p>
+            <p className="mt-0.5 text-sm text-ink">{f.tipo}</p>
             <p className="mt-1 font-mono tabular-nums text-sm">{f.precision}</p>
             <div className="mt-2">
               <StatusIndicator

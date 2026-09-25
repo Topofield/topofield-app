@@ -42,7 +42,7 @@ export default function ManualPage() {
     <div className="flex flex-col">
       <header className="mb-8">
         <h1 className="text-3xl font-bold">Manual de usuario</h1>
-        <p className="mt-2 max-w-2xl text-neutral-800">
+        <p className="mt-2 max-w-2xl text-ink">
           Cómo registrar los datos de campo, calcularlos con validación en vivo
           y cerrarlos con trazabilidad. Cubre lo que la aplicación permite hacer
           hoy, que es el alcance completo del proyecto: los tres módulos de
@@ -61,7 +61,7 @@ export default function ManualPage() {
             <li key={seccion.id}>
               <a
                 href={`#${seccion.id}`}
-                className="inline-block rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50"
+                className="inline-block rounded-full border border-rule bg-card px-3 py-1 text-sm font-medium text-ink transition-colors hover:bg-sel"
               >
                 {seccion.titulo}
               </a>
@@ -139,6 +139,15 @@ export default function ManualPage() {
           capturar nada. Puede modificarlo o eliminarlo cuando quiera.
         </p>
         <p>Cada usuario ve únicamente sus propios proyectos.</p>
+        <p>
+          <strong>Tema claro u oscuro.</strong> El icono de la cabecera, junto a{" "}
+          <strong>Manual</strong> —también arriba a la derecha en la pantalla
+          de inicio de sesión—, elige el tema: <strong>Sistema</strong> sigue
+          la configuración del teléfono o del computador, y{" "}
+          <strong>Claro</strong> u <strong>Oscuro</strong> lo fijan. La
+          elección se recuerda en ese navegador. El informe impreso sale
+          siempre en claro.
+        </p>
       </Seccion>
 
       {/* ── 3. El dashboard ────────────────────────────────────────────── */}
@@ -424,7 +433,7 @@ export default function ManualPage() {
           ))}
         </Tabla>
 
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           Donde <em>n</em> es el número de ángulos medidos.
         </p>
 
@@ -1800,6 +1809,25 @@ export default function ManualPage() {
           La navegación se reduce a un retorno al nivel anterior, en lugar de la
           ruta completa.
         </p>
+
+        <p>
+          <strong>Coma o punto decimal.</strong> Las celdas numéricas aceptan
+          los dos: <code>2541,7545</code> y <code>2541.7545</code> son el mismo
+          número, y el teclado del teléfono ofrece el separador de su idioma.
+          Lo que no se acepta es un separador de miles: <code>1.234,5</code> no
+          se adivina. Si lo tecleado no es un número, la celda lo dice
+          —<strong>«No es un número»</strong>— y la aplicación no guarda hasta
+          corregirlo, para que un dato mal escrito no se pierda como si la
+          celda estuviera vacía.
+        </p>
+
+        <p>
+          <strong>A pleno sol</strong>, el tema claro se lee mejor; de noche o
+          bajo techo, el oscuro cansa menos. Se cambia con el icono de la
+          cabecera (§ 2).
+        </p>
+
+        <Captura {...CAPTURAS.temaOscuro} />
       </Seccion>
 
       {/* ── 10. Informes ───────────────────────────────────────────────── */}
@@ -1810,7 +1838,7 @@ export default function ManualPage() {
           cuándo.
         </p>
 
-        <h3 className="text-lg font-semibold text-neutral-900">
+        <h3 className="text-lg font-semibold text-ink">
           Qué puede incluirse
         </h3>
         <p>
@@ -1840,7 +1868,7 @@ export default function ManualPage() {
           ofrecer un formulario que no llevaría a ninguna parte.
         </p>
 
-        <h3 className="text-lg font-semibold text-neutral-900">
+        <h3 className="text-lg font-semibold text-ink">
           Generar un informe
         </h3>
         <p>
@@ -1859,7 +1887,7 @@ export default function ManualPage() {
           ))}
         </Tabla>
 
-        <h3 className="text-lg font-semibold text-neutral-900">
+        <h3 className="text-lg font-semibold text-ink">
           Imprimir o guardar como PDF
         </h3>
         <p>
@@ -1880,7 +1908,7 @@ export default function ManualPage() {
           dato del proyecto: cada sección imprime el que declaró su propio
           proceso (en asentamientos, el de la visita más reciente).
         </p>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink-2">
           El PDF lo genera su navegador, no la aplicación. Los márgenes y los
           encabezados de página dependen de lo que usted elija en ese diálogo.
         </p>
@@ -1934,8 +1962,8 @@ export default function ManualPage() {
         <dl className="flex flex-col gap-5">
           {PREGUNTAS.map((p) => (
             <div key={p.pregunta}>
-              <dt className="font-semibold text-neutral-900">{p.pregunta}</dt>
-              <dd className="mt-1 text-neutral-800">{p.respuesta}</dd>
+              <dt className="font-semibold text-ink">{p.pregunta}</dt>
+              <dd className="mt-1 text-ink">{p.respuesta}</dd>
             </div>
           ))}
         </dl>
@@ -1957,7 +1985,7 @@ function Seccion({
 }) {
   return (
     <section id={id} className="mb-14 scroll-mt-6">
-      <h2 className="border-b border-neutral-200 pb-2 text-2xl font-bold">
+      <h2 className="border-b border-rule pb-2 text-2xl font-bold">
         {titulo}
       </h2>
       <div className="mt-6 flex flex-col gap-4">{children}</div>
@@ -1971,7 +1999,7 @@ function VolverArriba() {
     <p className="mt-2">
       <a
         href="#indice"
-        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+        className="text-sm font-medium text-ink hover:text-ink"
       >
         ↑ Volver al índice
       </a>
@@ -1987,11 +2015,11 @@ function VolverArriba() {
  */
 function Nota({ titulo, children }: { titulo?: string; children: ReactNode }) {
   return (
-    <aside className="rounded-md border-l-4 border-primary-500 bg-primary-50 px-4 py-3">
+    <aside className="rounded-md border-l-4 border-mira-strong bg-mira-bg px-4 py-3">
       {titulo && (
-        <p className="text-sm font-semibold text-primary-700">{titulo}</p>
+        <p className="text-sm font-semibold text-mira-ink">{titulo}</p>
       )}
-      <div className="text-sm text-neutral-900">{children}</div>
+      <div className="text-sm text-ink">{children}</div>
     </aside>
   );
 }
@@ -2022,18 +2050,18 @@ function Captura({
         alt={alt}
         width={width}
         height={height}
-        // Solo la primera se carga de inmediato; las otras diez suman 2,8 MB.
+        // Solo la primera se carga de inmediato; las otras veintiocho suman 8,4 MB.
         loading={prioridad ? "eager" : "lazy"}
         decoding="async"
         className={cn(
-          "h-auto w-full rounded-lg border border-neutral-200 bg-white shadow-sm",
+          "h-auto w-full rounded-lg border border-rule bg-card shadow-sm",
           // La captura de teléfono es muy estrecha y alta: estirarla al ancho
           // del contenedor la dejaría enorme y borrosa.
           angosta && "mx-auto max-w-xs",
         )}
       />
       {pie && (
-        <figcaption className="mt-2 text-sm text-neutral-500">{pie}</figcaption>
+        <figcaption className="mt-2 text-sm text-ink-2">{pie}</figcaption>
       )}
     </figure>
   );
@@ -2050,13 +2078,13 @@ function Tabla({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+    <div className="overflow-x-auto rounded-lg border border-rule bg-card">
       <table className="w-full text-sm">
-        <caption className="px-4 pt-3 text-left text-sm font-medium text-neutral-800">
+        <caption className="px-4 pt-3 text-left text-sm font-medium text-ink">
           {caption}
         </caption>
         <thead>
-          <tr className="border-b border-neutral-200 text-left">
+          <tr className="border-b border-rule text-left">
             {columnas.map((columna) => (
               <th key={columna} scope="col" className="px-4 py-2 font-semibold">
                 {columna}
@@ -2073,15 +2101,15 @@ function Tabla({
 function Fila({ celdas }: { celdas: ReactNode[] }) {
   const [primera, ...resto] = celdas;
   return (
-    <tr className="border-b border-neutral-100 last:border-0">
+    <tr className="border-b border-rule last:border-0">
       <th
         scope="row"
-        className="px-4 py-2 text-left font-medium text-neutral-900"
+        className="px-4 py-2 text-left font-medium text-ink"
       >
         {primera}
       </th>
       {resto.map((celda, i) => (
-        <td key={i} className="px-4 py-2 text-neutral-800">
+        <td key={i} className="px-4 py-2 text-ink">
           {celda}
         </td>
       ))}

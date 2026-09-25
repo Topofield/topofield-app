@@ -31,12 +31,18 @@ export const SERIES_MARKERS = [
 
 export type SeriesMarker = (typeof SERIES_MARKERS)[number];
 
-/** Colores de refuerzo. Canal SECUNDARIO: nunca el único. */
+/**
+ * Colores de refuerzo. Canal SECUNDARIO: nunca el único.
+ *
+ * Tokens y no hexadecimales (Fase 20): la gráfica sigue al tema, y al
+ * imprimir sale en claro. Los cuatro cumplen 3:1 como gráfico sobre la
+ * tarjeta en los dos temas (`pairings.test.ts`).
+ */
 export const SERIES_COLORS = [
-  "#187aae", // primary-500
-  "#1e8e4e", // semaphore-green
-  "#c25e08", // semaphore-orange
-  "#c0392b", // danger-500
+  "var(--color-ink)",
+  "var(--color-mira-strong)",
+  "var(--color-success)",
+  "var(--color-danger)",
 ] as const;
 
 function gcd(a: number, b: number): number {
@@ -63,6 +69,6 @@ export function seriesStyle(index: number): {
 } {
   return {
     shape: SERIES_MARKERS[index % SERIES_MARKERS.length] ?? "circle",
-    color: SERIES_COLORS[index % SERIES_COLORS.length] ?? "#187aae",
+    color: SERIES_COLORS[index % SERIES_COLORS.length] ?? "var(--color-ink)",
   };
 }

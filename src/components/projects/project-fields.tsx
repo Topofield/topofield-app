@@ -49,23 +49,21 @@ export function BasicFields({ values, errors }: FieldsProps) {
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
           label="Latitud"
           name="latitude"
-          type="number"
-          step="any"
-          min={-90}
-          max={90}
           helperText="Opcional (grados decimales)."
           defaultValue={values?.latitude}
           error={errors.latitude}
         />
         <Input
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
           label="Longitud"
           name="longitude"
-          type="number"
-          step="any"
-          min={-180}
-          max={180}
           helperText="Opcional (grados decimales)."
           defaultValue={values?.longitude}
           error={errors.longitude}

@@ -21,8 +21,8 @@ interface CloseProcessDialogProps {
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
-      <span className="text-sm text-neutral-500">{label}</span>
-      <span className="text-sm tabular-nums text-neutral-900">{value}</span>
+      <span className="text-sm text-ink-2">{label}</span>
+      <span className="text-sm tabular-nums text-ink">{value}</span>
     </div>
   );
 }
@@ -118,7 +118,7 @@ export function CloseProcessDialog({
 
           {!dirty && !captureBlocked && !closure.blocked && (
             <>
-              <div className="rounded-md border border-neutral-100 px-4 py-2">
+              <div className="rounded-md border border-rule px-4 py-2">
                 <SummaryRow
                   label="Tipo de nivelación"
                   value={LEVELING_TYPE_LABELS[type]}
@@ -149,16 +149,16 @@ export function CloseProcessDialog({
                 <Alert variant="warning">{closure.messages.join(" ")}</Alert>
               )}
 
-              <label className="flex items-center gap-2 text-sm text-neutral-800">
+              <label className="flex items-center gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
-                  className="h-4 w-4 rounded border-neutral-400"
+                  className="h-4 w-4 rounded border-rule-strong"
                 />
                 Confirmo que los datos son correctos.
               </label>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-ink-2">
                 Al cerrar, el proceso queda inmutable y de solo lectura.
               </p>
             </>

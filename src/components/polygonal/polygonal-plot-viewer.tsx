@@ -117,7 +117,7 @@ export function PolygonalPlotViewer({ input, result, reference }: PolygonalPlotV
           <Button size="sm" variant="ghost" aria-label="Desplazar al sur" onClick={() => panBy(0, 1)}>↓</Button>
           <Button size="sm" variant="ghost" aria-label="Desplazar al este" onClick={() => panBy(1, 0)}>→</Button>
         </span>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-ink-2">
           {view.zoom > 1 ? `Acercamiento ×${view.zoom}. ` : ""}Arrastra el dibujo o usa las flechas para desplazarlo.
         </span>
       </div>

@@ -1,7 +1,15 @@
 "use client";
 
-import { useId, useState } from "react";
-import { Button, DmsInput, EMPTY_DMS, type DmsValue } from "@/components/design-system";
+import { useId, useRef, useState } from "react";
+import {
+  Button,
+  DmsInput,
+  EMPTY_DMS,
+  NOT_A_NUMBER,
+  type DmsValue,
+} from "@/components/design-system";
+import { useNumberValidity } from "@/components/design-system/number-input";
+import { parseNumber, readNumberText } from "@/lib/utils/parse";
 import { cn } from "@/lib/utils/cn";
 import {
   decimalToDms,
@@ -72,6 +80,14 @@ export function AngleInput({
     setText(decimalText(value));
   }
 
+  // Un texto que no es número no emite: el ángulo se queda en el último
+  // válido, y la celda lo marca y bloquea el guardado (Fase 20, UI2), para
+  // que no se guarde un ángulo distinto del que se ve. Antes del `return` de
+  // DMS, por las reglas de los hooks; en DMS no cuenta, porque la celda
+  // decimal no está a la vista.
+  const inputRef = useRef<HTMLInputElement>(null);
+  const invalid = useNumberValidity(format === "dms" ? "" : text, inputRef);
+
   if (format === "dms") {
     return (
       <DmsInput
@@ -84,15 +100,19 @@ export function AngleInput({
     );
   }
 
-  const typed = text.trim() === "" ? null : Number(text);
-  const rounding = typed !== null && Number.isFinite(typed) && roundsOnStorage(typed);
+  const typed = parseNumber(text);
+  const rounding = typed !== null && roundsOnStorage(typed);
   const stored = rounding && typed !== null ? decimalToDms(typed) : null;
 
   function handleChange(next: string) {
     setText(next);
-    const n = next.trim() === "" ? null : Number(next);
+    const read = readNumberText(next);
     const emitted =
-      n === null ? { ...EMPTY_DMS } : Number.isFinite(n) ? decimalToDmsFields(n) : null;
+      read.kind === "empty"
+        ? { ...EMPTY_DMS }
+        : read.kind === "number"
+          ? decimalToDmsFields(read.value)
+          : null;
     if (!emitted) return;
     setKnown(emitted);
     onChange(emitted);
@@ -101,35 +121,40 @@ export function AngleInput({
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-neutral-800">
+        <label htmlFor={id} className="text-sm font-medium text-ink">
           {label}
         </label>
       )}
       <div className="flex items-center gap-1">
         <input
+          ref={inputRef}
           id={id}
-          type="number"
-          step="any"
+          type="text"
           inputMode="decimal"
+          autoComplete="off"
+          spellCheck={false}
           aria-label={label ? undefined : "Grados decimales"}
+          aria-invalid={invalid || error ? true : undefined}
           className={cn(
-            "h-9 min-h-11 w-36 rounded-md border border-neutral-400 bg-white px-1.5 text-right text-sm text-neutral-900",
-            "disabled:bg-neutral-100 disabled:text-neutral-500",
-            error && "border-danger-500",
+            "h-9 min-h-11 w-36 rounded-md border border-rule-strong bg-card px-1.5 text-right text-sm text-ink",
+            "disabled:bg-sel disabled:text-ink-2",
+            (invalid || error) && "border-danger",
           )}
           value={text}
           disabled={disabled}
           onChange={(e) => handleChange(e.target.value)}
         />
-        <span className="text-sm text-neutral-500">°</span>
+        <span className="text-sm text-ink-2">°</span>
       </div>
       {stored && (
-        <p className="text-xs text-warning-500">
+        <p className="text-xs text-warning">
           Se guarda como {stored.deg}°{stored.min}′{stored.sec}″ (a la décima de
           segundo).
         </p>
       )}
-      {error && <p className="text-sm text-danger-500">{error}</p>}
+      {(invalid || error) && (
+        <p className="text-sm text-danger">{invalid ? NOT_A_NUMBER : error}</p>
+      )}
     </div>
   );
 }
@@ -153,7 +178,7 @@ export function AngleFormatToggle({
 }) {
   return (
     <div role="group" aria-label="Formato de los ángulos" className="inline-flex items-center gap-1">
-      <span className="mr-1 text-sm text-neutral-700">Ángulos en</span>
+      <span className="mr-1 text-sm text-ink-2">Ángulos en</span>
       {(["dms", "decimal"] as const).map((format) => (
         <Button
           key={format}
