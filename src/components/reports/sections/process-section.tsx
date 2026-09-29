@@ -8,15 +8,17 @@ interface ReportProcessSectionProps {
   section: ReportSection;
   /** Número en el índice del informe consolidado; sin número en el de un proceso. */
   number?: number;
+  /** Título de la sección; por omisión, el nombre del proceso. */
+  title?: string;
 }
 
 /** La sección de un proceso en el informe: título, tipo y su cuerpo. */
-export function ReportProcessSection({ section, number }: ReportProcessSectionProps) {
+export function ReportProcessSection({ section, number, title }: ReportProcessSectionProps) {
   return (
     <section className="report-section report-break">
       <h2>
         {number !== undefined && `${number}. `}
-        {section.entry.name}
+        {title ?? section.entry.name}
         <span className="report-kind-tag">{CANDIDATE_KIND_LABELS[section.entry.type]}</span>
       </h2>
 

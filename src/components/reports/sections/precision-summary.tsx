@@ -1,11 +1,17 @@
 import type { PrecisionSummaryRow } from "@/lib/reports/summary";
 
 /** Resumen consolidado de precisiones, con su nota si algún equipo no alcanza. */
-export function PrecisionSummary({ rows }: { rows: PrecisionSummaryRow[] }) {
+export function PrecisionSummary({
+  rows,
+  title = "Resumen consolidado de precisiones",
+}: {
+  rows: PrecisionSummaryRow[];
+  title?: string;
+}) {
   const hayEquipoInsuficiente = rows.some((f) => f.marcar);
   return (
     <section className="report-section report-break">
-      <h2>Resumen consolidado de precisiones</h2>
+      <h2>{title}</h2>
       <table className="report-table">
         <thead>
           <tr>
