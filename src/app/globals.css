@@ -221,6 +221,13 @@
     border-bottom: 1px solid var(--color-rule);
   }
 
+  /* Subtítulo de una tabla dentro de una sección del informe (Fase 22). */
+  .report-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.5rem;
+  }
+
   .report-kind-tag {
     margin-left: 0.75rem;
     font-size: 0.75rem;

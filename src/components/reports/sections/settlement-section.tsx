@@ -1,5 +1,13 @@
 import { SettlementPlot } from "@/components/reports/settlement-plot";
-import { formatDateOnly, formatEquipmentLine, formatKmPrecision } from "@/lib/utils/format";
+import {
+  formatBookClosure,
+  formatDateOnly,
+  formatDateShort,
+  formatElevation,
+  formatEquipmentLine,
+  formatKmPrecision,
+} from "@/lib/utils/format";
+import { n } from "@/lib/reports/values";
 import type { SiteSectionData } from "@/lib/reports/sections";
 import { LEVEL_TYPE_LABELS, PRECISION_ORDER_LABELS } from "@/types/project";
 import { ALERT_LEVEL_LABELS } from "@/types/settlement";
@@ -58,6 +66,48 @@ export function SettlementReportSection({ data }: { data: SiteSectionData }) {
         )}
       </dl>
       <SettlementPlot points={pointInputs} visits={history.visits} />
+      {/* Cada visita con su amarre y el cierre de su libreta (Fase 22): el
+          informe documenta cómo se midió, no solo lo que salió. */}
+      <h3>Visitas</h3>
+      <table className="report-table">
+        <thead>
+          <tr>
+            <th>Visita</th>
+            <th>Fecha</th>
+            <th>Amarre</th>
+            <th>Cierre de la libreta</th>
+            <th>Peor alerta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visits.map((v) => {
+            const cierre = formatBookClosure(
+              n(v.closure_error_mm),
+              n(v.tolerance_mm),
+              v.meets_tolerance,
+            );
+            const resultado = history.visits.find((h) => h.visitId === v.id);
+            return (
+              <tr key={v.id}>
+                <td>Visita {v.visit_number}</td>
+                <td>{formatDateShort(v.date)}</td>
+                <td>
+                  {v.reference_bm_code
+                    ? `${v.reference_bm_code} · ${formatElevation(v.reference_bm_elevation)}`
+                    : "—"}
+                </td>
+                <td>
+                  {v.capture_mode === "book"
+                    ? `${cierre.value}${cierre.status === "out" ? " (fuera de tolerancia)" : ""}`
+                    : "—"}
+                </td>
+                <td>{resultado ? ALERT_LEVEL_LABELS[resultado.worstAlert] : "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <h3>Última visita</h3>
       <table className="report-table">
         <thead>
           <tr>
