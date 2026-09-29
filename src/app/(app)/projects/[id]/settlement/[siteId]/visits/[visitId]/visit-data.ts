@@ -28,7 +28,7 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
   if (!project) notFound();
 
   const site = await getSite(supabase, siteId);
-  if (!site || site.project_id !== project.id) notFound();
+  if (!site || site.project_id !== project.id || site.kind !== "settlement") notFound();
 
   const visitWithReadings = await getVisit(supabase, visitId);
   if (!visitWithReadings || visitWithReadings.visit.site_id !== site.id) notFound();

@@ -26,7 +26,7 @@ export default async function SitePage({ params }: SitePageProps) {
   }
 
   const site = await getSite(supabase, siteId);
-  if (!site || site.project_id !== project.id) {
+  if (!site || site.project_id !== project.id || site.kind !== "settlement") {
     notFound();
   }
 

@@ -59,6 +59,9 @@ export async function createProjectAction(
     project_id: data.id,
     name: "Área principal",
     structure_type: "otro",
+    // Agrupa las poligonales y nivelaciones: no es un control de
+    // asentamientos y no se muestra como lugar (Fase 22).
+    kind: "grouping",
   });
 
   if (siteError) {

@@ -40,7 +40,7 @@ export async function GET(
   }
 
   const site = await getSite(supabase, siteId);
-  if (!site || site.project_id !== project.id) {
+  if (!site || site.project_id !== project.id || site.kind !== "settlement") {
     return new NextResponse("Lugar no encontrado", { status: 404 });
   }
 

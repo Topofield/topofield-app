@@ -184,7 +184,8 @@ export async function getDashboardProjects(
  * filas a las del usuario, así que no hace falta filtrar por `user_id` aquí.
  *
  * Cuenta los tres módulos desde la Fase 5: poligonales, nivelaciones y
- * lugares de control de asentamientos. Un lugar cuenta como uno, no una vez
+ * lugares de control de asentamientos —solo los `settlement`: los de
+ * agrupación no son un trabajo del usuario (Fase 22). Un lugar cuenta como uno, no una vez
  * por visita: lo que el usuario reconoce como «un trabajo» es el monitoreo
  * del lugar completo, no cada visita individual.
  *
@@ -197,7 +198,7 @@ export async function getProcessCountsByProject(
   const [polygonal, leveling, sites] = await Promise.all([
     supabase.from("polygonal_processes").select("project_id"),
     supabase.from("leveling_processes").select("project_id"),
-    supabase.from("sites").select("project_id"),
+    supabase.from("sites").select("project_id").eq("kind", "settlement"),
   ]);
 
   for (const { error } of [polygonal, leveling, sites]) {
@@ -356,7 +357,10 @@ export async function getLevelingReadings(
   return (data ?? []) as LevelingReading[];
 }
 
-/** Lugares de un proyecto, del más antiguo al más reciente. */
+/**
+ * Controles de asentamientos de un proyecto, del más antiguo al más reciente.
+ * Los lugares de agrupación (Fase 22) no salen: no son un lugar para el usuario.
+ */
 export async function getSites(
   supabase: Client,
   projectId: string,
@@ -366,6 +370,7 @@ export async function getSites(
     .from("sites")
     .select("*")
     .eq("project_id", projectId)
+    .eq("kind", "settlement")
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Site[];
@@ -635,6 +640,7 @@ export async function getClosedWorkForReports(
       .from("sites")
       .select("id, name, status, closed_at")
       .eq("project_id", projectId)
+      .eq("kind", "settlement")
       .eq("status", "closed")
       .order("closed_at", { ascending: true }),
   ]);
