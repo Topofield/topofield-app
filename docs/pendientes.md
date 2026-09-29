@@ -8,9 +8,16 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-09-25)
+## Estado (2026-09-29)
 
-**Todas las peticiones recogidas están resueltas.** Las últimas, UI1 y UI2,
+El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
+navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
+**22** —el proceso en una pantalla, en curso,
+[`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md)—
+y la **23**, que espera aquí hasta que la 22 cierre (el método no solapa
+fases). Su contenido está en «Integridad (Fase 23)», al final.
+
+Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
 registro.
 
@@ -315,3 +322,39 @@ acepta en la plantilla CSV con `;`. Afecta a la libreta de nivelación, a la de
 la visita y a la captura de poligonales. Anotada en la Fase 18, que capturó en
 vivo sin resolverla.
 
+
+---
+
+## Integridad (Fase 23)
+
+Pedida el 2026-09-29, junto con la Fase 22, y separada de ella por decisión
+del usuario. Se redacta su PRD al cerrar la 22. Las cuatro vienen de la § 11
+de la doc técnica, donde está el detalle.
+
+### I1 · Guardados en una sola transacción
+
+`saveVisitAction` escribe la cabecera de la visita, la libreta, su purga y las
+lecturas en peticiones separadas; la georreferenciación escribe la cabecera y
+luego estación por estación. Si una falla a mitad, los datos quedan
+desalineados hasta el siguiente guardado (visita) o en dos sistemas de
+coordenadas (georreferenciación). La salida limpia es una función de Postgres
+por operación, que haga todo en una transacción.
+
+### I2 · La C0 de un punto con lecturas cerradas
+
+La cota inicial de un punto vigente se puede editar aunque tenga lecturas en
+visitas cerradas, y eso reescribe el histórico que muestran el panel, el
+informe y el Excel. La Fase 11 lo cerró solo para los puntos de baja. La regla
+natural: bloquear la C0 en cuanto el punto tenga una lectura cerrada.
+
+### I3 · El informe emitido se congela
+
+La portada de un informe ya emitido lee el proyecto en vivo (nombre, cliente,
+ubicación, datum), y `reports` no tiene trigger de inmutabilidad: editar el
+proyecto cambia informes que ya existen.
+
+### I4 · Los dos cabos sueltos de la Fase 9
+
+El respaldo `Math.min(...) || Infinity` de la tolerancia de discrepancia en
+`computeLeveling`, y los parámetros por defecto de `order` y
+`distancesReconstructed` en `validateRunCapture`.
