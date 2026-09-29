@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { StructureType } from "@/types/site";
 import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
+import { logDbError } from "@/lib/errors/user-message";
 
 export interface ActionResult {
   ok: boolean;
@@ -94,7 +95,7 @@ export async function createSiteAction(
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo crear el lugar.") };
 
   revalidatePath(`/projects/${payload.projectId}`);
   return { ok: true, siteId: data.id };
@@ -145,7 +146,7 @@ export async function saveSiteAction(
     })
     .eq("id", siteId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo guardar el lugar.") };
 
   // Los umbrales acaban de cambiar, y `settlement_readings.alert_status` es una
   // caché derivada de ellos: las lecturas ya guardadas conservan la
@@ -197,7 +198,7 @@ export async function closeSiteAction(
     })
     .eq("id", siteId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo cerrar el lugar.") };
 
   revalidatePath(`/projects/${site.project_id}`);
   return { ok: true };

@@ -6,6 +6,7 @@ import {
 } from "@/lib/calculations/settlement-persistence";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import type { PointInput, VisitInput } from "@/types/settlement";
+import { logDbError } from "@/lib/errors/user-message";
 
 /**
  * Recalcula el histórico de un lugar y reescribe las lecturas de sus visitas
@@ -113,7 +114,7 @@ export async function resyncSiteReadings(
       })),
       { onConflict: "visit_id,point_id" },
     );
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: logDbError(error, "No se pudieron recalcular las lecturas del lugar.") };
   }
 
   return { ok: true, rewritten };

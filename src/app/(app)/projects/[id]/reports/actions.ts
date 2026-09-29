@@ -8,6 +8,7 @@ import {
 } from "@/lib/supabase/queries";
 import { isEligible } from "@/lib/reports/eligibility";
 import type { IncludedProcess } from "@/types/report";
+import { logDbError } from "@/lib/errors/user-message";
 
 export interface ReportActionResult {
   ok: boolean;
@@ -91,7 +92,7 @@ export async function createReportAction(
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo generar el informe.") };
 
   revalidatePath(`/projects/${project.id}`);
   return { ok: true, reportId: data.id };
@@ -113,7 +114,7 @@ export async function deleteReportAction(
     .eq("id", reportId)
     .eq("project_id", project.id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el informe.") };
 
   revalidatePath(`/projects/${project.id}`);
   return { ok: true };
