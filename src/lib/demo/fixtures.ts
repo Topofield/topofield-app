@@ -47,7 +47,7 @@ export const PROYECTO_DEMO = {
   client: "Carteras de campo reales",
   location: "Bogotá",
   description:
-    "Proyecto de muestra con carteras de campo reales: las poligonales TT4 y Sede Vivero, la nivelación de El Verjón y el crudo de un nivel digital Leica; el control de asentamientos es la simulación de Torre Alameda. Puede modificarlo o eliminarlo cuando quiera.",
+    "Proyecto de muestra con carteras de campo reales: las poligonales TT4 y Sede Vivero, la nivelación de El Verjón y el crudo de un nivel digital Leica; el control de asentamientos es la simulación de Torre Alameda. Puede modificarlo o archivarlo cuando quiera.",
   datum: "MAGNA-SIRGAS",
   projection: "Origen Bogotá",
 } as const;

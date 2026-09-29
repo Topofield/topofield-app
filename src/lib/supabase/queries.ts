@@ -700,3 +700,40 @@ export async function getReport(
   if (error) throw error;
   return (data as unknown as Report | null) ?? null;
 }
+
+/**
+ * Cuánto trabajo cerrado tiene un proyecto: procesos cerrados o rechazados,
+ * lugares cerrados y visitas cerradas (Fase 22). Lo cerrado no se borra —los
+ * triggers de inmutabilidad lo impiden—, así que un proyecto con trabajo
+ * cerrado no se puede eliminar: se archiva.
+ */
+export async function getClosedWorkCount(supabase: Client, projectId: string): Promise<number> {
+  if (!UUID_RE.test(projectId)) return 0;
+  const cerrados = ["closed", "rejected"];
+  const [polygonal, leveling, sites, visits] = await Promise.all([
+    supabase
+      .from("polygonal_processes")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .in("status", cerrados),
+    supabase
+      .from("leveling_processes")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .in("status", cerrados),
+    supabase
+      .from("sites")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("status", "closed"),
+    supabase
+      .from("settlement_visits")
+      .select("id, sites!inner(project_id)", { count: "exact", head: true })
+      .eq("sites.project_id", projectId)
+      .eq("status", "closed"),
+  ]);
+  for (const r of [polygonal, leveling, sites, visits]) {
+    if (r.error) throw r.error;
+  }
+  return (polygonal.count ?? 0) + (leveling.count ?? 0) + (sites.count ?? 0) + (visits.count ?? 0);
+}

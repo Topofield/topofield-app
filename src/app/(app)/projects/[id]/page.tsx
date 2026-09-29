@@ -40,6 +40,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getLevelingProcesses,
   getPolygonalProcesses,
+  getClosedWorkCount,
   getProjectById,
   getReferencePoints,
   getReports,
@@ -132,8 +133,13 @@ export default async function ProjectHubPage({
     enProcesos ? getLevelingProcesses(supabase, project.id) : Promise.resolve([]),
     enProcesos ? getSites(supabase, project.id) : Promise.resolve([]),
   ]);
-  const referencePoints =
-    activeTab === "config" ? await getReferencePoints(supabase, project.id) : [];
+  const [referencePoints, closedWork] =
+    activeTab === "config"
+      ? await Promise.all([
+          getReferencePoints(supabase, project.id),
+          getClosedWorkCount(supabase, project.id),
+        ])
+      : [[], 0];
   const reports = activeTab === "reports" ? await getReports(supabase, project.id) : [];
 
   const tiposDelModulo = {
@@ -317,6 +323,7 @@ export default async function ProjectHubPage({
         <ProjectConfigTab
           project={project}
           referencePoints={referencePoints}
+          closedWork={closedWork}
         />
       )}
     </div>

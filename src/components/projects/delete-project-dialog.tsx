@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Modal } from "@/components/design-system";
+import { useState, useTransition } from "react";
+import { Alert, Button, Modal } from "@/components/design-system";
 import {
   archiveProjectAction,
   deleteProjectAction,
@@ -9,9 +9,27 @@ import {
 } from "@/app/(app)/projects/[id]/actions";
 import type { Project } from "@/types/project";
 
-export function DeleteProjectDialog({ project }: { project: Project }) {
+export function DeleteProjectDialog({
+  project,
+  closedWork,
+}: {
+  project: Project;
+  /** Procesos, lugares y visitas cerrados: con alguno, no se puede eliminar. */
+  closedWork: number;
+}) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const isActive = project.status === "active";
+
+  function eliminar() {
+    setError(null);
+    startTransition(async () => {
+      // Si funciona, la acción redirige al dashboard.
+      const r = await deleteProjectAction(project.id);
+      if (!r.ok) setError(r.error ?? "No se pudo eliminar el proyecto.");
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -40,12 +58,16 @@ export function DeleteProjectDialog({ project }: { project: Project }) {
             Eliminar proyecto
           </p>
           <p className="text-xs text-ink-2">
-            Borra el proyecto y sus puntos de referencia de forma permanente.
+            {closedWork > 0
+              ? `Tiene ${closedWork} ${closedWork === 1 ? "registro cerrado" : "registros cerrados"} (procesos, lugares o visitas), que no se pueden borrar. Si ya no lo usas, archívalo.`
+              : "Borra el proyecto con sus procesos, lugares y puntos de referencia, de forma permanente."}
           </p>
         </div>
-        <Button variant="danger" onClick={() => setConfirmOpen(true)}>
-          Eliminar
-        </Button>
+        {closedWork === 0 && (
+          <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+            Eliminar
+          </Button>
+        )}
       </div>
 
       <Modal
@@ -60,20 +82,23 @@ export function DeleteProjectDialog({ project }: { project: Project }) {
             >
               Cancelar
             </Button>
-            <form action={deleteProjectAction}>
-              <input type="hidden" name="project_id" value={project.id} />
-              <Button type="submit" variant="danger">
-                Eliminar definitivamente
-              </Button>
-            </form>
+            <Button variant="danger" onClick={eliminar} disabled={isPending}>
+              {isPending ? "Eliminando…" : "Eliminar definitivamente"}
+            </Button>
           </>
         }
       >
         <p className="text-sm text-ink-2">
           ¿Seguro que quieres eliminar{" "}
           <span className="font-medium">{project.name}</span>? Esta acción no
-          se puede deshacer y borra también sus puntos de referencia.
+          se puede deshacer y borra también sus procesos, lugares y puntos de
+          referencia.
         </p>
+        {error && (
+          <Alert variant="error" className="mt-3">
+            {error}
+          </Alert>
+        )}
       </Modal>
     </div>
   );
