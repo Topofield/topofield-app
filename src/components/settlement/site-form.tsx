@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import {
+  ActionBar,
   Alert,
   Button,
   Card,
@@ -26,6 +27,7 @@ import {
 import type { Thresholds } from "@/types/settlement";
 import { ThresholdsFields } from "./thresholds-fields";
 import { CloseSiteDialog } from "./close-site-dialog";
+import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 
 const STRUCTURE_TYPE_OPTIONS = STRUCTURE_TYPES.map((value) => ({
   value,
@@ -40,6 +42,12 @@ interface SiteFormProps {
   pointsCount?: number;
   visitsTotal?: number;
   visitsOpen?: number;
+  /**
+   * Fecha y hora de cierre, ya formateadas en el servidor. Formatearlas aquí
+   * con `Intl` rompía la hidratación: el ICU de Node y el del navegador no
+   * escriben la hora igual (Fase 22).
+   */
+  closedLabel?: string | null;
 }
 
 /**
@@ -57,6 +65,7 @@ export function SiteForm({
   pointsCount = 0,
   visitsTotal = 0,
   visitsOpen = 0,
+  closedLabel = null,
 }: SiteFormProps) {
   const router = useRouter();
   const isEdit = site !== undefined;
@@ -95,14 +104,6 @@ export function SiteForm({
       ));
 
   const disabled = site?.status === "closed";
-  const closedLabel =
-    site?.status === "closed" && site.closed_at
-      ? new Intl.DateTimeFormat("es-CO", {
-          dateStyle: "long",
-          timeStyle: "short",
-          timeZone: "America/Bogota",
-        }).format(new Date(site.closed_at))
-      : null;
 
   function handleStructureTypeChange(tipo: StructureType) {
     setStructureType(tipo);
@@ -147,7 +148,7 @@ export function SiteForm({
       }
 
       if (!isEdit && response.siteId) {
-        router.push(`/projects/${projectId}/sites/${response.siteId}`);
+        router.push(`/projects/${projectId}/settlement/${response.siteId}?tab=lugar`);
       } else {
         router.refresh();
       }
@@ -184,7 +185,7 @@ export function SiteForm({
         {disabled && (
           <Alert variant="info">
             {closedLabel
-              ? `Lugar cerrado el ${closedLabel}. Sus datos y los de sus visitas no admiten cambios.`
+              ? `Lugar cerrado el ${closedLabel}: sus datos y los de sus visitas no admiten cambios.`
               : "El lugar está cerrado; sus datos no admiten cambios."}
           </Alert>
         )}
@@ -234,19 +235,19 @@ export function SiteForm({
         />
 
         {!disabled && isEdit && (
-          <div className="flex justify-between gap-2">
-            <Button
-              type="button"
-              variant="danger"
-              onClick={openCloseDialog}
-              disabled={isPending}
-            >
-              Cerrar Lugar
-            </Button>
+          <ActionBar status={dirty ? "Cambios sin guardar" : null}>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
-          </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={openCloseDialog}
+              disabled={isPending}
+            >
+              Cerrar lugar
+            </Button>
+          </ActionBar>
         )}
         {!disabled && !isEdit && (
           <div className="flex justify-end gap-2">
@@ -269,6 +270,7 @@ export function SiteForm({
         visitsOpen={visitsOpen}
         dirty={dirty}
       />
+      <UnsavedChangesGuard dirty={dirty} />
     </Card>
   );
 }
