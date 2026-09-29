@@ -16,7 +16,7 @@ usando la UI tal como la usaría un usuario.
    npm run dev
    ```
 3. Abrir `http://localhost:3000/sign-in` e iniciar sesión:
-   - Email: `seed@topofield.local`
+   - Email: `topofieldsarf@gmail.com`
    - Password: `seed1234`
 
 Los procesos de nivelación de la seed viven en el proyecto **Lote catastral**.
