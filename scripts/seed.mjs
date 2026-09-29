@@ -2,7 +2,8 @@
 // asentamientos.
 //
 // Crea (idempotente — borra y recrea):
-//  - Un usuario seed@topofield.local con password fijo.
+//  - El usuario de la aplicación, topofieldsarf@gmail.com, con una password
+//    fija SOLO local: la misma cuenta que en producción, con otra contraseña.
 //  - 3 proyectos: "Lote catastral" (tercer_orden), "Red geodésica"
 //    (primer_orden) y "Edificio en monitoreo" (tercer_orden).
 //  - Cada proyecto con al menos un lugar (`sites`), obligatorio desde la
@@ -80,7 +81,10 @@ if (!SECRET) {
   );
   process.exit(1);
 }
-const EMAIL = "seed@topofield.local";
+// La misma cuenta que se usa en producción, para que local y nube tengan un
+// solo usuario. La contraseña es solo de la base local: la de producción no
+// vive en el repositorio.
+const EMAIL = "topofieldsarf@gmail.com";
 const PASSWORD = "seed1234";
 const APP_URL = "http://localhost:3000";
 

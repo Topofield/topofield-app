@@ -39,7 +39,7 @@ export default async function AppLayout({
             <Logo />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="hidden text-sm text-ink-2 sm:inline">
+            <span data-user-email className="hidden text-sm text-ink-2 sm:inline">
               {user.email}
             </span>
             {/* Visible también en móvil, al contrario que el correo: la ayuda

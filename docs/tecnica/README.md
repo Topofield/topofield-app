@@ -89,7 +89,10 @@ npm run seed         # datos de ejemplo (lee .env.local)
 npm run dev
 ```
 
-Credenciales de los datos de ejemplo: `seed@topofield.local` / `seed1234`.
+Credenciales de los datos de ejemplo: `topofieldsarf@gmail.com` / `seed1234`.
+Es la misma cuenta que se usa en producción, con una contraseña **solo local**;
+la de producción no está en el repositorio. `capturas.mjs` oculta el correo de
+la cabecera, que es real, para que no quede en las capturas del manual.
 
 **El registro exige un código de invitación.** Defina `SIGNUP_INVITE_CODE` en
 `.env.local` (ver `.env.example`); sin esa variable nadie puede registrarse, ni

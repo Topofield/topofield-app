@@ -27,7 +27,8 @@ const BASE = `http://localhost:${process.env.PORT ?? 3000}`;
 // Puerto de la base local (config.toml → [db].port). Overridable con
 // SUPABASE_DB_PORT por si se vuelve a cambiar el esquema de puertos.
 const DB_PORT = process.env.SUPABASE_DB_PORT ?? "55322";
-const CREDENCIALES = { email: "seed@topofield.local", password: "seed1234" };
+// La cuenta del seed local (la misma de producción, con la contraseña local).
+const CREDENCIALES = { email: "topofieldsarf@gmail.com", password: "seed1234" };
 
 /** Consulta un único valor en la base local. */
 function sql(query) {
@@ -112,7 +113,10 @@ const page = await browser.newPage({
 await page.addInitScript(() => {
   document.addEventListener("DOMContentLoaded", () => {
     const estilo = document.createElement("style");
-    estilo.textContent = "nextjs-portal{display:none!important}";
+    // El correo de la cabecera es el real de la cuenta: no va en las capturas,
+    // que se publican en el repositorio y en /manual.
+    estilo.textContent =
+      "nextjs-portal{display:none!important}[data-user-email]{visibility:hidden!important}";
     document.head.appendChild(estilo);
   });
 });
