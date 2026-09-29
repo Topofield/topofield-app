@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProjectById, getReport } from "@/lib/supabase/queries";
-import { loadReportSections } from "@/lib/reports/sections";
+import { closureOf, loadReportSections } from "@/lib/reports/sections";
+import { responsibleNames } from "@/lib/reports/responsible";
 import { precisionSummaryRows } from "@/lib/reports/summary";
 import { formatDate } from "@/lib/utils/format";
 import { CANDIDATE_KIND_LABELS } from "@/types/report";
@@ -43,6 +44,10 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
 
   const entries = [...report.included_processes].sort((a, b) => a.order - b.order);
   const sections = await loadReportSections(supabase, project.id, entries);
+  const names = await responsibleNames(
+    supabase,
+    sections.map((s) => closureOf(s).closedBy),
+  );
 
   return (
     <div className="report">
@@ -82,6 +87,7 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
 
       <ClosureRecord
         sections={sections}
+        names={names}
         footer={
           <>
             Informe emitido desde TopoField el{" "}

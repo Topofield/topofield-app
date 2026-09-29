@@ -4,12 +4,14 @@ import { formatDate } from "@/lib/utils/format";
 
 interface ClosureRecordProps {
   sections: ReportSection[];
+  /** Nombre de cada responsable, por id de usuario (`responsibleNames`). */
+  names: Map<string, string>;
   /** Texto al pie del informe. */
   footer: ReactNode;
 }
 
 /** Registro de cierre: quién cerró cada proceso y cuándo (§ 4.7). */
-export function ClosureRecord({ sections, footer }: ClosureRecordProps) {
+export function ClosureRecord({ sections, names, footer }: ClosureRecordProps) {
   return (
     <section className="report-section">
       <h2>Registro de cierre</h2>
@@ -28,7 +30,7 @@ export function ClosureRecord({ sections, footer }: ClosureRecordProps) {
               <tr key={`${s.entry.type}:${s.entry.id}`}>
                 <td>{s.entry.name}</td>
                 <td>{closedAt ? formatDate(closedAt) : "—"}</td>
-                <td className="mono">{closedBy ?? "—"}</td>
+                <td>{(closedBy ? names.get(closedBy) : undefined) ?? "—"}</td>
               </tr>
             );
           })}

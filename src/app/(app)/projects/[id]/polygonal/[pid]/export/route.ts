@@ -9,6 +9,7 @@ import { buildPolygonalWorkbook } from "@/lib/export/polygonal-workbook";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { polygonalInputOf } from "@/components/polygonal/polygonal-draft";
 import { safeFilename } from "@/lib/export/workbook";
+import { responsibleNames } from "@/lib/reports/responsible";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -52,7 +53,15 @@ export async function GET(
     process.correction_method === "least_squares"
       ? (computePolygonal(polygonalInputOf(process, stations)).adjustment ?? null)
       : null;
-  const workbook = buildPolygonalWorkbook(process, stations, project, adjustment);
+  // «Cerrado por» con el nombre del responsable, no su id (Fase 22).
+  const names = await responsibleNames(supabase, [process.closed_by]);
+  const closedBy = process.closed_by ? (names.get(process.closed_by) ?? null) : null;
+  const workbook = buildPolygonalWorkbook(
+    { ...process, closed_by: closedBy },
+    stations,
+    project,
+    adjustment,
+  );
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

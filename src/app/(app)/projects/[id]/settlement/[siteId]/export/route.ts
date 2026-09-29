@@ -15,6 +15,7 @@ import {
 } from "@/lib/export/settlement-workbook";
 import { safeFilename } from "@/lib/export/workbook";
 import type { PointInput, VisitInput } from "@/types/settlement";
+import { responsibleNames } from "@/lib/reports/responsible";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -84,8 +85,11 @@ export async function GET(
   const thresholds = thresholdsOf(site);
   const history = computeHistory(points, visitInputs, thresholds);
 
+  // «Cerrado por» con el nombre del responsable, no su id (Fase 22).
+  const names = await responsibleNames(supabase, [site.closed_by]);
+  const closedBy = site.closed_by ? (names.get(site.closed_by) ?? null) : null;
   const workbook = buildSettlementWorkbook(
-    site,
+    { ...site, closed_by: closedBy },
     sitePoints,
     visits,
     history,
