@@ -109,6 +109,7 @@ export function ReassignCoordinatesDialog({
       <Button
         type="button"
         variant="secondary"
+        size="sm"
         onClick={openDialog}
         disabled={disabled}
       >
