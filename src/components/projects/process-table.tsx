@@ -9,19 +9,9 @@ import {
   POLYGONAL_TYPE_LABELS,
   PROCESS_STATUS_LABELS,
   type PolygonalProcess,
-  type ProcessStatus,
 } from "@/types/polygonal";
+import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 
-const STATUS_TONE: Record<
-  ProcessStatus,
-  "neutral" | "primary" | "success" | "danger" | "warning"
-> = {
-  draft: "neutral",
-  in_progress: "neutral",
-  calculated: "primary",
-  closed: "success",
-  rejected: "danger",
-};
 
 /** Enlace de encabezado que alterna el orden de su columna. */
 function SortLink({
@@ -187,7 +177,7 @@ export function ProcessTable({
                   <td className="px-4 py-3">
                     <Badge
                       tone={
-                        fueraDeTolerancia ? "warning" : STATUS_TONE[p.status]
+                        fueraDeTolerancia ? "warning" : PROCESS_STATUS_TONE[p.status]
                       }
                     >
                       {fueraDeTolerancia

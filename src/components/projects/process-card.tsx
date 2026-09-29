@@ -5,20 +5,10 @@ import {
   POLYGONAL_TYPE_LABELS,
   PROCESS_STATUS_LABELS,
   type PolygonalProcess,
-  type ProcessStatus,
 } from "@/types/polygonal";
 import { LEVELING_TYPE_LABELS, type LevelingProcess } from "@/types/leveling";
+import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 
-const STATUS_TONE: Record<
-  ProcessStatus,
-  "neutral" | "primary" | "success" | "danger" | "warning"
-> = {
-  draft: "neutral",
-  in_progress: "neutral",
-  calculated: "primary",
-  closed: "success",
-  rejected: "danger",
-};
 
 /** Semáforo de tolerancia. El color no es el único canal: lleva texto.
  *  Mismo criterio y textos que `ToleranceMark` en `process-table.tsx`. */
@@ -90,7 +80,7 @@ export function ProcessCard(props: ProcessCardProps) {
   const outOfTolerance =
     process.status === "closed" && process.meets_tolerance === false;
 
-  const tone = outOfTolerance ? "warning" : STATUS_TONE[process.status];
+  const tone = outOfTolerance ? "warning" : PROCESS_STATUS_TONE[process.status];
   const label = outOfTolerance
     ? "Cerrado fuera de tolerancia"
     : PROCESS_STATUS_LABELS[process.status];

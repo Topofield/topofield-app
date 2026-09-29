@@ -29,7 +29,6 @@ import {
   type CorrectionMethod,
   type PolygonalProcess,
   type PolygonalStationWithReadings,
-  type ProcessStatus,
 } from "@/types/polygonal";
 import type { ReferencePoint } from "@/types/project";
 import { PolygonalConfigFields } from "./polygonal-config-fields";
@@ -50,17 +49,8 @@ import { AngleFormatToggle } from "./angle-input";
 import { GeoreferenceDialog } from "./georeference-dialog";
 import { georeferenceSummary } from "./georeference-plan";
 import type { AngleInputFormat } from "@/types/polygonal";
+import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 
-const STATUS_TONE: Record<
-  ProcessStatus,
-  "neutral" | "primary" | "success" | "danger"
-> = {
-  draft: "neutral",
-  in_progress: "neutral",
-  calculated: "primary",
-  closed: "success",
-  rejected: "danger",
-};
 
 interface PolygonalEditorProps {
   process: PolygonalProcess;
@@ -307,7 +297,7 @@ export function PolygonalEditor({
               {process.name}
             </h1>
             <div className="flex flex-wrap items-center gap-3">
-              <Badge tone={STATUS_TONE[process.status]}>
+              <Badge tone={PROCESS_STATUS_TONE[process.status]}>
                 {PROCESS_STATUS_LABELS[process.status]}
               </Badge>
               {/* Descarga directa: es una Route Handler que devuelve el .xlsx,

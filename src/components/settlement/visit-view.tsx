@@ -36,12 +36,8 @@ import {
   type SettlementBookReading,
   type VisitStatus,
 } from "@/types/settlement";
+import { VISIT_STATUS_TONE } from "@/lib/process-status";
 
-const STATUS_TONE = {
-  draft: "neutral",
-  calculated: "primary",
-  closed: "success",
-} as const;
 
 const LEVEL_NAMES = { caution: "precaución", alert: "alerta", alarm: "alarma" } as const;
 
@@ -266,7 +262,7 @@ export function VisitView(props: VisitViewProps) {
           value={
             <span className="flex flex-wrap items-center gap-2 text-base">
               <StatusIndicator level={summary.worstAlert} label={ALERT_LEVEL_LABELS[summary.worstAlert]} />
-              <Badge tone={STATUS_TONE[props.status]}>{VISIT_STATUS_LABELS[props.status]}</Badge>
+              <Badge tone={VISIT_STATUS_TONE[props.status]}>{VISIT_STATUS_LABELS[props.status]}</Badge>
             </span>
           }
           hint="Peor nivel de alerta y estado de la visita"

@@ -11,7 +11,7 @@ import {
   InvalidNumbersContext,
   useInvalidNumbers,
 } from "@/components/design-system";
-import { PROCESS_STATUS_LABELS, type ProcessStatus } from "@/types/polygonal";
+import { PROCESS_STATUS_LABELS } from "@/types/polygonal";
 import {
   computeLeveling,
   totalDistanceFromReadings,
@@ -44,17 +44,8 @@ import { ResultsPanel } from "./results-panel";
 import { RunTabs } from "./run-tabs";
 import { configWithImport, ImportDialog, type LevelingImport } from "./import-dialog";
 import type { LibretaRow } from "@/lib/import/leveling";
+import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 
-const STATUS_TONE: Record<
-  ProcessStatus,
-  "neutral" | "primary" | "success" | "danger"
-> = {
-  draft: "neutral",
-  in_progress: "neutral",
-  calculated: "primary",
-  closed: "success",
-  rejected: "danger",
-};
 
 function bmValue(code: string | null, elevation: number | null): BmValue {
   return {
@@ -361,7 +352,7 @@ export function LevelingEditor({
           <div className="mt-2 flex items-center justify-between gap-4">
             <h1 className="text-2xl font-bold">{process.name}</h1>
             <div className="flex items-center gap-3">
-              <Badge tone={STATUS_TONE[process.status]}>
+              <Badge tone={PROCESS_STATUS_TONE[process.status]}>
                 {PROCESS_STATUS_LABELS[process.status]}
               </Badge>
               <a

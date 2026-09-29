@@ -11,12 +11,8 @@ import {
   type CaptureMode,
   type VisitStatus,
 } from "@/types/settlement";
+import { VISIT_STATUS_TONE } from "@/lib/process-status";
 
-const STATUS_TONE = {
-  draft: "neutral",
-  calculated: "primary",
-  closed: "success",
-} as const;
 
 /** Una fila de la tabla: la visita ya resumida en el servidor. */
 export interface VisitTableRow {
@@ -166,7 +162,7 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                   />
                 </td>
                 <td className="py-2 pr-3">
-                  <Badge tone={STATUS_TONE[row.status]}>
+                  <Badge tone={VISIT_STATUS_TONE[row.status]}>
                     {VISIT_STATUS_LABELS[row.status]}
                   </Badge>
                 </td>
