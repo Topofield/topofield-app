@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   formatBookClosure,
+  formatCoordinate,
   formatDateShort,
+  formatElevation,
   formatPrecision,
   formatRelativeDate,
   formatSignedMm,
@@ -186,5 +188,27 @@ describe("formatBookClosure (Fase 18)", () => {
     expect(formatBookClosure(-6, 4.87, false).status).toBe("out");
     expect(formatBookClosure(1.3, null, null).detail).toBe("Sin tolerancia: faltan distancias");
     expect(formatBookClosure(null, null, null).status).toBe("unknown");
+  });
+});
+
+describe("formatCoordinate y formatElevation (Fase 22)", () => {
+  it("coordenadas a 3 decimales y cotas a 4, con punto", () => {
+    expect(formatCoordinate(5000)).toBe("5000.000");
+    expect(formatCoordinate(101515.6333)).toBe("101515.633");
+    expect(formatElevation(100.845)).toBe("100.8450");
+    expect(formatElevation("2541.7545")).toBe("2541.7545");
+  });
+
+  it("sin valor o con un valor que no es número, «—»", () => {
+    for (const v of [null, undefined, "", "abc", Number.NaN, Infinity]) {
+      expect(formatCoordinate(v)).toBe("—");
+      expect(formatElevation(v)).toBe("—");
+    }
+  });
+
+  it("los negativos conservan el signo; el cero negativo redondeado no", () => {
+    expect(formatCoordinate(-12.3456)).toBe("-12.346");
+    expect(formatCoordinate(-0.0004)).toBe("0.000");
+    expect(formatElevation(-0.00001)).toBe("0.0000");
   });
 });

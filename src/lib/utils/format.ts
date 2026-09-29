@@ -238,3 +238,26 @@ export function formatBookClosure(
     ? { value, detail: `Dentro de tolerancia (±${toleranceMm.toFixed(1)} mm)`, status: "ok" }
     : { value, detail: `Fuera de tolerancia (±${toleranceMm.toFixed(1)} mm)`, status: "out" };
 }
+
+/**
+ * Número fijo a `decimals` cifras, o "—" si falta o no es número. Con punto
+ * decimal: la presentación va con punto desde la Fase 20. Un cero negativo
+ * redondeado («-0.000») se escribe sin signo.
+ */
+function fixedOrDash(value: number | string | null | undefined, decimals: number): string {
+  if (value === null || value === undefined || value === "") return "—";
+  const v = Number(value);
+  if (!Number.isFinite(v)) return "—";
+  const text = v.toFixed(decimals);
+  return /^-0\.0*$/.test(text) ? text.slice(1) : text;
+}
+
+/** Coordenada (Norte o Este) a 3 decimales, según CLAUDE.md. */
+export function formatCoordinate(value: number | string | null | undefined): string {
+  return fixedOrDash(value, 3);
+}
+
+/** Cota a 4 decimales, según CLAUDE.md. */
+export function formatElevation(value: number | string | null | undefined): string {
+  return fixedOrDash(value, 4);
+}
