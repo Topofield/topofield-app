@@ -6,6 +6,8 @@ import { responsibleNames } from "@/lib/reports/responsible";
 import { precisionSummaryRows } from "@/lib/reports/summary";
 import { formatDate } from "@/lib/utils/format";
 import { CANDIDATE_KIND_LABELS } from "@/types/report";
+import { Breadcrumbs } from "@/components/design-system";
+import { DeleteReportButton } from "@/components/reports/delete-report-button";
 import { PrintButton } from "@/components/reports/print-button";
 import { ClosureRecord } from "@/components/reports/sections/closure-record";
 import { PrecisionSummary } from "@/components/reports/sections/precision-summary";
@@ -51,7 +53,21 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
 
   return (
     <div className="report">
-      <PrintButton />
+      {/* Barra de pantalla: migas de vuelta al proyecto y acciones. No se
+          imprime (`.report-actions`). */}
+      <div className="report-actions">
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: project.name, href: `/projects/${project.id}?tab=reports` },
+            { label: report.title },
+          ]}
+        />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <DeleteReportButton projectId={project.id} reportId={report.id} title={report.title} />
+          <PrintButton />
+        </div>
+      </div>
 
       <ReportCover title={report.title} project={project} date={report.generated_at} />
 

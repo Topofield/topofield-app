@@ -297,7 +297,7 @@ export default async function ProjectHubPage({
               {reports.map((r) => (
                 <li key={r.id}>
                   <Link
-                    href={`/projects/${project.id}/reports/${r.id}`}
+                    href={`/projects/${project.id}/reports/${r.id}/print`}
                     className="flex items-center justify-between gap-4 rounded-lg border border-rule px-4 py-3 transition-colors hover:bg-paper"
                   >
                     <span className="font-medium">{r.title}</span>
