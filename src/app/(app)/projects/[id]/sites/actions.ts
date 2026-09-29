@@ -203,3 +203,124 @@ export async function closeSiteAction(
   revalidatePath(`/projects/${site.project_id}`);
   return { ok: true };
 }
+
+/** Renombra un lugar (Fase 22), desde su fila en el hub. Rechaza los cerrados. */
+export async function renameSiteAction(siteId: string, name: string): Promise<ActionResult> {
+  const limpio = name.trim();
+  if (!limpio) return { ok: false, error: "El nombre no puede estar vacío." };
+
+  const supabase = await createClient();
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, project_id, kind")
+    .eq("id", siteId)
+    .maybeSingle();
+  if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
+  if (site.status === "closed") {
+    return { ok: false, error: "El lugar está cerrado y no puede modificarse." };
+  }
+
+  const { error } = await supabase.from("sites").update({ name: limpio }).eq("id", siteId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo renombrar el lugar.") };
+
+  revalidatePath(`/projects/${site.project_id}`);
+  return { ok: true };
+}
+
+/**
+ * Duplica un lugar (Fase 22): datos, umbrales y catálogo de puntos vigentes,
+ * sin visitas. Sirve para un monitoreo nuevo de la misma estructura. Los
+ * puntos de baja no pasan; los que se dieron de alta a mitad del monitoreo
+ * pasan como originales, porque en el lugar nuevo aún no hay visitas.
+ */
+export async function duplicateSiteAction(siteId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: original } = await supabase
+    .from("sites")
+    .select("*")
+    .eq("id", siteId)
+    .maybeSingle();
+  if (!original || original.kind !== "settlement") {
+    return { ok: false, error: "Lugar no encontrado." };
+  }
+
+  const { data: copia, error } = await supabase
+    .from("sites")
+    .insert({
+      project_id: original.project_id,
+      name: `${original.name} (copia)`,
+      description: original.description,
+      structure_type: original.structure_type,
+      velocity_caution: original.velocity_caution,
+      velocity_alert: original.velocity_alert,
+      velocity_alarm: original.velocity_alarm,
+      accumulated_caution: original.accumulated_caution,
+      accumulated_alert: original.accumulated_alert,
+      accumulated_alarm: original.accumulated_alarm,
+      angular_distortion_limit: original.angular_distortion_limit,
+      notes: original.notes,
+      kind: "settlement",
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: logDbError(error, "No se pudo duplicar el lugar.") };
+
+  const { data: puntos, error: pointsError } = await supabase
+    .from("settlement_points")
+    .select("code, location_description, northing, easting, initial_elevation")
+    .eq("site_id", siteId)
+    .is("retired_on", null)
+    .order("code");
+  if (pointsError) {
+    return { ok: false, error: logDbError(pointsError, "No se pudo copiar el catálogo de puntos.") };
+  }
+  if (puntos.length > 0) {
+    const { error: insertError } = await supabase
+      .from("settlement_points")
+      .insert(puntos.map((p) => ({ ...p, site_id: copia.id })));
+    if (insertError) {
+      // Sin el catálogo, el lugar copiado no sirve: se deshace.
+      await supabase.from("sites").delete().eq("id", copia.id);
+      return { ok: false, error: logDbError(insertError, "No se pudo copiar el catálogo de puntos.") };
+    }
+  }
+
+  revalidatePath(`/projects/${original.project_id}`);
+  return { ok: true, siteId: copia.id };
+}
+
+/**
+ * Elimina un lugar con sus puntos y visitas (Fase 22). Solo si está activo y
+ * ninguna de sus visitas está cerrada: una visita cerrada es un registro que
+ * no se borra, y la base también lo impide.
+ */
+export async function deleteSiteAction(siteId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, project_id, kind")
+    .eq("id", siteId)
+    .maybeSingle();
+  if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
+  if (site.status === "closed") {
+    return { ok: false, error: "El lugar está cerrado y no puede eliminarse." };
+  }
+
+  const { count } = await supabase
+    .from("settlement_visits")
+    .select("id", { count: "exact", head: true })
+    .eq("site_id", siteId)
+    .eq("status", "closed");
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error: "El lugar tiene visitas cerradas: no se puede eliminar. Puedes cerrarlo.",
+    };
+  }
+
+  const { error } = await supabase.from("sites").delete().eq("id", siteId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el lugar.") };
+
+  revalidatePath(`/projects/${site.project_id}`);
+  return { ok: true };
+}

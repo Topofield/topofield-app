@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logDbError } from "@/lib/errors/user-message";
 import {
   computeLeveling,
   totalDistanceFromReadings,
@@ -309,6 +310,103 @@ export async function closeLevelingProcessAction(
   if (error) return { ok: false, error: "No se pudo cerrar el proceso." };
 
   revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);
+  revalidatePath(`/projects/${process.project_id}`);
+  return { ok: true };
+}
+
+/**
+ * Duplica una nivelación (Fase 22): misma configuración y equipo, sin
+ * lecturas, en borrador. Mismo criterio que la poligonal: una copia con
+ * lecturas parecería medida.
+ */
+export async function duplicateLevelingProcessAction(
+  processId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: original } = await supabase
+    .from("leveling_processes")
+    .select("*")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!original) return { ok: false, error: "Proceso no encontrado." };
+
+  const { error } = await supabase.from("leveling_processes").insert({
+    project_id: original.project_id,
+    site_id: original.site_id,
+    name: `${original.name} (copia)`,
+    type: original.type,
+    start_bm_code: original.start_bm_code,
+    start_bm_elevation: original.start_bm_elevation,
+    end_bm_code: original.end_bm_code,
+    end_bm_elevation: original.end_bm_elevation,
+    has_return_run: original.has_return_run,
+    correction_method: original.correction_method,
+    precision_order: original.precision_order,
+    equipment_brand: original.equipment_brand,
+    equipment_model: original.equipment_model,
+    equipment_serial: original.equipment_serial,
+    equipment_calibration_date: original.equipment_calibration_date,
+    level_type: original.level_type,
+    km_precision_mm: original.km_precision_mm,
+    notes: original.notes,
+    status: "draft",
+  });
+  if (error) return { ok: false, error: logDbError(error, "No se pudo duplicar el proceso.") };
+
+  revalidatePath(`/projects/${original.project_id}`);
+  return { ok: true };
+}
+
+/** Renombra una nivelación (Fase 22). Rechaza las cerradas: son inmutables. */
+export async function renameLevelingProcessAction(
+  processId: string,
+  name: string,
+): Promise<ActionResult> {
+  const limpio = name.trim();
+  if (!limpio) return { ok: false, error: "El nombre no puede estar vacío." };
+
+  const supabase = await createClient();
+  const { data: process } = await supabase
+    .from("leveling_processes")
+    .select("id, status, project_id")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  if (process.status === "closed" || process.status === "rejected") {
+    return { ok: false, error: "El proceso está cerrado y no puede modificarse." };
+  }
+
+  const { error } = await supabase
+    .from("leveling_processes")
+    .update({ name: limpio })
+    .eq("id", processId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo renombrar el proceso.") };
+
+  revalidatePath(`/projects/${process.project_id}`);
+  return { ok: true };
+}
+
+/**
+ * Elimina una nivelación con sus lecturas (Fase 22). Rechaza las cerradas:
+ * son inmutables, y la base también lo impide.
+ */
+export async function deleteLevelingProcessAction(
+  processId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: process } = await supabase
+    .from("leveling_processes")
+    .select("id, status, project_id")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  if (process.status === "closed" || process.status === "rejected") {
+    return { ok: false, error: "El proceso está cerrado y no puede eliminarse." };
+  }
+
+  const { error } = await supabase.from("leveling_processes").delete().eq("id", processId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el proceso.") };
+
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
 }
