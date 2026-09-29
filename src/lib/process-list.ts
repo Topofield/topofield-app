@@ -1,15 +1,27 @@
 // Filtrado y ordenamiento del listado de procesos de un proyecto.
 // Función pura: sin React, sin Supabase. Se ejecuta en el servidor al renderizar
 // y es testeable de forma aislada.
-
-import type { PolygonalProcess, PolygonalType } from "@/types/polygonal";
+//
+// Desde la Fase 22 sirve a los tres módulos del hub: poligonales, nivelaciones
+// y lugares de asentamientos. Cada uno pasa su propia métrica de «resultado»
+// para ordenar; los estados de un lugar son «activo» y «cerrado».
 
 export type StatusFilter =
   | "todos"
   | "borradores"
   | "calculados"
   | "cerrados"
-  | "rechazados";
+  | "rechazados"
+  | "activos";
+
+/** Lo que el filtro necesita de un proceso o de un lugar. */
+export interface Filterable {
+  id: string;
+  name: string;
+  status: string;
+  type: string;
+  updated_at: string;
+}
 
 export type SortKey = "actividad" | "nombre" | "precision";
 export type SortDir = "asc" | "desc";
@@ -17,18 +29,13 @@ export type SortDir = "asc" | "desc";
 export interface ProcessFilters {
   q: string;
   estado: StatusFilter;
-  tipo: PolygonalType | "todos";
+  /** Un tipo del módulo (`closed`, `link`, `edificio`…) o «todos». */
+  tipo: string;
   orden: SortKey;
   dir: SortDir;
 }
 
-export interface StatusCounts {
-  todos: number;
-  borradores: number;
-  calculados: number;
-  cerrados: number;
-  rechazados: number;
-}
+export type StatusCounts = Record<StatusFilter, number>;
 
 /** Filtro por defecto: todo visible, lo más reciente primero. */
 export const DEFAULT_FILTERS: ProcessFilters = {
@@ -63,8 +70,8 @@ export function parsePrecision(value: string | null): number {
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 }
 
-/** ¿El proceso pertenece al grupo de estado indicado? */
-function matchesStatus(process: PolygonalProcess, estado: StatusFilter): boolean {
+/** ¿El proceso (o el lugar) pertenece al grupo de estado indicado? */
+function matchesStatus(process: Filterable, estado: StatusFilter): boolean {
   switch (estado) {
     case "todos":
       return true;
@@ -76,14 +83,27 @@ function matchesStatus(process: PolygonalProcess, estado: StatusFilter): boolean
       return process.status === "closed";
     case "rechazados":
       return process.status === "rejected";
+    case "activos":
+      return process.status === "active";
   }
 }
 
-/** Aplica búsqueda, filtros y orden. Devuelve un arreglo nuevo. */
-export function filterProcesses(
-  processes: PolygonalProcess[],
+/** Métrica por omisión para ordenar por resultado: la precisión relativa. */
+function precisionOf(item: Filterable): number {
+  const value = (item as { relative_precision?: string | null }).relative_precision;
+  return parsePrecision(value ?? null);
+}
+
+/**
+ * Aplica búsqueda, filtros y orden. Devuelve un arreglo nuevo. `metric` da el
+ * valor por el que ordena la columna de resultado (mayor es mejor); por
+ * omisión, la precisión relativa de una poligonal.
+ */
+export function filterProcesses<T extends Filterable>(
+  processes: T[],
   filters: ProcessFilters,
-): PolygonalProcess[] {
+  metric: (item: T) => number = precisionOf,
+): T[] {
   const term = normalize(filters.q);
 
   const filtered = processes.filter((p) => {
@@ -107,11 +127,7 @@ export function filterProcesses(
         cmp = a.name.localeCompare(b.name, "es-CO") * factor;
         break;
       case "precision":
-        cmp =
-          compareValues(
-            parsePrecision(a.relative_precision),
-            parsePrecision(b.relative_precision),
-          ) * factor;
+        cmp = compareValues(metric(a), metric(b)) * factor;
         break;
       case "actividad":
         cmp =
@@ -128,12 +144,15 @@ export function filterProcesses(
 }
 
 /** Cuántos procesos hay en cada grupo de estado, para los chips de filtro. */
-export function countByStatus(processes: PolygonalProcess[]): StatusCounts {
+export function countByStatus(processes: Filterable[]): StatusCounts {
+  const count = (estado: StatusFilter) =>
+    processes.filter((p) => matchesStatus(p, estado)).length;
   return {
     todos: processes.length,
-    borradores: processes.filter((p) => matchesStatus(p, "borradores")).length,
-    calculados: processes.filter((p) => matchesStatus(p, "calculados")).length,
-    cerrados: processes.filter((p) => matchesStatus(p, "cerrados")).length,
-    rechazados: processes.filter((p) => matchesStatus(p, "rechazados")).length,
+    borradores: count("borradores"),
+    calculados: count("calculados"),
+    cerrados: count("cerrados"),
+    rechazados: count("rechazados"),
+    activos: count("activos"),
   };
 }

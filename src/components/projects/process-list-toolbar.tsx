@@ -11,30 +11,31 @@ import {
   type StatusCounts,
   type StatusFilter,
 } from "@/lib/process-list";
-import { POLYGONAL_TYPE_LABELS, POLYGONAL_TYPES } from "@/types/polygonal";
+const CHIP_LABELS: Record<StatusFilter, string> = {
+  todos: "Todos",
+  borradores: "Borradores",
+  calculados: "Calculados",
+  cerrados: "Cerrados",
+  rechazados: "Rechazados",
+  activos: "Activos",
+};
 
-const CHIPS: { value: StatusFilter; label: string }[] = [
-  { value: "todos", label: "Todos" },
-  { value: "borradores", label: "Borradores" },
-  { value: "calculados", label: "Calculados" },
-  { value: "cerrados", label: "Cerrados" },
-  { value: "rechazados", label: "Rechazados" },
-];
-
-const TIPO_OPTIONS = [
-  { value: "todos", label: "Todos los tipos" },
-  ...POLYGONAL_TYPES.map((t) => ({ value: t, label: POLYGONAL_TYPE_LABELS[t] })),
-];
-
-/** Clave de persistencia, por proyecto: cada uno recuerda su propio filtro. */
-function storageKey(projectId: string): string {
-  return `topofield:procesos:${projectId}`;
+/**
+ * Clave de persistencia, por proyecto y módulo: cada lista recuerda su propio
+ * filtro (Fase 22: antes solo había la de poligonales).
+ */
+function storageKey(projectId: string, modulo: string): string {
+  return `topofield:procesos:${projectId}:${modulo}`;
 }
 
-/** Los parámetros de la URL que gobiernan el listado. */
-function toQuery(filters: ProcessFilters): string {
+/**
+ * Los parámetros de la URL que gobiernan el listado. Lleva siempre el módulo:
+ * sin él, un filtro de nivelaciones volvía a la lista de poligonales.
+ */
+function toQuery(modulo: string, filters: ProcessFilters): string {
   const params = new URLSearchParams();
   params.set("tab", "processes");
+  params.set("modulo", modulo);
   if (filters.q !== "") params.set("q", filters.q);
   if (filters.estado !== "todos") params.set("estado", filters.estado);
   if (filters.tipo !== "todos") params.set("tipo", filters.tipo);
@@ -46,20 +47,35 @@ function toQuery(filters: ProcessFilters): string {
 /** Destino de un chip de estado, conservando el resto de filtros. */
 function chipHref(
   projectId: string,
+  modulo: string,
   filters: ProcessFilters,
   estado: StatusFilter,
 ): string {
-  return `/projects/${projectId}?${toQuery({ ...filters, estado })}`;
+  return `/projects/${projectId}?${toQuery(modulo, { ...filters, estado })}`;
 }
 
+/**
+ * Búsqueda, tipo y estado del listado del hub (Fase 22: los tres módulos).
+ * Cada módulo pasa sus chips de estado y sus tipos; sin tipos, no hay
+ * selector.
+ */
 export function ProcessListToolbar({
   projectId,
+  modulo,
   filters,
   counts,
+  chips,
+  typeOptions,
+  typeLabel,
 }: {
   projectId: string;
+  modulo: string;
   filters: ProcessFilters;
   counts: StatusCounts;
+  chips: StatusFilter[];
+  typeOptions: { value: string; label: string }[] | null;
+  /** Nombre accesible del selector de tipo. */
+  typeLabel?: string;
 }) {
   const router = useRouter();
   // El buscador es no controlado (defaultValue) para que teclear rápido nunca
@@ -94,8 +110,8 @@ export function ProcessListToolbar({
     if (traeFiltros) return;
 
     try {
-      const guardado = window.localStorage.getItem(storageKey(projectId));
-      if (guardado && guardado !== "tab=processes") {
+      const guardado = window.localStorage.getItem(storageKey(projectId, modulo));
+      if (guardado && guardado !== toQuery(modulo, DEFAULT_FILTERS)) {
         router.replace(`/projects/${projectId}?${guardado}`);
       }
     } catch {
@@ -113,20 +129,20 @@ export function ProcessListToolbar({
   //
   // Va declarado DESPUÉS del efecto de restauración: ver la nota de arriba.
   useEffect(() => {
-    const query = toQuery(filters);
+    const query = toQuery(modulo, filters);
     try {
-      if (query === "tab=processes") {
-        window.localStorage.removeItem(storageKey(projectId));
+      if (query === toQuery(modulo, DEFAULT_FILTERS)) {
+        window.localStorage.removeItem(storageKey(projectId, modulo));
       } else {
-        window.localStorage.setItem(storageKey(projectId), query);
+        window.localStorage.setItem(storageKey(projectId, modulo), query);
       }
     } catch {
       // localStorage puede no estar disponible (modo privado); no es crítico.
     }
-  }, [projectId, filters]);
+  }, [projectId, modulo, filters]);
 
   function navegar(cambios: Partial<ProcessFilters>, modo: "push" | "replace" = "push") {
-    const query = toQuery({ ...filters, ...cambios });
+    const query = toQuery(modulo, { ...filters, ...cambios });
     const url = `/projects/${projectId}?${query}`;
     if (modo === "replace") {
       router.replace(url);
@@ -152,15 +168,15 @@ export function ProcessListToolbar({
           className="w-full sm:max-w-xs"
           onChange={(e) => navegar({ q: e.target.value }, "replace")}
         />
-        <Select
-          options={TIPO_OPTIONS}
-          value={filters.tipo}
-          aria-label="Filtrar por tipo de poligonal"
-          className="w-auto"
-          onChange={(e) =>
-            navegar({ tipo: e.target.value as ProcessFilters["tipo"] })
-          }
-        />
+        {typeOptions && (
+          <Select
+            options={[{ value: "todos", label: "Todos los tipos" }, ...typeOptions]}
+            value={filters.tipo}
+            aria-label={typeLabel ?? "Filtrar por tipo"}
+            className="w-auto"
+            onChange={(e) => navegar({ tipo: e.target.value })}
+          />
+        )}
         {hayFiltro && (
           <Button
             size="sm"
@@ -174,12 +190,13 @@ export function ProcessListToolbar({
       </div>
 
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por estado">
-        {CHIPS.map((chip) => {
+        {chips.map((value) => {
+          const chip = { value, label: CHIP_LABELS[value] };
           const activo = chip.value === filters.estado;
           return (
             <Link
               key={chip.value}
-              href={chipHref(projectId, filters, chip.value)}
+              href={chipHref(projectId, modulo, filters, chip.value)}
               aria-current={activo ? "true" : undefined}
               className={cn(
                 "rounded-full border px-3 py-1 text-sm transition-colors",
