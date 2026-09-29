@@ -114,7 +114,7 @@ export default async function VisitPage({ params }: VisitPageProps) {
       <Breadcrumbs
         items={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: project.name, href: `/projects/${project.id}` },
+          { label: project.name, href: `/projects/${project.id}?tab=processes&modulo=asentamientos` },
           { label: site.name, href: siteHref },
           { label: visitLabel },
         ]}
@@ -151,8 +151,6 @@ export default async function VisitPage({ params }: VisitPageProps) {
         prevHref={prev ? `${siteHref}/visits/${prev.id}` : null}
         nextHref={next ? `${siteHref}/visits/${next.id}` : null}
         editHref={open ? `${viewHref}/editar` : null}
-        backHref={siteHref}
-        siteName={site.name}
       />
     </div>
   );

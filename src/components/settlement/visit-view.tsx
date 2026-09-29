@@ -9,6 +9,7 @@ import {
   buttonClasses,
   Card,
   KpiCard,
+  PageHeader,
   StatusIndicator,
 } from "@/components/design-system";
 import { BookDrawer } from "@/components/settlement/book-drawer";
@@ -90,8 +91,6 @@ interface VisitViewProps {
   nextHref: string | null;
   /** Null si la visita o el lugar están cerrados. */
   editHref: string | null;
-  backHref: string;
-  siteName: string;
 }
 
 /**
@@ -146,65 +145,64 @@ export function VisitView(props: VisitViewProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Solo desde `md`: en un teléfono las migas ya colapsan en un
-          enlace al lugar, y dos enlaces de vuelta seguidos sobran. */}
-      <Link href={props.backHref} className="hidden w-fit text-sm text-ink-2 hover:text-ink md:block">
-        ← Volver a {props.siteName}
-      </Link>
-
-      <header className="flex flex-col gap-3 border-b-2 border-ink pb-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">
+      <PageHeader
+        title={
+          <>
             {props.visitLabel}
             {props.isBaseline && <span className="text-ink-2"> (lectura base)</span>}
-          </h1>
-          <p className="mt-1 text-sm text-ink-2">
+          </>
+        }
+        badge={<Badge tone={VISIT_STATUS_TONE[props.status]}>{VISIT_STATUS_LABELS[props.status]}</Badge>}
+        subtitle={
+          <>
             {formatDateOnly(props.date)}.
             {props.amarre && ` Amarre en ${props.amarre.code}.`}
             {props.operator && ` Nivelación por ${props.operator}`}
             {props.equipment !== "—" && ` con ${props.equipment}`}
             {props.operator || props.equipment !== "—" ? "." : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {props.prevHref ? (
-            <Link href={props.prevHref} aria-label="Visita anterior" className={buttonClasses({ variant: "secondary", size: "sm" })}>
-              ←
-            </Link>
-          ) : (
-            <Button variant="secondary" size="sm" disabled aria-label="Visita anterior">←</Button>
-          )}
-          {props.nextHref ? (
-            <Link href={props.nextHref} aria-label="Visita siguiente" className={buttonClasses({ variant: "secondary", size: "sm" })}>
-              →
-            </Link>
-          ) : (
-            <Button variant="secondary" size="sm" disabled aria-label="Visita siguiente">→</Button>
-          )}
-          {props.captureMode === "book" && props.book.length > 0 && (
-            <Button size="sm" onClick={() => setBookOpen(true)}>
-              Ver registro de nivelación
-            </Button>
-          )}
-          {props.editHref && (
-            <>
-              <Link href={props.editHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
-                Editar
+          </>
+        }
+        actions={
+          <>
+            {props.prevHref ? (
+              <Link href={props.prevHref} aria-label="Visita anterior" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                ←
               </Link>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setCloseError(null);
-                  setCloseOpen(true);
-                }}
-              >
-                Cerrar visita
+            ) : (
+              <Button variant="secondary" size="sm" disabled aria-label="Visita anterior">←</Button>
+            )}
+            {props.nextHref ? (
+              <Link href={props.nextHref} aria-label="Visita siguiente" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                →
+              </Link>
+            ) : (
+              <Button variant="secondary" size="sm" disabled aria-label="Visita siguiente">→</Button>
+            )}
+            {props.captureMode === "book" && props.book.length > 0 && (
+              <Button variant="secondary" size="sm" onClick={() => setBookOpen(true)}>
+                Ver registro de nivelación
               </Button>
-            </>
-          )}
-        </div>
-      </header>
+            )}
+            {props.editHref && (
+              <>
+                <Link href={props.editHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                  Editar
+                </Link>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setCloseError(null);
+                    setCloseOpen(true);
+                  }}
+                >
+                  Cerrar visita
+                </Button>
+              </>
+            )}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <KpiCard
@@ -258,14 +256,13 @@ export function VisitView(props: VisitViewProps) {
           className={closure?.status === "out" ? "border-warning" : undefined}
         />
         <KpiCard
-          label="Estado"
+          label="Alerta"
           value={
             <span className="flex flex-wrap items-center gap-2 text-base">
               <StatusIndicator level={summary.worstAlert} label={ALERT_LEVEL_LABELS[summary.worstAlert]} />
-              <Badge tone={VISIT_STATUS_TONE[props.status]}>{VISIT_STATUS_LABELS[props.status]}</Badge>
             </span>
           }
-          hint="Peor nivel de alerta y estado de la visita"
+          hint="Peor nivel de alerta de la visita"
         />
       </div>
 
