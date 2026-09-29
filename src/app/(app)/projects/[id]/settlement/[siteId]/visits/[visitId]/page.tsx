@@ -151,6 +151,8 @@ export default async function VisitPage({ params }: VisitPageProps) {
         prevHref={prev ? `${siteHref}/visits/${prev.id}` : null}
         nextHref={next ? `${siteHref}/visits/${next.id}` : null}
         editHref={open ? `${viewHref}/editar` : null}
+        isLast={next === null}
+        siteHref={siteHref}
       />
     </div>
   );

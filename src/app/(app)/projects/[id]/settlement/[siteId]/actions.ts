@@ -620,3 +620,49 @@ export async function closeVisitAction(
   revalidatePath(`/projects/${context.site.project_id}/settlement/${siteId}`);
   return { ok: true };
 }
+
+/**
+ * Elimina una visita (Fase 22): solo la última del lugar y sin cerrar.
+ *
+ * Borrar una intermedia dejaría un hueco en la numeración y cambiaría el
+ * asentamiento parcial y la velocidad de la siguiente, que se miden contra la
+ * visita anterior. La última no tiene quien dependa de ella: sus lecturas y
+ * su libreta se van con ella (cascada) y el resto del histórico no cambia.
+ */
+export async function deleteVisitAction(
+  projectId: string,
+  siteId: string,
+  visitId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, project_id")
+    .eq("id", siteId)
+    .maybeSingle();
+  if (!site || site.project_id !== projectId) return { ok: false, error: "Lugar no encontrado." };
+  if (site.status === "closed") {
+    return { ok: false, error: "El lugar está cerrado; sus visitas no se pueden eliminar." };
+  }
+
+  const { data: visits } = await supabase
+    .from("settlement_visits")
+    .select("id, visit_number, status")
+    .eq("site_id", siteId)
+    .order("visit_number", { ascending: false })
+    .limit(1);
+  const ultima = visits?.[0];
+  if (!ultima || ultima.id !== visitId) {
+    return { ok: false, error: "Solo se puede eliminar la última visita del lugar." };
+  }
+  if (ultima.status === "closed") {
+    return { ok: false, error: "La visita está cerrada y no puede eliminarse." };
+  }
+
+  const { error } = await supabase.from("settlement_visits").delete().eq("id", visitId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar la visita.") };
+
+  revalidatePath(`/projects/${projectId}/settlement/${siteId}`);
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true };
+}

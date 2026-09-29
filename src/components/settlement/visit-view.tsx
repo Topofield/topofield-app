@@ -18,6 +18,7 @@ import { PointBarsChart } from "@/components/settlement/charts/point-bars-chart"
 import { withUnit } from "@/components/settlement/site-kpis";
 import { PointHistoryChart } from "@/components/settlement/charts/point-history-chart";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
+import { DeleteVisitButton } from "@/components/settlement/delete-visit-button";
 import {
   nextAccumulatedThreshold,
   type VisitSummary,
@@ -91,6 +92,10 @@ interface VisitViewProps {
   nextHref: string | null;
   /** Null si la visita o el lugar están cerrados. */
   editHref: string | null;
+  /** Es la última visita del lugar: solo esa se puede eliminar (Fase 22). */
+  isLast: boolean;
+  /** El panel del lugar, adonde se vuelve tras eliminar la visita. */
+  siteHref: string;
 }
 
 /**
@@ -198,6 +203,15 @@ export function VisitView(props: VisitViewProps) {
                 >
                   Cerrar visita
                 </Button>
+                {props.isLast && (
+                  <DeleteVisitButton
+                    projectId={props.projectId}
+                    siteId={props.siteId}
+                    visitId={props.visitId}
+                    visitLabel={props.visitLabel}
+                    afterHref={props.siteHref}
+                  />
+                )}
               </>
             )}
           </>
