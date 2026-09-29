@@ -15,9 +15,17 @@ export type StructureType = (typeof STRUCTURE_TYPES)[number];
 export const SITE_STATUSES = ["active", "closed"] as const;
 export type SiteStatus = (typeof SITE_STATUSES)[number];
 
-export type Site = Omit<Tables<"sites">, "structure_type" | "status"> & {
+/**
+ * `grouping`: agrupa poligonales y nivelaciones y no se muestra como lugar;
+ * `settlement`: control de asentamientos (Fase 22).
+ */
+export const SITE_KINDS = ["grouping", "settlement"] as const;
+export type SiteKind = (typeof SITE_KINDS)[number];
+
+export type Site = Omit<Tables<"sites">, "structure_type" | "status" | "kind"> & {
   structure_type: StructureType;
   status: SiteStatus;
+  kind: SiteKind;
 };
 
 export const STRUCTURE_TYPE_LABELS: Record<StructureType, string> = {
