@@ -92,3 +92,80 @@ export const CARTERA_VIVERO: Cartera = {
 };
 
 export const CARTERAS: Cartera[] = [CARTERA_TT4, CARTERA_VIVERO];
+
+// --- Nivelación --------------------------------------------------------------
+
+/** Una fila de una libreta de nivelación real. */
+export interface LecturaCartera {
+  code: string;
+  type: "bm" | "pc" | "intermediate";
+  /** V+ y V−: el hilo medio. Una radiación lleva su vista intermedia como V−. */
+  backsight: number | null;
+  foresight: number | null;
+  /** Distancia a la mira de cada visual, (HS − HI)·100, en metros. */
+  backDistanceM: number | null;
+  foreDistanceM: number | null;
+}
+
+export interface CarteraNivelacion {
+  name: string;
+  startCode: string;
+  startElevation: number;
+  ida: LecturaCartera[];
+  vuelta: LecturaCartera[];
+}
+
+const l = (
+  code: string,
+  type: LecturaCartera["type"],
+  backsight: number | null,
+  foresight: number | null,
+  backDistanceM: number | null,
+  foreDistanceM: number | null,
+): LecturaCartera => ({ code, type, backsight, foresight, backDistanceM, foreDistanceM });
+
+/**
+ * docs/carteras/TRABAJO NIVELACION EL VERJON-corregido.xlsx — nivelación y
+ * contranivelación por los mismos puntos, de D1 (3288.5) a D4. Nivel
+ * automático con tres hilos: V+ y V− son el hilo medio y cada distancia es
+ * (HS − HI)·100, recalculada de la hoja fila a fila. En la vuelta, las V+ de
+ * C 6 y C 3 no traen hilo inferior —caía bajo el cero de la mira— y la hoja lo
+ * extrapola en su columna A (−0.087 y −0.063): de ahí 25.7 y 14.8 m.
+ *
+ * Los códigos van como en la hoja: `AUX1` en la ida y `AUX 1` en la vuelta, y
+ * `C 3 ` con un espacio final en la vuelta. Los puntos homólogos (Fase 17)
+ * tienen que emparejarlos igual.
+ */
+export const CARTERA_VERJON: CarteraNivelacion = {
+  name: "El Verjón — ida y vuelta",
+  startCode: "D1",
+  startElevation: 3288.5,
+  ida: [
+    l("D1", "bm", 1.209, null, 31.5, null),
+    l("C 1", "pc", 3.275, 0.268, 28.1, 28.5),
+    l("C 2", "pc", 3.469, 0.224, 21.9, 17.3),
+    l("C 3", "pc", 3.952, 0.092, 25.5, 11.7),
+    l("AUX1", "intermediate", null, 0.194, null, null),
+    l("C 4", "pc", 3.314, 0.244, 19.6, 15.1),
+    l("C 5", "pc", 3.013, 0.124, 18.1, 16.6),
+    l("C 6", "pc", 3.549, 0.145, 23.1, 15.5),
+    l("C 7", "pc", 3.16, 0.132, 24.2, 14.9),
+    l("D3", "pc", 2.395, 0.87, 14.7, 8.4),
+    l("C 8", "pc", 2.349, 0.195, 12.1, 21.8),
+    l("D4", "bm", null, 0.808, null, 15.7),
+  ],
+  vuelta: [
+    l("D4", "bm", 0.865, null, 14.3, null),
+    l("C 8", "pc", 0.802, 2.407, 15.2, 13.5),
+    l("D3", "pc", 0.531, 3.003, 14.8, 22.6),
+    l("C 7", "pc", 0.092, 2.821, 17.0, 18.1),
+    l("C 6", "pc", 0.083, 3.51, 25.7, 20.9),
+    l("C 5", "pc", 0.266, 2.953, 16.8, 16.2),
+    l("C 4", "pc", 0.157, 3.456, 15.7, 20.2),
+    l("AUX 1", "intermediate", null, 0.107, null, null),
+    l("C 3 ", "pc", 0.022, 3.865, 14.8, 24.7),
+    l("C 2", "pc", 0.134, 3.4, 18.0, 21.1),
+    l("C 1", "pc", 0.452, 3.186, 20.4, 27.5),
+    l("D1", "bm", null, 1.391, null, 40.1),
+  ],
+};

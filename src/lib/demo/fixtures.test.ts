@@ -1,42 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { dmsToDecimal } from "@/lib/calculations/angles";
-import { computeLeveling } from "@/lib/calculations/leveling";
-import { computePolygonal } from "@/lib/calculations/polygonal";
+import {
+  compareHomologousPoints,
+  computeLeveling,
+  totalDistanceFromReadings,
+} from "@/lib/calculations/leveling";
 import { computeHistory } from "@/lib/calculations/settlement";
+import {
+  bookRowInputOf,
+  computeVisitBook,
+  deriveControlElevations,
+} from "@/lib/calculations/settlement-book";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
+import type { ReadingInput } from "@/types/leveling";
+import type { PointInput } from "@/types/settlement";
 import {
   ASENTAMIENTO_DEMO,
-  NIVELACION_DEMO,
+  NIVELACION_VERJON,
+  nivelacionTramo2,
   PROCESOS_DEMO,
+  REFERENCIAS_DEMO,
+  type LecturaNivelacionDemo,
+  type NivelacionDemo,
   type ProcesoDemo,
 } from "./fixtures";
+import { resultadosDe } from "./insertar-poligonal";
+import { generateVisitBook } from "./libreta-asentamientos";
+import { ALAMEDA_OUT_OF_TOLERANCE } from "./torre-alameda";
 
-/** Pasa un fixture por el motor real, con el orden del propio proceso. */
-function calcular(proceso: ProcesoDemo) {
-  return computePolygonal({
-    type: proceso.type,
-    startNorth: proceso.startNorth,
-    startEast: proceso.startEast,
-    startAzimuth: dmsToDecimal(...proceso.startAz),
-    endNorth: proceso.endNorth ?? null,
-    endEast: proceso.endEast ?? null,
-    endAzimuth: null,
-    order: proceso.precisionOrder,
-    method: proceso.correctionMethod ?? "bowditch",
-    angleType: proceso.angleType,
-    hasOrientation: false,
-    hasClosingRow: false,
-    stations: proceso.stations.map((st) => ({
-      pointCode: st.code,
-      angle: st.angle ? dmsToDecimal(...st.angle) : Number.NaN,
-      deflectionDirection: st.dir ?? null,
-      distance: st.distance ?? null,
-      readings: st.angle
-        ? [{ order: 1, angle: dmsToDecimal(...st.angle) }]
-        : [],
-    })),
-  });
-}
+// Fase 21: la demo son las carteras reales. Cada fixture pasa por el motor tal
+// como lo harán los `insertar-*.ts`, y se comprueba lo que la cartera enseña.
 
 function porNombre(fragmento: string): ProcesoDemo {
   const p = PROCESOS_DEMO.find((x) => x.name.includes(fragmento));
@@ -44,172 +36,165 @@ function porNombre(fragmento: string): ProcesoDemo {
   return p;
 }
 
-describe("fixtures del proyecto demo", () => {
-  it("todos tienen estaciones y nombre", () => {
-    expect(PROCESOS_DEMO.length).toBeGreaterThan(0);
-    for (const p of PROCESOS_DEMO) {
-      expect(p.name.trim()).not.toBe("");
-      expect(p.stations.length).toBeGreaterThan(0);
+const lectura = (r: LecturaNivelacionDemo): ReadingInput => ({
+  pointCode: r.code,
+  pointType: r.type,
+  backsight: r.back ?? null,
+  foresight: r.fore ?? null,
+  backUpperM: null,
+  backLowerM: null,
+  foreUpperM: null,
+  foreLowerM: null,
+  backDistanceM: r.backDistanceM ?? null,
+  foreDistanceM: r.foreDistanceM ?? null,
+  distanceAccumulatedKm: null,
+});
+
+const nivelar = (n: NivelacionDemo) =>
+  computeLeveling({
+    type: n.type,
+    startElevation: n.startElevation,
+    endElevation: n.endElevation ?? null,
+    order: n.precisionOrder,
+    forward: n.forward.map(lectura),
+    return: n.return ? n.return.map(lectura) : null,
+  });
+
+describe("poligonales de la demo — carteras reales", () => {
+  it("tres procesos con nombres distintos", () => {
+    expect(PROCESOS_DEMO).toHaveLength(3);
+    expect(new Set(PROCESOS_DEMO.map((p) => p.name)).size).toBe(3);
+  });
+
+  it("la TT4 cumple —12″ de error angular, 1:7045— y nace cerrada", () => {
+    const tt4 = porNombre("TT4");
+    const { resultado, campos } = resultadosDe(tt4);
+    expect(resultado.angularError).toBeCloseTo(12, 3);
+    expect(campos.relative_precision).toBe("1:7045");
+    expect(campos.meets_tolerance).toBe(true);
+    expect(tt4.status).toBe("closed");
+    expect(tt4.hasClosingRow).toBe(true);
+  });
+
+  it("la Vivero se ajusta por mínimos cuadrados con los pesos de la hoja", () => {
+    const { resultado, campos } = resultadosDe(porNombre("Sede Vivero"));
+    expect(resultado.adjustment?.status).toBe("adjusted");
+    expect(campos.meets_tolerance).toBe(true);
+    expect(resultado.stations.every((s) => s.north != null && s.east != null)).toBe(true);
+  });
+
+  it("la Vivero en sistema local da la misma precisión, en (1000, 2000)", () => {
+    const local = resultadosDe(porNombre("sistema local"));
+    const real = resultadosDe({ ...porNombre("sistema local"), startNorth: 100139.844, startEast: 101491.444 });
+    expect(local.campos.relative_precision).toBe(real.campos.relative_precision);
+    expect(local.resultado.stations[0]?.north).toBeCloseTo(1000, 6);
+    expect(porNombre("sistema local").referenceFromCatalog).toBe(false);
+  });
+
+  it("cada amarre enlazado está en el catálogo del proyecto", () => {
+    const codigos = new Set(REFERENCIAS_DEMO.map((r) => r.code));
+    for (const p of PROCESOS_DEMO.filter((x) => x.referenceFromCatalog)) {
+      expect(codigos.has(p.referencePointCode!)).toBe(true);
     }
   });
+});
 
-  it("no repite nombres: el listado los muestra juntos", () => {
-    const nombres = PROCESOS_DEMO.map((p) => p.name);
-    expect(new Set(nombres).size).toBe(nombres.length);
+describe("nivelaciones de la demo — carteras reales", () => {
+  it("El Verjón: ida y vuelta abiertas, 5.0 mm de discrepancia y sus puntos homólogos", () => {
+    const r = nivelar(NIVELACION_VERJON);
+    expect(NIVELACION_VERJON.type).toBe("open");
+    expect(r.discrepancyMm).toBeCloseTo(5.0, 6);
+    expect(r.meetsDiscrepancy).toBe(true);
+    const homologos = compareHomologousPoints(r);
+    expect(homologos).not.toBeNull();
+    // AUX1 / AUX 1 y C 3 / «C 3 » se emparejan: los doce puntos, más la radiación.
+    expect(homologos!.points.length).toBeGreaterThanOrEqual(11);
+    expect(NIVELACION_VERJON.status).toBe("calculated");
   });
 
-  it("cubre los tres tipos de poligonal", () => {
-    const tipos = new Set(PROCESOS_DEMO.map((p) => p.type));
-    expect(tipos).toEqual(
-      new Set(["closed", "open_controlled", "open_uncontrolled"]),
-    );
-  });
-
-  // Lo que de verdad importa: que la demo no se contradiga a sí misma. Si
-  // alguien toca las coordenadas, esto falla antes de que un usuario vea un
-  // proceso que dice «cierre conforme» y sale en rojo.
-  it("el «cierre conforme» efectivamente cumple la tolerancia", () => {
-    const r = calcular(porNombre("cierre conforme"));
+  it("el tramo 2 se lee del crudo con el importador y cierra en −0.4 mm sobre 1.397 km", () => {
+    const tramo = nivelacionTramo2();
+    const r = nivelar(tramo);
+    expect(tramo.startBmCode).toBe("C10");
+    expect(tramo.startElevation).toBe(2541.7545);
+    expect(r.closureErrorMm).toBeCloseTo(-0.4, 6);
+    expect(totalDistanceFromReadings(tramo.forward.map(lectura))).toBeCloseTo(1.397288, 6);
     expect(r.meetsTolerance).toBe(true);
+    expect(tramo.status).toBe("closed");
   });
 
-  it("el «error de cierre» efectivamente NO cumple la tolerancia", () => {
-    const r = calcular(porNombre("error de cierre"));
-    expect(r.meetsTolerance).toBe(false);
-  });
-
-  it("el levantamiento de reconocimiento no tiene verificación de cierre", () => {
-    const r = calcular(porNombre("reconocimiento"));
-    expect(r.meetsTolerance).toBeNull();
-  });
-
-  it("el enlace entre puntos de control sí se verifica", () => {
-    const r = calcular(porNombre("Enlace"));
-    expect(r.linearError).not.toBeNull();
-  });
-
-  // El generador del proyecto de ejemplo persiste, además de los campos de
-  // cabecera, los RESULTADOS POR ESTACIÓN (ángulo corregido, azimut,
-  // proyecciones y coordenadas). Durante tres fases no lo hizo, y nadie lo
-  // notó: el editor recalcula en vivo, así que la aplicación se veía bien y
-  // solo el informe y la exportación a Excel —que leen lo persistido— salían
-  // con las celdas vacías. Este test fija que el motor sí produce esos valores
-  // para los fixtures que se muestran al usuario nuevo.
-  it("el motor produce coordenadas para todas las estaciones de la demo", () => {
-    for (const proceso of PROCESOS_DEMO) {
-      const r = calcular(proceso);
-      expect(r.stations).toHaveLength(proceso.stations.length);
-      for (const st of r.stations) {
-        expect(st.north).not.toBeNull();
-        expect(st.east).not.toBeNull();
-        expect(Number.isFinite(st.north as number)).toBe(true);
-        expect(Number.isFinite(st.east as number)).toBe(true);
-      }
-    }
-  });
-
-  it("el motor produce azimut para las estaciones que lo tienen definido", () => {
-    for (const proceso of PROCESOS_DEMO) {
-      const r = calcular(proceso);
-      const conAzimut = r.stations.filter((st) => st.azimuth != null);
-      expect(conAzimut.length).toBeGreaterThan(0);
-    }
+  it("el BM del tramo 2 está en el catálogo con su cota", () => {
+    expect(REFERENCIAS_DEMO.find((p) => p.code === "C10")?.elevation).toBe(2541.7545);
   });
 });
 
-describe("fixture de nivelación del demo", () => {
-  it("es un circuito cerrado y conforme (alimenta su informe)", () => {
-    const result = computeLeveling({
-      type: NIVELACION_DEMO.type,
-      startElevation: NIVELACION_DEMO.startElevation,
-      endElevation: NIVELACION_DEMO.endElevation ?? null,
-      order: NIVELACION_DEMO.precisionOrder,
-      forward: NIVELACION_DEMO.forward.map((r) => ({
-        pointCode: r.code,
-        pointType: r.type,
-        backsight: r.back ?? null,
-        foresight: r.fore ?? null,
-        backUpperM: r.backUpperM ?? null,
-        backLowerM: r.backLowerM ?? null,
-        foreUpperM: r.foreUpperM ?? null,
-        foreLowerM: r.foreLowerM ?? null,
-        backDistanceM: r.backDistanceM ?? null,
-        foreDistanceM: r.foreDistanceM ?? null,
-        distanceAccumulatedKm: null,
-      })),
-      return: null,
+describe("asentamientos de la demo — Torre Alameda", () => {
+  const f = ASENTAMIENTO_DEMO;
+  const points: PointInput[] = f.points.map((p) => ({
+    id: p.code,
+    code: p.code,
+    northing: p.northing,
+    easting: p.easting,
+    initialElevation: p.c0,
+    activeFrom: null,
+    retiredOn: null,
+  }));
+  const books = f.visits.map((v, i) => {
+    const rows = generateVisitBook({
+      amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
+      targets: v.targets,
+      closureMm: v.closureMm,
+      order: f.precisionOrder,
+      seed: 100 + i,
     });
-
-    expect(NIVELACION_DEMO.type).toBe("closed");
-    expect(result.closureErrorMm).not.toBeNull();
-    expect(result.toleranceMm).not.toBeNull();
-    // Conforme: el error de cierre queda por debajo de la tolerancia.
-    expect(Math.abs(result.closureErrorMm as number)).toBeLessThan(
-      result.toleranceMm as number,
-    );
-    expect(result.meetsTolerance).toBe(true);
+    const result = computeVisitBook(rows.map(bookRowInputOf), v.amarre.elevation, f.precisionOrder);
+    return { result, derived: deriveControlElevations(result, points, v.date) };
   });
-});
 
-describe("fixture de asentamientos del demo", () => {
-  function cotaEn(code: string, initialElevation: number, i: number): number {
-    const acc = ASENTAMIENTO_DEMO.partialsMm[code]!
-      .slice(0, i + 1)
-      .reduce((a, b) => a + b, 0);
-    return initialElevation + acc / 1000;
-  }
+  it("ocho puntos, catorce visitas y los dos BMs de amarre en el catálogo", () => {
+    expect(f.points).toHaveLength(8);
+    expect(f.visits).toHaveLength(14);
+    const codigos = new Set(REFERENCIAS_DEMO.map((r) => r.code));
+    for (const v of f.visits) expect(codigos.has(v.amarre.code)).toBe(true);
+    expect(new Set(f.visits.map((v) => v.amarre.code))).toEqual(new Set(["BM-1", "BM-2"]));
+  });
 
-  function historia() {
-    const points = ASENTAMIENTO_DEMO.points.map((p) => ({
-      id: p.code,
-      code: p.code,
-      northing: p.northing,
-      easting: p.easting,
-      initialElevation: p.initialElevation,
-      activeFrom: null,
-      retiredOn: null,
-    }));
-    const visits = ASENTAMIENTO_DEMO.visitDates.map((date, i) => ({
-      id: `v-${i}`,
-      visitNumber: i,
-      date,
-      readings: ASENTAMIENTO_DEMO.points.map((p) => ({
-        pointId: p.code,
-        elevation: cotaEn(p.code, p.initialElevation, i),
+  it("solo la visita 9 cierra fuera de tolerancia", () => {
+    const fuera = books.flatMap((b, i) => (b.result.meetsTolerance === false ? [i] : []));
+    expect(fuera).toEqual([ALAMEDA_OUT_OF_TOLERANCE]);
+  });
+
+  it("la libreta de cada visita reproduce la serie a 0.1 mm", () => {
+    books.forEach((b, i) => {
+      expect(b.derived.issues).toEqual([]);
+      for (const t of f.visits[i]!.targets) {
+        const got = b.derived.readings.find((r) => r.pointId === t.code)!.elevation;
+        expect(Math.abs(got - t.elevation)).toBeLessThanOrEqual(0.0001 + 1e-9);
+      }
+    });
+  });
+
+  it("el semáforo no sale todo verde", () => {
+    const history = computeHistory(
+      points,
+      f.visits.map((v, i) => ({
+        id: `v${i}`,
+        visitNumber: i,
+        date: v.date,
+        readings: books[i]!.derived.readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
       })),
-    }));
-    return computeHistory(points, visits, thresholdsFor("edificio"));
-  }
-
-  it("cada punto tiene un parcial por cada fecha de visita", () => {
-    for (const p of ASENTAMIENTO_DEMO.points) {
-      expect(ASENTAMIENTO_DEMO.partialsMm[p.code]).toHaveLength(
-        ASENTAMIENTO_DEMO.visitDates.length,
-      );
-    }
-  });
-
-  it("el semáforo no sale todo verde: hay variedad de alertas", () => {
-    const history = historia();
-    const todas = history.visits.flatMap((v) =>
-      v.readings.map((r) => r.alertStatus),
+      thresholdsFor("edificio"),
     );
-    expect(new Set(todas).size).toBeGreaterThan(1);
-  });
-
-  it("P-06 (esquina más cargada) llega a alarma en alguna visita", () => {
-    const history = historia();
-    const p06 = history.visits.flatMap((v) =>
-      v.readings.filter((r) => r.pointId === "P-06").map((r) => r.alertStatus),
-    );
-    expect(p06).toContain("alarm");
+    const niveles = new Set(history.visits.at(-1)!.readings.map((r) => r.alertStatus));
+    expect(niveles.size).toBeGreaterThan(1);
   });
 });
 
-describe("material de los informes del demo", () => {
-  it("hay exactamente una poligonal cerrada, y es el «cierre conforme»", () => {
-    const cerradas = PROCESOS_DEMO.filter((p) => p.status === "closed");
-    expect(cerradas).toHaveLength(1);
-    expect(cerradas[0]!.name).toContain("cierre conforme");
+describe("material de los informes de la demo", () => {
+  it("una poligonal y una nivelación nacen cerradas, y Torre Alameda se cierra", () => {
+    expect(PROCESOS_DEMO.filter((p) => p.status === "closed").map((p) => p.name)).toEqual([
+      "Poligonal V10 — cartera TT4",
+    ]);
+    expect([NIVELACION_VERJON, nivelacionTramo2()].filter((n) => n.status === "closed")).toHaveLength(1);
   });
 });

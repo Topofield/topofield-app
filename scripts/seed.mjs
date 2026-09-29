@@ -50,6 +50,19 @@ import {
 } from "../src/lib/calculations/settlement-book.ts";
 import { bookRowsToPersist } from "../src/lib/calculations/settlement-persistence.ts";
 import { generateVisitBook } from "../src/lib/demo/libreta-asentamientos.ts";
+import {
+  ALAMEDA_AMARRES,
+  ALAMEDA_OUT_OF_TOLERANCE,
+  ALAMEDA_POINTS as ALAMEDA_POINTS_DEMO,
+  alamedaVisits,
+} from "../src/lib/demo/torre-alameda.ts";
+
+// El seed inserta puntos con `location_description`; la fuente compartida usa
+// camelCase, como el resto de `src/lib/demo/`.
+const ALAMEDA_POINTS = ALAMEDA_POINTS_DEMO.map((p) => ({
+  ...p,
+  location_description: p.locationDescription,
+}));
 import { thresholdsFor } from "../src/lib/calculations/tolerances.ts";
 import { decimalToDms, dmsToDecimal } from "../src/lib/calculations/angles.ts";
 
@@ -1086,56 +1099,8 @@ const NORTE_VISIT_DATES = ["2025-01-20", "2025-02-20", "2025-03-20"];
 // de la serie (`generateVisitBook`). La visita 9 cierra fuera de tolerancia
 // para mostrar el aviso: se guarda y se cierra igual, sin compensar.
 
-const ALAMEDA_AMARRES = [
-  { code: "BM-1", type: "bm", north: 5000, east: 5000, elevation: 100.0, description: "BM de amarre de Torre Alameda (andén norte)" },
-  { code: "BM-2", type: "bm", north: 5040, east: 5060, elevation: 100.845, description: "BM de amarre alterno de Torre Alameda (portería)" },
-];
-
-const ALAMEDA_POINTS = [
-  { code: "TA-01", location_description: "Columna A1", northing: 5100.0, easting: 5100.0, c0: 100.612, finalMm: -18 },
-  { code: "TA-02", location_description: "Columna A2", northing: 5100.0, easting: 5118.0, c0: 100.587, finalMm: -22 },
-  { code: "TA-03", location_description: "Columna A3", northing: 5100.0, easting: 5136.0, c0: 100.534, finalMm: -27 },
-  { code: "TA-04", location_description: "Columna A4", northing: 5100.0, easting: 5154.0, c0: 100.498, finalMm: -19 },
-  { code: "TA-05", location_description: "Columna B1", northing: 5082.0, easting: 5100.0, c0: 100.455, finalMm: -15 },
-  { code: "TA-06", location_description: "Columna B2", northing: 5082.0, easting: 5118.0, c0: 100.521, finalMm: -24 },
-  { code: "TA-07", location_description: "Columna B3 (núcleo)", northing: 5082.0, easting: 5136.0, c0: 100.566, finalMm: -31 },
-  { code: "TA-08", location_description: "Columna B4", northing: 5082.0, easting: 5154.0, c0: 100.603, finalMm: -20 },
-];
-
-/** Días desde la lectura base: quincenal al principio, luego mensual. */
-const ALAMEDA_DAYS = [0, 14, 28, 42, 56, 84, 112, 140, 168, 196, 224, 252, 280, 308];
-const ALAMEDA_BASE = "2025-01-07";
-/** Visitas que cierran en BM-2 y la que cierra fuera de tolerancia. */
-const ALAMEDA_BM2 = new Set([5, 11]);
-const ALAMEDA_OUT_OF_TOLERANCE = 9;
-
-/** La serie de Torre Alameda: consolidación que se acelera con la carga (como el prototipo). */
-function alamedaVisits() {
-  let seed = 7;
-  const rnd = () => {
-    seed = (seed * 16807) % 2147483647;
-    return seed / 2147483647 - 0.5;
-  };
-  return ALAMEDA_DAYS.map((day, i) => {
-    const date = new Date(`${ALAMEDA_BASE}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() + day);
-    const load = Math.min(1, day / 210);
-    const targets = ALAMEDA_POINTS.map((p) => {
-      const mm =
-        i === 0 ? 0 : p.finalMm * (1 - Math.exp(-day / 115)) * (0.55 + 0.45 * load) + rnd() * 0.8;
-      return { code: p.code, elevation: Number((p.c0 + mm / 1000).toFixed(4)) };
-    });
-    const closureMm =
-      i === ALAMEDA_OUT_OF_TOLERANCE ? 9.8 : Number((rnd() * 6).toFixed(1));
-    return {
-      date: date.toISOString().slice(0, 10),
-      targets,
-      closureMm,
-      amarre: ALAMEDA_AMARRES[ALAMEDA_BM2.has(i) ? 1 : 0],
-      operator: i % 2 === 0 ? "J. Rodríguez" : "L. Cárdenas",
-    };
-  });
-}
+// La serie, los puntos y los BMs viven en src/lib/demo/torre-alameda.ts, que
+// comparte con el proyecto de ejemplo (Fase 21).
 
 /**
  * Cota de un punto en una visita: su cota base más el acumulado, o null si el

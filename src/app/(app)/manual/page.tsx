@@ -134,10 +134,32 @@ export default function ManualPage() {
         </p>
         <p>
           La primera vez que entre encontrará un{" "}
-          <strong>proyecto de ejemplo</strong> con cuatro poligonales ya
-          calculadas, para que pueda ver cómo funciona la aplicación sin
-          capturar nada. Puede modificarlo o eliminarlo cuando quiera.
+          <strong>proyecto de ejemplo</strong> hecho con{" "}
+          <strong>carteras de campo reales</strong>, ya calculadas, para que
+          pueda ver cómo funciona la aplicación sin capturar nada:
         </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            Tres poligonales: la <strong>V10</strong>, amarrada a TT4 y ya
+            cerrada; la de la <strong>Sede Vivero</strong>, ajustada por
+            mínimos cuadrados, y la misma en un sistema local, lista para{" "}
+            <strong>georreferenciar</strong> con los vértices D1 y D3 del
+            catálogo.
+          </li>
+          <li>
+            Dos nivelaciones: la de <strong>El Verjón</strong>, con ida y vuelta
+            por los mismos puntos —verá sus puntos homólogos y los avisos de
+            equilibrado—, y el <strong>tramo 2</strong>, leído del archivo de
+            un nivel digital Leica.
+          </li>
+          <li>
+            <strong>Torre Alameda</strong>, un control de asentamientos
+            simulado con catorce visitas y su libreta de nivelación en cada
+            una.
+          </li>
+          <li>Un informe de cierre por módulo.</li>
+        </ul>
+        <p>Puede modificarlo o eliminarlo cuando quiera.</p>
         <p>Cada usuario ve únicamente sus propios proyectos.</p>
         <p>
           <strong>Tema claro u oscuro.</strong> El icono de la cabecera, junto a{" "}
@@ -186,10 +208,10 @@ export default function ManualPage() {
 
         <Nota titulo="Empieza con un proyecto de ejemplo">
           La primera vez que entra, su cuenta ya trae un{" "}
-          <strong>«Proyecto de ejemplo»</strong> con poligonales, una
-          nivelación, un lugar de control de asentamientos y sus informes, para
-          que explore la aplicación con datos reales. Puede modificarlo o
-          eliminarlo cuando quiera.
+          <strong>«Proyecto de ejemplo»</strong> con carteras de campo reales
+          —poligonales y nivelaciones—, un lugar de control de asentamientos
+          simulado y sus informes, para que explore la aplicación con datos
+          reales (§ 2). Puede modificarlo o eliminarlo cuando quiera.
         </Nota>
       </Seccion>
 

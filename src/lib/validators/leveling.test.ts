@@ -9,6 +9,7 @@
 // completo (`ReadingCaptureIssues`, `hasReadingErrors`).
 
 import { describe, expect, it } from "vitest";
+import { CARTERA_VERJON } from "@/lib/demo/carteras";
 import {
   evaluateLevelingClosure,
   hasReadingErrors,
@@ -234,27 +235,14 @@ describe("equilibrado de visuales, por armada (Fase 19, N7)", () => {
     // campo calcula cada armada como V+ del punto i + V− del punto i+1
     // (M4 = I3 + K6…). La fila C 1 compara 28.1 con 28.5 y parecía equilibrada;
     // su armada con C 2 difiere 10.8 m.
-    const rows: ReadingInput[] = [
-      ["D1", "bm", 1.209, null, 31.5, null],
-      ["C 1", "pc", 3.275, 0.268, 28.1, 28.5],
-      ["C 2", "pc", 3.469, 0.224, 21.9, 17.3],
-      ["C 3", "pc", 3.952, 0.092, 25.5, 11.7],
-      ["AUX1", "intermediate", null, 0.194, null, null],
-      ["C 4", "pc", 3.314, 0.244, 19.6, 15.1],
-      ["C 5", "pc", 3.013, 0.124, 18.1, 16.6],
-      ["C 6", "pc", 3.549, 0.145, 23.1, 15.5],
-      ["C 7", "pc", 3.16, 0.132, 24.2, 14.9],
-      ["D3", "pc", 2.395, 0.87, 14.7, 8.4],
-      ["C 8", "pc", 2.349, 0.195, 12.1, 21.8],
-      ["D4", "bm", null, 0.808, null, 15.7],
-    ].map(([pointCode, pointType, backsight, foresight, backDistanceM, foreDistanceM]) =>
+    const rows: ReadingInput[] = CARTERA_VERJON.ida.map((r) =>
       bare({
-        pointCode: pointCode as string,
-        pointType: pointType as ReadingInput["pointType"],
-        backsight: backsight as number | null,
-        foresight: foresight as number | null,
-        backDistanceM: backDistanceM as number | null,
-        foreDistanceM: foreDistanceM as number | null,
+        pointCode: r.code,
+        pointType: r.type,
+        backsight: r.backsight,
+        foresight: r.foresight,
+        backDistanceM: r.backDistanceM,
+        foreDistanceM: r.foreDistanceM,
       }),
     );
     const w = validateSightBalances(rows, "tercer_orden", false);

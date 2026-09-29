@@ -22,7 +22,7 @@ type Client = SupabaseClient<Database>;
  * porque el editor recalcula en vivo, pero el informe y la exportación a
  * Excel —que leen lo persistido— mostraban guiones.
  */
-function resultadosDe(proceso: ProcesoDemo) {
+export function resultadosDe(proceso: ProcesoDemo) {
   const r = computePolygonal({
     type: proceso.type,
     startNorth: proceso.startNorth,
@@ -37,8 +37,10 @@ function resultadosDe(proceso: ProcesoDemo) {
     // método: Bowditch es el que usa la aplicación por defecto.
     method: proceso.correctionMethod ?? "bowditch",
     angleType: proceso.angleType,
-    hasOrientation: false,
-    hasClosingRow: false,
+    // Como en la aplicación: hay orientación cuando el proceso está amarrado.
+    hasOrientation: proceso.referencePointCode != null,
+    hasClosingRow: proceso.hasClosingRow ?? false,
+    leastSquares: proceso.leastSquares ?? null,
     stations: proceso.stations.map((st) => ({
       pointCode: st.code,
       angle: st.angle ? dmsToDecimal(...st.angle) : Number.NaN,
@@ -65,9 +67,10 @@ function resultadosDe(proceso: ProcesoDemo) {
 }
 
 /**
- * Inserta una poligonal y sus estaciones, y la cierra si el fixture lo pide.
- * Devuelve el `id` del proceso creado, que el orquestador usa para armar el
- * informe de poligonal cuando la poligonal nace cerrada.
+ * Inserta una poligonal, sus estaciones y sus lecturas, y la cierra si el
+ * fixture lo pide. `referencias` da el `id` de cada punto del catálogo por su
+ * código, para enlazar el amarre. Devuelve el `id` del proceso creado, que el
+ * orquestador usa para armar el informe de poligonal.
  */
 export async function insertarPoligonal(
   supabase: Client,
@@ -75,6 +78,7 @@ export async function insertarPoligonal(
   siteId: string,
   userId: string,
   proceso: ProcesoDemo,
+  referencias: ReadonlyMap<string, string>,
 ): Promise<string> {
   const cerrado = proceso.status === "closed";
   const calculo = resultadosDe(proceso);
@@ -108,6 +112,19 @@ export async function insertarPoligonal(
       end_north: proceso.endNorth ?? null,
       end_east: proceso.endEast ?? null,
       correction_method: proceso.correctionMethod ?? null,
+      // Fase 14: pesos del ajuste por mínimos cuadrados, solo con ese método.
+      ls_sigma_angle_seconds: proceso.leastSquares?.sigmaAngleSeconds ?? null,
+      ls_sigma_distance_m: proceso.leastSquares?.sigmaDistanceM ?? null,
+      ls_distance_measurements: proceso.leastSquares?.distanceMeasurements ?? null,
+      reference_point_id:
+        proceso.referencePointCode != null && proceso.referenceFromCatalog
+          ? (referencias.get(proceso.referencePointCode) ?? null)
+          : null,
+      reference_point_code: proceso.referencePointCode ?? null,
+      has_closing_row: proceso.hasClosingRow ?? false,
+      // Las carteras traen una lectura por ángulo: es lo que hay en el papel.
+      // El mínimo de 3 es para captura nueva.
+      angle_readings_min: 1,
       // Nace abierto aunque el fixture lo quiera cerrado: los triggers de
       // inmutabilidad rechazan escribir estaciones bajo un proceso ya cerrado.
       // El cierre se aplica al final, igual que hace la aplicación.
@@ -152,10 +169,33 @@ export async function insertarPoligonal(
     };
   });
 
-  const { error: errEst } = await supabase
+  const { data: insertadas, error: errEst } = await supabase
     .from("polygonal_stations")
-    .insert(estaciones);
+    .insert(estaciones)
+    .select("id, station_order");
   if (errEst) throw errEst;
+
+  // La lectura de cada ángulo (Fase 7): el editor promedia las lecturas, y una
+  // estación sin ninguna saldría incompleta.
+  const lecturas = proceso.stations.flatMap((st, i) => {
+    const stationId = insertadas.find((r) => r.station_order === i + 1)?.id;
+    if (!stationId || !st.angle) return [];
+    return [
+      {
+        station_id: stationId,
+        reading_order: 1,
+        angle_deg: st.angle[0],
+        angle_min: st.angle[1],
+        angle_sec: st.angle[2],
+      },
+    ];
+  });
+  if (lecturas.length > 0) {
+    const { error: errLect } = await supabase
+      .from("polygonal_angle_readings")
+      .insert(lecturas);
+    if (errLect) throw errLect;
+  }
 
   if (cerrado) {
     const { error: errCierre } = await supabase

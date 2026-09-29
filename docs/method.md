@@ -30,6 +30,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 18 | Libreta de nivelación y panel de asentamientos | [`prds/17-libreta-panel-asentamientos.md`](./prds/17-libreta-panel-asentamientos.md) | cerrada |
 | 19 | Equilibrado por armada y compensación desde el origen | [`prds/18-equilibrado-y-compensacion.md`](./prds/18-equilibrado-y-compensacion.md) | cerrada |
 | 20 | Identidad visual del prototipo y coma decimal | [`prds/19-identidad-visual-coma-decimal.md`](./prds/19-identidad-visual-coma-decimal.md) | cerrada |
+| 21 | La demo con las carteras reales | [`prds/20-demo-carteras-reales.md`](./prds/20-demo-carteras-reales.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -543,6 +544,27 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 21 — La demo con las carteras reales (2026-09-25)
+
+El «Proyecto de ejemplo» deja los datos sintéticos por las carteras de campo
+reales —TT4, Sede Vivero, El Verjón, el crudo Leica— y la simulación de Torre
+Alameda. Los datos reales viven una sola vez en `src/lib/demo/`. 817 tests.
+Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una transcripción se verifica contra la fuente, no contra otra copia.** El
+  CSV de El Verjón ya se había usado en dos fases; aun así se recalculó cada
+  distancia desde los hilos de la hoja antes de llevarlo a `src/`. Coincidió,
+  y ahora hay una razón para creerlo que no depende de que alguien lo
+  transcribiera bien la primera vez.
+- **Lo que se despliega no es el repositorio.** `docs/carteras/` no llega a
+  producción; la demo que lee el `.L` tenía que llevarlo en `src/`. Un test
+  que compara la copia con el original evita que las dos diverjan.
+- **Mover datos compartidos exige comparar la salida, no leer el diff.** La
+  serie de Torre Alameda salió idéntica del seed a `src/lib/demo/`… salvo por
+  un campo (`type: "bm"`) que la comparación JSON encontró y la lectura no.
 
 ### Cierre Fase 20 — Identidad visual del prototipo y coma decimal (2026-09-25)
 

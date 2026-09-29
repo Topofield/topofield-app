@@ -270,6 +270,16 @@
     padding: 0.35rem 0.5rem;
   }
 
+  /* En un teléfono, el resumen de precisiones (cinco columnas) no cabía por
+     unos píxeles. Se estrecha el relleno de las celdas solo en pantallas
+     estrechas: partir las palabras dejaba «Precisi ón». En A4 no cambia. */
+  @media screen and (max-width: 480px) {
+    .report-table th,
+    .report-table td {
+      padding-inline: 0.25rem;
+    }
+  }
+
   .report-table .num {
     text-align: right;
     font-variant-numeric: tabular-nums;
