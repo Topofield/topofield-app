@@ -2,16 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import {
+  ActionBar,
   Alert,
-  Badge,
-  Breadcrumbs,
   Button,
-  buttonClasses,
   Card,
   InvalidNumbersContext,
   useInvalidNumbers,
 } from "@/components/design-system";
-import { PROCESS_STATUS_LABELS } from "@/types/polygonal";
+import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 import {
   computeLeveling,
   totalDistanceFromReadings,
@@ -44,7 +42,8 @@ import { ResultsPanel } from "./results-panel";
 import { RunTabs } from "./run-tabs";
 import { configWithImport, ImportDialog, type LevelingImport } from "./import-dialog";
 import type { LibretaRow } from "@/lib/import/leveling";
-import { PROCESS_STATUS_TONE } from "@/lib/process-status";
+import { LevelingProfile } from "./leveling-profile";
+import { LevelingVerdictBanner } from "./leveling-verdict";
 
 
 function bmValue(code: string | null, elevation: number | null): BmValue {
@@ -166,8 +165,6 @@ function buildInput(
 interface LevelingEditorProps {
   process: LevelingProcess;
   readings: LevelingReading[];
-  projectId: string;
-  projectName: string;
   points: ReferencePoint[];
 }
 
@@ -175,8 +172,6 @@ interface LevelingEditorProps {
 export function LevelingEditor({
   process,
   readings: initialReadings,
-  projectId,
-  projectName,
   points,
 }: LevelingEditorProps) {
   const readOnly = process.status === "closed" || process.status === "rejected";
@@ -341,31 +336,6 @@ export function LevelingEditor({
   return (
     <InvalidNumbersContext.Provider value={invalidNumbers.report}>
       <div className="flex flex-col gap-6">
-        <div>
-          <Breadcrumbs
-            items={[
-              { label: "Dashboard", href: "/dashboard" },
-              { label: projectName, href: `/projects/${projectId}?tab=processes` },
-              { label: process.name },
-            ]}
-          />
-          <div className="mt-2 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-bold">{process.name}</h1>
-            <div className="flex items-center gap-3">
-              <Badge tone={PROCESS_STATUS_TONE[process.status]}>
-                {PROCESS_STATUS_LABELS[process.status]}
-              </Badge>
-              <a
-                href={`/projects/${projectId}/leveling/${process.id}/export`}
-                className={buttonClasses({ variant: "secondary", size: "sm" })}
-                download
-              >
-                Exportar a Excel
-              </a>
-            </div>
-          </div>
-        </div>
-
         {readOnly &&
           process.status === "closed" &&
           process.meets_tolerance === false && (
@@ -382,8 +352,12 @@ export function LevelingEditor({
                 : "Este proceso está cerrado; los datos son de solo lectura."}
             </Alert>
           )}
-        {error && <Alert variant="error">{error}</Alert>}
-        {saveMessage && <Alert variant="success">{saveMessage}</Alert>}
+        <LevelingVerdictBanner
+          result={result}
+          type={config.type}
+          order={config.precisionOrder}
+          totalKm={derivedTotalKm}
+        />
 
         <details
           open={process.status === "draft" || process.status === "in_progress"}
@@ -493,34 +467,40 @@ export function LevelingEditor({
           </div>
         </Card>
 
+        {levelType != null && (
+          <Card title="Perfil de la nivelación">
+            <LevelingProfile result={result} reconstructed={process.distances_reconstructed} />
+          </Card>
+        )}
+
         <ResultsPanel result={result} type={config.type} />
 
         {!readOnly && (
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            {configBlocked && (
-              <span className="text-sm text-danger">
-                {startElevationInvalid
-                  ? "La cota del BM de partida es obligatoria y debe ser un número."
-                  : "La cota del BM de llegada es obligatoria y debe ser un número."}
-              </span>
-            )}
-            {!configBlocked && captureBlocked && (
-              <span className="text-sm text-danger">
-                Corrige las celdas con error para poder guardar.
-              </span>
-            )}
-            {!configBlocked && !captureBlocked && dirty && (
-              <span className="text-sm text-ink-2">
-                Hay cambios sin guardar.
-              </span>
-            )}
+          <ActionBar
+            status={
+              error ? (
+                <span className="text-danger">{error}</span>
+              ) : configBlocked ? (
+                <span className="text-danger">
+                  {startElevationInvalid
+                    ? "La cota del BM de partida es obligatoria y debe ser un número."
+                    : "La cota del BM de llegada es obligatoria y debe ser un número."}
+                </span>
+              ) : captureBlocked ? (
+                <span className="text-danger">Corrige las celdas con error para poder guardar.</span>
+              ) : dirty ? (
+                "Cambios sin guardar"
+              ) : (
+                saveMessage
+              )
+            }
+          >
             <Button
               onClick={handleSave}
               disabled={isPending || captureBlocked || configBlocked}
             >
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
-            <span aria-hidden className="h-6 w-px bg-rule" />
             <CloseProcessDialog
               processId={process.id}
               type={config.type}
@@ -528,8 +508,9 @@ export function LevelingEditor({
               captureBlocked={captureBlocked || configBlocked}
               dirty={dirty}
             />
-          </div>
+          </ActionBar>
         )}
+        <UnsavedChangesGuard dirty={dirty} />
       </div>
     </InvalidNumbersContext.Provider>
   );
