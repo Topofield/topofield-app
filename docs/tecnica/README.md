@@ -2641,11 +2641,13 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-30):** la nube tiene aplicadas las **veintiuna**
-migraciones, hasta `20260929000000_tipo_de_lugar` (Fase 22), empujada antes
-del merge de su PR. Verificado con consultas al esquema: «Levantamientos de
-campo» quedó como agrupación, Torre Alameda como control, y los tres triggers
-de `sites` activos.
+**Estado actual (2026-09-30):** la nube tiene aplicadas las **veinticinco**
+migraciones, hasta `20260930030000_informe_congelado` (Fase 23), empujadas
+antes del merge de su PR. Verificado con consultas al esquema: El Verjón quedó
+con su veredicto (5.0 mm frente a 10.5 mm, cumple), ningún informe sin
+portada, las cuatro funciones de guardado como `SECURITY INVOKER` y sin
+`EXECUTE` para `anon`, los dos triggers nuevos activos, `reports` sin política
+de `UPDATE` y cero procesos calculados con el veredicto nulo.
 
 **Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
 mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de
