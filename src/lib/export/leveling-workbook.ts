@@ -67,6 +67,9 @@ export interface LevelingProcessRow {
   forward_error_mm: number | string | null;
   return_error_mm: number | string | null;
   discrepancy_mm: number | string | null;
+  /** Fase 23: la tolerancia y el veredicto de la discrepancia ida/vuelta. */
+  discrepancy_tolerance_mm: number | string | null;
+  meets_discrepancy: boolean | null;
   closed_at: string | null;
   closed_by: string | null;
   notes: string | null;
@@ -274,6 +277,17 @@ function sheetSummary(
     ["Error de ida (mm)", num(process.forward_error_mm)],
     ["Error de vuelta (mm)", num(process.return_error_mm)],
     ["Discrepancia ida/vuelta (mm)", num(process.discrepancy_mm)],
+    ["Tolerancia de la discrepancia (mm)", num(process.discrepancy_tolerance_mm)],
+    [
+      "¿Cumple la discrepancia?",
+      process.meets_discrepancy === null
+        ? process.has_return_run
+          ? "Sin evaluar"
+          : null
+        : process.meets_discrepancy
+          ? "Sí"
+          : "No",
+    ],
   ]);
 
   row += 1;

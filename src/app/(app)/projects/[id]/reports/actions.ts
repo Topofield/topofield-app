@@ -6,6 +6,7 @@ import {
   getClosedWorkForReports,
   getProjectById,
 } from "@/lib/supabase/queries";
+import { coverOf } from "@/lib/reports/cover";
 import { isEligible } from "@/lib/reports/eligibility";
 import type { IncludedProcess } from "@/types/report";
 import { logDbError } from "@/lib/errors/user-message";
@@ -33,7 +34,8 @@ export interface ReportPayload {
  * informe podría acabar apuntando a datos que aún cambian, y dejaría de ser
  * reproducible — que es lo que permite no guardar una copia de los datos.
  *
- * `name` se congela aquí, no al leer: es el nombre con el que se emitió.
+ * `name` se congela aquí, no al leer: es el nombre con el que se emitió. Lo
+ * mismo la portada (`cover`, Fase 23).
  */
 export async function createReportAction(
   payload: ReportPayload,
@@ -88,6 +90,9 @@ export async function createReportAction(
       included_processes: included,
       observations: payload.observations,
       generated_by: user.id,
+      // La portada se congela al emitir (Fase 23): editar el proyecto después
+      // no cambia un informe ya entregado.
+      cover: coverOf(project),
     })
     .select("id")
     .single();

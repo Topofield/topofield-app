@@ -10,6 +10,7 @@
 export interface LevelingClosureRow {
   status: string;
   type: string;
+  has_return_run: boolean;
   meets_tolerance: boolean | null;
 }
 
@@ -28,13 +29,12 @@ export interface LevelingClosureRow {
  * rechazar un trabajo por razones que el sistema no ve), pero nunca MÁS
  * laxo (pedir `closed` sobre uno que no cumple).
  *
- * `type === "open"` es la única excepción a la exigencia de
- * `meets_tolerance` no nulo: un recorrido sin cota de cierre conocida no
- * compensa ni evalúa tolerancia por diseño (`knownClosingElevation` en
- * `leveling.ts` devuelve `null` para ese tipo), así que `meets_tolerance`
- * queda en `null` de forma estructural y permanente, no por falta de
- * cálculo. Ahí el único criterio disponible es que el proceso haya llegado a
- * `calculated`.
+ La abierta **sin vuelta** es la única excepción a la exigencia de
+ * `meets_tolerance` no nulo: sin cota de cierre conocida ni segundo recorrido
+ * no hay nada contra qué juzgarla, así que `meets_tolerance` queda en `null`
+ * de forma estructural. Ahí el único criterio es que el proceso haya llegado
+ * a `calculated`. Con vuelta, desde la Fase 23, la discrepancia es su
+ * veredicto (`levelingProcessVerdict`).
  */
 export function deriveLevelingCloseStatus(
   row: LevelingClosureRow,
@@ -47,14 +47,21 @@ export function deriveLevelingCloseStatus(
     };
   }
 
-  if (row.type !== "open" && row.meets_tolerance == null) {
+  // Desde la Fase 23 una abierta CON vuelta guarda su veredicto —la
+  // discrepancia— en `meets_tolerance`, así que también lo exige. Solo la
+  // abierta sin vuelta queda sin veredicto por diseño.
+  const sinVeredicto = row.type === "open" && !row.has_return_run;
+  if (!sinVeredicto && row.meets_tolerance == null) {
     return {
       ok: false,
-      error: "No se puede cerrar un proceso sin resultados calculados.",
+      error:
+        row.type === "open"
+          ? "Faltan distancias por visual en la ida o en la vuelta para juzgar la discrepancia."
+          : "No se puede cerrar un proceso sin resultados calculados.",
     };
   }
 
-  const meetsTolerance = row.type === "open" ? true : row.meets_tolerance;
+  const meetsTolerance = sinVeredicto ? true : row.meets_tolerance;
   const mustReject = meetsTolerance === false;
 
   // El cliente puede pedir `rejected` aunque el proceso cumpla (más

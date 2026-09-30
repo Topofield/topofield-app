@@ -4,6 +4,7 @@ import { ClosureRecord } from "@/components/reports/sections/closure-record";
 import { PrecisionSummary } from "@/components/reports/sections/precision-summary";
 import { ReportProcessSection } from "@/components/reports/sections/process-section";
 import { ReportCover } from "@/components/reports/sections/report-cover";
+import { coverOf } from "@/lib/reports/cover";
 import { reportsIncluding } from "@/lib/reports/including";
 import { responsibleNames } from "@/lib/reports/responsible";
 import { closureOf, loadReportSections } from "@/lib/reports/sections";
@@ -58,7 +59,7 @@ export async function ProcessReport({ project, process, closed, notes }: Process
 
       <ReportCover
         title={process.name}
-        project={project}
+        cover={coverOf(project)}
         dateLabel={closed ? "Fecha de cierre" : "Fecha"}
         date={closed ? closedAt : now}
       />

@@ -42,6 +42,7 @@ export type Database = {
           correction_method: string
           created_at: string
           discrepancy_mm: number | null
+          discrepancy_tolerance_mm: number | null
           distances_reconstructed: boolean
           end_bm_code: string | null
           end_bm_elevation: number | null
@@ -54,6 +55,7 @@ export type Database = {
           id: string
           km_precision_mm: number | null
           level_type: string | null
+          meets_discrepancy: boolean | null
           meets_tolerance: boolean | null
           name: string
           notes: string | null
@@ -76,6 +78,7 @@ export type Database = {
           correction_method?: string
           created_at?: string
           discrepancy_mm?: number | null
+          discrepancy_tolerance_mm?: number | null
           distances_reconstructed?: boolean
           end_bm_code?: string | null
           end_bm_elevation?: number | null
@@ -88,6 +91,7 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          meets_discrepancy?: boolean | null
           meets_tolerance?: boolean | null
           name: string
           notes?: string | null
@@ -110,6 +114,7 @@ export type Database = {
           correction_method?: string
           created_at?: string
           discrepancy_mm?: number | null
+          discrepancy_tolerance_mm?: number | null
           distances_reconstructed?: boolean
           end_bm_code?: string | null
           end_bm_elevation?: number | null
@@ -122,6 +127,7 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          meets_discrepancy?: boolean | null
           meets_tolerance?: boolean | null
           name?: string
           notes?: string | null
@@ -693,6 +699,7 @@ export type Database = {
       }
       reports: {
         Row: {
+          cover: Json
           generated_at: string | null
           generated_by: string
           id: string
@@ -702,6 +709,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          cover: Json
           generated_at?: string | null
           generated_by: string
           id?: string
@@ -711,6 +719,7 @@ export type Database = {
           title: string
         }
         Update: {
+          cover?: Json
           generated_at?: string | null
           generated_by?: string
           id?: string
@@ -1088,6 +1097,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      georeference_polygonal: {
+        Args: { p_header: Json; p_process_id: string; p_stations: Json }
+        Returns: undefined
+      }
       owns_reading_station: {
         Args: { target_station: string }
         Returns: boolean
@@ -1095,6 +1108,24 @@ export type Database = {
       point_active_on: {
         Args: { p_active_from: string; p_date: string; p_retired_on: string }
         Returns: boolean
+      }
+      save_leveling_process: {
+        Args: { p_header: Json; p_process_id: string; p_readings: Json }
+        Returns: undefined
+      }
+      save_polygonal_process: {
+        Args: { p_header: Json; p_process_id: string; p_stations: Json }
+        Returns: undefined
+      }
+      save_visit: {
+        Args: {
+          p_book: Json
+          p_header: Json
+          p_readings: Json
+          p_rewrites: Json
+          p_visit_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

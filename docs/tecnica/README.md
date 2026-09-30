@@ -4,7 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-29 · Fase 22 cerrada · 847 tests ·
+**Última actualización:** 2026-09-30 · Fase 23 cerrada · 871 tests y 41
+pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -74,6 +75,8 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 19 | Equilibrado por armada y compensación desde el origen | cerrada |
 | 20 | Identidad visual del prototipo y coma decimal | cerrada |
 | 21 | La demo con las carteras reales | cerrada |
+| 22 | El proceso en una pantalla | cerrada |
+| 23 | Integridad | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -109,6 +112,7 @@ Mailpit: `http://127.0.0.1:55324`.
 | `npm run lint` | ESLint |
 | `npm run test` | Vitest (una pasada) |
 | `npm run test:watch` | Vitest en modo continuo |
+| `npx supabase test db` | Pruebas de la base con pgTAP (`supabase/tests/`), sobre la base local (Fase 23) |
 | `npm run seed` | Siembra los datos de ejemplo (`tsx --env-file=.env.local scripts/seed.mjs`) |
 | `npx supabase db reset` | Recrea la base y reaplica migraciones |
 | `npx supabase gen types typescript --local > src/types/database.ts` | Regenera tipos |
@@ -197,7 +201,7 @@ src/
 │   ├── design/              escalas de gráfica, marcadores y contraste
 │   ├── export/              libros de Excel de los tres módulos (§ 4.8)
 │   ├── import/leveling/     lectores de libretas de nivel digital (Fase 16)
-│   ├── reports/             elegibilidad, carga de secciones, resumen y responsable del informe
+│   ├── reports/             elegibilidad, carga de secciones, resumen, portada y responsable del informe
 │   ├── errors/              errores de la base traducidos para el usuario (Fase 22)
 │   ├── process-list.ts      filtrado y orden del listado del hub (los tres módulos)
 │   ├── process-status.ts    tonos de estado de procesos, visitas y lugares
@@ -247,6 +251,38 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (con el formulario completo, Fase 18), `saveVisitAction` (con libreta: ver § 4), `closeVisitAction`, `deleteVisitAction` (solo la última y abierta, Fase 22) |
 | `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction`, `deletePointAction` |
 | `(app)/projects/[id]/reports/actions.ts` | `createReportAction`, `deleteReportAction` |
+
+### Guardados en una transacción (Fase 23)
+
+Los guardados que escriben varias tablas no hacen una petición por paso:
+arman la carga y llaman a **una función de Postgres** con `supabase.rpc`, que
+hace todos los pasos en una sola transacción. Si falla uno, no queda nada
+escrito —ni una cabecera nueva sin estaciones, ni una visita con la fecha
+movida y la libreta vieja—.
+
+| Función | La llama | Hace, en orden |
+|---|---|---|
+| `save_polygonal_process` | `savePolygonalProcessAction` | cabecera; borra las estaciones e inserta las nuevas, cada una con sus lecturas de ángulo anidadas |
+| `save_leveling_process` | `saveLevelingProcessAction` | cabecera; reemplaza las lecturas de ida y vuelta |
+| `save_visit` | `saveVisitAction` | purga de las lecturas quitadas, cabecera, libreta (upsert y purga), lecturas y propagación a las visitas posteriores abiertas —el orden que imponen los triggers de vigencia— |
+| `georeference_polygonal` | `georeferencePolygonalProcessAction` | columnas de posición de la cabecera y de cada estación, por su id |
+
+Reglas (`20260930010000_guardados_atomicos.sql`):
+
+- **Solo escriben.** Validar, calcular con el motor y armar la carga sigue en
+  la Server Action: el motor es TypeScript y tiene los tests.
+- **`SECURITY INVOKER`**: corren como el usuario, con su RLS y los triggers
+  de inmutabilidad y vigencia. Otro usuario recibe «no encontrado» (`P0002`).
+  Solo `authenticated` tiene `EXECUTE`: Supabase se lo da a `anon` por defecto.
+- **Columnas explícitas**, sin SQL dinámico. La cabecera se rellena sobre la
+  fila actual con `jsonb_populate_record(fila, carga)`: una clave ausente
+  conserva su valor, como el `update` de supabase-js, y una de más no escribe
+  nada.
+- Los id de las estaciones los genera la base, y las lecturas de ángulo viajan
+  dentro de su estación: no pueden colgar de otra.
+
+Las prueba `supabase/tests/guardados_atomicos.test.sql` (§ 9) con cargas que
+fallan a mitad: la cabecera y las filas de antes no cambian.
 
 ### Informes y exportación (§ 4.7 y § 4.8 del PRD)
 
@@ -338,7 +374,11 @@ qué orden (`included_processes`, JSONB). Se aparta del `§3.2` del PRD principa
 en tres puntos, enmendados allí: no existe `file_url` —el PDF no se almacena,
 lo produce el navegador—, `project_id` es `NOT NULL` y cada entrada guarda su
 `order`. El `name` se congela al emitir, para que un proceso renombrado después
-conserve en el informe el nombre con el que salió.
+conserve en el informe el nombre con el que salió. Desde la Fase 23 también la
+**portada**: `cover` (JSONB, `NOT NULL`) guarda nombre, cliente, ubicación,
+datum y proyección del proyecto al emitir, y la vista imprimible la lee de ahí
+(`coverOf` en `lib/reports/cover.ts`). Un informe emitido **no se modifica**
+(§ 5): se elimina y se genera otro.
 
 **`sites` (el lugar) es transversal a los tres módulos**, no propia del
 control de asentamientos. `polygonal_processes` y `leveling_processes` tienen
@@ -647,6 +687,25 @@ el histórico de un lugar sellado. Lo cierra
 (`20260826120000_reject_write_on_closed_site_point.sql`), con la misma forma
 que el trigger de las visitas. Borrar un lugar **abierto** sigue cascadeando
 sin problema; borrar uno cerrado ya lo impedía el trigger de `sites`.
+
+**Lo que dependía de lo cerrado sin serlo (Fase 23).** Dos filas abiertas
+alimentaban resultados cerrados:
+
+- **La C0 y las coordenadas de un punto.** El acumulado es `(cota − C0) ×
+  1000` y las coordenadas dan la distorsión angular; el panel y el informe
+  recalculan en vivo, así que corregir la C0 cambiaba los números de visitas
+  ya cerradas. `settlement_points_reject_reference_change_with_closed_readings`
+  (`20260930020000_c0_con_lecturas_cerradas.sql`) rechaza con `23001` cambiar
+  `initial_elevation`, `northing` o `easting` si el punto tiene una lectura en
+  una visita cerrada; reescribir el mismo valor pasa (`WHEN … IS DISTINCT
+  FROM`). El código y la ubicación se siguen editando. `savePointAction` lo
+  comprueba antes con un mensaje (`pointReferenceChanged`, a la escala de la
+  columna) y el catálogo bloquea esos campos.
+- **El informe emitido.** `reports` admitía `UPDATE` y su portada leía el
+  proyecto. `reports_reject_update` (`20260930030000_informe_congelado.sql`)
+  rechaza todo `UPDATE` y se retiró la política de `UPDATE`: para una sesión,
+  un `UPDATE` no toca ninguna fila (RLS); sin RLS, el trigger lo rechaza. El
+  borrado sigue permitido.
 
 **Atribución de los informes.** La política de `INSERT` de `reports` comprueba
 también `generated_by = auth.uid()::text`
@@ -1062,7 +1121,9 @@ Viven en `tolerances.ts`, **nunca hardcodeadas en componentes**:
 
 Tolerancia angular = K·√n, donde n es el número de ángulos medidos. Nivelación
 usa su propio coeficiente, `LEVELING_TOLERANCE_K` (3/6/12/24 mm, tolerancia
-K·√D en km) — ver § 4 y § 7 del PRD principal.
+K·√D en km) — ver § 4 y § 7 del PRD principal. La discrepancia entre ida y
+vuelta se contrasta contra K·√D·√2, con D la menor de las dos distancias; si
+a un recorrido le faltan, no se evalúa (Fase 23).
 
 ### Aviso de equipo insuficiente (Fase 8)
 
@@ -1317,6 +1378,20 @@ Devuelve `{ canClose, mustReject, blocked, messages }`:
 La asimetría es deliberada: un **error angular** invalida el levantamiento y
 bloquea el cierre; una **precisión insuficiente** significa que el trabajo se
 hizo pero no alcanza la calidad exigida, y se documenta como rechazado.
+
+**Nivelación** (`evaluateLevelingClosure(result, type)`): la cerrada y la de
+enlace se juzgan por su cierre, y fuera de tolerancia solo se cierran como
+rechazadas. La abierta **sin vuelta** se cierra en cuanto está calculada: no
+hay contra qué juzgarla. La abierta **con vuelta** se juzga desde la Fase 23
+por la discrepancia: sin distancias en la ida o en la vuelta no hay veredicto
+y el cierre se bloquea; fuera de T·√2, solo rechazado.
+`levelingProcessVerdict` guarda ese veredicto en `meets_tolerance` —lo leen el
+hub, el dashboard, el resumen del informe y `deriveLevelingCloseStatus`—, y
+`discrepancy_tolerance_mm` y `meets_discrepancy` guardan la discrepancia con
+cualquier tipo que tenga vuelta; en cerrada y de enlace es un control más. La
+migración `20260930000000_veredicto_ida_vuelta.sql` rellenó los procesos no
+cerrados con lo guardado, verificado contra el motor; los cerrados conservan
+el criterio con que se cerraron.
 
 ### `validators/settlement.ts` — la capa estadística no bloquea
 
@@ -1649,17 +1724,18 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-847 tests en 55 archivos, Vitest, entorno `node` **sin jsdom**.
+871 tests en 57 archivos, Vitest, entorno `node` **sin jsdom**. Además, 41
+pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
-| `lib/calculations/leveling.test.ts` | 75 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19) |
+| `lib/calculations/leveling.test.ts` | 80 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 22 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16) |
 | `lib/validators/polygonal.test.ts` | 66 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15) |
-| `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
-| `lib/validators/leveling.test.ts` | 42 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19) |
+| `lib/validators/settlement.test.ts` | 45 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0 o las coordenadas, a la escala de la base (Fase 23) |
+| `lib/validators/leveling.test.ts` | 46 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23) |
 | `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
 | `lib/utils/format.test.ts` | 30 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22) |
@@ -1688,6 +1764,8 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `components/leveling/profile-data.test.ts` | 2 | Perfil de la nivelación con las carteras reales: el tramo 2 de 0 a 1397 m, de C10 a C10; la vuelta de El Verjón del final de la ida al origen (Fase 22) |
 | `lib/reports/responsible.test.ts` | 3 | Nombre del responsable del cierre: nombre completo, nombre y apellido, correo; nunca el id (Fase 22) |
 | `lib/reports/including.test.ts` | 2 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22) |
+| `lib/reports/leveling-report.test.ts` | 5 | La sección de nivelación con vuelta: la abierta sin filas de cierre, con su discrepancia y «fuera de tolerancia»; la cerrada con los dos; el resumen de precisiones de cada una (Fase 23) |
+| `lib/reports/cover.test.ts` | 2 | La portada del informe sale de `cover`, no del proyecto (Fase 23) |
 | `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` (fuera del manual) cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
 | `lib/utils/parse.test.ts` | 10 | **Coma o punto decimal**: signo, espacios, estados intermedios (`1,`, `,5`); vacío es `null` y lo inválido también, nunca `NaN`; separador de miles, exponentes y letras inválidos (Fase 20) |
 | `components/design-system/number-input.test.ts` | 8 | `NumberInput`: texto con teclado decimal, lo inválido se marca en vez del error del validador; el contador de celdas inválidas; `DmsInput` con segundos decimales (Fase 20) |
@@ -1700,14 +1778,24 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
 | `components/polygonal/closure-verdict.test.tsx` | 10 | Decisión del veredicto |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
-| `lib/export/leveling-workbook.test.ts` | 9 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta, equipo y orden del proceso (Fase 8) |
+| `lib/export/leveling-workbook.test.ts` | 10 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta, equipo y orden del proceso (Fase 8); tolerancia y veredicto de la discrepancia en el Resumen (Fase 23) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
-| `(app)/.../leveling/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
+| `(app)/.../leveling/[pid]/actions.test.ts` | 11 | Derivación del estado de cierre en servidor; la abierta con vuelta exige veredicto (Fase 23) |
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `lib/validators/project.test.ts` | 7 | El proyecto ya no valida equipo ni orden de precisión (Fase 8); latitud y longitud con coma decimal, y un separador de miles rechazado (Fase 20) |
 | `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
+
+**Pruebas de la base (Fase 23).** `supabase/tests/`, con pgTAP, sobre la base
+local: `npx supabase test db`. Cada archivo crea sus datos en una transacción
+que se deshace, así que no depende del seed ni lo toca.
+
+| Archivo | Pruebas | Cubre |
+|---|---|---|
+| `guardados_atomicos.test.sql` | 28 | Las cuatro funciones de guardado: guardan; una carga que falla a mitad no cambia la cabecera ni las filas de antes; la georreferenciación mueve un cerrado y rechaza una estación ajena; la propagación no toca otro lugar; otro usuario no escribe con ninguna de las cuatro (RLS) |
+| `c0_con_lecturas_cerradas.test.sql` | 7 | Con lectura cerrada, la C0 y las coordenadas no cambian y el código y la ubicación sí; reescribir el mismo valor pasa; sin ella, todo cambia |
+| `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -1864,9 +1952,12 @@ vez de perseguir otro cuarteto: `StatusIndicator` en modo `level` añade
 además del texto que el sistema de diseño ya exigía. Ver
 `docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
 
-**Dos cabos sueltos de la Fase 9, menores.** Los detectó la revisión del PR y
-se dejaron sin arreglar por acotados. Van a la **Fase 23** (I4 en
-`pendientes.md`):
+**Cerrado en la Fase 23 — dos cabos sueltos de la Fase 9.** Si a la ida o a
+la vuelta les faltan distancias, la tolerancia de la discrepancia no se evalúa
+(queda nula, y una abierta con vuelta no se cierra), y `validateRunCapture`
+exige `order` y `distancesReconstructed`. El texto original queda como
+registro. Los detectó la revisión del PR y se dejaron sin arreglar por
+acotados. Iban a la **Fase 23** (I4 en `pendientes.md`):
 
 - `computeLeveling` evalúa la tolerancia de discrepancia con `Math.min` de las
   dos distancias, pero `|| Number.POSITIVE_INFINITY` hace que una ida **sin**
@@ -1939,11 +2030,14 @@ select 'polygonal' as modulo, id, type, status from public.polygonal_processes
  where status='calculated' and meets_tolerance is null and type <> 'open_uncontrolled'
 union all
 select 'leveling', id, type, status from public.leveling_processes
- where status='calculated' and meets_tolerance is null and type <> 'open';
+ where status='calculated' and meets_tolerance is null
+   and not (type = 'open' and not has_return_run);
 ```
 
 Debe devolver cero filas. Si devuelve alguna, esos procesos hay que
-recalcularlos y guardarlos antes de desplegar, o no podrán cerrarse.
+recalcularlos y guardarlos antes de desplegar, o no podrán cerrarse. Desde la
+Fase 23 la abierta **con vuelta** también exige veredicto; si una sale en la
+consulta, le faltan distancias y no se cerrará hasta tenerlas.
 
 **El desnivel adoptado (`adoptedHeightDifference`) no alimenta la
 compensación.** `computeLeveling` lo calcula como el promedio de ida y vuelta
@@ -2163,8 +2257,11 @@ sobre la página. Desde la Fase 18, `capturas.mjs` oculta `nextjs-portal` antes
 de cada captura y todas se regeneraron sin él. La CSP no se relajó: abriría
 `eval` en desarrollo solo por una captura.
 
-**La C0 de un punto vigente sigue siendo editable aunque tenga lecturas
-cerradas (Fase 11, fuera de alcance).** El acumulado se recalcula en vivo
+**Cerrado en la Fase 23 — la C0 de un punto con lecturas cerradas.** Un
+trigger y `savePointAction` la bloquean, junto con las coordenadas, y el
+catálogo lo explica (§ 5). El texto original queda como registro: la C0 de un
+punto vigente seguía siendo editable aunque tuviera lecturas cerradas (Fase 11,
+fuera de alcance). El acumulado se recalcula en vivo
 contra la C0, así que corregirla reescribe el histórico que el panel, el
 informe y el Excel muestran para visitas ya cerradas —las persistidas no
 cambian, pero dejan de coincidir con la pantalla—. La Fase 11 lo cerró solo
@@ -2248,8 +2345,12 @@ nativa por paso. Queda pendiente de una revisión visual (no hecha desde este
 cierre documental, que no levantó la app) para confirmar que el paso corto
 sigue teniendo sentido en pantalla y no se lee como un `fieldset` vacío.
 
-**La portada del informe emitido sigue leyendo el proyecto en vivo, y
-`reports` no tiene trigger de inmutabilidad.** Va a la **Fase 23** (I3 en
+**Cerrado en la Fase 23 — la portada del informe emitido y la inmutabilidad de
+`reports`.** `reports.cover` congela la portada al emitir y un trigger rechaza
+todo `UPDATE` (§ 4 y § 5). El usuario decidió que un informe emitido no se
+reedita: se elimina y se genera otro. El texto original queda como registro:
+la portada del informe emitido seguía leyendo el proyecto en vivo, y `reports`
+no tenía trigger de inmutabilidad. Iba a la **Fase 23** (I3 en
 `pendientes.md`). El pie del informe imprimible dice que se emitió con
 procesos cerrados, y desde la Fase 8 sus mediciones, equipo y veredicto no
 cambian. Desde la Fase 15 la **posición** de una poligonal cerrada puede
@@ -2285,8 +2386,10 @@ a sin control lo conserva: el panel muestra entonces el selector para elegir
 otro, y el guardado lo rechaza con un mensaje hasta que se cambie. No se
 reescribe el método en silencio porque sería perder los pesos.
 
-**La georreferenciación no es atómica (Fase 15; va a la Fase 23, I1).** La
-acción escribe la
+**Cerrado en la Fase 23 — la georreferenciación en una transacción.**
+`georeference_polygonal` escribe la cabecera y las estaciones juntas (§ 3). El
+texto original queda como registro. La georreferenciación no era atómica
+(Fase 15; iba a la Fase 23, I1). La acción escribía la
 cabecera y después cada estación con su propio `UPDATE`: PostgREST no da una
 transacción que abarque varias peticiones, y una función de base se descartó
 al simplificar la fase. Si falla a medias, la cabecera queda en el sistema
@@ -2362,8 +2465,12 @@ largos. Tampoco lleva el amarre ni el cierre de la libreta. La decisión 13 del
 PRD de la fase dejó el informe fuera; alinearlo es cambiar la escala X por
 `timeScale` y añadir las dos columnas a la tabla de visitas del informe.
 
-**El guardado de una visita con libreta no es atómico (Fase 18; va a la Fase
-23, I1).**
+**Cerrado en la Fase 23 — el guardado de una visita en una transacción.**
+`save_visit` hace la purga, la cabecera, la libreta, las lecturas y la
+propagación juntas (§ 3); lo mismo el guardado de poligonal y de nivelación,
+que la apertura de la fase encontró con el mismo patrón. El texto original
+queda como registro. El guardado de una visita con libreta no era atómico
+(Fase 18; iba a la Fase 23, I1).
 `saveVisitAction` escribe la cabecera, la libreta, su purga y las lecturas en
 peticiones separadas. Si falla una intermedia, la visita queda con la libreta
 nueva y las lecturas viejas hasta el siguiente guardado, que lo repara. Es el
@@ -2534,12 +2641,13 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-29):** la nube tiene aplicadas **veinte**
-migraciones, hasta `20260927000000_compensacion_desde_el_origen` (Fase 19). La
-de la Fase 22, `20260929000000_tipo_de_lugar`, se aplica con `db push` después
-del merge: antes de empujarla, comprobar en la nube cuántos lugares de
-agrupación cerrados hay (su relleno escribe también en ellos, desactivando el
-trigger solo alrededor del UPDATE).
+**Estado actual (2026-09-30):** la nube tiene aplicadas las **veinticinco**
+migraciones, hasta `20260930030000_informe_congelado` (Fase 23), empujadas
+antes del merge de su PR. Verificado con consultas al esquema: El Verjón quedó
+con su veredicto (5.0 mm frente a 10.5 mm, cumple), ningún informe sin
+portada, las cuatro funciones de guardado como `SECURITY INVOKER` y sin
+`EXECUTE` para `anon`, los dos triggers nuevos activos, `reports` sin política
+de `UPDATE` y cero procesos calculados con el veredicto nulo.
 
 **Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
 mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de

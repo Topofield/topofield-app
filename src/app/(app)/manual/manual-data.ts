@@ -366,7 +366,7 @@ export const TIPOS_NIVELACION = [
   {
     tipo: "Abierta sin control",
     descripcion: "No cierra contra ningún BM",
-    verificacion: "No tiene verificación de cierre",
+    verificacion: "Sin cierre; con vuelta, la discrepancia entre ida y vuelta",
   },
 ];
 

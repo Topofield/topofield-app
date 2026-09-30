@@ -898,10 +898,11 @@ export default function ManualPage() {
         </Tabla>
 
         <p>
-          La nivelación abierta sin control sirve solo para reconocimiento:
-          calcula cotas, pero no hay forma de comprobar si son correctas,
-          igual que la poligonal abierta sin control. No se puede calcular
-          error de cierre ni compensar.
+          Sin recorrido de vuelta, la nivelación abierta sirve solo para
+          reconocimiento: calcula cotas, pero no hay forma de comprobar si son
+          correctas, igual que la poligonal abierta sin control. No se puede
+          calcular error de cierre ni compensar. Con vuelta, su veredicto es
+          la discrepancia entre ida y vuelta.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">
@@ -1119,8 +1120,24 @@ export default function ManualPage() {
           La aplicación compara los <strong>desniveles totales</strong> de
           ambos recorridos. La discrepancia entre ellos se contrasta contra{" "}
           <strong>T·√2</strong>, donde T es la misma tolerancia K·√D del
-          cierre individual. Ese es el veredicto.
+          cierre individual, con D la menor de las dos distancias.
         </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            En una <strong>abierta</strong>, la discrepancia es el veredicto
+            del proceso: la muestran la lista de procesos del proyecto, el
+            dashboard y el informe, y si no cumple el proceso solo puede
+            cerrarse como <strong>rechazado</strong>. Si a la ida o a la
+            vuelta les falta la distancia a las miras, no se puede juzgar y el
+            proceso no se cierra.
+          </li>
+          <li>
+            En una <strong>cerrada</strong> o <strong>de enlace</strong>, el
+            veredicto es el cierre; la discrepancia es un control más, que el
+            informe también imprime.
+          </li>
+        </ul>
 
         <p>
           <strong>Puntos homólogos.</strong> Si la ida y la vuelta pasan por
@@ -1229,8 +1246,9 @@ export default function ManualPage() {
         <p>
           Igual que en poligonales, cerrar una nivelación es{" "}
           <strong>irreversible</strong>. Un trabajo que no alcanza la
-          tolerancia solo puede cerrarse como <strong>rechazado</strong>; no
-          hay forma de cerrarlo como conforme si no cumple.
+          tolerancia —o, en una abierta con vuelta, cuya discrepancia no
+          cumple— solo puede cerrarse como <strong>rechazado</strong>; no hay
+          forma de cerrarlo como conforme si no cumple.
         </p>
 
         <VolverArriba />
@@ -1301,6 +1319,14 @@ export default function ManualPage() {
           La C0 es opcional. Si la deja vacía, la{" "}
           <strong>línea base del punto es su primera lectura</strong>: esa
           lectura queda con acumulado 0 y las siguientes se miden contra ella.
+        </p>
+
+        <p>
+          Cuando un punto ya se midió en una visita <strong>cerrada</strong>,
+          su C0 y sus coordenadas quedan fijas: los asentamientos con que se
+          cerró esa visita dependen de ellas. El diálogo{" "}
+          <strong>Editar</strong> las muestra bloqueadas; el código y la
+          ubicación se siguen pudiendo cambiar.
         </p>
 
         <p>
@@ -2042,14 +2068,17 @@ export default function ManualPage() {
           <strong>Imprimir o guardar como PDF</strong> abre el diálogo del
           navegador: elija «Guardar como PDF» como destino. Las migas vuelven
           al proyecto, y <strong>Eliminar informe</strong> lo borra: los
-          procesos que incluye no cambian, y puede volver a generarlo.
+          procesos que incluye no cambian, y puede volver a generarlo. Un
+          informe emitido no se edita: para corregirlo, elimínelo y genérelo
+          de nuevo.
         </p>
 
         <Captura {...CAPTURAS.informeImprimible} />
 
         <p>
-          El documento lleva portada con los datos del proyecto, índice, una
-          sección por proceso con sus resultados <strong>y su equipo</strong>{" "}
+          El documento lleva portada con los datos del proyecto{" "}
+          <strong>al emitirlo</strong> —si después cambian el nombre o el
+          cliente del proyecto, la portada no—, índice, una sección por proceso con sus resultados <strong>y su equipo</strong>{" "}
           —en las poligonales, con su dibujo—,
           el resumen consolidado de precisiones —con una columna de equipo—,
           sus observaciones y el registro de cierre. El equipo ya no es un

@@ -1,9 +1,10 @@
 import { formatDate } from "@/lib/utils/format";
-import type { Project } from "@/types/project";
+import type { ReportCoverData } from "@/types/report";
 
 interface ReportCoverProps {
   title: string;
-  project: Project;
+  /** En un informe emitido, la portada congelada al emitir (`reports.cover`). */
+  cover: ReportCoverData;
   /** Etiqueta de la fecha: «Fecha de emisión» en un informe emitido. */
   dateLabel?: string;
   date: string | null;
@@ -12,7 +13,7 @@ interface ReportCoverProps {
 /** Portada del informe: título y datos del proyecto (§ 4.7). */
 export function ReportCover({
   title,
-  project,
+  cover,
   dateLabel = "Fecha de emisión",
   date,
 }: ReportCoverProps) {
@@ -22,25 +23,25 @@ export function ReportCover({
       <h1 className="report-title">{title}</h1>
       <dl className="report-cover-grid">
         <dt>Proyecto</dt>
-        <dd>{project.name}</dd>
-        {project.client && (
+        <dd>{cover.name}</dd>
+        {cover.client && (
           <>
             <dt>Cliente</dt>
-            <dd>{project.client}</dd>
+            <dd>{cover.client}</dd>
           </>
         )}
-        {project.location && (
+        {cover.location && (
           <>
             <dt>Ubicación</dt>
-            <dd>{project.location}</dd>
+            <dd>{cover.location}</dd>
           </>
         )}
-        {project.datum && (
+        {cover.datum && (
           <>
             <dt>Datum / proyección</dt>
             <dd>
-              {project.datum}
-              {project.projection ? ` · ${project.projection}` : ""}
+              {cover.datum}
+              {cover.projection ? ` · ${cover.projection}` : ""}
             </dd>
           </>
         )}

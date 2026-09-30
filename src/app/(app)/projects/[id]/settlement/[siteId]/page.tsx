@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getProjectById,
   getReferencePoints,
+  getPointIdsWithClosedReadings,
   getSettlementReadingsBySite,
   getSite,
   getSitePoints,
@@ -103,7 +104,13 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         />
       )}
       {activeTab === "lugar" && (
-        <PlaceTab projectId={project.id} site={site} points={sitePoints} visits={visits} />
+        <PlaceTab
+          projectId={project.id}
+          site={site}
+          points={sitePoints}
+          visits={visits}
+          referenceLocked={await getPointIdsWithClosedReadings(supabase, site.id)}
+        />
       )}
       {activeTab === "informe" && (
         <ProcessReport

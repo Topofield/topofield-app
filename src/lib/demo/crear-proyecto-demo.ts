@@ -13,6 +13,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { IncludedProcess } from "@/types/report";
+import { coverOf } from "@/lib/reports/cover";
 import {
   ASENTAMIENTO_DEMO,
   NIVELACION_VERJON,
@@ -238,6 +239,7 @@ export async function crearProyectoDemo(
       supabase,
       proyecto.id,
       userId,
+      coverOf(PROYECTO_DEMO),
       informe.title,
       informe.observations,
       informe.included,

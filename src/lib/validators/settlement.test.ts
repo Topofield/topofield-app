@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  pointReferenceChanged,
   undoRetirementBlocker,
   validateActiveFrom,
   validateReadingCapture,
@@ -447,5 +448,34 @@ describe("validateActiveFrom", () => {
 
   it("acepta cualquier fecha válida si el lugar no tiene visitas cerradas", () => {
     expect(validateActiveFrom("2025-01-01", null)).toBeNull();
+  });
+});
+
+describe("pointReferenceChanged (Fase 23)", () => {
+  const punto = { initial_elevation: 100.12, northing: 2000, easting: 1000.5 };
+  const igual = { initialElevation: 100.12, northing: 2000, easting: 1000.5 };
+
+  it("el mismo valor, aunque vuelva formateado, no es un cambio", () => {
+    expect(pointReferenceChanged(punto, igual)).toBe(false);
+    expect(pointReferenceChanged(punto, { ...igual, initialElevation: 100.12000000001 })).toBe(false);
+  });
+
+  it("la C0 cambia a partir del cuarto decimal", () => {
+    expect(pointReferenceChanged(punto, { ...igual, initialElevation: 100.1201 })).toBe(true);
+  });
+
+  it("las coordenadas cambian a partir del tercer decimal", () => {
+    expect(pointReferenceChanged(punto, { ...igual, easting: 1000.501 })).toBe(true);
+    expect(pointReferenceChanged(punto, { ...igual, northing: 2000.0004 })).toBe(false);
+  });
+
+  it("poner o quitar un valor es un cambio", () => {
+    expect(pointReferenceChanged(punto, { ...igual, northing: null, easting: null })).toBe(true);
+    expect(
+      pointReferenceChanged(
+        { initial_elevation: null, northing: null, easting: null },
+        { initialElevation: null, northing: null, easting: null },
+      ),
+    ).toBe(false);
   });
 });

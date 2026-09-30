@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
 import {
   computeLeveling,
+  levelingProcessVerdict,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
 import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
@@ -167,52 +168,6 @@ export async function saveLevelingProcessAction(
       ? "in_progress"
       : "draft";
 
-  const { error: updateError } = await supabase
-    .from("leveling_processes")
-    .update({
-      name: payload.name,
-      type: payload.type,
-      start_bm_code: payload.startBmCode,
-      start_bm_elevation: payload.startBmElevation,
-      end_bm_code: payload.endBmCode,
-      end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
-      has_return_run: payload.hasReturnRun,
-      total_distance_km: totalDistanceKm,
-      // Guardar reemplaza la libreta entera, así que las distancias dejan de
-      // ser las que inventó el backfill de la Fase 9 repartiendo por mitades.
-      // Sin esto el proceso quedaba marcado para siempre: el banner seguiría
-      // afirmando que sus distancias son reconstruidas —falso sobre datos ya
-      // medidos en campo, en una aplicación cuyo tema es la trazabilidad— y el
-      // equilibrado quedaría suprimido justo sobre las distancias reales que
-      // sí permiten evaluarlo.
-      distances_reconstructed: false,
-      precision_order: payload.precisionOrder,
-      equipment_brand: payload.equipmentBrand,
-      equipment_model: payload.equipmentModel,
-      equipment_serial: payload.equipmentSerial,
-      equipment_calibration_date: payload.equipmentCalibrationDate,
-      level_type: payload.levelType,
-      km_precision_mm: payload.kmPrecisionMm,
-      closure_error_mm: result.closureErrorMm,
-      tolerance_mm: result.toleranceMm,
-      meets_tolerance: result.meetsTolerance,
-      forward_error_mm: result.forward.errorMm,
-      return_error_mm: result.return?.errorMm ?? null,
-      discrepancy_mm: result.discrepancyMm,
-      notes: payload.notes,
-      status,
-    })
-    .eq("id", payload.processId);
-  if (updateError) {
-    return { ok: false, error: "No se pudo guardar el proceso." };
-  }
-
-  // Las lecturas se reemplazan por completo: borra y reinserta el conjunto.
-  await supabase
-    .from("leveling_readings")
-    .delete()
-    .eq("process_id", payload.processId);
-
   function runRows(
     runType: "forward" | "return",
     drafts: ReadingDraft[],
@@ -221,7 +176,6 @@ export async function saveLevelingProcessAction(
     return drafts.map((draft, i) => {
       const r = computedReadings[i];
       return {
-        process_id: payload.processId,
         run_type: runType,
         reading_order: i + 1,
         point_code: draft.pointCode,
@@ -254,13 +208,54 @@ export async function saveLevelingProcessAction(
       : []),
   ];
 
-  if (rows.length > 0) {
-    const { error: insertError } = await supabase
-      .from("leveling_readings")
-      .insert(rows);
-    if (insertError) {
-      return { ok: false, error: "No se pudieron guardar las lecturas." };
-    }
+  // Cabecera y lecturas en una sola transacción (Fase 23): si falla un paso no
+  // queda nada a medias. Las lecturas se reemplazan por completo.
+  const { error: saveError } = await supabase.rpc("save_leveling_process", {
+    p_process_id: payload.processId,
+    p_header: {
+      name: payload.name,
+      type: payload.type,
+      start_bm_code: payload.startBmCode,
+      start_bm_elevation: payload.startBmElevation,
+      end_bm_code: payload.endBmCode,
+      end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
+      has_return_run: payload.hasReturnRun,
+      total_distance_km: totalDistanceKm,
+      // Guardar reemplaza la libreta entera, así que las distancias dejan de
+      // ser las que inventó el backfill de la Fase 9 repartiendo por mitades.
+      // Sin esto el proceso quedaba marcado para siempre: el banner seguiría
+      // afirmando que sus distancias son reconstruidas —falso sobre datos ya
+      // medidos en campo, en una aplicación cuyo tema es la trazabilidad— y el
+      // equilibrado quedaría suprimido justo sobre las distancias reales que
+      // sí permiten evaluarlo.
+      distances_reconstructed: false,
+      precision_order: payload.precisionOrder,
+      equipment_brand: payload.equipmentBrand,
+      equipment_model: payload.equipmentModel,
+      equipment_serial: payload.equipmentSerial,
+      equipment_calibration_date: payload.equipmentCalibrationDate,
+      level_type: payload.levelType,
+      km_precision_mm: payload.kmPrecisionMm,
+      closure_error_mm: result.closureErrorMm,
+      tolerance_mm: result.toleranceMm,
+      // El veredicto guardado: el cierre, o la discrepancia en una abierta
+      // con vuelta (Fase 23).
+      meets_tolerance: levelingProcessVerdict(result, payload.type),
+      forward_error_mm: result.forward.errorMm,
+      return_error_mm: result.return?.errorMm ?? null,
+      discrepancy_mm: result.discrepancyMm,
+      discrepancy_tolerance_mm:
+        result.discrepancyToleranceMm == null
+          ? null
+          : Number(result.discrepancyToleranceMm.toFixed(1)),
+      meets_discrepancy: result.meetsDiscrepancy,
+      notes: payload.notes,
+      status,
+    },
+    p_readings: rows,
+  });
+  if (saveError) {
+    return { ok: false, error: logDbError(saveError, "No se pudo guardar el proceso.") };
   }
 
   revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);
@@ -288,7 +283,7 @@ export async function closeLevelingProcessAction(
 
   const { data: process } = await supabase
     .from("leveling_processes")
-    .select("id, status, project_id, type, meets_tolerance")
+    .select("id, status, project_id, type, has_return_run, meets_tolerance")
     .eq("id", payload.processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };

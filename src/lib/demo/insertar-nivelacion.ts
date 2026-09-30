@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   computeLeveling,
+  levelingProcessVerdict,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
 import type { Database } from "@/types/database";
@@ -88,10 +89,15 @@ export async function insertarNivelacion(
       status: "calculated",
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
-      meets_tolerance: result.meetsTolerance,
+      meets_tolerance: levelingProcessVerdict(result, nivelacion.type),
       forward_error_mm: result.forward.errorMm,
       return_error_mm: result.return?.errorMm ?? null,
       discrepancy_mm: result.discrepancyMm,
+      discrepancy_tolerance_mm:
+        result.discrepancyToleranceMm == null
+          ? null
+          : Number(result.discrepancyToleranceMm.toFixed(1)),
+      meets_discrepancy: result.meetsDiscrepancy,
       notes: nivelacion.notes,
     })
     .select("id")

@@ -35,7 +35,7 @@ interface ResultsPanelProps {
  * calculado por `computeLeveling` en el editor — no recalcula nada.
  */
 export function ResultsPanel({ result, type }: ResultsPanelProps) {
-  const closure = evaluateLevelingClosure(result);
+  const closure = evaluateLevelingClosure(result, type);
   const arithmeticDifference = result.sumBacksights - result.sumForesights;
   const homologous = useMemo(() => compareHomologousPoints(result), [result]);
 

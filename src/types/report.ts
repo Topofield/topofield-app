@@ -22,9 +22,26 @@ export interface IncludedProcess {
   [key: string]: string | number;
 }
 
-/** Fila de `reports`, con `included_processes` ya tipado. */
-export type Report = Omit<Tables<"reports">, "included_processes"> & {
+/**
+ * La portada de un informe: los datos del proyecto que muestra. En un informe
+ * emitido es `reports.cover`, congelada al emitir (Fase 23): editar el
+ * proyecto después no la cambia. La pestaña Informe de un proceso la arma en
+ * vivo con `coverOf`.
+ */
+export interface ReportCoverData {
+  name: string;
+  client: string | null;
+  location: string | null;
+  datum: string | null;
+  projection: string | null;
+  /** Firma de índice para el tipo `Json` de la columna, como `IncludedProcess`. */
+  [key: string]: string | null;
+}
+
+/** Fila de `reports`, con `included_processes` y `cover` ya tipados. */
+export type Report = Omit<Tables<"reports">, "included_processes" | "cover"> & {
   included_processes: IncludedProcess[];
+  cover: ReportCoverData;
 };
 
 /** Etiqueta de cada tipo de trabajo en el índice del informe. */

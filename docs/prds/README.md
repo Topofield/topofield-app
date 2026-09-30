@@ -28,6 +28,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 20 | Identidad visual del prototipo y coma decimal | `19-identidad-visual-coma-decimal.md` | cerrada |
 | 21 | La demo con las carteras reales | `20-demo-carteras-reales.md` | cerrada |
 | 22 | El proceso en una pantalla | `21-proceso-en-una-pantalla.md` | cerrada |
+| 23 | Integridad | `22-integridad.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

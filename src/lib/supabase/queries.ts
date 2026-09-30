@@ -478,6 +478,24 @@ export async function getSettlementReadingsBySite(
   return grouped;
 }
 
+/**
+ * Los puntos del lugar con alguna lectura en una visita cerrada (Fase 23): su
+ * C0 y sus coordenadas ya no cambian.
+ */
+export async function getPointIdsWithClosedReadings(
+  supabase: Client,
+  siteId: string,
+): Promise<string[]> {
+  if (!UUID_RE.test(siteId)) return [];
+  const { data, error } = await supabase
+    .from("settlement_readings")
+    .select("point_id, settlement_visits!inner(site_id, status)")
+    .eq("settlement_visits.site_id", siteId)
+    .eq("settlement_visits.status", "closed");
+  if (error) throw error;
+  return [...new Set((data ?? []).map((r) => r.point_id))];
+}
+
 /** La libreta de nivelación de una visita (Fase 18), en orden de captura. */
 export async function getVisitBook(
   supabase: Client,

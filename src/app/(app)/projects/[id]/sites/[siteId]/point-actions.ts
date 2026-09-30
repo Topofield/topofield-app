@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
 import {
+  pointReferenceChanged,
+  REFERENCE_LOCKED_MESSAGE,
   undoRetirementBlocker,
   validateActiveFrom,
   validateRetirement,
@@ -243,6 +245,22 @@ export async function savePointAction(
     activeFrom = payload.activeFrom;
   }
 
+  // La C0 y las coordenadas de un punto medido en una visita cerrada ya no
+  // cambian (Fase 23): los resultados con que se cerró dependen de ellas. El
+  // trigger de la base garantiza lo mismo; aquí se da el mensaje.
+  const initialElevation = isAlta ? null : payload.initialElevation;
+  if (pointReferenceChanged(current, { ...payload, initialElevation })) {
+    const { count, error: countError } = await supabase
+      .from("settlement_readings")
+      .select("id, settlement_visits!inner(status)", { count: "exact", head: true })
+      .eq("point_id", pointId)
+      .eq("settlement_visits.status", "closed");
+    if (countError) {
+      return { ok: false, error: logDbError(countError, "No se pudo guardar el punto.") };
+    }
+    if ((count ?? 0) > 0) return { ok: false, error: REFERENCE_LOCKED_MESSAGE };
+  }
+
   const { error } = await supabase
     .from("settlement_points")
     .update({
@@ -250,7 +268,7 @@ export async function savePointAction(
       location_description: payload.locationDescription.trim(),
       northing: payload.northing,
       easting: payload.easting,
-      initial_elevation: isAlta ? null : payload.initialElevation,
+      initial_elevation: initialElevation,
       active_from: activeFrom,
     })
     .eq("id", pointId)
