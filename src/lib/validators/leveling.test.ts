@@ -12,7 +12,9 @@ import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON } from "@/lib/demo/carteras";
 import {
   evaluateLevelingClosure,
+  findIncompleteTurningPoint,
   hasReadingErrors,
+  turningPointBlocker,
   validateReadingCapture,
   validateRunCapture,
   validateSightBalances,
@@ -532,5 +534,86 @@ describe("evaluateLevelingClosure — capa de cierre (§ 5.2)", () => {
     const evaluation = evaluateLevelingClosure(resultWith(abierta), "open");
     expect(evaluation.canClose).toBe(true);
     expect(evaluation.mustReject).toBe(false);
+  });
+});
+
+describe("punto de cambio incompleto (Fase 24)", () => {
+  const bmStart = bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.4, backDistanceM: 30 });
+  const bmEnd = bare({ pointCode: "BM-1", pointType: "bm", foresight: 1.3, foreDistanceM: 30 });
+  const pcSinFore = bare({ pointCode: "PC-1", backsight: 1.5, backDistanceM: 30 });
+  const pcSinBack = bare({ pointCode: "PC-1", foresight: 1.2, foreDistanceM: 30 });
+  const pcCompleto = reading();
+  // Las filas del resultado del motor son `ComputedReading`: la regla solo
+  // mira tipo y lecturas.
+  const run = (rows: ReadingInput[]) => ({
+    readings: rows as never,
+    heightDifference: 0,
+    errorMm: null,
+  });
+
+  it("encuentra el PC sin V− o sin V+, con su fila", () => {
+    expect(findIncompleteTurningPoint([bmStart, pcCompleto, pcSinFore, bmEnd])).toEqual({
+      row: 3,
+      missing: "V−",
+    });
+    expect(findIncompleteTurningPoint([bmStart, pcSinBack, bmEnd])).toEqual({
+      row: 2,
+      missing: "V+",
+    });
+  });
+
+  it("una fila vacía, la primera, la última y lo que no es PC no cuentan", () => {
+    expect(findIncompleteTurningPoint([bmStart, bare(), bmEnd])).toBeNull();
+    expect(findIncompleteTurningPoint([pcSinFore, pcCompleto, pcSinBack])).toBeNull();
+    expect(
+      findIncompleteTurningPoint([bmStart, bare({ pointType: "intermediate", foresight: 1.1 }), bmEnd]),
+    ).toBeNull();
+  });
+
+  it("la celda avisa, sin bloquear el guardado", () => {
+    const issues = validateRunCapture([bmStart, pcSinFore, bmEnd], "closed", "tercer_orden", false);
+    expect(issues[1]!.warnings.foresight).toBe("Falta la V−: el punto de cambio no cierra su armada.");
+    expect(hasReadingErrors(issues)).toBe(false);
+    const otra = validateRunCapture([bmStart, pcSinBack, bmEnd], "closed", "tercer_orden", false);
+    expect(otra[1]!.warnings.backsight).toBe("Falta la V+: el punto de cambio no abre la armada siguiente.");
+  });
+
+  it("sin aviso en una fila recién agregada", () => {
+    const issues = validateRunCapture([bmStart, bare(), bmEnd], "closed", "tercer_orden", false);
+    expect(issues[1]!.warnings.foresight).toBeUndefined();
+    expect(issues[1]!.warnings.backsight).toBeUndefined();
+  });
+
+  it("el cierre nombra la fila, antes que la comprobación aritmética", () => {
+    const e = evaluateLevelingClosure(
+      resultWith({ forward: run([bmStart, pcSinFore, bmEnd]), arithmeticCheckOk: false }),
+      "closed",
+    );
+    expect(e.blocked).toBe(true);
+    expect(e.messages).toEqual([
+      "El punto de cambio de la fila 2 no tiene V−: sin ella la libreta no encadena y no se puede cerrar.",
+    ]);
+  });
+
+  it("revisa también la vuelta, que no pasa por la comprobación aritmética", () => {
+    const e = evaluateLevelingClosure(
+      resultWith({
+        forward: run([bmStart, pcCompleto, bmEnd]),
+        return: run([bmStart, pcSinBack, bmEnd]),
+        arithmeticCheckOk: true,
+        meetsDiscrepancy: true,
+      }),
+      "open",
+    );
+    expect(e.blocked).toBe(true);
+    expect(e.messages[0]).toBe(
+      "El punto de cambio de la fila 2 de la vuelta no tiene V+: sin ella la libreta no encadena y no se puede cerrar.",
+    );
+  });
+
+  it("con todo completo no dice nada", () => {
+    expect(
+      turningPointBlocker({ forward: run([bmStart, pcCompleto, bmEnd]), return: null }),
+    ).toBeNull();
   });
 });

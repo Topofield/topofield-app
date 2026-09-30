@@ -42,6 +42,8 @@ interface CloseVisitDialogProps {
     toleranceMm: number | null;
     meetsTolerance: boolean | null;
     arithmeticCheckOk: boolean;
+    /** Punto de cambio incompleto, con su fila (Fase 24); bloquea igual. */
+    turningPoint?: string | null;
   } | null;
 }
 
@@ -71,7 +73,7 @@ export function CloseVisitDialog({
 
   if (!open) return null;
 
-  const bookBlocked = book != null && !book.arithmeticCheckOk;
+  const bookBlocked = book != null && (!book.arithmeticCheckOk || !!book.turningPoint);
   const canConfirm = !dirty && !bookBlocked && confirmed && !isPending;
   const closure = book
     ? formatBookClosure(book.closureErrorMm, book.toleranceMm, book.meetsTolerance)
@@ -151,8 +153,8 @@ export function CloseVisitDialog({
 
         {bookBlocked && (
           <Alert variant="error">
-            La comprobación aritmética de la libreta no cuadra. Corrige la
-            libreta antes de cerrar la visita.
+            {book?.turningPoint ??
+              "La comprobación aritmética de la libreta no cuadra. Corrige la libreta antes de cerrar la visita."}
           </Alert>
         )}
         {closure?.status === "out" && (

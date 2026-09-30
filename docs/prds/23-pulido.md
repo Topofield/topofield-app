@@ -78,6 +78,16 @@ informe consolidado.
 La libreta de asentamientos valida con el mismo `validateRunCapture`, así que
 el aviso y el motivo de cierre valen en los dos sitios.
 
+### 6. La vuelta no pasa por la comprobación aritmética
+
+Hallado al implementar PU10. `computeLeveling` devuelve
+`arithmeticCheckOk: forward.arithmeticCheckOk`: solo la ida. Un punto de
+cambio incompleto en la **vuelta** no bloquea hoy el cierre, y la discrepancia
+—el veredicto de una abierta con vuelta desde la Fase 23— se calcula con cotas
+mal encadenadas. En la práctica la comprobación aritmética solo falla por un
+punto de cambio incompleto, así que revisar los puntos de cambio de **los dos
+recorridos** en el cierre cierra también este hueco, sin cambiar el motor.
+
 ## Alcance
 
 ### PU2 y PU3 · La tabla de estaciones de escritorio
@@ -136,9 +146,11 @@ de cierre y sin botón de informe consolidado.
   lleva el **aviso** «Falta la V−» / «Falta la V+». Es aviso, no error: no
   bloquea el guardado.
 - `evaluateLevelingClosure` y el cierre de la visita con libreta: si hay un
-  punto de cambio incompleto, el mensaje que bloquea nombra la fila («El punto
-  de cambio de la fila 4 no tiene V−») en lugar de «La comprobación aritmética
-  no cuadra».
+  punto de cambio incompleto **en la ida o en la vuelta**, el cierre se
+  bloquea con un mensaje que nombra la fila y el recorrido («El punto de
+  cambio de la fila 4 de la vuelta no tiene V−») en lugar de «La comprobación
+  aritmética no cuadra» (hallazgo 6). El panel de resultados y el editor de la
+  libreta muestran el mismo motivo.
 
 ### PU1 · Documentación
 

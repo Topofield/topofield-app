@@ -82,6 +82,8 @@ interface VisitViewProps {
   meetsTolerance: boolean | null;
   /** Comprobación aritmética de la libreta guardada; null sin libreta. */
   arithmeticCheckOk: boolean | null;
+  /** Punto de cambio incompleto de la libreta guardada, con su fila (Fase 24). */
+  bookTurningPoint: string | null;
   summary: VisitSummary;
   /** Promedio de la visita anterior, para el Δ del KPI. */
   previousMean: number | null;
@@ -478,6 +480,7 @@ export function VisitView(props: VisitViewProps) {
                 toleranceMm: props.toleranceMm,
                 meetsTolerance: props.meetsTolerance,
                 arithmeticCheckOk: props.arithmeticCheckOk,
+                turningPoint: props.bookTurningPoint,
               }
             : null
         }

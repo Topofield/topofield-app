@@ -149,6 +149,16 @@ describe("validateVisitClose — libreta (Fase 18)", () => {
     );
   });
 
+  it("un punto de cambio incompleto bloquea y dice qué fila (Fase 24)", () => {
+    const motivo =
+      "El punto de cambio de la fila 3 no tiene V−: sin ella la libreta no encadena y no se puede cerrar.";
+    const r = validateVisitClose(visit, [P1], "2025-01-01", [], {
+      arithmeticCheckOk: false,
+      turningPoint: motivo,
+    });
+    expect(r.errors.book).toBe(motivo);
+  });
+
   it("fuera de tolerancia no bloquea: solo avisa (decisión 5)", () => {
     const r = validateVisitClose(visit, [P1], "2025-01-01", [], { arithmeticCheckOk: true });
     expect(r.errors).toEqual({});

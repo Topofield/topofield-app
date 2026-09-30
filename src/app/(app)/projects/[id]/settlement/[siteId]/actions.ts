@@ -23,7 +23,7 @@ import {
   bookIssueMessage,
   validateVisitBook,
 } from "@/lib/validators/settlement-book";
-import { hasReadingErrors } from "@/lib/validators/leveling";
+import { hasReadingErrors, turningPointBlocker } from "@/lib/validators/leveling";
 import {
   CAPTURE_MODES,
   type BookRowPayload,
@@ -522,7 +522,7 @@ export async function closeVisitAction(
     .select("capture_mode, reference_bm_elevation, precision_order")
     .eq("id", visitId)
     .maybeSingle();
-  let bookCheck: { arithmeticCheckOk: boolean } | null = null;
+  let bookCheck: { arithmeticCheckOk: boolean; turningPoint: string | null } | null = null;
   if (header?.capture_mode === "book" && header.reference_bm_elevation != null) {
     const { data: rows } = await supabase
       .from("settlement_book_readings")
@@ -535,7 +535,10 @@ export async function closeVisitAction(
         Number(header.reference_bm_elevation),
         header.precision_order as PrecisionOrder,
       );
-      bookCheck = { arithmeticCheckOk: result.arithmeticCheckOk };
+      bookCheck = {
+        arithmeticCheckOk: result.arithmeticCheckOk,
+        turningPoint: turningPointBlocker(result),
+      };
     }
   }
 
