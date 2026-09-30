@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/design-system";
 import { PolygonalEditor } from "@/components/polygonal/polygonal-editor";
 import { ProcessReport } from "@/components/process/process-report";
+import { processReportState } from "@/lib/reports/state";
 import { ProcessShell } from "@/components/process/process-shell";
 import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 import { createClient } from "@/lib/supabase/server";
@@ -94,7 +95,7 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
         <ProcessReport
           project={project}
           process={{ type: "polygonal", id: process.id, name: process.name }}
-          closed={process.status === "closed"}
+          state={processReportState(process.status)}
           notes={process.notes}
         />
       )}

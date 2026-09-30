@@ -5,6 +5,7 @@ import { PrecisionSummary } from "@/components/reports/sections/precision-summar
 import { ReportProcessSection } from "@/components/reports/sections/process-section";
 import { ReportCover } from "@/components/reports/sections/report-cover";
 import { coverOf } from "@/lib/reports/cover";
+import type { ProcessReportState } from "@/lib/reports/state";
 import { reportsIncluding } from "@/lib/reports/including";
 import { responsibleNames } from "@/lib/reports/responsible";
 import { closureOf, loadReportSections } from "@/lib/reports/sections";
@@ -14,13 +15,17 @@ import { getReports } from "@/lib/supabase/queries";
 import { formatDate } from "@/lib/utils/format";
 import type { Project } from "@/types/project";
 import type { IncludedProcess } from "@/types/report";
+import { ReportStateMark } from "./report-state-mark";
 
 interface ProcessReportProps {
   project: Project;
   /** El proceso, como lo referenciaría un informe consolidado. */
   process: Pick<IncludedProcess, "type" | "id" | "name">;
-  /** Cerrado: el informe es el emitido; si no, un borrador. */
-  closed: boolean;
+  /**
+   * Borrador mientras se edita; cerrado, el emitido; rechazado, cerrado pero
+   * fuera de los consolidados (Fase 24, `processReportState`).
+   */
+  state: ProcessReportState;
   /** Notas del proceso, como observaciones. */
   notes?: string | null;
 }
@@ -33,7 +38,9 @@ interface ProcessReportProps {
  * del PRD). Sin cerrar, lleva la marca de borrador, también en el PDF. Debajo,
  * fuera de la impresión, los informes consolidados que lo incluyen.
  */
-export async function ProcessReport({ project, process, closed, notes }: ProcessReportProps) {
+export async function ProcessReport({ project, process, state, notes }: ProcessReportProps) {
+  // Cerrado conforme o rechazado: ya no cambia, y tiene fecha y registro de cierre.
+  const closed = state !== "draft";
   const supabase = await createClient();
   const entry: IncludedProcess = { ...process, order: 0 };
   const [sections, reports] = await Promise.all([
@@ -51,11 +58,7 @@ export async function ProcessReport({ project, process, closed, notes }: Process
 
   return (
     <div className="report">
-      {!closed && (
-        <p className="report-draft">
-          Borrador — el informe se emite al cerrar el proceso
-        </p>
-      )}
+      <ReportStateMark state={state} />
 
       <ReportCover
         title={process.name}
@@ -110,7 +113,7 @@ export async function ProcessReport({ project, process, closed, notes }: Process
         ) : (
           <p className="text-sm text-ink-2">Este proceso no está en ningún informe consolidado.</p>
         )}
-        {closed ? (
+        {state === "closed" ? (
           <Link
             href={`/projects/${project.id}/reports/new?incluir=${process.type}:${process.id}`}
             className={`mt-4 ${buttonClasses({ variant: "secondary", size: "sm" })}`}
@@ -119,7 +122,9 @@ export async function ProcessReport({ project, process, closed, notes }: Process
           </Link>
         ) : (
           <p className="mt-2 text-sm text-ink-2">
-            Un informe consolidado solo incluye procesos cerrados.
+            {state === "rejected"
+              ? "Un informe consolidado no incluye procesos rechazados."
+              : "Un informe consolidado solo incluye procesos cerrados."}
           </p>
         )}
       </section>

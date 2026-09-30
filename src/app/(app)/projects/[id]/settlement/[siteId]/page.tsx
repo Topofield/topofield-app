@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/design-system";
 import { ProcessReport } from "@/components/process/process-report";
+import { processReportState } from "@/lib/reports/state";
 import { ProcessShell } from "@/components/process/process-shell";
 import { NewVisitDialog } from "@/components/settlement/new-visit-dialog";
 import { isPointActiveOn, pointInputOf } from "@/lib/calculations/settlement";
@@ -116,7 +117,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         <ProcessReport
           project={project}
           process={{ type: "site", id: site.id, name: site.name }}
-          closed={site.status === "closed"}
+          state={processReportState(site.status)}
           notes={site.notes}
         />
       )}
