@@ -1,27 +1,36 @@
 // Seed para verificación manual de los módulos poligonal, nivelación y
 // asentamientos.
 //
-// Crea (idempotente — borra y recrea):
+// Crea, sobre una base recién reseteada:
 //  - El usuario de la aplicación, topofieldsarf@gmail.com, con una password
 //    fija SOLO local: la misma cuenta que en producción, con otra contraseña.
 //  - 3 proyectos: "Lote catastral" (tercer_orden), "Red geodésica"
 //    (primer_orden) y "Edificio en monitoreo" (tercer_orden).
 //  - Cada proyecto con al menos un lugar (`sites`), obligatorio desde la
 //    Fase 5 para los procesos de poligonal y nivelación.
-//  - 7 procesos poligonales precargados que cubren los 3 tipos, los 3 métodos
-//    y los estados closed / rejected.
+//  - 15 procesos poligonales (13 en "Lote catastral", 2 en "Red geodésica")
+//    que cubren los 3 tipos, los 4 métodos y los estados calculated, closed y
+//    rejected.
 //  - 2 procesos de nivelación: uno calculado (editable, para la captura del
 //    editor del manual) y uno cerrado (alimenta el informe de nivelación).
-//  - 2 lugares de monitoreo (`edificio`) en "Edificio en monitoreo": "Torre
-//    Central" (6 puntos × 6 visitas, ABIERTO/editable para las capturas) y
-//    "Edificio Norte" (4 × 3, CERRADO, para el informe de asentamientos).
-//  - 3 informes por proceso: poligonal y nivelación en "Lote catastral",
-//    asentamientos en "Edificio en monitoreo".
+//  - 3 lugares de monitoreo en "Edificio en monitoreo": "Edificio Torre
+//    Central" (7 puntos × 6 visitas, abierto y editable para las capturas),
+//    "Torre Alameda" (8 × 14 visitas con libreta, 12 cerradas) y "Edificio
+//    Norte" (4 × 3, cerrado, para el informe de asentamientos).
+//  - 3 informes: poligonal y nivelación en "Lote catastral", asentamientos en
+//    "Edificio en monitoreo".
 //  - Algunos reference_points para probar el CRUD de la tab Configuración.
 //
+// El "Proyecto de ejemplo" no lo crea el seed: lo crea la aplicación en el
+// primer inicio de sesión (`profiles.demo_seeded_at` queda nulo).
+//
+// No es idempotente: recrea el usuario, y sobre una base con trabajo cerrado
+// el borrado falla, porque lo cerrado es inmutable. Ejecútelo siempre tras
+// `npx supabase db reset`.
+//
 // Uso: con `npx supabase start` activo, ejecutar
-//   `npm run seed`
-// (equivale a `npx tsx --env-file=.env.local scripts/seed.mjs`; lee
+//   `npx supabase db reset && npm run seed`
+// (`npm run seed` equivale a `npx tsx --env-file=.env.local scripts/seed.mjs`; lee
 // SUPABASE_SECRET_KEY desde .env.local).
 //
 // Se ejecuta con `tsx` y no con `node` a secas porque este script importa los

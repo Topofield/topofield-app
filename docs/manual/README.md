@@ -14,8 +14,7 @@ trazabilidad, los informes y la exportación a Excel.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-09-24 · Fase 18 (Libreta de nivelación y
-panel de asentamientos).
+**Última actualización:** 2026-09-30 · Fase 23 (Integridad).
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -124,6 +123,7 @@ Arriba, tres indicadores del estado general:
   precisión que ellos mismos declararon. Requieren revisión antes del cierre.
 
 Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
+Cada tarjeta indica cuántos procesos tiene el proyecto.
 
 Use **+ Nuevo Proyecto** para crear uno.
 
@@ -348,7 +348,8 @@ orden de precisión exigido.
 ![Veredicto de cierre](../../public/manual/08-veredicto.png)
 
 Muestra la precisión alcanzada junto a la requerida, el error de cierre y el
-perímetro. El color lo resume: verde cumple, rojo no cumple.
+perímetro. El color lo resume, y el texto lo dice: verde cumple, rojo no
+cumple.
 
 **Ángulos en DMS o en grados decimales.** Bajo el veredicto, el conmutador
 **Ángulos en** elige cómo teclea los ángulos: en tres casillas (grados, minutos,
@@ -1246,8 +1247,9 @@ de la persona.
 
 **Solo procesos cerrados**, en un informe consolidado. Es la regla principal y
 tiene una razón práctica:
-el informe no guarda una copia de los datos, sino que los vuelve a leer cada
-vez que se abre. Como un proceso cerrado ya no puede cambiar sus mediciones ni
+el informe no guarda una copia de las mediciones: las vuelve a leer cada vez
+que se abre. Solo guarda su título, sus observaciones, la lista de procesos y
+la portada del día en que se emitió (§ 10.3). Como un proceso cerrado ya no puede cambiar sus mediciones ni
 su veredicto, el informe dice lo mismo hoy y dentro de un año. La excepción es
 la **posición**: si georreferencia una poligonal después de emitir el informe,
 el informe muestra las coordenadas nuevas, con una nota de cuándo y con qué

@@ -11,21 +11,29 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Build: `npm run build`
 - Lint: `npm run lint`
 - Type check: `npm run typecheck` (alias de `tsc --noEmit`)
+- Tests: `npm test` (Vitest, entorno node)
+- Tests de la base: `npx supabase test db` (pgTAP en `supabase/tests/`, sobre la base local)
 - Supabase local: `npx supabase start`
 - Supabase migrar (dev local): `npx supabase db reset` (recrea el volumen y reaplica todas las migraciones)
-- Supabase migrar (cloud, cuando exista): `npx supabase db push` (aplica solo las migraciones nuevas)
-- Supabase types: `npx supabase gen types typescript --local 2>/dev/null > src/types/database.ts`
+- Datos de prueba: `npx supabase db reset && npm run seed` (el seed no es idempotente; el «Proyecto de ejemplo» lo crea la app en el primer inicio de sesión)
+- Supabase migrar (cloud, producción): `npx supabase db push` (aplica solo las migraciones nuevas). Va **antes** del merge a `main` —Vercel despliega al instante— y solo con el visto bueno del usuario.
+- Supabase types: `npx supabase gen types typescript --local 2>/dev/null > src/types/database.ts`. Si el formato generado difiere del commiteado, añadir a mano solo lo nuevo.
 
 ## Architecture
-- `src/app/(auth)/` → páginas de login y registro (Supabase Auth)
-- `src/app/dashboard/` → dashboard principal con lista de proyectos
-- `src/app/projects/[id]/` → hub del proyecto, tabs de procesos/informes/config
-- `src/app/projects/[id]/polygonal/[pid]/` → editor de poligonales
-- `src/app/projects/[id]/leveling/[pid]/` → editor de nivelación
-- `src/app/projects/[id]/settlement/[pid]/` → editor de asentamientos
-- `src/app/projects/[id]/reports/` → generador de informes
+- `src/app/(auth)/` → páginas de login y registro (Supabase Auth); `src/app/auth/callback/` → confirmación de correo
+- `src/app/(app)/dashboard/` → dashboard principal con lista de proyectos
+- `src/app/(app)/manual/` → el manual de usuario en la app (ruta `/manual`)
+- `src/app/(app)/projects/[id]/` → hub del proyecto, tabs de procesos/informes/config
+- `src/app/(app)/projects/[id]/polygonal/[pid]/` → poligonal: pestañas Proceso · Informe, y `export/` (Excel)
+- `src/app/(app)/projects/[id]/leveling/[pid]/` → nivelación: pestañas Proceso · Informe, y `export/`
+- `src/app/(app)/projects/[id]/settlement/[siteId]/` → lugar de asentamientos: pestañas Panel · Puntos y lugar · Informe; `visits/[visitId]/` y su `editar/`
+- `src/app/(app)/projects/[id]/sites/` → alta del lugar (`[siteId]` redirige a la pestaña Puntos y lugar)
+- `src/app/(app)/projects/[id]/reports/` → informes consolidados: `new/` y `[reportId]/print/`
 - `src/components/design-system/` → sistema de diseño propio (NO usar shadcn/ui)
-- `src/components/editors/` → componentes de los 3 editores
+- `src/components/{polygonal,leveling,settlement}/` → editores y paneles de cada módulo
+- `src/components/process/` → la pantalla común de un proceso (`ProcessShell`) y su informe
+- `src/components/reports/` → alta del informe y sus secciones, compartidas con la pestaña Informe
+- `src/components/projects/`, `navigation/` → dashboard, hub y guarda de cambios sin guardar
 - `src/lib/calculations/` → algoritmos topográficos puros (sin dependencias de React)
 - `src/lib/calculations/polygonal.ts` → Bowditch, Tránsito, Crandall, Mínimos cuadrados (con `least-squares.ts`)
 - `src/lib/calculations/leveling.ts` → corrección proporcional a distancia
@@ -34,7 +42,11 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/lib/calculations/georeference.ts` → transformación rígida desde dos puntos (georreferenciación)
 - `src/lib/validators/` → reglas de validación por capa (captura, cierre, estadística)
 - `src/lib/import/leveling/` → lectores de libretas de nivel digital (`.L` de Leica, plantilla CSV), puros
-- `src/lib/supabase/` → clientes Supabase (browser, server) y helper de sesión para `proxy.ts`
+- `src/lib/reports/`, `src/lib/export/` → carga de secciones y portada del informe; libros de Excel
+- `src/lib/demo/` → el «Proyecto de ejemplo» con carteras de campo reales, que se crea al primer inicio de sesión
+- `src/lib/supabase/` → clientes Supabase (browser, server), consultas y helper de sesión para `proxy.ts`
+- `supabase/migrations/` → esquema, triggers de inmutabilidad y funciones de guardado; `supabase/tests/` → pruebas pgTAP
+- `scripts/seed.mjs` → datos de prueba locales
 - `src/types/` → tipos TypeScript e interfaces, incluye database.ts autogenerado
 - `src/proxy.ts` → protección de rutas con Supabase Auth (Next 16 renombró `middleware` → `proxy`)
 - `PRD-TopoField.md` → PRD completo con modelo de datos, algoritmos y reglas
@@ -48,13 +60,15 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - No usar shadcn/ui ni ninguna librería de componentes. El sistema de diseño está en `src/components/design-system/` y se construye sobre Tailwind puro.
 - Las coordenadas van a 3 decimales (0.000), las cotas a 4 decimales (0.0000), los ángulos en DMS.
 - Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado. Única excepción: la **posición** de una poligonal (coordenadas, proyecciones, azimuts, arranque y llegada) se puede reescribir al georreferenciarla (Fase 15); los triggers admiten solo esas columnas.
+- Lo que alimenta un resultado cerrado también queda fijo: la C0 y las coordenadas de un punto con lecturas en una visita cerrada no cambian (trigger en `settlement_points`), y un informe emitido no admite UPDATE: guarda su portada en `reports.cover` y solo se elimina y se regenera.
+- Los guardados que escriben varias tablas van por una función de Postgres (`supabase.rpc`: `save_polygonal_process`, `save_leveling_process`, `save_visit`, `georeference_polygonal`) para que sean atómicos. Son `SECURITY INVOKER`, con columnas explícitas, y solo escriben: el cálculo sigue en TypeScript, en la Server Action.
 - Cada tabla tiene Row Level Security (RLS) en Supabase. El user solo ve sus propios proyectos.
 - Las tolerancias están definidas como constantes en `src/lib/calculations/tolerances.ts`, no hardcodeadas en componentes.
 - Idioma de la interfaz: español (Colombia). Zona horaria: America/Bogota.
 - Consultar `PRD-TopoField.md` por sección según la tarea: `§3` modelo de datos y SQL · `§4.6` cierre y bloqueo · `§5` reglas de validación (`§5.4` tolerancias por orden) · `§6` algoritmos de cálculo · `§9` orden de implementación.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase** según el orden de implementación del PRD principal (§ 9). Hay 6 fases.
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 23, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.
@@ -65,7 +79,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `docs/manual/README.md` → manual de usuario, con capturas de la app real. Es la **fuente de la redacción**.
 - `src/app/(app)/manual/` → la ruta `/manual` de la app: el mismo manual maquetado con el sistema de diseño, visible para el usuario final y en producción. IMPORTANT: el texto vive **por duplicado** en los dos sitios y no hay generación automática; al editar uno, editar el otro en el mismo commit.
 - `docs/manual/capturas.mjs` → regenera las capturas en `public/manual/` (copia única; el Markdown las referencia con ruta relativa).
-- IMPORTANT: ambos se actualizan **al cerrar cada fase**, no al final del proyecto. Al implementar un módulo: mover su sección de «Módulos pendientes» al cuerpo del manual, regenerar capturas con `node docs/manual/capturas.mjs`, y actualizar en la doc técnica el estado de fases, la tabla de pruebas y la deuda técnica.
+- IMPORTANT: ambos se actualizan **al cerrar cada fase**, no al final del proyecto. Al cambiar algo visible: documentarlo en el manual (dos copias), regenerar capturas con `node docs/manual/capturas.mjs` —y commitear solo las que cambian por la fase—, y actualizar en la doc técnica el estado de fases, la tabla de pruebas y la deuda técnica (§ 11, entrada por entrada).
 
 ## Workflow
 - Antes de tareas complejas, leer las secciones relevantes de `PRD-TopoField.md` y el PRD de la fase actual en `docs/prds/`.

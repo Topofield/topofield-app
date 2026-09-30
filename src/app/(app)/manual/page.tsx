@@ -2011,8 +2011,10 @@ export default function ManualPage() {
         </h3>
         <p>
           <strong>Solo procesos cerrados</strong>, en un informe consolidado. Es
-          la regla principal y tiene una razón práctica: el informe no guarda una copia de los datos, sino
-          que los vuelve a leer cada vez que se abre. Como un proceso cerrado ya
+          la regla principal y tiene una razón práctica: el informe no guarda
+          una copia de las mediciones: las vuelve a leer cada vez que se abre.
+          Solo guarda su título, sus observaciones, la lista de procesos y la
+          portada del día en que se emitió. Como un proceso cerrado ya
           no puede cambiar sus mediciones ni su veredicto, el informe dice lo
           mismo hoy y dentro de un año. La excepción es la{" "}
           <strong>posición</strong>: si georreferencia una poligonal después de

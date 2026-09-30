@@ -3,7 +3,8 @@
 Recorrido paso a paso para verificar el módulo de control de asentamientos
 contra los datos precargados por la seed. Cubre los criterios del PRD-de-fase 5
 usando la UI tal como la usaría un usuario, y los de las fases 11, 12 y 18
-(libreta de nivelación y panel del lugar, pasos 11 a 20).
+(libreta de nivelación y panel del lugar, pasos 11 a 20), la 22 (la pantalla
+del lugar con sus pestañas) y la 23 (C0 y coordenadas fijas, paso 3 bis).
 
 ## Preparación
 
@@ -12,13 +13,21 @@ usando la UI tal como la usaría un usuario, y los de las fases 11, 12 y 18
    ```
    npx supabase db reset && npm run seed
    ```
+   El seed **solo funciona justo después del reset**: sobre una base con
+   datos no puede borrar el usuario —tiene registros cerrados, inmutables— y
+   se detiene pidiendo el `db reset`.
 2. En otra terminal, levantar el dev server:
    ```
    npm run dev
    ```
-3. Abrir `http://localhost:3000/sign-in` e iniciar sesión:
+3. Abrir `http://localhost:3000/sign-in` e iniciar sesión con **Entrar**:
    - Email: `topofieldsarf@gmail.com`
    - Password: `seed1234`
+
+Al entrar por primera vez, la aplicación crea el **Proyecto de ejemplo** (el
+seed deja `profiles.demo_seeded_at` vacío). Trae su propia **Torre Alameda**,
+cerrada, con sus 14 visitas cerradas: no confundirla con la de **Edificio en
+monitoreo**, que es la que usan los pasos.
 
 El monitoreo de la seed vive en el proyecto **Edificio en monitoreo**, con tres
 lugares:
@@ -39,20 +48,33 @@ referencia: sirve para el arranque en frío (paso 19).
 
 ### 1. Dashboard
 
-- ✓ El dashboard lista **3** proyectos: Lote catastral, Red geodésica y
-  **Edificio en monitoreo**.
+- ✓ El dashboard lista **4** proyectos: Proyecto de ejemplo, **Edificio en
+  monitoreo**, Red geodésica y Lote catastral.
 
 ### 2. Hub del proyecto de monitoreo
 
-- Abrir **Edificio en monitoreo**.
-- ✓ La tab de procesos/lugares muestra los tres lugares: **Edificio Torre
-  Central** y **Torre Alameda** (activos) y **Edificio Norte** (cerrado).
+- Abrir **Edificio en monitoreo**. ✓ La tab **Procesos** abre en
+  **Poligonales (0)**, con «Aún no hay poligonales».
+- Pulsar el chip **Control de Asentamientos (3)**.
+- ✓ Chips de estado **Todos (3)**, **Activos (2)** y **Cerrados (1)**, y la
+  tabla con Nombre, Estado, Alerta y Última actividad (sin columna Cumple):
+  **Edificio Torre Central** (Edificio · 6 visitas, Activo, Alarma), **Torre
+  Alameda** (Edificio · 14 visitas, Activo, Alerta) y **Edificio Norte**
+  (Edificio · 3 visitas, Cerrado, Alerta). Los activos ofrecen **Duplicar**,
+  **Renombrar** y **Eliminar**; Edificio Norte, solo **Duplicar**.
 
-### 3. Editor del lugar — catálogo de puntos
+### 3. Pestaña Puntos y lugar — catálogo de puntos
 
 - Abrir **Edificio Torre Central**.
-- ✓ La ficha del lugar muestra tipo de estructura **Edificio** y sus umbrales
-  (velocidad 2 / 5 / 10 mm/mes, acumulado 25 / 50 / 75 mm, distorsión 1/500).
+- ✓ Abre en la pestaña **Panel** (Fase 22). Cabecera: «Control de
+  asentamientos · Edificio · 6 puntos de control · lectura base el 15 de enero
+  de 2025» (cuenta los vigentes), con **+ Nueva visita**, **Exportar a Excel**
+  y **Ver informe**, y las pestañas **Panel**, **Puntos y lugar** e
+  **Informe**.
+- Pasar a **Puntos y lugar**.
+- ✓ **Datos del lugar** muestra tipo de estructura **Edificio** y sus umbrales
+  (velocidad 2 / 5 / 10 mm/mes, acumulado 25 / 50 / 75 mm, distorsión 1/500),
+  con **Guardar** y **Cerrar lugar** en la barra del pie.
 - ✓ El catálogo lista **7 puntos**. `P-01` a `P-06` tienen su descripción de
   ubicación, norte, este y cota inicial (100.0000).
 - ✓ **P-05** figura **De baja desde el 1 de mayo de 2025**, con el motivo
@@ -60,6 +82,21 @@ referencia: sirve para el arranque en frío (paso 19).
   **Deshacer baja**.
 - ✓ **P-07** figura **Alta el 15 de marzo de 2025** y su cota C0 dice
   «Primera lectura».
+
+### 3 bis. C0 y coordenadas fijas (Fase 23)
+
+- En **Puntos y lugar** de Edificio Torre Central, **Editar** P-01. ✓ Código,
+  Ubicación, Norte, Este y Cota C0 editables, sin aviso: ninguna visita del
+  lugar está cerrada todavía. **Cancelar**.
+- Abrir **Torre Alameda** (visitas 0–11 cerradas), pestaña **Puntos y lugar**,
+  y **Editar** TA-08. ✓ Norte, Este y Cota C0 salen deshabilitados, con el
+  aviso «El punto tiene lecturas en visitas cerradas: su C0 y sus coordenadas
+  ya no cambian. El código y la ubicación sí.»; Código y Ubicación siguen
+  editables. **Cancelar**.
+- En **Edificio Norte** (lugar cerrado), pestaña **Puntos y lugar**, ✓ el
+  catálogo no tiene **Editar** ni ninguna otra acción, ni **Agregar punto**.
+- El paso 8 comprueba el cambio en Torre Central: al cerrar su visita 0, P-01
+  pasa al caso de TA-08.
 
 ### 4. Registro de visitas
 
@@ -79,16 +116,19 @@ referencia: sirve para el arranque en frío (paso 19).
   (de baja desde el 1 de mayo de 2025)». P-07 tiene fila.
 - ✓ Los parciales, acumulados y velocidad se calculan a partir de las cotas; no
   se teclean.
+- ✓ La vista de la visita 5, la última y abierta, ofrece además **Eliminar**
+  (Fase 22); la de la visita 1, no.
 
 ### 5. Panel de asentamientos — semáforo
 
-- Ir al panel del lugar (`/settlement/[siteId]`).
+- Volver a la pestaña **Panel** del lugar (`/settlement/[siteId]`).
 - ✓ El **semáforo** no sale todo verde:
-  - **P-06** (esquina SE, mayor carga) alcanza el nivel **alarma** (su velocidad
-    en la primera visita, ≈ −23.6 mm/mes, supera el umbral de 10 mm/mes).
+  - **P-06** (esquina SE, mayor carga) sale en **alerta** (ver abajo). En la
+    tabla **Visitas**, las visitas 1 y 2 salen en **Alarma**: en la 1, P-06
+    baja a ≈ −23.56 mm/mes, sobre el umbral de 10 mm/mes.
   - **P-05** (borde sur, intermedio) no aparece: está de baja y no tiene
     lectura en la última visita. Su historia sigue en la gráfica.
-  - **P-04** sale en **alerta** por velocidad (≈ 6,9 mm/mes), con la marca
+  - **P-04** sale en **alerta** por velocidad (6.9 mm/mes), con la marca
     **⚠ Lectura fuera de tendencia** y la tendencia **Acelerando**: en la
     visita 5 sube 7,0 mm cuando venía bajando. Es la lectura mal tomada que
     siembra el seed (Fase 12). Debajo de la marca se lee el aviso completo.
@@ -102,21 +142,24 @@ referencia: sirve para el arranque en frío (paso 19).
   desde la lectura base; pulsar un chip resalta ese punto y atenúa los demás,
   y **Todos** vuelve a mostrarlos por igual.
 - ✓ Los chips dicen **P-05 (de baja)** y **P-07 (alta 15 de marzo de 2025)**.
-  En **Ver datos en tabla**, la serie de P-05 termina el 15/04 y la de P-07
-  empieza en 0 el 15/03.
+  En **Ver datos en tabla**, la serie de P-05 termina el 15 abr 2025 y la de
+  P-07 empieza en 0.0 el 15 mar 2025.
 - ✓ En **diferenciales**, los pares con P-07 llevan debajo «desde el 15 de
   marzo de 2025», y sus dos columnas de asentamiento restadas dan el
-  diferencial: **P-01 – P-07** muestra −2,8 y −5,0 y un diferencial de 2,2.
+  diferencial: **P-01 – P-07** muestra −2.8 y −5.0 y un diferencial de 2.2.
 - ✓ El indicador de **tendencia** marca los puntos como **convergentes**: la
   magnitud de la velocidad decrece en cada visita sucesiva (serie de
   consolidación que se estabiliza). La excepción es P-04 (ver paso 5).
 
 ### 7. Registrar una visita nueva
 
-- En el panel, **+ Nueva visita**. ✓ El nivelador, el orden y el equipo
-  vienen de la visita 5, y la nota lo dice.
-- Fecha posterior a la última y **Captura: Cotas directas**. ✓ El campo **BM
-  de amarre** desaparece. **Crear y abrir**.
+- En la cabecera, **+ Nueva visita**. ✓ El nivelador (Seed TopoField), el
+  orden (tercer orden) y el equipo (Trimble DiNi 12) vienen de la visita 5, y
+  la nota lo dice: «El nivelador, el amarre, el orden y el equipo vienen de la
+  visita 5. Cámbialos si no son los de esta.» La captura viene en «Digitar la
+  libreta de nivelación».
+- Fecha `2025-07-15` y **Captura: Cotas directas (nivelación procesada
+  fuera)**. ✓ El campo **BM de amarre** desaparece. **Crear y abrir**.
 - ✓ Se abre el editor (`…/visits/[visitId]/editar`) en cotas directas.
   Teclear cotas para los 6 puntos vigentes (P-01…P-04, P-06 y P-07; por
   ejemplo, una décima de mm por debajo de la anterior) y un error de cierre de
@@ -124,6 +167,9 @@ referencia: sirve para el arranque en frío (paso 19).
 - **Guardar visita**. ✓ La visita nace calculada y el panel recalcula
   parciales, velocidad y semáforo con la nueva medición; su columna
   **Cierre** dice +1.5, sin ⚠: en cotas directas no hay tolerancia.
+- Para no mover los números de los pasos siguientes, eliminar la visita nueva
+  (la 6): en su vista, **Eliminar** → «Eliminar visita» → confirmar. ✓ Vuelve
+  al panel con 6 visitas; solo la última visita abierta ofrece **Eliminar**.
 
 ### 7 bis. Lectura fuera de tendencia (Fase 12)
 
@@ -135,25 +181,29 @@ referencia: sirve para el arranque en frío (paso 19).
   bajo P-01 (sube 8,0 mm). Cambiarla a `99.9790`. ✓ El aviso pasa a «baja
   13,0 mm cuando su ritmo anterior preveía unos 0,9 mm». Restaurar
   `99.9915`. ✓ El aviso de P-01 desaparece.
-- Abrir **Cerrar Visita** en la visita 5. ✓ El resumen incluye «Lecturas
-  fuera de tendencia: P-04». El aviso no impide confirmar el cierre.
+- Abrir **Cerrar visita** en la visita 5. ✓ El resumen incluye «Lecturas
+  fuera de tendencia: P-04» y «Esta visita registra puntos en alerta. Se puede
+  cerrar igual.» El aviso no impide confirmar el cierre. **Cancelar**.
 
 ### 8. Cerrar una visita
 
-- Abrir la **visita 3** e intentar **cerrarla**.
-- ✓ Se rechaza: «Cierra antes la visita 2: contiene la primera lectura de
-  P-07, que es su línea base.»
+- Abrir la **visita 3** e intentar **cerrarla** (**Cerrar visita**, marcar la
+  casilla y **Confirmar Cierre**).
+- ✓ Al confirmar se rechaza: «Cierra antes la visita 2: contiene la primera
+  lectura de P-07, que es su línea base.»
 - Cerrar en orden las visitas **0, 1, 2 y 3**.
 - ✓ Cada una queda en estado **cerrada** y sus lecturas pasan a solo lectura;
   el resto del lugar sigue admitiendo visitas nuevas.
+- En **Puntos y lugar**, **Editar** P-01. ✓ Ahora Norte, Este y Cota C0 salen
+  deshabilitados con el aviso de la Fase 23 (paso 3 bis). **Cancelar**.
 - Cerrar la **visita 4**. ✓ Cierra sin lectura de P-05: está de baja desde el
   1 de mayo.
 
 ### 8 bis. Dar de baja y de alta (Fase 11)
 
-- Volver al catálogo. ✓ P-05 ya no ofrece *Deshacer baja*: dice «La baja ya es
-  definitiva: la visita 4 (15 de mayo de 2025), posterior a la baja, está
-  cerrada.»
+- Volver a **Puntos y lugar**. ✓ P-05 ya no ofrece *Deshacer baja*: dice «La
+  baja ya es definitiva: la visita 4 (15 de mayo de 2025), posterior a la
+  baja, está cerrada.»
 - **Dar de baja** P-01 con fecha **2025-06-01** y un motivo. ✓ Se rechaza: la
   fecha debe ser posterior a su última lectura (15 de junio de 2025).
 - Repetir con **2025-06-20**. ✓ P-01 queda de baja y en su fila aparece
@@ -170,16 +220,24 @@ referencia: sirve para el arranque en frío (paso 19).
 ### 9. Inmutabilidad — lugar cerrado
 
 - Volver al hub y abrir **Edificio Norte** (cerrado).
-- ✓ El lugar está en solo lectura: no se pueden editar sus puntos ni sus
-  visitas, ni **registrar una visita nueva**.
+- ✓ El lugar está en solo lectura: la cabecera no ofrece **+ Nueva visita**;
+  en **Puntos y lugar**, «Lugar cerrado el <fecha>: sus datos y los de sus
+  visitas no admiten cambios.», sin **Guardar** ni **Cerrar lugar** y con el
+  catálogo sin acciones; sus visitas no ofrecen **Editar** ni **Cerrar
+  visita**.
 - ✓ Su panel muestra la serie completa (4 puntos × 3 visitas) igual que un lugar
   abierto; lo único bloqueado es la escritura.
+- ✓ Su pestaña **Informe** no lleva la marca de borrador; la de Torre Central
+  sí: «Borrador — el informe se emite al cerrar el proceso».
 
 ### 10. RLS — aislamiento entre usuarios
 
-- Cerrar sesión y entrar con otra cuenta.
+- Cerrar sesión y entrar con otra cuenta (registrarla exige el código de
+  `SIGNUP_INVITE_CODE` y confirmar el correo en Mailpit: ver el paso 16 de
+  `manual-e2e-poligonal.md`).
 - Intentar navegar a la URL del lugar **Edificio Torre Central**.
 - ✓ Devuelve 404: RLS no deja ver lugares de proyectos ajenos.
+- Volver a entrar con la cuenta del seed para seguir.
 
 ### 11. Panel del lugar con libreta — Torre Alameda (Fase 18)
 
@@ -200,13 +258,13 @@ referencia: sirve para el arranque en frío (paso 19).
   tienen amarre **BM-2 100.8450**. La **visita 9** muestra **⚠ +9.8** en
   Cierre.
 - Pulsar la fila de la visita 12 (fuera del enlace). ✓ Abre su vista. Volver
-  con **← Volver a Torre Alameda**.
+  con la miga **Torre Alameda** (en el teléfono, **‹ Torre Alameda**).
 - ✓ **Tendencia del asentamiento**: el promedio con su banda mínimo–máximo y
   las líneas de −25 y −50 mm; el eje horizontal va en fechas y los cuatro
   intervalos de 14 días del principio se ven más cortos que los de 28 que
   siguen. Pulsar el punto de la última visita. ✓ Abre la visita 13.
 - ✓ **Evolución por punto**: chips **Todos** y TA-01…TA-08 con su último valor
-  (TA-07 −29,0 mm). Pulsar **TA-07**. ✓ Se resalta y el resto se atenúa.
+  (TA-07 −29.0 mm). Pulsar **TA-07**. ✓ Se resalta y el resto se atenúa.
   **Ver datos en tabla** despliega los valores.
 - ✓ Siguen **Semáforo por punto (última visita)** y **Asentamientos
   diferenciales y distorsión angular**.
@@ -220,7 +278,8 @@ referencia: sirve para el arranque en frío (paso 19).
 - ✓ Indicadores: asentamiento máximo −28.7 mm (TA-07), promedio −20.2 mm
   (−0.7 mm frente a la anterior), mayor movimiento −1.5 mm (TA-07), puntos en
   alerta 1 de 8 (TA-07), cierre de nivelación −1.6 mm «Dentro de tolerancia
-  (±4.5 mm)» y estado Precaución · Calculada.
+  (±4.0 mm)» y peor alerta Precaución (el estado, Calculada, va en el badge
+  del título).
 - Pulsar **TA-07** en **Puntos de control**. ✓ Al lado aparece su historial:
   acumulado −28.7 mm, velocidad −1.63 mm/mes, desde la anterior −1.5 mm, la
   gráfica hasta esta visita y «Le faltan 21.3 mm para el umbral de alerta
@@ -228,8 +287,8 @@ referencia: sirve para el arranque en frío (paso 19).
   punto**. ✓ Pasa a TA-03.
 - **Ver registro de nivelación**. ✓ Panel lateral con fecha, nivelador,
   equipo y «BM-1, cota 100.0000»; dos armadas (BM-1 y CP-1); las vistas
-  intermedias de TA-01…TA-08 resaltadas; Σ vistas más 2.8187, Σ vistas menos
-  2.8203, error de cierre −1.6 mm, «Dentro de tolerancia (±4.5 mm)». Esc lo
+  intermedias de TA-01…TA-08 resaltadas; Σ vistas más 2.4263, Σ vistas menos
+  2.4279, error de cierre −1.6 mm, «Dentro de tolerancia (±4.0 mm)». Esc lo
   cierra y devuelve el foco al botón.
 - Flecha →. ✓ Visita 13. Flecha → otra vez. ✓ Deshabilitada.
 - Abrir la **visita 3** (cerrada). ✓ Sin **Editar** ni **Cerrar visita**.
@@ -256,20 +315,20 @@ referencia: sirve para el arranque en frío (paso 19).
 
   | Punto | V+ | Dist V+ | V− | Dist V− |
   |---|---|---|---|---|
-  | BM-1 | 1.7318 | 28.015 | | |
-  | TA-01 | | | 1.1362 | |
-  | TA-02 | | | 1.1650 | |
-  | TA-03 | | | 1.2229 | |
-  | TA-04 | | | 1.2518 | |
-  | CP-1 | 1.0869 | 40.448 | 1.4187 | 38.673 |
-  | TA-05 | | | 0.9601 | |
-  | TA-06 | | | 0.9024 | |
-  | TA-07 | | | 0.8639 | |
-  | TA-08 | | | 0.8164 | |
-  | BM-1 | | | 1.4016 | 34.270 |
+  | BM-1 | 1.6146 | 28.363 | | |
+  | TA-01 | | | 1.0191 | |
+  | TA-02 | | | 1.0479 | |
+  | TA-03 | | | 1.1058 | |
+  | TA-04 | | | 1.1347 | |
+  | CP-1 | 0.8117 | 28.207 | 1.2152 | 27.818 |
+  | TA-05 | | | 0.7712 | |
+  | TA-06 | | | 0.7135 | |
+  | TA-07 | | | 0.6750 | |
+  | TA-08 | | | 0.6275 | |
+  | BM-1 | | | 1.2127 | 28.270 |
 
-- ✓ Resumen: Σ vistas más 2.8187, Σ vistas menos 2.8203, error de cierre
-  −1.6 mm, «Dentro de tolerancia (±4.5 mm)». ✓ **Cotas de los puntos de
+- ✓ Resumen: Σ vistas más 2.4263, Σ vistas menos 2.4279, error de cierre
+  −1.6 mm, «Dentro de tolerancia (±4.0 mm)». ✓ **Cotas de los puntos de
   control**, en solo lectura, repite las de la visita 12: TA-07 100.5373.
 - **Guardar visita**. ✓ «Visita guardada.» **Ver la visita**: ✓ la vista
   ofrece **Ver registro de nivelación** con esa libreta.
@@ -277,15 +336,16 @@ referencia: sirve para el arranque en frío (paso 19).
 ### 14. Libreta fuera de tolerancia
 
 - En el editor de la visita del paso 13, cambiar la V− del BM-1 de cierre a
-  `1.3916`.
-- ✓ Error de cierre +8.4 mm, «Fuera de tolerancia (±4.5 mm)» y el aviso «El
-  cierre supera la tolerancia. La visita se guarda y se cierra igual, pero sus
-  cotas no se compensan…». La cota de TA-07 pasa a **100.5361**, la calculada.
+  `1.2027`.
+- ✓ Error de cierre +8.4 mm, «Fuera de tolerancia (±4.0 mm)» y el aviso «El
+  cierre supera la tolerancia: las cotas no se compensan. Conviene revisar la
+  libreta o repetir la nivelación.» La cota de TA-07 pasa a **100.5361**, la
+  calculada.
 - **Guardar visita**. ✓ En el panel, su columna **Cierre** dice **⚠ +8.4**; en
   la vista, el indicador **Cierre de nivelación** dice «Fuera de tolerancia
-  (±4.5 mm)».
+  (±4.0 mm)».
 - **Cerrar visita**. ✓ El diálogo muestra «Cierre de la libreta: +8.4 mm ·
-  Fuera de tolerancia (±4.5 mm)» y el aviso de que se cierra con las cotas sin
+  Fuera de tolerancia (±4.0 mm)» y el aviso de que se cierra con las cotas sin
   compensar; **Confirmar Cierre** se habilita al marcar la casilla. Confirmar.
   ✓ La visita queda **Cerrada**.
 - La comprobación aritmética fallida, que sí bloquea el cierre, no se puede
@@ -295,27 +355,30 @@ referencia: sirve para el arranque en frío (paso 19).
 ### 15. Importar la libreta
 
 - **+ Nueva visita** con **Captura: Importar la libreta desde un archivo**. ✓
-  El BM de amarre pasa a ser opcional. Fecha posterior a la última, **Crear y
-  abrir**. ✓ El editor abre con el diálogo **Importar la libreta de la visita**.
+  El campo pasa a «BM de amarre (opcional: lo trae el archivo)». Fecha
+  posterior a la última, **Crear y abrir**. ✓ El editor abre con el diálogo
+  **Importar la libreta de la visita**.
 - **Descargar plantilla CSV** y reemplazar sus filas por la libreta del paso
-  13 (`ida,BM-1,bm,1.7318,,28.015,`, `ida,TA-01,radiacion,,1.1362,,`, …,
-  `ida,CP-1,pc,1.0869,1.4187,40.448,38.673`, …, `ida,BM-1,bm,,1.4016,,34.270`).
-  Elegirla. ✓ Formato «Plantilla CSV de TopoField», 2 armadas · 12 visuales,
-  BM de amarre BM-1 y las notas «BM de amarre» y «Punto de control». Sin aviso
-  de reemplazo: la plantilla precargada no tiene lecturas.
+  13 (`ida,BM-1,bm,1.6146,,28.363,`, `ida,TA-01,radiacion,,1.0191,,`, …,
+  `ida,CP-1,pc,0.8117,1.2152,28.207,27.818`, …, `ida,BM-1,bm,,1.2127,,28.270`).
+  Elegirla. ✓ Formato «Plantilla CSV de TopoField», armadas · visuales leídas
+  2 · 12, BM de amarre BM-1 y las notas «BM de amarre» y «Punto de control».
+  Sin aviso de reemplazo: la plantilla precargada no tiene lecturas.
 - **Usar estas lecturas**. ✓ La libreta se llena y el resumen da −1.6 mm; nada
   se ha guardado todavía. **Guardar visita**.
 - En otra visita abierta, **Importar desde archivo** con
   `docs/carteras/CRDUDO-TRAMO2.L`. ✓ «El archivo arranca en C10 y la visita
   tenía como amarre BM-1. Al aceptar, el amarre de la visita pasa a ser C10.»
-  Aceptar. ✓ Amarre C10 = 2541.7545 y, bajo la libreta, «TA-01 no tiene vista
-  menos en la libreta: queda sin cota.» para cada punto de control. **No
-  guardar**: recargar la página y descartar los cambios.
+  y BM de amarre C10 = 2541.7545. **Usar estas lecturas**. ✓ El amarre de la
+  visita pasa a C10 y, bajo la libreta, «TA-01 no tiene vista menos en la
+  libreta: queda sin cota.» para cada punto de control. **No guardar**:
+  recargar la página y descartar los cambios.
 
 ### 16. Renombrar un punto con libretas abiertas
 
-- En el catálogo de Torre Alameda (pestaña **Puntos y lugar**), **Editar** TA-08 y
-  cambiar el código a `TA-08X`.
+- En el catálogo de Torre Alameda (pestaña **Puntos y lugar**), **Editar**
+  TA-08 (✓ con la C0 y las coordenadas bloqueadas, paso 3 bis) y cambiar el
+  código a `TA-08X`.
 - Abrir el editor de la **visita 13**. ✓ La fila de la libreta dice TA-08X,
   con la nota «Punto de control». **Guardar visita**. ✓ La cota de TA-08X
   sigue en 100.5847.
@@ -342,10 +405,11 @@ referencia: sirve para el arranque en frío (paso 19).
 
 ### 19. Arranque en frío: proyecto sin BMs de referencia
 
-- En **Red geodésica** (sin puntos de referencia), crear un lugar con un punto
-  `B-01` sin C0 y abrir su panel. ✓ Indicadores sin datos, la tabla dice «Aún
-  no hay visitas registradas en este lugar.» y las gráficas, «Todavía no hay
-  lecturas».
+- En **Red geodésica** (sin puntos de referencia), **+ Nuevo Proceso →
+  Control de Asentamientos**, crear un lugar (✓ **Guardar** lleva a su pestaña
+  **Puntos y lugar**), agregar un punto `B-01` sin C0 y abrir su **Panel**.
+  ✓ Indicadores sin datos, la tabla dice «Aún no hay visitas registradas en
+  este lugar.» y las gráficas, «Todavía no hay lecturas».
 - **+ Nueva visita**. ✓ El selector de BM solo ofrece **Otro (entrada
   libre)**. Elegirlo, teclear `BM-X` y `100.0000`, fecha y **Crear y abrir**.
 - ✓ Plantilla BM-X, B-01 (intermedio), BM-X. Llenar BM-X V+ `1.5000` dist
@@ -372,9 +436,14 @@ del PRD-de-fase 5 en su uso real: catálogo de puntos, registro de visitas,
 cálculo de parciales/acumulados/velocidad, clasificación por semáforo,
 tendencia, y cierre de visita y de lugar con inmutabilidad. El paso 8 bis
 cubre el PRD-de-fase 11: baja, deshacer la baja, alta y la regla de cierre de
-la línea base. El paso 7 bis cubre el PRD-de-fase 12: el aviso de lectura
-fuera de tendencia. Los pasos 11 a 20 cubren el PRD-de-fase 18: el panel y la
-vista de la visita, el registro de nivelación, la libreta digitada e
-importada, el cierre fuera de tolerancia, el renombrado con libretas
-abiertas, la hoja «Libretas», el arranque en frío y el teléfono. Los niveles de
-alerta anteriores están verificados a mano en el brief de la fase.
+la línea base. Los pasos 2, 3 y 9 y el **Eliminar** del paso 7 cubren el
+PRD-de-fase 22: el listado del hub, la pantalla del lugar con sus pestañas
+Panel, Puntos y lugar e Informe, y la eliminación de la última visita. El paso
+3 bis, con su comprobación en el paso 8, cubre la Fase 23: la C0 y las
+coordenadas de un punto con lecturas cerradas no cambian. El paso 7 bis cubre
+el PRD-de-fase 12: el aviso de lectura fuera de tendencia. Los pasos 11 a 20
+cubren el PRD-de-fase 18: el panel y la vista de la visita, el registro de
+nivelación, la libreta digitada e importada, el cierre fuera de tolerancia,
+el renombrado con libretas abiertas, la hoja «Libretas», el arranque en frío
+y el teléfono. Los niveles de alerta anteriores están verificados a mano en
+el brief de la fase.

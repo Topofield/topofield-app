@@ -41,7 +41,7 @@ monografía de grado (Universidad Distrital).
 
 | Capa | Tecnología |
 |---|---|
-| Framework | Next.js 16.2.4 (App Router) |
+| Framework | Next.js 16.3.3 (App Router) |
 | UI | React 19.2.4 · Tailwind CSS v4 |
 | Datos y autenticación | Supabase (PostgreSQL + Auth) |
 | Lenguaje | TypeScript 5 (`strict`, `noUncheckedIndexedAccess`) |
@@ -174,18 +174,20 @@ src/
 │   ├── (app)/               pantallas autenticadas
 │   │   ├── dashboard/
 │   │   ├── manual/          manual de usuario (§ 12)
+│   │   ├── projects/new/    alta de proyecto
 │   │   └── projects/[id]/
-│   │       ├── polygonal/[pid]/         pestañas Proceso · Informe (Fase 22)
-│   │       ├── leveling/[pid]/          pestañas Proceso · Informe
+│   │       ├── polygonal/new/, polygonal/[pid]/   alta; pestañas Proceso · Informe (Fase 22) y export/ (Excel)
+│   │       ├── leveling/new/, leveling/[pid]/     alta; pestañas Proceso · Informe y export/
 │   │       ├── sites/                   alta del lugar; [siteId] redirige a su pestaña
-│   │       ├── settlement/[siteId]/     pestañas Panel · Puntos y lugar · Informe; visits/[visitId]/ vista y editar/
-│   │       └── reports/                 informes consolidados: alta y ruta imprimible
+│   │       ├── settlement/[siteId]/     pestañas Panel · Puntos y lugar · Informe; export/; visits/[visitId]/ vista y editar/
+│   │       └── reports/                 informes consolidados: new/ y [reportId]/print/
+│   ├── auth/callback/       confirmación de correo (Supabase Auth)
 │   ├── design-system/       galería del sistema de diseño (404 en producción)
 │   ├── layout.tsx           layout raíz, carga de fuentes
 │   ├── globals.css          tokens de tema y capas base
 │   └── icon.svg             favicon
-├── public/manual/           capturas que sirve la página /manual
 ├── components/
+│   ├── auth/                formulario de registro
 │   ├── design-system/       componentes propios reutilizables
 │   ├── process/             la pantalla común de un proceso y su informe (Fase 22)
 │   ├── navigation/          guarda de cambios sin guardar (Fase 22)
@@ -203,6 +205,8 @@ src/
 │   ├── import/leveling/     lectores de libretas de nivel digital (Fase 16)
 │   ├── reports/             elegibilidad, carga de secciones, resumen, portada y responsable del informe
 │   ├── errors/              errores de la base traducidos para el usuario (Fase 22)
+│   ├── auth/                mensajes de error de autenticación
+│   ├── theme.ts, theme-server.ts   tema claro y oscuro por cookie (Fase 20)
 │   ├── process-list.ts      filtrado y orden del listado del hub (los tres módulos)
 │   ├── process-status.ts    tonos de estado de procesos, visitas y lugares
 │   ├── supabase/            clientes y consultas
@@ -210,6 +214,10 @@ src/
 ├── types/                   tipos, incluido database.ts generado
 └── proxy.ts                 protección de rutas
 ```
+
+Fuera de `src/`: `public/manual/` (capturas que sirve la página `/manual` y
+enlaza el manual en Markdown), `supabase/migrations/` y `supabase/tests/`
+(pruebas pgTAP, Fase 23), y `scripts/` (seed y mantenimiento).
 
 > **Next 16 renombró `middleware` a `proxy`.** El archivo es `src/proxy.ts`.
 > Antes de escribir código de Next, consulte `node_modules/next/dist/docs/`:
@@ -244,12 +252,12 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/new/actions.ts` | `createProjectAction` |
 | `(app)/projects/[id]/actions.ts` | `updateProjectAction`, `archiveProjectAction`, `restoreProjectAction`, `deleteProjectAction` (rechaza un proyecto con trabajo cerrado, Fase 22), `createReferencePointAction`, `updateReferencePointAction`, `deleteReferencePointAction` |
 | `(app)/projects/[id]/polygonal/new/actions.ts` | `createPolygonalProcessAction` |
-| `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `closePolygonalProcessAction`, `duplicatePolygonalProcessAction`, `renamePolygonalProcessAction`, `deletePolygonalProcessAction` |
+| `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `closePolygonalProcessAction`, `duplicatePolygonalProcessAction`, `renamePolygonalProcessAction`, `deletePolygonalProcessAction`, `setAngleInputFormatAction` (Fase 13), `georeferencePolygonalProcessAction` (Fase 15) |
 | `(app)/projects/[id]/leveling/new/actions.ts` | `createLevelingProcessAction` |
 | `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction`, `closeLevelingProcessAction`, `duplicateLevelingProcessAction`, `renameLevelingProcessAction`, `deleteLevelingProcessAction` (Fase 22) |
 | `(app)/projects/[id]/sites/actions.ts` | `createSiteAction`, `saveSiteAction`, `closeSiteAction`, `renameSiteAction`, `duplicateSiteAction`, `deleteSiteAction` (Fase 22) |
 | `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (con el formulario completo, Fase 18), `saveVisitAction` (con libreta: ver § 4), `closeVisitAction`, `deleteVisitAction` (solo la última y abierta, Fase 22) |
-| `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction`, `deletePointAction` |
+| `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction` (C0 y coordenadas fijas con lecturas cerradas, Fase 23), `deletePointAction`, `retirePointAction`, `undoRetirementAction` (Fase 11) |
 | `(app)/projects/[id]/reports/actions.ts` | `createReportAction`, `deleteReportAction` |
 
 ### Guardados en una transacción (Fase 23)
@@ -1800,7 +1808,8 @@ que se deshace, así que no depende del seed ni lo toca.
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
 lectura ya tienen cobertura. Lo que **sigue sin tests** es la E/S de los Server
-Actions; ver [deuda técnica](#11-deuda-técnica-conocida).
+Actions, salvo los cuatro guardados que desde la Fase 23 escriben por funciones
+de Postgres con pruebas pgTAP; ver [deuda técnica](#11-deuda-técnica-conocida).
 
 ### Cómo se testea la interfaz
 
@@ -2166,12 +2175,12 @@ resincronización sobre un lugar recién sembrado, que contó 31 lecturas «a
 reescribir» sin nada que cambiar. Ahora se compara con tolerancia de media
 centésima.
 
-Queda en pie la limitación de fondo: **el proyecto sigue sin poder probar la
-E/S**. `resyncSiteReadings` y el bucle de `upsert` de `saveVisitAction` no
-tienen cobertura automática, porque no hay forma de mockear el cliente de
-Supabase ni pruebas de integración contra la base local. Lo que se ganó es que
-la parte que **decide** —donde vivían los fallos— ya no depende de
-verificación manual; lo que se escribe sigue dependiendo de ella.
+Queda en pie parte de la limitación de fondo. Desde la Fase 23 la escritura
+de la visita —purga, cabecera, libreta, lecturas y propagación— vive en la
+función `save_visit`, que sí tiene pruebas contra la base local (pgTAP, § 9).
+Siguen sin cobertura automática `resyncSiteReadings` y el armado de la carga en
+`saveVisitAction`: el paso del resultado del motor a las filas se verificó
+comparando la base antes y después de guardar desde la pantalla.
 
 **Cerrado — la gráfica distingue diez series por forma.** `SERIES_MARKERS`
 pasó de 5 a 10 formas en la Fase 6, porque con cinco la **forma sola** se
@@ -2187,14 +2196,17 @@ habría atrapado el fallo original. Verificado en la aplicación con 10 series y
 sobre todo, **en escala de grises**: sin color, las diez siluetas se siguen
 distinguiendo.
 
-**La E/S de los Server Actions sigue sin tests.** Es la deuda de fondo que la
-Fase 6 acotó pero no eliminó. La parte que **decide** qué escribir ya está
-cubierta por funciones puras (`settlement-persistence.ts`,
-`reports/eligibility.ts`, `close-status.ts`), pero lo que **escribe** —los
-`upsert` de `saveVisitAction`, `resyncSiteReadings`, el `insert` de
-`createReportAction`— no tiene cobertura automática, porque el proyecto no
-puede mockear el cliente de Supabase ni montar pruebas de integración contra la
-base local. Toda esa capa depende de verificación manual contra la base.
+**La E/S de los Server Actions sigue sin tests, salvo los cuatro guardados.**
+Es la deuda de fondo que la Fase 6 acotó pero no eliminó. La parte que
+**decide** qué escribir ya está cubierta por funciones puras
+(`settlement-persistence.ts`, `reports/eligibility.ts`, `close-status.ts`). La
+que **escribe** en los cuatro guardados de varias tablas pasó en la Fase 23 a
+funciones de Postgres con pruebas pgTAP contra la base local (§ 3 y § 9); esa
+misma vía sirve para probar triggers y RLS. Lo demás —`resyncSiteReadings`, el
+`insert` de `createReportAction`, las acciones de una sola tabla y el armado de
+las cargas en TypeScript— sigue sin cobertura automática, porque el proyecto no
+puede mockear el cliente de Supabase, y depende de verificación manual contra
+la base.
 
 **Cerrado — los datos de producción ya tienen sus resultados de estación.**
 El generador del proyecto de ejemplo (`crear-proyecto-demo.ts`) y el seed
@@ -2665,6 +2677,14 @@ Como los datos de producción no importaban, se vaciaron los de trabajo
 (`TRUNCATE public.projects CASCADE`, que no dispara triggers de fila) y se
 dejó `profiles.demo_seeded_at` en nulo para que el dashboard recree el
 proyecto demo. La cuenta del usuario se conservó.
+
+**La demo se regeneró el 2026-09-30** de la misma forma, con el visto bueno
+del usuario: la de producción se había creado con el generador de la Fase 21 y
+sus procesos cerrados conservaban las notas que la Fase 22 quitó (rutas de
+`docs/carteras/`, «puede eliminarlo»), que la inmutabilidad no deja corregir.
+Una guarda abortaba si había algo más que la demo de la única cuenta. La nueva
+se creó al entrar, en 5 s, con los textos, el veredicto y las portadas
+actuales.
 
 **El orden importa cuando hay auto-deploy.** Vercel despliega solo al empujar a
 `main`, así que la migración va **primero** y el `git push` después: al revés,

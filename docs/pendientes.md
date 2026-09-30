@@ -18,8 +18,12 @@ navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
 ([`prds/22-integridad.md`](./prds/22-integridad.md)), **cerrada** el
 2026-09-30. Su petición original está en «Integridad (Fase 23)», al final; el
 PRD la amplió con dos hallazgos de la apertura (guardados de poligonal y
-nivelación, veredicto de la abierta con vuelta). No queda ninguna petición
-abierta.
+nivelación, veredicto de la abierta con vuelta).
+
+El 2026-09-30, tras la revisión de pendientes, el usuario pidió una **Fase 24
+de pulido** con la deuda visible de la § 11 y lo que encontró la puesta al día
+de la documentación: «Pulido (Fase 24)», al final. Su PRD se redacta cuando se
+mergee la documentación.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -365,3 +369,59 @@ proyecto cambia informes que ya existen.
 El respaldo `Math.min(...) || Infinity` de la tolerancia de discrepancia en
 `computeLeveling`, y los parámetros por defecto de `order` y
 `distancesReconstructed` en `validateRunCapture`.
+
+## Pulido (Fase 24)
+
+Pedida el 2026-09-30. Las cinco primeras vienen de la § 11 de la doc técnica;
+las demás, de la revisión de pendientes y de reescribir los recorridos de
+`docs/testing/` contra la aplicación.
+
+### PU1 · Un solo formato de la precisión relativa
+
+El mismo proceso se lee `1:1001` en el listado y `1:1.001` en el editor: hay
+cuatro copias de `formatPrecision` con criterios distintos.
+
+### PU2 · El código de punto se corta en la tabla de estaciones
+
+El campo mide `w-24`: «Famarena_5» se ve «Famaren». El valor está intacto.
+
+### PU3 · El campo de distancia sin nombre accesible en escritorio
+
+En móvil lleva `aria-label`; en la tabla de escritorio, ninguno.
+
+### PU4 · Cuántos procesos, por estado
+
+La tarjeta del proyecto dice «7 procesos» sin distinguir borradores,
+calculados, cerrados y rechazados.
+
+### PU5 · La paleta del Excel
+
+`lib/export/workbook.ts` sigue con el azul y los grises anteriores a la Fase 20.
+
+### PU6 · Esqueletos de carga en las altas
+
+«Nuevo proyecto» y los `new` de cada módulo no tienen `loading.tsx`; la
+tarjeta de proyecto tampoco tiene hover de fondo.
+
+### PU7 · «Fuera de tolerancia» cuenta lugares cerrados
+
+El KPI del dashboard suma cualquier lugar con una lectura en alerta o alarma,
+aunque esté cerrado: la demo regenerada muestra «1» por Torre Alameda, bajo el
+rótulo «Requieren revisión antes del cierre». Poligonales y nivelaciones solo
+cuentan las calculadas.
+
+### PU8 · «Borrador» en el informe de un proceso rechazado
+
+La pestaña Informe de un proceso rechazado dice «Borrador — el informe se
+emite al cerrar el proceso», aunque ya está cerrado para siempre.
+
+### PU9 · Segundos de 60 o más en una lectura de ángulo (por confirmar)
+
+Al revisar los recorridos, 65″ en una lectura se mostró como 1′05″ sin error:
+la regla «Los segundos deben estar entre 0 y 59» mira el ángulo promedio, que
+llega ya normalizado. Hay que confirmarlo en el código.
+
+### PU10 · V− vacía en un punto de cambio
+
+Una nivelación se guarda con un punto de cambio sin V−; solo la comprobación
+aritmética impide cerrarla. Decidir si es captura parcial legítima o un hueco.

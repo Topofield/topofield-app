@@ -2,100 +2,171 @@
 
 Recorrido paso a paso para verificar el módulo poligonal contra los datos
 precargados por la seed. Cubre los criterios de aceptación del PRD-de-fase 3
-de cabo a rabo, usando la UI tal como la usaría un usuario.
+de cabo a rabo, usando la UI tal como la usaría un usuario, y lo que sumaron
+las fases 13 a 15 (dibujo, grados decimales, mínimos cuadrados y
+georreferenciación), la 22 (el proceso en una pantalla) y la 23 (guardado
+atómico).
 
 ## Preparación
 
-1. Con Supabase local activo (`npx supabase start`), correr:
+1. Con Supabase local activo (`npx supabase start`), sobre una base recién
+   reseteada, correr:
    ```
-   npm run seed
+   npx supabase db reset && npm run seed
    ```
-   El script lee `SUPABASE_SECRET_KEY` desde `.env.local`. Se imprimen
-   credenciales y URL al final.
+   El script lee `SUPABASE_SECRET_KEY` desde `.env.local` y **solo funciona
+   justo después del reset**: sobre una base con datos no puede borrar el
+   usuario —sus procesos cerrados son inmutables— y se detiene pidiendo el
+   `db reset`. Si falla con `permission denied`, ver la advertencia del § 2 de
+   `docs/tecnica/README.md`. Se imprimen credenciales y URL al final.
 2. En otra terminal, levantar el dev server:
    ```
    npm run dev
    ```
-3. Abrir `http://localhost:3000/sign-in` e iniciar sesión:
+3. Abrir `http://localhost:3000/sign-in` e iniciar sesión con **Entrar**:
    - Email: `topofieldsarf@gmail.com`
    - Password: `seed1234`
 
+El seed crea tres proyectos: **Lote catastral**, **Red geodésica** y
+**Edificio en monitoreo**. El cuarto, **Proyecto de ejemplo**, lo crea la
+aplicación la primera vez que la cuenta entra (el seed deja
+`profiles.demo_seeded_at` vacío): trae la V10 cerrada, la Vivero con mínimos
+cuadrados, la Vivero en sistema local con los vértices **D1** y **D3** en su
+catálogo, dos nivelaciones y una Torre Alameda cerrada.
+
 > Sugerencia: tener abierto `docs/templates/poligonales.xlsx` en paralelo para
-> contrastar números.
+> contrastar números. Ojo: la hoja **Cerrada** encadena los azimuts como
+> Az + 180° − α, la poligonal recorrida en el otro sentido, así que sus
+> azimuts salen espejados respecto de la app (paso 4); errores, perímetro y
+> precisión coinciden.
 
 ## Recorrido
 
 ### 1. Dashboard
 
 - Tras iniciar sesión llegas a `/dashboard`.
-- ✓ Aparecen 3 tarjetas de proyecto: **Lote catastral**, **Red geodésica** y
-  **Edificio en monitoreo**. Desde la Fase 8 la tarjeta no muestra el orden de
-  precisión: es un dato por proceso, no del proyecto.
-- ✓ El KPI "Proyectos activos" muestra 3.
+- ✓ Aparecen 4 tarjetas de proyecto, de la más reciente a la más antigua:
+  **Proyecto de ejemplo**, **Edificio en monitoreo**, **Red geodésica** y
+  **Lote catastral**. Cada una dice cliente, ubicación, fecha y cuántos
+  procesos tiene (Lote catastral: 15 procesos). Desde la Fase 8 la tarjeta no
+  muestra el orden de precisión: es un dato por proceso, no del proyecto.
+- ✓ El KPI "Proyectos activos" muestra 4.
 
 ### 2. Hub del proyecto
 
 - Hacer clic en **Lote catastral**.
-- ✓ El hub muestra el header con ubicación, coordenadas, fecha de creación,
-  datum y proyección del proyecto. Desde la Fase 8 ya no muestra equipo ni
-  precisión: cada proceso poligonal declara los suyos (Leica TS06 Plus,
-  5″, 1.5 mm + 2 ppm en los procesos de este proyecto).
+- ✓ La cabecera es compacta (Fase 22): nombre, badge **Activo**, la línea
+  «Cliente Demo · Bogotá · MAGNA-SIRGAS · Origen Bogotá» y **+ Nuevo
+  Proceso**. La descripción y el resto de los datos están en Configuración.
+  Desde la Fase 8 no muestra equipo ni precisión: cada proceso poligonal
+  declara los suyos (Leica TS06 Plus, 5″, 1.5 mm + 2 ppm en los procesos de
+  este proyecto).
 - ✓ Las tres tabs aparecen: **Procesos**, **Informes**, **Configuración**.
 
 ### 3. Tab Procesos
 
 - En la tab **Procesos**:
-- ✓ Sección "En progreso" lista 5 tarjetas (los 5 procesos `calculated`).
-- ✓ Sección "Cerrados" lista 2 tarjetas (el cerrado y el rechazado).
-- ✓ Cada tarjeta muestra tipo, nombre, fecha y badge de estado.
+- ✓ Chips de módulo: **Poligonales (13)** —el activo—, **Nivelaciones (2)** y
+  **Control de Asentamientos (0)**. Los tres listados funcionan igual.
+- ✓ Barra de filtros: el buscador «Buscar proceso…», el selector **Todos los
+  tipos** y los chips de estado **Todos (13)**, **Borradores (0)**,
+  **Calculados (10)**, **Cerrados (2)** y **Rechazados (1)**. No hay secciones
+  «En progreso» / «Cerrados»: el estado es un filtro.
+- ✓ La tabla tiene las columnas Nombre, Estado, Precisión, Cumple y Última
+  actividad, ordenada por actividad reciente. Cada fila dice nombre y tipo
+  («Poligonal · Cerrada»): p. ej. el Pentágono sale Calculado, 1:46, ✕; el
+  Cuadrado perfecto, 1:∞, ✓; el Reconocimiento, «Sin verificación», —.
+- ✓ Las filas abiertas ofrecen **Duplicar**, **Renombrar** y **Eliminar**;
+  **Cuadrado oficial (cerrado)**, **Cuadrado marginal (rechazado)** y
+  **Poligonal Famarena — Sede Vivero — sistema local** (cerrada), solo
+  **Duplicar**.
+- Escribir `vivero` en el buscador. ✓ Quedan las tres Vivero. Pulsar
+  **Cerrados**. ✓ Solo la de sistema local, y aparece **Limpiar filtros**.
+  Pulsarlo.
+- Abrir **Renombrar** y **Eliminar** de una fila abierta y pulsar
+  **Cancelar**. (No pulsar **Duplicar**: crea la copia al instante y cambia
+  los conteos del resto del recorrido.)
+- A 390 px, ✓ la tabla pasa a tarjetas, una por fila, con las mismas acciones.
 
 ### 4. Cálculo en vivo — Pentágono
 
 - Abrir **Pentágono — Caso 1 del marco teórico**.
-- ✓ La zona de configuración muestra los datos (start A, N=1000, E=1000, Az 45°).
+- ✓ La pantalla del proceso (Fase 22): migas Dashboard › Lote catastral ›
+  Pentágono…, badge **Calculado**, «Poligonal cerrada · Tercer orden»,
+  **Exportar a Excel** y **Ver informe** en la cabecera, las pestañas
+  **Proceso** e **Informe**, y la barra fija al pie con **Guardar** y **Cerrar
+  proceso**.
+- Desplegar **Configuración** (viene plegada: el proceso ya está calculado).
+  ✓ Arranque A, Norte 1000, Este 1000, azimut de partida 45° 0′ 0″, tipo de
+  ángulo Interiores.
 - ✓ La tabla de estaciones tiene 5 filas (A–E) con sus ángulos y distancias.
-- ✓ Los azimuts calculados en vivo coinciden con los de la hoja **Cerrada** del Excel
-  (cargar el mismo caso o usar los precargados).
+- ✓ Los azimuts calculados en vivo son 45°0′0″, 333°15′0″, 265°15′0″,
+  173°0′0″ y 129°30′0″. (La hoja **Cerrada** del Excel, que encadena
+  Az + 180° − α, da los espejados: 116°45′, 184°45′, 277° y 320°30′.)
 - ✓ El panel de resultados muestra:
-  - Σ ángulos = 540°, error angular ≈ 0″, cumple tolerancia.
-  - Perímetro ≈ 554.35 m, precisión relativa razonable.
-- ✓ El semáforo del panel es verde (cumple).
+  - Suma medida 540° 0′ 0″, error angular 0.0″, tolerancia angular 33.5″.
+  - Error de cierre 12.1733 m, perímetro 554.350 m, precisión relativa 1:46.
+- ✓ El veredicto es rojo: «NO CUMPLE TERCER ORDEN», 1:46, requerido 1:5.000.
+  Los ángulos suman 540° exactos, pero los lados del caso del marco teórico no
+  cierran: queda un error lineal de 12 m.
+- Pulsar **Cerrar proceso**. ✓ El diálogo avisa «La precisión relativa no
+  alcanza la tolerancia; solo puede cerrarse como rechazado.» Pulsar
+  **Cancelar**.
 
 ### 5. Métodos de corrección — Cuadrado con error 0.4 m
 
 - Volver al hub y abrir **Cuadrado con error 0.4 m (fixture clave)**.
-- ✓ El panel de resultados muestra error lineal = 0.400 m, precisión 1:1001.
-- ✓ El semáforo es rojo (NO cumple tercer orden: 1:1001 < 1:5000).
-- Cambiar el selector de método a **Tránsito** y luego a **Crandall**.
+- ✓ El veredicto dice error de cierre 0.4000 m y precisión 1:1.001.
+- ✓ Es rojo: «NO CUMPLE TERCER ORDEN» (1:1.001 < 1:5.000).
+- En **Resultados**, cambiar el selector **Método de corrección** a
+  **Tránsito** y luego a **Crandall**.
 - ✓ La tabla "Coordenadas corregidas" muestra:
   - **Bowditch**: N de B = **100.300**.
   - **Tránsito**: N de B = **100.200**.
   - **Crandall**: N de B = **100.200**.
-- ✓ Los tres números coinciden con la hoja **Cerrada** del Excel y con el
-  ejemplo trabajado del reporte HTML (`docs/math/poligonales.html` § 5.4).
+- ✓ Los tres números coinciden con el ejemplo trabajado del reporte HTML
+  (`docs/math/poligonales.html` § 5.4) y con la hoja **Cerrada** del Excel
+  cargando este cuadrado.
+- Volver a **Bowditch (brújula)**. ✓ La barra de acciones dice «Cambios sin
+  guardar».
 
 ### 6. Reasignar coordenadas
 
-- En el mismo proceso, clic en **Asignar coordenadas reales**.
-- En el modal, cambiar Norte a `5000` y Este a `7000`. Aplicar.
+- En el mismo proceso, clic en **Asignar coordenadas reales** (junto al
+  dibujo).
+- En el diálogo, cambiar **Norte de partida** a `5000` y **Este de partida** a
+  `7000`. **Aplicar**.
 - ✓ Las coordenadas de todas las estaciones se actualizan (la N de B pasa a
   `5100.300`, etc.) manteniendo los azimuts y deltas (en vivo).
-- Volver al modal y restaurar los valores originales (0, 0). Aplicar.
+- Volver al diálogo y restaurar los valores originales (0, 0). **Aplicar**.
 
 ### 7. Guardar
 
-- Editar algún campo trivial (ej. añadir notas) y clic en **Guardar**.
-- ✓ Aparece "Proceso guardado" y el badge sigue en "Calculado".
+- ✓ La barra sigue diciendo «Cambios sin guardar».
+- Pulsar la miga **Lote catastral**. ✓ Diálogo «Tienes cambios sin guardar»
+  con **Seguir editando** y **Salir sin guardar**. Pulsar **Seguir editando**.
+- Clic en **Guardar**.
+- ✓ La barra dice «Proceso guardado.» y el badge sigue en "Calculado".
+
+> **Guardado atómico (Fase 23).** Guardar escribe la cabecera, las estaciones
+> y sus lecturas en una sola transacción (`save_polygonal_process`): si algo
+> falla, no queda nada a medias. No hay nada que pulsar: basta con que el
+> guardado de este paso funcione. El caso de fallo lo cubren las pruebas
+> pgTAP (`npx supabase test db`, `supabase/tests/guardados_atomicos.test.sql`).
 
 ### 8. Cierre — flujo normal
 
-- Volver al hub y abrir **Pentágono — Caso 1** (no el oficial).
+- Volver al hub y abrir **Poligonal V10 — cartera TT4 — crandall** (cumple:
+  1:7.045).
 - Clic en **Cerrar proceso**.
-- ✓ El modal muestra el resumen (tipo, perímetro, error, precisión, fecha).
-- Marcar la casilla "Confirmo que los datos son correctos".
+- ✓ El modal muestra el resumen: tipo de poligonal Cerrada, perímetro
+  115.712 m, error de cierre 0.0164 m, precisión relativa 1:7.045 y fecha y
+  hora.
+- Marcar la casilla "Confirmo que los datos son correctos."
 - Clic **Confirmar cierre**.
 - ✓ El proceso queda con badge "Cerrado" y el editor pasa a solo lectura
-  (mensaje "Este proceso está cerrado…").
+  (mensaje «Este proceso está cerrado; los datos son de solo lectura, salvo su
+  posición, que se puede georreferenciar.»). La barra de acciones desaparece.
 
 ### 9. Cierre como rechazado
 
@@ -105,61 +176,87 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
   puede cerrarse como rechazado."
 - ✓ El botón confirma **Cerrar como rechazado** (variante danger).
 - Marcar la casilla y confirmar.
-- ✓ El badge pasa a "Rechazado".
+- ✓ El badge pasa a "Rechazado" y el aviso dice «Este proceso fue rechazado;
+  los datos son de solo lectura, salvo su posición, que se puede
+  georreferenciar.»
 
 ### 10. Inmutabilidad de procesos cerrados
 
-- Abrir **Pentágono oficial (cerrado)**.
-- ✓ Mensaje "Este proceso está cerrado; los datos son de solo lectura."
+- Abrir **Cuadrado oficial (cerrado)**.
+- ✓ Mensaje «Este proceso está cerrado; los datos son de solo lectura, salvo
+  su posición, que se puede georreferenciar.»
 - ✓ Los campos de configuración, la tabla de estaciones y el selector de
-  método están deshabilitados.
-- ✓ No aparecen los botones **Guardar**, **Asignar coordenadas reales** ni
-  **Cerrar proceso**.
+  método están deshabilitados; no hay **Eliminar** por estación ni **+ Agregar
+  estación**.
+- ✓ No aparecen la barra con **Guardar** y **Cerrar proceso** ni **Asignar
+  coordenadas reales**. Solo queda **Georreferenciar**.
 
 ### 11. Validación de captura — distancia fuera de rango
 
-- Volver al hub y abrir **Cuadrado perfecto**.
+- Volver al hub y abrir **Cuadrado perfecto 100×4**.
 - En la primera estación cambiar la distancia a `1500`.
 - ✓ La celda se marca con borde rojo y aparece el mensaje "La distancia no
   puede superar los 1000 m."
-- ✓ El botón **Guardar** se deshabilita y aparece "Corrige las celdas con
-  error para poder guardar."
+- ✓ El botón **Guardar** se deshabilita y la barra dice "Corrige las celdas
+  con error para poder guardar."
 - Restaurar `100` para volver al estado válido.
 
-### 12. Validación de captura — segundos inválidos
+### 12. Validación de captura — lectura de ángulo
 
-- En la primera estación cambiar los segundos del ángulo a `65`.
-- ✓ Borde rojo y mensaje "Los segundos deben estar entre 0 y 59."
-- Restaurar a `0`.
+- En la primera estación, pulsar el ángulo (`90°0′0″ · 1/1 ▾`) para desplegar
+  sus lecturas.
+- Cambiar los segundos de la lectura a `6x`.
+- ✓ Borde rojo y mensaje «No es un número.»; la celda pasa a «Sin lecturas»
+  con el aviso «Faltan lecturas: se exigen 1 y hay 0.», y **Guardar** queda
+  bloqueado con «Corrige las celdas con error para poder guardar.»
+- Cambiarlos a `65`. ✓ No se marca error: el ángulo de la estación es el
+  promedio de sus lecturas, que se normaliza, y la celda muestra `90°1′5″`.
+- Restaurar a `0`. ✓ Vuelve a `90°0′0″`. Al salir, **Salir sin guardar**.
 
 ### 13. Crear un proceso nuevo
 
 - En la tab Procesos del hub, clic **+ Nuevo Proceso**.
-- ✓ Modal con tres opciones —**Poligonal**, **Nivelación** y
-  **Asentamiento**—, todas habilitadas (los tres módulos están implementados).
-- Clic **Poligonal**. Llega a `/projects/[id]/polygonal/new`.
-- Llenar: Nombre "Prueba manual", Tipo "Cerrada", Código "X", Norte `0`,
-  Este `0`, Az `0°0'0"`.
-- Crear. ✓ Redirige al editor del nuevo proceso (status `draft`, sin estaciones).
-- Agregar 4 estaciones replicando el cuadrado perfecto. Guardar.
-- ✓ El editor calcula en vivo y muestra cierre exacto. Status pasa a
-  "Calculado".
+- ✓ Diálogo «Nuevo proceso» con tres opciones —**Poligonal**, **Nivelación** y
+  **Control de Asentamientos**—, todas habilitadas (los tres módulos están
+  implementados).
+- Clic **Poligonal**. Llega a `/projects/[id]/polygonal/new` («Nuevo proceso
+  poligonal»).
+- Llenar: Nombre del proceso "Prueba manual", Tipo de poligonal "Cerrada",
+  Tipo de ángulo "Interiores" (no viene preseleccionado), Lecturas mínimas por
+  ángulo `1`, Código "A", Norte `0`, Este `0` (vienen en 1000), Azimut de
+  partida `0° 0′ 0″`. El orden viene en tercer orden; el equipo es opcional.
+- **Crear proceso**. ✓ Redirige al editor del nuevo proceso (badge
+  «Borrador», sin estaciones, con la Configuración desplegada).
+- Agregar 4 estaciones replicando el cuadrado perfecto (A, B, C, D; 90° 0′ 0″
+  en la primera lectura; 100 m). Guardar.
+- ✓ El editor calcula en vivo y muestra cierre exacto («CUMPLE TERCER ORDEN»,
+  1:∞). Status pasa a "Calculado".
 
 ### 14. Abierta sin control — caso de reconocimiento
 
 - Volver al hub. Abrir **Reconocimiento E1-E4 (sin cierre)**.
-- ✓ Los azimuts calculados son **150°, 145°30', 157°45'** (idénticos al
-  documento marco teórico y a la hoja **Abierta sin control** del Excel).
-- ✓ El panel muestra "Sin verificación de cierre" (amarillo).
+- ✓ Abre en **Grados decimales** (lecturas 175.500000° y 192.250000°) y los
+  azimuts calculados son **150°, 145°30', 157°45'** (idénticos al documento
+  marco teórico y a la hoja **Abierta sin control** del Excel). E1 y E4, sin
+  ángulo, avisan «Faltan lecturas: se exigen 1 y hay 0.»: es un aviso, no
+  bloquea.
+- ✓ El veredicto dice «SIN VERIFICACIÓN DE CIERRE» en gris, ni verde ni rojo.
 - ✓ No hay selector de método de corrección (la abierta sin control no la
-  admite).
+  admite) y el dibujo dice «Abierta sin control: no se compensa.»
 
 ### 15. Tab Configuración — puntos de referencia
 
 - Volver al hub y entrar a la tab **Configuración**.
-- ✓ La sección "Puntos de referencia" lista los 3 BMs precargados.
-- Agregar un nuevo punto (`BM-03`, tipo BM, N=2000, E=2000, cota=2632.5).
+- ✓ La sección "Puntos de referencia" lista los 5 puntos precargados:
+  **BM-01** y **BM-02** (BM), **GPS-1** (GPS), y **TT4** y **14_IS1**
+  (Control, sin cota: los amarres de las carteras reales).
+- **Agregar punto**: el diálogo «Nuevo punto de referencia» pide código, tipo
+  (BM, Control, GPS o Detalle), norte, este, cota y descripción. Crear
+  `BM-03`, tipo BM, N=2000, E=2000, cota=2632.5, y **Guardar**.
 - ✓ Aparece en la tabla. Editar y borrar también funciona.
+- ✓ En **Zona de peligro**, **Eliminar proyecto** no se ofrece: «Tiene 4
+  registros cerrados (procesos, lugares o visitas)…» con los datos recién
+  sembrados, 6 tras los pasos 8 y 9.
 
 ### 15 bis. Dibujo de la poligonal (Fase 13)
 
@@ -182,7 +279,8 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
   Restaurarla.
 - Con el navegador en ancho de teléfono (390 px), ✓ los rótulos del dibujo se
   leen: no se encogen con la pantalla.
-- Abrir el **informe de poligonal** del proyecto e imprimir. ✓ Cada poligonal
+- Abrir la pestaña **Informe** de la TT4, o el informe **Informe de cierre —
+  Poligonal** de la tab Informes del proyecto, e imprimir. ✓ Cada poligonal
   lleva su dibujo bajo la tabla de coordenadas.
 
 ### 15 ter. Ángulos en grados decimales (Fase 13, P1)
@@ -197,9 +295,9 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 - Recargar la página. ✓ El conmutador sigue en **Grados decimales**: el
   formato se recuerda por proceso. Volver a DMS.
 - Abrir **Reconocimiento E1-E4**. ✓ Abre ya en **Grados decimales**.
-- Abrir un proceso **cerrado** y pulsar **Grados decimales**. ✓ Cambia la
-  vista y avisa «El proceso está cerrado: el formato solo cambia la vista y no
-  se guarda». Al recargar vuelve a DMS.
+- Abrir un proceso **cerrado** (p. ej. **Cuadrado oficial**) y pulsar
+  **Grados decimales**. ✓ Cambia la vista, sin aviso y sin guardar nada: al
+  recargar vuelve a DMS.
 
 ### 15 quater. Mínimos cuadrados (Fase 14)
 
@@ -210,18 +308,18 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
   −2.94, +1.86, +3.36 y −0.92. La orientación (primera fila) no tiene
   corrección angular.
 - ✓ Coordenadas: D1 100117.464 / 101515.631, D3 100182.240 / 101581.781.
-- ✓ σ₀ = **0.698**, «Los pesos supuestos describen bien las observaciones»,
-  3 condiciones y 3 iteraciones.
+- ✓ σ₀ = **0.698** y «Los pesos supuestos describen bien las observaciones».
 - ✓ El veredicto (error angular −4.0″, error lineal 0.0100, 1:24.717) es el
   mismo que en la Vivero con Bowditch.
 - Cambiar σ angular a **4**. ✓ Las correcciones cambian en vivo y se cargan
   más en los ángulos (D3 +1.099″).
 - Vaciar σ angular. ✓ «Faltan los pesos del ajuste», coordenadas en «—» y
-  **Guardar** deshabilitado con el motivo al lado. Restaurar 2.
+  **Guardar** deshabilitado con el motivo en la barra. Restaurar 2.
 - ✓ El dibujo sigue mostrando la ajustada y la sin compensar.
 - Abrir **Enlace P1-P3 con deflexión** y elegir Mínimos cuadrados. ✓ Los tres
-  campos salen **vacíos**. Con 2 / 0.011 / 2 aparecen 2 condiciones (no hay
-  azimut de llegada). Guardar y recargar: ✓ los pesos se conservan.
+  campos salen **vacíos**. Con 2 / 0.011 / 2 aparece la tabla de correcciones
+  (P2 +0.002″) y σ₀ 0.004: «Los σ supuestos son pesimistas: se midió mejor de
+  lo declarado». Guardar y recargar: ✓ los pesos se conservan.
 - Con σ angular **0**: ✓ el aviso explica que debe estar entre 0.01″ y
   9999.99″. Cambiar a Bowditch: ✓ se puede guardar (el peso inválido se
   descarta). Volver a Mínimos cuadrados con 2.
@@ -229,8 +327,8 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
 - **Exportar a Excel** la Vivero. ✓ «Cálculos» trae «Corrección angular (″)» y
   «Distancia ajustada (m)»; «Resumen», la sección «Ajuste por mínimos
   cuadrados» con los pesos y σ₀ 0.698.
-- En un informe que incluya una poligonal con el método, ✓ aparecen «Pesos
-  del ajuste» y σ₀.
+- En la pestaña **Informe** de la Vivero con el método, o en un informe
+  consolidado que la incluya, ✓ aparecen «Pesos del ajuste» y σ₀.
 
 ### 15 quinquies. Georreferenciación (Fase 15)
 
@@ -238,29 +336,43 @@ de cabo a rabo, usando la UI tal como la usaría un usuario.
   aviso de solo lectura dice que la posición se puede georreferenciar, y el
   botón **Georreferenciar** está activo.
 - Pulsarlo. Punto A: **D1**, Norte 100117.462, Este 101515.6333. Punto B:
-  **D3**, Norte 100182.239, Este 101581.7814.
+  **D3**, Norte 100182.239, Este 101581.7814. (El catálogo de Lote catastral
+  no tiene D1 ni D3: se teclean.)
 - ✓ Vista previa: rotación **35° 00′ 07.8″**, traslación N 100467.9285 · E
   99279.5759, factor de escala 1.000000, residuos 0.0 mm. La tabla lleva
   Famarena_5 de 1000.000 / 2000.000 a 100139.844 / 101491.444.
 - Cambiar el Norte de D3 a 100183.239. ✓ Aviso de factor de escala (1.007587).
   Restaurarlo.
-- Pulsar **Reescribir coordenadas**. ✓ Bajo el título: «Georreferenciado el
+- Pulsar **Reescribir coordenadas**. ✓ Sobre el dibujo: «Georreferenciado el
   <fecha> con D1 y D3 (rotación 35° 00′ 07.8″, factor de escala 1.000000)». El
   veredicto sigue en 1:24.717 y 0.0100 m. D3 queda en 100182.239 / 101581.781.
 - Georreferenciar otra vez con D1 y **D4** (100193.8973, 101558.713). ✓ La
   línea muestra la última: D1 y D4, rotación 0° 00′ 00.0″.
+- En el **Proyecto de ejemplo**, abrir **Poligonal Famarena — Sede Vivero —
+  sistema local** (calculada) y pulsar **Georreferenciar**. ✓ **Tomar del
+  catálogo** ofrece solo los puntos con coordenadas: 14_IS1, BM-1, BM-2, D1,
+  D3 y TT4 (C10 no, que solo tiene cota). Punto A: estación **D1** y, del
+  catálogo, **D1** (✓ llena 100117.462 / 101515.6333); punto B: **D3** y
+  **D3** (100182.239 / 101581.7814).
+- ✓ La misma vista previa: rotación 35° 00′ 07.8″, factor 1.000000, residuos
+  D1 0.0 mm · D3 0.0 mm, sin aviso de amarre. El botón dice **Georreferenciar**
+  (el proceso no está cerrado). Confirmar. ✓ «Georreferenciado el <fecha> con
+  D1 y D3…» sobre el dibujo, y Famarena_5 en 100139.844 / 101491.444.
 - Abrir **Poligonal Famarena — Sede Vivero — bowditch** (calculada, amarre del
   catálogo 14_IS1) y georreferenciar. ✓ Aviso de que el amarre pasa a manual.
   Tras confirmar, **Guardar** y recargar: ✓ las coordenadas no vuelven atrás.
 - En la **TT4 con Tránsito**, abrir el diálogo con dos puntos. ✓ Aviso de
   Tránsito. Cancelar.
 - Con cambios sin guardar en un proceso abierto, ✓ el botón está deshabilitado
-  y al lado dice «Guarde los cambios antes de georreferenciar».
+  y sobre el dibujo dice «Guarde los cambios antes de georreferenciar.»
 - Incluir la Vivero local en un informe e imprimirlo. ✓ Nota «Coordenadas
   georreferenciadas el <fecha> con D1 y …». Exportar a Excel: ✓ «Resumen» trae
   la sección «Georreferenciación».
 - A 390 px, ✓ la cabecera del editor envuelve y la página no desborda a lo
   ancho.
+
+La georreferenciación también se escribe en una sola transacción desde la
+Fase 23 (`georeference_polygonal`): cabecera y estaciones juntas.
 
 **Contra la base** (`psql -h 127.0.0.1 -p 55322 -U postgres`, sobre un proceso
 poligonal cerrado `<id>`):
@@ -276,17 +388,49 @@ delete from polygonal_stations where process_id = '<id>';                       
 
 Una nivelación cerrada sigue rechazando cualquier `UPDATE`.
 
+### 15 sexies. Pestaña Informe (Fase 22)
+
+- Abrir el **Pentágono** (calculado) y pulsar **Ver informe**. ✓ Se abre la
+  pestaña **Informe** y la acción de la cabecera pasa a ser **Imprimir o
+  guardar como PDF**.
+- ✓ El informe lleva la marca «Borrador — el informe se emite al cerrar el
+  proceso», los datos y resultados con el equipo, la tabla de coordenadas, el
+  dibujo y el pie «Borrador generado desde TopoField el <fecha>. El proceso no
+  está cerrado: sus datos todavía pueden cambiar.» Debajo, fuera de la
+  impresión: «Este proceso no está en ningún informe consolidado.»
+- Abrir la pestaña **Informe** de **Cuadrado oficial (cerrado)**. ✓ Sin marca
+  de borrador, con «Fecha de cierre» y el **Registro de cierre** (Seed
+  TopoField); debajo, «Informe de cierre — Poligonal · <fecha>» y el botón
+  **Generar un informe consolidado con este proceso**.
+- La V10 crandall cerrada en el paso 8 ✓ ya no lleva la marca de borrador.
+- Con cambios sin guardar en **Proceso**, pulsar la pestaña **Informe**. ✓
+  Pregunta «Tienes cambios sin guardar».
+
 ### 16. RLS — aislamiento entre usuarios
 
-- Cerrar sesión y registrar un segundo usuario nuevo (`otro@topofield.local`).
-- Intentar navegar manualmente a la URL del proyecto **Lote catastral**
-  (copiar el id del que se vio antes).
-- ✓ El sistema devuelve 404 (RLS no deja ver proyectos ajenos).
+- Copiar la URL del proyecto **Lote catastral** y **Cerrar sesión**.
+- En la pantalla de inicio, **Regístrate**. Llenar **Código de invitación**
+  con el valor de `SIGNUP_INVITE_CODE` de `.env.local` (sin esa variable el
+  registro está bloqueado), nombre, apellido, un correo nuevo (p. ej.
+  `otro@example.com`) y una contraseña de 6 caracteres o más. **Crear
+  cuenta**. ✓ Pantalla «Revise su correo».
+- Abrir Mailpit en `http://127.0.0.1:55324` (puerto `[inbucket]` de
+  `supabase/config.toml`) y pulsar el enlace del mensaje de confirmación **en
+  el mismo navegador** (el canje es PKCE: necesita la cookie del registro). ✓
+  Llega al dashboard con un solo proyecto, su propio **Proyecto de ejemplo**.
+- Pegar la URL del proyecto **Lote catastral**.
+- ✓ El sistema devuelve 404, «Proyecto no encontrado» (RLS no deja ver
+  proyectos ajenos).
 
 ## Resultado esperado
 
 Si los 16 puntos pasan, el módulo poligonal cumple los criterios a-p del
 PRD-de-fase 3 en su uso real. Los pasos 15 bis y 15 ter cubren el PRD-de-fase
-13: el dibujo de la poligonal y la captura en grados decimales. Cualquier discrepancia entre los números de la
-app, la hoja Excel y el reporte HTML debe documentarse y corregirse antes de
-pasar a Fase 4.
+13: el dibujo de la poligonal y la captura en grados decimales; el 15 quater,
+el 14 (mínimos cuadrados), y el 15 quinquies, el 15 (georreferenciación,
+también desde el catálogo del proyecto de ejemplo). Los pasos 3, 4, 7 y 15
+sexies cubren el PRD-de-fase 22: el listado del hub, la pantalla del proceso
+con su barra de acciones, la guarda de cambios sin guardar y la pestaña
+Informe; la nota del paso 7, el guardado atómico de la Fase 23. Cualquier
+discrepancia entre los números de la app, la hoja Excel y el reporte HTML
+debe documentarse y corregirse antes de pasar a Fase 4.
