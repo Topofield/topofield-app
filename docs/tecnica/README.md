@@ -2534,12 +2534,11 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-29):** la nube tiene aplicadas **veinte**
-migraciones, hasta `20260927000000_compensacion_desde_el_origen` (Fase 19). La
-de la Fase 22, `20260929000000_tipo_de_lugar`, se aplica con `db push` después
-del merge: antes de empujarla, comprobar en la nube cuántos lugares de
-agrupación cerrados hay (su relleno escribe también en ellos, desactivando el
-trigger solo alrededor del UPDATE).
+**Estado actual (2026-09-30):** la nube tiene aplicadas las **veintiuna**
+migraciones, hasta `20260929000000_tipo_de_lugar` (Fase 22), empujada antes
+del merge de su PR. Verificado con consultas al esquema: «Levantamientos de
+campo» quedó como agrupación, Torre Alameda como control, y los tres triggers
+de `sites` activos.
 
 **Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
 mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de

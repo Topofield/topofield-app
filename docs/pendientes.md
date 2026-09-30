@@ -14,8 +14,11 @@ El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
 navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
 **22** —el proceso en una pantalla,
 [`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md),
-**cerrada** el 2026-09-29— y la **23**, que espera aquí su PRD. Su contenido
-está en «Integridad (Fase 23)», al final.
+**cerrada** el 2026-09-29— y la **23**, abierta el 2026-09-30
+([`prds/22-integridad.md`](./prds/22-integridad.md)). Su petición original está
+en «Integridad (Fase 23)», al final; el PRD la amplía con dos hallazgos de la
+apertura (guardados de poligonal y nivelación, veredicto de la abierta con
+vuelta).
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -327,8 +330,11 @@ vivo sin resolverla.
 
 ## Integridad (Fase 23)
 
+> **En curso en la Fase 23** ([`prds/22-integridad.md`](./prds/22-integridad.md)).
+> Se conserva el texto de la petición como registro.
+
 Pedida el 2026-09-29, junto con la Fase 22, y separada de ella por decisión
-del usuario. Se redacta su PRD al cerrar la 22. Las cuatro vienen de la § 11
+del usuario. Las cuatro vienen de la § 11
 de la doc técnica, donde está el detalle.
 
 ### I1 · Guardados en una sola transacción
