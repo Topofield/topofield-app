@@ -1094,6 +1094,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      georeference_polygonal: {
+        Args: { p_header: Json; p_process_id: string; p_stations: Json }
+        Returns: undefined
+      }
       owns_reading_station: {
         Args: { target_station: string }
         Returns: boolean
@@ -1101,6 +1105,24 @@ export type Database = {
       point_active_on: {
         Args: { p_active_from: string; p_date: string; p_retired_on: string }
         Returns: boolean
+      }
+      save_leveling_process: {
+        Args: { p_header: Json; p_process_id: string; p_readings: Json }
+        Returns: undefined
+      }
+      save_polygonal_process: {
+        Args: { p_header: Json; p_process_id: string; p_stations: Json }
+        Returns: undefined
+      }
+      save_visit: {
+        Args: {
+          p_book: Json
+          p_header: Json
+          p_readings: Json
+          p_rewrites: Json
+          p_visit_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

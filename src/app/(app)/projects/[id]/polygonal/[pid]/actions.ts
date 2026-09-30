@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logDbError } from "@/lib/errors/user-message";
 import {
   azimuthFromCoordinates,
   decimalToDms,
@@ -299,9 +300,54 @@ export async function savePolygonalProcessAction(
   const azimuth = await resolveStartAzimuth(supabase, payload);
   if ("error" in azimuth) return { ok: false, error: azimuth.error };
 
-  const { error: updateError } = await supabase
-    .from("polygonal_processes")
-    .update({
+  // Cabecera, estaciones y lecturas en una sola transacción (Fase 23): si
+  // falla un paso no queda nada a medias. Las estaciones se reemplazan por
+  // completo; sus lecturas de ángulo viajan anidadas y la base genera los id.
+  const stations = payload.stations.map((st, i) => {
+    const r = result.stations[i];
+    const azimuth = r?.azimuth != null ? decimalToDms(r.azimuth) : null;
+    const corrected =
+      r?.correctedAngle != null ? decimalToDms(r.correctedAngle) : null;
+    return {
+      station_order: i + 1,
+      point_code: st.pointCode,
+      // El ángulo de la estación es el PROMEDIO de las lecturas, recalculado
+      // por el servidor. Las lecturas individuales van a su propia tabla.
+      ...(() => {
+        const avg = averageAngle(st);
+        const dms = Number.isFinite(avg) ? decimalToDms(avg) : null;
+        return {
+          angle_deg: dms?.deg ?? st.angleDeg,
+          angle_min: dms?.min ?? st.angleMin,
+          angle_sec: dms?.sec ?? st.angleSec,
+        };
+      })(),
+      deflection_direction: st.deflectionDirection,
+      horizontal_distance: st.horizontalDistance,
+      corrected_angle_deg: corrected?.deg ?? null,
+      corrected_angle_min: corrected?.min ?? null,
+      corrected_angle_sec: corrected?.sec ?? null,
+      azimuth_deg: azimuth?.deg ?? null,
+      azimuth_min: azimuth?.min ?? null,
+      azimuth_sec: azimuth?.sec ?? null,
+      delta_north: r?.deltaNorth ?? null,
+      delta_east: r?.deltaEast ?? null,
+      corrected_delta_north: r?.correctedDeltaNorth ?? null,
+      corrected_delta_east: r?.correctedDeltaEast ?? null,
+      north: r?.north ?? null,
+      east: r?.east ?? null,
+      readings: st.readings.map((reading, order) => ({
+        reading_order: order + 1,
+        angle_deg: reading.deg,
+        angle_min: reading.min,
+        angle_sec: reading.sec,
+      })),
+    };
+  });
+
+  const { error: saveError } = await supabase.rpc("save_polygonal_process", {
+    p_process_id: payload.processId,
+    p_header: {
       name: payload.name,
       type: payload.type,
       angle_type: payload.angleType,
@@ -339,87 +385,11 @@ export async function savePolygonalProcessAction(
       meets_tolerance: result.meetsTolerance,
       notes: payload.notes,
       status,
-    })
-    .eq("id", payload.processId);
-  if (updateError) {
-    return { ok: false, error: "No se pudo guardar el proceso." };
-  }
-
-  // Las estaciones se reemplazan por completo: borra y reinserta el conjunto.
-  await supabase
-    .from("polygonal_stations")
-    .delete()
-    .eq("process_id", payload.processId);
-
-  if (payload.stations.length > 0) {
-    const rows = payload.stations.map((st, i) => {
-      const r = result.stations[i];
-      const azimuth = r?.azimuth != null ? decimalToDms(r.azimuth) : null;
-      const corrected =
-        r?.correctedAngle != null ? decimalToDms(r.correctedAngle) : null;
-      return {
-        process_id: payload.processId,
-        station_order: i + 1,
-        point_code: st.pointCode,
-        // El ángulo de la estación es el PROMEDIO de las lecturas, recalculado
-        // por el servidor. Las lecturas individuales van a su propia tabla.
-        ...(() => {
-          const avg = averageAngle(st);
-          const dms = Number.isFinite(avg) ? decimalToDms(avg) : null;
-          return {
-            angle_deg: dms?.deg ?? st.angleDeg,
-            angle_min: dms?.min ?? st.angleMin,
-            angle_sec: dms?.sec ?? st.angleSec,
-          };
-        })(),
-        deflection_direction: st.deflectionDirection,
-        horizontal_distance: st.horizontalDistance,
-        corrected_angle_deg: corrected?.deg ?? null,
-        corrected_angle_min: corrected?.min ?? null,
-        corrected_angle_sec: corrected?.sec ?? null,
-        azimuth_deg: azimuth?.deg ?? null,
-        azimuth_min: azimuth?.min ?? null,
-        azimuth_sec: azimuth?.sec ?? null,
-        delta_north: r?.deltaNorth ?? null,
-        delta_east: r?.deltaEast ?? null,
-        corrected_delta_north: r?.correctedDeltaNorth ?? null,
-        corrected_delta_east: r?.correctedDeltaEast ?? null,
-        north: r?.north ?? null,
-        east: r?.east ?? null,
-      };
-    });
-    const { data: inserted, error: insertError } = await supabase
-      .from("polygonal_stations")
-      .insert(rows)
-      .select("id, station_order");
-    if (insertError || !inserted) {
-      return { ok: false, error: "No se pudieron guardar las estaciones." };
-    }
-
-    // Las lecturas cuelgan de la estación recién insertada. No hace falta
-    // borrarlas: las estaciones se reemplazan por completo en cada guardado y
-    // las lecturas caen por ON DELETE CASCADE.
-    const byOrder = new Map(inserted.map((r) => [r.station_order, r.id]));
-    const readingRows = payload.stations.flatMap((st, i) => {
-      const stationId = byOrder.get(i + 1);
-      if (stationId == null) return [];
-      return st.readings.map((r, order) => ({
-        station_id: stationId,
-        reading_order: order + 1,
-        angle_deg: r.deg,
-        angle_min: r.min,
-        angle_sec: r.sec,
-      }));
-    });
-
-    if (readingRows.length > 0) {
-      const { error: readingsError } = await supabase
-        .from("polygonal_angle_readings")
-        .insert(readingRows);
-      if (readingsError) {
-        return { ok: false, error: "No se pudieron guardar las lecturas." };
-      }
-    }
+    },
+    p_stations: stations,
+  });
+  if (saveError) {
+    return { ok: false, error: logDbError(saveError, "No se pudo guardar el proceso.") };
   }
 
   revalidatePath(
@@ -648,25 +618,20 @@ export async function georeferencePolygonalProcessAction(
   if (!planned.ok) return planned;
   const { plan } = planned;
 
-  const { error: headerError } = await supabase
-    .from("polygonal_processes")
-    .update({
+  // Cabecera y estaciones en una sola transacción (Fase 23). Las estaciones se
+  // actualizan por su id: en un cerrado no se pueden borrar y reinsertar, como
+  // hace el guardado, porque el trigger solo admite UPDATE de posición.
+  const { error } = await supabase.rpc("georeference_polygonal", {
+    p_process_id: process.id,
+    p_header: {
       ...plan.header,
       georef_at: new Date().toISOString(),
       georef_by: user.id,
-    })
-    .eq("id", process.id);
-  if (headerError) return { ok: false, error: "No se pudo georreferenciar el proceso." };
-
-  // Una fila por estación: en un cerrado no se puede borrar y reinsertar, como
-  // hace el guardado, porque el trigger solo admite UPDATE de posición.
-  const results = await Promise.all(
-    plan.stations.map(({ id, ...columns }) =>
-      supabase.from("polygonal_stations").update(columns).eq("id", id),
-    ),
-  );
-  if (results.some((r) => r.error)) {
-    return { ok: false, error: "No se pudieron georreferenciar las estaciones." };
+    },
+    p_stations: plan.stations,
+  });
+  if (error) {
+    return { ok: false, error: logDbError(error, "No se pudo georreferenciar el proceso.") };
   }
 
   revalidatePath(`/projects/${process.project_id}/polygonal/${process.id}`);

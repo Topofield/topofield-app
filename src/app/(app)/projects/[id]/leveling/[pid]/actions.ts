@@ -168,9 +168,51 @@ export async function saveLevelingProcessAction(
       ? "in_progress"
       : "draft";
 
-  const { error: updateError } = await supabase
-    .from("leveling_processes")
-    .update({
+  function runRows(
+    runType: "forward" | "return",
+    drafts: ReadingDraft[],
+    computedReadings: typeof result.forward.readings,
+  ) {
+    return drafts.map((draft, i) => {
+      const r = computedReadings[i];
+      return {
+        run_type: runType,
+        reading_order: i + 1,
+        point_code: draft.pointCode,
+        point_type: draft.pointType,
+        backsight: draft.backsight,
+        foresight: draft.foresight,
+        back_upper_m: draft.backUpperM,
+        back_lower_m: draft.backLowerM,
+        fore_upper_m: draft.foreUpperM,
+        fore_lower_m: draft.foreLowerM,
+        // Resueltas por el motor: derivadas de los hilos cuando los hay.
+        // Persistir la tecleada sola dejaría la celda vacía en un proceso
+        // capturado por taquimetría, y el informe lee la fila sin recalcular.
+        back_distance_m: r?.backDistanceResolvedM ?? null,
+        fore_distance_m: r?.foreDistanceResolvedM ?? null,
+        // Derivado: lo escribe el motor, no el borrador del cliente.
+        distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
+        instrument_height: r?.instrumentHeight ?? null,
+        elevation_calculated: r?.elevationCalculated ?? null,
+        elevation_corrected: r?.elevationCorrected ?? null,
+        correction_applied: r?.correctionApplied ?? null,
+      };
+    });
+  }
+
+  const rows = [
+    ...runRows("forward", payload.forward, result.forward.readings),
+    ...(payload.hasReturnRun && result.return != null
+      ? runRows("return", payload.return, result.return.readings)
+      : []),
+  ];
+
+  // Cabecera y lecturas en una sola transacción (Fase 23): si falla un paso no
+  // queda nada a medias. Las lecturas se reemplazan por completo.
+  const { error: saveError } = await supabase.rpc("save_leveling_process", {
+    p_process_id: payload.processId,
+    p_header: {
       name: payload.name,
       type: payload.type,
       start_bm_code: payload.startBmCode,
@@ -209,66 +251,11 @@ export async function saveLevelingProcessAction(
       meets_discrepancy: result.meetsDiscrepancy,
       notes: payload.notes,
       status,
-    })
-    .eq("id", payload.processId);
-  if (updateError) {
-    return { ok: false, error: "No se pudo guardar el proceso." };
-  }
-
-  // Las lecturas se reemplazan por completo: borra y reinserta el conjunto.
-  await supabase
-    .from("leveling_readings")
-    .delete()
-    .eq("process_id", payload.processId);
-
-  function runRows(
-    runType: "forward" | "return",
-    drafts: ReadingDraft[],
-    computedReadings: typeof result.forward.readings,
-  ) {
-    return drafts.map((draft, i) => {
-      const r = computedReadings[i];
-      return {
-        process_id: payload.processId,
-        run_type: runType,
-        reading_order: i + 1,
-        point_code: draft.pointCode,
-        point_type: draft.pointType,
-        backsight: draft.backsight,
-        foresight: draft.foresight,
-        back_upper_m: draft.backUpperM,
-        back_lower_m: draft.backLowerM,
-        fore_upper_m: draft.foreUpperM,
-        fore_lower_m: draft.foreLowerM,
-        // Resueltas por el motor: derivadas de los hilos cuando los hay.
-        // Persistir la tecleada sola dejaría la celda vacía en un proceso
-        // capturado por taquimetría, y el informe lee la fila sin recalcular.
-        back_distance_m: r?.backDistanceResolvedM ?? null,
-        fore_distance_m: r?.foreDistanceResolvedM ?? null,
-        // Derivado: lo escribe el motor, no el borrador del cliente.
-        distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
-        instrument_height: r?.instrumentHeight ?? null,
-        elevation_calculated: r?.elevationCalculated ?? null,
-        elevation_corrected: r?.elevationCorrected ?? null,
-        correction_applied: r?.correctionApplied ?? null,
-      };
-    });
-  }
-
-  const rows = [
-    ...runRows("forward", payload.forward, result.forward.readings),
-    ...(payload.hasReturnRun && result.return != null
-      ? runRows("return", payload.return, result.return.readings)
-      : []),
-  ];
-
-  if (rows.length > 0) {
-    const { error: insertError } = await supabase
-      .from("leveling_readings")
-      .insert(rows);
-    if (insertError) {
-      return { ok: false, error: "No se pudieron guardar las lecturas." };
-    }
+    },
+    p_readings: rows,
+  });
+  if (saveError) {
+    return { ok: false, error: logDbError(saveError, "No se pudo guardar el proceso.") };
   }
 
   revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);

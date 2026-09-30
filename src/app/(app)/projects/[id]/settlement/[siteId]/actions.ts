@@ -378,70 +378,14 @@ export async function saveVisitAction(
   const computed = history.visits.find((v) => v.visitId === payload.visitId);
   if (!computed) return { ok: false, error: "No se pudo calcular la visita." };
 
-  // Las lecturas que el usuario QUITÓ se retiran antes que nada. Hasta la
-  // Fase 11 iban al final, después del upsert, para que un fallo intermedio
-  // no dejara la visita sin datos; pero solo se borran las que ya no vienen
-  // en el payload —las que el usuario decidió quitar—, así que borrarlas
-  // primero no pierde ningún dato que se quisiera conservar. Y tiene que ser
-  // primero: el trigger de vigencia de `settlement_visits` rechaza el cambio
-  // de fecha mientras quede una lectura de un punto no vigente en la fecha
-  // nueva, que es exactamente la que el usuario acaba de quitar al mover la
-  // visita. Si no queda ninguna lectura (el usuario borró todas), se purga la
-  // visita completa.
-  const idsVigentes = computed.readings.map((r) => r.pointId);
-  const purga = supabase
-    .from("settlement_readings")
-    .delete()
-    .eq("visit_id", payload.visitId);
-  const { error: deleteError } =
-    idsVigentes.length > 0
-      ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
-      : await purga;
-  if (deleteError) return { ok: false, error: logDbError(deleteError, "No se pudo guardar la visita.") };
-
-  // La cabecera va antes del upsert: una lectura nueva de un punto que solo
-  // es vigente en la fecha NUEVA (un alta) la rechazaría el trigger de
-  // lecturas si la visita conservara todavía la fecha vieja.
   // En `book` el cierre, la tolerancia y la distancia son derivados de la
   // libreta; en `direct` el cierre es el tecleado y lo demás no existe.
   const round = (v: number | null, d: number) =>
     v == null ? null : Number(v.toFixed(d));
-  const { error: headerError } = await supabase
-    .from("settlement_visits")
-    .update({
-      date: payload.date,
-      operator: payload.operator,
-      weather_conditions: payload.weatherConditions,
-      capture_mode: payload.captureMode,
-      reference_bm_code: amarreCode === "" ? null : amarreCode,
-      reference_bm_elevation:
-        amarreCode === "" ? null : payload.referenceBm.elevation,
-      closure_error_mm:
-        payload.captureMode === "book"
-          ? round(book?.closureErrorMm ?? null, 1)
-          : payload.closureErrorMm,
-      tolerance_mm: round(book?.toleranceMm ?? null, 1),
-      meets_tolerance: book?.meetsTolerance ?? null,
-      total_distance_km: book
-        ? round(totalDistanceFromReadings(bookInputs), 3)
-        : null,
-      notes: payload.notes,
-      precision_order: payload.precisionOrder,
-      equipment_brand: payload.equipmentBrand,
-      equipment_model: payload.equipmentModel,
-      equipment_serial: payload.equipmentSerial,
-      equipment_calibration_date: payload.equipmentCalibrationDate,
-      level_type: payload.levelType,
-      km_precision_mm: payload.kmPrecisionMm,
-      status: readings.length > 0 ? "calculated" : "draft",
-    })
-    .eq("id", payload.visitId);
-  if (headerError) return { ok: false, error: logDbError(headerError, "No se pudo guardar la visita.") };
 
-  // La libreta: upsert por (visit_id, reading_order) y purga de las filas
-  // sobrantes, nunca borrado y reinserción —un fallo entre las dos dejaría la
-  // visita sin su dato de campo (PRD de la Fase 18, decisión 19)—. En
-  // `direct` la purga se lleva la libreta entera: el editor ya avisó.
+  // La libreta se guarda por (visit_id, reading_order) y se purgan las filas
+  // sobrantes. En `direct` la purga se lleva la libreta entera: el editor ya
+  // avisó.
   const bookRows = book
     ? bookRowsToPersist(
         payload.visitId,
@@ -450,41 +394,6 @@ export async function saveVisitAction(
         context.points,
       )
     : [];
-  if (bookRows.length > 0) {
-    const { error: bookError } = await supabase
-      .from("settlement_book_readings")
-      .upsert(bookRows, { onConflict: "visit_id,reading_order" });
-    if (bookError) return { ok: false, error: logDbError(bookError, "No se pudo guardar la visita.") };
-  }
-  const { error: bookPurgeError } = await supabase
-    .from("settlement_book_readings")
-    .delete()
-    .eq("visit_id", payload.visitId)
-    .gt("reading_order", bookRows.length);
-  if (bookPurgeError) return { ok: false, error: logDbError(bookPurgeError, "No se pudo guardar la visita.") };
-
-  // Upsert en vez de delete+insert: un `delete` seguido de un `insert` que
-  // fallara dejaría la visita sin lecturas y perdería el dato de campo ya
-  // capturado — justo lo que este módulo existe para evitar. El UNIQUE
-  // (visit_id, point_id) hace que `upsert` actualice la fila existente en
-  // vez de duplicarla.
-  if (computed.readings.length > 0) {
-    const { error: upsertError } = await supabase
-      .from("settlement_readings")
-      .upsert(
-        computed.readings.map((r) => ({
-          visit_id: payload.visitId,
-          point_id: r.pointId,
-          elevation: r.elevation,
-          partial_settlement: r.partialSettlement,
-          accumulated_settlement: r.accumulatedSettlement,
-          velocity: r.velocity,
-          alert_status: r.alertStatus,
-        })),
-        { onConflict: "visit_id,point_id" },
-      );
-    if (upsertError) return { ok: false, error: logDbError(upsertError, "No se pudo guardar la visita.") };
-  }
 
   // --- Propagación a visitas posteriores ABIERTAS ---------------------------
   // `computeHistory` recalculó TODO el histórico (`merged`), no solo la visita
@@ -510,22 +419,57 @@ export async function saveVisitAction(
     skipVisitId: payload.visitId,
   });
 
-  for (const rewrite of rewrites) {
-    const { error: propagateError } = await supabase
-      .from("settlement_readings")
-      .upsert(
-        rewrite.readings.map((r) => ({
-          visit_id: rewrite.visitId,
-          point_id: r.pointId,
-          elevation: r.elevation,
-          partial_settlement: r.partialSettlement,
-          accumulated_settlement: r.accumulatedSettlement,
-          velocity: r.velocity,
-          alert_status: r.alertStatus,
-        })),
-        { onConflict: "visit_id,point_id" },
-      );
-    if (propagateError) return { ok: false, error: logDbError(propagateError, "No se pudo guardar la visita.") };
+  const readingRow = (r: (typeof computed.readings)[number]) => ({
+    point_id: r.pointId,
+    elevation: r.elevation,
+    partial_settlement: r.partialSettlement,
+    accumulated_settlement: r.accumulatedSettlement,
+    velocity: r.velocity,
+    alert_status: r.alertStatus,
+  });
+
+  // Todo en una sola transacción (Fase 23), en el orden que imponen los
+  // triggers de vigencia —ver la migración `guardados_atomicos`—: purga de
+  // las lecturas que el usuario quitó, cabecera, libreta, lecturas y
+  // propagación. Si falla un paso no queda nada a medias: ni la fecha movida
+  // con la libreta vieja ni una visita sin lecturas.
+  const { error: saveError } = await supabase.rpc("save_visit", {
+    p_visit_id: payload.visitId,
+    p_header: {
+      date: payload.date,
+      operator: payload.operator,
+      weather_conditions: payload.weatherConditions,
+      capture_mode: payload.captureMode,
+      reference_bm_code: amarreCode === "" ? null : amarreCode,
+      reference_bm_elevation:
+        amarreCode === "" ? null : payload.referenceBm.elevation,
+      closure_error_mm:
+        payload.captureMode === "book"
+          ? round(book?.closureErrorMm ?? null, 1)
+          : payload.closureErrorMm,
+      tolerance_mm: round(book?.toleranceMm ?? null, 1),
+      meets_tolerance: book?.meetsTolerance ?? null,
+      total_distance_km: book
+        ? round(totalDistanceFromReadings(bookInputs), 3)
+        : null,
+      notes: payload.notes,
+      precision_order: payload.precisionOrder,
+      equipment_brand: payload.equipmentBrand,
+      equipment_model: payload.equipmentModel,
+      equipment_serial: payload.equipmentSerial,
+      equipment_calibration_date: payload.equipmentCalibrationDate,
+      level_type: payload.levelType,
+      km_precision_mm: payload.kmPrecisionMm,
+      status: readings.length > 0 ? "calculated" : "draft",
+    },
+    p_book: bookRows,
+    p_readings: computed.readings.map(readingRow),
+    p_rewrites: rewrites.flatMap((rewrite) =>
+      rewrite.readings.map((r) => ({ visit_id: rewrite.visitId, ...readingRow(r) })),
+    ),
+  });
+  if (saveError) {
+    return { ok: false, error: logDbError(saveError, "No se pudo guardar la visita.") };
   }
 
   // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
