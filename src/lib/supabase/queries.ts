@@ -123,13 +123,17 @@ export async function getDashboardKpis(
     // «Fuera de tolerancia» no aplica a una visita: lo equivalente es que
     // algún lugar tenga al menos un punto en alerta o alarma (ver JSDoc). Se
     // trae el `site_id` de cada lectura afectada (no `head: true`, hace falta
-    // la fila) y se reduce a lugares únicos abajo.
+    // la fila) y se reduce a lugares únicos abajo. Solo en visitas abiertas
+    // de lugares activos (Fase 24): como en poligonales y nivelaciones, el KPI
+    // pide revisar lo que falta cerrar, no lo ya cerrado.
     supabase
       .from("settlement_readings")
       .select(
-        "settlement_visits!inner(site_id, sites!inner(projects!inner(status)))",
+        "settlement_visits!inner(site_id, status, sites!inner(status, projects!inner(status)))",
       )
       .in("alert_status", ["alert", "alarm"])
+      .eq("settlement_visits.status", "calculated")
+      .eq("settlement_visits.sites.status", "active")
       .eq("settlement_visits.sites.projects.status", "active"),
   ]);
   if (calculatedVisitsError) throw calculatedVisitsError;
