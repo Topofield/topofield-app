@@ -135,7 +135,10 @@ export function planGeoreference(
   const after = computePolygonal(moved);
   if (!sameVerdict(before, after)) {
     // No debería pasar nunca: una transformación rígida no cambia el cierre.
-    return { ok: false, error: "La georreferenciación cambiaría el veredicto; no se aplica." };
+    return {
+      ok: false,
+      error: "No se puede georreferenciar sin alterar el cierre. Revise las coordenadas de los dos puntos.",
+    };
   }
 
   const residual = (i: number, real: PlanePoint) => ({

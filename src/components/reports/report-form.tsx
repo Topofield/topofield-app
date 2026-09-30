@@ -107,7 +107,7 @@ export function ReportForm({ projectId, candidates, initialSelected = [] }: Repo
       <Card>
         <EmptyState
           title="Todavía no hay procesos cerrados"
-          description="Un informe solo puede incluir procesos cerrados, porque son los únicos cuyos datos ya no cambian. Cierra una poligonal, una nivelación o un lugar de control para poder generarlo."
+          description="Un informe consolidado solo incluye procesos cerrados. Cierra una poligonal, una nivelación o un control de asentamientos para generarlo."
         />
       </Card>
     );

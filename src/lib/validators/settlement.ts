@@ -250,7 +250,7 @@ export function validateRetirement(input: {
     return "La baja necesita una fecha válida.";
   }
   if (input.reason.trim() === "") {
-    return "Indica el motivo de la baja: dentro de un año nadie recordará por qué el punto dejó de medirse.";
+    return "Indica el motivo de la baja.";
   }
   if (input.activeFrom !== null && input.retiredOn <= input.activeFrom) {
     return `La fecha de baja debe ser posterior al alta (${formatDateOnly(input.activeFrom)}).`;

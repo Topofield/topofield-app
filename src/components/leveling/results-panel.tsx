@@ -46,10 +46,8 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
         <div className="flex flex-col gap-4">
           {!result.arithmeticCheckOk && (
             <Alert variant="error" title="La comprobación aritmética no cuadra">
-              ΣV+ − ΣV− no coincide con el desnivel total del
-              recorrido. Es un fallo de gabinete (suma o traslado de datos):
-              cuadra igual con el nivel descolimado, así que no dice nada
-              sobre la calidad de la medición. Revisa la libreta antes de
+              ΣV+ − ΣV− no coincide con el desnivel total del recorrido: hay un
+              error de suma o de traslado de datos. Revisa la libreta antes de
               continuar.
             </Alert>
           )}
@@ -117,7 +115,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
             </dl>
             {result.toleranceMm == null && (
               <p className="text-sm text-ink-2">
-                Indica la distancia total del recorrido para evaluar la
+                Faltan distancias por visual en la libreta para evaluar la
                 tolerancia.
               </p>
             )}
@@ -202,9 +200,8 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               </div>
             </dl>
             <p className="text-xs text-ink-2">
-              El desnivel adoptado es el promedio informativo de ida y vuelta
-              (§ 6.9). Hoy no alimenta la compensación: las cotas corregidas se
-              calculan con el error de cierre de la ida.
+              El desnivel adoptado es el promedio de ida y vuelta. Las cotas
+              corregidas se calculan con el cierre de la ida.
             </p>
             {result.meetsDiscrepancy != null ? (
               <StatusIndicator
@@ -217,7 +214,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               />
             ) : (
               <p className="text-sm text-ink-2">
-                Indica la distancia total del recorrido para evaluar la
+                Faltan distancias por visual en la libreta para evaluar la
                 tolerancia.
               </p>
             )}
@@ -273,12 +270,9 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               </table>
             </div>
             <p className="text-xs text-ink-2">
-              Con las cotas calculadas, sin compensar. Es una lectura
-              informativa: el veredicto sigue siendo la discrepancia de la
-              sección. Los códigos se emparejan sin distinguir espacios ni
-              mayúsculas.
+              Con las cotas calculadas, sin compensar.
               {homologous.skippedCodes.length > 0 &&
-                ` No se comparan ${homologous.skippedCodes.join(", ")}: se repiten dentro de un recorrido y no se sabe con cuál de sus cotas emparejarlos.`}
+                ` No se comparan ${homologous.skippedCodes.join(", ")}: se repiten dentro de un recorrido.`}
             </p>
           </div>
         </Card>

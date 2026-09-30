@@ -98,8 +98,7 @@ export function TotalStationFieldset({
         <p className="text-sm text-warning">
           Una precisión de {value.angularPrecisionSeconds}″ no alcanza para{" "}
           {PRECISION_ORDER_LABELS[order].toLowerCase()}, cuya tolerancia parte
-          de {ANGULAR_TOLERANCE_K[order]}″. Puede capturar igual: es un aviso,
-          no un bloqueo.
+          de {ANGULAR_TOLERANCE_K[order]}″.
         </p>
       )}
 
@@ -201,8 +200,7 @@ export function LevelFieldset({
         <p className="text-sm text-warning">
           Una precisión de {value.kmPrecisionMm} mm/km no alcanza para{" "}
           {PRECISION_ORDER_LABELS[order].toLowerCase()}, cuya tolerancia parte
-          de {LEVELING_TOLERANCE_K[order]} mm/km. Puede capturar igual: es un
-          aviso, no un bloqueo.
+          de {LEVELING_TOLERANCE_K[order]} mm/km.
         </p>
       )}
     </fieldset>

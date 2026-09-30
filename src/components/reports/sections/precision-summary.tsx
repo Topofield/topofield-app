@@ -40,8 +40,7 @@ export function PrecisionSummary({
       {hayEquipoInsuficiente && (
         <p className="report-footnote">
           (*) El cierre cumple la tolerancia de su orden, pero la precisión del equipo declarado
-          no alcanza el coeficiente K de ese orden. El «Sí» es sobre las medidas, no sobre la
-          capacidad del instrumento.
+          no alcanza el coeficiente K de ese orden.
         </p>
       )}
     </section>

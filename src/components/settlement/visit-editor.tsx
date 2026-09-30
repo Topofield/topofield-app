@@ -593,7 +593,7 @@ export function VisitEditor({
 
         <Card
           title={isBook ? "Cotas de los puntos de control" : "Lecturas"}
-          description={isBook ? "Salen de la libreta: se recalculan al guardar." : undefined}
+          description={isBook ? "Salen de la libreta." : undefined}
         >
           <ReadingsTable
             points={rowPoints}

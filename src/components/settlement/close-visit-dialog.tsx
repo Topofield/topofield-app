@@ -165,9 +165,8 @@ export function CloseVisitDialog({
         {worstAlert === "alarm" || worstAlert === "alert" ? (
           <Alert variant="warning">
             Esta visita registra puntos en{" "}
-            {ALERT_LEVEL_LABELS[worstAlert].toLowerCase()}. El cierre queda
-            igualmente registrado: el nivel de alerta es un hallazgo del
-            monitoreo, no un impedimento.
+            {ALERT_LEVEL_LABELS[worstAlert].toLowerCase()}. Se puede cerrar
+            igual.
           </Alert>
         ) : null}
 

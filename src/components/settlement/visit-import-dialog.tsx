@@ -151,10 +151,9 @@ export function VisitImportDialog({
         <div className="flex flex-col gap-4">
           <p className="text-sm text-ink-2">
             Se leen el archivo <strong>.L de un nivel digital Leica</strong> y
-            la <strong>plantilla CSV</strong> de TopoField, como un solo
-            recorrido: el circuito cerrado sobre el BM de amarre. Las dos
-            lecturas de cada visual se promedian. Nada se guarda hasta que
-            pulse Guardar.
+            la <strong>plantilla CSV</strong> de TopoField, como el circuito
+            cerrado sobre el BM de amarre. Nada se guarda hasta que pulse
+            Guardar.
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <label className="text-sm font-medium text-ink">
@@ -223,9 +222,8 @@ export function VisitImportDialog({
               )}
               {!closesOnStart && (
                 <Alert variant="warning">
-                  El recorrido del archivo no termina en su punto de partida.
-                  La libreta de una visita es un circuito cerrado sobre el
-                  amarre: sin cerrar no se calcula el cierre.
+                  El recorrido del archivo no termina en su punto de partida:
+                  sin volver al amarre no se calcula el cierre.
                 </Alert>
               )}
               {hasRows && (
@@ -240,8 +238,7 @@ export function VisitImportDialog({
               ))}
 
               <p className="text-sm text-ink-2">
-                Revise el tipo de cada punto: el .L no lo trae y se deduce de
-                su posición; la plantilla CSV puede declararlo. Los puntos de
+                Revise el tipo de cada punto antes de aceptar. Los puntos de
                 control suelen ser radiaciones (intermedios).
               </p>
               <RunPreview

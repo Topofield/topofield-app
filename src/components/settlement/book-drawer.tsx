@@ -178,11 +178,10 @@ export function BookDrawer({
         ))}
       </dl>
       <p className="mt-3 text-sm text-ink-2">
-        Tolerancia de cierre K·√D según el orden de la visita, con D la
-        longitud del circuito en km. Las cotas de los puntos de control se
-        toman de la columna de cotas compensadas; si el cierre no cumple la
-        tolerancia, no se compensa. Las vistas intermedias de los puntos de
-        control están resaltadas.
+        Tolerancia de cierre K·√D, con D la longitud del circuito en km. Las
+        cotas de los puntos de control salen de las cotas compensadas; si el
+        cierre no cumple, no se compensa. Los puntos de control están
+        resaltados.
       </p>
     </Drawer>
   );

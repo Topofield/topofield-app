@@ -107,8 +107,7 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         footer={
           <>
             Informe emitido desde TopoField el{" "}
-            {report.generated_at ? formatDate(report.generated_at) : "—"}. El contenido procede de
-            procesos cerrados, cuyas mediciones y veredicto son inmutables desde su cierre.
+            {report.generated_at ? formatDate(report.generated_at) : "—"}, con procesos cerrados.
           </>
         }
       />

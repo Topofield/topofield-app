@@ -426,9 +426,8 @@ export function LevelingEditor({
             {levelType == null ? (
               <p className="rounded-md bg-sel px-4 py-3 text-sm text-ink-2">
                 Elige el <strong>tipo de nivel</strong> en la configuración antes
-                de capturar la libreta: decide si la distancia se obtiene leyendo
-                los tres hilos sobre la mira (nivel automático) o la entrega el
-                instrumento (nivel digital).
+                de capturar la libreta: automático (distancia por los tres hilos)
+                o digital (la entrega el instrumento).
               </p>
             ) : null}
             {levelType != null &&
