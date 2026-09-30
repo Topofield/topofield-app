@@ -15,7 +15,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(25);
+select plan(28);
 
 -- --- Datos, como postgres (sin RLS) ------------------------------------------
 insert into auth.users (id, email) values
@@ -191,6 +191,15 @@ select set_config('request.jwt.claims',
 select throws_ok(
   $$ select save_leveling_process('00000000-0000-4000-8000-00000000e001', '{"name":"Ajeno"}', '[]') $$,
   'P0002', null, 'RLS: otro usuario no encuentra el proceso');
+select throws_ok(
+  $$ select save_polygonal_process('00000000-0000-4000-8000-00000000d001', '{"name":"Ajeno"}', '[]') $$,
+  'P0002', null, 'RLS: otro usuario no encuentra la poligonal');
+select throws_ok(
+  $$ select georeference_polygonal('00000000-0000-4000-8000-00000000d001', '{"start_north":1}', '[]') $$,
+  'P0002', null, 'RLS: otro usuario no georreferencia');
+select throws_ok(
+  $$ select save_visit('00000000-0000-4000-8000-0000000f1001', '{"operator":"Ajeno"}', '[]', '[]', '[]') $$,
+  'P0002', null, 'RLS: otro usuario no encuentra la visita');
 
 select * from finish();
 rollback;
