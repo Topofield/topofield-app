@@ -20,6 +20,7 @@ import {
   type PointPayload,
 } from "@/app/(app)/projects/[id]/sites/[siteId]/point-actions";
 import { formatCoordinate, formatDateOnly, formatElevation } from "@/lib/utils/format";
+import { REFERENCE_LOCKED_MESSAGE } from "@/lib/validators/settlement";
 import type { SettlementPoint } from "@/types/settlement";
 import { readNumberText } from "@/lib/utils/parse";
 
@@ -51,6 +52,11 @@ interface PointsCatalogProps {
    * si todavía se puede. Lo calcula el servidor con `undoRetirementBlocker`.
    */
   undoBlockers: Record<string, string | null>;
+  /**
+   * Puntos con lecturas en visitas cerradas (Fase 23): su C0 y sus
+   * coordenadas ya no cambian, así que el diálogo de edición las bloquea.
+   */
+  referenceLocked: string[];
 }
 
 interface FormState {
@@ -133,6 +139,7 @@ export function PointsCatalog({
   disabled,
   hasVisits,
   undoBlockers,
+  referenceLocked,
 }: PointsCatalogProps) {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -312,6 +319,7 @@ export function PointsCatalog({
   const point = dialog?.mode === "edit" ? dialog.point : null;
   // Un punto de alta: uno nuevo en un lugar con visitas, o uno que ya lo era.
   const isAltaForm = point ? point.active_from !== null : hasVisits;
+  const referenceIsLocked = point !== null && referenceLocked.includes(point.id);
 
   return (
     <Card
@@ -463,12 +471,14 @@ export function PointsCatalog({
                 value={form.northing}
                 onChange={set("northing")}
                 error={errors.northing}
+                disabled={referenceIsLocked}
               />
               <NumberInput
                 label="Este"
                 value={form.easting}
                 onChange={set("easting")}
                 error={errors.easting}
+                disabled={referenceIsLocked}
               />
               {!isAltaForm && (
                 <NumberInput
@@ -476,9 +486,13 @@ export function PointsCatalog({
                   value={form.initialElevation}
                   onChange={set("initialElevation")}
                   error={errors.initialElevation}
+                  disabled={referenceIsLocked}
                 />
               )}
             </div>
+            {referenceIsLocked && (
+              <p className="text-sm text-ink-2">{REFERENCE_LOCKED_MESSAGE}</p>
+            )}
             {isAltaForm && (
               <Input
                 label="Fecha de alta"

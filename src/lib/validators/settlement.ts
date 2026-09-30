@@ -300,3 +300,26 @@ export function validateActiveFrom(
   }
   return null;
 }
+
+/** El mensaje de la C0 o las coordenadas bloqueadas (Fase 23). */
+export const REFERENCE_LOCKED_MESSAGE =
+  "El punto tiene lecturas en visitas cerradas: su C0 y sus coordenadas ya no cambian. El código y la ubicación sí.";
+
+/**
+ * ¿Cambia la C0 o alguna coordenada del punto (Fase 23)? Se compara a la
+ * escala de la base —cotas a 4 decimales, coordenadas a 3—: el formulario
+ * devuelve el valor formateado, y un `100.12` que vuelve como `100.1200` no es
+ * un cambio.
+ */
+export function pointReferenceChanged(
+  current: { initial_elevation: number | null; northing: number | null; easting: number | null },
+  next: { initialElevation: number | null; northing: number | null; easting: number | null },
+): boolean {
+  const differs = (a: number | null, b: number | null, decimals: number) =>
+    a === null || b === null ? a !== b : a.toFixed(decimals) !== b.toFixed(decimals);
+  return (
+    differs(current.initial_elevation, next.initialElevation, 4) ||
+    differs(current.northing, next.northing, 3) ||
+    differs(current.easting, next.easting, 3)
+  );
+}

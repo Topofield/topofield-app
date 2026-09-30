@@ -9,6 +9,8 @@ interface PlaceTabProps {
   site: Site;
   points: Awaited<ReturnType<typeof getSitePoints>>;
   visits: Awaited<ReturnType<typeof getVisits>>;
+  /** Puntos con lecturas en visitas cerradas: C0 y coordenadas fijas (Fase 23). */
+  referenceLocked: string[];
 }
 
 /**
@@ -16,7 +18,7 @@ interface PlaceTabProps {
  * catálogo de puntos de control. Hasta la Fase 21 era otra página,
  * `sites/[siteId]`, que ahora redirige aquí.
  */
-export function PlaceTab({ projectId, site, points, visits }: PlaceTabProps) {
+export function PlaceTab({ projectId, site, points, visits, referenceLocked }: PlaceTabProps) {
   // El diálogo de cierre resume cuántas visitas se van a congelar (§ 4.6):
   // cerrar el lugar cierra TODAS sus visitas de una vez.
   const visitsOpen = visits.filter((v) => v.status !== "closed").length;
@@ -60,6 +62,7 @@ export function PlaceTab({ projectId, site, points, visits }: PlaceTabProps) {
         disabled={site.status === "closed"}
         hasVisits={visits.length > 0}
         undoBlockers={undoBlockers}
+        referenceLocked={referenceLocked}
       />
     </div>
   );
