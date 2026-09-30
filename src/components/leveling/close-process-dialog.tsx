@@ -123,18 +123,30 @@ export function CloseProcessDialog({
                   label="Tipo de nivelación"
                   value={LEVELING_TYPE_LABELS[type]}
                 />
-                <SummaryRow
-                  label="Error de cierre"
-                  value={formatMm(result.closureErrorMm)}
-                />
-                <SummaryRow
-                  label="Tolerancia"
-                  value={formatMm(result.toleranceMm)}
-                />
+                {/* Una abierta no cierra contra cota conocida: sin filas vacías
+                    de cierre. Con vuelta, su veredicto es la discrepancia. */}
+                {type !== "open" && (
+                  <>
+                    <SummaryRow
+                      label="Error de cierre"
+                      value={formatMm(result.closureErrorMm)}
+                    />
+                    <SummaryRow
+                      label="Tolerancia"
+                      value={formatMm(result.toleranceMm)}
+                    />
+                  </>
+                )}
                 {result.discrepancyMm != null && (
                   <SummaryRow
                     label="Discrepancia ida/vuelta"
                     value={formatMm(result.discrepancyMm)}
+                  />
+                )}
+                {result.discrepancyToleranceMm != null && (
+                  <SummaryRow
+                    label="Tolerancia de la discrepancia"
+                    value={formatMm(result.discrepancyToleranceMm)}
                   />
                 )}
                 <SummaryRow
