@@ -1212,22 +1212,31 @@ Los casos 1 y 4 están diseñados para NO cumplir tolerancia, verificando que la
 
 ## 8. Pantallas y Rutas
 
+> **Enmendada el 2026-09-30** a las rutas que existen. El control de
+> asentamientos se organiza por lugar (Fase 5), los informes consolidados se
+> listan en el hub y se abren en su vista imprimible (Fase 22), y `/settings`
+> decayó con el catálogo de destinatarios (§ 4.9).
+
 | Ruta | Pantalla | Módulo |
 |---|---|---|
 | `/` | Redirect a `/dashboard` | Auth |
 | `/sign-in` | Login (Supabase Auth) | Auth |
-| `/sign-up` | Registro (Supabase Auth) | Auth |
+| `/sign-up` | Registro con código de invitación (Supabase Auth) | Auth |
+| `/auth/callback` | Confirmación de correo | Auth |
 | `/dashboard` | Dashboard principal | Core |
-| `/projects/new` | Crear proyecto (wizard) | Proyectos |
-| `/projects/[id]` | Vista del proyecto (hub) | Proyectos |
+| `/manual` | Manual de usuario | Core |
+| `/projects/new` | Crear proyecto | Proyectos |
+| `/projects/[id]` | Vista del proyecto (hub): procesos, informes y configuración | Proyectos |
 | `/projects/[id]/polygonal/new` | Crear proceso poligonal | Poligonal |
-| `/projects/[id]/polygonal/[pid]` | Editor de poligonal | Poligonal |
+| `/projects/[id]/polygonal/[pid]` | Poligonal: pestañas Proceso · Informe | Poligonal |
 | `/projects/[id]/leveling/new` | Crear proceso nivelación | Nivelación |
-| `/projects/[id]/leveling/[pid]` | Editor de nivelación | Nivelación |
-| `/projects/[id]/settlement/new` | Crear sistema asentamiento | Asentamiento |
-| `/projects/[id]/settlement/[pid]` | Editor de asentamiento | Asentamiento |
-| `/projects/[id]/reports` | Generador de informes | Informes |
-| `/settings` | Configuración | Core |
+| `/projects/[id]/leveling/[pid]` | Nivelación: pestañas Proceso · Informe | Nivelación |
+| `/projects/[id]/sites/new` | Crear lugar de control de asentamientos | Asentamiento |
+| `/projects/[id]/settlement/[siteId]` | Lugar: pestañas Panel · Puntos y lugar · Informe | Asentamiento |
+| `/projects/[id]/settlement/[siteId]/visits/[visitId]` | Vista de una visita; `/editar`, su editor | Asentamiento |
+| `/projects/[id]/reports/new` | Generar informe consolidado | Informes |
+| `/projects/[id]/reports/[reportId]/print` | Informe consolidado imprimible | Informes |
+| `…/[pid]/export`, `…/[siteId]/export` | Descarga del Excel de cada proceso | Exportación |
 
 ---
 
@@ -1241,6 +1250,11 @@ Alineado con el Gantt de 13 semanas:
 4. **Módulo Nivelación** (S7-S8): Editor con ida/vuelta, corrección proporcional. Validaciones. Cierre.
 5. **Módulo Asentamientos** (S8-S9): Campañas, cálculos, alertas semáforo, gráficas.
 6. **Cierre, Informes, Export** (S9-S10): Flujo de cierre, generador PDF, export Excel, destinatarios.
+
+Las seis fases se cerraron entre abril y agosto de 2026. Las fases 7 a 23 no
+estaban en este plan: nacieron del contraste del motor contra carteras de
+campo reales y de peticiones del usuario. Su índice y su estado están en
+[`docs/prds/README.md`](docs/prds/README.md).
 
 ---
 
