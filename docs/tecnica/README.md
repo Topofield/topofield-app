@@ -2678,6 +2678,14 @@ Como los datos de producción no importaban, se vaciaron los de trabajo
 dejó `profiles.demo_seeded_at` en nulo para que el dashboard recree el
 proyecto demo. La cuenta del usuario se conservó.
 
+**La demo se regeneró el 2026-09-30** de la misma forma, con el visto bueno
+del usuario: la de producción se había creado con el generador de la Fase 21 y
+sus procesos cerrados conservaban las notas que la Fase 22 quitó (rutas de
+`docs/carteras/`, «puede eliminarlo»), que la inmutabilidad no deja corregir.
+Una guarda abortaba si había algo más que la demo de la única cuenta. La nueva
+se creó al entrar, en 5 s, con los textos, el veredicto y las portadas
+actuales.
+
 **El orden importa cuando hay auto-deploy.** Vercel despliega solo al empujar a
 `main`, así que la migración va **primero** y el `git push` después: al revés,
 el despliegue serviría código que espera tablas que la base todavía no tiene.
