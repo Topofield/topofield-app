@@ -45,7 +45,12 @@ export function precisionSummaryRows(sections: ReportSection[]): PrecisionSummar
         n(s.data.process.angular_precision_seconds) ?? Number.NaN,
       );
     } else if (s.kind === "leveling") {
-      precision = `${fixed(s.data.process.closure_error_mm, 1)} mm (tol. ${fixed(s.data.process.tolerance_mm, 1)})`;
+      const p = s.data.process;
+      // En una abierta con vuelta el veredicto es la discrepancia (Fase 23).
+      precision =
+        p.type === "open" && p.has_return_run
+          ? `Δ ${fixed(p.discrepancy_mm, 1)} mm (tol. ${fixed(p.discrepancy_tolerance_mm, 1)})`
+          : `${fixed(p.closure_error_mm, 1)} mm (tol. ${fixed(p.tolerance_mm, 1)})`;
       cumple = s.data.process.meets_tolerance;
       equipo = formatEquipmentLine(
         s.data.process.equipment_brand,

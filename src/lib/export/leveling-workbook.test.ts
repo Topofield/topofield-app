@@ -45,6 +45,8 @@ function process(over: Partial<LevelingProcessRow> = {}): LevelingProcessRow {
     forward_error_mm: null,
     return_error_mm: null,
     discrepancy_mm: null,
+    discrepancy_tolerance_mm: null,
+    meets_discrepancy: null,
     closed_at: "2026-08-12T00:00:00Z",
     closed_by: "user-1",
     notes: null,
@@ -90,6 +92,32 @@ describe("buildLevelingWorkbook", () => {
     const raw = wb.getWorksheet("Datos Crudos")!;
     expect(raw.getCell("A4").value).toBe("Vuelta");
     expect(raw.getCell("D4").value).toBe("Punto de cambio");
+  });
+
+  // Fase 23: la tolerancia y el veredicto de la discrepancia, que en una
+  // abierta con vuelta es el veredicto del proceso.
+  it("el Resumen lleva la tolerancia y el veredicto de la discrepancia", () => {
+    const wb = buildLevelingWorkbook(
+      process({
+        type: "open",
+        has_return_run: true,
+        closure_error_mm: null,
+        tolerance_mm: null,
+        discrepancy_mm: "5.0",
+        discrepancy_tolerance_mm: "10.5",
+        meets_discrepancy: true,
+        meets_tolerance: true,
+      }),
+      [reading()],
+    );
+    const res = wb.getWorksheet("Resumen")!;
+    const pares = new Map<string, unknown>();
+    res.eachRow((row) => {
+      const etiqueta = row.getCell(1).value;
+      if (typeof etiqueta === "string") pares.set(etiqueta, row.getCell(2).value);
+    });
+    expect(pares.get("Tolerancia de la discrepancia (mm)")).toBe(10.5);
+    expect(pares.get("¿Cumple la discrepancia?")).toBe("Sí");
   });
 
   it("etiqueta el tipo de proceso «de enlace», que son tres y no dos", () => {

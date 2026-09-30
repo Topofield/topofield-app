@@ -19,10 +19,28 @@ export function LevelingReportSection({ data }: { data: LevelingSectionData }) {
       <dl className="report-pairs">
         <dt>Tipo</dt>
         <dd>{LEVELING_TYPE_LABELS[process.type as LevelingType] ?? process.type}</dd>
-        <dt>Error de cierre</dt>
-        <dd>{fixed(process.closure_error_mm, 1)} mm</dd>
-        <dt>Tolerancia</dt>
-        <dd>{fixed(process.tolerance_mm, 1)} mm</dd>
+        {/* Una abierta no cierra contra cota conocida: sin esas dos filas,
+            en vez de dos «— mm». */}
+        {process.type !== "open" && (
+          <>
+            <dt>Error de cierre</dt>
+            <dd>{fixed(process.closure_error_mm, 1)} mm</dd>
+            <dt>Tolerancia</dt>
+            <dd>{fixed(process.tolerance_mm, 1)} mm</dd>
+          </>
+        )}
+        {/* Con vuelta, la discrepancia (Fase 23): el veredicto en una abierta,
+            control de calidad en cerrada y de enlace. */}
+        {process.has_return_run && (
+          <>
+            <dt>Discrepancia ida y vuelta</dt>
+            <dd>
+              {fixed(process.discrepancy_mm, 1)} mm (tolerancia{" "}
+              {fixed(process.discrepancy_tolerance_mm, 1)} mm)
+              {process.meets_discrepancy === false ? " · fuera de tolerancia" : ""}
+            </dd>
+          </>
+        )}
         <dt>Distancia total</dt>
         <dd>{fixed(process.total_distance_km, 3)} km</dd>
         <dt>Orden de precisión</dt>
