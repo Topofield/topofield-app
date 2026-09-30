@@ -163,6 +163,9 @@
 @layer components {
   .report {
     max-width: 52rem;
+    /* Dentro de una columna flex (la pantalla del proceso), sin esto el
+       informe crece hasta el ancho de su tabla más ancha. */
+    min-width: 0;
     margin: 0 auto;
     padding: 2rem 1.5rem 4rem;
     color: var(--color-ink);
@@ -299,6 +302,18 @@
     .report-table th,
     .report-table td {
       padding-inline: 0.25rem;
+    }
+
+    /* Fase 22: el informe vive también en la pestaña de cada proceso. En un
+       teléfono, una tabla que no cabe se desplaza sola en vez de ensanchar
+       la página, y el informe no suma su propio margen al de la app. */
+    .report {
+      padding-inline: 0;
+    }
+
+    .report-table {
+      display: block;
+      overflow-x: auto;
     }
   }
 
