@@ -944,6 +944,46 @@ describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea
     expect(result.meetsDiscrepancy).toBeNull();
   });
 
+  // Fase 23 (cabo de la Fase 9): la tolerancia de la discrepancia es la de la
+  // MENOR de las dos distancias. Si falta una, no hay «menor de las dos»: no se
+  // evalúa con un solo recorrido.
+  it("ida sin distancias y vuelta con distancias: la discrepancia no se evalúa", () => {
+    const returnConDistancias: ReadingInput[] = fromAccum([
+      r("BM-1", "bm", 1.2, null, 0.0),
+      r("PV-1", "pc", 1.6, 0.9, 0.45),
+      r("BM-1", "bm", null, 1.89, 0.9),
+    ]);
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      forward: SIN_DISTANCIAS,
+      return: returnConDistancias,
+    });
+    expect(result.discrepancyMm).not.toBeNull();
+    expect(result.discrepancyToleranceMm).toBeNull();
+    expect(result.meetsDiscrepancy).toBeNull();
+  });
+
+  it("ida con distancias y vuelta sin ellas: la discrepancia no se evalúa", () => {
+    const idaConDistancias: ReadingInput[] = fromAccum([
+      r("BM-1", "bm", 1.5, null, 0.0),
+      r("PC-1", "pc", 2.0, 1.2, 0.3),
+      r("BM-1", "bm", null, 2.3, 0.6),
+    ]);
+    const vueltaSinDistancias: ReadingInput[] = [
+      bare({ pointCode: "BM-1", pointType: "bm", backsight: 2.3 }),
+      bare({ pointCode: "PC-1", pointType: "pc", foresight: 2.0, backsight: 1.2 }),
+      bare({ pointCode: "BM-1", pointType: "bm", foresight: 1.5 }),
+    ];
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      forward: idaConDistancias,
+      return: vueltaSinDistancias,
+    });
+    expect(result.discrepancyMm).not.toBeNull();
+    expect(result.discrepancyToleranceMm).toBeNull();
+    expect(result.meetsDiscrepancy).toBeNull();
+  });
+
   it("no produce NaN en ningún campo numérico del resultado", () => {
     const returnRun: ReadingInput[] = fromAccum([
       r("BM-1", "bm", 1.2, null, 0.0),

@@ -384,12 +384,13 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     // y la vuelta 397.6 m. Se evalúa con la MENOR de las dos, que es el
     // criterio conservador — la hoja de El Verjón juzga el cierre con la
     // distancia del recorrido contrario, que es arbitrario.
+    // Sin la distancia de alguno de los dos no hay «menor de las dos»: la
+    // tolerancia no se evalúa, en vez de juzgar con un solo recorrido (cabo
+    // de la Fase 9, cerrado en la Fase 23).
     const returnDistanceKm = totalDistanceFromReadings(input.return);
-    const pairDistanceKm = Math.min(
-      totalDistanceKm || Number.POSITIVE_INFINITY,
-      returnDistanceKm || Number.POSITIVE_INFINITY,
-    );
-    if (Number.isFinite(pairDistanceKm) && pairDistanceKm > 0) {
+    const valid = (d: number) => Number.isFinite(d) && d > 0;
+    if (valid(totalDistanceKm) && valid(returnDistanceKm)) {
+      const pairDistanceKm = Math.min(totalDistanceKm, returnDistanceKm);
       discrepancyToleranceMm =
         levelingTolerance(input.order, pairDistanceKm) * Math.SQRT2;
       meetsDiscrepancy = discrepancyMm <= discrepancyToleranceMm;
