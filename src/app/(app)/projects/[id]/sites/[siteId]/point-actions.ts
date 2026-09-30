@@ -66,10 +66,13 @@ async function loadOpenSite(
 ) {
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id")
+    .select("id, status, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
-  if (!site) return { ok: false as const, error: "Lugar no encontrado." };
+  // Un lugar de agrupación (Fase 22) no tiene catálogo de puntos.
+  if (!site || site.kind !== "settlement") {
+    return { ok: false as const, error: "Lugar no encontrado." };
+  }
   if (site.status === "closed") {
     return {
       ok: false as const,

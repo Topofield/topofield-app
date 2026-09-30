@@ -121,10 +121,12 @@ export async function saveSiteAction(
   // corresponde al lugar que en verdad se está guardando.
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id")
+    .select("id, status, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
-  if (!site) return { ok: false, error: "Lugar no encontrado." };
+  // Un lugar de agrupación (Fase 22) no es un control de asentamientos: no
+  // se edita ni se cierra como tal, aunque se llame a la acción directamente.
+  if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
   if (site.status === "closed") {
     return { ok: false, error: "El lugar está cerrado; no admite cambios." };
   }
@@ -181,10 +183,12 @@ export async function closeSiteAction(
   // desde el cliente, que podría no corresponder al lugar real.
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id")
+    .select("id, status, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
-  if (!site) return { ok: false, error: "Lugar no encontrado." };
+  // Un lugar de agrupación (Fase 22) no es un control de asentamientos: no
+  // se edita ni se cierra como tal, aunque se llame a la acción directamente.
+  if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
   if (site.status === "closed") {
     return { ok: false, error: "El lugar ya está cerrado." };
   }
@@ -272,6 +276,7 @@ export async function duplicateSiteAction(siteId: string): Promise<ActionResult>
     .is("retired_on", null)
     .order("code");
   if (pointsError) {
+    await supabase.from("sites").delete().eq("id", copia.id);
     return { ok: false, error: logDbError(pointsError, "No se pudo copiar el catálogo de puntos.") };
   }
   if (puntos.length > 0) {

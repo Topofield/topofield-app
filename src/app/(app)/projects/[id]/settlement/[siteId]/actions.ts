@@ -106,7 +106,8 @@ async function loadContext(
     .select("*")
     .eq("id", siteId)
     .maybeSingle();
-  if (!site) return null;
+  // Un lugar de agrupación (Fase 22) no tiene visitas.
+  if (!site || site.kind !== "settlement") return null;
 
   const { data: points } = await supabase
     .from("settlement_points")
