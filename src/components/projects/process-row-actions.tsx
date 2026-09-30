@@ -103,7 +103,7 @@ export function ProcessRowActions({ kind, id, name, closed }: ProcessRowActionsP
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex flex-wrap items-center justify-end gap-1">
+      <div className="flex items-center justify-end gap-1">
         <Button
           size="sm"
           variant="ghost"
