@@ -8,7 +8,8 @@
 // son funciones puras con sus propios tests. Así el informe no puede dibujar
 // una geometría distinta de la que se ve en pantalla.
 
-import { linearScale, niceTicks } from "@/lib/design/chart-scale";
+import { linearScale, niceTicks, timeScale, timeTicks } from "@/lib/design/chart-scale";
+import { fitXLabels, shortDate, timeTickLabels } from "@/lib/design/chart-labels";
 import { settlementPointLabel } from "@/lib/utils/format";
 import { seriesStyle, type SeriesMarker } from "@/lib/design/series-markers";
 import type { PointInput, VisitResult } from "@/types/settlement";
@@ -121,16 +122,9 @@ function Marker({
   }
 }
 
+/** Con punto decimal, como las tablas del informe (Fase 22). */
 function mm(value: number): string {
-  return value.toLocaleString("es-CO", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
-}
-
-function fecha(value: string): string {
-  const [y, m, d] = value.split("-");
-  return y && m && d ? `${d}/${m}` : value;
+  return value.toFixed(1);
 }
 
 interface SettlementPlotProps {
@@ -167,7 +161,17 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
     [yTicks[0] ?? 0, yTicks[yTicks.length - 1] ?? 0],
     [PLOT_HEIGHT, 0],
   );
-  const xScale = linearScale([0, Math.max(1, visits.length - 1)], [0, PLOT_WIDTH]);
+  // Eje X en tiempo real, como el panel (Fase 22): espaciar las visitas por
+  // igual exageraba la pendiente de los intervalos largos.
+  const dates = visits.map((v) => v.date);
+  const first = dates[0]!;
+  const last = dates[dates.length - 1]!;
+  const xScale = timeScale(dates, [0, PLOT_WIDTH]);
+  const ticks = timeTicks(first, last, Math.max(2, Math.floor(PLOT_WIDTH / 110)));
+  const xLabels = fitXLabels(
+    timeTickLabels(ticks).map((label, i) => ({ x: xScale(ticks[i]!), label })),
+    PLOT_WIDTH,
+  );
 
   return (
     <div className="report-plot">
@@ -175,7 +179,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         width={CHART_WIDTH}
         role="img"
-        aria-label={`Asentamiento acumulado en milímetros a lo largo de ${visits.length} visitas, para ${points.length} punto(s): ${points.map((p) => p.code).join(", ")}.`}
+        aria-label={`Asentamiento acumulado en milímetros, ${visits.length} visitas del ${shortDate(first)} al ${shortDate(last)}, para ${points.length} punto(s): ${points.map((p) => p.code).join(", ")}.`}
       >
         <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
           {yTicks.map((tick) => (
@@ -210,19 +214,26 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
             strokeWidth={1.4}
           />
 
-          {visits.map((visit, i) => (
-            <text
-              key={visit.visitId}
-              x={xScale(i)}
-              y={PLOT_HEIGHT + 18}
-              textAnchor={
-                i === 0 ? "start" : i === visits.length - 1 ? "end" : "middle"
-              }
-              fontSize={10}
-              fill="var(--color-ink-2)"
-            >
-              {fecha(visit.date)}
-            </text>
+          {xLabels.map(({ x, label, anchor }) => (
+            <g key={label}>
+              <line
+                x1={x}
+                x2={x}
+                y1={PLOT_HEIGHT}
+                y2={PLOT_HEIGHT + 4}
+                stroke="var(--color-rule-strong)"
+                strokeWidth={1}
+              />
+              <text
+                x={x}
+                y={PLOT_HEIGHT + 18}
+                textAnchor={anchor}
+                fontSize={10}
+                fill="var(--color-ink-2)"
+              >
+                {label}
+              </text>
+            </g>
           ))}
 
           <text
@@ -239,6 +250,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
             // hueco dibujaría una pendiente que nadie midió.
             const tramos: { i: number; v: number }[][] = [];
             let actual: { i: number; v: number }[] = [];
+            const x = (i: number) => xScale(visits[i]!.date);
             values.forEach((v, i) => {
               if (v === null) {
                 if (actual.length > 0) tramos.push(actual);
@@ -258,7 +270,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
                     stroke={color}
                     strokeWidth={1.4}
                     points={tramo
-                      .map(({ i, v }) => `${xScale(i)},${yScale(v)}`)
+                      .map(({ i, v }) => `${x(i)},${yScale(v)}`)
                       .join(" ")}
                   />
                 ))}
@@ -266,7 +278,7 @@ export function SettlementPlot({ points, visits }: SettlementPlotProps) {
                   <Marker
                     key={i}
                     shape={shape}
-                    cx={xScale(i)}
+                    cx={x(i)}
                     cy={yScale(v)}
                     color={color}
                   />

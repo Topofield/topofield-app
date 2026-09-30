@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Breadcrumbs } from "@/components/design-system";
+import { buttonClasses, PageHeader } from "@/components/design-system";
 import { VisitEditor } from "@/components/settlement/visit-editor";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { loadVisitData } from "../visit-data";
@@ -31,14 +32,21 @@ export default async function VisitEditPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs
-        items={[
+      <PageHeader
+        breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: project.name, href: `/projects/${project.id}` },
+          { label: project.name, href: `/projects/${project.id}?tab=processes&modulo=asentamientos` },
           { label: site.name, href: `/projects/${project.id}/settlement/${site.id}` },
           { label: visitLabel, href: viewHref },
           { label: "Editar" },
         ]}
+        title={`Editar ${visitLabel.charAt(0).toLowerCase()}${visitLabel.slice(1)}`}
+        subtitle={site.name}
+        actions={
+          <Link href={viewHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+            Ver la visita
+          </Link>
+        }
       />
       <VisitEditor
         projectId={project.id}

@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-25 · Fase 21 cerrada · 817 tests ·
+**Última actualización:** 2026-09-29 · Fase 22 cerrada · 847 tests ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -171,11 +171,11 @@ src/
 │   │   ├── dashboard/
 │   │   ├── manual/          manual de usuario (§ 12)
 │   │   └── projects/[id]/
-│   │       ├── polygonal/[pid]/
-│   │       ├── leveling/[pid]/
-│   │       ├── sites/[siteId]/          alta y editor del lugar
-│   │       ├── settlement/[siteId]/     panel del lugar; visits/[visitId]/ vista y editar/
-│   │       └── reports/                 informes: alta, vista y ruta imprimible
+│   │       ├── polygonal/[pid]/         pestañas Proceso · Informe (Fase 22)
+│   │       ├── leveling/[pid]/          pestañas Proceso · Informe
+│   │       ├── sites/                   alta del lugar; [siteId] redirige a su pestaña
+│   │       ├── settlement/[siteId]/     pestañas Panel · Puntos y lugar · Informe; visits/[visitId]/ vista y editar/
+│   │       └── reports/                 informes consolidados: alta y ruta imprimible
 │   ├── design-system/       galería del sistema de diseño (404 en producción)
 │   ├── layout.tsx           layout raíz, carga de fuentes
 │   ├── globals.css          tokens de tema y capas base
@@ -183,11 +183,13 @@ src/
 ├── public/manual/           capturas que sirve la página /manual
 ├── components/
 │   ├── design-system/       componentes propios reutilizables
+│   ├── process/             la pantalla común de un proceso y su informe (Fase 22)
+│   ├── navigation/          guarda de cambios sin guardar (Fase 22)
 │   ├── polygonal/           editor de poligonales
-│   ├── leveling/            editor de nivelación
+│   ├── leveling/            editor de nivelación, veredicto y perfil
 │   ├── settlement/          lugar, visitas, semáforo, gráfica
-│   ├── reports/             alta de informe y botón de impresión
-│   └── projects/            dashboard y gestión de proyectos
+│   ├── reports/             alta de informe, secciones del informe, impresión
+│   └── projects/            dashboard, hub y gestión de proyectos
 ├── lib/
 │   ├── calculations/        algoritmos puros
 │   ├── validators/          reglas de validación
@@ -195,8 +197,10 @@ src/
 │   ├── design/              escalas de gráfica, marcadores y contraste
 │   ├── export/              libros de Excel de los tres módulos (§ 4.8)
 │   ├── import/leveling/     lectores de libretas de nivel digital (Fase 16)
-│   ├── reports/             elegibilidad de procesos para informes (§ 4.7)
-│   ├── process-list.ts      filtrado y orden del listado de procesos
+│   ├── reports/             elegibilidad, carga de secciones, resumen y responsable del informe
+│   ├── errors/              errores de la base traducidos para el usuario (Fase 22)
+│   ├── process-list.ts      filtrado y orden del listado del hub (los tres módulos)
+│   ├── process-status.ts    tonos de estado de procesos, visitas y lugares
 │   ├── supabase/            clientes y consultas
 │   └── utils/
 ├── types/                   tipos, incluido database.ts generado
@@ -234,13 +238,13 @@ Action donde se aplican las guardas de negocio.
 | `(auth)/sign-up/actions.ts` | `signUpAction` |
 | `(app)/actions.ts` | `signOutAction` |
 | `(app)/projects/new/actions.ts` | `createProjectAction` |
-| `(app)/projects/[id]/actions.ts` | `updateProjectAction`, `archiveProjectAction`, `restoreProjectAction`, `deleteProjectAction`, `createReferencePointAction`, `updateReferencePointAction`, `deleteReferencePointAction` |
+| `(app)/projects/[id]/actions.ts` | `updateProjectAction`, `archiveProjectAction`, `restoreProjectAction`, `deleteProjectAction` (rechaza un proyecto con trabajo cerrado, Fase 22), `createReferencePointAction`, `updateReferencePointAction`, `deleteReferencePointAction` |
 | `(app)/projects/[id]/polygonal/new/actions.ts` | `createPolygonalProcessAction` |
 | `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `closePolygonalProcessAction`, `duplicatePolygonalProcessAction`, `renamePolygonalProcessAction`, `deletePolygonalProcessAction` |
 | `(app)/projects/[id]/leveling/new/actions.ts` | `createLevelingProcessAction` |
-| `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction`, `closeLevelingProcessAction` |
-| `(app)/projects/[id]/sites/actions.ts` | `createSiteAction`, `saveSiteAction`, `closeSiteAction` |
-| `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (con el formulario completo, Fase 18), `saveVisitAction` (con libreta: ver § 4), `closeVisitAction` |
+| `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction`, `closeLevelingProcessAction`, `duplicateLevelingProcessAction`, `renameLevelingProcessAction`, `deleteLevelingProcessAction` (Fase 22) |
+| `(app)/projects/[id]/sites/actions.ts` | `createSiteAction`, `saveSiteAction`, `closeSiteAction`, `renameSiteAction`, `duplicateSiteAction`, `deleteSiteAction` (Fase 22) |
+| `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (con el formulario completo, Fase 18), `saveVisitAction` (con libreta: ver § 4), `closeVisitAction`, `deleteVisitAction` (solo la última y abierta, Fase 22) |
 | `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction`, `deletePointAction` |
 | `(app)/projects/[id]/reports/actions.ts` | `createReportAction`, `deleteReportAction` |
 
@@ -266,6 +270,22 @@ enviar el de un proceso abierto. Un proceso `rejected` nunca es elegible — lo
 exige el § 4.6 desde la Fase 3, y esta es la primera fase que puede ejercerlo.
 Para asentamientos la unidad es el **lugar cerrado**, no la visita: un lugar
 activo admite visitas nuevas y su informe cambiaría.
+
+**Dos clases de informe desde la Fase 22.** El **informe de un proceso** vive
+en la pestaña Informe de su pantalla (`components/process/process-report.tsx`)
+y **no crea fila en `reports`**: es función de los datos del proceso, así que
+se ve también antes del cierre, con la marca «Borrador» —en pantalla y en el
+PDF—. El **informe consolidado** es el de siempre: una fila de `reports` con
+título, selección, orden y observaciones. Los dos se arman con las mismas
+piezas: la carga de datos por tipo (`lib/reports/sections.ts`), el resumen de
+precisiones (`lib/reports/summary.ts`) y los componentes de
+`components/reports/sections/` (portada, sección por tipo, resumen, registro de
+cierre), que salieron de la ruta imprimible sin cambiar su aspecto. El
+«Responsable» del registro de cierre —y el «Cerrado por» del Excel— es el
+nombre del perfil (`lib/reports/responsible.ts`), no el UUID de `closed_by`.
+Nada busca los informes que incluyen un proceso en la base
+(`included_processes` es JSONB sin tabla de unión): la pestaña filtra en
+memoria los del proyecto (`lib/reports/including.ts`).
 
 **El PDF lo produce el navegador.** No hay motor de PDF en el servidor: la ruta
 `/projects/[id]/reports/[reportId]/print` se maqueta con `@media print` y el
@@ -322,12 +342,26 @@ conserve en el informe el nombre con el que salió.
 
 **`sites` (el lugar) es transversal a los tres módulos**, no propia del
 control de asentamientos. `polygonal_processes` y `leveling_processes` tienen
-`site_id NOT NULL`: todo proceso pertenece a un lugar, aunque sea el lugar
-genérico `General` que la migración crea por backfill (ver
-[deuda técnica](#11-deuda-técnica-conocida)). El lugar reemplaza a la tabla
+`site_id NOT NULL`: todo proceso pertenece a un lugar, aunque sea un lugar de
+agrupación. El lugar reemplaza a la tabla
 `settlement_systems` del PRD principal `§3.2` — decisión registrada en
 `docs/prds/04-asentamientos.md`, decisión #6: guarda nombre, `structure_type`
 y los siete umbrales de alerta, así que una tabla aparte para lo mismo sobraba.
+
+**`sites.kind` distingue los dos usos del lugar (Fase 22).** `grouping` es el
+lugar del que cuelgan poligonales y nivelaciones —el `General` del backfill de
+la Fase 5, el «Área principal» que nace con cada proyecto, el «Levantamientos
+de campo» de la demo—; `settlement` es un control de asentamientos. La
+interfaz no muestra los de agrupación: `getSites`, los conteos, el selector de
+informes y las rutas del lugar solo ven `settlement`, y las acciones de lugar,
+puntos y visitas rechazan un `grouping` aunque se las llame directamente. Los
+procesos nuevos cuelgan del lugar de agrupación más antiguo del proyecto
+(`lib/supabase/grouping-site.ts`, que lo crea si falta). La migración
+`20260929000000_tipo_de_lugar.sql` clasificó los existentes: agrupación es un
+lugar sin puntos ni visitas que algún proceso referencia, o el «Área
+principal» original; el relleno desactivó el trigger de inmutabilidad de
+`sites` solo alrededor del UPDATE, como las migraciones de las fases 8, 9 y
+19.
 
 ### Convenciones que gobiernan el esquema
 
@@ -1333,11 +1367,44 @@ fase). Todo se revalida en el servidor.
 usar shadcn/ui ni librerías de componentes o iconos.** Los SVG se escriben a
 mano, inline.
 
-`Alert` · `Badge` · `Breadcrumbs` · `Button` · `Card` · `DmsInput` ·
-`Drawer` · `EmptyState` · `Input` · `KpiCard` · `Logo` · `Modal` ·
-`NumberInput` · `Select` · `StatusIndicator` · `Tabs` · `Textarea` ·
-`ThemeSelect`, más `LevelFieldset`/`TotalStationFieldset` y
-`PrecisionOrderSelect`.
+`ActionBar` · `Alert` · `Badge` · `Breadcrumbs` · `Button` · `Card` ·
+`DmsInput` · `Drawer` · `EmptyState` · `Input` · `KpiCard` · `Logo` · `Modal` ·
+`NumberInput` · `PageHeader` · `Select` · `Skeleton` · `StatusIndicator` ·
+`Tabs` · `Textarea` · `ThemeSelect`, más `LevelFieldset`/`TotalStationFieldset`
+y `PrecisionOrderSelect`.
+
+### La pantalla de un proceso (Fase 22)
+
+Poligonal, nivelación y control de asentamientos comparten la misma
+estructura, y no por copia: `components/process/process-shell.tsx` arma la
+cabecera (`PageHeader`: migas, título, badge de estado, subtítulo) con las
+acciones fijas —Exportar a Excel y «Ver informe», que en la pestaña Informe
+se vuelve «Imprimir o guardar como PDF»— y las pestañas (`Tabs`, enlaces con
+`?tab=`). El Server Component de cada página decide la pestaña y monta el
+editor o `ProcessReport`. Dentro del editor:
+
+- **`ActionBar`** al pie, `sticky`, con el estado («Cambios sin guardar», el
+  motivo que impide guardar) y Guardar / Cerrar. Solo si el proceso es
+  editable; no se imprime.
+- **`UnsavedChangesGuard`** (`components/navigation/unsaved-changes.tsx`) con
+  el `dirty` del editor: `beforeunload` para recargar o cerrar la pestaña, y
+  un `Modal` al pulsar un enlace interno. Intercepta el clic en fase de
+  captura en `document`, antes del manejador de `next/link`; deja pasar las
+  descargas, las pestañas nuevas, los externos y las anclas. Los botones
+  atrás y adelante del navegador no pasan por ella (el App Router no ofrece
+  cómo detenerlos).
+
+`ProcessShell` y `ProcessReport` no van al sistema de diseño: conocen el
+dominio (§ 8, «componentes del dominio»). `PageHeader`, `ActionBar` y
+`Skeleton` sí, porque son genéricos. Los tonos de estado de los badges viven
+en `lib/process-status.ts`, una sola copia.
+
+El hub del proyecto usa **un solo patrón de lista para los tres módulos**
+(`components/projects/process-table.tsx` + `hub-rows.tsx`): cada módulo arma
+sus filas en el servidor —tipo, estado, resultado, veredicto y la métrica por
+la que se ordena— y la tabla, sus tarjetas de móvil y las acciones por fila
+(`process-row-actions.tsx`) son las mismas. La barra de filtros guarda el
+último filtro por proyecto **y módulo**.
 
 ### Contrato de tokens
 
@@ -1582,7 +1649,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-817 tests en 47 archivos, Vitest, entorno `node` **sin jsdom**.
+847 tests en 55 archivos, Vitest, entorno `node` **sin jsdom**.
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -1594,8 +1661,8 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/validators/settlement.test.ts` | 41 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11) |
 | `lib/validators/leveling.test.ts` | 42 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19) |
 | `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
-| `lib/process-list.test.ts` | 28 | Filtrado, orden y conteo del listado |
-| `lib/utils/format.test.ts` | 27 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18) |
+| `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
+| `lib/utils/format.test.ts` | 30 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
@@ -1613,7 +1680,15 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 | `lib/validators/settlement-book.test.ts` | 13 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18) |
 | `lib/calculations/settlement-summary.test.ts` | 10 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, peor distorsión `1/∞`, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
-| `components/leveling/readings-table.test.ts` | 2 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18) |
+| `components/leveling/readings-table.test.ts` | 3 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18); una fila sin V+ ni V− no hereda la cota del punto anterior (Fase 22) |
+| `lib/errors/user-message.test.ts` | 4 | **Errores de la base para el usuario**: cada código conocido traducido sin dejar pasar el texto de Postgres; el check de un trigger propio, en español, pasa; el de una columna, no; código desconocido, el mensaje de la acción (Fase 22) |
+| `components/navigation/unsaved-changes.test.ts` | 3 | **Qué detiene la guarda de cambios sin guardar**: un enlace interno y el cambio de pestaña, sí; el ancla, la descarga, otra pestaña del navegador, un externo y lo marcado a propósito, no (Fase 22) |
+| `components/design-system/page-header.test.ts` | 4 | `PageHeader` y `ActionBar`: título en `<header>` (se oculta al imprimir), sin contenedores vacíos, migas; barra fija, anunciada y fuera de la impresión (Fase 22) |
+| `components/leveling/leveling-verdict.test.ts` | 4 | Veredicto de la nivelación: el tramo 2 por su cierre (−0.4 mm sobre 1.397 km), El Verjón por su discrepancia (5.0 mm), fuera de tolerancia, abierta sin vuelta e incompleta (Fase 22) |
+| `components/leveling/profile-data.test.ts` | 2 | Perfil de la nivelación con las carteras reales: el tramo 2 de 0 a 1397 m, de C10 a C10; la vuelta de El Verjón del final de la ida al origen (Fase 22) |
+| `lib/reports/responsible.test.ts` | 3 | Nombre del responsable del cierre: nombre completo, nombre y apellido, correo; nunca el id (Fase 22) |
+| `lib/reports/including.test.ts` | 2 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22) |
+| `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` (fuera del manual) cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
 | `lib/utils/parse.test.ts` | 10 | **Coma o punto decimal**: signo, espacios, estados intermedios (`1,`, `,5`); vacío es `null` y lo inválido también, nunca `NaN`; separador de miles, exponentes y letras inválidos (Fase 20) |
 | `components/design-system/number-input.test.ts` | 8 | `NumberInput`: texto con teclado decimal, lo inválido se marca en vez del error del validador; el contador de celdas inválidas; `DmsInput` con segundos decimales (Fase 20) |
 | `lib/theme.test.ts` | 6 | Cookie del tema: claro, oscuro, ausente y desconocido; atributo `data-theme`; cabecera de la cookie (Fase 20) |
@@ -1752,32 +1827,23 @@ la Fase 7; se arregla cuando se toque el sistema de diseño de la tabla.
 **`getProcessCountsByProject` no distingue el estado del proceso.** La tarjeta
 dice «7 procesos» contando borradores, calculados, cerrados y rechazados por
 igual. Desde la Fase 5 cuenta los tres módulos (poligonales, nivelaciones y
-lugares de control de asentamientos, un lugar = un trabajo). Sigue sin haber
-desglose del tipo «7 procesos (2 cerrados)». Ver también, más abajo, la
-entrada sobre el lugar «General» del backfill: el mismo conteo tiene un
-segundo problema propio de la Fase 5.
+lugares de control de asentamientos, un lugar = un trabajo); desde la Fase 22,
+sin los lugares de agrupación. Sigue sin haber desglose del tipo «7 procesos
+(2 cerrados)».
 
-**El helper `Block` está duplicado** en los dos `loading.tsx` que existen
-(`dashboard/`, `projects/[id]/`). Nivelación y asentamientos no añadieron
-`loading.tsx` propios —ver la entrada siguiente—, así que la duplicación no
-creció con la Fase 5, pero sigue sin extraerse a
-`design-system/skeleton.tsx`.
+**Cerrado — el helper `Block` ya no está duplicado (Fase 22).** Los
+`loading.tsx` usan `Skeleton` del sistema de diseño.
 
-**Las migas del editor de poligonal y de nivelación viven dentro del Client
-Component**, lo que obliga a pasar `projectName` a través de la frontera
-cliente/servidor (`leveling-editor.tsx` repitió el patrón de
-`polygonal-editor.tsx`). **Asentamientos no repitió el patrón**: sus rutas
-(`sites/[siteId]/page.tsx`, `settlement/[siteId]/page.tsx`) renderizan
-`Breadcrumbs` directamente desde el Server Component, que es lo correcto.
-Queda pendiente llevar poligonal y nivelación al mismo patrón.
+**Cerrado — las migas viven en el Server Component (Fase 22).** Las tres
+pantallas de proceso arman su cabecera, con las migas, en la página
+(`ProcessShell`); los editores ya no reciben `projectName`.
 
-**Faltan `loading.tsx` en los editores.** Ni el de poligonal, ni el de
-nivelación, ni los de asentamientos (lugar en `sites/[siteId]`, visita en
-`settlement/[siteId]/visits/[visitId]` y su `editar/`) tienen `loading.tsx` propio — tampoco
-«nuevo proyecto». Son las rutas con más trabajo de servidor y las que más se
-beneficiarían de un esqueleto durante la carga.
+**Faltan `loading.tsx` en las rutas de alta.** Desde la Fase 22 las tres
+pantallas de proceso —y con ellas la visita y su editor— tienen su esqueleto
+(`ProcessLoading`); antes mostraban el del hub. «Nuevo proyecto» y los `new`
+de cada módulo siguen heredando el del proyecto o ninguno.
 
-**`ProjectCard` no tiene hover de fondo**, a diferencia de `ProcessCard`.
+**`ProjectCard` no tiene hover de fondo**, a diferencia de las filas del hub.
 
 **El fixture «Enlace P1-P3»** del seed tiene su punto de llegada redondeado a 5
 decimales, lo que deja un error residual de 3.8e-7 m y una precisión de
@@ -1799,7 +1865,8 @@ además del texto que el sistema de diseño ya exigía. Ver
 `docs/prds/04-asentamientos.md`, hallazgo 5 y decisión #9.
 
 **Dos cabos sueltos de la Fase 9, menores.** Los detectó la revisión del PR y
-se dejaron sin arreglar por acotados:
+se dejaron sin arreglar por acotados. Van a la **Fase 23** (I4 en
+`pendientes.md`):
 
 - `computeLeveling` evalúa la tolerancia de discrepancia con `Math.min` de las
   dos distancias, pero `|| Number.POSITIVE_INFINITY` hace que una ida **sin**
@@ -1958,8 +2025,10 @@ acuerdo sobre qué es captura parcial legítima sin que nada lo delatara. Se
 fijan sus cuatro reglas y el caso límite de una abierta con una sola estación,
 donde el índice 0 es a la vez primero y último y gana la regla del primero.
 
-**El lugar «General» del backfill infla el conteo de procesos de proyectos
-que ya tenían trabajo.** La migración de la Fase 5 crea un lugar `General`
+**Cerrado — el lugar «General» del backfill ya no infla el conteo (Fase
+22).** Se resolvió con la columna `sites.kind` (§ 4): los lugares de
+agrupación salen del hub, de los conteos y de los informes. El texto original
+queda como registro. La migración de la Fase 5 crea un lugar `General`
 por cada proyecto con procesos existentes y les asigna ese `site_id` (ver
 § 4). Ese lugar en sí mismo no representa ningún monitoreo real, pero
 `getProcessCountsByProject` lo cuenta igual que un lugar de control genuino:
@@ -2100,8 +2169,8 @@ contra la C0, así que corregirla reescribe el histórico que el panel, el
 informe y el Excel muestran para visitas ya cerradas —las persistidas no
 cambian, pero dejan de coincidir con la pantalla—. La Fase 11 lo cerró solo
 para los puntos **de baja**, que ya no se editan. Para los vigentes, la regla
-natural es bloquear la C0 en cuanto el punto tenga una lectura cerrada; queda
-registrada aquí.
+natural es bloquear la C0 en cuanto el punto tenga una lectura cerrada. Va a
+la **Fase 23** (I2 en `pendientes.md`).
 
 **El margen del aviso de lectura fuera de tendencia es fijo por orden (Fase
 12, decisión deliberada).** Sale de un circuito de referencia de 250 m
@@ -2180,13 +2249,12 @@ cierre documental, que no levantó la app) para confirmar que el paso corto
 sigue teniendo sentido en pantalla y no se lee como un `fieldset` vacío.
 
 **La portada del informe emitido sigue leyendo el proyecto en vivo, y
-`reports` no tiene trigger de inmutabilidad.** El pie del informe imprimible
-afirma que el contenido procede de procesos cerrados, cuyas mediciones y
-veredicto son inmutables, y desde la Fase 8 eso es cierto para el equipo, la
-precisión y las medidas de cada proceso. Desde la Fase 15 la **posición** de
-una poligonal cerrada puede cambiar al georreferenciarla —decisión del
-usuario, con nota en el informe—, y por eso el pie ya no dice «inmutables» a
-secas. No es cierto para el resto de lo que sale impreso:
+`reports` no tiene trigger de inmutabilidad.** Va a la **Fase 23** (I3 en
+`pendientes.md`). El pie del informe imprimible dice que se emitió con
+procesos cerrados, y desde la Fase 8 sus mediciones, equipo y veredicto no
+cambian. Desde la Fase 15 la **posición** de una poligonal cerrada puede
+cambiar al georreferenciarla —decisión del usuario, con nota en el informe—.
+No es cierto para el resto de lo que sale impreso:
 
 - El bloque de portada lee `project.name`, `client`, `location`, `datum` y
   `projection` de una fila de `projects`, que no tiene ningún trigger que la
@@ -2217,7 +2285,8 @@ a sin control lo conserva: el panel muestra entonces el selector para elegir
 otro, y el guardado lo rechaza con un mensaje hasta que se cambie. No se
 reescribe el método en silencio porque sería perder los pesos.
 
-**La georreferenciación no es atómica (Fase 15).** La acción escribe la
+**La georreferenciación no es atómica (Fase 15; va a la Fase 23, I1).** La
+acción escribe la
 cabecera y después cada estación con su propio `UPDATE`: PostgREST no da una
 transacción que abarque varias peticiones, y una función de base se descartó
 al simplificar la fase. Si falla a medias, la cabecera queda en el sistema
@@ -2267,8 +2336,9 @@ el manual y el informe; quedó fuera de la fase.
 
 **Dos diálogos para mover una poligonal (Fase 15).** «Asignar coordenadas
 reales» (arranque + azimut, solo sin cerrar, sin anotación) y «Georreferenciar»
-(dos estaciones, cualquier estado, anotado) resuelven casi lo mismo. Unificarlos
-quedó fuera de alcance.
+(dos estaciones, cualquier estado, anotado) resuelven casi lo mismo. Desde la
+Fase 22 están juntos, en la tarjeta del dibujo; unificarlos sigue fuera de
+alcance.
 
 **Los pesos no pueden guardarse fuera del rango ni de la escala de sus
 columnas.** El validador rechaza σ angular fuera de 0.01″–9999.99″ o con más
@@ -2282,15 +2352,18 @@ que ampliar la escala de la columna.
 
 ---
 
-**La gráfica del informe impreso sigue con la visita en el eje X (Fase 18,
-diferido).** El panel y la vista pasaron al tiempo real (`timeScale`), pero
+**Cerrado — la gráfica del informe va en tiempo real (Fase 22).** Pasó a
+`timeScale`, como el panel, y la sección del lugar suma una tabla de visitas
+con el amarre y el cierre de la libreta. El texto original queda como
+registro. El panel y la vista pasaron al tiempo real (`timeScale`), pero
 `components/reports/settlement-plot.tsx` espacia las visitas de forma
 uniforme: con visitas irregulares exagera la pendiente de los intervalos
 largos. Tampoco lleva el amarre ni el cierre de la libreta. La decisión 13 del
 PRD de la fase dejó el informe fuera; alinearlo es cambiar la escala X por
 `timeScale` y añadir las dos columnas a la tabla de visitas del informe.
 
-**El guardado de una visita con libreta no es atómico (Fase 18).**
+**El guardado de una visita con libreta no es atómico (Fase 18; va a la Fase
+23, I1).**
 `saveVisitAction` escribe la cabecera, la libreta, su purga y las lecturas en
 peticiones separadas. Si falla una intermedia, la visita queda con la libreta
 nueva y las lecturas viejas hasta el siguiente guardado, que lo repara. Es el
@@ -2298,7 +2371,9 @@ mismo patrón aceptado en el resto del módulo (upsert y purga, nunca borrado y
 reinserción); la salida limpia es una función de Postgres que haga todo en una
 transacción.
 
-**Dos formatos de número en la misma pantalla (Fase 18).** Las gráficas
+**Cerrado — un solo formato de número (Fase 22).** Gráficas, diferenciales y
+panel de análisis pasaron al punto decimal y al guion, como las tablas. El
+texto original queda como registro. Las gráficas
 nuevas formatean con `es-CO` (coma decimal y signo menos tipográfico: «−9,3
 mm»), mientras las tablas y los KPIs usan `toFixed` (punto y guion: «-9.3»).
 Ya había mezcla antes —el semáforo de la última visita usaba coma—; unificar
@@ -2313,7 +2388,8 @@ identidad del prototipo. Quedó fuera de alcance, como los correos de Supabase
 Auth: son documentos fuera de la app. Llevarlo a la paleta nueva es cambiar
 `ACCENT` y dos rellenos grises; el Excel no tiene tema oscuro.
 
-**Las filas vacías de la plantilla muestran cota (Fase 18).** La tabla de
+**Cerrado — las filas vacías ya no muestran cota (Fase 22).** Una fila sin
+V+ ni V− muestra «—». El texto original queda como registro. La tabla de
 captura, compartida con nivelación, pinta la cota calculada en cada fila, y
 una fila sin lecturas hereda la del punto anterior. En la libreta precargada
 de una visita eso llena la columna de cotas repetidas antes de medir. Es
@@ -2329,6 +2405,37 @@ cohortes de puntos sería el siguiente paso si molesta.
 **Un `Modal` abierto sobre un `Drawer` se cierra con el mismo Esc (Fase
 18).** Los dos escuchan Escape en el documento. Hoy ninguna pantalla abre uno
 sobre otro; si pasa, `Modal` debe dejar de propagar el evento.
+
+**La guarda de cambios sin guardar no cubre atrás y adelante (Fase 22).**
+`UnsavedChangesGuard` detiene los enlaces internos y el navegador pregunta al
+recargar o cerrar, pero el App Router no ofrece cómo detener la navegación por
+el historial. Un `popstate` que devuelva al usuario sería frágil. Documentado
+en el manual (§ 4.4 y preguntas frecuentes). El atributo
+`data-unsaved-guard-skip`, para que un enlace no pase por la guarda, existe y
+tiene test, pero hoy ningún enlace lo usa.
+
+**«Cerrada» y «Cerrado» en la misma fila del hub (Fase 22).** El tipo de una
+poligonal o nivelación («Poligonal · Cerrada») va en el subtítulo y el estado
+(«Cerrado») en su badge. Son cosas distintas —circuito que vuelve al origen y
+proceso sellado— con la misma palabra, a centímetros. No se renombró ninguno:
+los dos son el vocabulario del topógrafo. Si confunde en el uso, lo natural es
+rotular el tipo («Circuito cerrado»).
+
+**Un proyecto con trabajo cerrado no se puede eliminar (Fase 22, decisión).**
+Los triggers de inmutabilidad rechazan el borrado de lo cerrado, y la cascada
+desde `projects` choca con ellos. Antes el error se ignoraba y la acción
+redirigía como si hubiera borrado; ahora `deleteProjectAction` lo comprueba
+(`getClosedWorkCount`) y la configuración propone archivar. La demo, que nace
+con trabajo cerrado, tampoco se puede eliminar: su descripción dice
+«archivarlo». Permitir borrar un proyecto entero con lo cerrado dentro sería
+una excepción a la inmutabilidad que tendría que decidir el usuario.
+
+**El informe de un proceso no queda registrado (Fase 22, decisión).** La
+pestaña Informe lo arma en cada visita y no crea fila en `reports`: el
+registro de «qué se emitió» sigue siendo el informe consolidado. Imprimir el
+de un proceso cerrado da un documento sin constancia en la base de haberse
+emitido. Es coherente con que el informe no guarda datos (§ 3); si hiciera
+falta la constancia, bastaría con registrar la impresión.
 
 ## 12. Manual de usuario en la app
 
@@ -2360,7 +2467,7 @@ compense su coste, y se factura por uso. El riesgo real de `<img>` —el salto d
 layout— se evita con `width`/`height` reales en cada imagen. Hay un
 `eslint-disable` puntual con esa explicación.
 
-**`loading="lazy"` en todas menos la primera.** Las veintinueve capturas
+**`loading="lazy"` en todas menos la primera.** Las treinta capturas
 suman 8,4 MB; sin esto la página las descargaría de golpe.
 
 **`Nota` propia en lugar de `Alert`.** `Alert` lleva `role="alert"` siempre, lo
@@ -2427,11 +2534,12 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-24):** la nube tiene aplicadas las **diecinueve**
-migraciones, hasta `20260926000000_libreta_visita` (Fase 18). Verificado contra
-la base con `migration list --linked` y consultas al esquema: columnas de las
-fases 8 a 18 presentes, RLS y los dos triggers de inmutabilidad en
-`settlement_book_readings`.
+**Estado actual (2026-09-29):** la nube tiene aplicadas **veinte**
+migraciones, hasta `20260927000000_compensacion_desde_el_origen` (Fase 19). La
+de la Fase 22, `20260929000000_tipo_de_lugar`, se aplica con `db push` después
+del merge: antes de empujarla, comprobar en la nube cuántos lugares de
+agrupación cerrados hay (su relleno escribe también en ellos, desactivando el
+trigger solo alrededor del UPDATE).
 
 **Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
 mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de

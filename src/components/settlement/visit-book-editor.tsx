@@ -187,9 +187,8 @@ export function VisitBookEditor({
         )}
         {closure?.status === "out" && (
           <Alert variant="warning">
-            El cierre supera la tolerancia. La visita se guarda y se cierra
-            igual, pero sus cotas no se compensan: conviene revisar la libreta
-            o repetir la nivelación.
+            El cierre supera la tolerancia: las cotas no se compensan. Conviene
+            revisar la libreta o repetir la nivelación.
           </Alert>
         )}
         {result && result.closureErrorMm != null && result.toleranceMm == null && (

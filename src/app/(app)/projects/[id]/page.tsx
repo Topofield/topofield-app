@@ -1,20 +1,31 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  Breadcrumbs,
+  Badge,
   buttonClasses,
   EmptyState,
+  PageHeader,
   Tabs,
   type SearchParams,
   type TabItem,
 } from "@/components/design-system";
+import {
+  levelingMetric,
+  levelingRow,
+  LEVELING_TYPE_OPTIONS,
+  polygonalRow,
+  POLYGONAL_TYPE_OPTIONS,
+  PROCESS_CHIPS,
+  SITE_CHIPS,
+  siteItem,
+  siteMetric,
+  siteRow,
+  SITE_TYPE_OPTIONS,
+} from "@/components/projects/hub-rows";
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
-import { ProcessCard } from "@/components/projects/process-card";
 import { ProcessListToolbar } from "@/components/projects/process-list-toolbar";
-import { ProcessTable } from "@/components/projects/process-table";
+import { ProcessTable, type ProcessRow } from "@/components/projects/process-table";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
-import { ProjectHeader } from "@/components/projects/project-header";
-import { SiteCard } from "@/components/projects/site-card";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
 import {
@@ -22,22 +33,22 @@ import {
   filterProcesses,
   type ProcessFilters,
   type SortKey,
+  type StatusCounts,
   type StatusFilter,
 } from "@/lib/process-list";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLevelingProcesses,
   getPolygonalProcesses,
+  getClosedWorkCount,
   getProjectById,
   getReferencePoints,
   getReports,
   getSiteSummariesByProject,
   getSites,
 } from "@/lib/supabase/queries";
-import { POLYGONAL_TYPES, type PolygonalType } from "@/types/polygonal";
-import type { LevelingProcess } from "@/types/leveling";
+import { PROJECT_STATUS_LABELS } from "@/types/project";
 import type { AlertLevel } from "@/types/settlement";
-import type { Site } from "@/types/site";
 
 const TABS: TabItem[] = [
   { id: "processes", label: "Procesos" },
@@ -53,31 +64,41 @@ const SUBTABS: { key: Modulo; label: string }[] = [
   { key: "asentamientos", label: "Control de Asentamientos" },
 ];
 
-/** Destino de una sub-tab, conservando el resto de parámetros de la URL. */
-function subtabHref(
-  projectId: string,
-  modulo: Modulo,
-  sp: SearchParams,
-): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(sp)) {
-    if (key === "tab" || key === "modulo" || value == null) continue;
-    for (const v of Array.isArray(value) ? value : [value]) {
-      if (v !== "") params.append(key, v);
-    }
-  }
-  params.set("tab", "processes");
-  params.set("modulo", modulo);
-  return `/projects/${projectId}?${params.toString()}`;
+/**
+ * Destino de un módulo. No conserva los filtros del anterior: los tipos y los
+ * estados cambian de un módulo a otro.
+ */
+function subtabHref(projectId: string, modulo: Modulo): string {
+  return `/projects/${projectId}?tab=processes&modulo=${modulo}`;
 }
 
-const STATUS_FILTERS: StatusFilter[] = [
-  "todos",
-  "borradores",
-  "calculados",
-  "cerrados",
-  "rechazados",
-];
+const EMPTY: Record<Modulo, { title: string; description: string }> = {
+  poligonales: {
+    title: "Aún no hay poligonales",
+    description: "Crea la primera poligonal del proyecto con «+ Nuevo Proceso».",
+  },
+  nivelaciones: {
+    title: "Aún no hay nivelaciones",
+    description: "Crea la primera nivelación del proyecto con «+ Nuevo Proceso».",
+  },
+  asentamientos: {
+    title: "Aún no hay controles de asentamientos",
+    description: "Crea el primer lugar de control de asentamientos con «+ Nuevo Proceso».",
+  },
+};
+
+const TYPE_LABEL: Record<Modulo, string> = {
+  poligonales: "Filtrar por tipo de poligonal",
+  nivelaciones: "Filtrar por tipo de nivelación",
+  asentamientos: "Filtrar por tipo de estructura",
+};
+
+const RESULT_LABEL: Record<Modulo, string> = {
+  poligonales: "Precisión",
+  nivelaciones: "Cierre",
+  asentamientos: "Alerta",
+};
+
 const SORT_KEYS: SortKey[] = ["actividad", "nombre", "precision"];
 
 interface ProjectHubPageProps {
@@ -105,68 +126,88 @@ export default async function ProjectHubPage({
     notFound();
   }
 
-  const processes =
-    activeTab === "processes"
-      ? await getPolygonalProcesses(supabase, project.id)
-      : [];
-  const levelingProcesses: LevelingProcess[] =
-    activeTab === "processes"
-      ? await getLevelingProcesses(supabase, project.id)
-      : [];
-  const sites: Site[] =
-    activeTab === "processes" ? await getSites(supabase, project.id) : [];
-  const referencePoints =
+  // Solo se carga la lista del módulo visible.
+  const enProcesos = activeTab === "processes";
+  const [processes, levelingProcesses, sites] = await Promise.all([
+    enProcesos ? getPolygonalProcesses(supabase, project.id) : Promise.resolve([]),
+    enProcesos ? getLevelingProcesses(supabase, project.id) : Promise.resolve([]),
+    enProcesos ? getSites(supabase, project.id) : Promise.resolve([]),
+  ]);
+  const [referencePoints, closedWork] =
     activeTab === "config"
-      ? await getReferencePoints(supabase, project.id)
-      : [];
-  const reports =
-    activeTab === "reports" ? await getReports(supabase, project.id) : [];
+      ? await Promise.all([
+          getReferencePoints(supabase, project.id),
+          getClosedWorkCount(supabase, project.id),
+        ])
+      : [[], 0];
+  const reports = activeTab === "reports" ? await getReports(supabase, project.id) : [];
 
-  // El conteo de visitas y la peor alerta solo se necesitan para pintar la
-  // sub-tab de asentamientos, y se resuelven con dos consultas fijas para
-  // todo el proyecto (`getSiteSummariesByProject`), no una tanda de tres por
-  // lugar: con N lugares, ir lugar a lugar serían 3N viajes a la base.
-  const siteRows =
-    activeTab === "processes" && modulo === "asentamientos"
-      ? await (async () => {
-          const summaries = await getSiteSummariesByProject(supabase, project.id);
-          return sites.map((site) => {
-            const summary = summaries[site.id];
-            return {
-              site,
-              visitCount: summary?.visitCount ?? 0,
-              worstAlert: summary?.worstAlert ?? ("normal" as AlertLevel),
-            };
-          });
-        })()
-      : [];
+  const tiposDelModulo = {
+    poligonales: POLYGONAL_TYPE_OPTIONS,
+    nivelaciones: LEVELING_TYPE_OPTIONS,
+    asentamientos: SITE_TYPE_OPTIONS,
+  }[modulo];
+  const chips = modulo === "asentamientos" ? SITE_CHIPS : PROCESS_CHIPS;
 
   const filters: ProcessFilters = {
     q: typeof sp.q === "string" ? sp.q : "",
-    estado: STATUS_FILTERS.includes(sp.estado as StatusFilter)
-      ? (sp.estado as StatusFilter)
-      : "todos",
-    tipo: POLYGONAL_TYPES.includes(sp.tipo as PolygonalType)
-      ? (sp.tipo as PolygonalType)
-      : "todos",
-    orden: SORT_KEYS.includes(sp.orden as SortKey)
-      ? (sp.orden as SortKey)
-      : "actividad",
+    estado: chips.includes(sp.estado as StatusFilter) ? (sp.estado as StatusFilter) : "todos",
+    tipo: tiposDelModulo.some((t) => t.value === sp.tipo) ? (sp.tipo as string) : "todos",
+    orden: SORT_KEYS.includes(sp.orden as SortKey) ? (sp.orden as SortKey) : "actividad",
     dir: sp.dir === "asc" ? "asc" : "desc",
   };
 
-  const visibles = filterProcesses(processes, filters);
-  const counts = countByStatus(processes);
+  // Filas del módulo visible, ya filtradas y ordenadas. El conteo de visitas y
+  // la peor alerta de cada lugar se resuelven con dos consultas fijas para
+  // todo el proyecto (`getSiteSummariesByProject`), no una tanda por lugar.
+  let total = 0;
+  let counts: StatusCounts = countByStatus([]);
+  let rows: ProcessRow[] = [];
+  if (enProcesos && modulo === "poligonales") {
+    total = processes.length;
+    counts = countByStatus(processes);
+    rows = filterProcesses(processes, filters).map((p) => polygonalRow(project.id, p));
+  } else if (enProcesos && modulo === "nivelaciones") {
+    total = levelingProcesses.length;
+    counts = countByStatus(levelingProcesses);
+    rows = filterProcesses(levelingProcesses, filters, levelingMetric).map((p) =>
+      levelingRow(project.id, p),
+    );
+  } else if (enProcesos) {
+    const summaries = await getSiteSummariesByProject(supabase, project.id);
+    const items = sites.map((site) =>
+      siteItem(
+        site,
+        summaries[site.id]?.visitCount ?? 0,
+        summaries[site.id]?.worstAlert ?? ("normal" as AlertLevel),
+      ),
+    );
+    total = items.length;
+    counts = countByStatus(items);
+    rows = filterProcesses(items, filters, siteMetric).map((s) => siteRow(project.id, s));
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: project.name },
-        ]}
+      {/* Cabecera compacta (Fase 22): la descripción y el resto de los datos
+          del proyecto están en Configuración. */}
+      <PageHeader
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: project.name }]}
+        title={project.name}
+        badge={
+          <Badge tone={project.status === "active" ? "success" : "neutral"}>
+            {PROJECT_STATUS_LABELS[project.status]}
+          </Badge>
+        }
+        subtitle={[
+          project.client,
+          project.location,
+          [project.datum, project.projection].filter(Boolean).join(" · "),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        actions={<NewProcessSelector projectId={project.id} />}
       />
-      <ProjectHeader project={project} />
       <Tabs
         items={TABS}
         activeId={activeTab}
@@ -175,19 +216,8 @@ export default async function ProjectHubPage({
       />
 
       {activeTab === "processes" && (
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold">
-              Procesos
-            </h2>
-            <NewProcessSelector projectId={project.id} />
-          </div>
-
-          <nav
-            className="flex flex-wrap gap-1.5"
-            role="group"
-            aria-label="Filtrar por módulo"
-          >
+        <div className="flex flex-col gap-5">
+          <nav className="flex flex-wrap gap-1.5" role="group" aria-label="Módulo">
             {SUBTABS.map((st) => {
               const active = st.key === modulo;
               const count =
@@ -199,7 +229,7 @@ export default async function ProjectHubPage({
               return (
                 <Link
                   key={st.key}
-                  href={subtabHref(project.id, st.key, sp)}
+                  href={subtabHref(project.id, st.key)}
                   aria-current={active ? "true" : undefined}
                   className={cn(
                     "rounded-full border px-3 py-1 text-sm transition-colors",
@@ -214,66 +244,39 @@ export default async function ProjectHubPage({
             })}
           </nav>
 
-          {modulo === "poligonales" &&
-            (processes.length === 0 ? (
-              <EmptyState
-                title="Aún no hay poligonales"
-                description="Crea la primera poligonal del proyecto con «+ Nuevo Proceso»."
-              />
-            ) : (
-              <div className="flex flex-col gap-4">
-                <ProcessListToolbar
-                  projectId={project.id}
-                  filters={filters}
-                  counts={counts}
-                />
-                {visibles.length === 0 ? (
-                  <EmptyState
-                    title="Ningún proceso coincide"
-                    description="Ajusta la búsqueda o los filtros para ver otros procesos."
-                  />
-                ) : (
-                  <ProcessTable
-                    projectId={project.id}
-                    processes={visibles}
-                    filters={filters}
-                  />
-                )}
-              </div>
-            ))}
-
-          {modulo === "nivelaciones" &&
-            (levelingProcesses.length === 0 ? (
-              <EmptyState
-                title="Aún no hay nivelaciones"
-                description="Crea la primera nivelación del proyecto con «+ Nuevo Proceso»."
-              />
-            ) : (
-              <LevelingProcessSection
+          {total === 0 ? (
+            <EmptyState
+              title={EMPTY[modulo].title}
+              description={EMPTY[modulo].description}
+            />
+          ) : (
+            <div className="flex flex-col gap-4">
+              <ProcessListToolbar
+                key={modulo}
                 projectId={project.id}
-                processes={levelingProcesses}
+                modulo={modulo}
+                filters={filters}
+                counts={counts}
+                chips={chips}
+                typeOptions={tiposDelModulo}
+                typeLabel={TYPE_LABEL[modulo]}
               />
-            ))}
-
-          {modulo === "asentamientos" &&
-            (siteRows.length === 0 ? (
-              <EmptyState
-                title="Aún no hay lugares"
-                description="Crea el primer lugar de control de asentamientos con «+ Nuevo Proceso»."
-              />
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {siteRows.map((row) => (
-                  <SiteCard
-                    key={row.site.id}
-                    projectId={project.id}
-                    site={row.site}
-                    visitCount={row.visitCount}
-                    worstAlert={row.worstAlert}
-                  />
-                ))}
-              </div>
-            ))}
+              {rows.length === 0 ? (
+                <EmptyState
+                  title="Ninguno coincide"
+                  description="Ajusta la búsqueda o los filtros para ver otros."
+                />
+              ) : (
+                <ProcessTable
+                  projectId={project.id}
+                  modulo={modulo}
+                  rows={rows}
+                  filters={filters}
+                  resultLabel={RESULT_LABEL[modulo]}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -297,7 +300,7 @@ export default async function ProjectHubPage({
               {reports.map((r) => (
                 <li key={r.id}>
                   <Link
-                    href={`/projects/${project.id}/reports/${r.id}`}
+                    href={`/projects/${project.id}/reports/${r.id}/print`}
                     className="flex items-center justify-between gap-4 rounded-lg border border-rule px-4 py-3 transition-colors hover:bg-paper"
                   >
                     <span className="font-medium">{r.title}</span>
@@ -320,65 +323,8 @@ export default async function ProjectHubPage({
         <ProjectConfigTab
           project={project}
           referencePoints={referencePoints}
+          closedWork={closedWork}
         />
-      )}
-    </div>
-  );
-}
-
-/**
- * Procesos de nivelación del proyecto, agrupados en «En progreso» y
- * «Cerrados». A diferencia de la poligonal (Fase 3), esta sección no tiene
- * todavía buscador ni filtros propios: se resuelve cuando la cantidad de
- * procesos de nivelación lo justifique.
- */
-function LevelingProcessSection({
-  projectId,
-  processes,
-}: {
-  projectId: string;
-  processes: LevelingProcess[];
-}) {
-  const enProgreso = processes.filter(
-    (p) => p.status !== "closed" && p.status !== "rejected",
-  );
-  const cerrados = processes.filter(
-    (p) => p.status === "closed" || p.status === "rejected",
-  );
-
-  return (
-    <div className="flex flex-col gap-4">
-      {enProgreso.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h4 className="text-xs font-medium text-ink-2">
-            En progreso
-          </h4>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {enProgreso.map((p) => (
-              <ProcessCard
-                key={p.id}
-                projectId={projectId}
-                process={p}
-                kind="leveling"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-      {cerrados.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h4 className="text-xs font-medium text-ink-2">Cerrados</h4>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {cerrados.map((p) => (
-              <ProcessCard
-                key={p.id}
-                projectId={projectId}
-                process={p}
-                kind="leveling"
-              />
-            ))}
-          </div>
-        </div>
       )}
     </div>
   );

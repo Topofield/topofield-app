@@ -31,6 +31,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 19 | Equilibrado por armada y compensación desde el origen | [`prds/18-equilibrado-y-compensacion.md`](./prds/18-equilibrado-y-compensacion.md) | cerrada |
 | 20 | Identidad visual del prototipo y coma decimal | [`prds/19-identidad-visual-coma-decimal.md`](./prds/19-identidad-visual-coma-decimal.md) | cerrada |
 | 21 | La demo con las carteras reales | [`prds/20-demo-carteras-reales.md`](./prds/20-demo-carteras-reales.md) | cerrada |
+| 22 | El proceso en una pantalla | [`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -544,6 +545,38 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 22 — El proceso en una pantalla (2026-09-29)
+
+Los tres módulos comparten pantalla —cabecera, pestañas Proceso · Informe,
+barra de acciones fija, guarda de cambios sin guardar— y el informe de cada
+proceso vive en su pestaña. El hub lista los tres con el mismo patrón y
+acciones por fila; los lugares de agrupación salen de la interfaz con
+`sites.kind`; la interfaz deja de hablar del desarrollo. 847 tests.
+Divergencias en el propio PRD. La integridad quedó para la Fase 23.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un Server Component no puede llamar funciones de un módulo `"use
+  client"`**, aunque sean puras: le llegan como referencias de cliente. Lo que
+  compartan servidor y cliente va a `lib/`, y el módulo cliente lo reexporta.
+- **Al añadir un discriminador, se busca cada lectura de la entidad, no solo
+  las listas.** `sites.kind` se aplicó bien a las consultas del hub y a las
+  rutas, pero la revisión encontró tres acciones que cargaban el lugar por id
+  sin mirarlo. `grep "from(\"sites\")"` las habría dado todas.
+- **El `next dev` de larga duración se saltó cambios de `globals.css` tres
+  veces en una fase.** Tras cada cambio de CSS se comprueba la regla en la
+  hoja compilada antes de juzgar la pantalla; una segunda edición real del
+  archivo la despierta.
+- **Una columna flex hace crecer a sus hijos hasta su contenido mínimo.** El
+  informe, que funcionaba solo, desbordaba dentro de la pantalla del proceso:
+  `min-width: 0` en el hijo. Pasa cada vez que un componente cambia de
+  contenedor.
+- **Las capturas de página completa pintan lo `sticky` donde acababa la
+  ventana.** Para el manual, el script lo vuelve estático.
+- **`git rm` deja los borrados preparados** y se cuelan en el siguiente
+  commit aunque se nombren otros archivos: revisar `git status` antes de
+  partir un cambio en commits.
 
 ### Cierre Fase 21 — La demo con las carteras reales (2026-09-25)
 

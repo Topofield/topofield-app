@@ -134,9 +134,9 @@ export async function crearProyectoDemo(
     .insert({
       project_id: proyecto.id,
       name: "Levantamientos de campo",
-      description:
-        "Poligonales y nivelaciones de carteras de campo reales (docs/carteras/).",
+      description: "Poligonales y nivelaciones de carteras de campo reales.",
       structure_type: "otro",
+      kind: "grouping",
     })
     .select("id")
     .single();

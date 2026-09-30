@@ -163,6 +163,9 @@
 @layer components {
   .report {
     max-width: 52rem;
+    /* Dentro de una columna flex (la pantalla del proceso), sin esto el
+       informe crece hasta el ancho de su tabla más ancha. */
+    min-width: 0;
     margin: 0 auto;
     padding: 2rem 1.5rem 4rem;
     color: var(--color-ink);
@@ -170,7 +173,10 @@
 
   .report-actions {
     display: flex;
-    justify-content: flex-end;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     margin-bottom: 2rem;
   }
 
@@ -219,6 +225,25 @@
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--color-rule);
+  }
+
+  /* Subtítulo de una tabla dentro de una sección (Fase 22). */
+  .report-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.5rem;
+  }
+
+  /* Informe de un proceso sin cerrar (Fase 22): la marca sale también en el PDF. */
+  .report-draft {
+    border: 2px dashed var(--color-warning);
+    border-radius: 0.5rem;
+    color: var(--color-warning);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-bottom: 2rem;
+    padding: 0.75rem 1rem;
+    text-transform: uppercase;
   }
 
   .report-kind-tag {
@@ -277,6 +302,18 @@
     .report-table th,
     .report-table td {
       padding-inline: 0.25rem;
+    }
+
+    /* Fase 22: el informe vive también en la pestaña de cada proceso. En un
+       teléfono, una tabla que no cabe se desplaza sola en vez de ensanchar
+       la página, y el informe no suma su propio margen al de la app. */
+    .report {
+      padding-inline: 0;
+    }
+
+    .report-table {
+      display: block;
+      overflow-x: auto;
     }
   }
 

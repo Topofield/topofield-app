@@ -1,3 +1,4 @@
+export { ActionBar } from "./action-bar";
 export { Alert } from "./alert";
 export { Badge } from "./badge";
 export { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
@@ -21,7 +22,9 @@ export {
 export { KpiCard } from "./kpi-card";
 export { Logo, LogoMark } from "./logo";
 export { Modal } from "./modal";
+export { PageHeader } from "./page-header";
 export { Select, type SelectOption } from "./select";
+export { Skeleton } from "./skeleton";
 export { StatusIndicator } from "./status-indicator";
 export { Tabs, type SearchParams, type TabItem } from "./tabs";
 export { Textarea } from "./textarea";

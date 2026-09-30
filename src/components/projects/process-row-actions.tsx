@@ -7,28 +7,80 @@ import {
   duplicatePolygonalProcessAction,
   renamePolygonalProcessAction,
 } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
-import type { PolygonalProcess } from "@/types/polygonal";
+import {
+  deleteLevelingProcessAction,
+  duplicateLevelingProcessAction,
+  renameLevelingProcessAction,
+} from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
+import {
+  deleteSiteAction,
+  duplicateSiteAction,
+  renameSiteAction,
+} from "@/app/(app)/projects/[id]/sites/actions";
+
+export type RowKind = "polygonal" | "leveling" | "site";
+
+type Result = { ok: boolean; error?: string };
+
+/** Las acciones de servidor y los textos de cada tipo (Fase 22: los tres). */
+const KINDS: Record<
+  RowKind,
+  {
+    duplicate: (id: string) => Promise<Result>;
+    rename: (id: string, name: string) => Promise<Result>;
+    remove: (id: string) => Promise<Result>;
+    noun: string;
+    /** Lo que se va con el borrado. */
+    deletes: string;
+  }
+> = {
+  polygonal: {
+    duplicate: duplicatePolygonalProcessAction,
+    rename: renamePolygonalProcessAction,
+    remove: deletePolygonalProcessAction,
+    noun: "proceso",
+    deletes: "y todas sus estaciones",
+  },
+  leveling: {
+    duplicate: duplicateLevelingProcessAction,
+    rename: renameLevelingProcessAction,
+    remove: deleteLevelingProcessAction,
+    noun: "proceso",
+    deletes: "y todas sus lecturas",
+  },
+  site: {
+    duplicate: duplicateSiteAction,
+    rename: renameSiteAction,
+    remove: deleteSiteAction,
+    noun: "lugar",
+    deletes: "con su catálogo de puntos y sus visitas",
+  },
+};
+
+interface ProcessRowActionsProps {
+  kind: RowKind;
+  id: string;
+  name: string;
+  /** Cerrado o rechazado: solo se puede duplicar. */
+  closed: boolean;
+}
 
 /**
- * Acciones por fila del listado. Los procesos cerrados solo admiten duplicar:
- * renombrar y eliminar quedan ocultos, no deshabilitados — una acción visible
- * pero inerte invita a intentarla.
+ * Acciones por fila del listado del hub, para poligonales, nivelaciones y
+ * lugares. Lo cerrado solo admite duplicar: renombrar y eliminar quedan
+ * ocultos, no deshabilitados — una acción visible pero inerte invita a
+ * intentarla.
  */
-export function ProcessRowActions({
-  process,
-}: {
-  process: PolygonalProcess;
-}) {
-  const inmutable =
-    process.status === "closed" || process.status === "rejected";
+export function ProcessRowActions({ kind, id, name, closed }: ProcessRowActionsProps) {
+  const k = KINDS[kind];
   const [renombrando, setRenombrando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
-  const [nombre, setNombre] = useState(process.name);
+  const [nombre, setNombre] = useState(name);
   const [error, setError] = useState<string | null>(null);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function ejecutar(accion: () => Promise<{ ok: boolean; error?: string }>) {
+  function ejecutar(accion: () => Promise<Result>) {
     setError(null);
     startTransition(async () => {
       const r = await accion();
@@ -44,10 +96,8 @@ export function ProcessRowActions({
   function duplicar() {
     setDuplicateError(null);
     startTransition(async () => {
-      const r = await duplicatePolygonalProcessAction(process.id);
-      if (!r.ok) {
-        setDuplicateError(r.error ?? "No se pudo duplicar el proceso.");
-      }
+      const r = await k.duplicate(id);
+      if (!r.ok) setDuplicateError(r.error ?? `No se pudo duplicar el ${k.noun}.`);
     });
   }
 
@@ -58,22 +108,22 @@ export function ProcessRowActions({
           size="sm"
           variant="ghost"
           type="button"
-          aria-label={`Duplicar «${process.name}»`}
+          aria-label={`Duplicar «${name}»`}
           disabled={isPending}
           onClick={duplicar}
         >
           Duplicar
         </Button>
 
-        {!inmutable && (
+        {!closed && (
           <>
             <Button
               size="sm"
               variant="ghost"
               type="button"
-              aria-label={`Renombrar «${process.name}»`}
+              aria-label={`Renombrar «${name}»`}
               onClick={() => {
-                setNombre(process.name);
+                setNombre(name);
                 setError(null);
                 setRenombrando(true);
               }}
@@ -84,7 +134,7 @@ export function ProcessRowActions({
               size="sm"
               variant="ghost"
               type="button"
-              aria-label={`Eliminar «${process.name}»`}
+              aria-label={`Eliminar «${name}»`}
               onClick={() => {
                 setError(null);
                 setEliminando(true);
@@ -105,7 +155,7 @@ export function ProcessRowActions({
       <Modal
         open={renombrando}
         onClose={() => setRenombrando(false)}
-        title="Renombrar proceso"
+        title={`Renombrar ${k.noun}`}
         footer={
           <>
             <Button variant="secondary" onClick={() => setRenombrando(false)}>
@@ -113,9 +163,7 @@ export function ProcessRowActions({
             </Button>
             <Button
               disabled={isPending || nombre.trim() === ""}
-              onClick={() =>
-                ejecutar(() => renamePolygonalProcessAction(process.id, nombre))
-              }
+              onClick={() => ejecutar(() => k.rename(id, nombre))}
             >
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
@@ -123,7 +171,7 @@ export function ProcessRowActions({
         }
       >
         <Input
-          label="Nombre del proceso"
+          label={`Nombre del ${k.noun}`}
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
         />
@@ -137,7 +185,7 @@ export function ProcessRowActions({
       <Modal
         open={eliminando}
         onClose={() => setEliminando(false)}
-        title="Eliminar proceso"
+        title={`Eliminar ${k.noun}`}
         footer={
           <>
             <Button variant="secondary" onClick={() => setEliminando(false)}>
@@ -146,9 +194,7 @@ export function ProcessRowActions({
             <Button
               variant="danger"
               disabled={isPending}
-              onClick={() =>
-                ejecutar(() => deletePolygonalProcessAction(process.id))
-              }
+              onClick={() => ejecutar(() => k.remove(id))}
             >
               {isPending ? "Eliminando…" : "Eliminar"}
             </Button>
@@ -156,8 +202,7 @@ export function ProcessRowActions({
         }
       >
         <p className="text-sm text-ink-2">
-          Se eliminará «{process.name}» y todas sus estaciones. Esta acción no se
-          puede deshacer.
+          Se eliminará «{name}» {k.deletes}. Esta acción no se puede deshacer.
         </p>
         {error && (
           <Alert variant="error" className="mt-2 py-2">

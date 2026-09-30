@@ -36,6 +36,7 @@ import {
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import type { Site } from "@/types/site";
 import type { LevelType, PrecisionOrder } from "@/types/project";
+import { logDbError } from "@/lib/errors/user-message";
 
 export interface ActionResult {
   ok: boolean;
@@ -105,7 +106,8 @@ async function loadContext(
     .select("*")
     .eq("id", siteId)
     .maybeSingle();
-  if (!site) return null;
+  // Un lugar de agrupación (Fase 22) no tiene visitas.
+  if (!site || site.kind !== "settlement") return null;
 
   const { data: points } = await supabase
     .from("settlement_points")
@@ -254,7 +256,7 @@ export async function createVisitAction(
           "Ya existe una visita con ese número. Recarga la página e inténtalo de nuevo.",
       };
     }
-    return { ok: false, error: error.message };
+    return { ok: false, error: logDbError(error, "No se pudo crear la visita.") };
   }
 
   // Se revalida con `context.site.project_id` (leído del lugar) y no con el
@@ -395,7 +397,7 @@ export async function saveVisitAction(
     idsVigentes.length > 0
       ? await purga.not("point_id", "in", `(${idsVigentes.join(",")})`)
       : await purga;
-  if (deleteError) return { ok: false, error: deleteError.message };
+  if (deleteError) return { ok: false, error: logDbError(deleteError, "No se pudo guardar la visita.") };
 
   // La cabecera va antes del upsert: una lectura nueva de un punto que solo
   // es vigente en la fecha NUEVA (un alta) la rechazaría el trigger de
@@ -434,7 +436,7 @@ export async function saveVisitAction(
       status: readings.length > 0 ? "calculated" : "draft",
     })
     .eq("id", payload.visitId);
-  if (headerError) return { ok: false, error: headerError.message };
+  if (headerError) return { ok: false, error: logDbError(headerError, "No se pudo guardar la visita.") };
 
   // La libreta: upsert por (visit_id, reading_order) y purga de las filas
   // sobrantes, nunca borrado y reinserción —un fallo entre las dos dejaría la
@@ -452,14 +454,14 @@ export async function saveVisitAction(
     const { error: bookError } = await supabase
       .from("settlement_book_readings")
       .upsert(bookRows, { onConflict: "visit_id,reading_order" });
-    if (bookError) return { ok: false, error: bookError.message };
+    if (bookError) return { ok: false, error: logDbError(bookError, "No se pudo guardar la visita.") };
   }
   const { error: bookPurgeError } = await supabase
     .from("settlement_book_readings")
     .delete()
     .eq("visit_id", payload.visitId)
     .gt("reading_order", bookRows.length);
-  if (bookPurgeError) return { ok: false, error: bookPurgeError.message };
+  if (bookPurgeError) return { ok: false, error: logDbError(bookPurgeError, "No se pudo guardar la visita.") };
 
   // Upsert en vez de delete+insert: un `delete` seguido de un `insert` que
   // fallara dejaría la visita sin lecturas y perdería el dato de campo ya
@@ -481,7 +483,7 @@ export async function saveVisitAction(
         })),
         { onConflict: "visit_id,point_id" },
       );
-    if (upsertError) return { ok: false, error: upsertError.message };
+    if (upsertError) return { ok: false, error: logDbError(upsertError, "No se pudo guardar la visita.") };
   }
 
   // --- Propagación a visitas posteriores ABIERTAS ---------------------------
@@ -523,7 +525,7 @@ export async function saveVisitAction(
         })),
         { onConflict: "visit_id,point_id" },
       );
-    if (propagateError) return { ok: false, error: propagateError.message };
+    if (propagateError) return { ok: false, error: logDbError(propagateError, "No se pudo guardar la visita.") };
   }
 
   // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
@@ -613,9 +615,55 @@ export async function closeVisitAction(
     })
     .eq("id", visitId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo cerrar la visita.") };
 
   // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
   revalidatePath(`/projects/${context.site.project_id}/settlement/${siteId}`);
+  return { ok: true };
+}
+
+/**
+ * Elimina una visita (Fase 22): solo la última del lugar y sin cerrar.
+ *
+ * Borrar una intermedia dejaría un hueco en la numeración y cambiaría el
+ * asentamiento parcial y la velocidad de la siguiente, que se miden contra la
+ * visita anterior. La última no tiene quien dependa de ella: sus lecturas y
+ * su libreta se van con ella (cascada) y el resto del histórico no cambia.
+ */
+export async function deleteVisitAction(
+  projectId: string,
+  siteId: string,
+  visitId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, project_id")
+    .eq("id", siteId)
+    .maybeSingle();
+  if (!site || site.project_id !== projectId) return { ok: false, error: "Lugar no encontrado." };
+  if (site.status === "closed") {
+    return { ok: false, error: "El lugar está cerrado; sus visitas no se pueden eliminar." };
+  }
+
+  const { data: visits } = await supabase
+    .from("settlement_visits")
+    .select("id, visit_number, status")
+    .eq("site_id", siteId)
+    .order("visit_number", { ascending: false })
+    .limit(1);
+  const ultima = visits?.[0];
+  if (!ultima || ultima.id !== visitId) {
+    return { ok: false, error: "Solo se puede eliminar la última visita del lugar." };
+  }
+  if (ultima.status === "closed") {
+    return { ok: false, error: "La visita está cerrada y no puede eliminarse." };
+  }
+
+  const { error } = await supabase.from("settlement_visits").delete().eq("id", visitId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar la visita.") };
+
+  revalidatePath(`/projects/${projectId}/settlement/${siteId}`);
+  revalidatePath(`/projects/${projectId}`);
   return { ok: true };
 }

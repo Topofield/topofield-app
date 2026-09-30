@@ -1020,6 +1020,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          kind: string
           name: string
           notes: string | null
           project_id: string
@@ -1040,6 +1041,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          kind?: string
           name: string
           notes?: string | null
           project_id: string
@@ -1060,6 +1062,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          kind?: string
           name?: string
           notes?: string | null
           project_id?: string

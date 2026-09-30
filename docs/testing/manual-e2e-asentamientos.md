@@ -184,10 +184,11 @@ referencia: sirve para el arranque en frío (paso 19).
 ### 11. Panel del lugar con libreta — Torre Alameda (Fase 18)
 
 - Abrir **Torre Alameda** desde el hub.
-- ✓ Encabezado: «Control de asentamientos en 8 puntos de control. Lectura base
-  el 7 de enero de 2025.», la leyenda Precaución −25 mm, Alerta −50 mm y
-  Alarma −75 mm, y las acciones **+ Nueva visita**, **Exportar a Excel** y
-  **Editar lugar**.
+- ✓ Cabecera: «Control de asentamientos · Edificio · 8 puntos de control ·
+  lectura base el 7 de enero de 2025», las acciones **+ Nueva visita**,
+  **Exportar a Excel** y **Ver informe**, y las pestañas **Panel**, **Puntos y
+  lugar** e **Informe** (Fase 22). En el panel, la leyenda Precaución -25 mm,
+  Alerta -50 mm y Alarma -75 mm.
 - ✓ Indicadores: **Asentamiento máximo** −29.0 mm (TA-07), **Promedio actual**
   −20.5 mm (8 puntos de control medidos), **Distorsión angular** 1/1.682
   (TA-07 – TA-08, dentro del límite 1/500), **Velocidad máxima**
@@ -313,7 +314,7 @@ referencia: sirve para el arranque en frío (paso 19).
 
 ### 16. Renombrar un punto con libretas abiertas
 
-- En el catálogo de Torre Alameda (**Editar lugar**), **Editar** TA-08 y
+- En el catálogo de Torre Alameda (pestaña **Puntos y lugar**), **Editar** TA-08 y
   cambiar el código a `TA-08X`.
 - Abrir el editor de la **visita 13**. ✓ La fila de la libreta dice TA-08X,
   con la nota «Punto de control». **Guardar visita**. ✓ La cota de TA-08X

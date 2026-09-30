@@ -8,6 +8,7 @@ import {
   validateActiveFrom,
   validateRetirement,
 } from "@/lib/validators/settlement";
+import { logDbError } from "@/lib/errors/user-message";
 
 export interface ActionResult {
   ok: boolean;
@@ -65,10 +66,13 @@ async function loadOpenSite(
 ) {
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id")
+    .select("id, status, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
-  if (!site) return { ok: false as const, error: "Lugar no encontrado." };
+  // Un lugar de agrupación (Fase 22) no tiene catálogo de puntos.
+  if (!site || site.kind !== "settlement") {
+    return { ok: false as const, error: "Lugar no encontrado." };
+  }
   if (site.status === "closed") {
     return {
       ok: false as const,
@@ -189,7 +193,7 @@ export async function createPointAction(
         error: "Ya existe un punto con ese código en este lugar.",
       };
     }
-    return { ok: false, error: error.message };
+    return { ok: false, error: logDbError(error, "No se pudo crear el punto.") };
   }
 
   revalidatePath(`/projects/${siteCheck.site.project_id}/sites/${payload.siteId}`);
@@ -259,7 +263,7 @@ export async function savePointAction(
         error: "Ya existe un punto con ese código en este lugar.",
       };
     }
-    return { ok: false, error: error.message };
+    return { ok: false, error: logDbError(error, "No se pudo guardar el punto.") };
   }
 
   // El código es la clave con que la libreta de una visita encuentra al punto
@@ -275,7 +279,7 @@ export async function savePointAction(
       .select("id")
       .eq("site_id", payload.siteId)
       .neq("status", "closed");
-    if (visitsError) return { ok: false, error: visitsError.message };
+    if (visitsError) return { ok: false, error: logDbError(visitsError, "No se pudo guardar el punto.") };
     const openIds = (openVisits ?? []).map((v) => v.id);
     if (openIds.length > 0) {
       const { error: renameError } = await supabase
@@ -283,7 +287,7 @@ export async function savePointAction(
         .update({ point_code: newCode })
         .eq("point_id", pointId)
         .in("visit_id", openIds);
-      if (renameError) return { ok: false, error: renameError.message };
+      if (renameError) return { ok: false, error: logDbError(renameError, "No se pudo guardar el punto.") };
     }
   }
 
@@ -374,7 +378,7 @@ export async function deletePointAction(
     .eq("id", pointId)
     .eq("site_id", siteId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el punto.") };
 
   revalidatePath(`/projects/${siteCheck.site.project_id}/sites/${siteId}`);
   return { ok: true };
@@ -417,7 +421,7 @@ export async function retirePointAction(
     .update({ retired_on: retiredOn, retirement_reason: reason.trim() })
     .eq("id", pointId)
     .eq("site_id", siteId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo dar de baja el punto.") };
 
   revalidatePath(`/projects/${siteCheck.site.project_id}/sites/${siteId}`);
   revalidatePath(`/projects/${siteCheck.site.project_id}/settlement/${siteId}`);
@@ -452,7 +456,7 @@ export async function undoRetirementAction(
     .update({ retired_on: null, retirement_reason: null })
     .eq("id", pointId)
     .eq("site_id", siteId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: logDbError(error, "No se pudo deshacer la baja del punto.") };
 
   revalidatePath(`/projects/${siteCheck.site.project_id}/sites/${siteId}`);
   revalidatePath(`/projects/${siteCheck.site.project_id}/settlement/${siteId}`);

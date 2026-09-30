@@ -18,6 +18,8 @@ interface ReportFormProps {
   projectId: string;
   /** Trabajos cerrados del proyecto; ya filtrados por elegibilidad. */
   candidates: EligibleCandidate[];
+  /** Claves `tipo:id` que llegan marcadas (desde la pestaña Informe de un proceso). */
+  initialSelected?: string[];
 }
 
 function claveDe(c: { kind: string; id: string }): string {
@@ -33,13 +35,15 @@ function claveDe(c: { kind: string; id: string }): string {
  * proyecto no usa ninguna— y es difícil de operar con teclado. Las flechas
  * dan el mismo control y son accesibles sin trabajo extra.
  */
-export function ReportForm({ projectId, candidates }: ReportFormProps) {
+export function ReportForm({ projectId, candidates, initialSelected = [] }: ReportFormProps) {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [observations, setObservations] = useState("");
   /** Claves elegidas, EN ORDEN: la posición en el array es el orden final. */
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() =>
+    initialSelected.filter((clave) => candidates.some((c) => claveDe(c) === clave)),
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -89,7 +93,7 @@ export function ReportForm({ projectId, candidates }: ReportFormProps) {
         }),
       });
       if (response.ok && response.reportId) {
-        router.push(`/projects/${projectId}/reports/${response.reportId}`);
+        router.push(`/projects/${projectId}/reports/${response.reportId}/print`);
       } else {
         setError(response.error ?? "No se pudo generar el informe.");
       }
@@ -100,17 +104,17 @@ export function ReportForm({ projectId, candidates }: ReportFormProps) {
   // vez de mostrar un formulario vacío que no llevaría a ninguna parte.
   if (candidates.length === 0) {
     return (
-      <Card title="Nuevo informe">
+      <Card>
         <EmptyState
           title="Todavía no hay procesos cerrados"
-          description="Un informe solo puede incluir procesos cerrados, porque son los únicos cuyos datos ya no cambian. Cierra una poligonal, una nivelación o un lugar de control para poder generarlo."
+          description="Un informe consolidado solo incluye procesos cerrados. Cierra una poligonal, una nivelación o un control de asentamientos para generarlo."
         />
       </Card>
     );
   }
 
   return (
-    <Card title="Nuevo informe">
+    <Card>
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {error && <Alert variant="error">{error}</Alert>}
 

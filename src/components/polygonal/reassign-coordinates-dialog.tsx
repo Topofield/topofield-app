@@ -109,6 +109,7 @@ export function ReassignCoordinatesDialog({
       <Button
         type="button"
         variant="secondary"
+        size="sm"
         onClick={openDialog}
         disabled={disabled}
       >
@@ -175,8 +176,7 @@ export function ReassignCoordinatesDialog({
             {azimutCalculado != null && (
               <p className="text-sm text-ink-2">
                 El error angular, el error lineal y la precisión relativa no
-                cambian: girar y trasladar la poligonal no altera nada de lo que
-                el cierre certifica.
+                cambian.
               </p>
             )}
           </div>

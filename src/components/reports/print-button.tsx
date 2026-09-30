@@ -6,20 +6,17 @@ import { buttonClasses } from "@/components/design-system";
  * Dispara el diálogo de impresión del navegador, desde el cual el usuario
  * elige «Guardar como PDF».
  *
- * Es lo único que necesita ser cliente en toda la ruta imprimible, y se oculta
- * en la propia impresión (`.report-actions` en `@media print`) para que el
- * botón no salga dentro del PDF.
+ * Quien lo usa lo pone en una zona que `@media print` oculta —`.report-actions`
+ * o la cabecera de página—, para que el botón no salga dentro del PDF.
  */
-export function PrintButton() {
+export function PrintButton({ size = "md" }: { size?: "sm" | "md" }) {
   return (
-    <div className="report-actions">
-      <button
-        type="button"
-        onClick={() => window.print()}
-        className={buttonClasses({ variant: "primary" })}
-      >
-        Imprimir o guardar como PDF
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => window.print()}
+      className={buttonClasses({ variant: "primary", size })}
+    >
+      Imprimir o guardar como PDF
+    </button>
   );
 }

@@ -2,15 +2,14 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
+  ActionBar,
   Alert,
-  Badge,
-  Breadcrumbs,
-  buttonClasses,
   Button,
   Card,
   InvalidNumbersContext,
   useInvalidNumbers,
 } from "@/components/design-system";
+import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 import { computePolygonal } from "@/lib/calculations/polygonal";
 import { totalStationMeetsOrder } from "@/lib/calculations/tolerances";
 import { parseNumber } from "@/lib/utils/parse";
@@ -25,11 +24,9 @@ import {
   setAngleInputFormatAction,
 } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import {
-  PROCESS_STATUS_LABELS,
   type CorrectionMethod,
   type PolygonalProcess,
   type PolygonalStationWithReadings,
-  type ProcessStatus,
 } from "@/types/polygonal";
 import type { ReferencePoint } from "@/types/project";
 import { PolygonalConfigFields } from "./polygonal-config-fields";
@@ -51,22 +48,10 @@ import { GeoreferenceDialog } from "./georeference-dialog";
 import { georeferenceSummary } from "./georeference-plan";
 import type { AngleInputFormat } from "@/types/polygonal";
 
-const STATUS_TONE: Record<
-  ProcessStatus,
-  "neutral" | "primary" | "success" | "danger"
-> = {
-  draft: "neutral",
-  in_progress: "neutral",
-  calculated: "primary",
-  closed: "success",
-  rejected: "danger",
-};
 
 interface PolygonalEditorProps {
   process: PolygonalProcess;
   stations: PolygonalStationWithReadings[];
-  projectId: string;
-  projectName: string;
   /** Catálogo del proyecto, para elegir y georreferenciar el amarre. */
   referencePoints?: ReferencePoint[];
   /**
@@ -80,8 +65,6 @@ interface PolygonalEditorProps {
 export function PolygonalEditor({
   process,
   stations: initialStations,
-  projectId,
-  projectName,
   referencePoints = [],
   angularPrecisionSeconds,
 }: PolygonalEditorProps) {
@@ -292,51 +275,6 @@ export function PolygonalEditor({
   return (
     <InvalidNumbersContext.Provider value={invalidNumbers.report}>
       <div className="flex flex-col gap-6">
-        <div>
-          <Breadcrumbs
-            items={[
-              { label: "Dashboard", href: "/dashboard" },
-              { label: projectName, href: `/projects/${projectId}?tab=processes` },
-              { label: process.name },
-            ]}
-          />
-          {/* Envuelve en móvil: con tres acciones, en una sola fila la página
-              desbordaba a lo ancho a 390 px. */}
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <h1 className="text-2xl font-bold">
-              {process.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge tone={STATUS_TONE[process.status]}>
-                {PROCESS_STATUS_LABELS[process.status]}
-              </Badge>
-              {/* Descarga directa: es una Route Handler que devuelve el .xlsx,
-                  no una navegación. Disponible en cualquier estado (§ 4.8). */}
-              <a
-                href={`/projects/${projectId}/polygonal/${process.id}/export`}
-                className={buttonClasses({ variant: "secondary", size: "sm" })}
-                download
-              >
-                Exportar a Excel
-              </a>
-              <GeoreferenceDialog
-                process={process}
-                stations={initialStations}
-                referencePoints={referencePoints}
-                disabledReason={georefBlocked}
-              />
-            </div>
-          </div>
-          {georefBlocked && (
-            <p className="mt-1 text-right text-xs text-ink-2">{georefBlocked}</p>
-          )}
-          {georeferenceSummary(process) && (
-            <p className="mt-1 text-sm text-ink-2">
-              Georreferenciado {georeferenceSummary(process)}.
-            </p>
-          )}
-        </div>
-
         {readOnly &&
           process.status === "closed" &&
           process.meets_tolerance === false && (
@@ -354,9 +292,6 @@ export function PolygonalEditor({
                 : "Este proceso está cerrado; los datos son de solo lectura, salvo su posición, que se puede georreferenciar."}
             </Alert>
           )}
-        {error && <Alert variant="error">{error}</Alert>}
-        {saveMessage && <Alert variant="success">{saveMessage}</Alert>}
-
         <ClosureVerdict
           result={result}
           type={config.type}
@@ -373,12 +308,6 @@ export function PolygonalEditor({
 
         <div className="flex flex-wrap items-center gap-3">
           <AngleFormatToggle value={angleFormat} onChange={changeAngleFormat} />
-          {readOnly && (
-            <span className="text-xs text-ink-2">
-              El proceso está cerrado: el formato solo cambia la vista y no se
-              guarda.
-            </span>
-          )}
           {formatError && (
             <span className="text-xs text-danger">{formatError}</span>
           )}
@@ -442,7 +371,50 @@ export function PolygonalEditor({
           />
         </Card>
 
-        <Card title="Dibujo de la poligonal">
+        {/* Las dos formas de mover la poligonal viven con su dibujo (Fase 22):
+            «Asignar coordenadas reales» cambia el arranque antes de cerrar;
+            «Georreferenciar», en cualquier estado, desde dos estaciones. */}
+        <Card
+          title="Dibujo de la poligonal"
+          actions={
+            <>
+              {!readOnly && (
+                <ReassignCoordinatesDialog
+                  angleFormat={angleFormat}
+                  startNorth={config.startNorth}
+                  startEast={config.startEast}
+                  startAzimuth={config.startAzimuth}
+                  referenceNorth={amarre?.north != null ? String(amarre.north) : undefined}
+                  referenceEast={amarre?.east != null ? String(amarre.east) : undefined}
+                  referencePointCode={amarre?.code ?? config.referencePointCode}
+                  onApply={(north, east, azimuth) => {
+                    setConfig({
+                      ...config,
+                      startNorth: north,
+                      startEast: east,
+                      startAzimuth: azimuth,
+                    });
+                    setDirty(true);
+                    setSaveMessage(null);
+                  }}
+                />
+              )}
+              <GeoreferenceDialog
+                process={process}
+                stations={initialStations}
+                referencePoints={referencePoints}
+                disabledReason={georefBlocked}
+              />
+            </>
+          }
+        >
+          {(georeferenceSummary(process) || georefBlocked) && (
+            <p className="mb-3 text-sm text-ink-2">
+              {georeferenceSummary(process)
+                ? `Georreferenciado ${georeferenceSummary(process)}.`
+                : georefBlocked}
+            </p>
+          )}
           <PolygonalPlotViewer
             input={input}
             result={result}
@@ -472,51 +444,37 @@ export function PolygonalEditor({
         </Card>
 
         {!readOnly && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ReassignCoordinatesDialog
-              angleFormat={angleFormat}
-              startNorth={config.startNorth}
-              startEast={config.startEast}
-              startAzimuth={config.startAzimuth}
-              referenceNorth={amarre?.north != null ? String(amarre.north) : undefined}
-              referenceEast={amarre?.east != null ? String(amarre.east) : undefined}
-              referencePointCode={amarre?.code ?? config.referencePointCode}
-              onApply={(north, east, azimuth) => {
-                setConfig({
-                  ...config,
-                  startNorth: north,
-                  startEast: east,
-                  startAzimuth: azimuth,
-                });
-                setDirty(true);
-                setSaveMessage(null);
-              }}
-            />
-            <div className="flex items-center gap-3">
-              {captureBlocked ? (
-                <span className="text-sm text-danger">
-                  Corrige las celdas con error para poder guardar.
-                </span>
+          <ActionBar
+            status={
+              error ? (
+                <span className="text-danger">{error}</span>
+              ) : captureBlocked ? (
+                <span className="text-danger">Corrige las celdas con error para poder guardar.</span>
               ) : weightsError ? (
-                <span className="text-sm text-danger">{weightsError}</span>
-              ) : null}
-              <Button
-                onClick={handleSave}
-                disabled={isPending || captureBlocked || weightsError != null}
-              >
-                {isPending ? "Guardando…" : "Guardar"}
-              </Button>
-              <span aria-hidden className="h-6 w-px bg-rule" />
-              <CloseProcessDialog
-                processId={process.id}
-                type={config.type}
-                result={result}
-                captureBlocked={captureBlocked}
-                dirty={dirty}
-              />
-            </div>
-          </div>
+                <span className="text-danger">{weightsError}</span>
+              ) : dirty ? (
+                "Cambios sin guardar"
+              ) : (
+                saveMessage
+              )
+            }
+          >
+            <Button
+              onClick={handleSave}
+              disabled={isPending || captureBlocked || weightsError != null}
+            >
+              {isPending ? "Guardando…" : "Guardar"}
+            </Button>
+            <CloseProcessDialog
+              processId={process.id}
+              type={config.type}
+              result={result}
+              captureBlocked={captureBlocked}
+              dirty={dirty}
+            />
+          </ActionBar>
         )}
+        <UnsavedChangesGuard dirty={dirty} />
       </div>
     </InvalidNumbersContext.Provider>
   );

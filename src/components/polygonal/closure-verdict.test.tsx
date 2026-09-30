@@ -100,7 +100,7 @@ describe("verdictFor — matiz de equipo insuficiente", () => {
     expect(v.tone).toBe("ok");
     expect(v.title).toBe("Cumple primer orden");
     expect(v.caveat).toBe(
-      "El cierre cumple, pero el equipo declarado no alcanza el orden declarado (K = 1″): el veredicto es sobre las medidas, no sobre la capacidad del instrumento.",
+      "El cierre cumple, pero el equipo declarado no alcanza el orden declarado (K = 1″).",
     );
   });
 

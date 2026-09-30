@@ -1409,11 +1409,13 @@ async function main() {
     name: "General",
     description: "Lugar genérico para los procesos de poligonal y nivelación del lote.",
     structure_type: "otro",
+    kind: "grouping",
   });
   const geodesicaSite = await createSite(geodesica, {
     name: "General",
     description: "Lugar genérico para los procesos de la red geodésica.",
     structure_type: "otro",
+    kind: "grouping",
   });
 
   // Los amarres de las carteras reales entran al catálogo como puntos de

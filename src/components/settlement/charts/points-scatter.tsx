@@ -162,10 +162,8 @@ export function PointsScatter({ series, baseDate, thresholds }: PointsScatterPro
 
       {series.length > MAX_DISTINGUISHABLE_SERIES && (
         <Alert variant="warning">
-          Hay {series.length} puntos: a partir de {MAX_DISTINGUISHABLE_SERIES + 1}{" "}
-          algunas series repiten forma y color a la vez y dejan de distinguirse
-          con claridad. Resalta un punto con los chips, o usa la tabla para leer
-          los valores exactos.
+          Con {series.length} puntos, algunas series se confunden. Resalta un
+          punto con los chips, o usa la tabla para leer los valores exactos.
         </Alert>
       )}
 

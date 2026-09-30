@@ -73,7 +73,7 @@ export function verdictFor(
       // orden declarado, decirlo sin matizar induce a error.
       caveat: instrumentMeetsOrder
         ? null
-        : `El cierre cumple, pero el equipo declarado no alcanza el orden declarado (K = ${ANGULAR_TOLERANCE_K[order]}″): el veredicto es sobre las medidas, no sobre la capacidad del instrumento.`,
+        : `El cierre cumple, pero el equipo declarado no alcanza el orden declarado (K = ${ANGULAR_TOLERANCE_K[order]}″).`,
     };
   }
   if (result.meetsTolerance === false) {

@@ -186,11 +186,9 @@ export function GeoreferenceDialog({
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-ink-2">
-            Dos estaciones del levantamiento con sus coordenadas reales llevan
-            la poligonal al sistema real: se gira y se traslada, sin cambiar
-            ángulos ni distancias. Use las dos estaciones más alejadas entre
-            sí: con puntos cercanos, un error pequeño en sus coordenadas gira
-            mucho la poligonal.
+            Dos estaciones con sus coordenadas reales llevan la poligonal al
+            sistema real: se gira y se traslada, sin cambiar ángulos ni
+            distancias. Use las dos estaciones más alejadas entre sí.
           </p>
           {pointFields("Punto A", a, setA)}
           {pointFields("Punto B", b, setB)}
@@ -227,32 +225,27 @@ export function GeoreferenceDialog({
               {!plan.scaleWithinOrder && (
                 <Alert variant="warning">
                   La distancia real entre {plan.pointCodes[0]} y {plan.pointCodes[1]} no
-                  concuerda con la medida a la precisión del orden (factor{" "}
-                  {plan.fit.scaleFactor.toFixed(6)}). Revise sus coordenadas. Si
-                  están en una proyección con factor de escala distinto de 1
-                  (p. ej. CTM12), la diferencia puede ser de la proyección y no
-                  un error. La escala no se aplica: se conservan las distancias
-                  medidas.
+                  concuerda con la medida (factor {plan.fit.scaleFactor.toFixed(6)}).
+                  Revise sus coordenadas; en una proyección con factor de escala
+                  distinto de 1 (p. ej. CTM12) la diferencia puede venir de la
+                  proyección. Se conservan las distancias medidas.
                 </Alert>
               )}
               {process.correction_method === "transit" && (
                 <Alert variant="warning">
-                  Con Tránsito las coordenadas no se trasladan rígidamente: el
-                  reparto del error depende de la orientación y cambia unos
-                  milímetros. El veredicto no cambia.
+                  Con Tránsito, las coordenadas corregidas cambian unos
+                  milímetros al girar la poligonal.
                 </Alert>
               )}
               {process.reference_point_id != null && (
                 <Alert variant="warning">
-                  El amarre {process.reference_point_code} es del catálogo y sus
-                  coordenadas siguen en el sistema anterior: pasa a amarre
-                  manual, con el mismo código.
+                  El amarre {process.reference_point_code} es del catálogo, que no
+                  cambia: pasa a amarre manual, con el mismo código.
                 </Alert>
               )}
               {closed && (
                 <p className="text-sm text-ink-2">
-                  El proceso está cerrado: se reescriben solo coordenadas y
-                  azimuts. El veredicto de cierre no cambia.
+                  El proceso está cerrado: solo cambian coordenadas y azimuts.
                 </p>
               )}
 

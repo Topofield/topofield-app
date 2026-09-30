@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Breadcrumbs } from "@/components/design-system";
+import { PageHeader } from "@/components/design-system";
 import { ReportForm } from "@/components/reports/report-form";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -10,10 +10,13 @@ import { selectableProcesses } from "@/lib/reports/eligibility";
 
 interface NewReportPageProps {
   params: Promise<{ id: string }>;
+  /** `incluir=tipo:id`, una o varias veces: procesos que llegan marcados. */
+  searchParams: Promise<{ incluir?: string | string[] }>;
 }
 
-export default async function NewReportPage({ params }: NewReportPageProps) {
+export default async function NewReportPage({ params, searchParams }: NewReportPageProps) {
   const { id } = await params;
+  const { incluir } = await searchParams;
 
   const supabase = await createClient();
   const project = await getProjectById(supabase, id);
@@ -26,18 +29,24 @@ export default async function NewReportPage({ params }: NewReportPageProps) {
   const candidates = selectableProcesses(
     await getClosedWorkForReports(supabase, project.id),
   );
+  const initialSelected = incluir === undefined ? [] : [incluir].flat();
 
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs
-        items={[
+      <PageHeader
+        breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: project.name, href: `/projects/${project.id}?tab=reports` },
           { label: "Nuevo informe" },
         ]}
+        title="Nuevo informe"
+        subtitle="Reúne procesos cerrados del proyecto en un solo documento."
       />
-      <h1 className="text-xl font-semibold">Nuevo informe</h1>
-      <ReportForm projectId={project.id} candidates={candidates} />
+      <ReportForm
+        projectId={project.id}
+        candidates={candidates}
+        initialSelected={initialSelected}
+      />
     </div>
   );
 }

@@ -258,8 +258,8 @@ export function ImportDialog({
         <div className="flex flex-col gap-4">
           <p className="text-sm text-ink-2">
             Se leen el archivo <strong>.L de un nivel digital Leica</strong> y
-            la <strong>plantilla CSV</strong> de TopoField. Las dos lecturas de
-            cada visual se promedian. Nada se guarda hasta que pulse Guardar.
+            la <strong>plantilla CSV</strong> de TopoField. Nada se guarda hasta
+            que pulse Guardar.
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <label className="text-sm font-medium text-ink">
@@ -372,8 +372,7 @@ export function ImportDialog({
                 <strong>{LEVELING_TYPE_LABELS[proposedLevelingType(rows, currentType)]}</strong>
                 {rows.return ? " con recorrido de vuelta" : ""}, en modo{" "}
                 <strong>digital</strong>. Puede cambiarlo después en la
-                configuración. Revise el tipo de cada punto: el .L no lo trae
-                y se deduce de su posición; la plantilla CSV puede declararlo.
+                configuración. Revise el tipo de cada punto antes de aceptar.
               </p>
 
               {hasReadings && (

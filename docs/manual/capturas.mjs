@@ -115,8 +115,11 @@ await page.addInitScript(() => {
     const estilo = document.createElement("style");
     // El correo de la cabecera es el real de la cuenta: no va en las capturas,
     // que se publican en el repositorio y en /manual.
+    // La barra de acciones fija (Fase 22) va estática: en una captura de
+    // página completa, `sticky` la pintaba a media página.
     estilo.textContent =
-      "nextjs-portal{display:none!important}[data-user-email]{visibility:hidden!important}";
+      "nextjs-portal{display:none!important}[data-user-email]{visibility:hidden!important}" +
+      ".sticky.bottom-0{position:static!important}";
     document.head.appendChild(estilo);
   });
 });
@@ -314,14 +317,22 @@ if (!informe) {
     .first()
     .fill("Levantamiento conforme a las tolerancias de tercer orden.");
   await page.getByRole("button", { name: /generar informe/i }).click();
-  await page.waitForURL(/\/reports\/[0-9a-f-]{36}$/, { timeout: 30000 });
-  informe = page.url().split("/").pop();
+  // Desde la Fase 22 el alta lleva directo a la vista imprimible.
+  await page.waitForURL(/\/reports\/[0-9a-f-]{36}\/print$/, { timeout: 30000 });
+  informe = page.url().split("/").at(-2);
 }
 
 await page.goto(`${BASE}/projects/${proyecto}/reports/${informe}/print`, {
   waitUntil: "networkidle",
 });
 await capturar("19-informe-imprimible", { fullPage: true });
+
+// La pestaña Informe de un proceso (Fase 22): el informe de la poligonal
+// cerrada, sin salir de su pantalla.
+await page.goto(`${BASE}/projects/${proyecto}/polygonal/${cerrado}?tab=informe`, {
+  waitUntil: "networkidle",
+});
+await capturar("30-informe-del-proceso", { fullPage: true });
 
 // Campo
 await page.setViewportSize({ width: 390, height: 844 });

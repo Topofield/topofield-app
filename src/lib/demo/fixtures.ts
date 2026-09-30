@@ -47,7 +47,7 @@ export const PROYECTO_DEMO = {
   client: "Carteras de campo reales",
   location: "Bogotá",
   description:
-    "Proyecto de muestra con carteras de campo reales: las poligonales TT4 y Sede Vivero, la nivelación de El Verjón y el crudo de un nivel digital Leica; el control de asentamientos es la simulación de Torre Alameda. Puede modificarlo o eliminarlo cuando quiera.",
+    "Proyecto de muestra con carteras de campo reales: las poligonales TT4 y Sede Vivero, la nivelación de El Verjón y el crudo de un nivel digital Leica; el control de asentamientos es la simulación de Torre Alameda. Puede modificarlo o archivarlo cuando quiera.",
   datum: "MAGNA-SIRGAS",
   projection: "Origen Bogotá",
 } as const;
@@ -228,7 +228,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     name: "Poligonal V10 — cartera TT4",
     status: "closed",
     notes:
-      "Cartera de campo real (docs/carteras/poligonales.xlsx). Seis vértices amarrados a TT4, con la fila de cierre de vuelta al amarre. Compensada por Bowditch.",
+      "Cartera de campo real: seis vértices amarrados a TT4, con la fila de cierre de vuelta al amarre. Compensada por Bowditch.",
   },
   {
     ...desdeCartera(CARTERA_VIVERO),
@@ -253,7 +253,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     referenceFromCatalog: false,
     status: "calculated",
     notes:
-      "La cartera Vivero en sistema local, para georreferenciar con los vértices D1 y D3 del catálogo (Georreferenciar, en el editor).",
+      "La cartera Vivero en sistema local, para georreferenciar con los vértices D1 y D3 del catálogo (Georreferenciar, junto al dibujo).",
   },
 ];
 
@@ -331,7 +331,7 @@ export const NIVELACION_VERJON: NivelacionDemo = {
   forward: CARTERA_VERJON.ida.map(deCartera),
   return: CARTERA_VERJON.vuelta.map(deCartera),
   notes:
-    "Cartera de campo real (docs/carteras/TRABAJO NIVELACION EL VERJON-corregido.xlsx): nivelación y contranivelación por los mismos puntos, con nivel automático de tres hilos.",
+    "Cartera de campo real: nivelación y contranivelación por los mismos puntos, con nivel automático de tres hilos.",
 };
 
 /**
@@ -371,7 +371,7 @@ export function nivelacionTramo2(): NivelacionDemo {
       foreDistanceM: r.foreDistanceM,
     })),
     notes:
-      "Crudo nativo de un nivel digital Leica (docs/carteras/CRDUDO-TRAMO2.L), importado como un solo recorrido. El instrumento mide dos veces cada visual; la libreta guarda el promedio.",
+      "Crudo nativo de un nivel digital Leica, importado como un solo recorrido. El instrumento mide dos veces cada visual; la libreta guarda el promedio.",
   };
 }
 
@@ -403,7 +403,7 @@ export interface AsentamientoDemo {
 export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
   name: "Torre Alameda",
   description:
-    "Torre de 14 niveles sobre suelo aluvial, con 8 puntos de control en columnas. Cada visita lleva su libreta de nivelación. Simulación del prototipo de control de asentamientos.",
+    "Torre de 14 niveles sobre suelo aluvial, con 8 puntos de control en columnas. Cada visita lleva su libreta de nivelación. Datos simulados.",
   precisionOrder: "tercer_orden",
   equipmentBrand: "Trimble",
   equipmentModel: "DiNi 12",
@@ -414,5 +414,5 @@ export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
   points: ALAMEDA_POINTS,
   visits: alamedaVisits(),
   notes:
-    "Lugar cerrado tras catorce visitas: su informe de asentamientos ya es reproducible.",
+    "Lugar cerrado tras catorce visitas.",
 };

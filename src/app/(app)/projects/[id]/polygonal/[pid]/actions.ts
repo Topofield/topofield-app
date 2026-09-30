@@ -609,7 +609,7 @@ export async function setAngleInputFormatAction(
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
   if (!canPersistAngleFormat(process.status)) {
-    return { ok: false, error: "El proceso está cerrado: el formato solo cambia la vista." };
+    return { ok: false, error: "El proceso está cerrado; el formato no se guarda." };
   }
 
   const { error } = await supabase

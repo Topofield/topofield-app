@@ -19,7 +19,7 @@ import {
   undoRetirementAction,
   type PointPayload,
 } from "@/app/(app)/projects/[id]/sites/[siteId]/point-actions";
-import { formatDateOnly } from "@/lib/utils/format";
+import { formatCoordinate, formatDateOnly, formatElevation } from "@/lib/utils/format";
 import type { SettlementPoint } from "@/types/settlement";
 import { readNumberText } from "@/lib/utils/parse";
 
@@ -361,15 +361,18 @@ export function PointsCatalog({
                   <td className="py-2 pr-3 text-ink-2">
                     {item.location_description}
                   </td>
-                  <td className="py-2 pr-3 text-ink-2">
-                    {item.northing ?? "—"}
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
+                    {formatCoordinate(item.northing)}
                   </td>
-                  <td className="py-2 pr-3 text-ink-2">
-                    {item.easting ?? "—"}
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
+                    {formatCoordinate(item.easting)}
                   </td>
-                  <td className="py-2 pr-3 text-ink-2">
-                    {item.initial_elevation ??
-                      (item.active_from !== null ? "Primera lectura" : "—")}
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
+                    {item.initial_elevation != null
+                      ? formatElevation(item.initial_elevation)
+                      : item.active_from !== null
+                        ? "Primera lectura"
+                        : "—"}
                   </td>
                   <td className="py-2 pr-3">
                     <PointState point={item} />
@@ -487,9 +490,8 @@ export function PointsCatalog({
             )}
             {isAltaForm && (
               <p className="text-sm text-ink-2">
-                El monitoreo ya está en curso: el punto se da de alta y su
-                línea base será su <strong>primera lectura</strong>, no la
-                visita 0 del lugar. Por eso no lleva cota C0.
+                El monitoreo ya está en curso: la línea base del punto será su{" "}
+                <strong>primera lectura</strong>, así que no lleva cota C0.
               </p>
             )}
 

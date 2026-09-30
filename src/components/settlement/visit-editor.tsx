@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ChangeEvent } from "react";
 import {
+  ActionBar,
   Alert,
   Button,
-  buttonClasses,
   Card,
   Input,
   InvalidNumbersContext,
@@ -18,6 +17,7 @@ import {
   useInvalidNumbers,
 } from "@/components/design-system";
 import { BmSelector, type BmValue } from "@/components/leveling/bm-selector";
+import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 import type { ReadingDraftState } from "@/components/leveling/readings-table";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { ReadingsTable } from "@/components/settlement/readings-table";
@@ -487,24 +487,7 @@ export function VisitEditor({
   return (
     <InvalidNumbersContext.Provider value={invalidNumbers.report}>
       <div className="flex flex-col gap-6">
-        <Card
-          title={isBaseline ? "Visita 0 — Línea base" : `Visita ${visit.visit_number}`}
-          actions={
-            <Link href={viewHref} className={buttonClasses({ variant: "ghost", size: "sm" })}>
-              Ver la visita
-            </Link>
-          }
-        >
-          {serverError && (
-            <Alert variant="error" className="mb-4">
-              {serverError}
-            </Alert>
-          )}
-          {saved && !serverError && (
-            <Alert variant="success" className="mb-4">
-              Visita guardada.
-            </Alert>
-          )}
+        <Card title="Datos de la visita">
           {isBaseline && (
             <Alert variant="info" className="mb-4">
               Esta es la línea base del lugar: no tiene visita anterior, así que
@@ -610,7 +593,7 @@ export function VisitEditor({
 
         <Card
           title={isBook ? "Cotas de los puntos de control" : "Lecturas"}
-          description={isBook ? "Salen de la libreta: se recalculan al guardar." : undefined}
+          description={isBook ? "Salen de la libreta." : undefined}
         >
           <ReadingsTable
             points={rowPoints}
@@ -638,7 +621,22 @@ export function VisitEditor({
         </Card>
 
         {!disabled && (
-          <div className="flex flex-wrap justify-end gap-2">
+          <ActionBar
+            status={
+              serverError ? (
+                <span className="text-danger">{serverError}</span>
+              ) : invalidNumbers.count > 0 ? (
+                <span className="text-danger">Corrige las celdas con error para poder guardar.</span>
+              ) : dirty ? (
+                "Cambios sin guardar"
+              ) : saved ? (
+                "Visita guardada."
+              ) : null
+            }
+          >
+            <Button onClick={handleSave} disabled={isPending || invalidNumbers.count > 0}>
+              {isPending ? "Guardando…" : "Guardar visita"}
+            </Button>
             <Button
               variant="secondary"
               onClick={() => {
@@ -649,11 +647,9 @@ export function VisitEditor({
             >
               Cerrar visita
             </Button>
-            <Button onClick={handleSave} disabled={isPending || invalidNumbers.count > 0}>
-              {isPending ? "Guardando…" : "Guardar visita"}
-            </Button>
-          </div>
+          </ActionBar>
         )}
+        <UnsavedChangesGuard dirty={dirty} />
 
         <CloseVisitDialog
           open={closeDialogOpen}

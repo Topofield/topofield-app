@@ -43,15 +43,15 @@ export const CAPTURAS = {
   },
   hubProyecto: {
     src: "/manual/04-hub-proyecto.png",
-    alt: "Hub del proyecto: ficha de datos arriba y la pestaña de procesos con su listado.",
+    alt: "Hub del proyecto: cabecera con el botón + Nuevo Proceso, las pestañas y el listado de poligonales con sus filtros y acciones.",
     width: 2560,
-    height: 3288,
+    height: 2936,
   },
   configuracionProyecto: {
     src: "/manual/05-configuracion-proyecto.png",
     alt: "Pestaña de configuración del proyecto, con la edición de datos y los puntos de referencia.",
     width: 2560,
-    height: 3596,
+    height: 3284,
   },
   nuevaPoligonal: {
     src: "/manual/06-nueva-poligonal.png",
@@ -64,7 +64,7 @@ export const CAPTURAS = {
     alt: "Editor de poligonal completo: veredicto, configuración, tabla de estaciones y resultados.",
     pie: "El editor de una poligonal que no alcanza la precisión exigida.",
     width: 2560,
-    height: 4698,
+    height: 4988,
   },
   veredicto: {
     src: "/manual/08-veredicto.png",
@@ -76,13 +76,13 @@ export const CAPTURAS = {
     src: "/manual/09-proceso-cerrado.png",
     alt: "Editor de un proceso cerrado, en solo lectura y sin botones de guardado.",
     width: 2560,
-    height: 4622,
+    height: 4862,
   },
   procesoRechazado: {
     src: "/manual/10-proceso-rechazado.png",
     alt: "Editor de un proceso rechazado, también en solo lectura.",
     width: 2560,
-    height: 4622,
+    height: 4862,
   },
   nuevaNivelacion: {
     src: "/manual/11-nueva-nivelacion.png",
@@ -100,14 +100,14 @@ export const CAPTURAS = {
     src: "/manual/24-puntos-homologos.png",
     alt: "Tabla de puntos homólogos del crudo de nivel digital leído como ida y vuelta: los residuos crecen hasta −5.2 mm a mitad del recorrido y vuelven a −0.4 mm, la discrepancia.",
     width: 1984,
-    height: 1114,
+    height: 1082,
   },
   editorNivelacion: {
     src: "/manual/12-editor-nivelacion.png",
-    alt: "Editor de nivelación completo: libreta, comprobación aritmética, cierre y cotas corregidas.",
+    alt: "Editor de nivelación completo: veredicto, libreta, perfil, comprobación aritmética, cierre y cotas corregidas.",
     pie: "Circuito cerrado que cumple la tolerancia: el BM final corrige exacto a su cota conocida.",
     width: 2560,
-    height: 2906,
+    height: 4414,
   },
   nuevoLugar: {
     src: "/manual/13-nuevo-lugar.png",
@@ -117,15 +117,15 @@ export const CAPTURAS = {
   },
   editorLugar: {
     src: "/manual/14-editor-lugar.png",
-    alt: "Editor del lugar: datos generales, umbrales y catálogo de puntos de control.",
+    alt: "Pestaña Puntos y lugar: datos generales, umbrales y catálogo de puntos de control.",
     width: 2560,
-    height: 3036,
+    height: 3302,
   },
   panelAsentamientos: {
     src: "/manual/15-panel-asentamientos.png",
     alt: "Panel del lugar Torre Alameda: los seis indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
     width: 2560,
-    height: 5290,
+    height: 5438,
   },
   nuevaVisita: {
     src: "/manual/25-nueva-visita.png",
@@ -137,13 +137,13 @@ export const CAPTURAS = {
     src: "/manual/26-importar-libreta-visita.png",
     alt: "Diálogo Importar la libreta de la visita con la plantilla CSV: dos armadas y doce visuales, BM de amarre BM-1, el aviso de que la libreta actual se reemplazará y la libreta con los puntos de control marcados.",
     width: 1344,
-    height: 2176,
+    height: 2136,
   },
   vistaVisita: {
     src: "/manual/27-vista-visita.png",
     alt: "Vista de la visita 12 de Torre Alameda: los seis indicadores, la tabla de puntos de control con TA-07 seleccionado, su historial con la nota «Le faltan 21.3 mm para el umbral de alerta» y las barras de acumulado y de movimiento por punto.",
     width: 2560,
-    height: 3022,
+    height: 2934,
   },
   registroNivelacion: {
     src: "/manual/28-registro-nivelacion.png",
@@ -161,19 +161,19 @@ export const CAPTURAS = {
     src: "/manual/22-georreferenciar.png",
     alt: "Diálogo Georreferenciar sobre la cartera Vivero en sistema local: D1 y D3 con sus coordenadas reales, rotación 35° 00′ 07.8″, factor de escala 1.000000 y la tabla de coordenadas actuales frente a reales.",
     width: 1344,
-    height: 2028,
+    height: 1988,
   },
   minimosCuadrados: {
     src: "/manual/21-minimos-cuadrados.png",
     alt: "Resultados de la cartera Vivero con mínimos cuadrados: los tres pesos, la tabla de correcciones por ángulo y distancia, y σ₀ = 0.698 con su lectura.",
     width: 1984,
-    height: 2580,
+    height: 2420,
   },
   editorVisita: {
     src: "/manual/16-editor-visita.png",
     alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas y su resumen de cierre, y debajo las cotas de los puntos de control que salen de ella.",
     width: 2560,
-    height: 5644,
+    height: 5866,
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
@@ -185,7 +185,7 @@ export const CAPTURAS = {
     src: "/manual/19-informe-imprimible.png",
     alt: "Informe maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados, resumen consolidado y registro de cierre.",
     width: 2560,
-    height: 3466,
+    height: 3500,
   },
   temaOscuro: {
     src: "/manual/29-tema-oscuro.png",
@@ -200,8 +200,14 @@ export const CAPTURAS = {
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
     pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
     width: 780,
-    height: 6462,
+    height: 6808,
     angosta: true,
+  },
+  informeDelProceso: {
+    src: "/manual/30-informe-del-proceso.png",
+    alt: "Pestaña Informe de una poligonal cerrada: portada, datos y resultados, dibujo, resumen de precisión y registro de cierre.",
+    width: 2560,
+    height: 4846,
   },
 } as const satisfies Record<string, Captura>;
 
@@ -279,12 +285,23 @@ export const ORDENES_PRECISION = [
 // --- § 4.3 Columnas del listado ---
 
 export const COLUMNAS_LISTADO = [
-  { columna: "Proceso", muestra: "Nombre y tipo de poligonal" },
-  { columna: "Estado", muestra: "Borrador, Calculado, Cerrado o Rechazado" },
-  { columna: "Precisión", muestra: "La precisión relativa alcanzada" },
+  {
+    columna: "Nombre",
+    muestra: "Nombre y tipo (en asentamientos, el tipo de estructura y cuántas visitas tiene)",
+  },
+  {
+    columna: "Estado",
+    muestra: "Borrador, Calculado, Cerrado o Rechazado; Activo o Cerrado en un lugar",
+  },
+  {
+    columna: "Resultado",
+    muestra:
+      "La precisión relativa de una poligonal, el cierre de una nivelación (o su discrepancia, si es abierta con vuelta) o la alerta de un lugar",
+  },
   {
     columna: "Cumple",
-    muestra: "✓ si alcanza su orden de precisión, ✕ si no, — si no aplica",
+    muestra:
+      "✓ si alcanza su orden de precisión, ✕ si no, — si no aplica. No aparece en asentamientos",
   },
   { columna: "Última actividad", muestra: "Cuándo se modificó por última vez" },
 ];
@@ -614,6 +631,16 @@ export const PREGUNTAS: Pregunta[] = [
       "¿Por qué la velocidad de dos visitas mensuales no me da el mismo número?",
     respuesta:
       "Porque se calcula con los días reales entre las dos fechas, no con «un mes» fijo. Un intervalo de 28 días y uno de 31 producen velocidades distintas aunque el asentamiento parcial fuera idéntico.",
+  },
+  {
+    pregunta: "¿Puedo eliminar un proyecto?",
+    respuesta:
+      "Si no tiene nada cerrado, sí, desde Configuración. Si tiene algún proceso, lugar o visita cerrados, no: esos registros no se borran. Archívelo para ocultarlo de la lista activa.",
+  },
+  {
+    pregunta: "Salí de un editor y perdí lo que había tecleado.",
+    respuesta:
+      "Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el navegador le preguntó antes. Los botones atrás y adelante del navegador no preguntan: guarde antes de usarlos.",
   },
   {
     pregunta: "¿Otros usuarios pueden ver mis proyectos?",

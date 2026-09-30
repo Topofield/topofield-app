@@ -82,8 +82,7 @@ export function PolygonalPlot({
     return (
       <p className="text-sm text-ink-2">
         Todavía no se puede dibujar: faltan ángulos o distancias en alguna
-        estación, o las coordenadas y el azimut de partida. El dibujo aparece
-        en cuanto el cálculo tenga coordenadas.
+        estación, o las coordenadas y el azimut de partida.
       </p>
     );
   }
@@ -146,7 +145,7 @@ export function PolygonalPlot({
   const summary =
     `Dibujo de la poligonal ${TYPE_LABELS[input.type]} con ${labelled.length} vértices` +
     (result.linearError !== null
-      ? `, error de cierre ${result.linearError.toLocaleString("es-CO", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m`
+      ? `, error de cierre ${result.linearError.toFixed(3)} m`
       : "") +
     (k ? `. La poligonal sin compensar se dibuja con los desplazamientos exagerados ${factorLabel(k)}.` : ".");
 

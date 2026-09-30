@@ -43,9 +43,9 @@ const UNADJUSTABLE_TEXT = {
   one_side:
     "Con un solo lado no hay nada que ajustar: las condiciones de llegada dependen de una sola distancia. Elija otro método o añada estaciones.",
   singular:
-    "La geometría de la poligonal no permite el ajuste (el sistema de condiciones es singular). Revise los datos o elija otro método.",
+    "La geometría de la poligonal no permite el ajuste. Revise los datos o elija otro método.",
   not_converged:
-    "El ajuste no convergió: las condiciones no quedan en cero. Revise la cartera en busca de un error grueso, o elija otro método.",
+    "El ajuste no convergió. Revise la cartera en busca de un error grueso, o elija otro método.",
 } as const;
 
 interface ResultsPanelProps {
@@ -122,18 +122,14 @@ export function ResultsPanel({
           </div>
           <p className="text-sm text-ink-2">
             La desviación típica que se supone para cada ángulo y cada
-            distancia; todas las observaciones pesan igual. La hoja de la
-            universidad usa, por ejemplo, 2″, 0.011 m y 2 mediciones. Una
-            distancia medida n veces pesa como σ/√n.
+            distancia. Una distancia medida n veces pesa como σ/√n.
           </p>
           {adjustment?.status === "missing_weights" && (
             <Alert variant="warning">
               {/* El motor solo sabe que no puede usar los pesos; el porqué
                   —faltan o no son válidos— lo da el validador. */}
               {weightsError ??
-                "Faltan los pesos del ajuste: σ angular, σ de distancia y número de mediciones."}{" "}
-              Sin pesos válidos no hay coordenadas ajustadas, y el método no
-              se puede guardar.
+                "Faltan los pesos del ajuste: σ angular, σ de distancia y número de mediciones."}
             </Alert>
           )}
           {adjustment?.status === "unadjustable" && (
@@ -168,8 +164,7 @@ export function ResultsPanel({
                   value={formatSeconds(result.reorientationError)}
                 />
                 <p className="mt-1 text-xs text-ink-2">
-                  El último azimut debe volver al azimut de amarre. Es control
-                  de calidad del levantamiento, no criterio de tolerancia.
+                  El último azimut debe volver al azimut de amarre.
                 </p>
               </>
             )}
@@ -268,24 +263,17 @@ export function ResultsPanel({
               </tbody>
             </table>
             <p className="mt-2 text-xs text-ink-2">
-              La orientación es el dato de partida y no se ajusta. Una celda con
-              «—» es una observación que no entra en el ajuste.
+              Una celda con «—» es una observación que no entra en el ajuste.
             </p>
           </div>
           <div className="max-w-md">
             <Row label="σ₀" value={adjustment.sigma0.toFixed(3)} />
-            <Row
-              label="Condiciones · iteraciones"
-              value={`${adjustment.conditions} · ${adjustment.iterations}`}
-            />
             <p className="mt-1 text-sm text-ink-2">
               {SIGMA0_TEXT[sigma0Reading(adjustment.sigma0)]}
             </p>
             <p className="mt-1 text-xs text-ink-2">
               σ₀ compara lo medido con los pesos supuestos: cerca de 1 (entre{" "}
-              {SIGMA0_BAND[0]} y {SIGMA0_BAND[1]}) es lo esperado. Es
-              información, no criterio: el veredicto de cierre es el mismo con
-              cualquier método.
+              {SIGMA0_BAND[0]} y {SIGMA0_BAND[1]}) es lo esperado.
             </p>
           </div>
         </div>

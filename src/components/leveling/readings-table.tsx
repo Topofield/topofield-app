@@ -170,9 +170,8 @@ export function ReadingsTable({
     <div className="flex flex-col gap-3">
       {distancesReconstructed && (
         <p className="text-sm text-warning">
-          Las distancias por visual de este proceso las reconstruyó la
-          migración repartiendo por mitades; el equilibrado de visuales no se
-          evalúa.
+          Las distancias por visual de este proceso son aproximadas
+          (repartidas por mitades): el equilibrado de visuales no se evalúa.
         </p>
       )}
       {wiresAvailable && (
@@ -222,6 +221,10 @@ export function ReadingsTable({
             {readings.map((reading, i) => {
               const issue = issues[i];
               const row = computed[i];
+              // Una fila sin V+ ni V− todavía no es una medición: sin «—», la
+              // plantilla precargada de una visita llenaba la columna de cotas
+              // con la del punto anterior antes de medir (Fase 22).
+              const sinLecturas = row == null || (row.backsight == null && row.foresight == null);
               const isFirst = i === 0;
               const isLast = i === readings.length - 1;
               const isIntermediate = reading.pointType === "intermediate";
@@ -417,15 +420,15 @@ export function ReadingsTable({
                       visual. Solo lectura — que se teclease era la causa de
                       que el punto de cierre pudiera quedar sin compensar. */}
                   <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-ink-2">
-                    {row?.distanceAccumulatedKm == null
+                    {sinLecturas || row?.distanceAccumulatedKm == null
                       ? "—"
                       : row.distanceAccumulatedKm.toFixed(3)}
                   </td>
                   <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums text-ink-2">
-                    {formatElevation(row?.elevationCalculated)}
+                    {formatElevation(sinLecturas ? null : row?.elevationCalculated)}
                   </td>
                   <td className="whitespace-nowrap py-2 pr-3 font-mono tabular-nums font-medium text-ink">
-                    {formatElevation(row?.elevationCorrected)}
+                    {formatElevation(sinLecturas ? null : row?.elevationCorrected)}
                   </td>
                   {!disabled && (
                     <td className="py-2">
