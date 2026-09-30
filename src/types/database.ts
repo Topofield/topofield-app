@@ -699,6 +699,7 @@ export type Database = {
       }
       reports: {
         Row: {
+          cover: Json
           generated_at: string | null
           generated_by: string
           id: string
@@ -708,6 +709,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          cover: Json
           generated_at?: string | null
           generated_by: string
           id?: string
@@ -717,6 +719,7 @@ export type Database = {
           title: string
         }
         Update: {
+          cover?: Json
           generated_at?: string | null
           generated_by?: string
           id?: string

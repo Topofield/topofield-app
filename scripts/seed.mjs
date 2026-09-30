@@ -223,12 +223,20 @@ function decimalToDmsTuple(decimal) {
  * 'leveling' | 'site'. Solo debe apuntar a trabajos ya cerrados.
  */
 async function insertReport(projectId, userId, { title, observations, included }) {
+  // La portada se congela al emitir (Fase 23), con los datos del proyecto.
+  const { data: project, error: projectError } = await admin
+    .from("projects")
+    .select("name, client, location, datum, projection")
+    .eq("id", projectId)
+    .single();
+  if (projectError) throw projectError;
   const { error } = await admin.from("reports").insert({
     project_id: projectId,
     title,
     included_processes: included,
     observations: observations ?? null,
     generated_by: userId,
+    cover: project,
   });
   if (error) throw error;
 }

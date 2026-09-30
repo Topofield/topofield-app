@@ -69,7 +69,8 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         </div>
       </div>
 
-      <ReportCover title={report.title} project={project} date={report.generated_at} />
+      {/* La portada congelada al emitir (Fase 23), no el proyecto de hoy. */}
+      <ReportCover title={report.title} cover={report.cover} date={report.generated_at} />
 
       <section className="report-section">
         <h2>Índice de procesos incluidos</h2>

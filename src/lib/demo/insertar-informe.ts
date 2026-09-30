@@ -2,12 +2,12 @@
 //
 // Un informe no guarda copia de los datos: se reconstruye al abrirlo a partir
 // de los procesos cerrados que incluye (todos inmutables por trigger). Aquí
-// solo se persiste la cabecera y la lista `included_processes`, con la misma
-// forma que arma `createReportAction`.
+// solo se persiste la cabecera, la portada congelada (`cover`, Fase 23) y la
+// lista `included_processes`, con la misma forma que arma `createReportAction`.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import type { IncludedProcess } from "@/types/report";
+import type { IncludedProcess, ReportCoverData } from "@/types/report";
 
 type Client = SupabaseClient<Database>;
 
@@ -15,6 +15,7 @@ export async function insertarInforme(
   supabase: Client,
   projectId: string,
   userId: string,
+  cover: ReportCoverData,
   title: string,
   observations: string | null,
   included: IncludedProcess[],
@@ -25,6 +26,7 @@ export async function insertarInforme(
     included_processes: included,
     observations,
     generated_by: userId,
+    cover,
   });
   if (error) throw error;
 }
