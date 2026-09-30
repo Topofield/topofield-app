@@ -98,7 +98,7 @@ aplicación sin capturar nada:
   y su libreta de nivelación en cada una.
 - Un informe de cierre por módulo.
 
-Puede modificarlo o eliminarlo cuando quiera.
+Puede modificarlo o archivarlo cuando quiera.
 
 Cada usuario ve únicamente sus propios proyectos.
 
@@ -131,7 +131,7 @@ Use **+ Nuevo Proyecto** para crear uno.
 > trae un **«Proyecto de ejemplo»** con carteras de campo reales —poligonales y
 > nivelaciones—, un lugar de control de asentamientos simulado y sus informes,
 > para que explore la aplicación con datos reales (§ 2). Puede modificarlo o
-> eliminarlo cuando quiera.
+> archivarlo cuando quiera.
 
 ---
 
@@ -160,17 +160,20 @@ quiere, las coordenadas geográficas en grados decimales.
 
 ![Hub del proyecto](../../public/manual/04-hub-proyecto.png)
 
-La ficha superior resume los datos del proyecto. Debajo, tres pestañas:
+La cabecera muestra el nombre y el estado del proyecto, su cliente, su
+ubicación y su sistema de referencia, y el botón **+ Nuevo Proceso**. Debajo,
+tres pestañas:
 
 **Procesos** — el listado de levantamientos del proyecto. Se detalla en
 [§ 4.3](#43-el-listado-de-procesos).
 
-**Informes** — genera los informes de cierre del proyecto con los procesos ya
-cerrados, listos para imprimir o guardar como PDF. Se detalla en
-[§ 10](#10-informes).
+**Informes** — los informes **consolidados**, que reúnen varios procesos
+cerrados en un solo documento. Se detalla en [§ 10](#10-informes). Cada
+proceso tiene además su propio informe, en su pantalla
+([§ 4.4](#44-la-pantalla-de-un-proceso)).
 
-**Configuración** — edición de los datos del proyecto y gestión de los puntos de
-referencia.
+**Configuración** — los datos del proyecto (también la descripción), los
+puntos de referencia, y archivar o eliminar el proyecto.
 
 ![Configuración del proyecto](../../public/manual/05-configuracion-proyecto.png)
 
@@ -179,24 +182,33 @@ mojones) que puede reutilizar como punto de partida o de llegada de sus
 poligonales, sin volver a teclearlas. Los que tienen cota sirven además como
 BM de sus nivelaciones y como **BM de amarre** de las visitas de asentamiento.
 
+**Archivar o eliminar.** Archivar oculta el proyecto de la lista activa del
+dashboard; puede restaurarlo cuando quiera. Eliminarlo lo borra con todo lo
+que contiene, y solo es posible si no tiene nada cerrado: un proceso, un
+lugar o una visita cerrados son registros que no se borran. En ese caso la
+configuración dice cuántos tiene y propone archivarlo.
+
 ### 4.3 El listado de procesos
 
-Todos los levantamientos del proyecto en una sola lista, con una barra para
-encontrar lo que busca.
+Los chips **Poligonales**, **Nivelaciones** y **Control de Asentamientos**
+eligen el módulo, con cuántos tiene cada uno. Los tres listados funcionan
+igual, con una barra para encontrar lo que busca.
 
 **Buscar.** Filtra por nombre mientras escribe. No distingue mayúsculas ni
 acentos: «via» encuentra «Vía terciaria».
 
-**Filtrar por estado.** Los chips muestran cuántos procesos hay en cada grupo,
-así que ve la distribución del proyecto sin desplegar nada. Pulse uno para ver
-solo ese grupo.
+**Filtrar por estado.** Los chips muestran cuántos hay en cada grupo, así que
+ve la distribución del proyecto sin desplegar nada. Pulse uno para ver solo
+ese grupo. En control de asentamientos los estados son **Activos** y
+**Cerrados**.
 
-**Filtrar por tipo.** El selector acota a un tipo de poligonal.
+**Filtrar por tipo.** El selector acota a un tipo de poligonal, de nivelación
+o de estructura.
 
 Cuando hay algún filtro activo aparece **Limpiar filtros**, para volver a verlo
 todo de un clic.
 
-> El listado recuerda el último filtro que usó en cada proyecto, así que al
+> Cada listado recuerda el último filtro que usó en cada proyecto, así que al
 > volver lo encuentra como lo dejó. Si abre un enlace que alguien le compartió,
 > manda lo que traiga ese enlace: verá lo mismo que quien se lo envió.
 
@@ -204,32 +216,69 @@ todo de un clic.
 
 | Columna | Qué muestra |
 |---|---|
-| Proceso | Nombre y tipo de poligonal |
-| Estado | Borrador, Calculado, Cerrado o Rechazado |
-| Precisión | La precisión relativa alcanzada |
-| Cumple | ✓ si alcanza su orden de precisión, ✕ si no, — si no aplica |
+| Nombre | Nombre y tipo (en asentamientos, el tipo de estructura y cuántas visitas tiene) |
+| Estado | Borrador, Calculado, Cerrado o Rechazado; Activo o Cerrado en un lugar |
+| Resultado | La **precisión** relativa de una poligonal, el **cierre** de una nivelación (o su discrepancia, si es abierta con vuelta) o la **alerta** de un lugar |
+| Cumple | ✓ si alcanza su orden de precisión, ✕ si no, — si no aplica. No aparece en asentamientos |
 | Última actividad | Cuándo se modificó por última vez |
 
 La columna **Cumple** es la que evita abrir cada proceso para saber si el
 levantamiento sirve.
 
-Pulse **Proceso**, **Precisión** o **Última actividad** para ordenar por esa
-columna; pulsar de nuevo invierte el orden. Por defecto se ordena por actividad
-reciente, así que lo que está trabajando queda arriba.
+Pulse **Nombre**, la columna de resultado o **Última actividad** para ordenar
+por esa columna; pulsar de nuevo invierte el orden. Por defecto se ordena por
+actividad reciente, así que lo que está trabajando queda arriba.
 
-**Acciones por proceso.** Cada fila ofrece:
+**Acciones por fila.** Cada fila ofrece:
 
-- **Duplicar** — crea un proceso nuevo con la misma configuración (tipo, punto
-  de partida, método de corrección) pero sin estaciones, en estado Borrador.
-- **Renombrar** — cambia el nombre sin abrir el editor.
-- **Eliminar** — borra el proceso y sus estaciones, con confirmación previa.
+- **Duplicar** — crea uno nuevo con la misma configuración, en borrador: una
+  poligonal sin estaciones, una nivelación sin lecturas, un lugar con sus
+  umbrales y su catálogo de puntos pero sin visitas.
+- **Renombrar** — cambia el nombre sin abrirlo.
+- **Eliminar** — lo borra con lo que contiene, con confirmación previa. Un
+  lugar con alguna visita cerrada no se puede eliminar.
 
-> **Los procesos cerrados y rechazados solo se pueden duplicar.** No admiten
-> renombrarse ni eliminarse, porque son inmutables. Si necesita rehacer un
+> **Lo cerrado solo se puede duplicar.** Un proceso cerrado o rechazado, o un
+> lugar cerrado, no admite renombrarse ni eliminarse. Si necesita rehacer un
 > levantamiento cerrado, duplíquelo: obtendrá una copia editable y el original
 > queda intacto como constancia.
 
-En el teléfono, la tabla se convierte en tarjetas, una por proceso.
+En el teléfono, la tabla se convierte en tarjetas, una por fila, con las
+mismas acciones.
+
+### 4.4 La pantalla de un proceso
+
+Poligonales, nivelaciones y controles de asentamientos se abren en la misma
+pantalla.
+
+**La cabecera.** El nombre, el estado y el tipo del proceso, y dos acciones:
+**Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. Las
+migas de arriba devuelven al listado del que vino.
+
+**Las pestañas.** **Proceso** reúne todo el trabajo: configuración, captura,
+cálculo, gráfico y análisis, que se recalculan mientras escribe. **Informe**
+muestra el informe de ese proceso, listo para **Imprimir o guardar como PDF**
+([§ 10](#10-informes)). El control de asentamientos tiene tres: **Panel**,
+**Puntos y lugar** e **Informe** ([§ 7](#7-control-de-asentamientos)).
+
+![Informe de un proceso, en su pestaña](../../public/manual/30-informe-del-proceso.png)
+
+Mientras el proceso no esté cerrado, su informe lleva la marca **«Borrador —
+el informe se emite al cerrar el proceso»**, también en el PDF: sirve para
+revisar antes de cerrar. Debajo, fuera de la impresión, aparecen los informes
+consolidados que ya lo incluyen y, si está cerrado, un botón para generar uno
+nuevo con él.
+
+**La barra de acciones.** Mientras el proceso se puede editar, **Guardar** y
+**Cerrar proceso** van en una barra fija al pie de la pantalla, siempre a la
+vista. A su izquierda dice si hay **cambios sin guardar** o qué impide guardar.
+
+> **Salir sin guardar pregunta.** Si tiene cambios sin guardar y pulsa una
+> miga, otra pestaña o cualquier enlace de la aplicación, un diálogo pregunta
+> antes de salir; al recargar o cerrar la pestaña, pregunta el navegador. Los
+> botones atrás y adelante del navegador no preguntan.
+
+---
 
 ---
 
@@ -290,7 +339,8 @@ Donde *n* es el número de ángulos medidos.
 
 ![Editor de poligonal](../../public/manual/07-editor-no-cumple.png)
 
-La pantalla se lee de arriba abajo:
+La pestaña **Proceso** ([§ 4.4](#44-la-pantalla-de-un-proceso)) se lee de
+arriba abajo:
 
 **El veredicto.** Lo primero y más visible: si el levantamiento cumple o no el
 orden de precisión exigido.
@@ -434,7 +484,7 @@ acercarse.
 
 ### 5.4 Reasignar coordenadas
 
-El botón **Asignar coordenadas reales** permite recalcular toda la poligonal
+El botón **Asignar coordenadas reales**, junto al dibujo, permite recalcular toda la poligonal
 desde un punto de partida distinto, conservando las mediciones. Es útil cuando
 levantó en un sistema local —1000, 1000— y después obtuvo las coordenadas
 oficiales.
@@ -455,8 +505,8 @@ GPS, por ejemplo—, o el proceso ya está cerrado, use **Georreferenciar**.
 
 Un levantamiento suele arrancar en un sistema local —(1000, 2000) y un azimut
 supuesto— y recibir coordenadas reales después, a veces con el proceso ya
-cerrado. El botón **Georreferenciar**, junto a **Exportar a Excel**, lo lleva
-al sistema real con **dos de sus estaciones** de coordenadas conocidas. Está
+cerrado. El botón **Georreferenciar**, junto al dibujo, lo lleva al sistema
+real con **dos de sus estaciones** de coordenadas conocidas. Está
 disponible en cualquier estado, también cerrado o rechazado.
 
 ![Georreferenciar la cartera Vivero en sistema local con D1 y D3](../../public/manual/22-georreferenciar.png)
@@ -473,8 +523,8 @@ disponible en cualquier estado, también cerrado o rechazado.
 La poligonal se **gira y se traslada**, sin escala: las distancias y los
 ángulos medidos no cambian, y el **veredicto de cierre tampoco**. Se recalcula
 con el nuevo arranque, así que coordenadas, azimuts y proyecciones quedan en el
-sistema real. Bajo el título queda anotada la última georreferenciación: fecha,
-puntos, rotación y factor de escala. Puede georreferenciar otra vez para
+sistema real. Sobre el dibujo queda anotada la última georreferenciación:
+fecha, puntos, rotación y factor de escala. Puede georreferenciar otra vez para
 corregir una coordenada mal tecleada.
 
 El diálogo avisa, sin impedirlo, en tres casos:
@@ -567,6 +617,11 @@ Si el tipo es *de enlace*, deberá indicar además el BM de llegada. Marque
 
 ![Editor de nivelación](../../public/manual/12-editor-nivelacion.png)
 
+**El veredicto.** Arriba, como en la poligonal: el error de cierre frente a su
+tolerancia en una nivelación cerrada o de enlace, o la discrepancia entre ida
+y vuelta en una abierta con vuelta. Una abierta sin vuelta no cierra contra
+nada y lo dice.
+
 **Configuración.** Plegada cuando el proceso ya está calculado. Ábrala para
 cambiar el nombre, el tipo, los BM o el orden de precisión y el equipo de
 nivel — los mismos campos del alta, editables mientras el proceso siga
@@ -609,6 +664,12 @@ en segundo, 4 en tercero y 6 en ordinario.
 
 > Con **nivel digital** el instrumento entrega la distancia y no se leen
 > hilos: se teclean la lectura y la distancia.
+
+**Perfil de la nivelación.** Bajo la libreta, la cota de cada punto frente a
+su distancia acumulada desde el origen: la ida con su cota corregida y, si hay
+vuelta, la vuelta con su cota calculada sobre el mismo eje. Las vistas
+intermedias van como anillos sueltos. «Ver datos en tabla» da los mismos
+valores en texto.
 
 **Comprobación aritmética.** ΣV+ − ΣV− debe coincidir con el
 desnivel total del recorrido. Es una verificación de gabinete: confirma que
@@ -734,11 +795,18 @@ continuación si el caso lo requiere.
 También define el **límite de distorsión angular**, expresado como `1/X`: un
 X menor es más severo (1/300 es peor que 1/500).
 
+Al abrir un lugar desde el proyecto se ve su pantalla
+([§ 4.4](#44-la-pantalla-de-un-proceso)), con tres pestañas: **Panel**, con
+el historial del monitoreo (§ 7.4); **Puntos y lugar**, con los datos, los
+umbrales y el catálogo de puntos (§ 7.2); e **Informe**. En la cabecera,
+**+ Nueva visita** (§ 7.3), **Exportar a Excel** y **Ver informe**.
+
 ### 7.2 Catalogar los puntos
 
-![Editor del lugar con el catálogo de puntos](../../public/manual/14-editor-lugar.png)
+![Pestaña Puntos y lugar, con el catálogo de puntos](../../public/manual/14-editor-lugar.png)
 
-Ya creado el lugar, agregue sus **puntos de control**: código, ubicación,
+Ya creado el lugar, en su pestaña **Puntos y lugar** agregue sus **puntos de
+control**: código, ubicación,
 coordenadas Norte/Este (opcionales, pero necesarias para calcular distorsión
 angular entre puntos) y la **cota inicial (C0)** — la referencia contra la
 que se mide el asentamiento acumulado de todas las visitas futuras.
@@ -903,11 +971,10 @@ consolidación frena con el tiempo.
 
 ![Panel del lugar: indicadores, visitas, tendencia, evolución por punto y semáforo](../../public/manual/15-panel-asentamientos.png)
 
-Abrir el lugar desde el proyecto lleva a su panel, que reúne el historial
-completo. Arriba, cuántos puntos de control tiene, la fecha de la lectura base
-y la leyenda de los tres umbrales de acumulado que dibujan las gráficas. Las
-acciones: **+ Nueva visita** (§ 7.3), **Exportar a Excel** (§ 11) y **Editar
-lugar**, que lleva al catálogo.
+Abrir el lugar desde el proyecto lleva a su pestaña **Panel**, que reúne el
+historial completo. La cabecera dice cuántos puntos de control tiene y la
+fecha de la lectura base; arriba del panel, la leyenda de los tres umbrales de
+acumulado que dibujan las gráficas.
 
 **Indicadores.** Seis, sobre la última visita y el histórico:
 
@@ -1040,7 +1107,13 @@ se cierra con sus cotas sin compensar.
 
 Cerrar el **lugar** termina el monitoreo por completo: el lugar y todas sus
 visitas —cerradas o no— quedan en solo lectura. Use el cierre del lugar
-cuando el seguimiento del sitio haya concluido, no visita por visita.
+cuando el seguimiento del sitio haya concluido, no visita por visita. El botón
+**Cerrar lugar** está en la barra de la pestaña **Puntos y lugar**.
+
+**Eliminar una visita.** Solo se puede eliminar la **última** visita del
+lugar, y solo si no está cerrada: el botón **Eliminar** aparece en su vista.
+Una visita intermedia no se borra, porque dejaría un hueco en la numeración y
+cambiaría el asentamiento parcial y la velocidad de la siguiente.
 
 ### 7.7 Dar de baja y de alta un punto
 
@@ -1106,8 +1179,9 @@ precisión y la fecha. Debe marcar la confirmación explícitamente.
 ![Proceso rechazado](../../public/manual/10-proceso-rechazado.png)
 
 En ambos casos el editor se abre en solo lectura: los campos están
-deshabilitados y no hay botones de guardado. Lo único que sigue disponible es
-**Georreferenciar** (§ 5.5).
+deshabilitados y no hay barra de acciones. Lo único que sigue disponible es
+**Georreferenciar** (§ 5.5). Su pestaña **Informe** ya no lleva la marca de
+borrador: es el informe del proceso cerrado.
 
 ---
 
@@ -1141,12 +1215,22 @@ cansa menos. Se cambia con el icono de la cabecera (§ 2).
 
 ## 10. Informes
 
-Un informe reúne varios trabajos ya terminados de un proyecto en un solo
-documento imprimible, con su registro de quién cerró cada cosa y cuándo.
+Hay dos clases de informe:
+
+- **El informe de un proceso** está en su pestaña **Informe**
+  ([§ 4.4](#44-la-pantalla-de-un-proceso)): no hay que generarlo. Mientras el
+  proceso no esté cerrado sale como borrador.
+- **Un informe consolidado** reúne varios trabajos ya terminados de un
+  proyecto en un solo documento imprimible, con título, orden y observaciones
+  propios. Se genera en la pestaña **Informes** del proyecto.
+
+Los dos llevan el registro de quién cerró cada cosa y cuándo, con el nombre
+de la persona.
 
 ### 10.1 Qué puede incluirse
 
-**Solo procesos cerrados.** Es la regla principal y tiene una razón práctica:
+**Solo procesos cerrados**, en un informe consolidado. Es la regla principal y
+tiene una razón práctica:
 el informe no guarda una copia de los datos, sino que los vuelve a leer cada
 vez que se abre. Como un proceso cerrado ya no puede cambiar sus mediciones ni
 su veredicto, el informe dice lo mismo hoy y dentro de un año. La excepción es
@@ -1165,9 +1249,11 @@ De ahí se siguen dos consecuencias:
 Si el proyecto no tiene nada cerrado, la pantalla se lo dice en vez de ofrecer
 un formulario que no llevaría a ninguna parte.
 
-### 10.2 Generar un informe
+### 10.2 Generar un informe consolidado
 
-En la pestaña **Informes** del proyecto, pulse **Generar Nuevo Informe**.
+En la pestaña **Informes** del proyecto, pulse **Generar Nuevo Informe**. Desde
+la pestaña **Informe** de un proceso cerrado, **Generar un informe consolidado
+con este proceso** abre el mismo formulario con ese proceso ya marcado.
 
 ![Nuevo informe](../../public/manual/18-nuevo-informe.png)
 
@@ -1182,9 +1268,11 @@ Se pide:
 
 ### 10.3 Imprimir o guardar como PDF
 
-Al generar, la aplicación abre el informe. El botón **Ver e imprimir** lleva al
-documento maquetado, y allí **Imprimir o guardar como PDF** abre el diálogo del
-navegador: elija «Guardar como PDF» como destino.
+Al generar, la aplicación abre el documento maquetado —también al pulsar un
+informe de la lista de la pestaña **Informes**—, y allí **Imprimir o guardar
+como PDF** abre el diálogo del navegador: elija «Guardar como PDF» como
+destino. Las migas vuelven al proyecto, y **Eliminar informe** lo borra: los
+procesos que incluye no cambian, y puede volver a generarlo.
 
 ![Informe imprimible](../../public/manual/19-informe-imprimible.png)
 
@@ -1202,8 +1290,8 @@ declaró su propio proceso (en asentamientos, el de la visita más reciente).
 
 ## 11. Exportar a Excel
 
-Cada proceso tiene un botón **Exportar a Excel** en su editor —y el control de
-asentamientos, en el panel del lugar—. Descarga un `.xlsx` con tres hojas:
+Cada proceso tiene un botón **Exportar a Excel** en la cabecera de su pantalla
+—también el control de asentamientos—. Descarga un `.xlsx` con tres hojas:
 
 | Hoja | Contiene |
 |---|---|
@@ -1308,6 +1396,16 @@ punto en la libreta. Si nivelaron y calcularon fuera de la aplicación, cambie
 Porque se calcula con los días reales entre las dos fechas, no con «un mes»
 fijo. Un intervalo de 28 días y uno de 31 producen velocidades distintas
 aunque el asentamiento parcial fuera idéntico.
+
+**¿Puedo eliminar un proyecto?**
+Si no tiene nada cerrado, sí, desde **Configuración**. Si tiene algún proceso,
+lugar o visita cerrados, no: esos registros no se borran. Archívelo para
+ocultarlo de la lista activa (§ 4.2).
+
+**Salí de un editor y perdí lo que había tecleado.**
+Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el
+navegador le preguntó antes. Los botones atrás y adelante del navegador no
+preguntan: guarde antes de usarlos (§ 4.4).
 
 **¿Otros usuarios pueden ver mis proyectos?**
 No. Cada usuario accede solo a los suyos; la restricción se aplica en la base de

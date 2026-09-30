@@ -159,7 +159,7 @@ export default function ManualPage() {
           </li>
           <li>Un informe de cierre por módulo.</li>
         </ul>
-        <p>Puede modificarlo o eliminarlo cuando quiera.</p>
+        <p>Puede modificarlo o archivarlo cuando quiera.</p>
         <p>Cada usuario ve únicamente sus propios proyectos.</p>
         <p>
           <strong>Tema claro u oscuro.</strong> El icono de la cabecera, junto a{" "}
@@ -211,7 +211,7 @@ export default function ManualPage() {
           <strong>«Proyecto de ejemplo»</strong> con carteras de campo reales
           —poligonales y nivelaciones—, un lugar de control de asentamientos
           simulado y sus informes, para que explore la aplicación con datos
-          reales (§ 2). Puede modificarlo o eliminarlo cuando quiera.
+          reales (§ 2). Puede modificarlo o archivarlo cuando quiera.
         </Nota>
       </Seccion>
 
@@ -261,8 +261,9 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.hubProyecto} />
 
         <p>
-          La ficha superior resume los datos del proyecto. Debajo, tres
-          pestañas:
+          La cabecera muestra el nombre y el estado del proyecto, su cliente,
+          su ubicación y su sistema de referencia, y el botón{" "}
+          <strong>+ Nuevo Proceso</strong>. Debajo, tres pestañas:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
@@ -271,13 +272,15 @@ export default function ManualPage() {
             proyecto. Se detalla en el apartado siguiente.
           </li>
           <li>
-            <strong>Informes</strong> — genera los informes de cierre del
-            proyecto con los procesos ya cerrados, listos para imprimir o
-            guardar como PDF. Se detalla en «10. Informes».
+            <strong>Informes</strong> — los informes{" "}
+            <strong>consolidados</strong>, que reúnen varios procesos cerrados
+            en un solo documento. Se detalla en «10. Informes». Cada proceso
+            tiene además su propio informe, en su pantalla (4.4).
           </li>
           <li>
-            <strong>Configuración</strong> — edición de los datos del proyecto y
-            gestión de los puntos de referencia.
+            <strong>Configuración</strong> — los datos del proyecto (también la
+            descripción), los puntos de referencia, y archivar o eliminar el
+            proyecto.
           </li>
         </ul>
 
@@ -291,13 +294,25 @@ export default function ManualPage() {
           como <strong>BM de amarre</strong> de las visitas de asentamiento.
         </p>
 
+        <p>
+          <strong>Archivar o eliminar.</strong> Archivar oculta el proyecto de
+          la lista activa del dashboard; puede restaurarlo cuando quiera.
+          Eliminarlo lo borra con todo lo que contiene, y solo es posible si no
+          tiene nada cerrado: un proceso, un lugar o una visita cerrados son
+          registros que no se borran. En ese caso la configuración dice
+          cuántos tiene y propone archivarlo.
+        </p>
+
         <h3 className="mt-4 text-lg font-semibold">
           4.3 El listado de procesos
         </h3>
 
         <p>
-          Todos los levantamientos del proyecto en una sola lista, con una barra
-          para encontrar lo que busca.
+          Los chips <strong>Poligonales</strong>,{" "}
+          <strong>Nivelaciones</strong> y{" "}
+          <strong>Control de Asentamientos</strong> eligen el módulo, con
+          cuántos tiene cada uno. Los tres listados funcionan igual, con una
+          barra para encontrar lo que busca.
         </p>
 
         <p>
@@ -306,14 +321,16 @@ export default function ManualPage() {
         </p>
 
         <p>
-          <strong>Filtrar por estado.</strong> Los chips muestran cuántos
-          procesos hay en cada grupo, así que ve la distribución del proyecto
-          sin desplegar nada. Pulse uno para ver solo ese grupo.
+          <strong>Filtrar por estado.</strong> Los chips muestran cuántos hay
+          en cada grupo, así que ve la distribución del proyecto sin desplegar
+          nada. Pulse uno para ver solo ese grupo. En control de asentamientos
+          los estados son <strong>Activos</strong> y{" "}
+          <strong>Cerrados</strong>.
         </p>
 
         <p>
           <strong>Filtrar por tipo.</strong> El selector acota a un tipo de
-          poligonal.
+          poligonal, de nivelación o de estructura.
         </p>
 
         <p>
@@ -322,8 +339,8 @@ export default function ManualPage() {
         </p>
 
         <Nota>
-          El listado recuerda el último filtro que usó en cada proyecto, así que
-          al volver lo encuentra como lo dejó. Si abre un enlace que alguien le
+          Cada listado recuerda el último filtro que usó en cada proyecto, así
+          que al volver lo encuentra como lo dejó. Si abre un enlace que alguien le
           compartió, manda lo que traiga ese enlace: verá lo mismo que quien se
           lo envió.
         </Nota>
@@ -343,40 +360,95 @@ export default function ManualPage() {
         </p>
 
         <p>
-          Pulse <strong>Proceso</strong>, <strong>Precisión</strong> o{" "}
+          Pulse <strong>Nombre</strong>, la columna de resultado o{" "}
           <strong>Última actividad</strong> para ordenar por esa columna; pulsar
           de nuevo invierte el orden. Por defecto se ordena por actividad
           reciente, así que lo que está trabajando queda arriba.
         </p>
 
         <p>
-          <strong>Acciones por proceso.</strong> Cada fila ofrece:
+          <strong>Acciones por fila.</strong> Cada fila ofrece:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>Duplicar</strong> — crea un proceso nuevo con la misma
-            configuración (tipo, punto de partida, método de corrección) pero
-            sin estaciones, en estado Borrador.
+            <strong>Duplicar</strong> — crea uno nuevo con la misma
+            configuración, en borrador: una poligonal sin estaciones, una
+            nivelación sin lecturas, un lugar con sus umbrales y su catálogo de
+            puntos pero sin visitas.
           </li>
           <li>
-            <strong>Renombrar</strong> — cambia el nombre sin abrir el editor.
+            <strong>Renombrar</strong> — cambia el nombre sin abrirlo.
           </li>
           <li>
-            <strong>Eliminar</strong> — borra el proceso y sus estaciones, con
-            confirmación previa.
+            <strong>Eliminar</strong> — lo borra con lo que contiene, con
+            confirmación previa. Un lugar con alguna visita cerrada no se puede
+            eliminar.
           </li>
         </ul>
 
-        <Nota titulo="Los procesos cerrados y rechazados solo se pueden duplicar">
-          No admiten renombrarse ni eliminarse, porque son inmutables. Si
-          necesita rehacer un levantamiento cerrado, duplíquelo: obtendrá una
-          copia editable y el original queda intacto como constancia.
+        <Nota titulo="Lo cerrado solo se puede duplicar">
+          Un proceso cerrado o rechazado, o un lugar cerrado, no admite
+          renombrarse ni eliminarse. Si necesita rehacer un levantamiento
+          cerrado, duplíquelo: obtendrá una copia editable y el original queda
+          intacto como constancia.
         </Nota>
 
         <p>
-          En el teléfono, la tabla se convierte en tarjetas, una por proceso.
+          En el teléfono, la tabla se convierte en tarjetas, una por fila, con
+          las mismas acciones.
         </p>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          4.4 La pantalla de un proceso
+        </h3>
+
+        <p>
+          Poligonales, nivelaciones y controles de asentamientos se abren en la
+          misma pantalla.
+        </p>
+
+        <p>
+          <strong>La cabecera.</strong> El nombre, el estado y el tipo del
+          proceso, y dos acciones: <strong>Exportar a Excel</strong> (§ 11) y{" "}
+          <strong>Ver informe</strong>. Las migas de arriba devuelven al
+          listado del que vino.
+        </p>
+
+        <p>
+          <strong>Las pestañas.</strong> <strong>Proceso</strong> reúne todo el
+          trabajo: configuración, captura, cálculo, gráfico y análisis, que se
+          recalculan mientras escribe. <strong>Informe</strong> muestra el
+          informe de ese proceso, listo para{" "}
+          <strong>Imprimir o guardar como PDF</strong> (§ 10). El control de
+          asentamientos tiene tres: <strong>Panel</strong>,{" "}
+          <strong>Puntos y lugar</strong> e <strong>Informe</strong> (§ 7).
+        </p>
+
+        <Captura {...CAPTURAS.informeDelProceso} />
+
+        <p>
+          Mientras el proceso no esté cerrado, su informe lleva la marca{" "}
+          <strong>«Borrador — el informe se emite al cerrar el proceso»</strong>,
+          también en el PDF: sirve para revisar antes de cerrar. Debajo, fuera
+          de la impresión, aparecen los informes consolidados que ya lo
+          incluyen y, si está cerrado, un botón para generar uno nuevo con él.
+        </p>
+
+        <p>
+          <strong>La barra de acciones.</strong> Mientras el proceso se puede
+          editar, <strong>Guardar</strong> y <strong>Cerrar proceso</strong> van
+          en una barra fija al pie de la pantalla, siempre a la vista. A su
+          izquierda dice si hay <strong>cambios sin guardar</strong> o qué
+          impide guardar.
+        </p>
+
+        <Nota titulo="Salir sin guardar pregunta">
+          Si tiene cambios sin guardar y pulsa una miga, otra pestaña o
+          cualquier enlace de la aplicación, un diálogo pregunta antes de
+          salir; al recargar o cerrar la pestaña, pregunta el navegador. Los
+          botones atrás y adelante del navegador no preguntan.
+        </Nota>
 
         <VolverArriba />
       </Seccion>
@@ -473,7 +545,7 @@ export default function ManualPage() {
 
         <Captura {...CAPTURAS.editor} />
 
-        <p>La pantalla se lee de arriba abajo:</p>
+        <p>La pestaña <strong>Proceso</strong> (4.4) se lee de arriba abajo:</p>
 
         <p>
           <strong>El veredicto.</strong> Lo primero y más visible: si el
@@ -715,8 +787,8 @@ export default function ManualPage() {
         <h3 className="mt-4 text-lg font-semibold">5.4 Reasignar coordenadas</h3>
 
         <p>
-          El botón <strong>Asignar coordenadas reales</strong> permite
-          recalcular toda la poligonal desde un punto de partida distinto,
+          El botón <strong>Asignar coordenadas reales</strong>, junto al
+          dibujo, permite recalcular toda la poligonal desde un punto de partida distinto,
           conservando las mediciones. Es útil cuando levantó en un sistema local
           —1000, 1000— y después obtuvo las coordenadas oficiales.
         </p>
@@ -746,7 +818,7 @@ export default function ManualPage() {
           Un levantamiento suele arrancar en un sistema local —(1000, 2000) y
           un azimut supuesto— y recibir coordenadas reales después, a veces con
           el proceso ya cerrado. El botón <strong>Georreferenciar</strong>,
-          junto a <strong>Exportar a Excel</strong>, lo lleva al sistema real
+          junto al dibujo, lo lleva al sistema real
           con <strong>dos de sus estaciones</strong> de coordenadas conocidas.
           Está disponible en cualquier estado, también cerrado o rechazado.
         </p>
@@ -780,7 +852,7 @@ export default function ManualPage() {
           distancias y los ángulos medidos no cambian, y el{" "}
           <strong>veredicto de cierre tampoco</strong>. Se recalcula con el
           nuevo arranque, así que coordenadas, azimuts y proyecciones quedan en
-          el sistema real. Bajo el título queda anotada la última
+          el sistema real. Sobre el dibujo queda anotada la última
           georreferenciación: fecha, puntos, rotación y factor de escala. Puede
           georreferenciar otra vez para corregir una coordenada mal tecleada.
         </p>
@@ -926,6 +998,13 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.editorNivelacion} />
 
         <p>
+          <strong>El veredicto.</strong> Arriba, como en la poligonal: el error
+          de cierre frente a su tolerancia en una nivelación cerrada o de
+          enlace, o la discrepancia entre ida y vuelta en una abierta con
+          vuelta. Una abierta sin vuelta no cierra contra nada y lo dice.
+        </p>
+
+        <p>
           <strong>Configuración.</strong> Plegada cuando el proceso ya está
           calculado. Ábrala para cambiar el nombre, el tipo, los BM o el
           orden de precisión y el equipo de nivel — los mismos campos del
@@ -982,6 +1061,14 @@ export default function ManualPage() {
           El instrumento entrega la distancia: se teclean la lectura y la
           distancia.
         </Nota>
+
+        <p>
+          <strong>Perfil de la nivelación.</strong> Bajo la libreta, la cota de
+          cada punto frente a su distancia acumulada desde el origen: la ida con
+          su cota corregida y, si hay vuelta, la vuelta con su cota calculada
+          sobre el mismo eje. Las vistas intermedias van como anillos sueltos.
+          «Ver datos en tabla» da los mismos valores en texto.
+        </p>
 
         <p>
           <strong>Comprobación aritmética.</strong> ΣV+ − ΣV−
@@ -1186,6 +1273,15 @@ export default function ManualPage() {
           peor que 1/500).
         </p>
 
+        <p>
+          Al abrir un lugar desde el proyecto se ve su pantalla (4.4), con tres
+          pestañas: <strong>Panel</strong>, con el historial del monitoreo
+          (7.4); <strong>Puntos y lugar</strong>, con los datos, los umbrales y
+          el catálogo de puntos (7.2); e <strong>Informe</strong>. En la
+          cabecera, <strong>+ Nueva visita</strong> (7.3),{" "}
+          <strong>Exportar a Excel</strong> y <strong>Ver informe</strong>.
+        </p>
+
         <h3 className="mt-4 text-lg font-semibold">
           7.2 Catalogar los puntos
         </h3>
@@ -1193,7 +1289,8 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.editorLugar} />
 
         <p>
-          Ya creado el lugar, agregue sus <strong>puntos de control</strong>:
+          Ya creado el lugar, en su pestaña <strong>Puntos y lugar</strong>{" "}
+          agregue sus <strong>puntos de control</strong>:
           código, ubicación, coordenadas Norte/Este (opcionales, pero
           necesarias para calcular distorsión angular entre puntos) y la{" "}
           <strong>cota inicial (C0)</strong> — la referencia contra la que se
@@ -1483,13 +1580,11 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.panelAsentamientos} />
 
         <p>
-          Abrir el lugar desde el proyecto lleva a su panel, que reúne el
-          historial completo. Arriba, cuántos puntos de control tiene, la
-          fecha de la lectura base y la leyenda de los tres umbrales de
-          acumulado que dibujan las gráficas. Las acciones:{" "}
-          <strong>+ Nueva visita</strong> (§ 7.3),{" "}
-          <strong>Exportar a Excel</strong> (§ 11) y{" "}
-          <strong>Editar lugar</strong>, que lleva al catálogo.
+          Abrir el lugar desde el proyecto lleva a su pestaña{" "}
+          <strong>Panel</strong>, que reúne el historial completo. La cabecera
+          dice cuántos puntos de control tiene y la fecha de la lectura base;
+          arriba del panel, la leyenda de los tres umbrales de acumulado que
+          dibujan las gráficas.
         </p>
 
         <p>
@@ -1699,7 +1794,17 @@ export default function ManualPage() {
           Cerrar el <strong>lugar</strong> termina el monitoreo por completo:
           el lugar y todas sus visitas —cerradas o no— quedan en solo
           lectura. Use el cierre del lugar cuando el seguimiento del sitio
-          haya concluido, no visita por visita.
+          haya concluido, no visita por visita. El botón{" "}
+          <strong>Cerrar lugar</strong> está en la barra de la pestaña{" "}
+          <strong>Puntos y lugar</strong>.
+        </p>
+
+        <p>
+          <strong>Eliminar una visita.</strong> Solo se puede eliminar la{" "}
+          <strong>última</strong> visita del lugar, y solo si no está cerrada:
+          el botón <strong>Eliminar</strong> aparece en su vista. Una visita
+          intermedia no se borra, porque dejaría un hueco en la numeración y
+          cambiaría el asentamiento parcial y la velocidad de la siguiente.
         </p>
 
         <h3 id="baja-alta" className="mt-4 scroll-mt-6 text-lg font-semibold">
@@ -1805,8 +1910,10 @@ export default function ManualPage() {
 
         <p>
           En ambos casos el editor se abre en solo lectura: los campos están
-          deshabilitados y no hay botones de guardado. Lo único que sigue
-          disponible es <strong>Georreferenciar</strong> (§ 5.5).
+          deshabilitados y no hay barra de acciones. Lo único que sigue
+          disponible es <strong>Georreferenciar</strong> (§ 5.5). Su pestaña{" "}
+          <strong>Informe</strong> ya no lleva la marca de borrador: es el
+          informe del proceso cerrado.
         </p>
       </Seccion>
 
@@ -1854,18 +1961,31 @@ export default function ManualPage() {
 
       {/* ── 10. Informes ───────────────────────────────────────────────── */}
       <Seccion id="informes" titulo="10. Informes">
+        <p>Hay dos clases de informe:</p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>El informe de un proceso</strong> está en su pestaña{" "}
+            <strong>Informe</strong> (4.4): no hay que generarlo. Mientras el
+            proceso no esté cerrado sale como borrador.
+          </li>
+          <li>
+            <strong>Un informe consolidado</strong> reúne varios trabajos ya
+            terminados de un proyecto en un solo documento imprimible, con
+            título, orden y observaciones propios. Se genera en la pestaña{" "}
+            <strong>Informes</strong> del proyecto.
+          </li>
+        </ul>
         <p>
-          Un informe reúne varios trabajos ya terminados de un proyecto en un
-          solo documento imprimible, con su registro de quién cerró cada cosa y
-          cuándo.
+          Los dos llevan el registro de quién cerró cada cosa y cuándo, con el
+          nombre de la persona.
         </p>
 
         <h3 className="text-lg font-semibold text-ink">
           Qué puede incluirse
         </h3>
         <p>
-          <strong>Solo procesos cerrados.</strong> Es la regla principal y tiene
-          una razón práctica: el informe no guarda una copia de los datos, sino
+          <strong>Solo procesos cerrados</strong>, en un informe consolidado. Es
+          la regla principal y tiene una razón práctica: el informe no guarda una copia de los datos, sino
           que los vuelve a leer cada vez que se abre. Como un proceso cerrado ya
           no puede cambiar sus mediciones ni su veredicto, el informe dice lo
           mismo hoy y dentro de un año. La excepción es la{" "}
@@ -1891,11 +2011,14 @@ export default function ManualPage() {
         </p>
 
         <h3 className="text-lg font-semibold text-ink">
-          Generar un informe
+          Generar un informe consolidado
         </h3>
         <p>
           En la pestaña <strong>Informes</strong> del proyecto, pulse{" "}
-          <strong>Generar Nuevo Informe</strong>.
+          <strong>Generar Nuevo Informe</strong>. Desde la pestaña{" "}
+          <strong>Informe</strong> de un proceso cerrado,{" "}
+          <strong>Generar un informe consolidado con este proceso</strong> abre
+          el mismo formulario con ese proceso ya marcado.
         </p>
 
         <Captura {...CAPTURAS.nuevoInforme} />
@@ -1913,10 +2036,13 @@ export default function ManualPage() {
           Imprimir o guardar como PDF
         </h3>
         <p>
-          Al generar, la aplicación abre el informe. El botón{" "}
-          <strong>Ver e imprimir</strong> lleva al documento maquetado, y allí{" "}
+          Al generar, la aplicación abre el documento maquetado —también al
+          pulsar un informe de la lista de la pestaña{" "}
+          <strong>Informes</strong>—, y allí{" "}
           <strong>Imprimir o guardar como PDF</strong> abre el diálogo del
-          navegador: elija «Guardar como PDF» como destino.
+          navegador: elija «Guardar como PDF» como destino. Las migas vuelven
+          al proyecto, y <strong>Eliminar informe</strong> lo borra: los
+          procesos que incluye no cambian, y puede volver a generarlo.
         </p>
 
         <Captura {...CAPTURAS.informeImprimible} />
@@ -1939,8 +2065,8 @@ export default function ManualPage() {
       {/* ── 11. Exportar a Excel ───────────────────────────────────────── */}
       <Seccion id="export" titulo="11. Exportar a Excel">
         <p>
-          Cada proceso tiene un botón <strong>Exportar a Excel</strong> en su
-          editor —y el control de asentamientos, en el panel del lugar—.
+          Cada proceso tiene un botón <strong>Exportar a Excel</strong> en la
+          cabecera de su pantalla —también el control de asentamientos—.
           Descarga un <code>.xlsx</code> con tres hojas:
         </p>
 
