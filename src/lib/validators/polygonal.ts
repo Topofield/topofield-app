@@ -18,6 +18,13 @@ export interface StationCaptureInput {
   angleMin: number | null;
   angleSec: number | null;
   distance: number | null;
+  /**
+   * Las lecturas del ángulo tal como se guardan en `polygonal_angle_readings`
+   * (Fase 24). El ángulo de la estación es su promedio, que llega ya
+   * normalizado: una lectura de 65″ se convierte en 1′05″ y la regla de rango
+   * de arriba nunca la vería. Sin lecturas, no se revisan.
+   */
+  readings?: readonly { deg: number; min: number; sec: number }[];
 }
 
 /** Issues de captura de una estación, indexados por celda. */
@@ -103,7 +110,40 @@ export function validatePolygonalStation(
     warnings.angle = "Ángulo de 0° o 360°: posible error de captura.";
   }
 
+  // Cada lectura, además del promedio (Fase 24): es lo que se guarda.
+  if (errors.angle == null) {
+    const bad = (station.readings ?? [])
+      .map((r, i) => ({ i, error: readingDmsError(r) }))
+      .find((r) => r.error != null);
+    if (bad) {
+      errors.angle = `Lectura ${bad.i + 1}: ${bad.error}`;
+      delete warnings.angle;
+    }
+  }
+
   return { errors, warnings };
+}
+
+/**
+ * Por qué una lectura DMS no puede guardarse, o `null` (Fase 24). Los grados
+ * y los minutos son columnas enteras; el CHECK de `polygonal_angle_readings`
+ * exige los mismos rangos. Un número que no es número lo marca la celda
+ * (`NumberInput`), no esta regla.
+ */
+export function readingDmsError(reading: {
+  deg: number;
+  min: number;
+  sec: number;
+}): string | null {
+  const { deg, min, sec } = reading;
+  if (![deg, min, sec].every(Number.isFinite)) return null;
+  if (!Number.isInteger(deg) || !Number.isInteger(min)) {
+    return "Los grados y los minutos van sin decimales.";
+  }
+  if (deg < 0 || deg >= 360) return "Los grados deben estar entre 0 y 359.";
+  if (min < 0 || min >= 60) return "Los minutos deben estar entre 0 y 59.";
+  if (sec < 0 || sec >= 60) return "Los segundos deben estar entre 0 y 59.";
+  return null;
 }
 
 /** ¿Tiene la lista de issues algún error bloqueante? */

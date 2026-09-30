@@ -13,6 +13,7 @@ import {
   validateGeoreferencePoints,
   validateLeastSquaresWeights,
   hasCaptureErrors,
+  readingDmsError,
   validatePolygonalStation,
   validateReadings,
   type CaptureIssues,
@@ -658,5 +659,59 @@ describe("validateGeoreferencePoints (Fase 15)", () => {
     expect(validateGeoreferencePoints(stations, real(1), real(2))).toMatch(/coinciden/);
     // Por encima del límite de decimal(12,4).
     expect(validateGeoreferencePoints(stations, real(1, 1e9), real(2, 180, 280))).toMatch(/100 000 000/);
+  });
+});
+
+describe("lecturas fuera de rango (Fase 24)", () => {
+  // El ángulo de la estación es el promedio, que llega normalizado: 90°00′65″
+  // se promedia como 90°01′05″ y la regla de rango del ángulo no salta. La
+  // lectura cruda es lo que se guarda en `polygonal_angle_readings`.
+  it("65″ en una lectura bloquea aunque el promedio salga válido", () => {
+    const r = validatePolygonalStation(
+      capture({ angleMin: 1, angleSec: 5, readings: [{ deg: 90, min: 0, sec: 65 }] }),
+      EXPECT_BOTH,
+    );
+    expect(r.errors.angle).toBe("Lectura 1: Los segundos deben estar entre 0 y 59.");
+  });
+
+  it("nombra la primera lectura mala", () => {
+    const r = validatePolygonalStation(
+      capture({
+        readings: [
+          { deg: 90, min: 0, sec: 0 },
+          { deg: 90, min: 60, sec: 0 },
+        ],
+      }),
+      EXPECT_BOTH,
+    );
+    expect(r.errors.angle).toBe("Lectura 2: Los minutos deben estar entre 0 y 59.");
+  });
+
+  it("lecturas válidas no cambian nada", () => {
+    const r = validatePolygonalStation(
+      capture({ readings: [{ deg: 90, min: 0, sec: 0 }, { deg: 359, min: 59, sec: 59.9 }] }),
+      EXPECT_BOTH,
+    );
+    expect(r.errors).toEqual({});
+  });
+
+  it("el error de la lectura sustituye al aviso del ángulo", () => {
+    const r = validatePolygonalStation(
+      capture({ angleDeg: 0, readings: [{ deg: 0, min: 0, sec: 60 }] }),
+      EXPECT_BOTH,
+    );
+    expect(r.errors.angle).toMatch(/^Lectura 1:/);
+    expect(r.warnings.angle).toBeUndefined();
+  });
+
+  it("readingDmsError: límites y columnas enteras", () => {
+    expect(readingDmsError({ deg: 0, min: 0, sec: 0 })).toBeNull();
+    expect(readingDmsError({ deg: 359, min: 59, sec: 59.9 })).toBeNull();
+    expect(readingDmsError({ deg: 360, min: 0, sec: 0 })).toBe("Los grados deben estar entre 0 y 359.");
+    expect(readingDmsError({ deg: -1, min: 0, sec: 0 })).toBe("Los grados deben estar entre 0 y 359.");
+    expect(readingDmsError({ deg: 90, min: 0, sec: 60 })).toBe("Los segundos deben estar entre 0 y 59.");
+    expect(readingDmsError({ deg: 90, min: 30.5, sec: 0 })).toBe("Los grados y los minutos van sin decimales.");
+    // Lo que no es número lo marca la celda, no esta regla.
+    expect(readingDmsError({ deg: Number.NaN, min: 0, sec: 0 })).toBeNull();
   });
 });

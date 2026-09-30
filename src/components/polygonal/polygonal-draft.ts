@@ -40,6 +40,23 @@ export function readingValues(readings: DmsValue[]): number[] {
     .filter((v) => Number.isFinite(v));
 }
 
+/**
+ * Las lecturas de una estación como las guarda el servidor (Fase 24): las
+ * manda el guardado y las revisa el validador, así que es una sola función.
+ * Las filas sin grados no cuentan; minutos y segundos en blanco valen 0.
+ */
+export function readingsDraft(
+  station: Pick<StationDraftState, "readings">,
+): { deg: number; min: number; sec: number }[] {
+  return station.readings
+    .filter((r) => r.deg.trim() !== "")
+    .map((r) => ({
+      deg: parseNumber(r.deg) ?? 0,
+      min: parseNumber(r.min) ?? 0,
+      sec: parseNumber(r.sec) ?? 0,
+    }));
+}
+
 /** Promedio de las lecturas completas, en DMS. `null` si no hay ninguna. */
 export function averageOf(readings: DmsValue[]): DmsValue | null {
   const values = readingValues(readings);

@@ -39,6 +39,7 @@ import { StationsTable } from "./stations-table";
 import {
   buildInput,
   processToConfig,
+  readingsDraft,
   stationToDraft,
   weightsFromDraft,
   weightsToDraft,
@@ -144,6 +145,7 @@ export function PolygonalEditor({
             angleMin: parseNumber(st.angle.min),
             angleSec: parseNumber(st.angle.sec),
             distance: parseNumber(st.distance),
+            readings: readingsDraft(st),
           },
           expectStationCapture(
             config.type,
@@ -252,13 +254,7 @@ export function PolygonalEditor({
           angleDeg: parseNumber(st.angle.deg),
           angleMin: parseNumber(st.angle.min),
           angleSec: parseNumber(st.angle.sec),
-          readings: st.readings
-            .filter((r) => r.deg.trim() !== "")
-            .map((r) => ({
-              deg: parseNumber(r.deg) ?? 0,
-              min: parseNumber(r.min) ?? 0,
-              sec: parseNumber(r.sec) ?? 0,
-            })),
+          readings: readingsDraft(st),
           deflectionDirection: st.deflectionDirection,
           horizontalDistance: parseNumber(st.distance),
         })),
