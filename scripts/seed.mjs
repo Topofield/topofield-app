@@ -41,6 +41,7 @@ import {
 } from "../src/lib/demo/carteras.ts";
 import {
   computeLeveling,
+  levelingProcessVerdict,
   totalDistanceFromReadings,
 } from "../src/lib/calculations/leveling.ts";
 import { computeHistory } from "../src/lib/calculations/settlement.ts";
@@ -496,10 +497,15 @@ async function insertLeveling(projectId, siteId, spec, userId) {
       ...equipo,
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
-      meets_tolerance: result.meetsTolerance,
+      meets_tolerance: levelingProcessVerdict(result, spec.type),
       forward_error_mm: result.forward.errorMm,
       return_error_mm: result.return?.errorMm ?? null,
       discrepancy_mm: result.discrepancyMm,
+      discrepancy_tolerance_mm:
+        result.discrepancyToleranceMm == null
+          ? null
+          : Number(result.discrepancyToleranceMm.toFixed(1)),
+      meets_discrepancy: result.meetsDiscrepancy,
       notes: spec.notes ?? null,
     })
     .select("id")

@@ -293,7 +293,10 @@ export interface ClosureEvaluation {
  * Evalúa si un proceso de nivelación puede cerrarse, a partir de su
  * resultado de cálculo (§ 5.2).
  */
-export function evaluateLevelingClosure(result: LevelingResult): ClosureEvaluation {
+export function evaluateLevelingClosure(
+  result: LevelingResult,
+  type: LevelingType,
+): ClosureEvaluation {
   // La comprobación aritmética (ΣV+ − ΣV− == desnivel total) es
   // un fallo estructural en los datos, no un problema de precisión: si no
   // cuadra, ningún cierre es confiable y se bloquea sin más.
@@ -310,6 +313,33 @@ export function evaluateLevelingClosure(result: LevelingResult): ClosureEvaluati
 
   const messages: string[] = [];
   let mustReject = false;
+
+  // Una abierta con vuelta se juzga por su discrepancia (Fase 23): sin
+  // tolerancia —falta la distancia de algún recorrido— no hay veredicto y no
+  // se cierra; fuera de tolerancia, solo como rechazada.
+  if (type === "open" && result.return) {
+    if (result.meetsDiscrepancy == null) {
+      return {
+        canClose: false,
+        mustReject: false,
+        blocked: true,
+        messages: [
+          "Faltan distancias por visual en la ida o en la vuelta para juzgar la discrepancia.",
+        ],
+      };
+    }
+    if (result.meetsDiscrepancy === false) {
+      return {
+        canClose: true,
+        mustReject: true,
+        blocked: false,
+        messages: [
+          `La discrepancia entre ida y vuelta (${result.discrepancyMm?.toFixed(1)} mm) supera T·√2 (${result.discrepancyToleranceMm?.toFixed(1)} mm); solo puede cerrarse como rechazado.`,
+        ],
+      };
+    }
+    return { canClose: true, mustReject: false, blocked: false, messages };
+  }
 
   if (result.meetsTolerance === false) {
     mustReject = true;

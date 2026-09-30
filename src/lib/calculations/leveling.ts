@@ -8,6 +8,7 @@ import type {
   HomologousPoint,
   LevelingInput,
   LevelingResult,
+  LevelingType,
   ReadingInput,
   RunResult,
 } from "@/types/leveling";
@@ -436,6 +437,21 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
 /** El código sin espacios y en mayúsculas: «AUX 1», «aux1» y «AUX1 » son el mismo. */
 function normalizedCode(code: string): string {
   return code.replace(/\s+/g, "").toUpperCase();
+}
+
+/**
+ * El veredicto que se guarda de un proceso de nivelación (Fase 23). En una
+ * cerrada o de enlace es el cierre contra la cota conocida; la discrepancia
+ * de ida y vuelta es ahí control de calidad (Fase 4). En una **abierta** no
+ * hay cierre: si tiene vuelta, el emparejamiento por sección es su veredicto
+ * (§ 6.9 del PRD principal); sin vuelta, no hay ninguno. Función pura.
+ */
+export function levelingProcessVerdict(
+  result: LevelingResult,
+  type: LevelingType,
+): boolean | null {
+  if (type !== "open") return result.meetsTolerance;
+  return result.return ? result.meetsDiscrepancy : null;
 }
 
 /**

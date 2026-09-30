@@ -8,8 +8,9 @@ import {
   resolveVisualDistances,
   accumulateDistances,
   totalDistanceFromReadings,
+  levelingProcessVerdict,
 } from "./leveling";
-import type { LevelingInput, PointType, ReadingInput } from "@/types/leveling";
+import type { LevelingInput, LevelingResult, PointType, ReadingInput } from "@/types/leveling";
 
 /** Fila con todo a null; se sobrescribe lo que cada test necesite. */
 function bare(over: Partial<ReadingInput> = {}): ReadingInput {
@@ -1015,5 +1016,38 @@ describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea
       expect(Number.isNaN(reading.correctionApplied)).toBe(false);
       expect(Number.isNaN(reading.elevationCorrected)).toBe(false);
     }
+  });
+});
+
+// Fase 23: el veredicto que se guarda. En cerrada y de enlace, el cierre; en
+// una abierta, la discrepancia si tiene vuelta (§ 6.9: el emparejamiento por
+// sección es el veredicto del doble recorrido); sin vuelta, ninguno.
+describe("levelingProcessVerdict", () => {
+  const base: LevelingResult = {
+    forward: { readings: [], heightDifference: 0, errorMm: null },
+    return: null,
+    arithmeticCheckOk: true,
+    sumBacksights: 0,
+    sumForesights: 0,
+    closureErrorMm: null,
+    toleranceMm: null,
+    meetsTolerance: null,
+    discrepancyMm: null,
+    discrepancyToleranceMm: null,
+    meetsDiscrepancy: null,
+    adoptedHeightDifference: null,
+  };
+  it("cerrada y de enlace: el cierre", () => {
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: true, meetsDiscrepancy: false }, "closed")).toBe(true);
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: false, meetsDiscrepancy: true }, "link")).toBe(false);
+  });
+  it("abierta con vuelta: la discrepancia", () => {
+    const conVuelta = { ...base, return: { readings: [], heightDifference: 0, errorMm: null } };
+    expect(levelingProcessVerdict({ ...conVuelta, meetsTolerance: null, meetsDiscrepancy: false }, "open")).toBe(false);
+    expect(levelingProcessVerdict({ ...conVuelta, meetsTolerance: null, meetsDiscrepancy: true }, "open")).toBe(true);
+    expect(levelingProcessVerdict({ ...conVuelta, meetsTolerance: null, meetsDiscrepancy: null }, "open")).toBeNull();
+  });
+  it("abierta sin vuelta: sin veredicto", () => {
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: null, return: null }, "open")).toBeNull();
   });
 });

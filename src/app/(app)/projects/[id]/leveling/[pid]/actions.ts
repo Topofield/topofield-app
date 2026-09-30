@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
 import {
   computeLeveling,
+  levelingProcessVerdict,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
 import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
@@ -195,10 +196,17 @@ export async function saveLevelingProcessAction(
       km_precision_mm: payload.kmPrecisionMm,
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
-      meets_tolerance: result.meetsTolerance,
+      // El veredicto guardado: el cierre, o la discrepancia en una abierta
+      // con vuelta (Fase 23).
+      meets_tolerance: levelingProcessVerdict(result, payload.type),
       forward_error_mm: result.forward.errorMm,
       return_error_mm: result.return?.errorMm ?? null,
       discrepancy_mm: result.discrepancyMm,
+      discrepancy_tolerance_mm:
+        result.discrepancyToleranceMm == null
+          ? null
+          : Number(result.discrepancyToleranceMm.toFixed(1)),
+      meets_discrepancy: result.meetsDiscrepancy,
       notes: payload.notes,
       status,
     })
@@ -288,7 +296,7 @@ export async function closeLevelingProcessAction(
 
   const { data: process } = await supabase
     .from("leveling_processes")
-    .select("id, status, project_id, type, meets_tolerance")
+    .select("id, status, project_id, type, has_return_run, meets_tolerance")
     .eq("id", payload.processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };

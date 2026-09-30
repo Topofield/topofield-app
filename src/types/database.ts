@@ -42,6 +42,7 @@ export type Database = {
           correction_method: string
           created_at: string
           discrepancy_mm: number | null
+          discrepancy_tolerance_mm: number | null
           distances_reconstructed: boolean
           end_bm_code: string | null
           end_bm_elevation: number | null
@@ -54,6 +55,7 @@ export type Database = {
           id: string
           km_precision_mm: number | null
           level_type: string | null
+          meets_discrepancy: boolean | null
           meets_tolerance: boolean | null
           name: string
           notes: string | null
@@ -76,6 +78,7 @@ export type Database = {
           correction_method?: string
           created_at?: string
           discrepancy_mm?: number | null
+          discrepancy_tolerance_mm?: number | null
           distances_reconstructed?: boolean
           end_bm_code?: string | null
           end_bm_elevation?: number | null
@@ -88,6 +91,7 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          meets_discrepancy?: boolean | null
           meets_tolerance?: boolean | null
           name: string
           notes?: string | null
@@ -110,6 +114,7 @@ export type Database = {
           correction_method?: string
           created_at?: string
           discrepancy_mm?: number | null
+          discrepancy_tolerance_mm?: number | null
           distances_reconstructed?: boolean
           end_bm_code?: string | null
           end_bm_elevation?: number | null
@@ -122,6 +127,7 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          meets_discrepancy?: boolean | null
           meets_tolerance?: boolean | null
           name?: string
           notes?: string | null

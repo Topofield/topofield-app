@@ -456,7 +456,7 @@ describe("hasReadingErrors", () => {
 
 describe("evaluateLevelingClosure — capa de cierre (§ 5.2)", () => {
   it("no reporta nada cuando todo cumple", () => {
-    const evaluation = evaluateLevelingClosure(resultWith());
+    const evaluation = evaluateLevelingClosure(resultWith(), "closed");
     expect(evaluation.messages).toHaveLength(0);
     expect(evaluation.blocked).toBe(false);
     expect(evaluation.mustReject).toBe(false);
@@ -465,6 +465,7 @@ describe("evaluateLevelingClosure — capa de cierre (§ 5.2)", () => {
   it("marca error crítico si la comprobación aritmética no cuadra", () => {
     const evaluation = evaluateLevelingClosure(
       resultWith({ arithmeticCheckOk: false }),
+      "closed",
     );
     expect(evaluation.blocked).toBe(true);
     expect(evaluation.messages.length).toBeGreaterThan(0);
@@ -473,6 +474,7 @@ describe("evaluateLevelingClosure — capa de cierre (§ 5.2)", () => {
   it("permite cerrar como rechazado si el cierre excede la tolerancia", () => {
     const evaluation = evaluateLevelingClosure(
       resultWith({ closureErrorMm: 20, meetsTolerance: false }),
+      "closed",
     );
     expect(evaluation.blocked).toBe(false);
     expect(evaluation.canClose).toBe(true);
@@ -486,10 +488,49 @@ describe("evaluateLevelingClosure — capa de cierre (§ 5.2)", () => {
         discrepancyToleranceMm: 16.1,
         meetsDiscrepancy: false,
       }),
+      "closed",
     );
     expect(evaluation.canClose).toBe(true);
     expect(evaluation.blocked).toBe(false);
     expect(evaluation.mustReject).toBe(false);
     expect(evaluation.messages.length).toBeGreaterThan(0);
+  });
+
+  // Fase 23: en una abierta con vuelta, la discrepancia es el veredicto.
+  const conVuelta = { return: { readings: [], heightDifference: 0, errorMm: null } };
+  const abierta = { closureErrorMm: null, toleranceMm: null, meetsTolerance: null };
+
+  it("abierta con vuelta fuera de tolerancia: solo se cierra como rechazada", () => {
+    const evaluation = evaluateLevelingClosure(
+      resultWith({ ...abierta, ...conVuelta, discrepancyMm: 22, discrepancyToleranceMm: 16.1, meetsDiscrepancy: false }),
+      "open",
+    );
+    expect(evaluation.canClose).toBe(true);
+    expect(evaluation.mustReject).toBe(true);
+    expect(evaluation.messages.join(" ")).toMatch(/rechazad/);
+  });
+
+  it("abierta con vuelta que cumple: se cierra", () => {
+    const evaluation = evaluateLevelingClosure(
+      resultWith({ ...abierta, ...conVuelta, discrepancyMm: 5, discrepancyToleranceMm: 10.5, meetsDiscrepancy: true }),
+      "open",
+    );
+    expect(evaluation.canClose).toBe(true);
+    expect(evaluation.mustReject).toBe(false);
+  });
+
+  it("abierta con vuelta sin tolerancia de discrepancia: no se puede cerrar", () => {
+    const evaluation = evaluateLevelingClosure(
+      resultWith({ ...abierta, ...conVuelta, discrepancyMm: 5 }),
+      "open",
+    );
+    expect(evaluation.canClose).toBe(false);
+    expect(evaluation.blocked).toBe(true);
+  });
+
+  it("abierta sin vuelta: se cierra como hoy, sin veredicto", () => {
+    const evaluation = evaluateLevelingClosure(resultWith(abierta), "open");
+    expect(evaluation.canClose).toBe(true);
+    expect(evaluation.mustReject).toBe(false);
   });
 });

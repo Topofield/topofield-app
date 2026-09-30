@@ -45,7 +45,7 @@ export function CloseProcessDialog({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const closure = evaluateLevelingClosure(result);
+  const closure = evaluateLevelingClosure(result, type);
   const canConfirm = !dirty && !captureBlocked && !closure.blocked && confirmed && !isPending;
 
   function handleConfirm() {
