@@ -24,18 +24,13 @@ function formatDistortion(inverse: number): string {
   return `1/${Math.round(inverse).toLocaleString("es-CO")}`;
 }
 
+// Con punto decimal, como el resto de tablas (Fase 22).
 function formatMm(value: number): string {
-  return value.toLocaleString("es-CO", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
+  return value.toFixed(1);
 }
 
 function formatM(value: number): string {
-  return value.toLocaleString("es-CO", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return value.toFixed(2);
 }
 
 /**

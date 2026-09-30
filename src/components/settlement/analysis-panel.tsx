@@ -35,10 +35,8 @@ interface AnalysisPanelProps {
 
 function formatMm(value: number | null): string {
   if (value === null) return "—";
-  return value.toLocaleString("es-CO", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
+  // Con punto decimal, como el resto de tablas (Fase 22).
+  return value.toFixed(1);
 }
 
 /**

@@ -131,13 +131,13 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite }: 
     <div className="flex flex-col gap-6">
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2">
         <li className="flex items-center gap-1.5">
-          <ThresholdSwatch level="caution" /> Precaución −{chartThresholds.caution} mm
+          <ThresholdSwatch level="caution" /> Precaución -{chartThresholds.caution} mm
         </li>
         <li className="flex items-center gap-1.5">
-          <ThresholdSwatch level="alert" /> Alerta −{chartThresholds.alert} mm
+          <ThresholdSwatch level="alert" /> Alerta -{chartThresholds.alert} mm
         </li>
         <li className="flex items-center gap-1.5">
-          <ThresholdSwatch level="alarm" /> Alarma −{chartThresholds.alarm} mm
+          <ThresholdSwatch level="alarm" /> Alarma -{chartThresholds.alarm} mm
         </li>
       </ul>
 

@@ -22,6 +22,7 @@ import {
   deleteReferencePointAction,
   updateReferencePointAction,
 } from "@/app/(app)/projects/[id]/actions";
+import { formatCoordinate, formatElevation } from "@/lib/utils/format";
 
 type Dialog = { mode: "create" } | { mode: "edit"; point: ReferencePoint };
 
@@ -118,14 +119,14 @@ export function ReferencePointsManager({
                       {REFERENCE_POINT_TYPE_LABELS[item.type]}
                     </Badge>
                   </td>
-                  <td className="py-2 pr-3 text-ink-2">
-                    {item.north ?? "—"}
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
+                    {formatCoordinate(item.north)}
                   </td>
-                  <td className="py-2 pr-3 text-ink-2">
-                    {item.east ?? "—"}
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
+                    {formatCoordinate(item.east)}
                   </td>
-                  <td className="py-2 pr-3 text-ink-2">
-                    {item.elevation ?? "—"}
+                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
+                    {formatElevation(item.elevation)}
                   </td>
                   <td className="py-2 pr-3">
                     <div className="flex items-center justify-end gap-1">

@@ -14,35 +14,31 @@ export function textWidth(text: string, fontSize: number = FONT_SIZE): number {
 }
 
 // --- Formato ---
+//
+// Con punto decimal y guion, como las tablas y los KPIs (Fase 22). Las
+// gráficas escribían «−9,3» (coma de es-CO y menos tipográfico) junto a
+// tablas con «-9.3»; la Fase 20 fijó el punto para la presentación.
 
-/** Signo menos tipográfico: el guion se confunde con un separador. */
-export function withMinus(text: string): string {
-  return text.replace(/^-/, "−");
+/** Un cero negativo redondeado («-0.0») sin signo. */
+function sinCeroNegativo(text: string): string {
+  return /^-0(\.0*)?$/.test(text) ? text.slice(1) : text;
 }
 
-/** mm con un decimal, en es-CO («−12,3»). Un −0,0 se muestra como 0,0. */
+/** mm con un decimal («-12.3»). */
 export function formatMm(value: number): string {
-  const text = value.toLocaleString("es-CO", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
-  return text === "-0,0" ? "0,0" : withMinus(text);
+  return sinCeroNegativo(value.toFixed(1));
 }
 
-/** Valor de un umbral, sin decimales si no los tiene («−25», «−12,5»). */
+/** Valor de un umbral, sin decimales si no los tiene («-25», «-12.5»). */
 export function formatThresholdMm(value: number): string {
-  return withMinus(value.toLocaleString("es-CO", { maximumFractionDigits: 1 }));
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 /** Rótulo de una marca del eje Y, con los decimales que pida el paso. */
 export function formatTick(value: number, step: number): string {
   const decimals =
     step >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(step) - 1e-9));
-  const text = value.toLocaleString("es-CO", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-  return /^-0(,0*)?$/.test(text) ? text.slice(1) : withMinus(text);
+  return sinCeroNegativo(value.toFixed(decimals));
 }
 
 /**

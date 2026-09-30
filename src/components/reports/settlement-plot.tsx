@@ -122,11 +122,9 @@ function Marker({
   }
 }
 
+/** Con punto decimal, como las tablas del informe (Fase 22). */
 function mm(value: number): string {
-  return value.toLocaleString("es-CO", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
+  return value.toFixed(1);
 }
 
 interface SettlementPlotProps {
