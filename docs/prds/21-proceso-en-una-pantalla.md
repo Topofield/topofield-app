@@ -1,7 +1,8 @@
 # PRD-de-fase 22 — El proceso en una pantalla
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-29
+**Fecha de cierre:** 2026-09-29
 
 **Rama:** `fase-22-proceso-en-una-pantalla`
 **Petición:** del usuario, 2026-09-29: cerrar los huecos de funcionalidad
@@ -14,6 +15,39 @@ botón de exportar Excel e informe»; y quitar «notas no relevantes o
 relacionadas con el desarrollo que no interesan a los usuarios».
 **Módulo:** transversal — hub del proyecto, las tres pantallas de proceso, los
 informes, el sistema de diseño y el modelo de lugares
+
+> **Divergencias de la implementación:**
+>
+> - **«Cerrar lugar» no va en la cabecera**, sino en la barra fija de la
+>   pestaña Puntos y lugar, como Cerrar en los otros procesos: su diálogo
+>   depende de los cambios sin guardar del formulario del lugar.
+> - **Georreferenciar y Asignar coordenadas reales van en la tarjeta del
+>   dibujo**, no en la cabecera: el primero depende de los cambios sin guardar
+>   del editor, y los dos mueven lo que el dibujo muestra.
+> - **La cabecera cambia su segunda acción según la pestaña**: «Ver informe»
+>   en Proceso, «Imprimir o guardar como PDF» en Informe.
+> - **La tabla de visitas del informe de asentamientos es nueva**: el informe
+>   no tenía ninguna a la que sumar el amarre y el cierre.
+> - **Duplicar un lugar copia la C0** de los puntos vigentes; los dados de alta
+>   a mitad del monitoreo pasan como originales, porque el lugar nuevo aún no
+>   tiene visitas. Los de baja no pasan.
+> - **Tampoco la demo se puede eliminar**: nace con trabajo cerrado. Su
+>   descripción dice ahora «archivarlo». Permitir borrar un proyecto con lo
+>   cerrado dentro queda como decisión del usuario (§ 11).
+> - **Las notas de la demo** citaban rutas del repositorio
+>   (`docs/carteras/…`); se quitaron. «Universidad Distrital» se queda: es la
+>   procedencia de la cartera Vivero, no una nota de desarrollo.
+> - **Hallado en la verificación en pantalla**, y corregido:
+>   - el formulario del lugar formateaba la fecha de cierre con `Intl` en el
+>     cliente y rompía la hidratación de un lugar cerrado (preexistente: nadie
+>     abría la configuración de uno cerrado);
+>   - dentro de la columna flex de la pantalla del proceso, el informe crecía
+>     hasta su tabla más ancha (423 px a 390);
+>   - el eje de tiempo del informe necesitaba funciones de un módulo
+>     `"use client"`: se movieron a `lib/design/chart-labels.ts`.
+> - **Hallado en la revisión de código**, y corregido: las acciones de guardar
+>   y cerrar un lugar, las de puntos y las de visitas no rechazaban un lugar
+>   de agrupación si se las llamaba directamente.
 
 ## Propósito
 

@@ -12,10 +12,10 @@ que lo descartó.
 
 El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
 navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
-**22** —el proceso en una pantalla, en curso,
-[`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md)—
-y la **23**, que espera aquí hasta que la 22 cierre (el método no solapa
-fases). Su contenido está en «Integridad (Fase 23)», al final.
+**22** —el proceso en una pantalla,
+[`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md),
+**cerrada** el 2026-09-29— y la **23**, que espera aquí su PRD. Su contenido
+está en «Integridad (Fase 23)», al final.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como

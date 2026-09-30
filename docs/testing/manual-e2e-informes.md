@@ -39,11 +39,25 @@ uno en **Edificio en monitoreo** (asentamientos).
 
 ### 3. Ruta imprimible
 
-- Desde el informe, abrir la vista de impresión
-  (`/projects/[id]/reports/[reportId]/print`).
-- ✓ Se ve la maquetación imprimible (portada, secciones, tablas) sin la
-  navegación de la app.
+- El informe se abre directo en la vista de impresión
+  (`/projects/[id]/reports/[reportId]/print`, Fase 22); la ruta sin `/print`
+  redirige a ella.
+- ✓ Arriba, las migas de vuelta al proyecto y **Eliminar informe** e
+  **Imprimir o guardar como PDF**; nada de eso sale al imprimir.
+- ✓ El registro de cierre nombra al responsable, no un identificador.
 - ✓ Con el diálogo de impresión del navegador puede guardarse como PDF.
+
+### 3 bis. El informe de un proceso (Fase 22)
+
+- Abrir **Cuadrado oficial (cerrado)** y su pestaña **Informe**.
+- ✓ Portada, «Datos y resultados», resumen de precisión y registro de cierre,
+  sin marca de borrador; debajo, **Informe de cierre — Poligonal** como
+  informe consolidado que lo incluye.
+- ✓ **Generar un informe consolidado con este proceso** abre el alta con el
+  proceso ya marcado.
+- Abrir un proceso calculado y su pestaña **Informe**. ✓ Lleva la marca
+  «Borrador — el informe se emite al cerrar el proceso», también en la vista
+  de impresión del navegador.
 
 ### 4. Elegibilidad — solo procesos cerrados
 
