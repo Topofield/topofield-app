@@ -229,10 +229,12 @@ export function validateRunCapture(
   /**
    * Orden de precisión del proceso y si sus distancias las reconstruyó el
    * backfill. Gobiernan el equilibrado de visuales, que se evalúa aquí porque
-   * esta es la puerta por la que pasan las filas de verdad.
+   * esta es la puerta por la que pasan las filas de verdad. Obligatorios desde
+   * la Fase 23: con valores por defecto, un llamador que los olvidara evaluaba
+   * contra tercer orden sin que el compilador lo señalara.
    */
-  order: PrecisionOrder = "tercer_orden",
-  distancesReconstructed = false,
+  order: PrecisionOrder,
+  distancesReconstructed: boolean,
 ): ReadingCaptureIssues[] {
   const lastIndex = readings.length - 1;
   const mustEndInBm = levelingType !== "open";

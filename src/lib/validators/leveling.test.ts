@@ -351,7 +351,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "PC-1", pointType: "pc" }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed");
+    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
     expect(issues.at(0)?.errors.backsight).toBeDefined();
   });
 
@@ -361,7 +361,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "PC-1", pointType: "pc" }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed");
+    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
     expect(issues.at(2)?.errors.backsight).toBeUndefined();
   });
 
@@ -371,7 +371,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "PC-1", pointType: "pc" }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed");
+    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
     expect(issues.at(0)?.errors.backsight).toBeUndefined();
   });
 
@@ -380,7 +380,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "", pointType: "bm", backsight: null, distanceAccumulatedKm: 0 }),
       reading({ pointCode: "BM-2", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.5 }),
     ];
-    const issues = validateRunCapture(readings, "closed");
+    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
     expect(issues.at(0)?.errors.pointCode).toBeDefined();
     expect(issues.at(0)?.errors.backsight).toBeDefined();
   });
@@ -393,7 +393,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: 1.5, distanceAccumulatedKm: 0.9 }),
       reading({ pointCode: "RAD-1", pointType: "intermediate", foresight: 0.805, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed");
+    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
     expect(issues.at(2)?.errors.pointType).toBeDefined();
   });
 
@@ -403,7 +403,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "BM-B", pointType: "bm", foresight: 2.815, backsight: null, distanceAccumulatedKm: 2.2 }),
       reading({ pointCode: "RAD-1", pointType: "intermediate", foresight: 0.5, backsight: null, distanceAccumulatedKm: 2.2 }),
     ];
-    const issues = validateRunCapture(readings, "link");
+    const issues = validateRunCapture(readings, "link", "tercer_orden", false);
     expect(issues.at(2)?.errors.pointType).toBeDefined();
   });
 
@@ -413,7 +413,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "PC-1", pointType: "pc", foresight: 0.876, backsight: 0.654, distanceAccumulatedKm: 0.08 }),
       reading({ pointCode: "PC-2", pointType: "intermediate", foresight: 1.987, backsight: null, distanceAccumulatedKm: 0.16 }),
     ];
-    const issues = validateRunCapture(readings, "open");
+    const issues = validateRunCapture(readings, "open", "tercer_orden", false);
     expect(issues.at(2)?.errors.pointType).toBeUndefined();
   });
 
@@ -422,7 +422,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "BM-1", pointType: "bm", foresight: null, backsight: 1.5, distanceAccumulatedKm: 0 }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.808, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed");
+    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
     expect(issues.at(1)?.errors.pointType).toBeUndefined();
   });
 });
