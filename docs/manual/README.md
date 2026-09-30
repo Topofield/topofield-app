@@ -552,12 +552,13 @@ TopoField maneja tres tipos de nivelación geométrica:
 |---|---|---|
 | **Cerrada** | Sale de un BM y vuelve a ese mismo BM | Error de cierre contra la cota de partida |
 | **De enlace** | Va de un BM conocido a otro BM conocido distinto | Error de cierre contra la cota de llegada |
-| **Abierta sin control** | No cierra contra ningún BM | **No tiene verificación de cierre** |
+| **Abierta sin control** | No cierra contra ningún BM | Sin cierre; con vuelta, la **discrepancia entre ida y vuelta** |
 
-La nivelación abierta sin control sirve solo para reconocimiento: calcula
-cotas, pero no hay forma de comprobar si son correctas, igual que la
-poligonal abierta sin control (§ 5.1). No se puede calcular error de cierre ni
-compensar.
+Sin recorrido de vuelta, la nivelación abierta sirve solo para
+reconocimiento: calcula cotas, pero no hay forma de comprobar si son
+correctas, igual que la poligonal abierta sin control (§ 5.1). No se puede
+calcular error de cierre ni compensar. Con vuelta, su veredicto es la
+discrepancia entre ida y vuelta (§ 6.6).
 
 ### 6.2 Cómo se llena la libreta
 
@@ -705,7 +706,15 @@ puntos**. La aplicación admite las dos.
 
 La aplicación compara los **desniveles totales** de ambos recorridos. La
 discrepancia entre ellos se contrasta contra **T·√2**, donde T es la misma
-tolerancia K·√D del cierre individual. Ese es el veredicto.
+tolerancia K·√D del cierre individual, con D la menor de las dos distancias.
+
+- En una **abierta**, la discrepancia es el veredicto del proceso: la muestran
+  la lista de procesos del proyecto, el dashboard y el informe, y si no
+  cumple el proceso solo puede cerrarse como **rechazado**. Si a la ida o a la
+  vuelta les falta la distancia a las miras, no se puede juzgar y el proceso
+  no se cierra.
+- En una **cerrada** o **de enlace**, el veredicto es el cierre; la
+  discrepancia es un control más, que el informe también imprime.
 
 **Puntos homólogos.** Si la ida y la vuelta pasan por los mismos puntos,
 Resultados añade una tabla que compara la cota de cada punto en los dos
@@ -766,8 +775,9 @@ Guardar**; al crear, el proceso nace con sus lecturas.
 ### 6.8 Cierre irreversible
 
 Igual que en poligonales, cerrar una nivelación es **irreversible**
-(§ 8). Un trabajo que no alcanza la tolerancia solo puede cerrarse como
-**rechazado**; no hay forma de cerrarlo como conforme si no cumple.
+(§ 8). Un trabajo que no alcanza la tolerancia —o, en una abierta con
+vuelta, cuya discrepancia no cumple— solo puede cerrarse como **rechazado**;
+no hay forma de cerrarlo como conforme si no cumple.
 
 ---
 
@@ -814,6 +824,11 @@ que se mide el asentamiento acumulado de todas las visitas futuras.
 La C0 es opcional. Si la deja vacía, la **línea base del punto es su primera
 lectura**: esa lectura queda con acumulado 0 y las siguientes se miden contra
 ella.
+
+Cuando un punto ya se midió en una visita **cerrada**, su C0 y sus coordenadas
+quedan fijas: los asentamientos con que se cerró esa visita dependen de ellas.
+El diálogo **Editar** las muestra bloqueadas; el código y la ubicación se
+siguen pudiendo cambiar.
 
 **Renombrar un punto** cambia también su código en la libreta de las visitas
 **abiertas** (§ 7.3), para que su cota siga saliendo de su fila. Las visitas
@@ -1272,11 +1287,14 @@ Al generar, la aplicación abre el documento maquetado —también al pulsar un
 informe de la lista de la pestaña **Informes**—, y allí **Imprimir o guardar
 como PDF** abre el diálogo del navegador: elija «Guardar como PDF» como
 destino. Las migas vuelven al proyecto, y **Eliminar informe** lo borra: los
-procesos que incluye no cambian, y puede volver a generarlo.
+procesos que incluye no cambian, y puede volver a generarlo. Un informe
+emitido no se edita: para corregirlo, elimínelo y genérelo de nuevo.
 
 ![Informe imprimible](../../public/manual/19-informe-imprimible.png)
 
-El documento lleva portada con los datos del proyecto, índice, una sección
+El documento lleva portada con los datos del proyecto **al emitirlo** —si
+después cambian el nombre o el cliente del proyecto, la portada no—, índice,
+una sección
 por proceso con sus resultados **y su equipo** —en las poligonales, con su
 dibujo—, el resumen consolidado de
 precisiones —con una columna de equipo—, sus observaciones y el registro de
