@@ -32,7 +32,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 20 | Identidad visual del prototipo y coma decimal | [`prds/19-identidad-visual-coma-decimal.md`](./prds/19-identidad-visual-coma-decimal.md) | cerrada |
 | 21 | La demo con las carteras reales | [`prds/20-demo-carteras-reales.md`](./prds/20-demo-carteras-reales.md) | cerrada |
 | 22 | El proceso en una pantalla | [`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md) | cerrada |
-| 23 | Integridad | [`prds/22-integridad.md`](./prds/22-integridad.md) | en curso |
+| 23 | Integridad | [`prds/22-integridad.md`](./prds/22-integridad.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -546,6 +546,38 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 23 — Integridad (2026-09-30)
+
+Los cuatro guardados de varias tablas van en una transacción, con funciones
+de Postgres que solo escriben; la nivelación abierta con vuelta guarda su
+veredicto —la discrepancia— y no se cierra como conforme si no cumple; la C0
+y las coordenadas de un punto con lecturas cerradas quedan fijas, y el informe
+emitido congela su portada y ya no se modifica. 871 tests y 41 pruebas de base
+con pgTAP. Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Para pasar un guardado a una función de Postgres, se compara la base
+  antes y después de guardar sin cambios.** Guardar desde la pantalla, sin
+  tocar nada, y comparar las filas (sin id ni `updated_at`) muestra cualquier
+  columna que la carga perdió. En seis guardados salió una sola diferencia, y
+  era ruido de coma flotante de una precisión relativa de 1:500 millones.
+- **`jsonb_populate_record(fila_actual, carga)` reproduce el `update` de
+  supabase-js**: la clave ausente conserva su valor y la de más no escribe
+  nada. Con eso, la función tiene columnas explícitas sin exigir que la carga
+  las traiga todas.
+- **Sin política de `UPDATE`, un `UPDATE` de la sesión no falla: no toca
+  ninguna fila.** El trigger de inmutabilidad solo habla cuando RLS no filtra
+  (como `postgres`). La prueba tiene que mirar los dos caminos, o el trigger
+  parecerá funcionar por la razón equivocada.
+- **Las pruebas de base con pgTAP crean sus datos en una transacción que se
+  deshace.** No dependen del seed, no lo ensucian y corren con `npx supabase
+  test db` sobre la base local.
+- **Tras un `db reset` y el seed, el proyecto de ejemplo no existe hasta el
+  primer inicio de sesión.** Un script que busque sus ids tiene que entrar
+  antes; el recorrido lo encontró buscando El Verjón en una base recién
+  sembrada.
 
 ### Cierre Fase 22 — El proceso en una pantalla (2026-09-29)
 

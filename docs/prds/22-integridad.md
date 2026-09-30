@@ -1,7 +1,8 @@
 # PRD-de-fase 23 — Integridad
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-30
+**Fecha de cierre:** 2026-09-30
 
 **Rama:** `fase-23-integridad`
 **Petición:** del usuario, 2026-09-29: los huecos de integridad que la Fase 22
@@ -11,6 +12,25 @@ sueltos de la Fase 9—, más la discrepancia de ida y vuelta en el informe de
 nivelación, vista en producción al cerrar la 22.
 **Módulo:** transversal — los guardados de los tres módulos, el catálogo de
 puntos, los informes y el veredicto de la nivelación
+
+> **Divergencias de la implementación:**
+>
+> - **Los id de las estaciones los genera la base**, no la Server Action: la
+>   función inserta estación por estación y sus lecturas de ángulo viajan
+>   anidadas en ella, así que no pueden colgar de otra. Se consigue lo mismo
+>   que pedía el PRD sin que la carga traiga id.
+> - **`reports.cover` es `NOT NULL`**: no se emite un informe sin portada. Por
+>   eso la demo y el seed también la escriben, no solo `createReportAction`.
+> - **Las pruebas de base son pgTAP** (`npx supabase test db`), no un script
+>   SQL suelto: 41 pruebas en tres archivos, con datos propios en una
+>   transacción que se deshace. Cubren la atomicidad, la C0 y `reports`.
+> - **Hallado en la verificación en pantalla**, y corregido: el diálogo de
+>   cierre de una nivelación abierta mostraba «Error de cierre —» y
+>   «Tolerancia —» vacíos; ahora muestra la discrepancia y su tolerancia.
+> - **Cuatro capturas del manual se regeneraron** aunque la fase no toca esas
+>   pantallas: aún mostraban en la cabecera el correo del seed anterior.
+> - **La revisión de código no encontró defectos.** Sugirió probar el rechazo
+>   por RLS en las cuatro funciones, no solo en una; se añadió.
 
 ## Propósito
 

@@ -8,17 +8,18 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-09-29)
+## Estado (2026-09-30)
 
 El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
 navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
 **22** —el proceso en una pantalla,
 [`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md),
-**cerrada** el 2026-09-29— y la **23**, abierta el 2026-09-30
-([`prds/22-integridad.md`](./prds/22-integridad.md)). Su petición original está
-en «Integridad (Fase 23)», al final; el PRD la amplía con dos hallazgos de la
-apertura (guardados de poligonal y nivelación, veredicto de la abierta con
-vuelta).
+**cerrada** el 2026-09-29— y la **23**
+([`prds/22-integridad.md`](./prds/22-integridad.md)), **cerrada** el
+2026-09-30. Su petición original está en «Integridad (Fase 23)», al final; el
+PRD la amplió con dos hallazgos de la apertura (guardados de poligonal y
+nivelación, veredicto de la abierta con vuelta). No queda ninguna petición
+abierta.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -330,7 +331,7 @@ vivo sin resolverla.
 
 ## Integridad (Fase 23)
 
-> **En curso en la Fase 23** ([`prds/22-integridad.md`](./prds/22-integridad.md)).
+> **Resuelta en la Fase 23** ([`prds/22-integridad.md`](./prds/22-integridad.md)).
 > Se conserva el texto de la petición como registro.
 
 Pedida el 2026-09-29, junto con la Fase 22, y separada de ella por decisión
