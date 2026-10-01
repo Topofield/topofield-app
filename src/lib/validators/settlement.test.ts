@@ -15,8 +15,6 @@ import type { PointInput, VisitInput } from "@/types/settlement";
 const P1: PointInput = {
   id: "p1",
   code: "P-01",
-  northing: 0,
-  easting: 0,
   initialElevation: 100.0,
   activeFrom: null,
   retiredOn: null,
@@ -509,30 +507,21 @@ describe("validateActiveFrom", () => {
 });
 
 describe("pointReferenceChanged (Fase 23)", () => {
-  const punto = { initial_elevation: 100.12, northing: 2000, easting: 1000.5 };
-  const igual = { initialElevation: 100.12, northing: 2000, easting: 1000.5 };
+  const punto = { initial_elevation: 100.12 };
+  const igual = { initialElevation: 100.12 };
 
   it("el mismo valor, aunque vuelva formateado, no es un cambio", () => {
     expect(pointReferenceChanged(punto, igual)).toBe(false);
-    expect(pointReferenceChanged(punto, { ...igual, initialElevation: 100.12000000001 })).toBe(false);
+    expect(pointReferenceChanged(punto, { initialElevation: 100.12000000001 })).toBe(false);
   });
 
   it("la C0 cambia a partir del cuarto decimal", () => {
-    expect(pointReferenceChanged(punto, { ...igual, initialElevation: 100.1201 })).toBe(true);
+    expect(pointReferenceChanged(punto, { initialElevation: 100.1201 })).toBe(true);
   });
 
-  it("las coordenadas cambian a partir del tercer decimal", () => {
-    expect(pointReferenceChanged(punto, { ...igual, easting: 1000.501 })).toBe(true);
-    expect(pointReferenceChanged(punto, { ...igual, northing: 2000.0004 })).toBe(false);
-  });
-
-  it("poner o quitar un valor es un cambio", () => {
-    expect(pointReferenceChanged(punto, { ...igual, northing: null, easting: null })).toBe(true);
-    expect(
-      pointReferenceChanged(
-        { initial_elevation: null, northing: null, easting: null },
-        { initialElevation: null, northing: null, easting: null },
-      ),
-    ).toBe(false);
+  it("poner o quitar la C0 es un cambio", () => {
+    expect(pointReferenceChanged(punto, { initialElevation: null })).toBe(true);
+    expect(pointReferenceChanged({ initial_elevation: null }, { initialElevation: 100.12 })).toBe(true);
+    expect(pointReferenceChanged({ initial_elevation: null }, { initialElevation: null })).toBe(false);
   });
 });

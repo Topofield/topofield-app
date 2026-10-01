@@ -192,7 +192,6 @@ export const SETTLEMENT_THRESHOLD_PRESETS: Record<StructureType, Thresholds> = {
     accumulatedCaution: 25,
     accumulatedAlert: 50,
     accumulatedAlarm: 75,
-    angularDistortionLimit: 500,
   },
   presa: {
     velocityCaution: 2,
@@ -201,7 +200,6 @@ export const SETTLEMENT_THRESHOLD_PRESETS: Record<StructureType, Thresholds> = {
     accumulatedCaution: 10,
     accumulatedAlert: 25,
     accumulatedAlarm: 50,
-    angularDistortionLimit: 500,
   },
   terraplen: {
     velocityCaution: 2,
@@ -210,7 +208,6 @@ export const SETTLEMENT_THRESHOLD_PRESETS: Record<StructureType, Thresholds> = {
     accumulatedCaution: 25,
     accumulatedAlert: 50,
     accumulatedAlarm: 75,
-    angularDistortionLimit: 500,
   },
   otro: {
     velocityCaution: 2,
@@ -219,7 +216,6 @@ export const SETTLEMENT_THRESHOLD_PRESETS: Record<StructureType, Thresholds> = {
     accumulatedCaution: 25,
     accumulatedAlert: 50,
     accumulatedAlarm: 75,
-    angularDistortionLimit: 500,
   },
 };
 
@@ -229,7 +225,7 @@ export function thresholdsFor(structureType: StructureType): Thresholds {
 }
 
 /**
- * Las siete columnas de umbral de un lugar, tal como llegan de la base.
+ * Las seis columnas de umbral de un lugar, tal como llegan de la base.
  *
  * Se declara estructuralmente y no como `Site` para que sirva igual a un
  * `Site` completo y a un `select` parcial que solo pidió los umbrales, que es
@@ -242,7 +238,6 @@ export interface SiteThresholdColumns {
   accumulated_caution: number;
   accumulated_alert: number;
   accumulated_alarm: number;
-  angular_distortion_limit: number;
 }
 
 /**
@@ -263,7 +258,6 @@ export function thresholdsOf(site: SiteThresholdColumns): Thresholds {
     accumulatedCaution: Number(site.accumulated_caution),
     accumulatedAlert: Number(site.accumulated_alert),
     accumulatedAlarm: Number(site.accumulated_alarm),
-    angularDistortionLimit: Number(site.angular_distortion_limit),
   };
 }
 

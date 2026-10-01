@@ -62,16 +62,12 @@ export interface Thresholds {
   accumulatedCaution: number;
   accumulatedAlert: number;
   accumulatedAlarm: number;
-  /** El X de 1/X. */
-  angularDistortionLimit: number;
 }
 
 /** Un punto del catálogo, con lo que el cálculo necesita de él. */
 export interface PointInput {
   id: string;
   code: string;
-  northing: number | null;
-  easting: number | null;
   /**
    * Cota C0 tecleada en el catálogo. Si es null, la línea base del punto es su
    * primera lectura (Fase 11): la «visita 0» de un BM dado de alta a mitad del
@@ -128,7 +124,7 @@ export interface ComputedReading {
   /**
    * Fecha de la línea base del punto: la de la primera visita del lugar si
    * tiene C0 (la C0 es la cota de la visita 0), o la de su primera lectura si
-   * no. Los diferenciales la necesitan para comparar periodos comunes.
+   * no.
    */
   baselineDate: string;
   /** Cota de la línea base: la C0 o la primera lectura. */
@@ -142,33 +138,6 @@ export interface VisitResult {
   readings: ComputedReading[];
   /** El peor nivel de alerta de la visita. */
   worstAlert: AlertLevel;
-}
-
-/** Un par de puntos con su asentamiento diferencial y su distorsión. */
-export interface DifferentialPair {
-  pointIdA: string;
-  pointIdB: string;
-  /** mm, siempre positivo. */
-  differentialMm: number;
-  /**
-   * Asentamiento de cada punto (mm) desde `sinceDate`: los dos números cuya
-   * diferencia es `differentialMm`. Para dos puntos originales es su
-   * acumulado; para un par con un punto de alta, el asentamiento sobre el
-   * periodo común (Fase 11). Mostrar el acumulado en su lugar pondría en
-   * pantalla dos números que restados no dan el diferencial.
-   */
-  settlementAMm: number;
-  settlementBMm: number;
-  /** Fecha desde la que se miden los dos asentamientos (ISO). */
-  sinceDate: string;
-  /** Distancia horizontal en m. */
-  distanceM: number;
-  /**
-   * El X de 1/X. `Infinity` cuando el diferencial es 0: dos puntos que se
-   * asientan igual no tienen distorsión entre sí.
-   */
-  distortionInverse: number;
-  exceedsLimit: boolean;
 }
 
 /**
@@ -195,7 +164,6 @@ export type Trend = "converging" | "accelerating";
 
 export interface SettlementHistory {
   visits: VisitResult[];
-  differentials: DifferentialPair[];
   /**
    * Tendencia por punto. Un punto solo aparece si tiene al menos 2 velocidades
    * (es decir, 3 visitas): con menos no se afirma nada.

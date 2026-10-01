@@ -27,8 +27,6 @@ const POINT_ROWS: PointRow[] = [
     id: "p1",
     code: "P-01",
     location_description: "Esquina NW",
-    northing: "1000.000",
-    easting: "2000.000",
     initial_elevation: "100.0000",
     active_from: null,
     retired_on: null,
@@ -38,8 +36,6 @@ const POINT_ROWS: PointRow[] = [
     id: "p2",
     code: "P-02",
     location_description: "Esquina NE",
-    northing: "1000.000",
-    easting: "2030.000",
     initial_elevation: "100.0000",
     active_from: null,
     retired_on: null,
@@ -50,8 +46,6 @@ const POINT_ROWS: PointRow[] = [
 const POINTS: PointInput[] = POINT_ROWS.map((p) => ({
   id: p.id,
   code: p.code,
-  northing: Number(p.northing),
-  easting: Number(p.easting),
   initialElevation: Number(p.initial_elevation),
   activeFrom: null,
   retiredOn: null,
@@ -135,8 +129,8 @@ describe("buildSettlementWorkbook", () => {
     const raw = build().getWorksheet("Datos Crudos")!;
     expect(raw.getCell("A5").value).toBe("P-01");
     expect(raw.getCell("B5").value).toBe("Esquina NW");
-    expect(raw.getCell("E5").value).toBe(100);
-    expect(raw.getCell("E5").numFmt).toBe("0.0000");
+    expect(raw.getCell("C5").value).toBe(100);
+    expect(raw.getCell("C5").numFmt).toBe("0.0000");
   });
 
   it("escribe en el catálogo el alta, la baja y el motivo de cada punto (Fase 11)", () => {
@@ -155,12 +149,12 @@ describe("buildSettlementWorkbook", () => {
       computeHistory(POINTS, VISIT_INPUTS, THRESHOLDS),
       THRESHOLDS,
     ).getWorksheet("Datos Crudos")!;
-    expect(raw.getCell("F4").value).toBe("Alta");
-    expect(raw.getCell("G4").value).toBe("Baja");
-    expect(raw.getCell("H4").value).toBe("Motivo de baja");
-    expect(raw.getCell("G5").value).toBeNull();
-    expect(raw.getCell("G6").value).toBe("2026-03-01");
-    expect(raw.getCell("H6").value).toBe("Destruido por obra");
+    expect(raw.getCell("D4").value).toBe("Alta");
+    expect(raw.getCell("E4").value).toBe("Baja");
+    expect(raw.getCell("F4").value).toBe("Motivo de baja");
+    expect(raw.getCell("E5").value).toBeNull();
+    expect(raw.getCell("E6").value).toBe("2026-03-01");
+    expect(raw.getCell("F6").value).toBe("Destruido por obra");
   });
 
   // El libro debe mostrar el CÓDIGO del punto, no su UUID: un informe con
@@ -196,7 +190,8 @@ describe("buildSettlementWorkbook", () => {
       .getColumn(1)
       .values.filter((v): v is string => typeof v === "string");
     expect(etiquetas).toContain("Acumulado — precaución (mm)");
-    expect(etiquetas).toContain("Límite de distorsión angular");
+    expect(etiquetas).not.toContain("Límite de distorsión angular");
+    expect(etiquetas).not.toContain("Pares que superan la distorsión");
   });
 
   it("distingue la visita cerrada de la abierta en los datos crudos", () => {
@@ -208,28 +203,19 @@ describe("buildSettlementWorkbook", () => {
     expect(estados).toContain("Abierta");
   });
 
-  // Dos puntos que se asientan igual no tienen distorsión entre sí: se escribe
-  // `1/∞` y no un número enorme ni una celda vacía.
-  it("representa la distorsión sin diferencial como 1/∞", () => {
-    const iguales: VisitInput[] = [
-      VISIT_INPUTS[0]!,
-      {
-        id: "v1",
-        visitNumber: 1,
-        date: "2026-02-01",
-        readings: [
-          { pointId: "p1", elevation: 99.98 },
-          { pointId: "p2", elevation: 99.98 },
-        ],
-      },
-    ];
-    const history = computeHistory(POINTS, iguales, THRESHOLDS);
-    const wb = buildSettlementWorkbook(SITE, POINT_ROWS, VISIT_ROWS, history, THRESHOLDS);
-    const calc = wb.getWorksheet("Cálculos")!;
-    const textos = calc
-      .getColumn(5)
+  // Los puntos de control no tienen posición (Fase 29).
+  it("no escribe coordenadas ni diferenciales", () => {
+    const wb = build();
+    const catalogo = wb.getWorksheet("Datos Crudos")!.getRow(4).values;
+    expect(catalogo).toContain("Cota C0 (m)");
+    expect(catalogo).not.toContain("Norte (m)");
+    expect(catalogo).not.toContain("Este (m)");
+    const secciones = wb
+      .getWorksheet("Cálculos")!
+      .getColumn(1)
       .values.filter((v): v is string => typeof v === "string");
-    expect(textos).toContain("1/∞");
+    expect(secciones).toContain("Visita");
+    expect(secciones).not.toContain("Asentamientos diferenciales (última visita)");
   });
 
   it("exporta un lugar sin puntos ni visitas sin romperse", () => {

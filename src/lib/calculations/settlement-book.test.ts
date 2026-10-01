@@ -61,8 +61,6 @@ function point(code: string, extra: Partial<PointInput> = {}): PointInput {
   return {
     id: code.toLowerCase(),
     code,
-    northing: null,
-    easting: null,
     initialElevation: null,
     activeFrom: null,
     retiredOn: null,

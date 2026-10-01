@@ -81,10 +81,6 @@ describe("thresholdsFor", () => {
       expect(t.velocityAlarm).toBe(10);
     }
   });
-
-  it("usa 1/500 como límite de distorsión por defecto", () => {
-    expect(thresholdsFor("edificio").angularDistortionLimit).toBe(500);
-  });
 });
 
 describe("thresholdsOf", () => {
@@ -101,7 +97,6 @@ describe("thresholdsOf", () => {
       accumulated_caution: "25.00" as unknown as number,
       accumulated_alert: "50.00" as unknown as number,
       accumulated_alarm: "75.00" as unknown as number,
-      angular_distortion_limit: 500,
     });
 
     expect(t.velocityCaution).toBe(2);
@@ -110,7 +105,6 @@ describe("thresholdsOf", () => {
     expect(t.accumulatedCaution).toBe(25);
     expect(t.accumulatedAlert).toBe(50);
     expect(t.accumulatedAlarm).toBe(75);
-    expect(t.angularDistortionLimit).toBe(500);
     for (const v of Object.values(t)) {
       expect(typeof v).toBe("number");
     }
@@ -124,7 +118,6 @@ describe("thresholdsOf", () => {
       accumulated_caution: 12,
       accumulated_alert: 30,
       accumulated_alarm: 60,
-      angular_distortion_limit: 250,
     });
 
     expect(t).toEqual({
@@ -134,7 +127,6 @@ describe("thresholdsOf", () => {
       accumulatedCaution: 12,
       accumulatedAlert: 30,
       accumulatedAlarm: 60,
-      angularDistortionLimit: 250,
     });
   });
 
@@ -148,7 +140,6 @@ describe("thresholdsOf", () => {
       accumulated_caution: preset.accumulatedCaution,
       accumulated_alert: preset.accumulatedAlert,
       accumulated_alarm: preset.accumulatedAlarm,
-      angular_distortion_limit: preset.angularDistortionLimit,
     });
     expect(leido).toEqual(preset);
   });
