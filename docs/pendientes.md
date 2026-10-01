@@ -40,7 +40,8 @@ eligió corregir primero:
   **cerrada** el 2026-10-01: los 18 errores y dos más que salieron al
   implementar;
 - **Fase 27** — segundo pulido
-  ([`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md)), redactada;
+  ([`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md)), **en curso**
+  desde el 2026-10-01;
 - después, los criterios que eligió cambiar, **sin fase**: «Criterios del
   cálculo», al final.
 

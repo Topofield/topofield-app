@@ -32,7 +32,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 24 | Pulido | `23-pulido.md` | cerrada |
 | 25 | Catálogo de equipos | `24-catalogo-equipos.md` | cerrada |
 | 26 | Correcciones del cálculo | `25-correcciones-calculo.md` | cerrada |
-| 27 | Segundo pulido | `26-segundo-pulido.md` | pendiente |
+| 27 | Segundo pulido | `26-segundo-pulido.md` | en curso |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

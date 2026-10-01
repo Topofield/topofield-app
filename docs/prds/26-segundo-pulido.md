@@ -1,13 +1,14 @@
 # PRD-de-fase 27 — Segundo pulido
 
-**Estado:** pendiente (redactado; se abre al cerrar la Fase 26)
-**Fecha de redacción:** 2026-10-01
+**Estado:** en curso
+**Fecha de apertura:** 2026-10-01
 
 **Rama:** `fase-27-segundo-pulido`
 **Petición:** del usuario, 2026-10-01, tras revisar los pendientes: «corrige
 CLAUDE.md y prepara el PRD del pulido». Recoge el grupo de pulido de la § 11
 de la doc técnica y un fallo del alta de proyecto encontrado al prepararlo.
 Va después de la Fase 26 (correcciones del cálculo), por decisión del usuario.
+Se abrió el mismo día, al cerrar la 26: «sí, abre la fase 27 del pulido».
 **Módulo:** transversal — alta de proyecto, etiquetas de tipo de poligonal y
 nivelación, y acción de guardado de la poligonal
 
@@ -77,21 +78,34 @@ se alcanza con una carga hecha a mano. Al revisarlo:
 
 ### PU11 · Alta de proyecto
 
-- Arreglar el envío involuntario. La forma depende de la decisión 1.
-- El subtítulo deja de mencionar el equipo.
+- **Un solo formulario** (decisión 1): datos básicos y sistema de referencia
+  en la misma página, como el de editar, con «Crear proyecto». Sin pasos ya no
+  hay botón que cambie de tipo ni validación por paso: el navegador valida el
+  formulario entero al enviar.
+- El subtítulo deja de mencionar el equipo y los dos pasos.
 - Manual (§ 4.1, dos copias) y la captura `03-nuevo-proyecto.png`.
 
 ### PU12 · Abierta con vuelta
 
 Una función `levelingTypeLabel(type, hasReturnRun)` da la etiqueta del tipo
 donde hoy se usa `LEVELING_TYPE_LABELS` para mostrar un proceso: hub,
-cabecera, diálogo de cierre, informe y Excel. La forma de la etiqueta depende
-de la decisión 2. El manual (§ 6.1, tabla de tipos) se ajusta.
+cabecera, diálogo de cierre, informe y Excel. Una abierta con vuelta se
+rotula **«Abierta con ida y vuelta»**; «Abierta sin control» queda para la que
+no tiene vuelta (decisión 2). El selector del tipo, que se elige antes de
+capturar la vuelta, dice «Abierta» y explica que la vuelta la controla. El
+manual (§ 6.1, tabla de tipos) se ajusta.
 
 ### PU13 · Tipo y estado en el hub
 
-El subtítulo del hub deja de poder confundirse con el estado. La forma depende
-de la decisión 3.
+El subtítulo del hub rotula el tipo como frase, igual que la cabecera del
+proceso (decisión 3): «Poligonal cerrada», «Poligonal abierta con control»,
+«Nivelación de enlace», «Nivelación abierta con ida y vuelta». El badge sigue
+diciendo el estado.
+
+### PU16 · Cuándo usar cada diálogo
+
+«Asignar coordenadas reales» y «Georreferenciar» siguen siendo dos diálogos
+(decisión 4). Cada uno dice en una línea cuándo conviene el otro.
 
 ### PU15 · Test del amarre
 
@@ -101,24 +115,23 @@ de la decisión 3.
 - Mensajes distintos para «no existe» y «sin coordenadas».
 - La consulta filtra por el proyecto del proceso.
 
-## Decisiones del usuario (por tomar)
+## Decisiones del usuario (apertura)
 
-1. **Alta de proyecto:** ¿un solo formulario (datos básicos y sistema de
-   referencia, como el de editar), o dos pasos con el botón arreglado?
-2. **Abierta con vuelta:** ¿cómo se rotula? La auditoría propone «Abierta
-   con ida y vuelta», y «sin control» solo para la que no tiene vuelta.
-3. **Tipo y estado en el hub:** ¿«Poligonal cerrada» como frase, «Circuito
-   cerrado», o se deja?
-4. **Los dos diálogos que mueven una poligonal** («Asignar coordenadas
-   reales» y «Georreferenciar»): ¿se unifican en esta fase o siguen fuera?
+1. **Alta de proyecto: un solo formulario**, como el de editar.
+2. **La abierta con vuelta se rotula «Abierta con ida y vuelta»**; «sin
+   control» queda para la que no la tiene.
+3. **El tipo en el hub, como frase:** «Poligonal cerrada».
+4. **Los dos diálogos que mueven una poligonal siguen aparte**; cada uno dice
+   cuándo usar el otro.
 
 ## Pruebas
 
 | Qué | Cómo |
 |---|---|
-| PU11 | En pantalla: «Siguiente» (o el formulario único) no crea nada hasta pulsar «Crear proyecto»; render del formulario |
+| PU11 | Render del formulario: un solo botón, de envío, y los campos de los dos grupos; en pantalla, el proyecto se crea al pulsar «Crear proyecto» con su proyección |
 | PU12 | Test de `levelingTypeLabel`: los tres tipos, con y sin vuelta |
-| PU13 | Render de las filas del hub |
+| PU13 | Test de las filas del hub: el tipo como frase en poligonales y nivelaciones |
+| PU16 | Render de los dos diálogos con su línea |
 | PU15 | Tests de la función pura: con coordenadas, sin norte, sin este, sin punto |
 
 **En pantalla (local), claro y oscuro, 1280 y 390 px:** el alta de un
@@ -142,6 +155,8 @@ nivelaciones, una abierta con vuelta (cabecera, cierre, informe y Excel).
 - Migrar `relative_precision` a número, historial de georreferenciaciones,
   la guarda en atrás y adelante del navegador.
 - La distancia acumulada en coma flotante: va en la Fase 26 (C-14).
+- Unificar los dos diálogos que mueven una poligonal (decisión 4).
+- Los criterios del cálculo (CR1 a CR4 en `pendientes.md`).
 
 ## Riesgos
 
@@ -152,12 +167,12 @@ nivelaciones, una abierta con vuelta (cabecera, cierre, informe y Excel).
 
 ## Tareas (en orden)
 
-0. **Apertura:** estados en `method.md` y `prds/README.md`, `pendientes.md`
-   (el PRD ya se commitea con la apertura de la Fase 26). Commit `docs:`.
-   Rama.
+0. **Apertura:** este PRD con las decisiones, estados en `method.md` y
+   `prds/README.md`, `pendientes.md`. Commit `docs:`. Rama.
 1. **PU11** — alta de proyecto.
 2. **PU15** — función pura, tests y filtro por proyecto.
 3. **PU12 y PU13** — etiquetas.
-4. **Verificación en pantalla** en local.
-5. **Cierre:** manual (dos copias) y capturas que cambien, doc técnica § 11,
+4. **PU16** — una línea en cada diálogo.
+5. **Verificación en pantalla** en local.
+6. **Cierre:** manual (dos copias) y capturas que cambien, doc técnica § 11,
    `method.md`, `prds/README.md`, `pendientes.md`. Revisión de código y PR.
