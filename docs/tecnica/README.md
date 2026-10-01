@@ -1257,6 +1257,39 @@ y se verificó fila a fila contra él. Una guarda aborta si un punto de control
 de asentamientos es punto de cambio en una libreta compensada: su cota
 cambiaría y la serie solo la recalcula `computeHistory`.
 
+### Nivelación: ida y vuelta en la compensación (Fase 28)
+
+Con recorrido de vuelta, cada recorrido se compensa contra la cota conocida en
+la que cierra, y solo si el trabajo cumple:
+
+- **Abierta.** Ida y vuelta forman un circuito sobre el BM de partida, la única
+  cota conocida. `circuitClosureMm` = (Δh_ida + Δh_vuelta)·1000 se reparte por
+  distancia a lo largo de todo el circuito (`applyCircuitCorrection`): en la
+  ida con su acumulado, y en la vuelta con D_ida + su acumulado. En el punto de
+  vuelta da el promedio de ida y vuelta ponderado por 1/D.
+- **Cerrada o de enlace.** La vuelta se compensa con su propio cierre
+  (`applyProportionalCorrection`), como la ida con el suyo.
+
+**Una cota por punto.** `adoptedElevations` da el promedio de las cotas
+compensadas de un punto leído dos veces —en la ida y en la vuelta, o al ir y
+al volver de un mismo recorrido, como el tramo 2— y la cota conocida para el
+BM de partida y, en una de enlace, el de llegada (`knownBmsOf`), que no
+cambian nunca. Los puntos se reconocen por su código normalizado, como los
+homólogos. `adoptedElevationsOf` la aplica a un cálculo, solo si el veredicto
+es «cumple»; `storedAdoptedElevations` (`lib/reports/adopted.ts`) la deriva de
+las filas guardadas para el informe y el Excel, sin recalcular.
+
+Por qué el promedio y no la cota de la ida: tras compensar el circuito, la
+incertidumbre de un punto depende de su posición como s·(L − s)/L, que es
+simétrica, así que sus dos cotas compensadas valen lo mismo. El documento
+`docs/math/nivelacion.html` reúne todas las fórmulas del módulo con El Verjón
+resuelto paso a paso.
+
+**Sin marca por proceso** (decisión 3 del PRD de la fase): el motor nuevo vale
+para todos. Las nivelaciones abiertas guardadas se recalcularon; las cerradas
+conservan sus filas. En producción, la única cerrada, el tramo 2, es un solo
+recorrido y se compensa como antes.
+
 ### `computeSettlements`, `computeDifferentials`, `classifyAlert`
 
 El motor de asentamientos, en `settlement.ts`, se apoya en tres piezas
@@ -2174,7 +2207,9 @@ recalcularlos y guardarlos antes de desplegar, o no podrán cerrarse. Desde la
 Fase 23 la abierta **con vuelta** también exige veredicto; si una sale en la
 consulta, le faltan distancias y no se cerrará hasta tenerlas.
 
-**El desnivel adoptado (`adoptedHeightDifference`) no alimenta la
+**Cerrado en la Fase 28 — ida y vuelta entran en la compensación**, y cada
+punto leído dos veces recibe una cota adoptada (ver § 6). El texto original
+queda como registro. **El desnivel adoptado (`adoptedHeightDifference`) no alimenta la
 compensación.** `computeLeveling` lo calcula como el promedio de ida y vuelta
 (§ 6.9) y el panel de resultados lo muestra («Desnivel adoptado (promedio)»),
 pero la corrección proporcional del recorrido de ida se aplica hoy con el
