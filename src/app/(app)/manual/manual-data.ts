@@ -131,7 +131,7 @@ export const CAPTURAS = {
     src: "/manual/25-nueva-visita.png",
     alt: "Formulario Nueva visita: fecha, nivelador, captura «Digitar la libreta de nivelación», BM de amarre BM-1 con cota 100.0000, orden de precisión y equipo tomados de la visita anterior.",
     width: 1344,
-    height: 2012,
+    height: 2340,
   },
   importarLibretaVisita: {
     src: "/manual/26-importar-libreta-visita.png",
@@ -173,7 +173,7 @@ export const CAPTURAS = {
     src: "/manual/16-editor-visita.png",
     alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas y su resumen de cierre, y debajo las cotas de los puntos de control que salen de ella.",
     width: 2560,
-    height: 5866,
+    height: 6122,
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
@@ -203,6 +203,12 @@ export const CAPTURAS = {
     height: 6808,
     angosta: true,
   },
+  equipos: {
+    src: "/manual/31-equipos.png",
+    alt: "Página Equipos: estaciones totales y niveles del catálogo, con su calibración —dos con el aviso de más de un año— y su precisión.",
+    width: 2560,
+    height: 1874,
+  },
   informeDelProceso: {
     src: "/manual/30-informe-del-proceso.png",
     alt: "Pestaña Informe de una poligonal cerrada: portada, datos y resultados, dibujo, resumen de precisión y registro de cierre.",
@@ -231,6 +237,7 @@ export const SECCIONES: SeccionManual[] = [
   { id: "campo", titulo: "Trabajo en campo" },
   { id: "informes", titulo: "Informes" },
   { id: "export", titulo: "Exportar a Excel" },
+  { id: "equipos", titulo: "El catálogo de equipos" },
   { id: "faq", titulo: "Preguntas frecuentes" },
 ];
 
@@ -580,7 +587,7 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Dónde declaro el equipo y el orden de precisión que usé?",
     respuesta:
-      "En cada proceso, no en el proyecto: cada poligonal, cada nivelación y cada visita de asentamiento declara los suyos, en su propia configuración. Un mismo proyecto puede así tener una poligonal de tercer orden medida con una estación total y, meses después, una red de control de primer orden medida con otra — cada una con el instrumento con que realmente se trabajó.",
+      "En cada proceso, no en el proyecto: cada poligonal, cada nivelación y cada visita de asentamiento declara los suyos, en su propia configuración. Un mismo proyecto puede así tener una poligonal de tercer orden medida con una estación total y, meses después, una red de control de primer orden medida con otra — cada una con el instrumento con que realmente se trabajó. Si es el de siempre, tómelo del catálogo de equipos.",
   },
   {
     pregunta: "Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?",
