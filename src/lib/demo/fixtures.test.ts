@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compareHomologousPoints,
+  adoptedElevationsOf,
   computeLeveling,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
@@ -196,5 +197,73 @@ describe("material de los informes de la demo", () => {
       "Poligonal V10 — cartera TT4",
     ]);
     expect([NIVELACION_VERJON, nivelacionTramo2()].filter((n) => n.status === "closed")).toHaveLength(1);
+  });
+});
+
+// Fase 28: ida y vuelta en la compensación, con las carteras reales. Los
+// valores esperados salen de compensar El Verjón como un solo circuito
+// D1 → D4 → D1 por distancia (el método de libro), calculados aparte.
+describe("ida y vuelta compensadas — las carteras de la demo (Fase 28)", () => {
+  const norm = (c: string) => c.replace(/\s+/g, "").toUpperCase();
+
+  it("El Verjón se compensa como un circuito de 781.9 m con −5.0 mm de cierre", () => {
+    const r = nivelar(NIVELACION_VERJON);
+    expect(r.circuitClosureMm).toBeCloseTo(-5.0, 6);
+    const ida = r.forward.readings;
+    const vuelta = r.return!.readings;
+    // El BM de partida conserva su cota al salir y al volver.
+    expect(ida[0]!.elevationCorrected).toBe(3288.5);
+    expect(vuelta.at(-1)!.elevationCorrected).toBeCloseTo(3288.5, 9);
+    // El punto de vuelta: el promedio de ida y vuelta ponderado por distancia.
+    expect(ida.at(-1)!.elevationCorrected).toBeCloseTo(3315.0855, 4);
+    expect(vuelta[0]!.elevationCorrected).toBeCloseTo(ida.at(-1)!.elevationCorrected, 9);
+    // C1, pasado dos veces: una cota compensada en cada pasada.
+    const c1 = (rows: typeof ida) => rows.find((x) => norm(x.pointCode) === "C1")!.elevationCorrected;
+    expect(c1(ida)).toBeCloseTo(3289.4414, 4);
+    expect(c1(vuelta)).toBeCloseTo(3289.4386, 4);
+  });
+
+  it("y cada punto recibe una sola cota, el promedio de sus dos compensadas", () => {
+    const r = nivelar(NIVELACION_VERJON);
+    const adopted = adoptedElevationsOf(r, {
+      type: NIVELACION_VERJON.type,
+      startElevation: NIVELACION_VERJON.startElevation,
+      endElevation: null,
+    })!;
+    const cota = (code: string) => adopted.find((a) => norm(a.pointCode) === code)!;
+    expect(cota("D1")).toMatchObject({ elevation: 3288.5, known: true, readings: 2 });
+    expect(cota("C1").elevation).toBeCloseTo(3289.44, 4);
+    expect(cota("C5").elevation).toBeCloseTo(3302.767, 4);
+    expect(cota("C8").elevation).toBeCloseTo(3313.544, 4);
+    expect(cota("D4").elevation).toBeCloseTo(3315.0855, 4);
+    // «AUX 1» en la ida y «AUX1» en la vuelta son el mismo punto.
+    expect(cota("AUX1").readings).toBe(2);
+  });
+
+  it("los homólogos siguen comparando las cotas calculadas, sin compensar", () => {
+    const h = compareHomologousPoints(nivelar(NIVELACION_VERJON))!;
+    expect(h.points.at(-1)!.residualMm).toBeCloseTo(-5.0, 6);
+  });
+
+  it("el tramo 2, un recorrido que vuelve por sus puntos, da una cota por punto", () => {
+    const t2 = nivelacionTramo2();
+    const r = nivelar(t2);
+    // Las filas se compensan como antes: C14 al ir sigue en 2542.2296.
+    const c14 = r.forward.readings.filter((x) => norm(x.pointCode) === "C14");
+    expect(c14.map((x) => Number(x.elevationCorrected.toFixed(4)))).toEqual([2542.2296, 2542.2246]);
+    const adopted = adoptedElevationsOf(r, { type: t2.type, startElevation: t2.startElevation, endElevation: null })!;
+    const cota = (code: string) => adopted.find((a) => norm(a.pointCode) === code)!;
+    expect(cota("C14").elevation).toBeCloseTo(2542.2271, 4);
+    expect(cota("C10")).toMatchObject({ elevation: 2541.7545, known: true, readings: 2 });
+  });
+
+  it("sin cumplir no se compensa ni hay cota adoptada", () => {
+    // En primer orden, los 5.0 mm superan T·√2 = 2.63 mm.
+    const r = nivelar({ ...NIVELACION_VERJON, precisionOrder: "primer_orden" });
+    expect(r.meetsDiscrepancy).toBe(false);
+    expect(r.forward.readings.every((x) => x.elevationCorrected === x.elevationCalculated)).toBe(true);
+    expect(
+      adoptedElevationsOf(r, { type: "open", startElevation: NIVELACION_VERJON.startElevation, endElevation: null }),
+    ).toBeNull();
   });
 });

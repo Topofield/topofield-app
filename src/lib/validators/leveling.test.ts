@@ -273,6 +273,7 @@ function resultWith(over: Partial<LevelingResult> = {}): LevelingResult {
     discrepancyToleranceMm: null,
     meetsDiscrepancy: null,
     adoptedHeightDifference: null,
+    circuitClosureMm: null,
     ...over,
   };
 }
