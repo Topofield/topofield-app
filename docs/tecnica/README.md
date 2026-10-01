@@ -2695,13 +2695,15 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-30):** la nube tiene aplicadas las **veinticinco**
-migraciones, hasta `20260930030000_informe_congelado` (Fase 23), empujadas
-antes del merge de su PR. Verificado con consultas al esquema: El Verjón quedó
-con su veredicto (5.0 mm frente a 10.5 mm, cumple), ningún informe sin
-portada, las cuatro funciones de guardado como `SECURITY INVOKER` y sin
-`EXECUTE` para `anon`, los dos triggers nuevos activos, `reports` sin política
-de `UPDATE` y cero procesos calculados con el veredicto nulo.
+**Estado actual (2026-09-30):** la nube tiene aplicadas las **veintiséis**
+migraciones, hasta `20260930040000_rango_lecturas_angulo` (Fase 24), empujada
+antes del merge de su PR, con 0 lecturas fuera de rango contadas antes.
+Verificado con consultas al esquema: el CHECK `polygonal_angle_readings_dms_range`
+activo. Las de la Fase 23 se verificaron al aplicarse: El Verjón con su
+veredicto, ningún informe sin portada, las cuatro funciones de guardado como
+`SECURITY INVOKER` y sin `EXECUTE` para `anon`, sus dos triggers activos,
+`reports` sin política de `UPDATE` y cero procesos calculados con el veredicto
+nulo.
 
 **Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
 mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de
