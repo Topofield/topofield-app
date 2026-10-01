@@ -34,6 +34,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 22 | El proceso en una pantalla | [`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md) | cerrada |
 | 23 | Integridad | [`prds/22-integridad.md`](./prds/22-integridad.md) | cerrada |
 | 24 | Pulido | [`prds/23-pulido.md`](./prds/23-pulido.md) | cerrada |
+| 25 | Catálogo de equipos | [`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md) | en curso |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 

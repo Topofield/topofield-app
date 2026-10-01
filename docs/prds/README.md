@@ -30,6 +30,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 22 | El proceso en una pantalla | `21-proceso-en-una-pantalla.md` | cerrada |
 | 23 | Integridad | `22-integridad.md` | cerrada |
 | 24 | Pulido | `23-pulido.md` | cerrada |
+| 25 | Catálogo de equipos | `24-catalogo-equipos.md` | en curso |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
