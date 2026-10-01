@@ -23,6 +23,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/app/(auth)/` → páginas de login y registro (Supabase Auth); `src/app/auth/callback/` → confirmación de correo
 - `src/app/(app)/dashboard/` → dashboard principal con lista de proyectos
 - `src/app/(app)/manual/` → el manual de usuario en la app (ruta `/manual`)
+- `src/app/(app)/equipos/` → el catálogo de equipos de la cuenta (ruta `/equipos`)
 - `src/app/(app)/projects/[id]/` → hub del proyecto, tabs de procesos/informes/config
 - `src/app/(app)/projects/[id]/polygonal/[pid]/` → poligonal: pestañas Proceso · Informe, y `export/` (Excel)
 - `src/app/(app)/projects/[id]/leveling/[pid]/` → nivelación: pestañas Proceso · Informe, y `export/`
@@ -34,6 +35,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/components/process/` → la pantalla común de un proceso (`ProcessShell`) y su informe
 - `src/components/reports/` → alta del informe y sus secciones, compartidas con la pestaña Informe
 - `src/components/projects/`, `navigation/` → dashboard, hub y guarda de cambios sin guardar
+- `src/components/equipment/` → página del catálogo de equipos, selector «Tomar del catálogo» y su contexto, que carga el layout de `(app)`
 - `src/lib/calculations/` → algoritmos topográficos puros (sin dependencias de React)
 - `src/lib/calculations/polygonal.ts` → Bowditch, Tránsito, Crandall, Mínimos cuadrados (con `least-squares.ts`)
 - `src/lib/calculations/leveling.ts` → corrección proporcional a distancia
@@ -62,13 +64,14 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado. Única excepción: la **posición** de una poligonal (coordenadas, proyecciones, azimuts, arranque y llegada) se puede reescribir al georreferenciarla (Fase 15); los triggers admiten solo esas columnas.
 - Lo que alimenta un resultado cerrado también queda fijo: la C0 y las coordenadas de un punto con lecturas en una visita cerrada no cambian (trigger en `settlement_points`), y un informe emitido no admite UPDATE: guarda su portada en `reports.cover` y solo se elimina y se regenera.
 - Los guardados que escriben varias tablas van por una función de Postgres (`supabase.rpc`: `save_polygonal_process`, `save_leveling_process`, `save_visit`, `georeference_polygonal`) para que sean atómicos. Son `SECURITY INVOKER`, con columnas explícitas, y solo escriben: el cálculo sigue en TypeScript, en la Server Action.
+- El catálogo de equipos (`equipment`) es una **plantilla**: elegir un equipo copia sus datos en las columnas `equipment_*` y de precisión del proceso o de la visita. Ningún proceso lo referencia, así que editar o borrar un equipo nunca cambia lo ya medido ni informado.
 - Cada tabla tiene Row Level Security (RLS) en Supabase. El user solo ve sus propios proyectos.
 - Las tolerancias están definidas como constantes en `src/lib/calculations/tolerances.ts`, no hardcodeadas en componentes.
 - Idioma de la interfaz: español (Colombia). Zona horaria: America/Bogota.
 - Consultar `PRD-TopoField.md` por sección según la tarea: `§3` modelo de datos y SQL · `§4.6` cierre y bloqueo · `§5` reglas de validación (`§5.4` tolerancias por orden) · `§6` algoritmos de cálculo · `§9` orden de implementación.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 23, todas cerradas.
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 25, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.
