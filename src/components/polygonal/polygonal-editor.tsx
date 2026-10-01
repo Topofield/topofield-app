@@ -341,6 +341,10 @@ export function PolygonalEditor({
             <PolygonalConfigFields
               value={config}
               angleFormat={angleFormat}
+              // El catálogo, como en el alta (Fase 26, C-20): sin él el
+              // editor mostraba «Sin amarre / manual» en un proceso amarrado,
+              // no calculaba el azimut ni ofrecía la fila de cierre.
+              referencePoints={referencePoints}
               disabled={readOnly}
               onChange={(v) => {
                 setConfig(v);

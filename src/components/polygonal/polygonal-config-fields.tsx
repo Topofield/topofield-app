@@ -230,7 +230,9 @@ export function PolygonalConfigFields({
           onChange={(v) => set("startAzimuth", v)}
         />
 
-        {azimutCalculado != null && (
+        {/* Solo la cerrada cierra contra el amarre: en una abierta la casilla
+            no cambiaba nada (Fase 26). */}
+        {azimutCalculado != null && value.type === "closed" && (
           <label className="flex items-start gap-2 text-sm text-ink-2">
             <input
               type="checkbox"
