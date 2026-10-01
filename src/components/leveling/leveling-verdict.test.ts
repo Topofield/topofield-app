@@ -5,7 +5,7 @@ import { levelingVerdictFor } from "./leveling-verdict";
 // Fase 22: el veredicto de la nivelación, arriba de la pantalla.
 
 const base: LevelingResult = {
-  forward: { readings: [], heightDifference: 0, errorMm: null },
+  forward: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true },
   return: null,
   arithmeticCheckOk: true,
   sumBacksights: 0,
@@ -49,7 +49,7 @@ describe("levelingVerdictFor", () => {
     const v = levelingVerdictFor(
       {
         ...base,
-        return: { readings: [], heightDifference: 0, errorMm: null },
+        return: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true },
         discrepancyMm: 5,
         discrepancyToleranceMm: 10.5,
         meetsDiscrepancy: true,
@@ -68,5 +68,36 @@ describe("levelingVerdictFor", () => {
       "Sin verificación de cierre",
     );
     expect(levelingVerdictFor(base, "closed", "tercer_orden", 0).title).toBe("Datos incompletos");
+  });
+});
+
+describe("levelingVerdictFor — la vuelta de una cerrada (Fase 26, C-10)", () => {
+  const vuelta = (meetsTolerance: boolean | null) => ({
+    readings: [],
+    heightDifference: 0,
+    distanceKm: 0.9,
+    errorMm: 12,
+    toleranceMm: 5.7,
+    meetsTolerance,
+    arithmeticCheckOk: true,
+  });
+  const ida = { closureErrorMm: -5, toleranceMm: 5.7, meetsTolerance: true };
+
+  it("si la vuelta no cumple, decide la vuelta", () => {
+    const v = levelingVerdictFor({ ...base, ...ida, return: vuelta(false) }, "closed", "segundo_orden", 0.9);
+    expect(v.tone).toBe("danger");
+    expect(v.value).toBe("+12.0 mm");
+    expect(v.detail).toBe("Error de cierre de la vuelta sobre 0.900 km");
+  });
+
+  it("si cumplen los dos, se muestra la ida y se dice que lo es", () => {
+    const v = levelingVerdictFor({ ...base, ...ida, return: vuelta(true) }, "closed", "segundo_orden", 0.9);
+    expect(v.tone).toBe("ok");
+    expect(v.detail).toBe("Error de cierre de la ida sobre 0.900 km");
+  });
+
+  it("sin tolerancia de la vuelta, datos incompletos", () => {
+    const v = levelingVerdictFor({ ...base, ...ida, return: vuelta(null) }, "link", "segundo_orden", 0.9);
+    expect(v.title).toBe("Datos incompletos");
   });
 });

@@ -373,7 +373,11 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
   const forwardResult: RunResult = {
     readings,
     heightDifference: forward.heightDifference,
+    distanceKm: totalDistanceKm,
     errorMm: closureErrorMm,
+    toleranceMm,
+    meetsTolerance,
+    arithmeticCheckOk: forward.arithmeticCheckOk,
   };
 
   // --- Ida y vuelta (§ 6.9, enmendado — decisión #2) -----------------------
@@ -426,18 +430,37 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       known != null
         ? (back.finalElevation - input.startElevation) * 1000
         : null;
+    // La vuelta de una cerrada o de enlace se juzga como la ida, con su propia
+    // distancia (Fase 26, C-10, decisión 2 del PRD). Antes solo se juzgaba la
+    // discrepancia, |e_ida + e_vuelta|, y dos errores de signo contrario se
+    // cancelaban: una vuelta del doble de la tolerancia cerraba conforme.
+    const returnToleranceMm =
+      returnErrorMm != null && valid(returnDistanceKm)
+        ? levelingTolerance(input.order, returnDistanceKm)
+        : null;
 
     returnResult = {
       readings: back.readings,
       heightDifference: back.heightDifference,
+      distanceKm: returnDistanceKm,
       errorMm: returnErrorMm,
+      toleranceMm: returnToleranceMm,
+      meetsTolerance:
+        returnErrorMm != null && returnToleranceMm != null
+          ? withinTolerance(returnErrorMm, returnToleranceMm)
+          : null,
+      arithmeticCheckOk: back.arithmeticCheckOk,
     };
   }
 
   return {
     forward: forwardResult,
     return: returnResult,
-    arithmeticCheckOk: forward.arithmeticCheckOk,
+    // Las dos comprobaciones (Fase 26, C-12): un BM interior de la vuelta con
+    // solo V+ no rompía nada y el proceso salía rechazado por la discrepancia,
+    // sin decir por qué.
+    arithmeticCheckOk:
+      forward.arithmeticCheckOk && (returnResult?.arithmeticCheckOk ?? true),
     sumBacksights: forward.sumBacksights,
     sumForesights: forward.sumForesights,
     closureErrorMm,
@@ -459,8 +482,8 @@ function normalizedCode(code: string): string {
 
 /**
  * El veredicto que se guarda de un proceso de nivelación (Fase 23). En una
- * cerrada o de enlace es el cierre contra la cota conocida; la discrepancia
- * de ida y vuelta es ahí control de calidad (Fase 4). En una **abierta** no
+ * cerrada o de enlace es el cierre contra la cota conocida, de la ida y, si la
+ * hay, de la vuelta (Fase 26); la discrepancia es ahí control de calidad. En una **abierta** no
  * hay cierre: si tiene vuelta, el emparejamiento por sección es su veredicto
  * (§ 6.9 del PRD principal); sin vuelta, no hay ninguno. Función pura.
  */
@@ -468,8 +491,13 @@ export function levelingProcessVerdict(
   result: LevelingResult,
   type: LevelingType,
 ): boolean | null {
-  if (type !== "open") return result.meetsTolerance;
-  return result.return ? result.meetsDiscrepancy : null;
+  if (type === "open") return result.return ? result.meetsDiscrepancy : null;
+  // Con vuelta, cumplen los dos recorridos (Fase 26, C-10). Uno que no cumple
+  // decide; uno sin tolerancia —le faltan distancias— deja el veredicto en
+  // blanco.
+  const runs = [result.meetsTolerance, result.return ? result.return.meetsTolerance : true];
+  if (runs.includes(false)) return false;
+  return runs.includes(null) ? null : true;
 }
 
 /**

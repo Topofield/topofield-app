@@ -20,9 +20,9 @@ export interface LevelingVerdict {
  * Veredicto de una nivelación (Fase 22), el equivalente del de la poligonal.
  * Función pura.
  *
- * Una cerrada o de enlace se juzga por su error de cierre; una abierta con
- * vuelta, por la discrepancia entre ida y vuelta; una abierta sin vuelta no
- * cierra contra nada.
+ * Una cerrada o de enlace se juzga por su error de cierre, el de la ida y, si
+ * la hay, el de la vuelta; una abierta con vuelta, por la discrepancia entre
+ * ida y vuelta; una abierta sin vuelta no cierra contra nada.
  */
 export function levelingVerdictFor(
   result: LevelingResult,
@@ -41,13 +41,26 @@ export function levelingVerdictFor(
 
   if (type !== "open") {
     if (result.meetsTolerance === null || result.closureErrorMm === null) return incompletos;
+    const back = result.return;
+    if (back && back.meetsTolerance === null) return incompletos;
+    // Con vuelta, cada recorrido con su tolerancia (Fase 26): si la ida cumple
+    // y la vuelta no, decide la vuelta.
+    if (result.meetsTolerance && back && back.meetsTolerance === false && back.errorMm !== null) {
+      return {
+        tone: "danger",
+        title: `No cumple ${orderLabel}`,
+        value: `${formatSignedMm(back.errorMm)} mm`,
+        required: back.toleranceMm === null ? null : `tolerancia ±${back.toleranceMm.toFixed(1)} mm`,
+        detail: `Error de cierre de la vuelta sobre ${back.distanceKm.toFixed(3)} km`,
+      };
+    }
     return {
       tone: result.meetsTolerance ? "ok" : "danger",
       title: `${result.meetsTolerance ? "Cumple" : "No cumple"} ${orderLabel}`,
       value: `${formatSignedMm(result.closureErrorMm)} mm`,
       required:
         result.toleranceMm === null ? null : `tolerancia ±${result.toleranceMm.toFixed(1)} mm`,
-      detail: `Error de cierre sobre ${totalKm.toFixed(3)} km`,
+      detail: `Error de cierre${back ? " de la ida" : ""} sobre ${totalKm.toFixed(3)} km`,
     };
   }
 

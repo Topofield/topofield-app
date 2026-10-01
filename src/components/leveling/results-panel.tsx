@@ -179,6 +179,16 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                     : "—"}
                 </dd>
               </div>
+              {result.return.toleranceMm != null && (
+                <div>
+                  <dt className="text-ink-2">
+                    Tolerancia {RUN_TYPE_LABELS.return.toLowerCase()}
+                  </dt>
+                  <dd className="font-mono tabular-nums text-ink">
+                    {`±${formatMm(result.return.toleranceMm)} mm`}
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt className="text-ink-2">Discrepancia</dt>
                 <dd className="font-mono tabular-nums text-ink">

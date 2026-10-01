@@ -394,14 +394,16 @@ export function evaluateLevelingClosure(
 
   // La comprobación aritmética (ΣV+ − ΣV− == desnivel total) es
   // un fallo estructural en los datos, no un problema de precisión: si no
-  // cuadra, ningún cierre es confiable y se bloquea sin más.
+  // cuadra, ningún cierre es confiable y se bloquea sin más. Se revisan los
+  // dos recorridos y se dice cuál (Fase 26, C-12).
   if (!result.arithmeticCheckOk) {
+    const which = !result.forward.arithmeticCheckOk ? "de la ida" : "de la vuelta";
     return {
       canClose: false,
       mustReject: false,
       blocked: true,
       messages: [
-        "La comprobación aritmética no cuadra: ΣV+ − ΣV− no coincide con el desnivel total.",
+        `La comprobación aritmética ${result.return ? `${which} ` : ""}no cuadra: ΣV+ − ΣV− no coincide con el desnivel total.`,
       ],
     };
   }
@@ -436,10 +438,38 @@ export function evaluateLevelingClosure(
     return { canClose: true, mustReject: false, blocked: false, messages };
   }
 
+  // Cerrada o de enlace: sin tolerancia de algún recorrido —le faltan
+  // distancias— no hay veredicto, y el servidor no cerraría (Fase 26).
+  const back = result.return;
+  if (
+    type !== "open" &&
+    (result.meetsTolerance === null || (back && back.meetsTolerance === null))
+  ) {
+    return {
+      canClose: false,
+      mustReject: false,
+      blocked: true,
+      messages: [
+        back && result.meetsTolerance !== null
+          ? "Faltan distancias por visual en la vuelta para juzgar su cierre."
+          : "Faltan distancias por visual para juzgar el cierre.",
+      ],
+    };
+  }
+
+  const label = back ? " de la ida" : "";
   if (result.meetsTolerance === false) {
     mustReject = true;
     messages.push(
-      `El error de cierre (${result.closureErrorMm?.toFixed(1)} mm) supera la tolerancia (${result.toleranceMm?.toFixed(1)} mm); solo puede cerrarse como rechazado.`,
+      `El error de cierre${label} (${result.closureErrorMm?.toFixed(1)} mm) supera la tolerancia (${result.toleranceMm?.toFixed(1)} mm); solo puede cerrarse como rechazado.`,
+    );
+  }
+
+  // La vuelta, con su propia tolerancia (Fase 26, C-10).
+  if (back && back.meetsTolerance === false) {
+    mustReject = true;
+    messages.push(
+      `El error de cierre de la vuelta (${back.errorMm?.toFixed(1)} mm) supera su tolerancia (${back.toleranceMm?.toFixed(1)} mm); solo puede cerrarse como rechazado.`,
     );
   }
 

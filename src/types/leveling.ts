@@ -133,14 +133,25 @@ export interface RunResult {
   readings: ComputedReading[];
   /** Desnivel de la sección: cota final − cota inicial. */
   heightDifference: number;
+  /** Longitud del recorrido en km, de sus distancias por visual. */
+  distanceKm: number;
   /** Error de cierre del recorrido en mm. Null si el tipo no cierra. */
   errorMm: number | null;
+  /**
+   * Tolerancia K·√D del recorrido con su propia distancia, y si la cumple
+   * (Fase 26). Null si el tipo no cierra o le faltan distancias.
+   */
+  toleranceMm: number | null;
+  meetsTolerance: boolean | null;
+  /** ΣV+ − ΣV− = desnivel del recorrido. */
+  arithmeticCheckOk: boolean;
 }
 
 export interface LevelingResult {
   forward: RunResult;
   return: RunResult | null;
-  // Comprobación aritmética (solo bm y pc; los intermedios se excluyen).
+  // Comprobación aritmética (solo bm y pc; los intermedios se excluyen), de la
+  // ida y de la vuelta.
   arithmeticCheckOk: boolean;
   sumBacksights: number;
   sumForesights: number;
