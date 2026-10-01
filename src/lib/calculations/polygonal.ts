@@ -142,6 +142,22 @@ function chainCoordinates(
   return { north, east };
 }
 
+/**
+ * Azimut del primer lado de una abierta (Fase 26, C-2). Sin amarre es el de
+ * partida, tecleado. Con amarre, `startAzimuth` apunta del arranque HACIA el
+ * amarre y la primera fila lleva el ángulo de orientación, medido a la derecha
+ * desde el amarre: el primer lado sale de los dos, como en la cerrada. Antes
+ * las abiertas tomaban el azimut al amarre como si fuera el del primer lado.
+ * `NaN` si falta el ángulo de orientación.
+ */
+function firstSideAzimuth(input: PolygonalInput): number {
+  if (!input.hasOrientation) return input.startAzimuth;
+  const orientation = input.stations[0]?.angle;
+  return isNum(orientation)
+    ? normalizeAzimuth(input.startAzimuth + orientation)
+    : Number.NaN;
+}
+
 // ----------------------------------------------------------------------------
 // Poligonal cerrada
 // ----------------------------------------------------------------------------
@@ -166,18 +182,33 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
 
   // Qué ángulos entran en la condición de cierre angular. Con fila de cierre
   // entran todos, incluido el de orientación, y el vértice de arranque aporta
-  // sus dos lecturas: de ahí el +360 de la suma teórica. Sin fila de cierre el
-  // de orientación solo fija el datum y queda fuera de la suma — es el esquema
-  // de la cartera Vivero (hallazgo 4 del PRD de fase).
+  // sus dos lecturas. Sin fila de cierre el de orientación solo fija el datum
+  // y queda fuera de la suma — es el esquema de la cartera Vivero (hallazgo 4
+  // del PRD de fase).
   const firstParticipating =
     input.hasOrientation && !input.hasClosingRow ? 1 : 0;
+  const twoReadingsAtStart = input.hasOrientation && input.hasClosingRow;
 
-  const theoreticalSumFor = (vertices: number): number => {
+  /**
+   * Suma teórica de los ángulos que entran en la condición. Con fila de
+   * cierre, las dos lecturas del vértice de arranque (orientación: amarre →
+   * primera estación; cierre: última estación → amarre) suman su ángulo más
+   * 360·k: k = 1 si el amarre queda fuera del barrido horario de la vista
+   * atrás a la adelante, y k = 0 si queda dentro. Antes el +360 era fijo y con
+   * el amarre del otro lado la poligonal salía con 360° de error (Fase 26,
+   * C-1). k sale de la propia suma; fuera de 0 o 1 se deja 1, para que una
+   * poligonal declarada interior siendo exterior —720° de diferencia— se siga
+   * viendo como error. Sin la suma (datos incompletos) se muestra k = 1, el
+   * caso de la cartera TT4.
+   */
+  const theoreticalSumFor = (vertices: number, sum: number | null): number => {
     const base =
       input.angleType === "exterior"
         ? (vertices + 2) * 180
         : (vertices - 2) * 180;
-    return base + (input.hasOrientation && input.hasClosingRow ? 360 : 0);
+    if (!twoReadingsAtStart) return base;
+    const k = sum === null ? 1 : Math.round((sum - base) / 360);
+    return base + 360 * (k === 0 ? 0 : 1);
   };
 
   const hasAllData =
@@ -188,7 +219,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
   if (!hasAllData) {
     return {
       angleSum: null,
-      theoreticalSum: vertexCount >= 3 ? theoreticalSumFor(vertexCount) : null,
+      theoreticalSum: vertexCount >= 3 ? theoreticalSumFor(vertexCount, null) : null,
       angularError: null,
       angularTolerance: null,
       anglesMeetTolerance: null,
@@ -198,7 +229,6 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
       perimeter,
       relativePrecision: null,
       meetsLinearTolerance: null,
-      reorientationError: null,
       meetsTolerance: null,
       stations: blankStations(stations),
     };
@@ -207,7 +237,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
   // Verificación angular
   const participating = angles.slice(firstParticipating);
   const angleSum = participating.reduce((a, b) => a + b, 0);
-  const theoreticalSum = theoreticalSumFor(vertexCount);
+  const theoreticalSum = theoreticalSumFor(vertexCount, angleSum);
   const angularErrorDeg = angleSum - theoreticalSum;
   const angularError = degreesToSeconds(angularErrorDeg);
   const tolerance = angularTolerance(input.order, participating.length);
@@ -230,19 +260,6 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     azimuths.push(
       normalizeAzimuth((azimuths[i - 1] ?? 0) + 180 + (correctedAngles[i] ?? 0)),
     );
-  }
-
-  // Control de reorientación: el último azimut de la cadena debe volver al
-  // azimut de amarre (con fila de cierre) o al del primer lado (sin ella).
-  // No condiciona el veredicto de cierre: es control de calidad del
-  // levantamiento, no criterio de tolerancia.
-  let reorientationError: number | null = null;
-  if (input.hasOrientation) {
-    const target = input.hasClosingRow
-      ? normalizeAzimuth(input.startAzimuth)
-      : (azimuths[0] ?? 0);
-    const diff = normalizeAzimuth((azimuths[n - 1] ?? 0) - target);
-    reorientationError = degreesToSeconds(diff > 180 ? diff - 360 : diff);
   }
 
   const sideAzimuths = azimuths.slice(0, sideCount);
@@ -334,7 +351,6 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     perimeter,
     relativePrecision,
     meetsLinearTolerance,
-    reorientationError,
     meetsTolerance: anglesMeetTolerance && meetsLinearTolerance,
     stations: stationResults,
     ...adjustmentOf(ls),
@@ -367,7 +383,9 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   const deflectionsValid = stations
     .slice(1, requiredDeflectionsLast + 1)
     .every((s) => isNum(s.angle));
-  const hasData = n >= 2 && distances.every(isNum) && deflectionsValid;
+  const startAzimuth = firstSideAzimuth(input);
+  const hasData =
+    n >= 2 && distances.every(isNum) && deflectionsValid && isNum(startAzimuth);
 
   if (!hasData || !hasEnd) {
     return {
@@ -382,7 +400,6 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
       perimeter,
       relativePrecision: null,
       meetsLinearTolerance: null,
-      reorientationError: null,
       meetsTolerance: null,
       stations: blankStations(stations),
     };
@@ -395,7 +412,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   let anglesMeetTolerance: boolean | null = null;
   let correctionPerDeflection = 0;
   if (doAngularClosure) {
-    let azCalc = input.startAzimuth;
+    let azCalc = startAzimuth;
     for (let i = 1; i <= n - 1; i++) {
       const st = stations[i];
       const dir = st?.deflectionDirection === "left" ? -1 : 1;
@@ -411,8 +428,9 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   }
 
   // Azimut de cada lado con la deflexión corregida (la corrección es 0 si no
-  // hubo cierre angular).
-  const azimuths: number[] = [input.startAzimuth];
+  // hubo cierre angular). El ángulo de orientación, si lo hay, fija el datum y
+  // no se corrige, como en la cerrada sin fila de cierre.
+  const azimuths: number[] = [startAzimuth];
   for (let i = 1; i < sideCount; i++) {
     const station = stations[i];
     const dir = station?.deflectionDirection === "left" ? -1 : 1;
@@ -451,7 +469,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
   // llegada en N y en E dependen de una sola distancia y el sistema es
   // singular.
   const ls = runLeastSquares(input, sideCount < 2, (w) =>
-    leastSquaresOpenControlled(input, doAngularClosure, w),
+    leastSquaresOpenControlled(input, startAzimuth, doAngularClosure, w),
   );
   const {
     correctedDeltaN,
@@ -498,7 +516,6 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
     perimeter,
     relativePrecision,
     meetsLinearTolerance,
-    reorientationError: null,
     meetsTolerance:
       (anglesMeetTolerance ?? true) && meetsLinearTolerance,
     stations: stationResults,
@@ -516,10 +533,12 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
   const sideCount = n - 1;
   const distances = stations.slice(0, sideCount).map((s) => s.distance);
   const perimeter = distances.reduce<number>((a, d) => (isNum(d) ? a + d : a), 0);
+  const startAzimuth = firstSideAzimuth(input);
   const hasData =
     n >= 2 &&
     distances.every(isNum) &&
-    stations.slice(1, sideCount).every((s) => isNum(s.angle));
+    stations.slice(1, sideCount).every((s) => isNum(s.angle)) &&
+    isNum(startAzimuth);
 
   if (!hasData) {
     return {
@@ -534,13 +553,12 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
       perimeter,
       relativePrecision: null,
       meetsLinearTolerance: null,
-      reorientationError: null,
       meetsTolerance: null,
       stations: blankStations(stations),
     };
   }
 
-  const azimuths: number[] = [input.startAzimuth];
+  const azimuths: number[] = [startAzimuth];
   for (let i = 1; i < sideCount; i++) {
     azimuths.push(
       normalizeAzimuth((azimuths[i - 1] ?? 0) + 180 + (stations[i]?.angle ?? 0)),
@@ -581,7 +599,6 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
     perimeter,
     relativePrecision: null,
     meetsLinearTolerance: null,
-    reorientationError: null,
     meetsTolerance: null,
     stations: stationResults,
   };
@@ -907,6 +924,7 @@ function leastSquaresClosed(
  */
 function leastSquaresOpenControlled(
   input: PolygonalInput,
+  startAzimuth: number,
   doAngularClosure: boolean,
   weights: LeastSquaresWeights,
 ): LeastSquaresOutcome {
@@ -925,7 +943,7 @@ function leastSquaresOpenControlled(
   const geometry = (l: number[]) => {
     const signed = l.slice(0, nd).map((x) => x / D2R);
     const distances = l.slice(nd);
-    const azimuths: number[] = [input.startAzimuth];
+    const azimuths: number[] = [startAzimuth];
     for (let k = 1; k < sideCount; k++) {
       azimuths.push(normalizeAzimuth((azimuths[k - 1] ?? 0) + (signed[k - 1] ?? 0)));
     }
@@ -942,7 +960,7 @@ function leastSquaresOpenControlled(
       const f: number[] = [];
       const A: number[][] = [];
       if (doAngularClosure) {
-        let az = input.startAzimuth + g.signed.reduce((a, b) => a + b, 0) - (input.endAzimuth ?? 0);
+        let az = startAzimuth + g.signed.reduce((a, b) => a + b, 0) - (input.endAzimuth ?? 0);
         az = ((((az + 180) % 360) + 360) % 360) - 180;
         f.push(az * D2R);
         A.push([...deflIdx.map(() => 1), ...distances0.map(() => 0)]);

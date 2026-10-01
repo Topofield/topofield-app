@@ -53,6 +53,37 @@ describe("StationsTable — nombres accesibles (Fase 24)", () => {
   });
 });
 
+describe("StationsTable — fila de orientación (Fase 26, C-2)", () => {
+  function renderOpen(orientationRow: boolean) {
+    return renderToStaticMarkup(
+      createElement(StationsTable, {
+        stations: [station(0, "A"), station(1, "B")],
+        onChange: () => {},
+        result,
+        issues: [],
+        showDeflection: true,
+        readingsMin: 1,
+        angularPrecisionSeconds: Number.NaN,
+        angleFormat: "dms",
+        orientationRow,
+      }),
+    );
+  }
+
+  it("una abierta amarrada rotula la primera fila como orientación y le quita el sentido", () => {
+    const html = renderOpen(true);
+    expect(html).toContain("Orientación: ángulo a la derecha desde el amarre.");
+    expect(html).not.toContain('aria-label="Sentido de la estación 1"');
+    expect(html).toContain('aria-label="Sentido de la estación 2"');
+  });
+
+  it("sin amarre, la primera fila es como las demás", () => {
+    const html = renderOpen(false);
+    expect(html).not.toContain("Orientación");
+    expect(html).toContain('aria-label="Sentido de la estación 1"');
+  });
+});
+
 describe("readingValues — coma decimal (Fase 26, C-5)", () => {
   it("una lectura con coma cuenta igual que con punto", async () => {
     const { readingValues, averageOf } = await import("./polygonal-draft");

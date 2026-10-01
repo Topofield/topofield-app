@@ -50,7 +50,6 @@ function resultWith(over: Partial<PolygonalResult> = {}): PolygonalResult {
     perimeter: 0,
     relativePrecision: null,
     meetsLinearTolerance: null,
-    reorientationError: null,
     meetsTolerance: null,
     stations: [],
     ...over,
@@ -402,9 +401,9 @@ describe("evaluatePolygonalClosure — abierta con control", () => {
     expect(r.messages[0]).toContain("punto de llegada");
   });
 
-  it("no exige verificación angular, a diferencia de la cerrada", () => {
-    // anglesMeetTolerance en false no debe bloquear: la abierta con control se
-    // verifica contra el punto de llegada, no por suma de ángulos.
+  it("el error angular fuera de tolerancia obliga a rechazar, como en el servidor (Fase 26, C-3)", () => {
+    // El servidor guarda meets_tolerance = ángulos && lineal; el diálogo debe
+    // decir lo mismo y no ofrecer «Confirmar cierre».
     const r = evaluatePolygonalClosure(
       "open_controlled",
       resultWith({ anglesMeetTolerance: false, meetsLinearTolerance: true }),
@@ -412,6 +411,18 @@ describe("evaluatePolygonalClosure — abierta con control", () => {
     );
     expect(r.canClose).toBe(true);
     expect(r.blocked).toBe(false);
+    expect(r.mustReject).toBe(true);
+    expect(r.messages[0]).toContain("azimut de llegada");
+  });
+
+  it("sin azimut de llegada no hay verificación angular y decide el lineal", () => {
+    const r = evaluatePolygonalClosure(
+      "open_controlled",
+      resultWith({ anglesMeetTolerance: null, meetsLinearTolerance: true }),
+      false,
+    );
+    expect(r.mustReject).toBe(false);
+    expect(r.messages).toEqual([]);
   });
 });
 
@@ -716,6 +727,30 @@ describe("lecturas fuera de rango (Fase 24)", () => {
     expect(readingDmsError({ deg: 90, min: 30.5, sec: 0 })).toBe("Los grados y los minutos van sin decimales.");
     // Lo que no es número lo marca la celda, no esta regla.
     expect(readingDmsError({ deg: Number.NaN, min: 0, sec: 0 })).toBeNull();
+  });
+});
+
+describe("expectStationCapture — amarre y fila de cierre (Fase 26)", () => {
+  it("la fila de cierre de una cerrada no pide distancia (C-19)", () => {
+    // El servidor llamaba sin `hasClosingRow` y exigía la distancia: una
+    // cerrada amarrada con fila de cierre no se podía guardar.
+    expect(expectStationCapture("closed", 4, 5, true, true)).toEqual({
+      angle: true,
+      distance: false,
+    });
+  });
+
+  it("en una abierta amarrada, la primera fila pide el ángulo de orientación (C-2)", () => {
+    for (const type of ["open_controlled", "open_uncontrolled"] as const) {
+      expect(expectStationCapture(type, 0, 4, false, true)).toEqual({
+        angle: true,
+        distance: true,
+      });
+      expect(expectStationCapture(type, 0, 4, false, false)).toEqual({
+        angle: false,
+        distance: true,
+      });
+    }
   });
 });
 

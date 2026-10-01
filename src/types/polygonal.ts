@@ -270,12 +270,6 @@ export interface PolygonalResult {
   perimeter: number;
   relativePrecision: number | null; // el X de 1:X
   meetsLinearTolerance: boolean | null;
-  /**
-   * Discrepancia del control de reorientación, en segundos de arco. Con fila de
-   * cierre, contra el azimut de amarre; sin ella, contra el azimut del primer
-   * lado. `null` cuando no hay orientación.
-   */
-  reorientationError: number | null;
   // Global
   meetsTolerance: boolean | null;
   stations: StationResult[];

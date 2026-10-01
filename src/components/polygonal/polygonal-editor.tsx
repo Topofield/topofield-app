@@ -135,6 +135,10 @@ export function PolygonalEditor({
       ? { code: amarre.code, north: Number(amarre.north), east: Number(amarre.east) }
       : null;
 
+  // Amarrado: la primera fila de una abierta lleva el ángulo de orientación
+  // (Fase 26, C-2). La misma regla que `buildInput`.
+  const hasOrientation = input.hasOrientation;
+
   const issues = useMemo<CaptureIssues[]>(
     () =>
       stations.map((st, i) =>
@@ -152,10 +156,11 @@ export function PolygonalEditor({
             i,
             stations.length,
             config.hasClosingRow,
+            hasOrientation,
           ),
         ),
       ),
-    [stations, config.type, config.hasClosingRow],
+    [stations, config.type, config.hasClosingRow, hasOrientation],
   );
 
   // Una celda con texto que no es número también bloquea (Fase 20, UI2):
@@ -357,6 +362,7 @@ export function PolygonalEditor({
               angularPrecisionSeconds
             }
             showDeflection={config.type === "open_controlled"}
+            orientationRow={config.type !== "closed" && hasOrientation}
             disabled={readOnly}
             angleFormat={angleFormat}
             onChange={(v) => {

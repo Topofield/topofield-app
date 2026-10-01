@@ -105,6 +105,15 @@ export interface ClosePolygonalPayload {
   asRejected: boolean;
 }
 
+/**
+ * Hay orientación cuando el proceso está amarrado a un punto conocido:
+ * entonces `startAzimuth` apunta del arranque HACIA la referencia y la primera
+ * estación lleva el ángulo de orientación.
+ */
+function hasOrientationOf(payload: SavePolygonalPayload): boolean {
+  return payload.referencePointId != null || payload.referencePointCode != null;
+}
+
 function angleOrNaN(
   deg: number | null,
   min: number | null,
@@ -158,11 +167,7 @@ function buildInput(payload: SavePolygonalPayload): PolygonalInput {
     order: payload.precisionOrder,
     method: payload.correctionMethod,
     angleType: payload.angleType,
-    // Hay orientación cuando el proceso está amarrado a un punto conocido:
-    // entonces startAzimuth apunta del arranque HACIA la referencia y la
-    // primera estación lleva el ángulo de orientación.
-    hasOrientation:
-      payload.referencePointId != null || payload.referencePointCode != null,
+    hasOrientation: hasOrientationOf(payload),
     hasClosingRow: payload.hasClosingRow,
     leastSquares:
       payload.lsSigmaAngleSeconds != null &&
@@ -267,7 +272,16 @@ export async function savePolygonalProcessAction(
         // Cada lectura, que es lo que se guarda (Fase 24).
         readings: st.readings,
       },
-      expectStationCapture(payload.type, i, payload.stations.length),
+      // La misma llamada que el editor, con la fila de cierre y el amarre: sin
+      // ellos, la fila de cierre de una cerrada amarrada —que no lleva
+      // distancia— se rechazaba al guardar (Fase 26, C-19).
+      expectStationCapture(
+        payload.type,
+        i,
+        payload.stations.length,
+        payload.hasClosingRow,
+        hasOrientationOf(payload),
+      ),
     ),
   );
   if (hasCaptureErrors(issues)) {

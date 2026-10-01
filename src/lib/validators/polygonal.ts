@@ -47,6 +47,7 @@ export function expectStationCapture(
   index: number,
   total: number,
   hasClosingRow = false,
+  hasOrientation = false,
 ): { angle: boolean; distance: boolean } {
   if (type === "closed") {
     // La fila de cierre es de control: lleva el ángulo contra el amarre y no
@@ -56,7 +57,9 @@ export function expectStationCapture(
     }
     return { angle: true, distance: true };
   }
-  if (index === 0) return { angle: false, distance: true };
+  // En una abierta amarrada, la primera fila lleva el ángulo de orientación
+  // desde el amarre: sin él no hay azimut del primer lado (Fase 26, C-2).
+  if (index === 0) return { angle: hasOrientation, distance: true };
   if (index === total - 1) return { angle: false, distance: false };
   return { angle: true, distance: true };
 }
@@ -260,17 +263,26 @@ export function evaluatePolygonalClosure(
       messages: ["Completa los datos y el punto de llegada antes de cerrar."],
     };
   }
-  if (!result.meetsLinearTolerance) {
-    return {
-      canClose: true,
-      mustReject: true,
-      blocked: false,
-      messages: [
-        "El cierre contra el punto conocido no alcanza la tolerancia; solo puede cerrarse como rechazado.",
-      ],
-    };
+  // El error angular, si hay azimut de llegada, también decide: es lo que el
+  // servidor guarda en `meets_tolerance`. Antes el diálogo ofrecía «Confirmar
+  // cierre» y el servidor lo guardaba rechazado (Fase 26, C-3).
+  const messages: string[] = [];
+  if (result.anglesMeetTolerance === false) {
+    messages.push(
+      "El error angular contra el azimut de llegada supera la tolerancia; solo puede cerrarse como rechazado.",
+    );
   }
-  return { canClose: true, mustReject: false, blocked: false, messages: [] };
+  if (!result.meetsLinearTolerance) {
+    messages.push(
+      "El cierre contra el punto conocido no alcanza la tolerancia; solo puede cerrarse como rechazado.",
+    );
+  }
+  return {
+    canClose: true,
+    mustReject: messages.length > 0,
+    blocked: false,
+    messages,
+  };
 }
 
 /**
