@@ -104,10 +104,10 @@ export const CAPTURAS = {
   },
   editorNivelacion: {
     src: "/manual/12-editor-nivelacion.png",
-    alt: "Editor de nivelación completo: veredicto, libreta, perfil, comprobación aritmética, cierre y cotas corregidas.",
+    alt: "Editor de nivelación completo: veredicto, libreta, perfil, comprobación aritmética, cierre, cotas corregidas y cotas adoptadas.",
     pie: "Circuito cerrado que cumple la tolerancia: el BM final corrige exacto a su cota conocida.",
     width: 2560,
-    height: 4414,
+    height: 5004,
   },
   nuevoLugar: {
     src: "/manual/13-nuevo-lugar.png",
@@ -185,7 +185,7 @@ export const CAPTURAS = {
     src: "/manual/19-informe-imprimible.png",
     alt: "Informe maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados, resumen consolidado y registro de cierre.",
     width: 2560,
-    height: 3500,
+    height: 3842,
   },
   temaOscuro: {
     src: "/manual/29-tema-oscuro.png",
