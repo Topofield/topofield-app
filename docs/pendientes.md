@@ -360,6 +360,10 @@ hay distorsión angular.
   el Excel o el informe del módulo, ni la libreta de la visita, ni la
   nivelación de la demo. Esas coordenadas solo las usan las poligonales: el
   amarre, el azimut y la georreferenciación.
+- **BM-01 y BM-02 del seed también** (petición del usuario). Están en el
+  catálogo de «Lote catastral» y ningún proceso del seed los usa como amarre;
+  el selector del BM de partida de una nivelación toma de ellos el código y la
+  cota. GPS-1 conserva las suyas: es un punto GPS.
 
 **Lo que se quita.** Es el inventario de la petición; el PRD lo verifica.
 
@@ -370,7 +374,7 @@ hay distorsión angular.
 | Captura | Norte y Este en el catálogo de puntos, con su regla «las dos o ninguna»; el límite 1/X en los umbrales del lugar; la copia de los tres al duplicar un lugar; la comparación de coordenadas en `validators/settlement.ts` y `point-actions.ts` |
 | Panel | El KPI «Distorsión angular» y la tarjeta «Asentamientos diferenciales y distorsión angular» |
 | Excel | Las columnas Norte y Este, la hoja de diferenciales, la fila del límite y «Pares que superan la distorsión» |
-| Demo y seed | Las coordenadas de los puntos de Torre Alameda y de los lugares del seed, y las de BM-1 y BM-2 (`north` y `east` de `AmarreAlameda` en `torre-alameda.ts` y su copia en `fixtures.ts`) |
+| Demo y seed | Las coordenadas de los puntos de Torre Alameda y de los lugares del seed, las de BM-1 y BM-2 (`north` y `east` de `AmarreAlameda` en `torre-alameda.ts` y su copia en `fixtures.ts`), y las de BM-01 y BM-02 (`REFERENCE_POINTS` en `scripts/seed.mjs`) |
 | Documentación | El manual en sus dos copias y sus capturas; PRD principal § 3, § 4 y § 6.10; doc técnica |
 
 **Lo que no cambia:** el informe consolidado, que no muestra ni coordenadas ni
