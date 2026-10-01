@@ -120,10 +120,12 @@ Arriba, tres indicadores del estado general:
 - **Proyectos activos** — cuántos proyectos tiene en curso.
 - **Procesos calculados** — levantamientos resueltos, listos para revisar y cerrar.
 - **Fuera de tolerancia** — procesos calculados que no alcanzan el orden de
-  precisión que ellos mismos declararon. Requieren revisión antes del cierre.
+  precisión que ellos mismos declararon, y lugares con algún punto en alerta o
+  alarma en una visita abierta. Requieren revisión antes del cierre.
 
 Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
-Cada tarjeta indica cuántos procesos tiene el proyecto.
+Cada tarjeta indica cuántos procesos tiene el proyecto y cuántos están en
+curso, cerrados o rechazados.
 
 Use **+ Nuevo Proyecto** para crear uno.
 
@@ -265,9 +267,10 @@ muestra el informe de ese proceso, listo para **Imprimir o guardar como PDF**
 
 Mientras el proceso no esté cerrado, su informe lleva la marca **«Borrador —
 el informe se emite al cerrar el proceso»**, también en el PDF: sirve para
-revisar antes de cerrar. Debajo, fuera de la impresión, aparecen los informes
-consolidados que ya lo incluyen y, si está cerrado, un botón para generar uno
-nuevo con él.
+revisar antes de cerrar. Si se cerró como rechazado, lleva en cambio la marca
+**«Rechazado»**: queda como constancia y no entra en informes consolidados.
+Debajo, fuera de la impresión, aparecen los informes consolidados que ya lo
+incluyen y, si está cerrado conforme, un botón para generar uno nuevo con él.
 
 **La barra de acciones.** Mientras el proceso se puede editar, **Guardar** y
 **Cerrar proceso** van en una barra fija al pie de la pantalla, siempre a la
@@ -397,7 +400,8 @@ difieren 40″ con un teodolito de 5″ no son repetibilidad: son un error de
 puntería o de tecleo. Es un aviso, no un bloqueo.
 
 Los errores de captura se marcan al momento: una distancia de cero o mayor a
-1000 m, minutos o segundos fuera del rango 0-59. Un ángulo de 0° o 360° genera
+1000 m, minutos o segundos fuera del rango 0-59 —en cada lectura, no solo en
+el promedio—. Un ángulo de 0° o 360° genera
 una advertencia, no un bloqueo: es válido, pero suele indicar un error de
 tecleo.
 
@@ -593,6 +597,11 @@ El punto intermedio cuelga de la AI vigente pero **no propaga cota ni abre
 una armada nueva**, y por eso queda fuera de la comprobación aritmética y de
 la compensación: un error en su lectura no contamina el resto del recorrido,
 pero tampoco se corrige.
+
+Si a un punto de cambio le falta la V+ o la V−, la celda lo avisa. Puede
+guardar la libreta a medias, pero el proceso no se cierra hasta completarla: el
+cierre dice qué fila, de la ida o de la vuelta, está incompleta. Lo mismo vale
+para la libreta de una visita de asentamientos.
 
 ### 6.4 Crear una nivelación
 
