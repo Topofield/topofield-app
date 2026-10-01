@@ -254,9 +254,10 @@ export function horizontalDistance(
  * Un X MENOR es más severo: 1/300 es peor que 1/500. De ahí que `exceedsLimit`
  * compare `distortionInverse < limit`.
  *
- * Dos exclusiones deliberadas, ambas para no fabricar tranquilidad falsa:
+ * Dos exclusiones deliberadas, ambas para no fabricar un resultado que el dato
+ * no respalda:
  * - Un par sin coordenadas en algún punto queda fuera. Calcularlo con L = 0
- *   daría distorsión infinita, que se lee como «normal».
+ *   daría X = 0, una distorsión de 1/0: una falsa alarma.
  * - Un par donde algún punto no tiene acumulado queda fuera: no hay nada que
  *   comparar.
  *

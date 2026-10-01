@@ -55,9 +55,10 @@ const MAX_READING = 4;
 // su forma. Ver `validateSightBalances`, más abajo: por armada desde la Fase 19.
 
 /**
- * Tipos de punto que entran en la comprobación aritmética y en la
- * compensación (§ 5.1). Los `intermediate` cuelgan de la AI vigente y quedan
- * fuera de ambas, así que no exigen distancia por visual.
+ * Tipos de punto que entran en la comprobación aritmética y en el acumulado
+ * de distancias (§ 5.1). Los `intermediate` cuelgan de la AI vigente: quedan
+ * fuera de los dos y no exigen distancia por visual. Se compensan con la
+ * corrección de su armada.
  */
 function requiresVisualDistances(pointType: PointType): boolean {
   return pointType !== "intermediate";

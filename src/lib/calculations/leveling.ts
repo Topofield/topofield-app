@@ -313,12 +313,11 @@ function knownClosingElevation(input: LevelingInput): number | null {
  * `open` se calcula pero no se cierra ni se corrige: sin un segundo punto de
  * cota conocida no hay forma de detectar el error acumulado.
  *
- * Esta función NO valida que las filas traigan `distanceAccumulatedKm`
- * completo (ver el contrato documentado en `applyProportionalCorrection`).
- * Si faltan distancias acumuladas, `meetsTolerance` puede seguir en `true`
- * mientras las cotas corregidas quedan mal calculadas. Rechazar o exigir esos
- * datos en captura es responsabilidad de la capa de validadores
- * (`src/lib/validators/leveling.ts`, Tarea 7), no del motor de cálculo.
+ * El acumulado se deriva de las distancias por visual (Fase 9). Esta función
+ * no valida que estén completas ni que sean positivas: con una que falta el
+ * total sale corto y la tolerancia también. Exigirlas en captura es
+ * responsabilidad de `validators/leveling.ts`, y la base rechaza las que no
+ * son positivas (Fase 26).
  *
  * `totalDistanceKm` no finito o ≤ 0 (p. ej. `Number.NaN`, el valor con el
  * que nace un proceso recién creado, antes de que el editor lo complete) dejan

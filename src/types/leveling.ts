@@ -24,8 +24,9 @@ export type RunType = (typeof RUN_TYPES)[number];
  * - `pc`: punto de cambio. Recibe la V− de una armada y la V+ de la siguiente;
  *   propaga la cota entre armadas.
  * - `intermediate`: radiación. Solo recibe V−, cuelga de la AI vigente, no
- *   propaga cota y queda FUERA de la comprobación aritmética y de la
- *   compensación.
+ *   propaga cota y queda FUERA de la comprobación aritmética. En la
+ *   compensación recibe la corrección de su armada: la de la distancia
+ *   acumulada hasta el instrumento (Fase 19).
  */
 export const POINT_TYPES = ["bm", "pc", "intermediate"] as const;
 export type PointType = (typeof POINT_TYPES)[number];

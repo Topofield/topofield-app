@@ -1,12 +1,15 @@
 // Cálculo de poligonales — funciones puras (PRD § 6.2-6.6, marco teórico
 // mt-poligonales.docx). Sin React, sin Supabase. Solo aritmética topográfica.
 //
-// Convención de azimuts (la del marco teórico mt-poligonales.docx; las dos
-// orientaciones del recorrido producen polígonos espejo que igualmente cierran,
-// por eso la convención debe ser fija, no autodetectable):
-//  - Cerrada: Az_i = Az_{i-1} + 180° − ángulo interno_i (caso 1 del documento).
-//  - Abierta sin control: Az_i = Az_{i-1} + 180° + ángulo horizontal_i (caso 3).
+// Convención de azimuts (Fase 7, la del instrumento: cero en la vista atrás y
+// giro a la derecha; las dos orientaciones del recorrido producen polígonos
+// espejo que igualmente cierran, por eso la convención es fija):
+//  - Cerrada y abierta sin control: Az_i = Az_{i-1} + 180° + ángulo_i. Con
+//    ángulos interiores el recorrido es antihorario; con exteriores, horario.
+//    El marco teórico (caso 1) usa + 180° − ángulo, la convención anterior.
 //  - Abierta con control: Az_i = Az_{i-1} ± deflexión_i (+ derecha, − izquierda).
+//  - Con amarre, el primer lado sale del azimut hacia el amarre más el ángulo
+//    de orientación de la primera fila (Fase 26).
 
 import {
   cosDeg,

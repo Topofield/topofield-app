@@ -41,7 +41,8 @@ export function readingDispersionTolerance(instrumentSeconds: number): number {
 
 /**
  * Tolerancia angular en segundos de arco: K·√n, donde n es el número de
- * ángulos medidos (= número de estaciones de la poligonal).
+ * ángulos que entran en la condición: los vértices en una cerrada (más el de
+ * cierre si hay fila de cierre) y las deflexiones en una abierta con control.
  */
 export function angularTolerance(order: PrecisionOrder, n: number): number {
   return ANGULAR_TOLERANCE_K[order] * Math.sqrt(n);
@@ -55,7 +56,9 @@ export function minRelativePrecision(order: PrecisionOrder): number {
 /**
  * Coeficiente K de la tolerancia de nivelación K·√D, en milímetros
  * (PRD § 5.4). Coinciden con la tabla del marco teórico § 8; su «Segundo
- * Orden Clase II» es nuestro `segundo_orden`. Los niveles «Clase I» (K=4) y
+ * Orden Clase II» es nuestro `segundo_orden`. Las clases del marco teórico
+ * están corridas una respecto a la FGCS (1984), donde 6 mm·√D es segundo orden
+ * clase I (auditoría del cálculo, § 6). Los niveles «Clase I» (K=4) y
  * «Expedita» (K=50) del marco teórico no están modelados en el tipo
  * `PrecisionOrder` (decisión #4 del PRD de la Fase 4). Desde la Fase 8 el
  * orden lo declara cada proceso —`leveling_processes.precision_order` y
