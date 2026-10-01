@@ -8,7 +8,7 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-09-30)
+## Estado (2026-10-01)
 
 El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
 navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
@@ -27,8 +27,21 @@ cerró ese mismo día ([`prds/23-pulido.md`](./prds/23-pulido.md)).
 
 Ese mismo día el usuario pidió el **catálogo de equipos**, diferido desde la
 Fase 8: «Catálogo de equipos (Fase 25)», al final, cerrada ese mismo día
-([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)). No queda
-ninguna petición abierta.
+([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)).
+
+El 2026-10-01 el usuario pidió un **segundo pulido** con lo que quedaba de la
+§ 11 y una **revisión de las fórmulas y métodos de cálculo** de cada módulo.
+La revisión está en [`auditoria-calculo.md`](./auditoria-calculo.md): 18
+errores (C-1 a C-18) y 18 criterios por decidir (D-1 a D-18). El usuario
+eligió corregir primero:
+
+- **Fase 26** — correcciones del cálculo
+  ([`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md)),
+  **en curso**;
+- **Fase 27** — segundo pulido
+  ([`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md)), redactada;
+- después, los criterios que eligió cambiar, **sin fase**: «Criterios del
+  cálculo», al final.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -447,3 +460,42 @@ nivelación y visita recaptura marca, modelo, serie, calibración y precisión
 del mismo aparato. La Fase 8 lo difirió porque una tabla referenciada por id
 cambiaría en silencio el equipo de los informes cerrados; se reabre con el
 congelado resuelto: el catálogo es una plantilla y el proceso copia.
+
+## Criterios del cálculo (sin fase)
+
+Pedidos el 2026-10-01, después de leer la auditoría del motor
+([`auditoria-calculo.md`](./auditoria-calculo.md), § 2): el usuario eligió
+cambiar estos cuatro grupos. Cada uno pide su propia decisión al abrir su
+fase, después de la 27. El resto de la § 2 queda documentado, sin cambio.
+
+### CR1 · Desnivel adoptado en la compensación (D-1)
+
+Hoy las cotas de una nivelación con vuelta salen solo de la ida, compensada
+con su propio cierre. Ida y vuelta son dos observaciones del mismo desnivel:
+compensar el lazo ida + vuelta las combina, como dice el marco teórico
+(§ 2.5). En El Verjón, D4 sube 2.5 mm; en el tramo 2 de la demo, un mismo
+punto deja de tener dos cotas. Hace falta un método de corrección nuevo para
+que lo cerrado conserve el suyo, y revisar el criterio de la vuelta de la
+Fase 26 (C-10).
+
+### CR2 · Estabilidad de los BMs y distorsión en el semáforo (D-13, D-9)
+
+- Avisar si la libreta de una visita no nivela entre BM-1 y BM-2: un BM movido
+  hace que todos los puntos «se asienten» a la vez (marco teórico § 2.3).
+- La distorsión angular entra en el semáforo con los cuatro niveles del marco
+  (§ 4.1), entre puntos vecinos y descontando el giro rígido.
+
+### CR3 · Rigor estadístico (D-3, D-6, D-7)
+
+- Control acumulado del equilibrado de visuales en la sección, y límites por
+  armada con fuente.
+- σ₀ de mínimos cuadrados con la prueba χ² y su redundancia, en vez de la
+  banda [0.5, 2].
+- Margen del aviso de tendencia derivado de la longitud real de los circuitos.
+
+### CR4 · Avisos (D-4, D-5, D-8, D-10)
+
+- Equipo insuficiente comparado con la tolerancia como error máximo.
+- Dispersión de lecturas con el cuantil del rango de m lecturas.
+- Promedio encadenado de asentamientos.
+- «Acelerando» solo por encima del ruido de la velocidad.
