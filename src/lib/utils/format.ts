@@ -248,8 +248,22 @@ function fixedOrDash(value: number | string | null | undefined, decimals: number
   if (value === null || value === undefined || value === "") return "—";
   const v = Number(value);
   if (!Number.isFinite(v)) return "—";
-  const text = v.toFixed(decimals);
+  const text = roundHalfAwayFromZero(v, decimals).toFixed(decimals);
   return /^-0\.0*$/.test(text) ? text.slice(1) : text;
+}
+
+/**
+ * Redondea los empates hacia afuera, como el formato de Excel (Fase 26,
+ * C-18). `toFixed` redondea el binario: 1234.5675 se guarda como
+ * 1234.567499999… y daba 1234.567 en el informe y 1234.568 en el Excel.
+ * Se toman 15 cifras significativas —las que muestra Excel— y se redondea la
+ * representación decimal desplazando el exponente.
+ */
+export function roundHalfAwayFromZero(value: number, decimals: number): number {
+  const abs = Number(Math.abs(value).toPrecision(15));
+  const rounded = Number(`${Math.round(Number(`${abs}e${decimals}`))}e-${decimals}`);
+  if (!Number.isFinite(rounded)) return value;
+  return value < 0 ? -rounded : rounded;
 }
 
 /** Coordenada (Norte o Este) a 3 decimales, según CLAUDE.md. */
