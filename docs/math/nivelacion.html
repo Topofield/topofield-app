@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>TopoField — Fundamentos del módulo de nivelación</title>
+<style>
+  :root {
+    --text: #1a252f;
+    --muted: #5d6d7e;
+    --accent: #0b3d5c;
+    --code-bg: #f2f3f4;
+    --border: #d5d8dc;
+  }
+  body {
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: #ffffff;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 28px; margin: 0; color: var(--accent); }
+  h2 { font-size: 22px; margin-top: 40px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { font-size: 17px; margin-top: 28px; }
+  p { margin: 10px 0; }
+  ol, ul { margin: 8px 0 10px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  table { border-collapse: collapse; margin: 12px 0; width: 100%; font-size: 13px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .formula { font-family: ui-monospace, "SF Mono", monospace; padding: 10px 14px; background: var(--code-bg); border-left: 3px solid var(--accent); margin: 10px 0; font-size: 13.5px; line-height: 1.7; }
+  .note { border-left: 3px solid var(--border); padding: 4px 14px; margin: 12px 0; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  nav.toc { background: #f8f9fa; padding: 14px 20px; border-radius: 6px; margin: 22px 0 30px; }
+  nav.toc strong { display: block; margin-bottom: 6px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  @media print {
+    body { max-width: none; padding: 0 12mm; }
+    table, .formula { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Fundamentos matemáticos del módulo de nivelación</h1>
+<p class="muted">TopoField · al cierre de la Fase 28 (ida y vuelta en la compensación) · 2026-10-01</p>
+
+<p>Este documento reúne las fórmulas con que TopoField calcula una nivelación
+geométrica, tal como están implementadas, para poder citarlas y verificarlas.
+Cada sección dice qué archivo del repositorio la implementa y desde qué fase
+rige. Los dos ejemplos del final se resolvieron a mano y coinciden con el motor
+de la aplicación: los mismos números están en sus pruebas automatizadas.</p>
+
+<nav class="toc">
+<strong>Contenido</strong>
+<ol>
+  <li><a href="#mapa">Mapa del código</a></li>
+  <li><a href="#convenciones">Convenciones</a></li>
+  <li><a href="#base">El cálculo base: altura de instrumento y cotas</a></li>
+  <li><a href="#distancias">Las distancias</a></li>
+  <li><a href="#cierre">Error de cierre y tolerancia</a></li>
+  <li><a href="#compensacion">La compensación proporcional a la distancia</a></li>
+  <li><a href="#idavuelta">Ida y vuelta</a></li>
+  <li><a href="#equilibrado">El equilibrado de visuales</a></li>
+  <li><a href="#ejemplo1">Ejemplo 1: un circuito corto</a></li>
+  <li><a href="#ejemplo2">Ejemplo 2: El Verjón, con ida y vuelta</a></li>
+  <li><a href="#fuentes">Fuentes y decisiones</a></li>
+</ol>
+</nav>
+
+<h2 id="mapa">1. Mapa del código</h2>
+<p>El cálculo vive en <code>src/lib/calculations/</code>, en funciones puras de
+TypeScript: reciben los datos de campo y devuelven los resultados, sin tocar la
+base de datos ni la interfaz.</p>
+<table>
+<tr><th>Archivo</th><th>Qué hace</th></tr>
+<tr><td><code>leveling.ts</code></td><td>El motor: altura de instrumento, cotas, comprobación aritmética, distancias, cierre, compensación, ida y vuelta, cotas adoptadas y puntos homólogos. La función principal es <code>computeLeveling(input)</code>.</td></tr>
+<tr><td><code>tolerances.ts</code></td><td>Las constantes por orden de precisión: K de la tolerancia, límite del equilibrado de visuales y tolerancia del hilo medio.</td></tr>
+<tr><td><code>src/lib/validators/leveling.ts</code></td><td>Las reglas de captura (qué se puede guardar) y de cierre (qué se puede cerrar y si solo como rechazado).</td></tr>
+<tr><td><code>src/lib/import/leveling/</code></td><td>La lectura de libretas de nivel digital (formato <code>.L</code> de Leica y plantilla CSV).</td></tr>
+</table>
+
+<h2 id="convenciones">2. Convenciones</h2>
+<ul>
+  <li><strong>Vista más (V+)</strong>: la lectura hacia atrás, sobre un punto de cota conocida o recién calculada. <strong>Vista menos (V−)</strong>: la lectura hacia adelante, sobre el punto cuya cota se quiere conocer.</li>
+  <li><strong>Tipos de punto</strong>: <em>BM</em> (cota conocida, ancla el recorrido), <em>punto de cambio</em> (recibe la V− de una armada y la V+ de la siguiente) e <em>intermedio</em> o radiación (solo V−: se lee para conocer su cota, sin seguir el recorrido por él).</li>
+  <li><strong>Tipos de nivelación</strong>: <em>cerrada</em> (sale de un BM y vuelve a él), <em>de enlace</em> (va de un BM conocido a otro BM conocido) y <em>abierta</em> (no llega a ninguna cota conocida).</li>
+  <li><strong>Unidades</strong>: lecturas y cotas en metros con 4 decimales; distancias por visual en metros; la tolerancia se calcula con la distancia en kilómetros y se expresa en milímetros.</li>
+</ul>
+
+<h2 id="base">3. El cálculo base: altura de instrumento y cotas</h2>
+<p>Fila por fila, en este orden:</p>
+<div class="formula">
+1. si la fila tiene V−:  Cota = AI<sub>vigente</sub> − V−<br>
+2. si la fila tiene V+:  AI<sub>nueva</sub> = Cota + V+
+</div>
+<p>El orden importa: en un punto de cambio, la V− viene de la armada anterior y
+la V+ abre la siguiente. Un punto intermedio consume la altura de instrumento
+vigente pero no la cambia ni propaga su cota.</p>
+
+<h3>3.1. Comprobación aritmética</h3>
+<p>Solo con los BM y los puntos de cambio (los intermedios quedan fuera):</p>
+<div class="formula">Σ V+ − Σ V− = Cota<sub>final</sub> − Cota<sub>inicial</sub></div>
+<p>Se acepta con una diferencia menor que 0.1 mm. Comprueba la aritmética de la
+libreta, no la calidad de la medición: cuadra igual con un nivel descolimado.
+Si no cuadra, el proceso no se puede cerrar. Desde la Fase 26 se exige en la
+ida y en la vuelta.</p>
+
+<h2 id="distancias">4. Las distancias</h2>
+
+<h3>4.1. Estadimetría</h3>
+<p>Con nivel automático y los tres hilos:</p>
+<div class="formula">D = K · (HS − HI),&nbsp;&nbsp;&nbsp;K = 100</div>
+<p>Sin corrección por cos² α: la visual de un nivel es horizontal. El hilo medio
+debería ser el promedio de los otros dos; si se aparta más de 2 mm, la app
+avisa de un posible error de lectura. Con los tres hilos, la distancia sale de
+ellos; sin ellos, se teclea.</p>
+
+<h3>4.2. El acumulado desde el origen</h3>
+<p>La compensación necesita la distancia recorrida desde el origen hasta cada
+punto (Fase 19):</p>
+<ul>
+  <li>un BM o un punto de cambio acumula hasta su V−, la visual con la que se <em>llega</em> a él; su V+ se suma para los puntos siguientes;</li>
+  <li>un intermedio hereda el acumulado de su armada, hasta el instrumento;</li>
+  <li>el total del recorrido es el acumulado de su última fila.</li>
+</ul>
+<p>Desde la Fase 26 las distancias se suman en milímetros enteros, para que
+164.5 m sean exactamente 164.5 m y no 164.49999999999997.</p>
+
+<h2 id="cierre">5. Error de cierre y tolerancia</h2>
+<div class="formula">E = Cota<sub>calculada del punto de cierre</sub> − Cota<sub>conocida</sub>&nbsp;&nbsp;&nbsp;(en mm)</div>
+<p>En una cerrada, la cota conocida es la del BM de partida; en una de enlace,
+la del BM de llegada. Una abierta sin vuelta no tiene error de cierre.</p>
+<div class="formula">T = K · √D&nbsp;&nbsp;&nbsp;(T en mm, D en km)&nbsp;&nbsp;&nbsp;&nbsp;cumple si |E| ≤ T</div>
+<table>
+<tr><th>Orden de precisión</th><th class="num">K (mm/√km)</th></tr>
+<tr><td>Primer orden</td><td class="num">3</td></tr>
+<tr><td>Segundo orden</td><td class="num">6</td></tr>
+<tr><td>Tercer orden</td><td class="num">12</td></tr>
+<tr><td>Ordinario</td><td class="num">24</td></tr>
+</table>
+<p>Son los valores del marco teórico del proyecto (§ 8). La comparación usa un
+margen de 10<sup>−6</sup> mm (Fase 26): el error sale de restar cotas en coma
+flotante, y sin margen un cierre exactamente igual a la tolerancia cumplía o no
+según la cota del BM.</p>
+<p class="note">Para comparar: la FGCS (1984) usa 3, 4, 6, 8 y 12 mm·√D para
+sus órdenes y clases. Las clases del marco teórico están corridas una respecto
+a ella (6 mm·√D es segundo orden clase I en la FGCS).</p>
+
+<h2 id="compensacion">6. La compensación proporcional a la distancia</h2>
+<p>Solo se compensa un trabajo que cumple la tolerancia; si no cumple, se
+repite (marco teórico § 8.1). La corrección de cada punto es proporcional a su
+distancia acumulada:</p>
+<div class="formula">C<sub>i</sub> = −E · d<sub>i</sub> / D&nbsp;&nbsp;&nbsp;&nbsp;Cota compensada<sub>i</sub> = Cota calculada<sub>i</sub> + C<sub>i</sub></div>
+<ul>
+  <li>El BM de partida tiene d = 0, así que no se corrige: <strong>su cota no cambia nunca</strong>.</li>
+  <li>El punto de cierre tiene d = D, así que recibe −E y queda exactamente en su cota conocida.</li>
+  <li>Un intermedio recibe la corrección de su armada.</li>
+</ul>
+<p>Cada C<sub>i</sub> es acumulativa desde el origen, no un incremento: no se
+suman entre sí. Se reparte por distancia y no por número de estaciones porque
+las armadas no miden igual; con armadas iguales, las dos reglas coinciden.</p>
+
+<h2 id="idavuelta">7. Ida y vuelta</h2>
+<p>Medir ida y vuelta es medir dos veces el mismo desnivel, en recorridos
+independientes. La vuelta puede pasar por los mismos puntos de la ida o por
+otros.</p>
+
+<h3>7.1. La discrepancia</h3>
+<div class="formula">Discrepancia = | Δh<sub>ida</sub> + Δh<sub>vuelta</sub> |&nbsp;&nbsp;&nbsp;&nbsp;Tolerancia = K · √D<sub>mín</sub> · √2</div>
+<p>Δh es el desnivel de cada recorrido (cota final menos inicial); el de la
+vuelta tiene el signo contrario al de la ida. D<sub>mín</sub> es la menor de las
+dos distancias, el criterio conservador. El √2 es el del marco teórico (§ 8.1):
+la discrepancia es la diferencia de dos medidas independientes, cada una con su
+error. La FGCS no lo lleva, porque sus constantes ya son de ida contra
+vuelta.</p>
+
+<h3>7.2. El veredicto</h3>
+<ul>
+  <li><strong>Abierta con vuelta</strong>: la discrepancia contra su tolerancia (Fase 23).</li>
+  <li><strong>Cerrada o de enlace con vuelta</strong>: cada recorrido contra su propia tolerancia, K·√D con su distancia (Fase 26). La discrepancia es un control más. Juzgar solo la discrepancia dejaba que dos errores de signo contrario se cancelaran.</li>
+</ul>
+
+<h3>7.3. La compensación con vuelta (Fase 28)</h3>
+<p>Cada recorrido se compensa contra la cota conocida en la que cierra.</p>
+<p><strong>Abierta.</strong> La única cota conocida es la del BM de partida, así
+que ida y vuelta forman <strong>un circuito</strong> que sale de él y vuelve a
+él:</p>
+<div class="formula">
+E<sub>circuito</sub> = (Δh<sub>ida</sub> + Δh<sub>vuelta</sub>) · 1000&nbsp;&nbsp;&nbsp;(mm)&nbsp;&nbsp;&nbsp;&nbsp;L = D<sub>ida</sub> + D<sub>vuelta</sub><br>
+en la ida:&nbsp;&nbsp;&nbsp;C<sub>i</sub> = −E<sub>circuito</sub> · s<sub>i</sub> / L<br>
+en la vuelta:&nbsp;C<sub>j</sub> = −E<sub>circuito</sub> · (D<sub>ida</sub> + t<sub>j</sub>) / L
+</div>
+<p>s<sub>i</sub> es el acumulado del punto en la ida y t<sub>j</sub> en la
+vuelta. La vuelta sigue donde terminó la ida, y la corrección crece de forma
+continua a lo largo de todo el circuito: es el método de libro de «compensación
+acumulativa y secuencial», por distancia.</p>
+<p><strong>Cerrada o de enlace.</strong> La vuelta cierra en el BM de partida y
+se compensa con su propio error, como la ida con el suyo (§ 6).</p>
+
+<h3>7.4. Por qué el punto de vuelta queda en el promedio ponderado</h3>
+<p>Sea B el punto donde la ida da la vuelta. La ida dice
+B<sub>ida</sub> = A + Δh<sub>ida</sub>, y la vuelta, leída desde A,
+B<sub>vuelta</sub> = A − Δh<sub>vuelta</sub>. Al compensar el circuito, B tiene
+s = D<sub>ida</sub>:</p>
+<div class="formula">
+B<sub>compensada</sub> = A + Δh<sub>ida</sub> − (Δh<sub>ida</sub> + Δh<sub>vuelta</sub>) · D<sub>ida</sub> / L<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= (B<sub>ida</sub> · D<sub>vuelta</sub> + B<sub>vuelta</sub> · D<sub>ida</sub>) / (D<sub>ida</sub> + D<sub>vuelta</sub>)
+</div>
+<p>Es el promedio de las dos medidas con pesos 1/D, el estimador de mínimos
+cuadrados cuando la varianza de un desnivel crece con su distancia. Compensar
+el circuito y promediar ida y vuelta dan lo mismo en el punto de vuelta.</p>
+
+<h3>7.5. La cota adoptada de un punto leído dos veces</h3>
+<p>Si la vuelta pasa por los mismos puntos de la ida, cada uno queda con dos
+cotas compensadas, una por pasada, que no coinciden. La aplicación da
+<strong>una sola cota por punto</strong>, la <em>cota adoptada</em>
+(<code>adoptedElevations</code>):</p>
+<div class="formula">
+Cota adoptada = Cota conocida&nbsp;&nbsp;&nbsp;&nbsp;si es el BM de partida (o el de llegada en una de enlace)<br>
+Cota adoptada = ( Cota compensada<sub>ida</sub> + Cota compensada<sub>vuelta</sub> ) / 2&nbsp;&nbsp;&nbsp;&nbsp;si se leyó dos veces<br>
+Cota adoptada = Cota compensada&nbsp;&nbsp;&nbsp;&nbsp;si se leyó una vez
+</div>
+<p><strong>Por qué el promedio y no la cota de la ida.</strong> Antes de
+compensar, la cota de la ida de un punto cercano al origen acumula menos
+estaciones que la de la vuelta, y es más confiable. Después de compensar el
+circuito ya no: la incertidumbre de un punto compensado depende de su posición
+en el circuito como s·(L − s)/L, una expresión simétrica. Un punto a 100 m de la
+salida y el mismo punto a 100 m de la llegada quedan igual de inciertos. Sus dos
+cotas compensadas valen lo mismo, y el promedio de dos medidas igual de buenas
+es la mejor estimación de las dos.</p>
+<p>Los puntos se reconocen por su código sin espacios ni mayúsculas («AUX 1» y
+«AUX1» son el mismo). La misma regla vale para un único recorrido que vuelve
+por sus propios puntos, como el tramo 2 de la demo. Si el trabajo no cumple, no
+se compensa y no hay cota adoptada.</p>
+
+<h3>7.6. El BM de partida no cambia</h3>
+<p>El BM de partida aparece dos veces en el circuito: al salir, con d = 0, y al
+volver, con d = L, donde la compensación lo deja exactamente en su cota
+conocida. Aun así la regla es explícita: <strong>el BM de partida —y el de
+llegada en una de enlace— conserva su cota conocida en todas sus filas y en la
+cota adoptada</strong>. Es un dato, no una medición.</p>
+
+<h3>7.7. Puntos homólogos</h3>
+<p>Cuando ida y vuelta comparten puntos, la aplicación compara la cota de cada
+uno en los dos recorridos (Fase 17):</p>
+<div class="formula">Residuo = Cota calculada<sub>vuelta</sub> − Cota calculada<sub>ida</sub></div>
+<p>Con las cotas <em>calculadas</em>, sin compensar, porque la compensación
+reparte justo lo que se quiere ver. Un residuo que crece a lo largo del
+recorrido indica un error sistemático; uno que salta en un punto, un error en
+ese punto.</p>
+
+<h2 id="equilibrado">8. El equilibrado de visuales</h2>
+<p>Igualar la distancia de la vista más y la de la vista menos de cada armada
+cancela el error de colimación del nivel (la visual no perfectamente
+horizontal). La aplicación avisa, sin bloquear, cuando en una armada:</p>
+<div class="formula">| d<sub>V+</sub> − d<sub>V−</sub> | &gt; límite del orden&nbsp;&nbsp;&nbsp;(2 / 3 / 4 / 6 m en primer, segundo y tercer orden y ordinario)</div>
+<p class="note">Estos límites son un criterio de la aplicación. El marco
+teórico (§ 7) da 2, 5 y 10 m, y la FGCS 2, 5, 5, 10 y 10 m. El control del
+desequilibrio <em>acumulado</em> de la sección, que es el que sesga el
+resultado, está pendiente (CR3).</p>
+
+<h2 id="ejemplo1">9. Ejemplo 1: un circuito corto</h2>
+<p>Abierta de A (cota conocida 100.000 m) a B, con ida y vuelta por el mismo
+punto de cambio P. Tercer orden.</p>
+<table>
+<tr><th>Recorrido</th><th>Punto</th><th class="num">V+</th><th class="num">d V+ (m)</th><th class="num">V−</th><th class="num">d V− (m)</th></tr>
+<tr><td>Ida</td><td>A</td><td class="num">1.500</td><td class="num">50</td><td></td><td></td></tr>
+<tr><td>Ida</td><td>P</td><td class="num">1.620</td><td class="num">60</td><td class="num">1.050</td><td class="num">50</td></tr>
+<tr><td>Ida</td><td>B</td><td></td><td></td><td class="num">1.068</td><td class="num">60</td></tr>
+<tr><td>Vuelta</td><td>B</td><td class="num">1.100</td><td class="num">55</td><td></td><td></td></tr>
+<tr><td>Vuelta</td><td>P</td><td class="num">1.090</td><td class="num">45</td><td class="num">1.655</td><td class="num">55</td></tr>
+<tr><td>Vuelta</td><td>A</td><td></td><td></td><td class="num">1.536</td><td class="num">45</td></tr>
+</table>
+
+<p><strong>Paso 1 — cotas calculadas.</strong> Ida: AI = 100.000 + 1.500 = 101.500;
+P = 101.500 − 1.050 = 100.450; AI = 100.450 + 1.620 = 102.070;
+B = 102.070 − 1.068 = <strong>101.002</strong>. Δh<sub>ida</sub> = +1.002 m.
+Vuelta, desde B = 101.002: AI = 102.102; P = 100.447; AI = 101.537;
+A = 101.537 − 1.536 = <strong>100.001</strong>. Δh<sub>vuelta</sub> = −1.001 m.</p>
+
+<p><strong>Paso 2 — veredicto.</strong> Discrepancia = |1.002 − 1.001| = 1.0 mm.
+D<sub>ida</sub> = 220 m y D<sub>vuelta</sub> = 200 m, así que
+D<sub>mín</sub> = 0.200 km y la tolerancia es 12 · √0.200 · √2 = 7.59 mm.
+<strong>Cumple.</strong></p>
+
+<p><strong>Paso 3 — compensación del circuito.</strong>
+E<sub>circuito</sub> = 100.001 − 100.000 = +1.0 mm, sobre L = 420 m:</p>
+<table>
+<tr><th>Recorrido</th><th>Punto</th><th class="num">Posición en el circuito (m)</th><th class="num">Corrección (mm)</th><th class="num">Calculada (m)</th><th class="num">Compensada (m)</th></tr>
+<tr><td>Ida</td><td>A</td><td class="num">0</td><td class="num">0.000</td><td class="num">100.0000</td><td class="num">100.0000</td></tr>
+<tr><td>Ida</td><td>P</td><td class="num">100</td><td class="num">−0.238</td><td class="num">100.4500</td><td class="num">100.4498</td></tr>
+<tr><td>Ida</td><td>B</td><td class="num">220</td><td class="num">−0.524</td><td class="num">101.0020</td><td class="num">101.0015</td></tr>
+<tr><td>Vuelta</td><td>P</td><td class="num">330</td><td class="num">−0.786</td><td class="num">100.4470</td><td class="num">100.4462</td></tr>
+<tr><td>Vuelta</td><td>A</td><td class="num">420</td><td class="num">−1.000</td><td class="num">100.0010</td><td class="num">100.0000</td></tr>
+</table>
+<p>Comprobación del § 7.4: (101.002 · 200 + 101.001 · 220) / 420 = 101.00148,
+la misma cota de B que da la compensación.</p>
+
+<p><strong>Paso 4 — cotas adoptadas.</strong></p>
+<table>
+<tr><th>Punto</th><th class="num">Cota adoptada (m)</th><th>Origen</th></tr>
+<tr><td>A</td><td class="num">100.0000</td><td>BM de cota conocida</td></tr>
+<tr><td>P</td><td class="num">100.4480</td><td>Promedio de 100.44976 y 100.44621</td></tr>
+<tr><td>B</td><td class="num">101.0015</td><td>Punto de vuelta: el mismo valor en las dos pasadas</td></tr>
+</table>
+
+<h2 id="ejemplo2">10. Ejemplo 2: El Verjón, con ida y vuelta</h2>
+<p>Cartera de campo real del proyecto: nivelación abierta de D1 (cota conocida
+3288.500 m) a D4, con ida y vuelta por los mismos puntos y nivel automático de
+tres hilos. Tercer orden.</p>
+
+<h3>10.1. Datos y veredicto</h3>
+<table>
+<tr><th></th><th class="num">Ida</th><th class="num">Vuelta</th></tr>
+<tr><td>Σ V+ (m)</td><td class="num">29.685</td><td class="num">3.404</td></tr>
+<tr><td>Σ V− (m)</td><td class="num">3.102</td><td class="num">29.992</td></tr>
+<tr><td>Desnivel Δh (m)</td><td class="num">+26.583</td><td class="num">−26.588</td></tr>
+<tr><td>Distancia (m)</td><td class="num">384.3</td><td class="num">397.6</td></tr>
+</table>
+<p>Comprobación aritmética: 29.685 − 3.102 = 26.583 y 3.404 − 29.992 = −26.588.
+Discrepancia = |26.583 − 26.588| = 5.0 mm. Tolerancia = 12 · √0.3843 · √2 =
+10.52 mm. <strong>Cumple.</strong></p>
+
+<h3>10.2. Compensación del circuito</h3>
+<p>E<sub>circuito</sub> = 26.583 − 26.588 = −5.0 mm (la vuelta llega a D1 en
+3288.4950), sobre L = 781.9 m. La corrección es +5.0 · posición / 781.9 mm.</p>
+<table>
+<tr><th>Punto</th><th class="num">Ida: posición (m)</th><th class="num">Ida: compensada (m)</th><th class="num">Vuelta: posición (m)</th><th class="num">Vuelta: compensada (m)</th></tr>
+<tr><td>D1</td><td class="num">0.0</td><td class="num">3288.5000</td><td class="num">781.9</td><td class="num">3288.5000</td></tr>
+<tr><td>C 1</td><td class="num">60.0</td><td class="num">3289.4414</td><td class="num">721.4</td><td class="num">3289.4386</td></tr>
+<tr><td>C 2</td><td class="num">105.4</td><td class="num">3292.4927</td><td class="num">675.9</td><td class="num">3292.4903</td></tr>
+<tr><td>C 3</td><td class="num">139.0</td><td class="num">3295.8699</td><td class="num">640.0</td><td class="num">3295.8681</td></tr>
+<tr><td>AUX 1 (intermedio)</td><td class="num">164.5</td><td class="num">3299.6281</td><td class="num">615.3</td><td class="num">3299.6259</td></tr>
+<tr><td>C 4</td><td class="num">179.6</td><td class="num">3299.5781</td><td class="num">599.6</td><td class="num">3299.5758</td></tr>
+<tr><td>C 5</td><td class="num">215.8</td><td class="num">3302.7684</td><td class="num">562.6</td><td class="num">3302.7656</td></tr>
+<tr><td>C 6</td><td class="num">249.4</td><td class="num">3305.6366</td><td class="num">520.7</td><td class="num">3305.6353</td></tr>
+<tr><td>C 7</td><td class="num">287.4</td><td class="num">3309.0538</td><td class="num">482.8</td><td class="num">3309.0531</td></tr>
+<tr><td>D3</td><td class="num">320.0</td><td class="num">3311.3440</td><td class="num">449.9</td><td class="num">3311.3429</td></tr>
+<tr><td>C 8</td><td class="num">356.5</td><td class="num">3313.5443</td><td class="num">412.1</td><td class="num">3313.5436</td></tr>
+<tr><td>D4</td><td class="num">384.3</td><td class="num">3315.0855</td><td class="num">384.3</td><td class="num">3315.0855</td></tr>
+</table>
+<p>La posición en la vuelta es D<sub>ida</sub> + el acumulado de la vuelta. D4:
+3315.083 + 5.0 · 384.3 / 781.9 mm = 3315.0855, que es también el promedio de
+ida (3315.083) y vuelta (3315.088) ponderado por sus distancias.</p>
+
+<h3>10.3. Cotas adoptadas</h3>
+<table>
+<tr><th>Punto</th><th class="num">Cota adoptada (m)</th><th>Origen</th></tr>
+<tr><td>D1</td><td class="num">3288.5000</td><td>BM de cota conocida</td></tr>
+<tr><td>C 1</td><td class="num">3289.4400</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>C 2</td><td class="num">3292.4915</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>C 3</td><td class="num">3295.8690</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>AUX 1</td><td class="num">3299.6270</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>C 4</td><td class="num">3299.5770</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>C 5</td><td class="num">3302.7670</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>C 6</td><td class="num">3305.6360</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>C 7</td><td class="num">3309.0535</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>D3</td><td class="num">3311.3435</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>C 8</td><td class="num">3313.5440</td><td>Promedio de 2 cotas compensadas</td></tr>
+<tr><td>D4</td><td class="num">3315.0855</td><td>Punto de vuelta</td></tr>
+</table>
+<p>Hasta la Fase 28 la aplicación daba las cotas de la ida sin compensar
+(D4 = 3315.083). El cambio va de 0 a 2.5 mm.</p>
+
+<h2 id="fuentes">11. Fuentes y decisiones</h2>
+<h3>11.1. Fuentes</h3>
+<ul>
+  <li>Marco teórico del proyecto, <em>Nivelaciones de precisión</em> (<code>docs/marco-teorico/mt-nivelaciones_precision.docx</code>): tolerancias por orden (§ 8), ida y vuelta y el √2 (§ 8.1), la vuelta que «convierte la abierta en cerrada» (§ 2.5, § 4.5), equilibrado de visuales (§ 7).</li>
+  <li>Wolf, P. R. y Ghilani, C. D., <em>Elementary Surveying</em> y <em>Adjustment Computations</em>: nivelación diferencial, compensación proporcional a la distancia y ajuste por mínimos cuadrados.</li>
+  <li>FGCC (1984), <em>Standards and Specifications for Geodetic Control Networks</em>: para comparar tolerancias y equilibrado.</li>
+  <li>ISO 17123-2: la desviación típica del nivel por km de doble nivelación, que la aplicación usa para el aviso de equipo.</li>
+</ul>
+<h3>11.2. Decisiones del proyecto, por fase</h3>
+<table>
+<tr><th>Fase</th><th>Decisión</th></tr>
+<tr><td>4</td><td>Ida y vuelta se emparejan por sección (entre los BM extremos), no tramo a tramo.</td></tr>
+<tr><td>9</td><td>El acumulado se deriva de las distancias por visual; ya no se teclea.</td></tr>
+<tr><td>17</td><td>Comparación por puntos homólogos con las cotas calculadas.</td></tr>
+<tr><td>19</td><td>El acumulado llega hasta la V− de cada punto: el BM de partida no se compensa. Equilibrado por armada.</td></tr>
+<tr><td>23</td><td>El veredicto de una abierta con vuelta es su discrepancia.</td></tr>
+<tr><td>26</td><td>Cada recorrido de una cerrada o de enlace con vuelta, con su tolerancia; comprobación aritmética de los dos recorridos; distancias por visual positivas; acumulado en milímetros; margen en la comparación con la tolerancia.</td></tr>
+<tr><td>28</td><td>Ida y vuelta en la compensación: circuito por distancia en una abierta, cada recorrido con su cierre en una cerrada o de enlace, una cota adoptada por punto y el BM de partida fijo.</td></tr>
+</table>
+<p class="small muted">Verificación: los números de los ejemplos están en
+<code>src/lib/calculations/leveling.test.ts</code> y
+<code>src/lib/demo/fixtures.test.ts</code>. La auditoría del motor de cálculo
+(<code>docs/auditoria-calculo.md</code>) contrastó estas fórmulas con las
+carteras reales del proyecto.</p>
+
+</body>
+</html>

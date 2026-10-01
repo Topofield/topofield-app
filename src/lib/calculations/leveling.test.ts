@@ -1240,3 +1240,54 @@ describe("adoptedElevations (Fase 28)", () => {
     expect(adoptedElevationsOf(open, { type: "open", startElevation: 100, endElevation: null })).toBeNull();
   });
 });
+
+// El ejemplo 1 de docs/math/nivelacion.html, resuelto a mano allí: si el
+// motor cambia, el documento para la monografía deja de ser cierto.
+describe("el ejemplo 1 de los fundamentos (docs/math/nivelacion.html)", () => {
+  const result = computeLeveling({
+    type: "open",
+    startElevation: 100,
+    endElevation: null,
+    order: "tercer_orden",
+    forward: [
+      bare({ pointCode: "A", pointType: "bm", backsight: 1.5, backDistanceM: 50 }),
+      bare({ pointCode: "P", foresight: 1.05, foreDistanceM: 50, backsight: 1.62, backDistanceM: 60 }),
+      bare({ pointCode: "B", pointType: "bm", foresight: 1.068, foreDistanceM: 60 }),
+    ],
+    return: [
+      bare({ pointCode: "B", pointType: "bm", backsight: 1.1, backDistanceM: 55 }),
+      bare({ pointCode: "P", foresight: 1.655, foreDistanceM: 55, backsight: 1.09, backDistanceM: 45 }),
+      bare({ pointCode: "A", pointType: "bm", foresight: 1.536, foreDistanceM: 45 }),
+    ],
+  });
+
+  it("pasos 1 y 2: desniveles, discrepancia y tolerancia", () => {
+    expect(result.forward.heightDifference).toBeCloseTo(1.002, 9);
+    expect(result.return!.heightDifference).toBeCloseTo(-1.001, 9);
+    expect(result.discrepancyMm).toBeCloseTo(1.0, 6);
+    expect(result.discrepancyToleranceMm).toBeCloseTo(7.59, 2);
+    expect(result.meetsDiscrepancy).toBe(true);
+  });
+
+  it("paso 3: el circuito de 420 m reparte +1.0 mm", () => {
+    expect(result.circuitClosureMm).toBeCloseTo(1.0, 6);
+    const [a, p, b] = result.forward.readings;
+    const [, pv, av] = result.return!.readings;
+    expect(a!.elevationCorrected).toBe(100);
+    expect(p!.correctionApplied * 1000).toBeCloseTo(-0.238, 3);
+    expect(b!.elevationCorrected).toBeCloseTo(101.00148, 5);
+    // § 7.4: el punto de vuelta es el promedio ponderado por 1/D.
+    expect(b!.elevationCorrected).toBeCloseTo((101.002 * 200 + 101.001 * 220) / 420, 9);
+    expect(pv!.elevationCorrected).toBeCloseTo(100.44621, 5);
+    expect(av!.elevationCorrected).toBeCloseTo(100, 9);
+  });
+
+  it("paso 4: las cotas adoptadas", () => {
+    const adopted = adoptedElevationsOf(result, { type: "open", startElevation: 100, endElevation: null })!;
+    expect(adopted.map((x) => [x.pointCode, Number(x.elevation.toFixed(4)), x.known])).toEqual([
+      ["A", 100, true],
+      ["P", 100.448, false],
+      ["B", 101.0015, false],
+    ]);
+  });
+});
