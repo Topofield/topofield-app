@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
 import {
   averageReadings,
-  azimuthFromCoordinates,
   decimalToDms,
   dmsToDecimal,
 } from "@/lib/calculations/angles";
@@ -15,6 +14,7 @@ import {
   expectStationCapture,
   validateLeastSquaresWeights,
   hasCaptureErrors,
+  referenceStartAzimuth,
   validatePolygonalStation,
 } from "@/lib/validators/polygonal";
 import { derivePolygonalCloseStatus } from "./close-status";
@@ -203,6 +203,7 @@ function buildInput(payload: SavePolygonalPayload): PolygonalInput {
 async function resolveStartAzimuth(
   supabase: Awaited<ReturnType<typeof createClient>>,
   payload: SavePolygonalPayload,
+  projectId: string,
 ): Promise<{ deg: number | null; min: number | null; sec: number | null } | { error: string }> {
   if (payload.referencePointId == null) {
     return {
@@ -212,25 +213,19 @@ async function resolveStartAzimuth(
     };
   }
 
+  // Del catálogo de ESTE proyecto (Fase 27, PU15): la RLS impide usar el punto
+  // de otro usuario, pero no el de otro proyecto del mismo usuario.
   const { data: refPoint } = await supabase
     .from("reference_points")
     .select("north, east")
     .eq("id", payload.referencePointId)
+    .eq("project_id", projectId)
     .maybeSingle();
 
-  if (refPoint?.north == null || refPoint?.east == null) {
-    return { error: "El punto de amarre no tiene coordenadas." };
-  }
-
-  const dms = decimalToDms(
-    azimuthFromCoordinates(
-      payload.startNorth,
-      payload.startEast,
-      Number(refPoint.north),
-      Number(refPoint.east),
-    ),
+  return referenceStartAzimuth(
+    { north: payload.startNorth, east: payload.startEast },
+    refPoint ?? null,
   );
-  return dms;
 }
 
 /**
@@ -318,7 +313,7 @@ export async function savePolygonalProcessAction(
       ? "in_progress"
       : "draft";
 
-  const azimuth = await resolveStartAzimuth(supabase, payload);
+  const azimuth = await resolveStartAzimuth(supabase, payload, process.project_id);
   if ("error" in azimuth) return { ok: false, error: azimuth.error };
 
   // Cabecera, estaciones y lecturas en una sola transacción (Fase 23): si

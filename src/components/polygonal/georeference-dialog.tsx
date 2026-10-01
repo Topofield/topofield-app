@@ -190,6 +190,12 @@ export function GeoreferenceDialog({
             sistema real: se gira y se traslada, sin cambiar ángulos ni
             distancias. Use las dos estaciones más alejadas entre sí.
           </p>
+          {/* Los dos diálogos siguen aparte; cada uno dice cuándo conviene el
+              otro (Fase 27, PU16). */}
+          <p className="text-sm text-ink-2">
+            Si solo conoce las coordenadas del arranque y el azimut, y el
+            proceso sigue abierto, use <strong>Asignar coordenadas reales</strong>.
+          </p>
           {pointFields("Punto A", a, setA)}
           {pointFields("Punto B", b, setB)}
 

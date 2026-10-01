@@ -14,6 +14,7 @@ import {
   validateLeastSquaresWeights,
   hasCaptureErrors,
   readingDmsError,
+  referenceStartAzimuth,
   validatePolygonalStation,
   validateReadings,
   type CaptureIssues,
@@ -772,5 +773,28 @@ describe("decimales que la base no guarda (Fase 26, C-4)", () => {
       "La distancia admite hasta cuatro decimales.",
     );
     expect(validatePolygonalStation(capture({ distance: 100.1234 }), EXPECT_BOTH).errors.distance).toBeUndefined();
+  });
+});
+
+describe("referenceStartAzimuth — el azimut desde el punto de amarre (Fase 27, PU15)", () => {
+  const start = { north: 1000, east: 1000 };
+
+  it("con coordenadas, el azimut del arranque hacia el amarre", () => {
+    // ΔN = ΔE = 100: 45° exactos.
+    expect(referenceStartAzimuth(start, { north: 1100, east: 1100 })).toEqual({ deg: 45, min: 0, sec: 0 });
+    // Las columnas decimal llegan como texto desde la base.
+    expect(referenceStartAzimuth(start, { north: "900.000", east: "1000.000" })).toEqual({ deg: 180, min: 0, sec: 0 });
+  });
+
+  it("sin norte o sin este no hay azimut", () => {
+    const error = { error: "El punto de amarre no tiene coordenadas." };
+    expect(referenceStartAzimuth(start, { north: null, east: 1100 })).toEqual(error);
+    expect(referenceStartAzimuth(start, { north: 1100, east: null })).toEqual(error);
+  });
+
+  it("un punto que no está en el catálogo del proyecto se dice distinto", () => {
+    expect(referenceStartAzimuth(start, null)).toEqual({
+      error: "El punto de amarre no está en el catálogo del proyecto.",
+    });
   });
 });

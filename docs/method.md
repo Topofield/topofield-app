@@ -36,7 +36,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 24 | Pulido | [`prds/23-pulido.md`](./prds/23-pulido.md) | cerrada |
 | 25 | Catálogo de equipos | [`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md) | cerrada |
 | 26 | Correcciones del cálculo | [`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md) | cerrada |
-| 27 | Segundo pulido | [`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md) | pendiente |
+| 27 | Segundo pulido | [`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -550,6 +550,31 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 27 — Segundo pulido (2026-10-01)
+
+El alta de proyecto es un solo formulario —el asistente creaba el proyecto al
+pulsar «Siguiente»—; la nivelación abierta con vuelta se rotula «Abierta con
+ida y vuelta»; el hub dice el tipo como frase; el amarre se busca en el
+proyecto y su rechazo tiene test; y cada diálogo que mueve una poligonal dice
+cuándo usar el otro. 976 tests y 67 pruebas de base. Divergencias en el
+propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un botón que cambia de `type` al pulsarlo envía el formulario.** React
+  aplica el cambio de estado antes de la acción por defecto del clic, y el
+  navegador ve un botón de envío. El fallo llevaba desde la Fase 2 y nadie lo
+  vio porque nadie revisó el paso 2: la § 11 lo tenía pendiente «de una
+  revisión visual» desde la Fase 8. Una entrada que pide mirar una pantalla se
+  resuelve mirándola, no razonando sobre ella.
+- **Una etiqueta vive en más sitios de los que se listan.** El PRD nombraba
+  cinco lugares para «Abierta sin control»; la búsqueda del mapa de etiquetas
+  encontró dos más (el diálogo de importar y el filtro del hub). Antes de
+  cambiar un texto del dominio, buscar todos los usos de su constante.
+- **Una captura de viewport se queda corta cuando el formulario crece.** Al
+  juntar los dos pasos, «Crear proyecto» quedó fuera de la captura; se pasó a
+  página completa.
 
 ### Cierre Fase 26 — Correcciones del cálculo (2026-10-01)
 

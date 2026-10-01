@@ -7,7 +7,12 @@ import type { ProcessRow } from "@/components/projects/process-table";
 import type { StatusFilter } from "@/lib/process-list";
 import { PROCESS_STATUS_TONE, SITE_STATUS_TONE } from "@/lib/process-status";
 import { formatPrecision, formatSignedMm } from "@/lib/utils/format";
-import { LEVELING_TYPE_LABELS, LEVELING_TYPES, type LevelingProcess } from "@/types/leveling";
+import {
+  LEVELING_TYPE_CHOICE_LABELS,
+  LEVELING_TYPES,
+  levelingKindLabel,
+  type LevelingProcess,
+} from "@/types/leveling";
 import {
   POLYGONAL_TYPE_LABELS,
   POLYGONAL_TYPES,
@@ -37,7 +42,7 @@ export const POLYGONAL_TYPE_OPTIONS = POLYGONAL_TYPES.map((t) => ({
 }));
 export const LEVELING_TYPE_OPTIONS = LEVELING_TYPES.map((t) => ({
   value: t,
-  label: LEVELING_TYPE_LABELS[t],
+  label: LEVELING_TYPE_CHOICE_LABELS[t],
 }));
 export const SITE_TYPE_OPTIONS = STRUCTURE_TYPES.map((t) => ({
   value: t,
@@ -60,7 +65,9 @@ export function polygonalRow(projectId: string, p: PolygonalProcess): ProcessRow
     kind: "polygonal",
     name: p.name,
     href: `/projects/${projectId}/polygonal/${p.id}`,
-    kindLabel: `Poligonal · ${POLYGONAL_TYPE_LABELS[p.type]}`,
+    // El tipo como frase, como la cabecera del proceso (Fase 27, PU13): junto
+    // al badge «Cerrado», un «· Cerrada» suelto se leía como el estado.
+    kindLabel: `Poligonal ${POLYGONAL_TYPE_LABELS[p.type].toLowerCase()}`,
     ...processStatus(p),
     result: p.relative_precision
       ? formatPrecision(p.relative_precision)
@@ -94,7 +101,7 @@ export function levelingRow(projectId: string, p: LevelingProcess): ProcessRow {
     kind: "leveling",
     name: p.name,
     href: `/projects/${projectId}/leveling/${p.id}`,
-    kindLabel: `Nivelación · ${LEVELING_TYPE_LABELS[p.type]}${p.has_return_run ? " · ida y vuelta" : ""}`,
+    kindLabel: levelingKindLabel(p.type, p.has_return_run),
     ...processStatus(p),
     result,
     meets: p.meets_tolerance,

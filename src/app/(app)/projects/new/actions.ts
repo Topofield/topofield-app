@@ -11,7 +11,7 @@ export interface CreateProjectState {
 
 /**
  * Crea un proyecto. En éxito redirige al hub del proyecto; en error de
- * validación devuelve el estado para que el wizard muestre los errores sin
+ * validación devuelve el estado para que el formulario muestre los errores sin
  * perder lo digitado.
  */
 export async function createProjectAction(
@@ -53,7 +53,7 @@ export async function createProjectAction(
   // nombre del proyecto ya se ve en el hub que envuelve al lugar, así que
   // repetirlo como nombre del lugar sería redundante; "Área principal"
   // describe qué es sin inventar un dato de campo (tipo de estructura,
-  // ubicación) que el wizard de proyecto no pide. `structure_type: 'otro'`
+  // ubicación) que el alta de proyecto no pide. `structure_type: 'otro'`
   // porque en este punto no se sabe qué se va a construir o monitorear.
   const { error: siteError } = await supabase.from("sites").insert({
     project_id: data.id,

@@ -21,7 +21,7 @@ import {
   type PrecisionOrder,
 } from "@/types/project";
 import {
-  LEVELING_TYPE_LABELS,
+  levelingTypeLabel,
   POINT_TYPE_LABELS,
   RUN_TYPE_LABELS,
   type LevelingType,
@@ -227,7 +227,7 @@ function sheetSummary(
   writeSection(s, row0, "Proceso");
   let row = writePairs(s, row0 + 1, [
     ["Nombre", process.name],
-    ["Tipo", LEVELING_TYPE_LABELS[process.type as LevelingType] ?? process.type],
+    ["Tipo", levelingTypeLabel(process.type as LevelingType, process.has_return_run === true)],
     ["Estado", PROCESS_STATUS_LABELS[process.status]],
     ["Lecturas", readings.length],
     ["¿Tiene vuelta?", process.has_return_run ? "Sí" : "No"],

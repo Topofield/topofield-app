@@ -1,5 +1,5 @@
 import { Breadcrumbs, Card } from "@/components/design-system";
-import { ProjectWizard } from "@/components/projects/project-wizard";
+import { NewProjectForm } from "@/components/projects/new-project-form";
 
 export default function NewProjectPage() {
   return (
@@ -14,10 +14,11 @@ export default function NewProjectPage() {
         Nuevo proyecto
       </h1>
       <p className="mt-1 text-sm text-ink-2">
-        Registra los datos del proyecto y del equipo en dos pasos.
+        Los datos del proyecto y su sistema de referencia. El equipo y el orden
+        de precisión se declaran en cada proceso.
       </p>
       <Card className="mt-6">
-        <ProjectWizard />
+        <NewProjectForm />
       </Card>
     </div>
   );

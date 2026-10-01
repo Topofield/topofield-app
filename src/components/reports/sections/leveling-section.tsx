@@ -3,7 +3,7 @@ import { fixed } from "@/lib/reports/values";
 import type { LevelingSectionData } from "@/lib/reports/sections";
 import { LEVEL_TYPE_LABELS, PRECISION_ORDER_LABELS } from "@/types/project";
 import {
-  LEVELING_TYPE_LABELS,
+  levelingTypeLabel,
   POINT_TYPE_LABELS,
   RUN_TYPE_LABELS,
   type LevelingType,
@@ -18,7 +18,7 @@ export function LevelingReportSection({ data }: { data: LevelingSectionData }) {
     <>
       <dl className="report-pairs">
         <dt>Tipo</dt>
-        <dd>{LEVELING_TYPE_LABELS[process.type as LevelingType] ?? process.type}</dd>
+        <dd>{levelingTypeLabel(process.type as LevelingType, process.has_return_run)}</dd>
         {/* Una abierta no cierra contra cota conocida: sin esas dos filas,
             en vez de dos «— mm». */}
         {process.type !== "open" && (

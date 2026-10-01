@@ -143,7 +143,7 @@ await capturar("02-dashboard");
 
 // Proyectos
 await page.goto(`${BASE}/projects/new`, { waitUntil: "networkidle" });
-await capturar("03-nuevo-proyecto");
+await capturar("03-nuevo-proyecto", { fullPage: true });
 await page.goto(`${BASE}/projects/${proyecto}`, { waitUntil: "networkidle" });
 await capturar("04-hub-proyecto", { fullPage: true });
 await page.goto(`${BASE}/projects/${proyecto}?tab=config`, { waitUntil: "networkidle" });

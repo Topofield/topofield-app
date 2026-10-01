@@ -16,7 +16,7 @@ import {
 } from "@/lib/import/leveling";
 import type { LevelingConfigState } from "./leveling-config-fields";
 import {
-  LEVELING_TYPE_LABELS,
+  levelingTypeLabel,
   POINT_TYPES,
   POINT_TYPE_LABELS,
   type LevelingType,
@@ -369,8 +369,13 @@ export function ImportDialog({
 
               <p className="text-sm text-ink-2">
                 El proceso quedará como{" "}
-                <strong>{LEVELING_TYPE_LABELS[proposedLevelingType(rows, currentType)]}</strong>
-                {rows.return ? " con recorrido de vuelta" : ""}, en modo{" "}
+                <strong>
+                  {levelingTypeLabel(proposedLevelingType(rows, currentType), rows.return != null)}
+                </strong>
+                {rows.return && proposedLevelingType(rows, currentType) !== "open"
+                  ? " con recorrido de vuelta"
+                  : ""}
+                , en modo{" "}
                 <strong>digital</strong>. Puede cambiarlo después en la
                 configuración. Revise el tipo de cada punto antes de aceptar.
               </p>

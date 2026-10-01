@@ -136,6 +136,12 @@ export function ReassignCoordinatesDialog({
               Las coordenadas de todas las estaciones se recalculan manteniendo
               los ángulos y las distancias.
             </p>
+            {/* Los dos diálogos siguen aparte; cada uno dice cuándo conviene el
+                otro (Fase 27, PU16). */}
+            <p className="text-sm text-ink-2">
+              Si conoce las coordenadas reales de dos estaciones, o el proceso
+              ya está cerrado, use <strong>Georreferenciar</strong>.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <NumberInput
                 label="Norte de partida"

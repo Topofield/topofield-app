@@ -144,12 +144,10 @@ Use **+ Nuevo Proyecto** para crear uno.
 
 ![Nuevo proyecto](../../public/manual/03-nuevo-proyecto.png)
 
-El formulario tiene dos pasos:
-
-**Paso 1 — Datos básicos.** Nombre, descripción, cliente, ubicación y, si
-quiere, las coordenadas geográficas en grados decimales.
-
-**Paso 2 — Datum y proyección.** El sistema de referencia del proyecto.
+El formulario reúne en una página los **datos básicos** —nombre, descripción,
+cliente, ubicación y, si quiere, las coordenadas geográficas en grados
+decimales— y el **sistema de referencia**: datum y proyección. El proyecto se
+crea al pulsar **Crear proyecto**.
 
 > **El equipo y el orden de precisión no se piden aquí.** Se declaran en cada
 > proceso: cada poligonal, cada nivelación y cada visita de asentamiento tiene
@@ -507,7 +505,8 @@ cierre certifica; solo se mueven las coordenadas.
 
 Este diálogo es para un proceso **sin cerrar** y parte del punto de arranque.
 Si lo que tiene son las coordenadas reales de **dos estaciones** —medidas con
-GPS, por ejemplo—, o el proceso ya está cerrado, use **Georreferenciar**.
+GPS, por ejemplo—, o el proceso ya está cerrado, use **Georreferenciar**. Cada
+uno de los dos diálogos lo recuerda.
 
 ### 5.5 Georreferenciar
 
@@ -560,13 +559,14 @@ TopoField maneja tres tipos de nivelación geométrica:
 |---|---|---|
 | **Cerrada** | Sale de un BM y vuelve a ese mismo BM | Error de cierre contra la cota de partida |
 | **De enlace** | Va de un BM conocido a otro BM conocido distinto | Error de cierre contra la cota de llegada |
-| **Abierta sin control** | No cierra contra ningún BM | Sin cierre; con vuelta, la **discrepancia entre ida y vuelta** |
+| **Abierta** | No cierra contra ningún BM | Sin vuelta, ninguno; con vuelta, la **discrepancia entre ida y vuelta** |
 
 Sin recorrido de vuelta, la nivelación abierta sirve solo para
 reconocimiento: calcula cotas, pero no hay forma de comprobar si son
 correctas, igual que la poligonal abierta sin control (§ 5.1). No se puede
-calcular error de cierre ni compensar. Con vuelta, su veredicto es la
-discrepancia entre ida y vuelta (§ 6.6).
+calcular error de cierre ni compensar, y la aplicación la rotula **Abierta
+sin control**. Con vuelta, su veredicto es la discrepancia entre ida y vuelta
+(§ 6.6), y se rotula **Abierta con ida y vuelta**.
 
 ### 6.2 Cómo se llena la libreta
 

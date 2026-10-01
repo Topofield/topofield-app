@@ -223,17 +223,13 @@ export default function ManualPage() {
 
         <Captura {...CAPTURAS.nuevoProyecto} />
 
-        <p>El formulario tiene dos pasos:</p>
-
         <p>
-          <strong>Paso 1 — Datos básicos.</strong> Nombre, descripción, cliente,
+          El formulario reúne en una página los{" "}
+          <strong>datos básicos</strong> —nombre, descripción, cliente,
           ubicación y, si quiere, las coordenadas geográficas en grados
-          decimales.
-        </p>
-
-        <p>
-          <strong>Paso 2 — Datum y proyección.</strong> El sistema de
-          referencia del proyecto.
+          decimales— y el <strong>sistema de referencia</strong>: datum y
+          proyección. El proyecto se crea al pulsar{" "}
+          <strong>Crear proyecto</strong>.
         </p>
 
         <Nota titulo="El equipo y el orden de precisión no se piden aquí">
@@ -817,7 +813,8 @@ export default function ManualPage() {
           Este diálogo es para un proceso <strong>sin cerrar</strong> y parte
           del punto de arranque. Si lo que tiene son las coordenadas reales de{" "}
           <strong>dos estaciones</strong> —medidas con GPS, por ejemplo—, o el
-          proceso ya está cerrado, use <strong>Georreferenciar</strong>.
+          proceso ya está cerrado, use <strong>Georreferenciar</strong>. Cada
+          uno de los dos diálogos lo recuerda.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">5.5 Georreferenciar</h3>
@@ -909,8 +906,10 @@ export default function ManualPage() {
           Sin recorrido de vuelta, la nivelación abierta sirve solo para
           reconocimiento: calcula cotas, pero no hay forma de comprobar si son
           correctas, igual que la poligonal abierta sin control. No se puede
-          calcular error de cierre ni compensar. Con vuelta, su veredicto es
-          la discrepancia entre ida y vuelta.
+          calcular error de cierre ni compensar, y la aplicación la rotula{" "}
+          <strong>Abierta sin control</strong>. Con vuelta, su veredicto es la
+          discrepancia entre ida y vuelta, y se rotula{" "}
+          <strong>Abierta con ida y vuelta</strong>.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">

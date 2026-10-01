@@ -12,7 +12,7 @@ import {
   getProjectById,
   getReferencePoints,
 } from "@/lib/supabase/queries";
-import { LEVELING_TYPE_LABELS, type LevelingType } from "@/types/leveling";
+import { levelingKindLabel, type LevelingType } from "@/types/leveling";
 import { PROCESS_STATUS_LABELS } from "@/types/polygonal";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
 
@@ -51,7 +51,6 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
   }
 
   const basePath = `/projects/${id}/leveling/${pid}`;
-  const tipo = LEVELING_TYPE_LABELS[process.type as LevelingType] ?? process.type;
 
   return (
     <ProcessShell
@@ -66,7 +65,7 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
           {PROCESS_STATUS_LABELS[process.status]}
         </Badge>
       }
-      subtitle={`Nivelación ${tipo.toLowerCase()}${process.has_return_run ? " · ida y vuelta" : ""} · ${PRECISION_ORDER_LABELS[process.precision_order]}`}
+      subtitle={`${levelingKindLabel(process.type as LevelingType, process.has_return_run)} · ${PRECISION_ORDER_LABELS[process.precision_order]}`}
       basePath={basePath}
       tabs={TABS}
       activeTab={activeTab}
