@@ -1,4 +1,4 @@
-// Validación de los datos de un proyecto (wizard de creación y edición).
+// Validación de los datos de un proyecto (alta y edición).
 // Función pura: sin React, sin Supabase. Es la fuente de verdad — el Server
 // Action la invoca antes de cualquier INSERT/UPDATE.
 //

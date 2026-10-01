@@ -17,7 +17,7 @@ interface FieldsProps {
   errors: Record<string, string>;
 }
 
-/** Campos de datos básicos del proyecto (paso 1 del wizard). */
+/** Campos de datos básicos del proyecto. */
 export function BasicFields({ values, errors }: FieldsProps) {
   return (
     <>
@@ -74,7 +74,7 @@ export function BasicFields({ values, errors }: FieldsProps) {
 }
 
 /**
- * Datum y proyección del proyecto (paso 2 del wizard).
+ * Datum y proyección del proyecto.
  *
  * Desde la Fase 8 el equipo y la precisión ya no se capturan aquí: cada
  * proceso (poligonal, nivelación, asentamiento) los define por su cuenta. Por
