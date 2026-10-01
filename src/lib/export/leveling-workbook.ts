@@ -14,6 +14,7 @@ import {
   writeSection,
 } from "./workbook";
 import { PROCESS_STATUS_LABELS, type ProcessStatus } from "@/types/polygonal";
+import { adoptedNote, storedAdoptedElevations } from "@/lib/reports/adopted";
 import {
   LEVEL_TYPE_LABELS,
   PRECISION_ORDER_LABELS,
@@ -206,6 +207,36 @@ function sheetCalculations(
   ]);
 }
 
+/**
+ * Una cota por punto (Fase 28): el promedio de las cotas compensadas de un
+ * punto leído dos veces, y la cota conocida para los BM de partida y llegada.
+ */
+function sheetAdopted(
+  wb: ExcelJS.Workbook,
+  process: LevelingProcessRow,
+  readings: LevelingReadingRow[],
+): void {
+  const s = wb.addWorksheet("Cotas adoptadas");
+  s.columns = [{ width: 14 }, { width: 18 }, { width: 10 }, { width: 34 }];
+  setSheetTitle(s, `${process.name} — cotas adoptadas`);
+  const adopted = storedAdoptedElevations(process, readings);
+  if (adopted === null) {
+    writePairs(s, 3, [
+      ["Sin cotas adoptadas", "El trabajo no se compensó: no cumple, o es una abierta sin vuelta."],
+    ]);
+    return;
+  }
+  setHeaders(s, 3, ["Punto", "Cota adoptada (m)", "Lecturas", "Origen"]);
+  adopted.forEach((a, i) => {
+    writeRow(
+      s,
+      4 + i,
+      [a.pointCode, a.elevation, a.readings, adoptedNote(a)],
+      [null, DECIMALS.elevation, null, null],
+    );
+  });
+}
+
 function sheetSummary(
   wb: ExcelJS.Workbook,
   process: LevelingProcessRow,
@@ -314,6 +345,7 @@ export function buildLevelingWorkbook(
   });
   sheetRawData(wb, process, ordered);
   sheetCalculations(wb, process, ordered);
+  sheetAdopted(wb, process, ordered);
   sheetSummary(wb, process, ordered, project);
   return wb;
 }

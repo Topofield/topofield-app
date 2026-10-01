@@ -165,6 +165,26 @@ export interface LevelingResult {
   discrepancyToleranceMm: number | null;
   meetsDiscrepancy: boolean | null;
   adoptedHeightDifference: number | null;
+  /**
+   * Cierre del circuito ida + vuelta de una abierta, en mm con su signo: la
+   * llegada de la vuelta menos la cota del BM de partida (Fase 28). Es lo que
+   * se reparte al compensar. Null sin vuelta o si no es abierta.
+   */
+  circuitClosureMm: number | null;
+}
+
+/**
+ * La cota definitiva de un punto (Fase 28): una sola, aunque se haya leído
+ * dos veces.
+ */
+export interface AdoptedElevation {
+  /** El código como se escribió la primera vez. */
+  pointCode: string;
+  elevation: number;
+  /** Cuántas filas lo leyeron. */
+  readings: number;
+  /** BM de cota conocida (partida, o llegada en una de enlace): no se toca. */
+  known: boolean;
 }
 
 /**

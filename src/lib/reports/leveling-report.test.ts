@@ -82,3 +82,30 @@ describe("informe de una nivelación con vuelta (Fase 23)", () => {
     expect(fila!.precision).toBe("-0.4 mm (tol. 14.2)");
   });
 });
+
+describe("informe de una nivelación — cotas adoptadas (Fase 28)", () => {
+  const fila = (run_type: string, reading_order: number, point_code: string, elevation_corrected: string) =>
+    ({ id: `${run_type}${reading_order}`, run_type, reading_order, point_code, point_type: "pc", elevation_corrected }) as unknown as LevelingSectionData["readings"][number];
+
+  it("una cota por punto, con el BM de partida fijo", () => {
+    const data = nivelacion({ start_bm_elevation: 3288.5 } as Partial<LevelingSectionData["process"]>);
+    data.readings = [
+      fila("forward", 1, "D1", "3288.5000"),
+      fila("forward", 2, "C1", "3289.4414"),
+      fila("return", 1, "C1", "3289.4386"),
+      fila("return", 2, "D1", "3288.5000"),
+    ];
+    const html = renderToStaticMarkup(createElement(LevelingReportSection, { data }));
+    expect(html).toContain("Cotas adoptadas");
+    expect(html).toContain("3289.4400");
+    expect(html).toContain("BM de cota conocida");
+    expect(html).toContain("Promedio de 2 cotas compensadas");
+  });
+
+  it("sin compensación no hay tabla", () => {
+    const html = renderToStaticMarkup(
+      createElement(LevelingReportSection, { data: nivelacion({ meets_tolerance: false }) }),
+    );
+    expect(html).not.toContain("Cotas adoptadas");
+  });
+});

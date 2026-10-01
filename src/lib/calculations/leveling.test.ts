@@ -9,6 +9,8 @@ import {
   accumulateDistances,
   totalDistanceFromReadings,
   levelingProcessVerdict,
+  adoptedElevations,
+  adoptedElevationsOf,
 } from "./leveling";
 import type { LevelingInput, LevelingResult, PointType, ReadingInput } from "@/types/leveling";
 
@@ -1036,6 +1038,7 @@ describe("levelingProcessVerdict", () => {
     discrepancyToleranceMm: null,
     meetsDiscrepancy: null,
     adoptedHeightDifference: null,
+    circuitClosureMm: null,
   };
   it("cerrada y de enlace: el cierre", () => {
     expect(levelingProcessVerdict({ ...base, meetsTolerance: true, meetsDiscrepancy: false }, "closed")).toBe(true);
@@ -1144,5 +1147,147 @@ describe("levelingProcessVerdict — con vuelta en cerrada y de enlace (Fase 26,
     expect(levelingProcessVerdict({ ...base, meetsTolerance: true, return: run(null) }, "closed")).toBeNull();
     expect(levelingProcessVerdict({ ...base, meetsTolerance: null, return: run(false) }, "closed")).toBeNull();
     expect(levelingProcessVerdict({ ...base, meetsTolerance: false, return: run(null) }, "link")).toBeNull();
+  });
+});
+
+// Fase 28: con vuelta, cada recorrido se compensa contra la cota conocida en
+// la que cierra, y cada punto recibe una sola cota.
+describe("computeLeveling — la vuelta también se compensa (Fase 28)", () => {
+  it("cerrada: la vuelta se compensa con su propio cierre y llega a la cota de partida", () => {
+    // Ida −8 mm y vuelta +10 mm sobre 0.9 km: T = 11.38 mm, cumplen los dos.
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      return: fromAccum([
+        r("BM-1", "bm", 1.2, null, 0.0),
+        r("PV-1", "pc", 1.6, 0.9, 0.45),
+        r("BM-1", "bm", null, 1.89, 0.9),
+      ]),
+    });
+    const back = result.return!.readings;
+    // PV-1 a mitad de la vuelta: −10 mm × 0.45/0.9 = −5 mm.
+    expect(back[1]!.correctionApplied).toBeCloseTo(-0.005, 9);
+    expect(back.at(-1)!.elevationCorrected).toBeCloseTo(100, 9);
+    expect(result.forward.readings.at(-1)!.elevationCorrected).toBeCloseTo(100, 9);
+  });
+
+  it("de enlace: la ida contra el BM de llegada y la vuelta contra el de partida", () => {
+    // A (100.000) → B (100.500) en 0.5 km: la ida mide +0.504 (+4 mm) y la
+    // vuelta −0.497 desde B (+3 mm al llegar a A). T = 12·√0.5 = 8.49 mm.
+    const result = computeLeveling({
+      type: "link",
+      startElevation: 100,
+      endElevation: 100.5,
+      order: "tercer_orden",
+      forward: [
+        bare({ pointCode: "A", pointType: "bm", backsight: 1.5, backDistanceM: 250 }),
+        bare({ pointCode: "B", pointType: "bm", foresight: 0.996, foreDistanceM: 250 }),
+      ],
+      return: [
+        bare({ pointCode: "B", pointType: "bm", backsight: 1.0, backDistanceM: 250 }),
+        bare({ pointCode: "A", pointType: "bm", foresight: 1.497, foreDistanceM: 250 }),
+      ],
+    });
+    expect(result.forward.readings.at(-1)!.elevationCorrected).toBeCloseTo(100.5, 9);
+    expect(result.return!.readings.at(-1)!.elevationCorrected).toBeCloseTo(100, 9);
+    const adopted = adoptedElevationsOf(result, { type: "link", startElevation: 100, endElevation: 100.5 })!;
+    expect(adopted).toEqual([
+      { pointCode: "A", elevation: 100, readings: 2, known: true },
+      { pointCode: "B", elevation: 100.5, readings: 2, known: true },
+    ]);
+  });
+
+  it("sin vuelta, la compensación es la de siempre", () => {
+    const before = computeLeveling(CLOSED_INPUT);
+    expect(before.return).toBeNull();
+    expect(before.circuitClosureMm).toBeNull();
+    expect(before.forward.readings.at(-1)!.elevationCorrected).toBeCloseTo(100, 9);
+  });
+});
+
+describe("adoptedElevations (Fase 28)", () => {
+  it("promedia un punto leído dos veces y respeta la cota de un BM conocido", () => {
+    const adopted = adoptedElevations(
+      [
+        { pointCode: "BM-1", elevation: 100 },
+        { pointCode: "AUX 1", elevation: 101.002 },
+        { pointCode: "C2", elevation: 102 },
+        { pointCode: "AUX1", elevation: 100.998 },
+        { pointCode: "BM-1", elevation: 100.0000001 },
+      ],
+      [{ pointCode: "BM-1", elevation: 100 }],
+    );
+    expect(adopted).toEqual([
+      { pointCode: "BM-1", elevation: 100, readings: 2, known: true },
+      { pointCode: "AUX 1", elevation: 101, readings: 2, known: false },
+      { pointCode: "C2", elevation: 102, readings: 1, known: false },
+    ]);
+  });
+
+  it("las filas sin código o sin cota no cuentan", () => {
+    expect(
+      adoptedElevations(
+        [
+          { pointCode: " ", elevation: 100 },
+          { pointCode: "C1", elevation: Number.NaN },
+        ],
+        [],
+      ),
+    ).toEqual([]);
+  });
+
+  it("una abierta sin vuelta no tiene cotas adoptadas: no se compensó", () => {
+    const open = computeLeveling({ ...CLOSED_INPUT, type: "open" });
+    expect(adoptedElevationsOf(open, { type: "open", startElevation: 100, endElevation: null })).toBeNull();
+  });
+});
+
+// El ejemplo 1 de docs/math/nivelacion.html, resuelto a mano allí: si el
+// motor cambia, el documento para la monografía deja de ser cierto.
+describe("el ejemplo 1 de los fundamentos (docs/math/nivelacion.html)", () => {
+  const result = computeLeveling({
+    type: "open",
+    startElevation: 100,
+    endElevation: null,
+    order: "tercer_orden",
+    forward: [
+      bare({ pointCode: "A", pointType: "bm", backsight: 1.5, backDistanceM: 50 }),
+      bare({ pointCode: "P", foresight: 1.05, foreDistanceM: 50, backsight: 1.62, backDistanceM: 60 }),
+      bare({ pointCode: "B", pointType: "bm", foresight: 1.068, foreDistanceM: 60 }),
+    ],
+    return: [
+      bare({ pointCode: "B", pointType: "bm", backsight: 1.1, backDistanceM: 55 }),
+      bare({ pointCode: "P", foresight: 1.655, foreDistanceM: 55, backsight: 1.09, backDistanceM: 45 }),
+      bare({ pointCode: "A", pointType: "bm", foresight: 1.536, foreDistanceM: 45 }),
+    ],
+  });
+
+  it("pasos 1 y 2: desniveles, discrepancia y tolerancia", () => {
+    expect(result.forward.heightDifference).toBeCloseTo(1.002, 9);
+    expect(result.return!.heightDifference).toBeCloseTo(-1.001, 9);
+    expect(result.discrepancyMm).toBeCloseTo(1.0, 6);
+    expect(result.discrepancyToleranceMm).toBeCloseTo(7.59, 2);
+    expect(result.meetsDiscrepancy).toBe(true);
+  });
+
+  it("paso 3: el circuito de 420 m reparte +1.0 mm", () => {
+    expect(result.circuitClosureMm).toBeCloseTo(1.0, 6);
+    const [a, p, b] = result.forward.readings;
+    const [, pv, av] = result.return!.readings;
+    expect(a!.elevationCorrected).toBe(100);
+    expect(p!.correctionApplied * 1000).toBeCloseTo(-0.238, 3);
+    expect(b!.elevationCorrected).toBeCloseTo(101.00148, 5);
+    // § 7.4: el punto de vuelta es el promedio ponderado por 1/D.
+    expect(b!.elevationCorrected).toBeCloseTo((101.002 * 200 + 101.001 * 220) / 420, 9);
+    expect(pv!.elevationCorrected).toBeCloseTo(100.44621, 5);
+    expect(av!.elevationCorrected).toBeCloseTo(100, 9);
+  });
+
+  it("paso 4: las cotas adoptadas", () => {
+    const adopted = adoptedElevationsOf(result, { type: "open", startElevation: 100, endElevation: null })!;
+    expect(adopted.map((x) => [x.pointCode, Number(x.elevation.toFixed(4)), x.known])).toEqual([
+      ["A", 100, true],
+      ["P", 100.448, false],
+      ["B", 101.0015, false],
+    ]);
   });
 });

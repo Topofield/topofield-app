@@ -1105,24 +1105,41 @@ Desnivel promediado, que se calcula siempre y se informa:
 
   Δh_adoptado = (Δh_ida - Δh_vuelta) / 2
 
-Δh_adoptado se calcula y se informa como dato del doble recorrido, pero HOY
-NO alimenta la compensación: la corrección proporcional (§ 6.8) se aplica al
-recorrido de ida usando el error de cierre de la propia ida (Cota_calculada -
-Cota_conocida), no el desnivel adoptado. NO se promedia tramo a tramo.
-
 Veredicto:
   - abierta con vuelta: Discrepancia ≤ Tolerancia_iv (Fase 23);
   - cerrada o de enlace con vuelta: cada recorrido cumple su propia
     tolerancia, K × √D con su distancia (Fase 26). La discrepancia es control.
+
+Compensación con vuelta (Fase 28), solo si el trabajo cumple:
+  - abierta: ida y vuelta forman un circuito sobre el BM de partida.
+      E_circuito = (Δh_ida + Δh_vuelta) × 1000          (mm)
+      L          = D_ida + D_vuelta
+      ida:    C_i = -E_circuito × s_i / L
+      vuelta: C_j = -E_circuito × (D_ida + t_j) / L
+    En el punto de vuelta da el promedio de ida y vuelta con pesos 1/D.
+  - cerrada o de enlace: cada recorrido se compensa con su propio cierre
+    (§ 6.8): la ida contra su cota conocida y la vuelta contra la del BM de
+    partida.
+
+Cota adoptada de cada punto:
+  - BM de partida (y de llegada en una de enlace): su cota conocida, siempre;
+  - leído dos veces: el promedio de sus dos cotas compensadas;
+  - leído una vez: su cota compensada.
 ```
+
+> **Enmendado en la Fase 28** (2026-10-01, CR1). Hasta entonces el desnivel
+> adoptado se informaba pero no alimentaba la compensación: la ida se
+> compensaba con su propio cierre, la vuelta solo controlaba, y una abierta con
+> vuelta quedaba sin compensar. Ahora las dos medidas entran, y cada punto
+> leído dos veces recibe una sola cota. El detalle, con El Verjón resuelto
+> paso a paso, está en `docs/math/nivelacion.html`.
 
 > **Precisado en la Fase 26** (2026-10-01, auditoría del cálculo). El texto
 > decía que el desnivel se adopta «si la discrepancia cumple»; el motor lo
 > calcula siempre, porque es informativo. Y en una cerrada o de enlace con
 > vuelta solo se juzgaba la discrepancia, |e_ida + e_vuelta|, donde dos errores
-> de signo contrario se cancelan: ahora se juzga cada recorrido. Si el desnivel
-> adoptado debe entrar en la compensación queda pendiente (CR1 en
-> `docs/pendientes.md`).
+> de signo contrario se cancelan: ahora se juzga cada recorrido. El desnivel
+> adoptado entró en la compensación en la Fase 28 (ver arriba).
 
 ### 6.10 Asentamientos — Cálculos
 

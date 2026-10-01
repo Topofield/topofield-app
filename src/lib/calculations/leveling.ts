@@ -3,6 +3,7 @@
 
 import { levelingTolerance } from "./tolerances";
 import type {
+  AdoptedElevation,
   ComputedReading,
   HomologousComparison,
   HomologousPoint,
@@ -300,6 +301,32 @@ export function applyProportionalCorrection(
   });
 }
 
+/**
+ * Corrección proporcional a lo largo de un circuito formado por varios
+ * recorridos (Fase 28): la de cada fila es −E·(desplazamiento + acumulado)/L,
+ * con el desplazamiento la longitud de los recorridos que la preceden en el
+ * circuito. Es `applyProportionalCorrection` con el acumulado medido desde el
+ * inicio del circuito y no desde el del recorrido.
+ */
+function applyCircuitCorrection(
+  readings: ComputedReading[],
+  errorMm: number,
+  offsetKm: number,
+  circuitKm: number,
+): ComputedReading[] {
+  if (circuitKm <= 0) return readings;
+  const errorM = errorMm / 1000;
+  return readings.map((reading) => {
+    const position = offsetKm + (reading.distanceAccumulatedKm ?? 0);
+    const correction = -errorM * (position / circuitKm) + 0;
+    return {
+      ...reading,
+      correctionApplied: correction,
+      elevationCorrected: reading.elevationCalculated + correction,
+    };
+  });
+}
+
 /** Cota conocida contra la que cierra el recorrido, o null si no cierra. */
 function knownClosingElevation(input: LevelingInput): number | null {
   if (input.type === "closed") return input.startElevation;
@@ -369,15 +396,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     }
   }
 
-  const forwardResult: RunResult = {
-    readings,
-    heightDifference: forward.heightDifference,
-    distanceKm: totalDistanceKm,
-    errorMm: closureErrorMm,
-    toleranceMm,
-    meetsTolerance,
-    arithmeticCheckOk: forward.arithmeticCheckOk,
-  };
+  let circuitClosureMm: number | null = null;
 
   // --- Ida y vuelta (§ 6.9, enmendado — decisión #2) -----------------------
   // Los recorridos son mediciones independientes: distintos puntos de cambio
@@ -438,19 +457,66 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
         ? levelingTolerance(input.order, returnDistanceKm)
         : null;
 
+    const returnMeets =
+      returnErrorMm != null && returnToleranceMm != null
+        ? withinTolerance(returnErrorMm, returnToleranceMm)
+        : null;
+
+    // --- Las dos medidas en la compensación (Fase 28) ----------------------
+    // Antes la vuelta solo controlaba: en una abierta las cotas eran las de la
+    // ida sin compensar, y en una cerrada o de enlace la vuelta no se
+    // compensaba. Ahora cada recorrido se compensa contra la cota conocida en
+    // la que cierra, siempre que el trabajo cumpla (se repite si no, marco
+    // teórico § 8.1). El BM de partida no cambia: su acumulado es 0 al salir,
+    // y al volver la compensación lo deja en su cota conocida.
+    let backReadings = back.readings;
+    if (known == null) {
+      // Abierta: ida y vuelta forman un circuito sobre el BM de partida, que
+      // es la única cota conocida. El error es la llegada de la vuelta menos
+      // esa cota, y se reparte por distancia a lo largo de todo el circuito:
+      // la vuelta sigue donde terminó la ida. En el punto de vuelta da el
+      // promedio de ida y vuelta ponderado por sus distancias.
+      circuitClosureMm = (forward.heightDifference + back.heightDifference) * 1000;
+      const circuitKm = totalDistanceKm + returnDistanceKm;
+      if (meetsDiscrepancy === true && valid(circuitKm)) {
+        readings = applyCircuitCorrection(forward.readings, circuitClosureMm, 0, circuitKm);
+        backReadings = applyCircuitCorrection(
+          back.readings,
+          circuitClosureMm,
+          totalDistanceKm,
+          circuitKm,
+        );
+      }
+    } else if (returnMeets === true && returnErrorMm != null) {
+      // Cerrada o de enlace: la vuelta cierra en el BM de partida y se
+      // compensa con su propio error, como la ida con el suyo.
+      backReadings = applyProportionalCorrection(
+        back.readings,
+        returnErrorMm,
+        returnDistanceKm,
+      );
+    }
+
     returnResult = {
-      readings: back.readings,
+      readings: backReadings,
       heightDifference: back.heightDifference,
       distanceKm: returnDistanceKm,
       errorMm: returnErrorMm,
       toleranceMm: returnToleranceMm,
-      meetsTolerance:
-        returnErrorMm != null && returnToleranceMm != null
-          ? withinTolerance(returnErrorMm, returnToleranceMm)
-          : null,
+      meetsTolerance: returnMeets,
       arithmeticCheckOk: back.arithmeticCheckOk,
     };
   }
+
+  const forwardResult: RunResult = {
+    readings,
+    heightDifference: forward.heightDifference,
+    distanceKm: totalDistanceKm,
+    errorMm: closureErrorMm,
+    toleranceMm,
+    meetsTolerance,
+    arithmeticCheckOk: forward.arithmeticCheckOk,
+  };
 
   return {
     forward: forwardResult,
@@ -469,6 +535,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     discrepancyToleranceMm,
     meetsDiscrepancy,
     adoptedHeightDifference,
+    circuitClosureMm,
   };
 }
 
@@ -576,4 +643,85 @@ export function compareHomologousPoints(
       result.discrepancyMm != null &&
       Math.abs(Math.abs(last.residualMm) - result.discrepancyMm) < 1e-6,
   };
+}
+
+// --- Cotas adoptadas (Fase 28) -----------------------------------------------
+
+/**
+ * Una cota por punto, a partir de las filas ya compensadas, en el orden de la
+ * libreta: primero la ida, después la vuelta.
+ *
+ * - Un BM de cota conocida —el de partida y, en una de enlace, el de
+ *   llegada— conserva su cota conocida, siempre: es un dato, no una
+ *   medición, y queda fuera del promedio.
+ * - Un punto leído una vez, su cota compensada.
+ * - Un punto leído más de una vez —en la ida y en la vuelta, o al ir y al
+ *   volver de un mismo recorrido—, el promedio de sus cotas compensadas.
+ *   Tras compensar el circuito las dos valen lo mismo: la incertidumbre de un
+ *   punto depende de su posición en el circuito, y es simétrica.
+ *
+ * Los puntos se reconocen por su código sin espacios ni mayúsculas, como los
+ * homólogos («AUX 1» y «AUX1» son el mismo). Las filas sin código o sin cota
+ * finita no cuentan.
+ */
+export function adoptedElevations(
+  rows: readonly { pointCode: string; elevation: number }[],
+  knownPoints: readonly { pointCode: string; elevation: number }[],
+): AdoptedElevation[] {
+  const known = new Map(knownPoints.map((p) => [normalizedCode(p.pointCode), p.elevation]));
+  const byCode = new Map<string, { pointCode: string; sum: number; readings: number }>();
+  for (const row of rows) {
+    const key = normalizedCode(row.pointCode);
+    if (key === "" || !Number.isFinite(row.elevation)) continue;
+    const entry = byCode.get(key) ?? { pointCode: row.pointCode.trim(), sum: 0, readings: 0 };
+    entry.sum += row.elevation;
+    entry.readings += 1;
+    byCode.set(key, entry);
+  }
+  return [...byCode.entries()].map(([key, entry]) => {
+    const knownElevation = known.get(key);
+    return {
+      pointCode: entry.pointCode,
+      elevation: knownElevation ?? entry.sum / entry.readings,
+      readings: entry.readings,
+      known: knownElevation !== undefined,
+    };
+  });
+}
+
+/**
+ * Las cotas adoptadas de un cálculo, o `null` si el trabajo no se compensó:
+ * no cumple, o es una abierta sin vuelta, que no tiene contra qué cerrar. Es
+ * el mismo criterio del veredicto guardado (`levelingProcessVerdict`).
+ */
+export function adoptedElevationsOf(
+  result: LevelingResult,
+  input: Pick<LevelingInput, "type" | "startElevation" | "endElevation">,
+): AdoptedElevation[] | null {
+  if (levelingProcessVerdict(result, input.type) !== true) return null;
+  const forward = result.forward.readings;
+  const knownPoints = knownBmsOf(forward, input);
+  const rows = [...forward, ...(result.return?.readings ?? [])].map((r) => ({
+    pointCode: r.pointCode,
+    elevation: r.elevationCorrected,
+  }));
+  return adoptedElevations(rows, knownPoints);
+}
+
+/**
+ * Los BM de cota conocida de una libreta: el de la primera fila de la ida y,
+ * en una de enlace, el de la última.
+ */
+export function knownBmsOf(
+  forward: readonly { pointCode: string }[],
+  input: Pick<LevelingInput, "type" | "startElevation" | "endElevation">,
+): { pointCode: string; elevation: number }[] {
+  const known: { pointCode: string; elevation: number }[] = [];
+  const first = forward[0];
+  if (first) known.push({ pointCode: first.pointCode, elevation: input.startElevation });
+  const last = forward.at(-1);
+  if (input.type === "link" && last && input.endElevation != null) {
+    known.push({ pointCode: last.pointCode, elevation: input.endElevation });
+  }
+  return known;
 }

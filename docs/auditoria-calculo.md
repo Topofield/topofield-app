@@ -57,9 +57,12 @@ auditoría: salieron al implementar y al verificar en pantalla.
 | C-20 el editor no mostraba el amarre | MEDIA | **Corregido**: hallado al verificar C-2 | `3537730` |
 
 La § 3 (documentación) se corrigió en `58a673b`, `ec22c34` y `922d8cb`. La
-§ 2 (criterios) sigue abierta: el usuario pidió cambiar D-1, D-3, D-4 a D-10
-y D-13, anotados como CR1 a CR4 en [`pendientes.md`](./pendientes.md). La § 4
-es material del usuario y no se tocó.
+§ 2 (criterios) sigue abierta: el usuario pidió cambiar D-1, D-3 a D-8, D-10
+y D-13, anotados como CR1 a CR4 en [`pendientes.md`](./pendientes.md). D-9 se
+retiró el 2026-10-01: los puntos de control dejan de tener posición (A3 de
+`pendientes.md`). **D-1 (CR1) se resolvió en la Fase 28**: ida y vuelta
+entran en la compensación y cada punto leído dos veces recibe el promedio de
+sus cotas compensadas. La § 4 es material del usuario y no se tocó.
 
 ---
 

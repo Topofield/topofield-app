@@ -37,6 +37,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 25 | Catálogo de equipos | [`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md) | cerrada |
 | 26 | Correcciones del cálculo | [`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md) | cerrada |
 | 27 | Segundo pulido | [`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md) | cerrada |
+| 28 | Ida y vuelta en la compensación | [`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -550,6 +551,37 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 28 — Ida y vuelta en la compensación (2026-10-01)
+
+CR1: con vuelta, las dos medidas entran en las cotas —en una abierta como un
+circuito sobre el BM de partida, en una cerrada o de enlace cada recorrido con
+su cierre— y cada punto leído dos veces recibe una cota adoptada, el promedio
+de sus dos compensadas. El BM de partida no cambia nunca. Las fórmulas del
+módulo quedan para la monografía en `docs/math/nivelacion.html`. 994 tests.
+Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un método de libro vale lo que valen sus supuestos.** El texto que trajo
+  el usuario compensaba bien el circuito, pero su ejemplo volvía por puntos
+  distintos, y su consejo para los puntos repetidos —quedarse con la ida
+  porque «acumula menos estaciones»— vale antes de compensar y no después.
+  Comprobarlo con los números de la demo (El Verjón, el tramo 2) y con la
+  teoría (la incertidumbre de un punto compensado es simétrica en el
+  circuito) dejó la decisión en manos del usuario con la información
+  completa.
+- **Dos formulaciones que coinciden son una prueba.** Compensar el circuito y
+  promediar ida y vuelta con pesos 1/D dan la misma cota en el punto de
+  vuelta (D4 = 3315.0855). Mostrarlo en el documento y en un test vale más
+  que afirmarlo.
+- **Un documento con números necesita un test que los fije.** El ejemplo de
+  los fundamentos está en `leveling.test.ts`: si el motor cambia, el
+  documento para la monografía no queda desactualizado en silencio.
+- **«Recalcular todo» tiene un límite: lo cerrado no se reescribe.** Se
+  recalcularon las nivelaciones abiertas guardadas; las cerradas conservan
+  sus filas por la inmutabilidad, y en producción la única cerrada no
+  cambiaba.
 
 ### Cierre Fase 27 — Segundo pulido (2026-10-01)
 
