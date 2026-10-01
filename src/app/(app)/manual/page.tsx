@@ -619,6 +619,14 @@ export default function ManualPage() {
         </p>
 
         <p>
+          Una poligonal <strong>abierta</strong> también puede amarrarse. Su
+          primera fila lleva entonces el{" "}
+          <strong>ángulo de orientación</strong>, medido a la derecha desde el
+          amarre hasta la siguiente estación, y la tabla lo rotula así: el
+          primer lado sale del azimut al amarre más ese ángulo.
+        </p>
+
+        <p>
           <strong>Estaciones.</strong> La tabla de captura. Por cada estación
           registra el código, el ángulo y la distancia horizontal. A la derecha,
           la aplicación calcula en vivo el azimut, ΔN y ΔE.
@@ -643,9 +651,11 @@ export default function ManualPage() {
         <p>
           Los errores de captura se marcan al momento: una distancia de cero o
           mayor a 1000 m, minutos o segundos fuera del rango 0-59 —en cada
-          lectura, no solo en el promedio—. Un ángulo de 0° o 360° genera una
-          advertencia, no un bloqueo: es válido, pero suele indicar un error de
-          tecleo.
+          lectura, no solo en el promedio—, segundos con más de una cifra
+          decimal o distancias con más de cuatro: la aplicación guarda los
+          segundos a la décima y las distancias a la diezmilésima. Un ángulo
+          de 0° o 360° genera una advertencia, no un bloqueo: es válido, pero
+          suele indicar un error de tecleo.
         </p>
 
         <p>
@@ -653,14 +663,6 @@ export default function ManualPage() {
           (suma medida contra suma teórica, error y tolerancia), cierre lineal
           (error, perímetro, precisión relativa) y la tabla de coordenadas
           corregidas.
-        </p>
-
-        <p>
-          Si su poligonal está amarrada aparece además el{" "}
-          <strong>control de reorientación</strong>: el último azimut de la
-          cadena debe volver al azimut de amarre. Es un control de calidad de su
-          levantamiento, no un criterio de tolerancia, así que no impide cerrar
-          el proceso.
         </p>
 
         <p>
@@ -963,9 +965,10 @@ export default function ManualPage() {
         <p>
           El punto intermedio cuelga de la AI vigente pero{" "}
           <strong>no propaga cota ni abre una armada nueva</strong>, y por eso
-          queda fuera de la comprobación aritmética y de la compensación: un
-          error en su lectura no contamina el resto del recorrido, pero
-          tampoco se corrige.
+          queda fuera de la comprobación aritmética: un error en su lectura no
+          contamina el resto del recorrido. En la compensación recibe la
+          corrección de su armada, la de la distancia acumulada hasta el
+          instrumento.
         </p>
 
         <p>
@@ -1037,7 +1040,8 @@ export default function ManualPage() {
           Sin ella el recorrido no acumula, la distancia total sale menor de la
           real y el punto de cierre queda mal corregido — con el proceso
           informando que cumple. Los puntos intermedios no la necesitan: no
-          entran en la compensación.
+          acumulan distancia. Tiene que ser mayor que cero: una distancia de
+          cero o negativa es un error de captura.
         </Nota>
 
         <p>
@@ -1148,8 +1152,11 @@ export default function ManualPage() {
           </li>
           <li>
             En una <strong>cerrada</strong> o <strong>de enlace</strong>, el
-            veredicto es el cierre; la discrepancia es un control más, que el
-            informe también imprime.
+            veredicto es el cierre de <strong>cada recorrido</strong>: la ida y
+            la vuelta tienen que cumplir cada una su tolerancia K·√D, con su
+            propia distancia. Si una no cumple, el proceso solo puede cerrarse
+            como <strong>rechazado</strong>, y el diálogo dice cuál. La
+            discrepancia es un control más, que el informe también imprime.
           </li>
         </ul>
 
@@ -1260,9 +1267,11 @@ export default function ManualPage() {
         <p>
           Igual que en poligonales, cerrar una nivelación es{" "}
           <strong>irreversible</strong>. Un trabajo que no alcanza la
-          tolerancia —o, en una abierta con vuelta, cuya discrepancia no
-          cumple— solo puede cerrarse como <strong>rechazado</strong>; no hay
-          forma de cerrarlo como conforme si no cumple.
+          tolerancia —en una cerrada o de enlace con vuelta, la de cualquiera
+          de los dos recorridos; en una abierta con vuelta, la de su
+          discrepancia— solo puede cerrarse como{" "}
+          <strong>rechazado</strong>; no hay forma de cerrarlo como conforme
+          si no cumple.
         </p>
 
         <VolverArriba />
@@ -1373,8 +1382,10 @@ export default function ManualPage() {
           Cada <strong>visita</strong> es una fecha en la que se releyeron
           los puntos del catálogo. La primera visita registrada es la{" "}
           <strong>visita 0 o línea base</strong>: fija el punto de partida y
-          no tiene asentamiento ni velocidad propios, porque no hay una
-          visita anterior contra la que compararla.
+          no tiene velocidad, porque no hay una visita anterior contra la que
+          compararla. Su acumulado es cero en los puntos cuya C0 es su lectura
+          de esta visita; si la C0 viene de otra medición, la visita 0 muestra
+          ya lo que el punto se movió desde entonces.
         </p>
 
         <p>
@@ -1389,7 +1400,10 @@ export default function ManualPage() {
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>Fecha</strong> y <strong>Nivelador</strong>.
+            <strong>Fecha</strong> y <strong>Nivelador</strong>. La fecha tiene
+            que ser posterior a la de la última visita: dos visitas del mismo
+            lugar no comparten fecha, y al editar una visita abierta su fecha
+            tiene que quedar entre la de la anterior y la de la siguiente.
           </li>
           <li>
             <strong>Captura</strong> — cómo llegan las cotas:{" "}
@@ -1822,12 +1836,13 @@ export default function ManualPage() {
           la visita se cierra con sus cotas sin compensar.
         </p>
 
-        <Nota titulo="Cierre antes la visita de la línea base">
-          Si un punto sin C0 tiene su primera lectura en una visita anterior
-          que sigue abierta, la aplicación no deja cerrar las posteriores:
-          «Cierra antes la visita 2: contiene la primera lectura de P-07, que
-          es su línea base». Si esa primera lectura siguiera editable,
-          cambiarla movería el acumulado de visitas ya cerradas.
+        <Nota titulo="Cierre las visitas en orden">
+          El parcial, la velocidad y la alerta de cada punto se miden contra su
+          lectura anterior, y un punto sin C0 acumula desde su primera lectura.
+          Si la visita que tiene esas lecturas sigue abierta, la aplicación no
+          deja cerrar las posteriores: «Cierra antes la visita 2: P-01, P-07 se
+          calculan contra sus lecturas». Si esas lecturas siguieran editables,
+          corregirlas movería lo que ya quedó cerrado.
         </Nota>
 
         <p>
