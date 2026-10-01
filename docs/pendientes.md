@@ -350,6 +350,13 @@ hay distorsión angular.
   pierden con el `db push`, que va con el visto bueno del usuario.
 - **El catálogo de puntos de referencia del proyecto no cambia.** Lo
   comparten las poligonales, y un BM de amarre ya puede ir sin coordenadas.
+- **BM-1 y BM-2 de Torre Alameda pierden sus coordenadas ficticias**
+  (petición del usuario, «si las nivelaciones no llevan nada relacionado con
+  coordenadas»). Verificado: nada de nivelación lee las coordenadas de un
+  punto de referencia, solo su cota. Ni el motor, los validadores, el editor,
+  el Excel o el informe del módulo, ni la libreta de la visita, ni la
+  nivelación de la demo. Esas coordenadas solo las usan las poligonales: el
+  amarre, el azimut y la georreferenciación.
 
 **Lo que se quita.** Es el inventario de la petición; el PRD lo verifica.
 
@@ -360,7 +367,7 @@ hay distorsión angular.
 | Captura | Norte y Este en el catálogo de puntos, con su regla «las dos o ninguna»; el límite 1/X en los umbrales del lugar; la copia de los tres al duplicar un lugar; la comparación de coordenadas en `validators/settlement.ts` y `point-actions.ts` |
 | Panel | El KPI «Distorsión angular» y la tarjeta «Asentamientos diferenciales y distorsión angular» |
 | Excel | Las columnas Norte y Este, la hoja de diferenciales, la fila del límite y «Pares que superan la distorsión» |
-| Demo y seed | Las coordenadas de los puntos de Torre Alameda y de los lugares del seed |
+| Demo y seed | Las coordenadas de los puntos de Torre Alameda y de los lugares del seed, y las de BM-1 y BM-2 (`north` y `east` de `AmarreAlameda` en `torre-alameda.ts` y su copia en `fixtures.ts`) |
 | Documentación | El manual en sus dos copias y sus capturas; PRD principal § 3, § 4 y § 6.10; doc técnica |
 
 **Lo que no cambia:** el informe consolidado, que no muestra ni coordenadas ni
@@ -371,8 +378,10 @@ migración. El semáforo tampoco: la distorsión nunca entró en él.
 
 - El panel se queda con cinco KPIs: qué ocupa el sexto hueco, o cómo se
   reacomoda la rejilla.
-- BM-1 y BM-2 de Torre Alameda llevan coordenadas ficticias en el catálogo de
-  referencia del proyecto: si se quitan también.
+- En los proyectos de ejemplo ya creados, BM-1 y BM-2 conservan sus
+  coordenadas: la demo nueva sale sin ellas, pero la migración no toca
+  `reference_points`. Decidir si se limpian, y cómo reconocerlos sin tocar un
+  BM real del usuario con el mismo código.
 - El marco teórico (`docs/marco-teorico/mt-control_asentamientos.docx`)
   explica la distorsión. Es material de la monografía y la app no lo toca; si
   se anota allí que queda fuera del alcance, lo decide el usuario.
