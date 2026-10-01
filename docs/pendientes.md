@@ -26,8 +26,9 @@ de la documentación: «Pulido (Fase 24)», al final. La fase se abrió y se
 cerró ese mismo día ([`prds/23-pulido.md`](./prds/23-pulido.md)).
 
 Ese mismo día el usuario pidió el **catálogo de equipos**, diferido desde la
-Fase 8: «Catálogo de equipos (Fase 25)», al final, en curso
-([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)).
+Fase 8: «Catálogo de equipos (Fase 25)», al final, cerrada ese mismo día
+([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)). No queda
+ninguna petición abierta.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -437,7 +438,7 @@ aritmética impide cerrarla. Decidir si es captura parcial legítima o un hueco.
 
 ## Catálogo de equipos (Fase 25)
 
-> **En curso en la Fase 25** ([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)).
+> **Resuelta en la Fase 25** ([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)).
 > Se conserva el texto de la petición como registro.
 
 Pedida el 2026-09-30 al revisar los pendientes: «sí, prepara el PRD del

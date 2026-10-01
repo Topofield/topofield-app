@@ -1,7 +1,8 @@
 # PRD-de-fase 25 — Catálogo de equipos
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-30
+**Fecha de cierre:** 2026-09-30
 
 **Rama:** `fase-25-catalogo-equipos`
 **Petición:** del usuario, 2026-09-30, tras revisar los pendientes: «sí,
@@ -10,6 +11,27 @@ prepara el PRD del catálogo de equipos». Viene de la § 11 de la doc técnica
 Fase 8).
 **Módulo:** transversal — los formularios de equipo de poligonal, nivelación y
 visitas de asentamientos, una página nueva y el modelo de datos
+
+> **Divergencias de la implementación:**
+>
+> - **El catálogo llega por un contexto, no por las páginas.** El layout de
+>   las pantallas autenticadas lo carga una vez y lo reparte; pasarlo por seis
+>   páginas y dos componentes de configuración era mucho cableado. Las
+>   acciones ya revalidan el layout, así que no queda viejo.
+> - **El selector vive en `components/equipment/`**, no en el sistema de
+>   diseño: los fieldsets ganaron solo un `order` opcional y dos huecos,
+>   `header` y `footer`.
+> - **El seed trae siete equipos**, no seis: son los que usan sus procesos.
+> - **La demo inserta solo los equipos que faltan.** Hallado al implementar:
+>   `TRUNCATE projects`, con el que se regenera la demo de producción, no vacía
+>   el catálogo, y el índice único rechazaría el mismo aparato.
+> - **Hallado en la verificación en pantalla**, y corregido: con el enlace
+>   «Equipos», la cabecera del teléfono pegaba la palabra del logo a los
+>   enlaces y partía «Cerrar sesión». En pantallas pequeñas se muestra solo el
+>   isotipo.
+> - **La doc técnica decía «once tablas» y «diez con RLS»**; hay quince,
+>   todas con RLS. Se corrigió al cerrar.
+> - **La revisión de código no encontró defectos.**
 
 ## Propósito
 
