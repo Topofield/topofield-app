@@ -371,9 +371,9 @@ export const TIPOS_NIVELACION = [
     verificacion: "Error de cierre contra la cota de llegada",
   },
   {
-    tipo: "Abierta sin control",
+    tipo: "Abierta",
     descripcion: "No cierra contra ningún BM",
-    verificacion: "Sin cierre; con vuelta, la discrepancia entre ida y vuelta",
+    verificacion: "Sin vuelta, ninguno; con vuelta, la discrepancia entre ida y vuelta",
   },
 ];
 
