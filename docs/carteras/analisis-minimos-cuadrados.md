@@ -1,5 +1,19 @@
 # Análisis de la cartera de mínimos cuadrados
 
+> **Nota de la auditoría del cálculo (Fase 26, 2026-10-01).** Este análisis
+> se conserva como registro de su momento. Tres precisiones
+> ([`../auditoria-calculo.md`](../auditoria-calculo.md), § 3 y § 4):
+>
+> - «El ajuste correcto» no usa exactamente los mismos pesos que la hoja: toma
+>   σ de distancia 0.011 m sin dividir por √2 (dos mediciones). Con los pesos
+>   de la hoja, el ajuste es el del PRD de la Fase 14, que el motor reproduce.
+> - Su tabla de correcciones está rotada una estación: el «ángulo 1» de
+>   +0.769″ es el de Famarena_5.
+> - La hoja «AJUSTE CORREGIDO» de `Ajuste_Poligonal_Minimos_Cuadrados-corregido.xlsx`
+>   tiene la matriz A desplazada un lado y no cumple su propio bloque de
+>   verificación.
+
+
 Verificación de `Ajuste_Poligonal_Minimos_Cuadrados.xlsx` (U. Distrital, Sede
 Vivero, 4-nov-2021). Es el insumo de la **Fase 14**; se deja escrito para no
 rederivarlo.

@@ -5,6 +5,7 @@ import {
   validateActiveFrom,
   validateReadingCapture,
   validateRetirement,
+  neighborVisitDates,
   validateVisitCapture,
   validateVisitClose,
   type SiteVisit,
@@ -335,8 +336,10 @@ describe("validateVisitClose — la línea base no puede quedar abierta (Fase 11
     const v2 = visitaCon(2, "2025-03-15", ["p1", "p7"]); // abierta: base de P-07
     const v3 = visitaCon(3, "2025-04-15", ["p1", "p7"]);
     const r = validateVisitClose(v3, [P1, P7], "2025-03-15", [v2, v3]);
+    // Desde la Fase 26 (C-15) bloquea también P-01, que tiene C0: su lectura
+    // anterior está en la misma visita abierta.
     expect(r.errors.readings).toBe(
-      "Cierra antes la visita 2: contiene la primera lectura de P-07, que es su línea base.",
+      "Cierra antes la visita 2: P-01, P-07 se calculan contra sus lecturas.",
     );
   });
 
@@ -353,11 +356,65 @@ describe("validateVisitClose — la línea base no puede quedar abierta (Fase 11
     expect(r.errors).toEqual({});
   });
 
-  it("no aplica la regla a un punto con C0: su línea base es la C0, no una lectura", () => {
+  it("un punto con C0 tampoco se cierra con su lectura anterior abierta (Fase 26, C-15)", () => {
+    // Su acumulado parte de la C0, pero su parcial y su velocidad se miden
+    // contra la lectura de v0: corregirla después cambiaría v1 cerrada.
     const v0 = visitaCon(0, "2025-01-15", ["p1"]); // abierta
     const v1 = visitaCon(1, "2025-02-15", ["p1"]);
     const r = validateVisitClose(v1, [P1], "2025-01-15", [v0, v1]);
-    expect(r.errors).toEqual({});
+    expect(r.errors.readings).toBe("Cierra antes la visita 0: P-01 se calcula contra sus lecturas.");
+  });
+});
+
+describe("validateVisitClose — la lectura anterior no puede quedar abierta (Fase 26, C-15)", () => {
+  it("con la anterior cerrada y la intermedia abierta, bloquea la intermedia", () => {
+    const v0 = visitaCon(0, "2025-01-15", ["p1"], true);
+    const v1 = visitaCon(1, "2025-02-15", ["p1"]); // abierta
+    const v2 = visitaCon(2, "2025-03-15", ["p1"]);
+    const r = validateVisitClose(v2, [P1], "2025-02-15", [v0, v1, v2]);
+    expect(r.errors.readings).toBe("Cierra antes la visita 1: P-01 se calcula contra sus lecturas.");
+  });
+
+  it("con todas las anteriores cerradas, cierra", () => {
+    const v0 = visitaCon(0, "2025-01-15", ["p1"], true);
+    const v1 = visitaCon(1, "2025-02-15", ["p1"], true);
+    const v2 = visitaCon(2, "2025-03-15", ["p1"]);
+    expect(validateVisitClose(v2, [P1], "2025-02-15", [v0, v1, v2]).errors).toEqual({});
+  });
+
+  it("y comprueba la fecha contra la visita siguiente (C-16)", () => {
+    const v1 = visitaCon(1, "2025-03-15", ["p1"], true);
+    const v2 = visitaCon(2, "2025-03-15", ["p1"], true);
+    const r = validateVisitClose(v1, [P1], null, [v1, v2]);
+    expect(r.errors.date).toBe("La fecha debe ser anterior a la de la visita siguiente (2025-03-15).");
+  });
+});
+
+describe("neighborVisitDates y la fecha entre vecinas (Fase 26, C-16)", () => {
+  const visitas = [
+    { visitNumber: 0, date: "2025-01-15" },
+    { visitNumber: 2, date: "2025-03-15" },
+    { visitNumber: 3, date: "2025-04-15" },
+  ];
+
+  it("da las fechas de la anterior y la siguiente por número", () => {
+    expect(neighborVisitDates({ visitNumber: 2 }, visitas)).toEqual({
+      previous: "2025-01-15",
+      next: "2025-04-15",
+    });
+    expect(neighborVisitDates({ visitNumber: 3 }, visitas)).toEqual({ previous: "2025-03-15", next: null });
+    expect(neighborVisitDates({ visitNumber: 0 }, [])).toEqual({ previous: null, next: null });
+  });
+
+  it("rechaza la misma fecha que otra visita y saltar por encima de la siguiente", () => {
+    const visita = visitaCon(1, "2025-03-15", ["p1"]);
+    expect(validateVisitCapture(visita, [P1], "2025-01-15", "2025-03-15").errors.date).toBe(
+      "La fecha debe ser anterior a la de la visita siguiente (2025-03-15).",
+    );
+    const despues = visitaCon(1, "2025-04-20", ["p1"]);
+    expect(validateVisitCapture(despues, [P1], "2025-01-15", "2025-03-15").errors.date).toBeDefined();
+    const entre = visitaCon(1, "2025-02-15", ["p1"]);
+    expect(validateVisitCapture(entre, [P1], "2025-01-15", "2025-03-15").errors.date).toBeUndefined();
   });
 });
 

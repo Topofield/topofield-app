@@ -100,7 +100,7 @@ poligonal porque los datos de campo son distintos:</p>
 
 <table>
 <tr><th>Tipo</th><th>Fórmula del azimut del lado <em>i</em></th></tr>
-<tr><td>Cerrada</td><td><code>Az<sub>i</sub> = Az<sub>i−1</sub> + 180° − ángulo interno<sub>i</sub></code></td></tr>
+<tr><td>Cerrada</td><td><code>Az<sub>i</sub> = Az<sub>i−1</sub> + 180° + ángulo<sub>i</sub></code></td></tr>
 <tr><td>Abierta sin control</td><td><code>Az<sub>i</sub> = Az<sub>i−1</sub> + 180° + ángulo horizontal<sub>i</sub></code></td></tr>
 <tr><td>Abierta con control</td><td><code>Az<sub>i</sub> = Az<sub>i−1</sub> ± deflexión<sub>i</sub></code> &nbsp;(+ derecha · − izquierda)</td></tr>
 </table>
@@ -108,8 +108,12 @@ poligonal porque los datos de campo son distintos:</p>
 <p class="small muted">Nota: en la poligonal cerrada las dos orientaciones del
 recorrido (horario y antihorario) producen polígonos espejo que igualmente
 cierran, porque <code>Σ(180 ± α)</code> es siempre múltiplo de 360°. Por eso la
-convención debe ser fija; no se puede autodetectar. La que se usa es la del caso
-1 del marco teórico (<code>+ 180° − ángulo</code>).</p>
+convención debe ser fija; no se puede autodetectar. Desde la Fase 7 es la del
+instrumento —cero en la vista atrás y giro a la derecha—, <code>+ 180° +
+ángulo</code>: con ángulos interiores el recorrido es antihorario y con
+exteriores, horario. El caso 1 del marco teórico usa <code>+ 180° − ángulo</code>,
+la convención anterior. Con amarre, el primer lado sale del azimut hacia el
+amarre más el ángulo de orientación (Fase 26).</p>
 
 <h3>2.3. Tolerancias por orden de precisión (§ 5.4)</h3>
 <table>
@@ -230,23 +234,23 @@ cierre.</p>
 <li>Punto de partida: (0, 0). Azimut de partida: 0°. Orden: tercer orden.</li>
 </ul>
 
-<p><strong>Paso 1 — Azimuts.</strong> Con la convención cerrada
-(<code>+180° − ángulo interno</code>):</p>
+<p><strong>Paso 1 — Azimuts.</strong> Con la convención de la Fase 7
+(<code>+180° + ángulo</code>; con interiores, recorrido antihorario):</p>
 <table>
 <tr><th>Lado</th><th>Cálculo</th><th>Azimut</th></tr>
 <tr><td>A→B</td><td>(partida)</td><td>0°</td></tr>
-<tr><td>B→C</td><td>0 + 180 − 90 = 90</td><td>90°</td></tr>
-<tr><td>C→D</td><td>90 + 180 − 90 = 180</td><td>180°</td></tr>
-<tr><td>D→A</td><td>180 + 180 − 90 = 270</td><td>270°</td></tr>
+<tr><td>B→C</td><td>0 + 180 + 90 = 270</td><td>270°</td></tr>
+<tr><td>C→D</td><td>270 + 180 + 90 = 540 → 180</td><td>180°</td></tr>
+<tr><td>D→A</td><td>180 + 180 + 90 = 450 → 90</td><td>90°</td></tr>
 </table>
 
 <p><strong>Paso 2 — Proyecciones base.</strong></p>
 <table>
 <tr><th>Lado</th><th class="num">d</th><th>Az</th><th class="num">ΔN</th><th class="num">ΔE</th></tr>
 <tr><td>A→B</td><td class="num">100.4</td><td>0°</td><td class="num">+100.400</td><td class="num">0</td></tr>
-<tr><td>B→C</td><td class="num">100</td><td>90°</td><td class="num">0</td><td class="num">+100.000</td></tr>
+<tr><td>B→C</td><td class="num">100</td><td>270°</td><td class="num">0</td><td class="num">−100.000</td></tr>
 <tr><td>C→D</td><td class="num">100</td><td>180°</td><td class="num">−100.000</td><td class="num">0</td></tr>
-<tr><td>D→A</td><td class="num">100</td><td>270°</td><td class="num">0</td><td class="num">−100.000</td></tr>
+<tr><td>D→A</td><td class="num">100</td><td>90°</td><td class="num">0</td><td class="num">+100.000</td></tr>
 <tr><th>Σ</th><th></th><th></th><th class="num">+0.400</th><th class="num">0</th></tr>
 </table>
 <p>Error de cierre lineal: <code>√(0.4² + 0²) = 0.400 m</code>. Precisión
@@ -270,8 +274,8 @@ cerrada.</p>
 <tr><th>Estación</th><th class="num">N</th><th class="num">E</th></tr>
 <tr><td>A</td><td class="num">0.000</td><td class="num">0.000</td></tr>
 <tr><td>B</td><td class="num">+100.300</td><td class="num">0.000</td></tr>
-<tr><td>C</td><td class="num">+100.200</td><td class="num">+100.000</td></tr>
-<tr><td>D</td><td class="num">+0.100</td><td class="num">+100.000</td></tr>
+<tr><td>C</td><td class="num">+100.200</td><td class="num">−100.000</td></tr>
+<tr><td>D</td><td class="num">+0.100</td><td class="num">−100.000</td></tr>
 </table>
 
 <h3>5.2. Corrección por Tránsito</h3>
@@ -332,7 +336,8 @@ expect(r.stations[1]?.north).toBeCloseTo(100.1996, 3);  // Crandall</code></pre>
 
 <h2 id="verificacion">6. Tests y verificación</h2>
 <p>El conjunto de pruebas automatizadas (Vitest) cubre los tres archivos de
-cálculo. <code>npm run test</code> ejecuta 26 pruebas:</p>
+cálculo. Al cerrar la Fase 3, <code>npm run test</code> ejecutaba 26 pruebas
+(las cifras de hoy están en la § 9 de <code>docs/tecnica/README.md</code>):</p>
 <table>
 <tr><th>Archivo</th><th class="num">Tests</th><th>Qué cubre</th></tr>
 <tr><td><code>angles.test.ts</code></td><td class="num">8</td><td>DMS ↔ decimal con acarreo de desbordamiento, normalización de azimut, y trigonometría en grados.</td></tr>

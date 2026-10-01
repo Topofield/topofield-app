@@ -81,17 +81,45 @@ export function validateReadingCapture(
 }
 
 /**
+ * Las fechas de las visitas vecinas de una, por número: la anterior y la
+ * siguiente, o `null` (Fase 26, C-16). El número se asigna en orden de fecha
+ * —una visita nueva va después de la última—, así que la fecha de una visita
+ * tiene que quedar entre las de sus vecinas. Antes se comparaba solo con la
+ * última de fecha estrictamente anterior, y una visita abierta podía igualar
+ * la fecha de otra o saltar por encima de una cerrada, cambiando su parcial y
+ * su velocidad.
+ */
+export function neighborVisitDates(
+  visit: Pick<VisitInput, "visitNumber">,
+  visits: readonly Pick<VisitInput, "visitNumber" | "date">[],
+): { previous: string | null; next: string | null } {
+  let previous: Pick<VisitInput, "visitNumber" | "date"> | null = null;
+  let next: Pick<VisitInput, "visitNumber" | "date"> | null = null;
+  for (const v of visits) {
+    if (v.visitNumber < visit.visitNumber && (!previous || v.visitNumber > previous.visitNumber)) {
+      previous = v;
+    }
+    if (v.visitNumber > visit.visitNumber && (!next || v.visitNumber < next.visitNumber)) {
+      next = v;
+    }
+  }
+  return { previous: previous?.date ?? null, next: next?.date ?? null };
+}
+
+/**
  * Valida la captura de una visita completa (§ 5.1).
  *
- * `previousVisitDate` es la fecha de la visita cronológicamente anterior, o
- * `null` si es la primera. Sirve para impedir que una visita se feche antes que
- * su predecesora, lo que daría intervalos negativos y velocidades con el signo
- * invertido.
+ * `previousVisitDate` y `nextVisitDate` son las fechas de las visitas vecinas
+ * (`neighborVisitDates`), o `null`. La fecha tiene que quedar estrictamente
+ * entre las dos: antes de la anterior daría intervalos negativos y velocidades
+ * con el signo invertido; igual a otra deja el intervalo en cero; después de la
+ * siguiente reordena la serie y cambia el parcial de visitas ya cerradas.
  */
 export function validateVisitCapture(
   visit: VisitInput,
   points: PointInput[],
   previousVisitDate: string | null,
+  nextVisitDate: string | null = null,
 ): VisitCaptureIssues {
   const errors: VisitCaptureIssues["errors"] = {};
   const warnings: VisitCaptureIssues["warnings"] = {};
@@ -101,6 +129,8 @@ export function validateVisitCapture(
     errors.date = "La visita necesita una fecha válida.";
   } else if (previousVisitDate !== null && visit.date <= previousVisitDate) {
     errors.date = `La fecha debe ser posterior a la de la visita anterior (${previousVisitDate}).`;
+  } else if (nextVisitDate !== null && visit.date >= nextVisitDate) {
+    errors.date = `La fecha debe ser anterior a la de la visita siguiente (${nextVisitDate}).`;
   }
 
   const byId = new Map(points.map((p) => [p.id, p]));
@@ -157,18 +187,18 @@ function outsideValidityMessage(point: PointInput, date: string): string {
  * cerrarla incompleta deja un hueco que ya no se puede rellenar. Un punto de
  * baja o todavía no dado de alta no se exige (Fase 11).
  *
- * `siteVisits` son las visitas del lugar con su estado, para la regla de la
- * línea base: una visita no se cierra si alguno de sus puntos sin C0 tiene la
- * primera lectura —su línea base— en una visita ANTERIOR todavía abierta. Si
- * se cerrara, editar esa lectura abierta cambiaría el acumulado que el panel
- * recalcula en vivo para esta visita, que ya sería inmutable. Ver el PRD de la
- * Fase 11, «Por qué la línea base no puede quedar abierta».
+ * `siteVisits` son las visitas del lugar con su estado. Una visita no se
+ * cierra si sigue abierta una visita ANTERIOR contra cuyas lecturas se calcula:
+ * la de la lectura anterior de cada punto —parcial, velocidad, alerta— y, para
+ * un punto sin C0, la de su primera lectura, su línea base. Si se cerrara,
+ * editar esa lectura abierta cambiaría lo que el panel, el informe y el Excel
+ * recalculan en vivo para esta visita, que ya sería inmutable. La Fase 11 lo
+ * impidió para la línea base; la Fase 26 (C-15), para la lectura anterior.
  *
  * También repite la comprobación de orden cronológico de `validateVisitCapture`
- * (vía `previousVisitDate`): el cierre sella la visita como inmutable, así que
- * es el último punto donde una fecha fuera de orden puede atajarse. Sin este
- * chequeo se podría cerrar con el mismo dato que la captura ya habría
- * rechazado, dejando un intervalo negativo grabado para siempre.
+ * (vía `previousVisitDate` y la visita siguiente de `siteVisits`): el cierre
+ * sella la visita como inmutable, así que es el último punto donde una fecha
+ * fuera de orden puede atajarse.
  *
  * NO evalúa los umbrales de alerta. Un punto en alarma se cierra con
  * normalidad; es el hallazgo que el monitoreo busca documentar.
@@ -185,7 +215,12 @@ export function validateVisitClose(
   siteVisits: readonly SiteVisit[],
   book: { arithmeticCheckOk: boolean; turningPoint?: string | null } | null = null,
 ): VisitCaptureIssues {
-  const issues = validateVisitCapture(visit, points, previousVisitDate);
+  const issues = validateVisitCapture(
+    visit,
+    points,
+    previousVisitDate,
+    neighborVisitDates(visit, siteVisits.filter((v) => v.id !== visit.id)).next,
+  );
   const messages: string[] = [];
 
   // Un punto de cambio incompleto dice qué fila corregir (Fase 24); si no lo
@@ -205,20 +240,36 @@ export function validateVisitClose(
     messages.push(`Faltan lecturas de: ${missing.map((p) => p.code).join(", ")}.`);
   }
 
+  // Las visitas abiertas contra cuyas lecturas se calcula esta (Fase 26,
+  // C-15). El parcial, la velocidad y la alerta de un punto se miden contra su
+  // lectura anterior, y un punto sin C0 acumula desde su primera lectura, la
+  // línea base: si esas visitas siguen abiertas, corregirlas después cambiaría
+  // lo que esta deja sellado. Antes solo se protegía la línea base.
   const byId = new Map(points.map((p) => [p.id, p]));
   const others = siteVisits.filter((v) => v.id !== visit.id);
+  const blocking = new Map<number, string[]>();
+  const block = (v: SiteVisit, code: string) => {
+    const codes = blocking.get(v.visitNumber) ?? [];
+    if (!codes.includes(code)) codes.push(code);
+    blocking.set(v.visitNumber, codes);
+  };
   for (const pointId of measured) {
     const point = byId.get(pointId);
-    if (!point || point.initialElevation !== null) continue;
-
-    const baselineVisit = others
+    if (!point) continue;
+    const prior = others
       .filter((v) => v.date < visit.date && v.readings.some((r) => r.pointId === pointId))
-      .sort((a, b) => a.date.localeCompare(b.date))[0];
-    if (baselineVisit && !baselineVisit.closed) {
-      messages.push(
-        `Cierra antes la visita ${baselineVisit.visitNumber}: contiene la primera lectura de ${point.code}, que es su línea base.`,
-      );
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const previous = prior.at(-1);
+    if (previous && !previous.closed) block(previous, point.code);
+    const baseline = prior[0];
+    if (point.initialElevation === null && baseline && !baseline.closed) {
+      block(baseline, point.code);
     }
+  }
+  for (const [visitNumber, codes] of [...blocking].sort((a, b) => a[0] - b[0])) {
+    messages.push(
+      `Cierra antes la visita ${visitNumber}: ${codes.join(", ")} se ${codes.length === 1 ? "calcula" : "calculan"} contra sus lecturas.`,
+    );
   }
 
   if (messages.length > 0) {

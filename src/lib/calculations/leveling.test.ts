@@ -1024,7 +1024,7 @@ describe("computeLeveling — distancia total inválida (hallazgo crítico Tarea
 // sección es el veredicto del doble recorrido); sin vuelta, ninguno.
 describe("levelingProcessVerdict", () => {
   const base: LevelingResult = {
-    forward: { readings: [], heightDifference: 0, errorMm: null },
+    forward: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true },
     return: null,
     arithmeticCheckOk: true,
     sumBacksights: 0,
@@ -1042,12 +1042,107 @@ describe("levelingProcessVerdict", () => {
     expect(levelingProcessVerdict({ ...base, meetsTolerance: false, meetsDiscrepancy: true }, "link")).toBe(false);
   });
   it("abierta con vuelta: la discrepancia", () => {
-    const conVuelta = { ...base, return: { readings: [], heightDifference: 0, errorMm: null } };
+    const conVuelta = { ...base, return: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true } };
     expect(levelingProcessVerdict({ ...conVuelta, meetsTolerance: null, meetsDiscrepancy: false }, "open")).toBe(false);
     expect(levelingProcessVerdict({ ...conVuelta, meetsTolerance: null, meetsDiscrepancy: true }, "open")).toBe(true);
     expect(levelingProcessVerdict({ ...conVuelta, meetsTolerance: null, meetsDiscrepancy: null }, "open")).toBeNull();
   });
   it("abierta sin vuelta: sin veredicto", () => {
     expect(levelingProcessVerdict({ ...base, meetsTolerance: null, return: null }, "open")).toBeNull();
+  });
+});
+
+// Fase 26 — la vuelta de una cerrada y su comprobación aritmética (C-10, C-12).
+describe("computeLeveling — la vuelta se juzga (Fase 26)", () => {
+  it("la vuelta de una cerrada se juzga con su propia tolerancia (C-10)", () => {
+    // Segundo orden en 0.9 km: T = 6·√0.9 = 5.692 mm. La ida cierra en −5 mm y
+    // cumple; la vuelta en +12 mm, el doble. La discrepancia, |−5 + 12| = 7 mm,
+    // queda bajo T·√2 = 8.05 mm: antes el proceso se cerraba conforme.
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      order: "segundo_orden",
+      forward: fromAccum([r("BM-1", "bm", 1.2, null, 0), r("BM-1", "bm", null, 1.205, 0.9)]),
+      return: fromAccum([r("BM-1", "bm", 1.2, null, 0), r("BM-1", "bm", null, 1.188, 0.9)]),
+    });
+    expect(result.meetsTolerance).toBe(true);
+    expect(result.meetsDiscrepancy).toBe(true);
+    expect(result.return?.errorMm).toBeCloseTo(12, 6);
+    expect(result.return?.toleranceMm).toBeCloseTo(6 * Math.sqrt(0.9), 9);
+    expect(result.return?.meetsTolerance).toBe(false);
+    expect(levelingProcessVerdict(result, "closed")).toBe(false);
+  });
+
+  it("la vuelta pasa por la comprobación aritmética (C-12)", () => {
+    // Un BM interior de la vuelta con solo V+: ΣV+ − ΣV− = 1.31 m frente a un
+    // desnivel de 0.11 m.
+    const result = computeLeveling({
+      ...CLOSED_INPUT,
+      return: fromAccum([
+        r("BM-1", "bm", 1.2, null, 0),
+        r("X", "bm", 1.3, null, 0.45),
+        r("BM-1", "bm", null, 1.19, 0.9),
+      ]),
+    });
+    expect(result.forward.arithmeticCheckOk).toBe(true);
+    expect(result.return?.arithmeticCheckOk).toBe(false);
+    expect(result.arithmeticCheckOk).toBe(false);
+  });
+
+});
+
+// Fase 26 — aritmética sin ruido de coma flotante (C-13, C-14).
+describe("computeLeveling — sin ruido de coma flotante (Fase 26)", () => {
+  it("un cierre exactamente igual a la tolerancia cumple, sea cual sea la cota (C-13)", () => {
+    // 1 km de tercer orden: T = 12 mm, y el error es 1.512 − 1.500 = 12 mm.
+    for (const startElevation of [100, 1000, 2541.7545, 3288.5]) {
+      const result = computeLeveling({
+        ...CLOSED_INPUT,
+        startElevation,
+        forward: [
+          bare({ pointCode: "BM", pointType: "bm", backsight: 1.512, backDistanceM: 500 }),
+          bare({ pointCode: "BM", pointType: "bm", foresight: 1.5, foreDistanceM: 500 }),
+        ],
+      });
+      expect(result.toleranceMm).toBe(12);
+      expect(result.closureErrorMm).toBeCloseTo(12, 6);
+      expect(result.meetsTolerance).toBe(true);
+    }
+  });
+
+  it("la distancia acumulada se suma en milímetros (C-14)", () => {
+    // 49.8 + 47.3 + 39.3 + 28.1 = 164.5 m, que en coma flotante da
+    // 164.49999999999997 y la columna en km guardaba como 0.164.
+    const rows = [
+      bare({ pointCode: "A", pointType: "bm", backsight: 1, backDistanceM: 49.8 }),
+      bare({ pointCode: "B", foresight: 1, foreDistanceM: 47.3, backsight: 1, backDistanceM: 39.3 }),
+      bare({ pointCode: "C", pointType: "bm", foresight: 1, foreDistanceM: 28.1 }),
+    ];
+    expect(accumulateDistances(rows)).toEqual([0, 97.1, 164.5]);
+    expect(totalDistanceFromReadings(rows)).toBe(0.1645);
+  });
+});
+
+describe("levelingProcessVerdict — con vuelta en cerrada y de enlace (Fase 26, C-10)", () => {
+  const run = (meetsTolerance: boolean | null) => ({
+    readings: [],
+    heightDifference: 0,
+    distanceKm: 0.9,
+    errorMm: 1,
+    toleranceMm: 5,
+    meetsTolerance,
+    arithmeticCheckOk: true,
+  });
+  const base = computeLeveling(CLOSED_INPUT);
+  it("cumplen los dos recorridos, o no cumple", () => {
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: true, return: run(true) }, "closed")).toBe(true);
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: true, return: run(false) }, "link")).toBe(false);
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: false, return: run(true) }, "closed")).toBe(false);
+  });
+  it("sin tolerancia de un recorrido no hay veredicto, aunque el otro no cumpla", () => {
+    // Como el diálogo de cierre: si se guardara false, el servidor dejaría
+    // cerrar como rechazado lo que el diálogo bloquea (revisión de la Fase 26).
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: true, return: run(null) }, "closed")).toBeNull();
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: null, return: run(false) }, "closed")).toBeNull();
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: false, return: run(null) }, "link")).toBeNull();
   });
 });

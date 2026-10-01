@@ -95,17 +95,21 @@ export function accumulateDistances(
   readings: ReadingInput[],
   { reconstructed = false }: { reconstructed?: boolean } = {},
 ): number[] {
+  // En milímetros enteros (Fase 26, C-14): sumando metros en coma flotante,
+  // 164.5 m llegaban como 164.49999999999997 y la columna en km guardaba
+  // 0.164. Las distancias se capturan al milímetro, como mucho.
+  const mm = (d: number | null) => Math.round((d ?? 0) * 1000);
   let running = 0;
   return readings.map((reading) => {
-    if (reading.pointType === "intermediate") return running;
+    if (reading.pointType === "intermediate") return running / 1000;
     const { back, fore } = resolveVisualDistances(reading);
     if (reconstructed) {
-      running += (fore ?? 0) + (back ?? 0);
-      return running;
+      running += mm(fore) + mm(back);
+      return running / 1000;
     }
-    const here = running + (fore ?? 0);
-    running = here + (back ?? 0);
-    return here;
+    const here = running + mm(fore);
+    running = here + mm(back);
+    return here / 1000;
   });
 }
 
@@ -125,6 +129,20 @@ export function totalDistanceFromReadings(readings: ReadingInput[]): number {
 
 /** Tolerancia de la comprobación aritmética, en metros (0.1 mm). */
 const ARITHMETIC_EPSILON = 0.0001;
+
+/**
+ * ¿Cumple un error la tolerancia? |error| ≤ T con un margen de 1e-6 mm
+ * (Fase 26, C-13): el error sale de restar cotas en coma flotante y arrastra
+ * ruido del orden de 1e-10 mm. Sin margen, un cierre exactamente igual a la
+ * tolerancia —12.0 mm frente a 12.0 mm en 1 km de tercer orden— cumplía o no
+ * según la cota del BM. Las lecturas van a 0.1 mm, así que el margen no
+ * cambia ningún veredicto que se pueda medir.
+ */
+export function withinTolerance(errorMm: number, toleranceMm: number): boolean {
+  return Math.abs(errorMm) <= toleranceMm + TOLERANCE_MARGIN_MM;
+}
+
+const TOLERANCE_MARGIN_MM = 1e-6;
 
 export interface RunComputation {
   readings: ComputedReading[];
@@ -295,12 +313,11 @@ function knownClosingElevation(input: LevelingInput): number | null {
  * `open` se calcula pero no se cierra ni se corrige: sin un segundo punto de
  * cota conocida no hay forma de detectar el error acumulado.
  *
- * Esta función NO valida que las filas traigan `distanceAccumulatedKm`
- * completo (ver el contrato documentado en `applyProportionalCorrection`).
- * Si faltan distancias acumuladas, `meetsTolerance` puede seguir en `true`
- * mientras las cotas corregidas quedan mal calculadas. Rechazar o exigir esos
- * datos en captura es responsabilidad de la capa de validadores
- * (`src/lib/validators/leveling.ts`, Tarea 7), no del motor de cálculo.
+ * El acumulado se deriva de las distancias por visual (Fase 9). Esta función
+ * no valida que estén completas ni que sean positivas: con una que falta el
+ * total sale corto y la tolerancia también. Exigirlas en captura es
+ * responsabilidad de `validators/leveling.ts`, y la base rechaza las que no
+ * son positivas (Fase 26).
  *
  * `totalDistanceKm` no finito o ≤ 0 (p. ej. `Number.NaN`, el valor con el
  * que nace un proceso recién creado, antes de que el editor lo complete) dejan
@@ -338,7 +355,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
 
     if (hasValidDistance) {
       toleranceMm = levelingTolerance(input.order, totalDistanceKm);
-      meetsTolerance = Math.abs(closureErrorMm) <= toleranceMm;
+      meetsTolerance = withinTolerance(closureErrorMm, toleranceMm);
 
       // Solo se compensa un trabajo que cumple la tolerancia. Si no cumple,
       // se repite el levantamiento (marco teórico § 8.1).
@@ -355,7 +372,11 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
   const forwardResult: RunResult = {
     readings,
     heightDifference: forward.heightDifference,
+    distanceKm: totalDistanceKm,
     errorMm: closureErrorMm,
+    toleranceMm,
+    meetsTolerance,
+    arithmeticCheckOk: forward.arithmeticCheckOk,
   };
 
   // --- Ida y vuelta (§ 6.9, enmendado — decisión #2) -----------------------
@@ -394,7 +415,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       const pairDistanceKm = Math.min(totalDistanceKm, returnDistanceKm);
       discrepancyToleranceMm =
         levelingTolerance(input.order, pairDistanceKm) * Math.SQRT2;
-      meetsDiscrepancy = discrepancyMm <= discrepancyToleranceMm;
+      meetsDiscrepancy = withinTolerance(discrepancyMm, discrepancyToleranceMm);
     }
     adoptedHeightDifference =
       (forward.heightDifference - back.heightDifference) / 2;
@@ -408,18 +429,37 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       known != null
         ? (back.finalElevation - input.startElevation) * 1000
         : null;
+    // La vuelta de una cerrada o de enlace se juzga como la ida, con su propia
+    // distancia (Fase 26, C-10, decisión 2 del PRD). Antes solo se juzgaba la
+    // discrepancia, |e_ida + e_vuelta|, y dos errores de signo contrario se
+    // cancelaban: una vuelta del doble de la tolerancia cerraba conforme.
+    const returnToleranceMm =
+      returnErrorMm != null && valid(returnDistanceKm)
+        ? levelingTolerance(input.order, returnDistanceKm)
+        : null;
 
     returnResult = {
       readings: back.readings,
       heightDifference: back.heightDifference,
+      distanceKm: returnDistanceKm,
       errorMm: returnErrorMm,
+      toleranceMm: returnToleranceMm,
+      meetsTolerance:
+        returnErrorMm != null && returnToleranceMm != null
+          ? withinTolerance(returnErrorMm, returnToleranceMm)
+          : null,
+      arithmeticCheckOk: back.arithmeticCheckOk,
     };
   }
 
   return {
     forward: forwardResult,
     return: returnResult,
-    arithmeticCheckOk: forward.arithmeticCheckOk,
+    // Las dos comprobaciones (Fase 26, C-12): un BM interior de la vuelta con
+    // solo V+ no rompía nada y el proceso salía rechazado por la discrepancia,
+    // sin decir por qué.
+    arithmeticCheckOk:
+      forward.arithmeticCheckOk && (returnResult?.arithmeticCheckOk ?? true),
     sumBacksights: forward.sumBacksights,
     sumForesights: forward.sumForesights,
     closureErrorMm,
@@ -441,8 +481,8 @@ function normalizedCode(code: string): string {
 
 /**
  * El veredicto que se guarda de un proceso de nivelación (Fase 23). En una
- * cerrada o de enlace es el cierre contra la cota conocida; la discrepancia
- * de ida y vuelta es ahí control de calidad (Fase 4). En una **abierta** no
+ * cerrada o de enlace es el cierre contra la cota conocida, de la ida y, si la
+ * hay, de la vuelta (Fase 26); la discrepancia es ahí control de calidad. En una **abierta** no
  * hay cierre: si tiene vuelta, el emparejamiento por sección es su veredicto
  * (§ 6.9 del PRD principal); sin vuelta, no hay ninguno. Función pura.
  */
@@ -450,8 +490,15 @@ export function levelingProcessVerdict(
   result: LevelingResult,
   type: LevelingType,
 ): boolean | null {
-  if (type !== "open") return result.meetsTolerance;
-  return result.return ? result.meetsDiscrepancy : null;
+  if (type === "open") return result.return ? result.meetsDiscrepancy : null;
+  // Con vuelta, cumplen los dos recorridos (Fase 26, C-10). Un recorrido sin
+  // tolerancia —le faltan distancias— deja el veredicto en blanco aunque el
+  // otro no cumpla: así el servidor no cierra lo que el diálogo bloquea
+  // (`evaluateLevelingClosure`), y quien lo cierre como rechazado lo hará con
+  // los dos recorridos juzgados. Sin eso, uno que no cumple decide.
+  const runs = [result.meetsTolerance, result.return ? result.return.meetsTolerance : true];
+  if (runs.includes(null)) return null;
+  return !runs.includes(false);
 }
 
 /**

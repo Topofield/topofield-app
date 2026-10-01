@@ -386,6 +386,11 @@ coordenadas del arranque y las de la referencia. Si su cartera cierra visando de
 vuelta al amarre, marque la casilla correspondiente: la última fila será ese
 ángulo de cierre y no llevará distancia.
 
+Una poligonal **abierta** también puede amarrarse. Su primera fila lleva
+entonces el **ángulo de orientación**, medido a la derecha desde el amarre
+hasta la siguiente estación, y la tabla lo rotula así: el primer lado sale del
+azimut al amarre más ese ángulo.
+
 **Estaciones.** La tabla de captura. Por cada estación registra el código, el
 ángulo y la distancia horizontal. A la derecha, la aplicación calcula en vivo el
 azimut, ΔN y ΔE.
@@ -402,18 +407,15 @@ puntería o de tecleo. Es un aviso, no un bloqueo.
 
 Los errores de captura se marcan al momento: una distancia de cero o mayor a
 1000 m, minutos o segundos fuera del rango 0-59 —en cada lectura, no solo en
-el promedio—. Un ángulo de 0° o 360° genera
+el promedio—, segundos con más de una cifra decimal o distancias con más de
+cuatro: la aplicación guarda los segundos a la décima y las distancias a la
+diezmilésima. Un ángulo de 0° o 360° genera
 una advertencia, no un bloqueo: es válido, pero suele indicar un error de
 tecleo.
 
 **Resultados.** El detalle completo: verificación angular (suma medida contra
 suma teórica, error y tolerancia), cierre lineal (error, perímetro, precisión
 relativa) y la tabla de coordenadas corregidas.
-
-Si su poligonal está amarrada aparece además el **control de reorientación**:
-el último azimut de la cadena debe volver al azimut de amarre. Es un control de
-calidad de su levantamiento, no un criterio de tolerancia, así que no impide
-cerrar el proceso.
 
 Aquí elige el **método de corrección**:
 
@@ -595,9 +597,10 @@ Cada fila indica de qué tipo es el punto que registra:
 | **Intermedio (radiación)** | Solo se lee para conocer su cota, sin continuar el recorrido a través de él | Solo V− |
 
 El punto intermedio cuelga de la AI vigente pero **no propaga cota ni abre
-una armada nueva**, y por eso queda fuera de la comprobación aritmética y de
-la compensación: un error en su lectura no contamina el resto del recorrido,
-pero tampoco se corrige.
+una armada nueva**, y por eso queda fuera de la comprobación aritmética: un
+error en su lectura no contamina el resto del recorrido. En la compensación
+recibe la corrección de su armada, la de la distancia acumulada hasta el
+instrumento.
 
 Si a un punto de cambio le falta la V+ o la V−, la celda lo avisa. Puede
 guardar la libreta a medias, pero el proceso no se cierra hasta completarla: el
@@ -647,8 +650,9 @@ lectura.
 > **La distancia a cada mira es obligatoria en los BM y en los puntos de
 > cambio.** Sin ella el recorrido no acumula, la distancia total sale menor de
 > la real y el punto de cierre queda mal corregido — con el proceso informando
-> que cumple. Los puntos intermedios no la necesitan: no entran en la
-> compensación.
+> que cumple. Los puntos intermedios no la necesitan: no acumulan distancia.
+> Tiene que ser mayor que cero: una distancia de cero o negativa es un error
+> de captura.
 
 **Los tres hilos, con nivel automático.** Si el proceso declara un nivel
 automático, la libreta ofrece capturar los tres hilos estadimétricos de cada
@@ -724,8 +728,11 @@ tolerancia K·√D del cierre individual, con D la menor de las dos distancias.
   cumple el proceso solo puede cerrarse como **rechazado**. Si a la ida o a la
   vuelta les falta la distancia a las miras, no se puede juzgar y el proceso
   no se cierra.
-- En una **cerrada** o **de enlace**, el veredicto es el cierre; la
-  discrepancia es un control más, que el informe también imprime.
+- En una **cerrada** o **de enlace**, el veredicto es el cierre de **cada
+  recorrido**: la ida y la vuelta tienen que cumplir cada una su tolerancia
+  K·√D, con su propia distancia. Si una no cumple, el proceso solo puede
+  cerrarse como **rechazado**, y el diálogo dice cuál. La discrepancia es un
+  control más, que el informe también imprime.
 
 **Puntos homólogos.** Si la ida y la vuelta pasan por los mismos puntos,
 Resultados añade una tabla que compara la cota de cada punto en los dos
@@ -786,9 +793,10 @@ Guardar**; al crear, el proceso nace con sus lecturas.
 ### 6.8 Cierre irreversible
 
 Igual que en poligonales, cerrar una nivelación es **irreversible**
-(§ 8). Un trabajo que no alcanza la tolerancia —o, en una abierta con
-vuelta, cuya discrepancia no cumple— solo puede cerrarse como **rechazado**;
-no hay forma de cerrarlo como conforme si no cumple.
+(§ 8). Un trabajo que no alcanza la tolerancia —en una cerrada o de enlace
+con vuelta, la de cualquiera de los dos recorridos; en una abierta con vuelta,
+la de su discrepancia— solo puede cerrarse como **rechazado**; no hay forma
+de cerrarlo como conforme si no cumple.
 
 ---
 
@@ -852,14 +860,19 @@ instala—; ver [§ 7.7](#77-dar-de-baja-y-de-alta-un-punto).
 
 Cada **visita** es una fecha en la que se releyeron los puntos del catálogo.
 La primera visita registrada es la **visita 0 o línea base**: fija el punto
-de partida y no tiene asentamiento ni velocidad propios, porque no hay una
-visita anterior contra la que compararla.
+de partida y no tiene velocidad, porque no hay una visita anterior contra la
+que compararla. Su acumulado es cero en los puntos cuya C0 es su lectura de
+esta visita; si la C0 viene de otra medición, la visita 0 muestra ya lo que el
+punto se movió desde entonces.
 
 **Crear la visita.** En el panel del lugar (§ 7.4), **+ Nueva visita** pide:
 
 ![Formulario de nueva visita](../../public/manual/25-nueva-visita.png)
 
-- **Fecha** y **Nivelador**.
+- **Fecha** y **Nivelador**. La fecha tiene que ser posterior a la de la
+  última visita: dos visitas del mismo lugar no comparten fecha, y al editar
+  una visita abierta su fecha tiene que quedar entre la de la anterior y la de
+  la siguiente.
 - **Captura** — cómo llegan las cotas: *digitar la libreta de nivelación*,
   *importar la libreta desde un archivo* o *cotas directas*, para una
   nivelación calculada fuera de la aplicación.
@@ -1125,11 +1138,12 @@ libreta. **Si la comprobación aritmética no cuadra, no se puede cerrar**:
 corrija la libreta. Si el cierre supera la tolerancia, solo avisa: la visita
 se cierra con sus cotas sin compensar.
 
-> **Cierre antes la visita de la línea base.** Si un punto sin C0 tiene su
-> primera lectura en una visita anterior que sigue abierta, la aplicación no
-> deja cerrar las posteriores: «Cierra antes la visita 2: contiene la primera
-> lectura de P-07, que es su línea base». Si esa primera lectura siguiera
-> editable, cambiarla movería el acumulado de visitas ya cerradas.
+> **Cierre las visitas en orden.** El parcial, la velocidad y la alerta de
+> cada punto se miden contra su lectura anterior, y un punto sin C0 acumula
+> desde su primera lectura. Si la visita que tiene esas lecturas sigue
+> abierta, la aplicación no deja cerrar las posteriores: «Cierra antes la
+> visita 2: P-01, P-07 se calculan contra sus lecturas». Si esas lecturas
+> siguieran editables, corregirlas movería lo que ya quedó cerrado.
 
 Cerrar el **lugar** termina el monitoreo por completo: el lugar y todas sus
 visitas —cerradas o no— quedan en solo lectura. Use el cierre del lugar

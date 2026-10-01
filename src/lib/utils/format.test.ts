@@ -212,3 +212,29 @@ describe("formatCoordinate y formatElevation (Fase 22)", () => {
     expect(formatElevation(-0.00001)).toBe("0.0000");
   });
 });
+
+describe("los empates se redondean como en Excel (Fase 26, C-18)", () => {
+  it("1000.0005 da 1000.001, no 1000.000", () => {
+    // En binario es 1000.000499999…, y toFixed redondeaba hacia abajo.
+    expect(formatCoordinate(1000.0005)).toBe("1000.001");
+    expect(formatCoordinate("1000.0005")).toBe("1000.001");
+    expect(formatCoordinate(-1000.0005)).toBe("-1000.001");
+  });
+
+  it("lo que no es empate no cambia", () => {
+    expect(formatCoordinate(1000.0004)).toBe("1000.000");
+    expect(formatCoordinate(1000.0006)).toBe("1000.001");
+    expect(formatElevation(2541.75455)).toBe("2541.7546");
+    expect(formatCoordinate(-0.0004)).toBe("0.000");
+  });
+
+  it("una malla de coordenadas guardadas a 4 decimales coincide con el redondeo decimal", () => {
+    // Con toFixed, 4960 de estos 20 000 valores salían distintos.
+    for (let i = 0; i < 20000; i++) {
+      const tenths = 10_000_000 + i * 5; // …0, …5: la mitad son empates
+      const value = Number(`${tenths}e-4`);
+      const expected = (Math.floor(tenths / 10) + (tenths % 10 >= 5 ? 1 : 0)) / 1000;
+      expect(formatCoordinate(value)).toBe(expected.toFixed(3));
+    }
+  });
+});

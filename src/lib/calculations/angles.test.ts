@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  averageReadings,
   azimuthFromCoordinates,
   cosDeg,
   decimalToDms,
@@ -10,6 +11,7 @@ import {
   degreesToSeconds,
   dmsToDecimal,
   normalizeAzimuth,
+  readingSpreadSeconds,
   sinDeg,
 } from "./angles";
 
@@ -133,12 +135,55 @@ describe("captura en grados decimales (Fase 13, P1)", () => {
   });
 
   it("un decimal con más precisión que 0.1″ se redondea al guardarse, y se avisa", () => {
-    expect(roundsOnStorage(45.5042501)).toBe(true);
-    expect(decimalToDmsFields(45.5042501)).toEqual({ deg: "45", min: "30", sec: "15.3" });
+    // 45.50426° son 45°30′15.336″: se guarda 15.3″, 0.036″ menos, y se ve.
+    expect(roundsOnStorage(45.50426)).toBe(true);
+    expect(decimalToDmsFields(45.50426)).toEqual({ deg: "45", min: "30", sec: "15.3" });
     expect(roundsOnStorage(Number(formatDecimalDegrees(dmsToDecimal(45, 30, 15.3))))).toBe(false);
+  });
+
+  it("pasar a la vista decimal no avisa de un redondeo que nadie tecleó (Fase 26, C-17)", () => {
+    // 10°00′00.1″ se muestra 10.000028, que no cae en la malla de 0.1″.
+    expect(formatDecimalDegrees(dmsToDecimal(10, 0, 0.1))).toBe("10.000028");
+    expect(roundsOnStorage(10.000028)).toBe(false);
+    // Toda la malla de 0.1″ de un grado, vista en decimal, sin aviso.
+    for (let tenths = 0; tenths < 36000; tenths++) {
+      const shown = Number(formatDecimalDegrees(dmsToDecimal(10, 0, tenths / 10)));
+      expect(roundsOnStorage(shown)).toBe(false);
+    }
+  });
+
+  it("los segundos se leen con coma decimal (Fase 26, C-5)", () => {
+    expect(dmsFieldsToDecimal(f("45", "30", "12,5"))).toBeCloseTo(45 + 30 / 60 + 12.5 / 3600, 12);
+    expect(dmsFieldsToDecimal(f("45", "30", "12.5"))).toBe(dmsFieldsToDecimal(f("45", "30", "12,5")));
+    expect(dmsFieldsToDecimal(f("45", "3x", "0"))).toBeNull();
   });
 
   it("muestra seis decimales", () => {
     expect(formatDecimalDegrees(45.5)).toBe("45.500000");
+  });
+});
+
+describe("promedio y dispersión de lecturas (Fase 26, C-4 y C-6)", () => {
+  const dms = (d: number, m: number, sec: number) => dmsToDecimal(d, m, sec);
+
+  it("redondea el promedio a la décima de segundo que se guarda", () => {
+    // 45°, 45°00′01″ y 45°00′01″: 0.667″ de media, que se guarda 0.7″.
+    expect(averageReadings([dms(45, 0, 0), dms(45, 0, 1), dms(45, 0, 1)])).toBe(dms(45, 0, 0.7));
+  });
+
+  it("promedia a través de 0°/360°", () => {
+    // Desde 359°59′56″: +0″, +6″ y +10″, media +5.333″ → 0°00′01.3″, no 120°.
+    const values = [dms(359, 59, 56), dms(0, 0, 2), dms(0, 0, 6)];
+    expect(averageReadings(values)).toBe(dms(0, 0, 1.3));
+    expect(readingSpreadSeconds(values)).toBeCloseTo(10, 9);
+  });
+
+  it("360°00′00″ exacto sigue siendo 360°", () => {
+    expect(averageReadings([360, 360, 360])).toBe(360);
+  });
+
+  it("sin lecturas no hay promedio, y con una no hay dispersión", () => {
+    expect(averageReadings([])).toBeNull();
+    expect(readingSpreadSeconds([dms(45, 0, 0)])).toBeNull();
   });
 });

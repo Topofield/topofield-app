@@ -364,10 +364,6 @@ describe("computePolygonal — cartera real TT4 (docs/carteras/poligonales.xlsx)
     expect(bowditch.perimeter).toBeCloseTo(115.712, 6);
   });
 
-  it("el control de reorientación recupera el azimut de amarre", () => {
-    expect(bowditch.reorientationError).toBeCloseTo(0, 3);
-  });
-
   it("reproduce las coordenadas de la hoja BRUJULA dentro de 0.1 mm", () => {
     const esperadas: [number, number][] = [
       [100135.666, 101440.525],
@@ -421,11 +417,6 @@ describe("computePolygonal — cartera Vivero (cierre contra el primer lado)", (
     expect(r.theoreticalSum).toBe(540);
     expect(r.angleSum).toBeCloseTo(539.998889, 6);
     expect(r.angularError).toBeCloseTo(-4, 2);
-  });
-
-  it("el control de reorientación compara contra el azimut del primer lado", () => {
-    expect(r.reorientationError).not.toBeNull();
-    expect(Math.abs(r.reorientationError!)).toBeLessThan(1);
   });
 
   it("cierra: las proyecciones corregidas suman cero", () => {
@@ -588,5 +579,219 @@ describe("polygonalTraces — la sin compensar cierra con el error de cierre", (
       stations: [st("A", 90, 100), st("B", 90, null)],
     };
     expect(polygonalTraces(input, computePolygonal(input))).toBeNull();
+  });
+});
+
+// Cuadrados de 100 m sin error, con amarre y fila de cierre (Fase 26, C-1).
+// Las dos lecturas del vértice de arranque —orientación (amarre → V1) y cierre
+// (V3 → amarre)— suman el ángulo del vértice más 360·k: k = 0 si el amarre
+// queda dentro del barrido horario de la vista atrás a la adelante, y 1 si
+// queda fuera. Los ángulos se calculan aquí a mano desde los azimuts.
+describe("computePolygonal — fila de cierre con el amarre a cualquier lado (Fase 26, C-1)", () => {
+  /**
+   * Interior, en sentido antihorario: V0(0,0) → V1(0,100) → V2(100,100) →
+   * V3(100,0) → V0, con azimuts 90, 0, 270 y 180. El vértice V0 barre de la
+   * vista atrás (V3, azimut 0) a la adelante (V1, azimut 90).
+   */
+  function interiorSquare(azAmarre: number): PolygonalInput {
+    const norm = (a: number) => ((a % 360) + 360) % 360;
+    return {
+      type: "closed",
+      method: "bowditch",
+      order: "tercer_orden",
+      angleType: "interior",
+      hasOrientation: true,
+      hasClosingRow: true,
+      startNorth: 0,
+      startEast: 0,
+      startAzimuth: azAmarre,
+      endNorth: null,
+      endEast: null,
+      endAzimuth: null,
+      stations: [
+        st("V0", norm(90 - azAmarre), 100),
+        st("V1", 90, 100),
+        st("V2", 90, 100),
+        st("V3", 90, 100),
+        st("V0", norm(azAmarre - 360), null),
+      ],
+    };
+  }
+
+  it("con el amarre dentro del barrido (k = 0) cierra sin error", () => {
+    // Amarre al NE, en (200, 300): azimut 56.31°, entre 0° y 90°.
+    const r = computePolygonal(interiorSquare(azimuthFromCoordinates(0, 0, 200, 300)));
+    expect(r.theoreticalSum).toBe(360);
+    expect(r.angularError).toBeCloseTo(0, 6);
+    expect(r.linearError).toBeCloseTo(0, 9);
+    expect(r.stations[2]!.north).toBeCloseTo(100, 9);
+    expect(r.stations[2]!.east).toBeCloseTo(100, 9);
+  });
+
+  it("con el amarre fuera del barrido (k = 1) también, como TT4", () => {
+    // Amarre al SO, en (−100, −100): azimut 225°.
+    const r = computePolygonal(interiorSquare(225));
+    expect(r.theoreticalSum).toBe(720);
+    expect(r.angularError).toBeCloseTo(0, 6);
+    expect(r.linearError).toBeCloseTo(0, 9);
+  });
+
+  it("exterior en sentido horario con el amarre fuera: (n + 2)·180 sin +360", () => {
+    // V0(0,0) → V1(100,0) → V2(100,100) → V3(0,100) → V0, azimuts 0, 90,
+    // 180 y 270; ángulos exteriores de 270°. Amarre al SO, azimut 225°:
+    // orientación 0 − 225 = 135° y cierre 225 − (270 + 180) = −225 ≡ 135°.
+    const r = computePolygonal({
+      ...interiorSquare(225),
+      angleType: "exterior",
+      stations: [
+        st("V0", 135, 100),
+        st("V1", 270, 100),
+        st("V2", 270, 100),
+        st("V3", 270, 100),
+        st("V0", 135, null),
+      ],
+    });
+    expect(r.theoreticalSum).toBe(1080);
+    expect(r.angularError).toBeCloseTo(0, 6);
+    expect(r.linearError).toBeCloseTo(0, 9);
+  });
+
+  it("una interior declarada exterior sigue saliendo como error", () => {
+    const r = computePolygonal({
+      ...interiorSquare(225),
+      angleType: "exterior",
+    });
+    expect(Math.abs(r.angularError!)).toBeGreaterThan(300 * 3600);
+  });
+
+  it("mínimos cuadrados usa la misma suma teórica y converge", () => {
+    const r = computePolygonal({
+      ...interiorSquare(azimuthFromCoordinates(0, 0, 200, 300)),
+      method: "least_squares",
+      leastSquares: { sigmaAngleSeconds: 5, sigmaDistanceM: 0.003, distanceMeasurements: 1 },
+    });
+    expect(r.adjustment?.status).toBe("adjusted");
+  });
+});
+
+// Abiertas amarradas (Fase 26, C-2): el primer lado sale del azimut hacia el
+// amarre más el ángulo de orientación de la primera fila.
+describe("computePolygonal — abiertas con amarre (Fase 26, C-2)", () => {
+  const base = {
+    method: "bowditch",
+    order: "tercer_orden",
+    angleType: "interior",
+    hasOrientation: true,
+    hasClosingRow: false,
+    startNorth: 0,
+    startEast: 0,
+    // Amarre al norte; el primer lado va al este: orientación de 90°.
+    startAzimuth: 0,
+    endAzimuth: null,
+  } as const;
+
+  it("sin control: B queda al este, en (0, 100)", () => {
+    const r = computePolygonal({
+      ...base,
+      type: "open_uncontrolled",
+      endNorth: null,
+      endEast: null,
+      stations: [st("A", 90, 100), st("B", 0, null)],
+    });
+    expect(r.stations[0]!.azimuth).toBeCloseTo(90, 9);
+    expect(r.stations[1]!.north).toBeCloseTo(0, 9);
+    expect(r.stations[1]!.east).toBeCloseTo(100, 9);
+  });
+
+  it("con control: llega sin error al punto conocido", () => {
+    // A → B al este (100 m) y B → C girando 90° a la izquierda: al norte.
+    const r = computePolygonal({
+      ...base,
+      type: "open_controlled",
+      endNorth: 100,
+      endEast: 100,
+      stations: [
+        st("A", 90, 100),
+        st("B", 90, 100, "left"),
+        { pointCode: "C", angle: Number.NaN, deflectionDirection: null, distance: null, readings: [] },
+      ],
+    });
+    expect(r.linearError).toBeCloseTo(0, 9);
+    expect(r.meetsLinearTolerance).toBe(true);
+  });
+
+  it("sin el ángulo de orientación no calcula", () => {
+    const r = computePolygonal({
+      ...base,
+      type: "open_uncontrolled",
+      endNorth: null,
+      endEast: null,
+      stations: [
+        { pointCode: "A", angle: Number.NaN, deflectionDirection: null, distance: 100, readings: [] },
+        st("B", 0, null),
+      ],
+    });
+    expect(r.stations[1]!.north).toBeNull();
+  });
+});
+
+// Mínimos cuadrados (Fase 26, C-7 y C-9): casos que antes no se ajustaban.
+describe("computePolygonal — mínimos cuadrados en los bordes", () => {
+  it("una abierta con control ya ajustada converge (C-7)", () => {
+    // Salió de una búsqueda aleatoria: con el umbral de 1e-10 σ el cambio
+    // entre iteraciones se estancaba en el ruido de coma flotante y el
+    // resultado era «no converge». Los valores van tal cual: redondeados, el
+    // ruido cambia y el fallo no se reproduce.
+    const r = computePolygonal({
+      type: "open_controlled",
+      method: "least_squares",
+      order: "tercer_orden",
+      angleType: "interior",
+      hasOrientation: false,
+      hasClosingRow: false,
+      startNorth: 1000,
+      startEast: 2000,
+      startAzimuth: 56.04694604873657,
+      endNorth: 1078.6008522017971,
+      endEast: 2209.0243418916502,
+      endAzimuth: null,
+      leastSquares: { sigmaAngleSeconds: 5, sigmaDistanceM: 0.003, distanceMeasurements: 1 },
+      stations: [
+        { pointCode: "P0", angle: Number.NaN, deflectionDirection: null, distance: 183.59706505775452, readings: [] },
+        st("P1", 56.83420915073819, 61.57452806472779, "right"),
+        { pointCode: "P2", angle: Number.NaN, deflectionDirection: null, distance: null, readings: [] },
+      ],
+    });
+    expect(r.adjustment?.status).toBe("adjusted");
+  });
+
+  it("σ angular muy pequeña con σ de distancia grande no es «singular» (C-9)", () => {
+    // Cuadrado de 100 m con +2″ de error angular y 4 mm de más en un lado. La
+    // condición angular, en rad², quedaba por debajo del pivote relativo.
+    const r = computePolygonal({
+      type: "closed",
+      method: "least_squares",
+      order: "tercer_orden",
+      angleType: "interior",
+      hasOrientation: false,
+      hasClosingRow: false,
+      startNorth: 1000,
+      startEast: 1000,
+      startAzimuth: 0,
+      endNorth: null,
+      endEast: null,
+      endAzimuth: null,
+      leastSquares: { sigmaAngleSeconds: 0.01, sigmaDistanceM: 0.5, distanceMeasurements: 1 },
+      stations: [
+        st("V0", 90 + 2 / 3600, 100),
+        st("V1", 90, 100.004),
+        st("V2", 90, 100),
+        st("V3", 90, 100),
+      ],
+    });
+    expect(r.adjustment?.status).toBe("adjusted");
+    if (r.adjustment?.status !== "adjusted") return;
+    // Los 2″ se reparten por igual: −0.5″ por ángulo.
+    for (const c of r.adjustment.angleCorrectionsSec) expect(c).toBeCloseTo(-0.5, 6);
   });
 });

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
 import {
+  averageReadings,
   azimuthFromCoordinates,
   decimalToDms,
   dmsToDecimal,
@@ -104,6 +105,15 @@ export interface ClosePolygonalPayload {
   asRejected: boolean;
 }
 
+/**
+ * Hay orientación cuando el proceso está amarrado a un punto conocido:
+ * entonces `startAzimuth` apunta del arranque HACIA la referencia y la primera
+ * estación lleva el ángulo de orientación.
+ */
+function hasOrientationOf(payload: SavePolygonalPayload): boolean {
+  return payload.referencePointId != null || payload.referencePointCode != null;
+}
+
 function angleOrNaN(
   deg: number | null,
   min: number | null,
@@ -118,16 +128,20 @@ function angleOrNaN(
  * Promedio de las lecturas de una estación, en grados decimales. Sin lecturas
  * cae al ángulo que venga en el draft, que es el camino de los datos sin
  * reiteración.
+ *
+ * Es el mismo promedio del editor, redondeado a la décima de segundo que se
+ * guarda (Fase 26, C-4): antes el servidor calculaba con el promedio sin
+ * redondear, y el error angular guardado no era el que mostraban el editor y
+ * el informe.
  */
 function averageAngle(st: StationDraft): number {
   if (st.readings.length === 0) {
     return angleOrNaN(st.angleDeg, st.angleMin, st.angleSec);
   }
-  const total = st.readings.reduce(
-    (a, r) => a + dmsToDecimal(r.deg, r.min, r.sec),
-    0,
+  return (
+    averageReadings(st.readings.map((r) => dmsToDecimal(r.deg, r.min, r.sec))) ??
+    Number.NaN
   );
-  return total / st.readings.length;
 }
 
 function buildInput(payload: SavePolygonalPayload): PolygonalInput {
@@ -153,11 +167,7 @@ function buildInput(payload: SavePolygonalPayload): PolygonalInput {
     order: payload.precisionOrder,
     method: payload.correctionMethod,
     angleType: payload.angleType,
-    // Hay orientación cuando el proceso está amarrado a un punto conocido:
-    // entonces startAzimuth apunta del arranque HACIA la referencia y la
-    // primera estación lleva el ángulo de orientación.
-    hasOrientation:
-      payload.referencePointId != null || payload.referencePointCode != null,
+    hasOrientation: hasOrientationOf(payload),
     hasClosingRow: payload.hasClosingRow,
     leastSquares:
       payload.lsSigmaAngleSeconds != null &&
@@ -262,7 +272,16 @@ export async function savePolygonalProcessAction(
         // Cada lectura, que es lo que se guarda (Fase 24).
         readings: st.readings,
       },
-      expectStationCapture(payload.type, i, payload.stations.length),
+      // La misma llamada que el editor, con la fila de cierre y el amarre: sin
+      // ellos, la fila de cierre de una cerrada amarrada —que no lleva
+      // distancia— se rechazaba al guardar (Fase 26, C-19).
+      expectStationCapture(
+        payload.type,
+        i,
+        payload.stations.length,
+        payload.hasClosingRow,
+        hasOrientationOf(payload),
+      ),
     ),
   );
   if (hasCaptureErrors(issues)) {

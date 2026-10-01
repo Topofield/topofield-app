@@ -167,7 +167,7 @@ export const CAPTURAS = {
     src: "/manual/21-minimos-cuadrados.png",
     alt: "Resultados de la cartera Vivero con mínimos cuadrados: los tres pesos, la tabla de correcciones por ángulo y distancia, y σ₀ = 0.698 con su lectura.",
     width: 1984,
-    height: 2420,
+    height: 2324,
   },
   editorVisita: {
     src: "/manual/16-editor-visita.png",

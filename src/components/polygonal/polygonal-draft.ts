@@ -8,7 +8,12 @@
 // por construcción el mismo que el del editor.
 
 import type { DmsValue } from "@/components/design-system/dms-input";
-import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
+import {
+  averageReadings,
+  decimalToDms,
+  dmsFieldsToDecimal,
+  dmsToDecimal,
+} from "@/lib/calculations/angles";
 import { parseNumber } from "@/lib/utils/parse";
 import type {
   CorrectionMethod,
@@ -24,20 +29,17 @@ import type { StationDraftState } from "./stations-table";
 /**
  * Lecturas capturadas de una estación, en grados decimales.
  *
- * Las filas en blanco NO cuentan. El filtro es por `deg` y no por
- * `Number.isFinite`, porque `Number("")` en JavaScript es 0 y no NaN: sin este
- * filtro, las filas vacías con que se rellena hasta el mínimo se leerían como
- * lecturas de 0°0'0" y la dispersión saldría contra el ángulo real.
- * Los minutos y segundos en blanco sí valen 0, que es lo que espera quien
- * teclea un ángulo redondo.
+ * Las filas en blanco NO cuentan: sin grados no hay lectura. Si no, las filas
+ * vacías con que se rellena hasta el mínimo se leerían como lecturas de 0°0'0"
+ * y la dispersión saldría contra el ángulo real. Los minutos y segundos en
+ * blanco sí valen 0, que es lo que espera quien teclea un ángulo redondo, y se
+ * leen con coma o punto decimal, como en el servidor (Fase 26, C-5).
  */
 export function readingValues(readings: DmsValue[]): number[] {
   return readings
     .filter((r) => r.deg.trim() !== "")
-    .map((r) =>
-      dmsToDecimal(Number(r.deg), Number(r.min || 0), Number(r.sec || 0)),
-    )
-    .filter((v) => Number.isFinite(v));
+    .map((r) => dmsFieldsToDecimal(r))
+    .filter((v): v is number => v !== null);
 }
 
 /**
@@ -59,9 +61,8 @@ export function readingsDraft(
 
 /** Promedio de las lecturas completas, en DMS. `null` si no hay ninguna. */
 export function averageOf(readings: DmsValue[]): DmsValue | null {
-  const values = readingValues(readings);
-  if (values.length === 0) return null;
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  const avg = averageReadings(readingValues(readings));
+  if (avg === null) return null;
   const dms = decimalToDms(avg);
   return { deg: String(dms.deg), min: String(dms.min), sec: String(dms.sec) };
 }

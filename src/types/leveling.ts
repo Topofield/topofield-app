@@ -24,8 +24,9 @@ export type RunType = (typeof RUN_TYPES)[number];
  * - `pc`: punto de cambio. Recibe la V− de una armada y la V+ de la siguiente;
  *   propaga la cota entre armadas.
  * - `intermediate`: radiación. Solo recibe V−, cuelga de la AI vigente, no
- *   propaga cota y queda FUERA de la comprobación aritmética y de la
- *   compensación.
+ *   propaga cota y queda FUERA de la comprobación aritmética. En la
+ *   compensación recibe la corrección de su armada: la de la distancia
+ *   acumulada hasta el instrumento (Fase 19).
  */
 export const POINT_TYPES = ["bm", "pc", "intermediate"] as const;
 export type PointType = (typeof POINT_TYPES)[number];
@@ -133,14 +134,25 @@ export interface RunResult {
   readings: ComputedReading[];
   /** Desnivel de la sección: cota final − cota inicial. */
   heightDifference: number;
+  /** Longitud del recorrido en km, de sus distancias por visual. */
+  distanceKm: number;
   /** Error de cierre del recorrido en mm. Null si el tipo no cierra. */
   errorMm: number | null;
+  /**
+   * Tolerancia K·√D del recorrido con su propia distancia, y si la cumple
+   * (Fase 26). Null si el tipo no cierra o le faltan distancias.
+   */
+  toleranceMm: number | null;
+  meetsTolerance: boolean | null;
+  /** ΣV+ − ΣV− = desnivel del recorrido. */
+  arithmeticCheckOk: boolean;
 }
 
 export interface LevelingResult {
   forward: RunResult;
   return: RunResult | null;
-  // Comprobación aritmética (solo bm y pc; los intermedios se excluyen).
+  // Comprobación aritmética (solo bm y pc; los intermedios se excluyen), de la
+  // ida y de la vuelta.
   arithmeticCheckOk: boolean;
   sumBacksights: number;
   sumForesights: number;

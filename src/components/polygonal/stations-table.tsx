@@ -185,7 +185,14 @@ interface StationsTableProps {
   disabled?: boolean;
   /** Formato de captura de los ángulos (Fase 13, P1). */
   angleFormat: AngleInputFormat;
+  /**
+   * La primera fila lleva el ángulo de orientación desde el amarre, no una
+   * deflexión ni un ángulo de vértice: abiertas amarradas (Fase 26, C-2).
+   */
+  orientationRow?: boolean;
 }
+
+const ORIENTATION_HINT = "Orientación: ángulo a la derecha desde el amarre.";
 
 /** Tabla editable de estaciones con las columnas calculadas en vivo. */
 export function StationsTable({
@@ -198,6 +205,7 @@ export function StationsTable({
   angularPrecisionSeconds,
   disabled,
   angleFormat,
+  orientationRow = false,
 }: StationsTableProps) {
   function update(index: number, patch: Partial<StationDraftState>) {
     onChange(stations.map((s, i) => (i === index ? { ...s, ...patch } : s)));
@@ -269,8 +277,14 @@ export function StationsTable({
                         })
                       }
                     />
+                    {orientationRow && i === 0 && (
+                      <p className="mt-1 text-xs text-ink-2">{ORIENTATION_HINT}</p>
+                    )}
                   </td>
-                  {showDeflection && (
+                  {showDeflection && orientationRow && i === 0 && (
+                    <td className="py-2 pr-3" />
+                  )}
+                  {showDeflection && !(orientationRow && i === 0) && (
                     <td className="py-2 pr-3">
                       <Select
                         options={DEFLECTION_OPTIONS}
@@ -373,7 +387,9 @@ export function StationsTable({
 
               <div className="mt-3 flex flex-col gap-3">
                 <div>
-                  <p className="mb-1 text-xs font-medium text-ink-2">Ángulo</p>
+                  <p className="mb-1 text-xs font-medium text-ink-2">
+                    {orientationRow && i === 0 ? ORIENTATION_HINT : "Ángulo"}
+                  </p>
                   <AngleReadingsCell
                     station={station}
                     stationNumber={i + 1}
@@ -390,7 +406,7 @@ export function StationsTable({
                   />
                 </div>
 
-                {showDeflection && (
+                {showDeflection && !(orientationRow && i === 0) && (
                   <div>
                     <p className="mb-1 text-xs font-medium text-ink-2">
                       Sentido

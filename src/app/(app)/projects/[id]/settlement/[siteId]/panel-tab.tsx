@@ -35,8 +35,9 @@ interface PanelTabProps {
  * pestaña desde la Fase 22): umbrales, KPIs, visitas, tendencia, evolución
  * por punto, semáforo de la última visita y diferenciales. El histórico se
  * calcula en el servidor con `computeHistory` —el mismo motor que usan las
- * Server Actions al guardar—, para que lo que se ve coincida siempre con lo
- * persistido.
+ * Server Actions al guardar—, con los umbrales vigentes: una visita cerrada se
+ * reclasifica si se editan los umbrales. Sus lecturas no cambian, porque una
+ * visita solo se cierra con las anteriores cerradas (Fase 26, C-15).
  */
 export function PanelTab({ project, site, sitePoints, visits, readingsBySite }: PanelTabProps) {
   const points: PointInput[] = sitePoints.map(pointInputOf);

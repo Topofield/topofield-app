@@ -46,7 +46,13 @@ const dini: Equipment = {
 
 function render(element: ReturnType<typeof createElement>, equipment: Equipment[] = [leica, dini]) {
   return renderToStaticMarkup(
-    createElement(EquipmentCatalogProvider, { equipment, today: "2026-09-30", children: element }),
+    // Los hijos van como tercer argumento (react/no-children-prop); el cast
+    // es porque el tipo de las props los declara obligatorios.
+    createElement(
+      EquipmentCatalogProvider,
+      { equipment, today: "2026-09-30" } as Parameters<typeof EquipmentCatalogProvider>[0],
+      element,
+    ),
   );
 }
 

@@ -35,6 +35,8 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 23 | Integridad | [`prds/22-integridad.md`](./prds/22-integridad.md) | cerrada |
 | 24 | Pulido | [`prds/23-pulido.md`](./prds/23-pulido.md) | cerrada |
 | 25 | Catálogo de equipos | [`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md) | cerrada |
+| 26 | Correcciones del cálculo | [`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md) | cerrada |
+| 27 | Segundo pulido | [`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md) | pendiente |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -548,6 +550,49 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 26 — Correcciones del cálculo (2026-10-01)
+
+Nació de una auditoría del motor pedida por el usuario
+([`auditoria-calculo.md`](./auditoria-calculo.md)): cuatro revisiones
+independientes, que rehicieron el cálculo por su cuenta, confirmaron las
+fórmulas sobre todas las carteras reales y encontraron 18 errores. La fase
+los corrigió, cada uno con su test, y encontró dos más (C-19, C-20). Dos
+migraciones: distancias por visual positivas y una visita por fecha. 966
+tests y 67 pruebas de base. Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Que el motor reproduzca las carteras no prueba el motor: prueba esas
+  carteras.** Las dos poligonales reales tienen el amarre del mismo lado
+  (k = 1), y el +360 fijo de la fila de cierre sobrevivió diecinueve fases.
+  Ningún error de la auditoría estaba en una fórmula de libro: estaban en los
+  esquemas que los datos reales no ejercitan y en las reglas alrededor del
+  cálculo —el orden de las visitas, el veredicto de la vuelta—. Para buscar
+  errores de motor hacen falta casos construidos a propósito y aleatorios, no
+  más carteras parecidas.
+- **Dos caminos que calculan lo mismo divergen.** El servidor promediaba sin
+  redondear y el editor redondeando; el editor convertía con `Number` y el
+  servidor con `parseNumber`. Cada uno estaba bien por separado. Lo que se
+  calcula en dos sitios tiene que salir de una sola función.
+- **Un test que fija el comportamiento puede fijar el error.** «La abierta con
+  control no exige verificación angular» era un test, y era justo lo que el
+  servidor contradecía. Antes de corregir un test que falla tras un arreglo,
+  preguntar qué afirmaba y por qué.
+- **Un auditor también se equivoca: verificar antes de afirmar.** Cada
+  hallazgo grave se comprobó en el código antes de presentarlo, y el informe
+  distingue lo verificado de lo reportado. Al escribir el estado de la
+  remediación salió una exageración propia —«los tests nuevos fallan con el
+  código anterior»— que solo se había comprobado en tres módulos.
+- **Verificar en pantalla sigue encontrando lo que nadie buscaba.** Al
+  comprobar C-2 apareció C-20: el editor de poligonales nunca mostró el amarre,
+  desde la Fase 3. Y una prueba de distancia negativa «fallaba» porque esa
+  fila tenía hilos, que mandan sobre lo tecleado: antes de dar por roto un
+  arreglo, mirar los datos de la fila.
+- **Probar el índice antes de commitear.** Con hunks y bloques de tests
+  mezclados, cada commit se preparó en el índice y se comprobó exportándolo a
+  una copia aparte con su typecheck y sus tests: así cada commit compila y
+  pasa por sí solo.
 
 ### Cierre Fase 25 — Catálogo de equipos (2026-09-30)
 

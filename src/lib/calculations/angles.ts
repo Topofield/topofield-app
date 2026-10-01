@@ -1,6 +1,8 @@
 // Utilidades de ángulos — funciones puras (PRD § 6.1).
 // Sin React, sin Supabase. Solo aritmética.
 
+import { readNumberText } from "@/lib/utils/parse";
+
 export interface Dms {
   deg: number;
   min: number;
@@ -80,6 +82,46 @@ export function azimuthFromCoordinates(
   return normalizeAzimuth((Math.atan2(deltaEast, deltaNorth) * 180) / Math.PI);
 }
 
+/** Diferencia `angle − reference` llevada a (−180°, 180°]. */
+export function angularDeviation(angle: number, reference: number): number {
+  const d = normalizeAzimuth(angle - reference);
+  return d > 180 ? d - 360 : d;
+}
+
+/**
+ * Promedio de las lecturas de un mismo ángulo, en grados decimales, redondeado
+ * a la décima de segundo con que se guarda la estación. `null` sin lecturas.
+ *
+ * Es el único promedio de lecturas (Fase 26): lo usan el editor y el servidor,
+ * así que el cálculo que se guarda es el que se ve (C-4). Cada lectura se toma
+ * respecto a la primera, en (−180°, 180°], antes de promediar (C-6): 359°59′56″,
+ * 0°00′02″ y 0°00′06″ promedian 0°00′01.3″, no 120°. El promedio solo se lleva
+ * a [0°, 360°] si se sale: 360°00′00″ exacto sigue valiendo, como en la regla
+ * de la lectura (Fase 24).
+ */
+export function averageReadings(values: readonly number[]): number | null {
+  const first = values[0];
+  if (first === undefined) return null;
+  const spread = values.reduce((acc, v) => acc + angularDeviation(v, first), 0);
+  let mean = first + spread / values.length;
+  if (mean < 0) mean += 360;
+  else if (mean > 360) mean -= 360;
+  const { deg, min, sec } = decimalToDms(mean);
+  return dmsToDecimal(deg, min, sec);
+}
+
+/**
+ * Dispersión de las lecturas de un mismo ángulo —la mayor menos la menor—, en
+ * segundos de arco, con el mismo desenvolvimiento que `averageReadings`. `null`
+ * con menos de dos lecturas.
+ */
+export function readingSpreadSeconds(values: readonly number[]): number | null {
+  const first = values[0];
+  if (first === undefined || values.length < 2) return null;
+  const deviations = values.map((v) => angularDeviation(v, first));
+  return degreesToSeconds(Math.max(...deviations) - Math.min(...deviations));
+}
+
 // ----------------------------------------------------------------------------
 // Captura en grados decimales (Fase 13, P1)
 // ----------------------------------------------------------------------------
@@ -107,12 +149,23 @@ export const DECIMAL_DEGREE_DIGITS = 6;
  * ángulo redondo— y un valor no numérico da `null`.
  */
 export function dmsFieldsToDecimal(fields: DmsFields): number | null {
-  if (fields.deg.trim() === "") return null;
-  const deg = Number(fields.deg);
-  const min = Number(fields.min.trim() === "" ? 0 : fields.min);
-  const sec = Number(fields.sec.trim() === "" ? 0 : fields.sec);
-  if (![deg, min, sec].every(Number.isFinite)) return null;
-  return dmsToDecimal(deg, min, sec);
+  const deg = readNumberText(fields.deg);
+  if (deg.kind !== "number") return null;
+  const min = dmsFieldValue(fields.min);
+  const sec = dmsFieldValue(fields.sec);
+  if (min === null || sec === null) return null;
+  return dmsToDecimal(deg.value, min, sec);
+}
+
+/**
+ * El valor de una casilla de minutos o segundos: en blanco vale 0 y un texto
+ * que no es número da `null`. Con coma decimal, como el resto de la captura
+ * (Fase 20): `Number("12,5")` es `NaN` y la lectura se perdía (Fase 26, C-5).
+ */
+export function dmsFieldValue(text: string): number | null {
+  const read = readNumberText(text);
+  if (read.kind === "empty") return 0;
+  return read.kind === "number" ? read.value : null;
 }
 
 /** Grados decimales con los decimales de la vista. */
@@ -132,5 +185,10 @@ export function decimalToDmsFields(decimal: number): DmsFields {
  */
 export function roundsOnStorage(decimal: number): boolean {
   const { deg, min, sec } = decimalToDms(decimal);
-  return Math.abs(dmsToDecimal(deg, min, sec) - decimal) > 1e-9;
+  // Media unidad del último decimal de la vista (Fase 26, C-17): un ángulo
+  // guardado se muestra redondeado a 0.000001°, y con un umbral menor pasar a
+  // la vista decimal avisaba de un redondeo que nadie había tecleado.
+  return Math.abs(dmsToDecimal(deg, min, sec) - decimal) > DECIMAL_VIEW_HALF_UNIT;
 }
+
+const DECIMAL_VIEW_HALF_UNIT = 0.5 * 10 ** -DECIMAL_DEGREE_DIGITS;

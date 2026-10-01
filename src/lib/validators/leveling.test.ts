@@ -261,7 +261,7 @@ describe("equilibrado de visuales, por armada (Fase 19, N7)", () => {
 /** Resultado de cierre; por defecto todo cumple, cada caso altera lo que prueba. */
 function resultWith(over: Partial<LevelingResult> = {}): LevelingResult {
   return {
-    forward: { readings: [], heightDifference: 0, errorMm: null },
+    forward: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true },
     return: null,
     arithmeticCheckOk: true,
     sumBacksights: 0,
@@ -499,7 +499,7 @@ describe("evaluateLevelingClosure — capa de cierre (§ 5.2)", () => {
   });
 
   // Fase 23: en una abierta con vuelta, la discrepancia es el veredicto.
-  const conVuelta = { return: { readings: [], heightDifference: 0, errorMm: null } };
+  const conVuelta = { return: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true } };
   const abierta = { closureErrorMm: null, toleranceMm: null, meetsTolerance: null };
 
   it("abierta con vuelta fuera de tolerancia: solo se cierra como rechazada", () => {
@@ -548,7 +548,11 @@ describe("punto de cambio incompleto (Fase 24)", () => {
   const run = (rows: ReadingInput[]) => ({
     readings: rows as never,
     heightDifference: 0,
+    distanceKm: 0,
     errorMm: null,
+    toleranceMm: null,
+    meetsTolerance: null,
+    arithmeticCheckOk: true,
   });
 
   it("encuentra el PC sin V− o sin V+, con su fila", () => {
@@ -615,5 +619,65 @@ describe("punto de cambio incompleto (Fase 24)", () => {
     expect(
       turningPointBlocker({ forward: run([bmStart, pcCompleto, bmEnd]), return: null }),
     ).toBeNull();
+  });
+});
+
+// --- Fase 26 — correcciones del cálculo ---------------------------------------
+
+describe("validateReadingCapture — distancias por visual (Fase 26, C-11)", () => {
+  it("una distancia en cero o negativa es error de captura", () => {
+    const negativa = validateReadingCapture(
+      bare({ pointType: "pc", backsight: 1.2, backDistanceM: -50, foresight: 1.1, foreDistanceM: 30 }),
+    );
+    expect(negativa.errors.backDistanceM).toBe("La distancia debe ser mayor que cero.");
+    const cero = validateReadingCapture(
+      bare({ pointType: "pc", backsight: 1.2, backDistanceM: 30, foresight: 1.1, foreDistanceM: 0 }),
+    );
+    expect(cero.errors.foreDistanceM).toBe("La distancia debe ser mayor que cero.");
+  });
+});
+
+describe("evaluateLevelingClosure — la vuelta de una cerrada (Fase 26)", () => {
+  const vuelta = (over: Partial<LevelingResult["forward"]> = {}) => ({
+    readings: [],
+    heightDifference: 0,
+    distanceKm: 0.9,
+    errorMm: 12,
+    toleranceMm: 5.7,
+    meetsTolerance: false,
+    arithmeticCheckOk: true,
+    ...over,
+  });
+
+  it("una vuelta fuera de su tolerancia obliga a rechazar y lo dice (C-10)", () => {
+    const r = evaluateLevelingClosure(
+      resultWith({ return: vuelta(), meetsDiscrepancy: true }),
+      "closed",
+    );
+    expect(r.mustReject).toBe(true);
+    expect(r.messages.some((m) => m.startsWith("El error de cierre de la vuelta (12.0 mm)"))).toBe(true);
+  });
+
+  it("sin tolerancia de la vuelta no se cierra", () => {
+    const r = evaluateLevelingClosure(
+      resultWith({ return: vuelta({ toleranceMm: null, meetsTolerance: null }) }),
+      "link",
+    );
+    expect(r.blocked).toBe(true);
+    expect(r.messages[0]).toContain("en la vuelta");
+  });
+
+  it("sin tolerancia de la ida tampoco, como en el servidor", () => {
+    const r = evaluateLevelingClosure(resultWith({ meetsTolerance: null, toleranceMm: null }), "closed");
+    expect(r.blocked).toBe(true);
+  });
+
+  it("dice qué recorrido no pasa la comprobación aritmética (C-12)", () => {
+    const r = evaluateLevelingClosure(
+      resultWith({ arithmeticCheckOk: false, return: vuelta({ arithmeticCheckOk: false, meetsTolerance: true }) }),
+      "closed",
+    );
+    expect(r.blocked).toBe(true);
+    expect(r.messages[0]).toContain("de la vuelta");
   });
 });

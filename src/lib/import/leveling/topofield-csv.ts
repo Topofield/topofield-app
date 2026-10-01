@@ -117,6 +117,11 @@ export function readTopofieldCsv(text: string): ReadResult {
     if (back == null && fore == null) {
       return { ok: false, error: `Fila ${fila}: sin V+ ni V−.` };
     }
+    // Una distancia por visual en cero o negativa no es una medición: envenena
+    // el acumulado y la tolerancia K·√D (Fase 26, C-11).
+    if ([backD, foreD].some((d) => typeof d === "number" && d <= 0)) {
+      return { ok: false, error: `Fila ${fila}: una distancia debe ser mayor que cero.` };
+    }
 
     const r = runs[run];
     // Un punto de cambio escrito en dos filas —V− en una, V+ en la siguiente,

@@ -249,3 +249,17 @@ describe("revisión de la Fase 16", () => {
     expect(rows.return).toBeNull();
   });
 });
+
+describe("plantilla CSV — distancias (Fase 26, C-11)", () => {
+  it("una distancia en cero o negativa no se importa", () => {
+    const cabecera = "recorrido,punto,tipo,v_mas,v_menos,dist_mas,dist_menos";
+    expect(readLevelingFile(`${cabecera}\nida,A,bm,1.5,,0,`)).toEqual({
+      ok: false,
+      error: "Fila 2: una distancia debe ser mayor que cero.",
+    });
+    expect(readLevelingFile(`${cabecera}\nida,A,bm,1.5,,30,\nida,B,bm,,1.4,,-30`)).toEqual({
+      ok: false,
+      error: "Fila 3: una distancia debe ser mayor que cero.",
+    });
+  });
+});

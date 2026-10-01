@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-30 · Fase 25 cerrada · 921 tests y 59
+**Última actualización:** 2026-10-01 · Fase 26 cerrada · 966 tests y 67
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -918,12 +918,29 @@ Hay dos esquemas de cierre, y `has_closing_row` los distingue:
 
 | Esquema | Última fila | Suma teórica | Ejemplo |
 |---|---|---|---|
-| Contra el amarre | Ángulo del último lado de vuelta a la referencia, sin distancia | `(n−2)·180 + 360` sobre n+1 ángulos | cartera TT4 |
+| Contra el amarre | Ángulo del último lado de vuelta a la referencia, sin distancia | `(n−2)·180 + 360·k` sobre n+1 ángulos (exteriores: `(n+2)·180 + 360·k`) | cartera TT4 |
 | Contra el primer lado | Ángulo interior del vértice de arranque | `(n−2)·180` sobre n ángulos; la orientación solo fija el datum | cartera Vivero |
 
-En ambos, el **control de reorientación** compara el último azimut de la cadena
-contra su objetivo y expone la discrepancia en segundos. Avisa, no bloquea: es
-control de calidad del levantamiento, no criterio de tolerancia.
+**El 360·k de la fila de cierre (Fase 26, C-1).** Con fila de cierre, el
+vértice de arranque aporta dos lecturas —orientación (amarre → primera
+estación) y cierre (última estación → amarre)— que suman su ángulo más 360·k:
+k = 1 si el amarre queda fuera del barrido horario que va de la vista atrás a
+la adelante, y k = 0 si queda dentro. Hasta la Fase 26 el +360 era fijo: TT4
+tiene k = 1, pero con el amarre del otro lado —o en una exterior recorrida en
+sentido horario con el amarre fuera— la poligonal salía con 360° de error. El
+motor saca k de la propia suma, redondeando a 0 o 1; fuera de ese rango deja
+1, para que una poligonal declarada interior siendo exterior, a 720°, se siga
+viendo como error.
+
+**En las abiertas (Fase 26, C-2)** el amarre también orienta: el primer lado
+sale del azimut hacia el amarre más el ángulo de orientación de la primera
+fila, que la tabla rotula así. Ese ángulo fija el datum y no se corrige, como
+en la cerrada sin fila de cierre.
+
+Hasta la Fase 26 había un **control de reorientación** que comparaba el último
+azimut de la cadena con su objetivo. Se quitó: calculado con los ángulos
+corregidos daba siempre 0, y con los crudos coincidía con el error angular,
+que ya se muestra.
 
 ### Las hojas de Excel de referencia
 
@@ -1151,11 +1168,19 @@ Viven en `tolerances.ts`, **nunca hardcodeadas en componentes**:
 | `tercer_orden` | 15 | 1:5.000 |
 | `ordinario` | 30 | 1:3.000 |
 
-Tolerancia angular = K·√n, donde n es el número de ángulos medidos. Nivelación
-usa su propio coeficiente, `LEVELING_TOLERANCE_K` (3/6/12/24 mm, tolerancia
-K·√D en km) — ver § 4 y § 7 del PRD principal. La discrepancia entre ida y
-vuelta se contrasta contra K·√D·√2, con D la menor de las dos distancias; si
-a un recorrido le faltan, no se evalúa (Fase 23). `CALIBRATION_MAX_MONTHS`
+Tolerancia angular = K·√n, donde n es el número de ángulos que entran en la
+condición: los vértices de una cerrada (más el de cierre si hay fila de
+cierre) o las deflexiones de una abierta con control. Nivelación usa su propio
+coeficiente, `LEVELING_TOLERANCE_K` (3/6/12/24 mm, tolerancia K·√D en km) — ver
+§ 4 y § 7 del PRD principal. En una cerrada o de enlace con vuelta, **cada
+recorrido** se juzga con K·√D sobre su propia distancia (Fase 26, C-10). La
+discrepancia entre ida y vuelta se contrasta contra K·√D·√2, con D la menor de
+las dos distancias; si a un recorrido le faltan, no se evalúa (Fase 23). El
+error y la tolerancia se comparan con un margen de 10⁻⁶ mm (`withinTolerance`,
+Fase 26, C-13): el error sale de restar cotas en coma flotante, y sin margen
+un cierre exactamente igual a la tolerancia cumplía o no según la cota del BM.
+Las tolerancias son las del marco teórico; la FGCS (1984) no lleva el √2 de la
+discrepancia y sus clases están corridas (auditoría del cálculo, § 6). `CALIBRATION_MAX_MONTHS`
 (12) es la antigüedad de la calibración a partir de la cual el formulario de
 equipo avisa (Fase 25).
 
@@ -1186,8 +1211,10 @@ la validación de captura (§ 7).
 
 ### Umbral de cierre exacto
 
-`computePolygonal` considera exacto un cierre con `linearError <= 1e-9` m y
-devuelve `relativePrecision: Infinity`, que se presenta como `1:∞`.
+En la **cerrada**, `computePolygonal` considera exacto un cierre con
+`linearError <= 1e-9` m y devuelve `relativePrecision: Infinity`, que se
+presenta como `1:∞`. La abierta con control solo trata como exacto el cierre
+igual a 0.
 
 El umbral existe porque un cierre geométricamente exacto deja un residuo de
 punto flotante (~1e-14) que producía precisiones absurdas como
@@ -1258,8 +1285,8 @@ verificadas independientemente contra el marco teórico del dominio (ver
 `computeDifferentials` calcula la distorsión angular entre cada par de
 puntos como `1/((L×1000)/Δs_diferencial)`; un diferencial de 0 da `1/∞`,
 clasificado normal, y un par sin coordenadas en alguno de sus puntos queda
-fuera de la tabla en vez de calcularse con `L=0` (que daría una distorsión
-infinita y aparentaría normalidad falsa).
+fuera de la tabla en vez de calcularse con `L=0`, que daría X = 0: una
+distorsión de 1/0, es decir, una falsa alarma.
 
 **Periodo común (Fase 11).** Si los dos puntos de un par tienen líneas base
 de fechas distintas —uno se dio de alta a mitad del monitoreo—, restar
@@ -1375,7 +1402,10 @@ Toda celda numérica es texto hasta que la lee `lib/utils/parse.ts`:
   migración encontró cinco sitios así (azimut al amarre y al reasignar,
   distancia desde los hilos, catálogo de puntos, cota del BM) y los umbrales
   del lugar, que guardaban números en el estado y borraban el separador al
-  teclearlo; cada umbral guarda ahora su texto.
+  teclearlo; cada umbral guarda ahora su texto. La auditoría del cálculo
+  encontró dos más, arreglados en la Fase 26 (C-5): las lecturas de ángulo del
+  editor (`readingValues`) y la vista en grados decimales
+  (`dmsFieldsToDecimal`). Una lectura con «12,5″» se perdía del promedio.
 
 ### Capa 1 — captura
 
@@ -1431,19 +1461,27 @@ bloquea el cierre; una **precisión insuficiente** significa que el trabajo se
 hizo pero no alcanza la calidad exigida, y se documenta como rechazado.
 
 **Nivelación** (`evaluateLevelingClosure(result, type)`): la cerrada y la de
-enlace se juzgan por su cierre, y fuera de tolerancia solo se cierran como
-rechazadas. La abierta **sin vuelta** se cierra en cuanto está calculada: no
+enlace se juzgan por su cierre —el de la ida y, si la hay, el de la vuelta,
+cada uno con su tolerancia (Fase 26, C-10)—, y si alguno no cumple solo se
+cierran como rechazadas; sin la tolerancia de alguno, por falta de
+distancias, no se cierran. Antes la vuelta solo pesaba por la discrepancia,
+|e_ida + e_vuelta|, y dos errores de signo contrario se cancelaban. La abierta **sin vuelta** se cierra en cuanto está calculada: no
 hay contra qué juzgarla. La abierta **con vuelta** se juzga desde la Fase 23
 por la discrepancia: sin distancias en la ida o en la vuelta no hay veredicto
 y el cierre se bloquea; fuera de T·√2, solo rechazado.
 Antes que cualquier veredicto, un **punto de cambio incompleto** —con V+ y sin
 V−, o al revés, fuera de la primera y la última fila— bloquea el cierre con un
 mensaje que nombra la fila y el recorrido (`turningPointBlocker`, Fase 24). Va
-primero porque dice qué corregir, y porque **la vuelta no pasa por la
-comprobación aritmética**: `computeLeveling` devuelve la de la ida. En la
-captura es solo un aviso en la celda (`validateRunCapture`): guardar a medias
-es legítimo. La libreta de la visita usa las mismas funciones.
-`levelingProcessVerdict` guarda ese veredicto en `meets_tolerance` —lo leen el
+primero porque dice qué corregir. Después va la **comprobación aritmética** de
+los dos recorridos: hasta la Fase 26 (C-12) `computeLeveling` devolvía solo la
+de la ida, y un BM interior de la vuelta con solo V+ pasaba. El mensaje dice
+qué recorrido no cuadra. En la captura el punto de cambio incompleto es solo
+un aviso en la celda (`validateRunCapture`): guardar a medias es legítimo. Una
+distancia por visual en cero o negativa es error de captura (Fase 26, C-11) y
+un CHECK la rechaza en la base. La libreta de la visita usa las mismas
+funciones.
+`levelingProcessVerdict` guarda ese veredicto —en cerrada y de enlace, los dos
+recorridos— en `meets_tolerance` —lo leen el
 hub, el dashboard, el resumen del informe y `deriveLevelingCloseStatus`—, y
 `discrepancy_tolerance_mm` y `meets_discrepancy` guardan la discrepancia con
 cualquier tipo que tenga vuelta; en cerrada y de enlace es un control más. La
@@ -1459,17 +1497,22 @@ bloquea nada**.
 
 - **Captura** — cota vacía o no numérica: error. Cota que se aleja más de 1 m
   de C0: advertencia, no error (podría ser un terraplén real sobre turba; el
-  error de transcripción es la lectura más probable, pero no la única). Fecha
-  de visita anterior o igual a la visita previa: error — evita un intervalo
-  negativo que invertiría el signo de la velocidad. Punto duplicado o
-  fantasma en la misma visita: error.
+  error de transcripción es la lectura más probable, pero no la única). La
+  fecha de la visita tiene que quedar **entre** la de su visita anterior y la
+  de su siguiente, por número (`neighborVisitDates`, Fase 26, C-16): antes o
+  igual a la anterior invertiría o anularía el intervalo, y después de la
+  siguiente reordenaría la serie y cambiaría el parcial de visitas ya
+  cerradas. Un índice único `(site_id, date)` lo garantiza en la base. Punto
+  duplicado o fantasma en la misma visita: error.
 - **Cierre** — exige lectura de todos los puntos **vigentes** en la fecha de
   la visita; una visita cerrada es el registro inmutable de una fecha, y
   cerrarla incompleta deja un hueco que ya no se puede rellenar. Además, no
-  cierra una visita si alguno de sus puntos sin C0 tiene la línea base en una
-  visita **anterior abierta**: si esa lectura siguiera editable, cambiarla
-  movería el acumulado que se recalcula en vivo para la visita ya cerrada
-  (Fase 11).
+  cierra una visita si sigue **abierta una visita anterior** contra cuyas
+  lecturas se calcula: la de la lectura anterior de cada punto —parcial,
+  velocidad y alerta (Fase 26, C-15)— y, para un punto sin C0, la de su línea
+  base (Fase 11). Si esa lectura siguiera editable, cambiarla movería lo que el
+  panel, el informe y el Excel recalculan en vivo para la visita ya cerrada.
+  El mensaje dice qué visita cerrar antes y por qué puntos.
 - **Estadística** — clasifica el semáforo, pero **no participa en si se
   puede guardar o cerrar**. Un punto en alarma se guarda y se cierra con
   normalidad: es el hallazgo que el monitoreo existe para documentar, no un
@@ -1789,28 +1832,28 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-921 tests en 64 archivos, Vitest, entorno `node` **sin jsdom**. Además, 59
+966 tests en 64 archivos, Vitest, entorno `node` **sin jsdom**. Además, 67
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
 | `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
-| `lib/calculations/leveling.test.ts` | 80 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23) |
+| `lib/calculations/leveling.test.ts` | 86 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
-| `lib/import/leveling/import.test.ts` | 22 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16) |
-| `lib/validators/polygonal.test.ts` | 71 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24) |
-| `lib/validators/settlement.test.ts` | 45 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0 o las coordenadas, a la escala de la base (Fase 23) |
-| `lib/validators/leveling.test.ts` | 53 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24) |
-| `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
+| `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
+| `lib/validators/polygonal.test.ts` | 77 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26) |
+| `lib/validators/settlement.test.ts` | 50 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0 o las coordenadas, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
+| `lib/validators/leveling.test.ts` | 58 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
+| `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
-| `lib/utils/format.test.ts` | 30 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22) |
+| `lib/utils/format.test.ts` | 33 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26) |
 | `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
 | `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
 | `lib/calculations/settlement-persistence.test.ts` | 18 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18) |
-| `lib/calculations/angles.test.ts` | 16 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13) |
+| `lib/calculations/angles.test.ts` | 22 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13); promedio y dispersión de lecturas a través de 0°/360°, redondeo a 0.1″, coma decimal y sin aviso falso en la vista decimal (Fase 26) |
 | `lib/demo/fixtures.test.ts` | 13 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
@@ -1825,7 +1868,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/errors/user-message.test.ts` | 4 | **Errores de la base para el usuario**: cada código conocido traducido sin dejar pasar el texto de Postgres; el check de un trigger propio, en español, pasa; el de una columna, no; código desconocido, el mensaje de la acción (Fase 22) |
 | `components/navigation/unsaved-changes.test.ts` | 3 | **Qué detiene la guarda de cambios sin guardar**: un enlace interno y el cambio de pestaña, sí; el ancla, la descarga, otra pestaña del navegador, un externo y lo marcado a propósito, no (Fase 22) |
 | `components/design-system/page-header.test.ts` | 4 | `PageHeader` y `ActionBar`: título en `<header>` (se oculta al imprimir), sin contenedores vacíos, migas; barra fija, anunciada y fuera de la impresión (Fase 22) |
-| `components/leveling/leveling-verdict.test.ts` | 4 | Veredicto de la nivelación: el tramo 2 por su cierre (−0.4 mm sobre 1.397 km), El Verjón por su discrepancia (5.0 mm), fuera de tolerancia, abierta sin vuelta e incompleta (Fase 22) |
+| `components/leveling/leveling-verdict.test.ts` | 7 | Veredicto de la nivelación: el tramo 2 por su cierre (−0.4 mm sobre 1.397 km), El Verjón por su discrepancia (5.0 mm), fuera de tolerancia, abierta sin vuelta e incompleta (Fase 22); la vuelta de una cerrada decide si no cumple (Fase 26) |
 | `components/leveling/profile-data.test.ts` | 2 | Perfil de la nivelación con las carteras reales: el tramo 2 de 0 a 1397 m, de C10 a C10; la vuelta de El Verjón del final de la ida al origen (Fase 22) |
 | `lib/reports/responsible.test.ts` | 3 | Nombre del responsable del cierre: nombre completo, nombre y apellido, correo; nunca el id (Fase 22) |
 | `lib/reports/including.test.ts` | 2 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22) |
@@ -1833,7 +1876,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/reports/cover.test.ts` | 2 | La portada del informe sale de `cover`, no del proyecto (Fase 23) |
 | `lib/reports/state.test.ts` | 4 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24) |
 | `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
-| `components/polygonal/stations-table.test.ts` | 3 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24) |
+| `components/polygonal/stations-table.test.ts` | 6 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24); la fila de orientación de una abierta amarrada y la coma decimal en las lecturas (Fase 26) |
 | `lib/export/workbook-colors.test.ts` | 4 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24) |
 | `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
 | `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
@@ -1848,7 +1891,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `components/design-system/theme-select.test.ts` | 2 | El selector de tema: etiqueta, tres opciones, arranque en la elección de la cookie (Fase 20) |
 | `lib/design/tokens-retirados.test.ts` | 2 | **Ninguna clase ni `var()` usa un token retirado** ni la paleta de Tailwind en todo `src/`, ni un color literal en `fill` o `stroke` (Fase 20) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
-| `components/polygonal/closure-verdict.test.tsx` | 10 | Decisión del veredicto |
+| `components/polygonal/closure-verdict.test.tsx` | 9 | Decisión del veredicto |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
 | `lib/export/leveling-workbook.test.ts` | 10 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta, equipo y orden del proceso (Fase 8); tolerancia y veredicto de la discrepancia en el Resumen (Fase 23) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
@@ -1869,6 +1912,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `c0_con_lecturas_cerradas.test.sql` | 7 | Con lectura cerrada, la C0 y las coordenadas no cambian y el código y la ubicación sí; reescribir el mismo valor pasa; sin ella, todo cambia |
 | `catalogo_equipos.test.sql` | 11 | Alta con el dueño por defecto; campos del otro tipo, sin marca ni modelo y el mismo aparato rechazados; editar o borrar un equipo no cambia el proceso que lo copió; otro usuario no ve ni escribe (Fase 25) |
 | `rango_lecturas.test.sql` | 7 | El CHECK de las lecturas de ángulo: los límites y 360°00′00″ exacto se guardan; 65″, 60′, 360°00′01″, 361° y segundos negativos no, y no se pierde lo de antes (Fase 24) |
+| `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
@@ -2139,7 +2183,9 @@ PRD principal y `docs/prds/03-nivelacion.md` afirmaban lo contrario y se
 corrigieron. Si en una fase futura se decide que el desnivel adoptado sí debe
 entrar en la compensación, es un cambio de motor de cálculo con tests nuevos,
 no un ajuste menor: altera todas las cotas corregidas de un recorrido con
-vuelta.
+vuelta. La auditoría del cálculo (Fase 26, D-1) recomienda que entre —ida y
+vuelta son dos observaciones del mismo desnivel— y el usuario lo pidió para
+una fase posterior: CR1 en `pendientes.md`.
 
 **Cerrado — el `worstAlert` del hub ya no diverge del panel.** El hub lee el
 `alert_status` persistido en `settlement_readings` y el panel del lugar lo
@@ -2366,7 +2412,9 @@ la **Fase 23** (I2 en `pendientes.md`).
 (`TREND_DEVIATION_REFERENCE_KM`), razonable para un edificio y posiblemente
 corto para una presa. Si un usuario lo pide, el paso natural es hacerlo un
 umbral editable del lugar, junto a los de velocidad y acumulado, lo que exige
-migración y resincronización.
+migración y resincronización. La auditoría del cálculo (Fase 26, D-7)
+recomienda en cambio derivarlo de la longitud real de los dos circuitos: el
+margen fijo equivale a uno de 0.5 km. Pendiente como CR3.
 
 **Tres componentes del sistema de diseño conocen el dominio.** La § 8 dice que
 un componente del sistema de diseño no importa nada de `@/types/*` ni de
@@ -2419,6 +2467,23 @@ HTTP con sesión de navegador (12 KB, tres hojas, catálogo y cotas correctos).
 `npm audit` queda en **0 vulnerabilidades**, producción y desarrollo. Si un
 override deja de hacer falta porque el padre se actualiza, se puede quitar y
 comprobar con `npm audit` que sigue en cero.
+
+**Cerrado en la Fase 26 — la auditoría del motor de cálculo**
+([`../auditoria-calculo.md`](../auditoria-calculo.md)). Cuatro revisiones
+independientes confirmaron las fórmulas de libro sobre todas las carteras
+reales y encontraron 18 errores en esquemas que esas carteras no cubren, en
+reglas de validación y en límites numéricos; la Fase 26 los corrigió, cada
+uno con su test, y encontró dos más al implementar y verificar: el servidor
+rechazaba guardar una cerrada con fila de cierre (C-19) y el editor no
+mostraba el amarre (C-20). Lo que queda abierto de la auditoría son
+**criterios**, no errores: los que el usuario pidió cambiar están en
+`pendientes.md` (CR1 a CR4); el resto, documentado en la § 2 de la auditoría.
+
+**Una distancia tecleada que los hilos tapan (Fase 26, visto al verificar).**
+Con los tres hilos capturados, la distancia sale de ellos (Fase 9) y la que
+se teclea en la celda se ignora, aunque la celda la siga mostrando: escribir
+«−50» en una fila con hilos no da error ni cambia el cálculo. Es el diseño
+—los hilos son la medición—, pero la celda debería dejarlo ver.
 
 **Cerrado en la Fase 25 — el catálogo de equipos**, como plantilla: el
 proceso copia los valores y no referencia el catálogo, así que editarlo no
@@ -2476,7 +2541,9 @@ un informe emitido se puede reeditar o solo reemitir.
 [0.5, 2]` solo cambia el texto que acompaña a σ₀. Con 2 o 3 condiciones σ₀
 fluctúa mucho aunque los pesos sean los correctos, así que la banda es ancha;
 la prueba χ² con sus grados de libertad sería lo riguroso y quedó fuera de
-alcance. Si algún día σ₀ decide algo, hay que cambiarla por la prueba.
+alcance. Si algún día σ₀ decide algo, hay que cambiarla por la prueba. La
+auditoría del cálculo (Fase 26, D-6) lo cuantificó —con r = 3 un σ₀ de 1.61
+ya es significativo— y el usuario pidió la prueba χ²: CR3 en `pendientes.md`.
 
 **Mínimos cuadrados en una abierta sin control (Fase 14).** El selector no lo
 ofrece ahí, pero un proceso con el método al que después se le cambia el tipo
@@ -2517,13 +2584,21 @@ base local no había ninguna; la nube no se revisó.
 > **Cerrado sin datos afectados (revisado en la Fase 19).** La nube se vació en
 > la Fase 18 y todo lo que hay se calculó con el motor posterior a la Fase 16.
 
-**El acumulado del motor se suma en coma flotante (Fase 19).** En un empate
+**Cerrado en la Fase 26 — el acumulado se suma en milímetros enteros (C-14).**
+El texto original queda como registro. **El acumulado del motor se suma en
+coma flotante (Fase 19).** En un empate
 exacto al metro —164.5 m en la ida de El Verjón— el motor llega a
 164.49999999999997 y la columna `decimal(8,3)` guarda 0.164, mientras que la
 suma decimal de la migración de la Fase 19 guarda 0.165. Solo afecta a «Dist
 acum», que es informativa: la corrección se calcula con el valor sin
 redondear y coincide. Sumar en milímetros enteros lo resolvería; no se hizo
 por acotado.
+
+**La distancia de la columna, en km a tres decimales (Fase 26).** La
+auditoría señala que `distance_accumulated_km decimal(8,3)` tiene una
+resolución de 1 m, más gruesa que el dato. Pasarla a metros sería una
+migración sobre procesos cerrados; no se hizo, porque la columna es
+informativa y la corrección no la usa.
 
 **Se pierden la σ del instrumento y las repeticiones (Fase 16).** La libreta
 guarda una lectura por visual, así que el import promedia. Llevar a
@@ -2608,7 +2683,10 @@ filas sin V+ ni V−.
 KPI «Promedio» y la línea de tendencia promedian los acumulados de la visita;
 un punto dado de alta a mitad del monitoreo parte de 0 y tira del promedio
 hacia arriba. El PRD de la fase lo acepta y lo dice; separar la serie por
-cohortes de puntos sería el siguiente paso si molesta.
+cohortes de puntos sería el siguiente paso si molesta. La auditoría del
+cálculo (Fase 26, D-8) añade que también lo mueven las bajas y recomienda el
+promedio encadenado, igual al actual sin altas ni bajas: CR4 en
+`pendientes.md`.
 
 **Un `Modal` abierto sobre un `Drawer` se cierra con el mismo Esc (Fase
 18).** Los dos escuchan Escape en el documento. Hoy ninguna pantalla abre uno
@@ -2742,10 +2820,14 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-30):** la nube tiene aplicadas las **veintisiete**
-migraciones, hasta `20260930050000_catalogo_equipos` (Fase 25), empujada antes
-del merge de su PR: la tabla `equipment` con RLS, sus cuatro políticas, el
-índice único y sus CHECK, y el catálogo vacío. La de la Fase 24 dejó el CHECK
+**Estado actual (2026-10-01):** la nube tiene aplicadas las **veintinueve**
+migraciones, hasta `20261001020000_visita_fecha_unica` (Fase 26), empujadas
+antes del merge de su PR. Las dos de la Fase 26 —el CHECK de distancias por
+visual positivas en `leveling_readings` y `settlement_book_readings`, y el
+índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
+filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
+la tabla `equipment` con RLS, sus cuatro políticas, el índice único y sus
+CHECK. La de la Fase 24 dejó el CHECK
 `polygonal_angle_readings_dms_range` activo. Las de la Fase 23 se verificaron al aplicarse: El Verjón con su
 veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `SECURITY INVOKER` y sin `EXECUTE` para `anon`, sus dos triggers activos,

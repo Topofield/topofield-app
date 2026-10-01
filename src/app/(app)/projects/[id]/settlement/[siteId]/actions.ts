@@ -16,6 +16,7 @@ import {
   type PersistedReading,
 } from "@/lib/calculations/settlement-persistence";
 import {
+  neighborVisitDates,
   validateVisitCapture,
   validateVisitClose,
 } from "@/lib/validators/settlement";
@@ -114,10 +115,14 @@ async function loadContext(
     .select("*")
     .eq("site_id", siteId);
 
+  // En orden de fecha: el motor y los validadores recorren las visitas así, y
+  // sin orden el de dos visitas dependía del de las filas (Fase 26, C-16).
   const { data: visits } = await supabase
     .from("settlement_visits")
     .select("*")
-    .eq("site_id", siteId);
+    .eq("site_id", siteId)
+    .order("date")
+    .order("visit_number");
 
   const { data: readings } = await supabase
     .from("settlement_readings")
@@ -346,8 +351,8 @@ export async function saveVisitAction(
   const others = context.visits
     .filter((v) => v.id !== payload.visitId)
     .sort((a, b) => a.date.localeCompare(b.date));
-  const previousDate =
-    others.filter((v) => v.date < payload.date).at(-1)?.date ?? null;
+  // La fecha, entre las de sus visitas vecinas por número (Fase 26, C-16).
+  const neighbors = neighborVisitDates({ visitNumber: visit.visit_number }, others);
 
   const candidate: VisitInput = {
     id: payload.visitId,
@@ -356,7 +361,12 @@ export async function saveVisitAction(
     readings,
   };
 
-  const issues = validateVisitCapture(candidate, context.points, previousDate);
+  const issues = validateVisitCapture(
+    candidate,
+    context.points,
+    neighbors.previous,
+    neighbors.next,
+  );
   if (Object.keys(issues.errors).length > 0) {
     return { ok: false, error: Object.values(issues.errors)[0] };
   }
@@ -501,14 +511,13 @@ export async function closeVisitAction(
   const visit = context.visits.find((v) => v.id === visitId);
   if (!visit) return { ok: false, error: "Visita no encontrada." };
 
-  // La fecha de la visita cronológicamente anterior a esta. El cierre también
-  // comprueba el orden: sellar como inmutable una visita fechada fuera de orden
-  // dejaría un intervalo negativo imposible de corregir después.
-  const previousDate =
-    context.visits
-      .filter((v) => v.id !== visitId && v.date < visit.date)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .at(-1)?.date ?? null;
+  // La fecha de la visita anterior por número. El cierre también comprueba el
+  // orden: sellar como inmutable una visita fechada fuera de orden dejaría un
+  // intervalo imposible de corregir después (Fase 26, C-16).
+  const previousDate = neighborVisitDates(
+    visit,
+    context.visits.filter((v) => v.id !== visitId),
+  ).previous;
 
   const siteVisits = context.visits.map((v) => ({
     ...v,

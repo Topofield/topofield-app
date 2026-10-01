@@ -507,7 +507,7 @@ describe("computeDifferentials", () => {
   });
 
   it("excluye el par si a un punto le faltan coordenadas", () => {
-    // Calcularlo con L = 0 daría distorsión infinita y aparentaría normalidad.
+    // Calcularlo con L = 0 daría X = 0, una distorsión de 1/0: falsa alarma.
     const sinCoords: PointInput = { ...B, easting: null };
     const pairs = computeDifferentials(
       [A, sinCoords],
