@@ -81,17 +81,45 @@ export function validateReadingCapture(
 }
 
 /**
+ * Las fechas de las visitas vecinas de una, por número: la anterior y la
+ * siguiente, o `null` (Fase 26, C-16). El número se asigna en orden de fecha
+ * —una visita nueva va después de la última—, así que la fecha de una visita
+ * tiene que quedar entre las de sus vecinas. Antes se comparaba solo con la
+ * última de fecha estrictamente anterior, y una visita abierta podía igualar
+ * la fecha de otra o saltar por encima de una cerrada, cambiando su parcial y
+ * su velocidad.
+ */
+export function neighborVisitDates(
+  visit: Pick<VisitInput, "visitNumber">,
+  visits: readonly Pick<VisitInput, "visitNumber" | "date">[],
+): { previous: string | null; next: string | null } {
+  let previous: Pick<VisitInput, "visitNumber" | "date"> | null = null;
+  let next: Pick<VisitInput, "visitNumber" | "date"> | null = null;
+  for (const v of visits) {
+    if (v.visitNumber < visit.visitNumber && (!previous || v.visitNumber > previous.visitNumber)) {
+      previous = v;
+    }
+    if (v.visitNumber > visit.visitNumber && (!next || v.visitNumber < next.visitNumber)) {
+      next = v;
+    }
+  }
+  return { previous: previous?.date ?? null, next: next?.date ?? null };
+}
+
+/**
  * Valida la captura de una visita completa (§ 5.1).
  *
- * `previousVisitDate` es la fecha de la visita cronológicamente anterior, o
- * `null` si es la primera. Sirve para impedir que una visita se feche antes que
- * su predecesora, lo que daría intervalos negativos y velocidades con el signo
- * invertido.
+ * `previousVisitDate` y `nextVisitDate` son las fechas de las visitas vecinas
+ * (`neighborVisitDates`), o `null`. La fecha tiene que quedar estrictamente
+ * entre las dos: antes de la anterior daría intervalos negativos y velocidades
+ * con el signo invertido; igual a otra deja el intervalo en cero; después de la
+ * siguiente reordena la serie y cambia el parcial de visitas ya cerradas.
  */
 export function validateVisitCapture(
   visit: VisitInput,
   points: PointInput[],
   previousVisitDate: string | null,
+  nextVisitDate: string | null = null,
 ): VisitCaptureIssues {
   const errors: VisitCaptureIssues["errors"] = {};
   const warnings: VisitCaptureIssues["warnings"] = {};
@@ -101,6 +129,8 @@ export function validateVisitCapture(
     errors.date = "La visita necesita una fecha válida.";
   } else if (previousVisitDate !== null && visit.date <= previousVisitDate) {
     errors.date = `La fecha debe ser posterior a la de la visita anterior (${previousVisitDate}).`;
+  } else if (nextVisitDate !== null && visit.date >= nextVisitDate) {
+    errors.date = `La fecha debe ser anterior a la de la visita siguiente (${nextVisitDate}).`;
   }
 
   const byId = new Map(points.map((p) => [p.id, p]));
@@ -185,7 +215,12 @@ export function validateVisitClose(
   siteVisits: readonly SiteVisit[],
   book: { arithmeticCheckOk: boolean; turningPoint?: string | null } | null = null,
 ): VisitCaptureIssues {
-  const issues = validateVisitCapture(visit, points, previousVisitDate);
+  const issues = validateVisitCapture(
+    visit,
+    points,
+    previousVisitDate,
+    neighborVisitDates(visit, siteVisits.filter((v) => v.id !== visit.id)).next,
+  );
   const messages: string[] = [];
 
   // Un punto de cambio incompleto dice qué fila corregir (Fase 24); si no lo

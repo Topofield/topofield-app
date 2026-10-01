@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(6);
+select plan(8);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a501', 'correcciones@topofield.test');
@@ -58,6 +58,16 @@ select lives_ok(
                                            backsight, back_distance_m)
      values ('00000000-0000-4000-8000-00000000e501', 1, 'BM-1', 'bm', 1.2, 25) $$,
   'y con una distancia positiva se guarda');
+
+-- C-16: una visita por fecha en cada lugar.
+select throws_ok(
+  $$ insert into settlement_visits (site_id, visit_number, date)
+     values ('00000000-0000-4000-8000-00000000c502', 1, '2026-01-10') $$,
+  '23505', null, 'dos visitas del mismo lugar no comparten fecha');
+select lives_ok(
+  $$ insert into settlement_visits (site_id, visit_number, date)
+     values ('00000000-0000-4000-8000-00000000c502', 1, '2026-02-10') $$,
+  'con otra fecha, sí');
 
 select * from finish();
 rollback;

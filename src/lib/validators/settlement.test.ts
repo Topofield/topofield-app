@@ -5,6 +5,7 @@ import {
   validateActiveFrom,
   validateReadingCapture,
   validateRetirement,
+  neighborVisitDates,
   validateVisitCapture,
   validateVisitClose,
   type SiteVisit,
@@ -477,5 +478,33 @@ describe("pointReferenceChanged (Fase 23)", () => {
         { initialElevation: null, northing: null, easting: null },
       ),
     ).toBe(false);
+  });
+});
+
+describe("neighborVisitDates y la fecha entre vecinas (Fase 26, C-16)", () => {
+  const visitas = [
+    { visitNumber: 0, date: "2025-01-15" },
+    { visitNumber: 2, date: "2025-03-15" },
+    { visitNumber: 3, date: "2025-04-15" },
+  ];
+
+  it("da las fechas de la anterior y la siguiente por número", () => {
+    expect(neighborVisitDates({ visitNumber: 2 }, visitas)).toEqual({
+      previous: "2025-01-15",
+      next: "2025-04-15",
+    });
+    expect(neighborVisitDates({ visitNumber: 3 }, visitas)).toEqual({ previous: "2025-03-15", next: null });
+    expect(neighborVisitDates({ visitNumber: 0 }, [])).toEqual({ previous: null, next: null });
+  });
+
+  it("rechaza la misma fecha que otra visita y saltar por encima de la siguiente", () => {
+    const visita = visitaCon(1, "2025-03-15", ["p1"]);
+    expect(validateVisitCapture(visita, [P1], "2025-01-15", "2025-03-15").errors.date).toBe(
+      "La fecha debe ser anterior a la de la visita siguiente (2025-03-15).",
+    );
+    const despues = visitaCon(1, "2025-04-20", ["p1"]);
+    expect(validateVisitCapture(despues, [P1], "2025-01-15", "2025-03-15").errors.date).toBeDefined();
+    const entre = visitaCon(1, "2025-02-15", ["p1"]);
+    expect(validateVisitCapture(entre, [P1], "2025-01-15", "2025-03-15").errors.date).toBeUndefined();
   });
 });
