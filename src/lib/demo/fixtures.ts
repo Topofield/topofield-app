@@ -416,3 +416,36 @@ export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
   notes:
     "Lugar cerrado tras catorce visitas.",
 };
+
+/**
+ * Los equipos del catálogo de la demo (Fase 25): la estación total de las
+ * poligonales y el nivel de Torre Alameda, con los mismos datos que copian
+ * sus procesos. Su calibración de 2024 muestra el aviso de más de un año.
+ */
+export const EQUIPOS_DEMO = [
+  {
+    kind: "total_station",
+    brand: EQUIPO_POLIGONAL.equipmentBrand,
+    model: EQUIPO_POLIGONAL.equipmentModel,
+    serial: EQUIPO_POLIGONAL.equipmentSerial,
+    calibration_date: EQUIPO_POLIGONAL.equipmentCalibrationDate,
+    angular_precision_seconds: EQUIPO_POLIGONAL.angularPrecisionSeconds,
+    distance_precision_mm: EQUIPO_POLIGONAL.distancePrecisionMm,
+    distance_precision_ppm: EQUIPO_POLIGONAL.distancePrecisionPpm,
+    level_type: null,
+    km_precision_mm: null,
+  },
+  {
+    kind: "level",
+    brand: ASENTAMIENTO_DEMO.equipmentBrand,
+    model: ASENTAMIENTO_DEMO.equipmentModel,
+    serial: ASENTAMIENTO_DEMO.equipmentSerial,
+    calibration_date: ASENTAMIENTO_DEMO.equipmentCalibrationDate,
+    angular_precision_seconds: null,
+    distance_precision_mm: null,
+    distance_precision_ppm: null,
+    level_type: ASENTAMIENTO_DEMO.levelType,
+    km_precision_mm: ASENTAMIENTO_DEMO.kmPrecisionMm,
+  },
+] as const;
+

@@ -20,6 +20,8 @@
 //  - 3 informes: poligonal y nivelación en "Lote catastral", asentamientos en
 //    "Edificio en monitoreo".
 //  - Algunos reference_points para probar el CRUD de la tab Configuración.
+//  - El catálogo de equipos del usuario (Fase 25): los siete aparatos que usan
+//    sus procesos.
 //
 // El "Proyecto de ejemplo" no lo crea el seed: lo crea la aplicación en el
 // primer inicio de sesión (`profiles.demo_seeded_at` queda nulo).
@@ -681,6 +683,55 @@ const LEVEL_AUTOMATICO_RESPALDO = {
   level_type: "automatico",
   km_precision_mm: 2.5,
 };
+
+// El nivel automático de la nivelación «Circuito BM-1»: lee los tres hilos.
+const LEVEL_AUTOMATICO_NIVELACION = {
+  equipment_brand: "Leica",
+  equipment_model: "NA2",
+  equipment_serial: "LNA2-2025-003",
+  equipment_calibration_date: "2025-11-10",
+  level_type: "automatico",
+  km_precision_mm: 0.7,
+};
+
+/**
+ * Los equipos del catálogo del usuario del seed (Fase 25): los que usan sus
+ * procesos, con los mismos datos. Las calibraciones de 2024 muestran el aviso
+ * de más de un año.
+ */
+const EQUIPMENT_CATALOG = [
+  ...[TOTAL_STATION_TERCER_ORDEN, TOTAL_STATION_PRIMER_ORDEN, TOTAL_STATION_INSUFICIENTE].map((e) => ({
+    kind: "total_station",
+    brand: e.equipment_brand,
+    model: e.equipment_model,
+    serial: e.equipment_serial,
+    calibration_date: e.equipment_calibration_date,
+    angular_precision_seconds: e.angular_precision_seconds,
+    distance_precision_mm: e.distance_precision_mm,
+    distance_precision_ppm: e.distance_precision_ppm,
+  })),
+  ...[
+    LEVEL_DIGITAL_TERCER_ORDEN,
+    LEVEL_DIGITAL_MONITOREO,
+    LEVEL_AUTOMATICO_RESPALDO,
+    LEVEL_AUTOMATICO_NIVELACION,
+  ].map((e) => ({
+    kind: "level",
+    brand: e.equipment_brand,
+    model: e.equipment_model,
+    serial: e.equipment_serial,
+    calibration_date: e.equipment_calibration_date,
+    level_type: e.level_type,
+    km_precision_mm: e.km_precision_mm,
+  })),
+];
+
+async function insertEquipmentCatalog(userId) {
+  const { error } = await admin
+    .from("equipment")
+    .insert(EQUIPMENT_CATALOG.map((e) => ({ ...e, user_id: userId })));
+  if (error) throw error;
+}
 
 // ----------------------------------------------------------------------------
 // Definiciones de los procesos
@@ -1406,6 +1457,9 @@ async function main() {
   console.log("Preparando seed de TopoField...");
   const userId = await recreateUser();
   console.log(`  ✓ Usuario recreado: ${EMAIL} (id ${userId})`);
+
+  await insertEquipmentCatalog(userId);
+  console.log(`  ✓ Catálogo de equipos: ${EQUIPMENT_CATALOG.length} equipos`);
 
   const catastral = await createProject(userId, {
     name: "Lote catastral",
