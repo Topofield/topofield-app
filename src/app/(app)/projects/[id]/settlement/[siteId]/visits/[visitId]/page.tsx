@@ -13,6 +13,7 @@ import {
 } from "@/lib/calculations/settlement-book";
 import { summarizeVisit } from "@/lib/calculations/settlement-summary";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
+import { turningPointBlocker } from "@/lib/validators/leveling";
 import {
   formatDateShort,
   formatEquipmentLine,
@@ -95,14 +96,17 @@ export default async function VisitPage({ params }: VisitPageProps) {
   // cierre: bloquea si falla (Fase 18, decisión 5).
   const amarreElevation =
     visit.reference_bm_elevation == null ? null : Number(visit.reference_bm_elevation);
-  const arithmeticCheckOk =
+  const bookResult =
     visit.capture_mode === "book" && data.book.length > 0 && amarreElevation != null
       ? computeVisitBook(
           data.book.map((r) => bookRowInputOf(bookRowOf(r))),
           amarreElevation,
           visit.precision_order,
-        ).arithmeticCheckOk
+        )
       : null;
+  const arithmeticCheckOk = bookResult?.arithmeticCheckOk ?? null;
+  // Un punto de cambio incompleto bloquea el cierre y dice qué fila (Fase 24).
+  const bookTurningPoint = bookResult ? turningPointBlocker(bookResult) : null;
 
   const prev = index > 0 ? allVisits[index - 1] : null;
   const next = allVisits[index + 1] ?? null;
@@ -139,6 +143,7 @@ export default async function VisitPage({ params }: VisitPageProps) {
         toleranceMm={visit.tolerance_mm == null ? null : Number(visit.tolerance_mm)}
         meetsTolerance={visit.meets_tolerance}
         arithmeticCheckOk={arithmeticCheckOk}
+        bookTurningPoint={bookTurningPoint}
         summary={summary}
         previousMean={previous?.mean ?? null}
         rows={rows}

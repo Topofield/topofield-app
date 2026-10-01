@@ -13,11 +13,27 @@ import ExcelJS from "exceljs";
 
 import { formatEquipmentLine } from "@/lib/utils/format";
 
-const ACCENT = "FF0B3D5C";
+/**
+ * Colores de la identidad de la Fase 20, copiados de los tokens del tema claro
+ * de `globals.css` (Fase 24): el Excel no lee CSS y no tiene tema oscuro. Hasta
+ * entonces conservaba el azul y los grises anteriores. Un test compara cada
+ * uno con su token.
+ */
+export const WORKBOOK_COLORS = {
+  /** `--color-ink`: títulos y secciones. */
+  ink: "FF1C2427",
+  /** `--color-ink-2`: etiquetas de los pares clave-valor. */
+  ink2: "FF56636A",
+  /** `--color-sel`: relleno de las cabeceras. */
+  sel: "FFEEF3F2",
+  /** `--color-rule-strong`: borde de las cabeceras. */
+  ruleStrong: "FF838B8C",
+} as const;
+
 const HEADER_FILL: ExcelJS.Fill = {
   type: "pattern",
   pattern: "solid",
-  fgColor: { argb: "FFF2F3F4" },
+  fgColor: { argb: WORKBOOK_COLORS.sel },
 };
 
 /** Decimales por tipo de magnitud, según CLAUDE.md. */
@@ -31,17 +47,17 @@ export const DECIMALS = {
 } as const;
 
 function styleTitle(cell: ExcelJS.Cell): void {
-  cell.font = { bold: true, size: 14, color: { argb: ACCENT } };
+  cell.font = { bold: true, size: 14, color: { argb: WORKBOOK_COLORS.ink } };
 }
 
 function styleSection(cell: ExcelJS.Cell): void {
-  cell.font = { bold: true, size: 11, color: { argb: ACCENT } };
+  cell.font = { bold: true, size: 11, color: { argb: WORKBOOK_COLORS.ink } };
 }
 
 function styleHeader(cell: ExcelJS.Cell): void {
   cell.font = { bold: true };
   cell.fill = HEADER_FILL;
-  cell.border = { bottom: { style: "thin", color: { argb: "FFB0B0B0" } } };
+  cell.border = { bottom: { style: "thin", color: { argb: WORKBOOK_COLORS.ruleStrong } } };
   cell.alignment = { vertical: "middle", wrapText: true };
 }
 
@@ -99,7 +115,7 @@ export function writePairs(
   let row = startRow;
   for (const [label, value] of pairs) {
     sheet.getCell(row, 1).value = label;
-    sheet.getCell(row, 1).font = { color: { argb: "FF6B7280" } };
+    sheet.getCell(row, 1).font = { color: { argb: WORKBOOK_COLORS.ink2 } };
     if (value !== null && value !== undefined) {
       sheet.getCell(row, 2).value = value;
     }

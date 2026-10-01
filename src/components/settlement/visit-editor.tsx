@@ -49,6 +49,7 @@ import { samePointCode } from "@/lib/calculations/leveling";
 import { formatDateOnly, formatTrendDeviation } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import { validateVisitBook } from "@/lib/validators/settlement-book";
+import { turningPointBlocker } from "@/lib/validators/leveling";
 import {
   closeVisitAction,
   saveVisitAction,
@@ -669,6 +670,7 @@ export function VisitEditor({
                   toleranceMm: bookResult.toleranceMm,
                   meetsTolerance: bookResult.meetsTolerance,
                   arithmeticCheckOk: bookResult.arithmeticCheckOk,
+                  turningPoint: turningPointBlocker(bookResult),
                 }
               : null
           }

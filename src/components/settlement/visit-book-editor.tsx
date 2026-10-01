@@ -13,7 +13,7 @@ import type { LibretaRow } from "@/lib/import/leveling";
 import { formatBookClosure } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import { bookIssueMessage } from "@/lib/validators/settlement-book";
-import type { ReadingCaptureIssues } from "@/lib/validators/leveling";
+import { turningPointBlocker, type ReadingCaptureIssues } from "@/lib/validators/leveling";
 import type { LevelingResult } from "@/types/leveling";
 import type { LevelType } from "@/types/project";
 import type { BookIssue, BookRowPayload } from "@/types/settlement";
@@ -130,6 +130,8 @@ export function VisitBookEditor({
       : null;
   });
 
+  // Un punto de cambio incompleto dice qué fila corregir (Fase 24).
+  const turningPoint = result ? turningPointBlocker(result) : null;
   const closure = result
     ? formatBookClosure(result.closureErrorMm, result.toleranceMm, result.meetsTolerance)
     : null;
@@ -179,10 +181,10 @@ export function VisitBookEditor({
           </dl>
         )}
 
-        {result && !result.arithmeticCheckOk && (
+        {result && (turningPoint || !result.arithmeticCheckOk) && (
           <Alert variant="error">
-            La comprobación aritmética no cuadra: ΣV+ − ΣV− no coincide con el
-            desnivel. La visita no podrá cerrarse así.
+            {turningPoint ??
+              "La comprobación aritmética no cuadra: ΣV+ − ΣV− no coincide con el desnivel. La visita no podrá cerrarse así."}
           </Alert>
         )}
         {closure?.status === "out" && (

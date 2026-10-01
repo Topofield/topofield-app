@@ -191,7 +191,8 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Fuera de tolerancia</strong> — procesos calculados que no
-            alcanzan el orden de precisión que ellos mismos declararon.
+            alcanzan el orden de precisión que ellos mismos declararon, y
+            lugares con algún punto en alerta o alarma en una visita abierta.
             Requieren revisión antes del cierre.
           </li>
         </ul>
@@ -199,7 +200,8 @@ export default function ManualPage() {
         <p>
           Debajo, sus proyectos. El selector{" "}
           <strong>Activos / Archivados</strong> filtra la lista. Cada tarjeta
-          indica cuántos procesos tiene el proyecto.
+          indica cuántos procesos tiene el proyecto y cuántos están en curso,
+          cerrados o rechazados.
         </p>
 
         <p>
@@ -430,9 +432,12 @@ export default function ManualPage() {
         <p>
           Mientras el proceso no esté cerrado, su informe lleva la marca{" "}
           <strong>«Borrador — el informe se emite al cerrar el proceso»</strong>,
-          también en el PDF: sirve para revisar antes de cerrar. Debajo, fuera
-          de la impresión, aparecen los informes consolidados que ya lo
-          incluyen y, si está cerrado, un botón para generar uno nuevo con él.
+          también en el PDF: sirve para revisar antes de cerrar. Si se cerró
+          como rechazado, lleva en cambio la marca{" "}
+          <strong>«Rechazado»</strong>: queda como constancia y no entra en
+          informes consolidados. Debajo, fuera de la impresión, aparecen los
+          informes consolidados que ya lo incluyen y, si está cerrado
+          conforme, un botón para generar uno nuevo con él.
         </p>
 
         <p>
@@ -637,9 +642,10 @@ export default function ManualPage() {
 
         <p>
           Los errores de captura se marcan al momento: una distancia de cero o
-          mayor a 1000 m, minutos o segundos fuera del rango 0-59. Un ángulo de
-          0° o 360° genera una advertencia, no un bloqueo: es válido, pero suele
-          indicar un error de tecleo.
+          mayor a 1000 m, minutos o segundos fuera del rango 0-59 —en cada
+          lectura, no solo en el promedio—. Un ángulo de 0° o 360° genera una
+          advertencia, no un bloqueo: es válido, pero suele indicar un error de
+          tecleo.
         </p>
 
         <p>
@@ -960,6 +966,14 @@ export default function ManualPage() {
           queda fuera de la comprobación aritmética y de la compensación: un
           error en su lectura no contamina el resto del recorrido, pero
           tampoco se corrige.
+        </p>
+
+        <p>
+          Si a un punto de cambio le falta la V+ o la V−, la celda lo avisa.
+          Puede guardar la libreta a medias, pero el proceso no se cierra hasta
+          completarla: el cierre dice qué fila, de la ida o de la vuelta, está
+          incompleta. Lo mismo vale para la libreta de una visita de
+          asentamientos.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">

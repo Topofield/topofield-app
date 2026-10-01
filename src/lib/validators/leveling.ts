@@ -17,6 +17,7 @@ import type {
   LevelingType,
   PointType,
   ReadingInput,
+  RunResult,
 } from "@/types/leveling";
 import type { PrecisionOrder } from "@/types/project";
 
@@ -193,6 +194,62 @@ export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
   return issues.some((i) => Object.keys(i.errors).length > 0);
 }
 
+/** Un punto de cambio al que le falta una de sus dos lecturas (Fase 24). */
+export interface IncompleteTurningPoint {
+  /** Fila del recorrido, desde 1. */
+  row: number;
+  missing: "V+" | "V−";
+}
+
+/**
+ * El primer punto de cambio con V+ y sin V−, o con V− y sin V+ (Fase 24).
+ *
+ * Un punto de cambio cierra una armada con su V− y abre la siguiente con su
+ * V+: sin una de las dos la cadena de alturas de instrumento se rompe y las
+ * cotas siguientes salen de una AI equivocada. Una fila sin ninguna de las dos
+ * es captura a medias y no cuenta. La primera y la última fila quedan fuera:
+ * un recorrido abierto puede empezar o terminar en un punto de cambio, que
+ * entonces solo abre o solo cierra.
+ */
+export function findIncompleteTurningPoint(
+  readings: readonly ReadingInput[],
+): IncompleteTurningPoint | null {
+  for (let i = 1; i < readings.length - 1; i++) {
+    const reading = readings[i]!;
+    if (reading.pointType !== "pc") continue;
+    const hasBack = reading.backsight != null;
+    const hasFore = reading.foresight != null;
+    if (hasBack && !hasFore) return { row: i + 1, missing: "V−" };
+    if (hasFore && !hasBack) return { row: i + 1, missing: "V+" };
+  }
+  return null;
+}
+
+/**
+ * Por qué no se puede cerrar una libreta con un punto de cambio incompleto,
+ * nombrando la fila y el recorrido, o `null` (Fase 24). Revisa también la
+ * vuelta, que no pasa por la comprobación aritmética del motor
+ * (`arithmeticCheckOk` es la de la ida).
+ */
+export function turningPointBlocker(
+  result: Pick<LevelingResult, "forward" | "return">,
+): string | null {
+  const runs: [string | null, RunResult][] = result.return
+    ? [
+        ["ida", result.forward],
+        ["vuelta", result.return],
+      ]
+    : [[null, result.forward]];
+  for (const [label, run] of runs) {
+    const found = findIncompleteTurningPoint(run.readings);
+    if (found) {
+      const where = label ? ` de la ${label}` : "";
+      return `El punto de cambio de la fila ${found.row}${where} no tiene ${found.missing}: sin ella la libreta no encadena y no se puede cerrar.`;
+    }
+  }
+  return null;
+}
+
 /**
  * Valida una libreta completa (un recorrido), añadiendo a
  * `validateReadingCapture` el único error que depende de la POSICIÓN de la
@@ -255,6 +312,28 @@ export function validateRunCapture(
       };
     }
 
+    // Punto de cambio incompleto (Fase 24): aviso, no error. Capturar a
+    // medias es legítimo; el cierre lo bloquea con el mismo criterio
+    // (`findIncompleteTurningPoint`), que exime la primera y la última fila.
+    let warnings = issues.warnings;
+    if (
+      reading.pointType === "pc" &&
+      index !== 0 &&
+      index !== lastIndex &&
+      (reading.backsight == null) !== (reading.foresight == null)
+    ) {
+      const side = reading.foresight == null ? "foresight" : "backsight";
+      if (warnings[side] == null) {
+        warnings = {
+          ...warnings,
+          [side]:
+            side === "foresight"
+              ? "Falta la V−: el punto de cambio no cierra su armada."
+              : "Falta la V+: el punto de cambio no abre la armada siguiente.",
+        };
+      }
+    }
+
     if (
       mustEndInBm &&
       index === lastIndex &&
@@ -270,8 +349,8 @@ export function validateRunCapture(
     return {
       errors,
       warnings: balance[index]
-        ? { ...issues.warnings, sightBalance: balance[index] }
-        : issues.warnings,
+        ? { ...warnings, sightBalance: balance[index] }
+        : warnings,
     };
   });
 }
@@ -297,6 +376,14 @@ export function evaluateLevelingClosure(
   result: LevelingResult,
   type: LevelingType,
 ): ClosureEvaluation {
+  // Un punto de cambio incompleto rompe la cadena de la ida o de la vuelta.
+  // Va primero porque dice qué fila corregir (Fase 24), y porque la vuelta no
+  // pasa por la comprobación aritmética de abajo.
+  const turningPoint = turningPointBlocker(result);
+  if (turningPoint) {
+    return { canClose: false, mustReject: false, blocked: true, messages: [turningPoint] };
+  }
+
   // La comprobación aritmética (ΣV+ − ΣV− == desnivel total) es
   // un fallo estructural en los datos, no un problema de precisión: si no
   // cuadra, ningún cierre es confiable y se bloquea sin más.

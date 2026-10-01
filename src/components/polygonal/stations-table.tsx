@@ -73,6 +73,7 @@ function formatCoord(value: number | null): string {
  */
 function AngleReadingsCell({
   station,
+  stationNumber,
   issue,
   readingIssue,
   disabled,
@@ -80,6 +81,8 @@ function AngleReadingsCell({
   onChange,
 }: {
   station: StationDraftState;
+  /** Número de la estación, para nombrar sus lecturas (Fase 24). */
+  stationNumber: number;
   issue?: CaptureIssues;
   readingIssue?: { error?: string; warning?: string };
   disabled?: boolean;
@@ -136,7 +139,14 @@ function AngleReadingsCell({
       {open && (
         <div className="mt-1 flex flex-col gap-1 rounded-md bg-paper p-2">
           {station.readings.map((reading, index) => (
-            <div key={index} className="flex items-center gap-2">
+            // El grupo da contexto a «Grados», «Minutos» y «Segundos» para un
+            // lector de pantalla (Fase 24).
+            <div
+              key={index}
+              role="group"
+              aria-label={`Lectura ${index + 1} de la estación ${stationNumber}`}
+              className="flex items-center gap-2"
+            >
               <span className="w-4 text-xs text-ink-2">{index + 1}</span>
               <AngleInput
                 format={format}
@@ -240,12 +250,14 @@ export function StationsTable({
                       onChange={(e) =>
                         update(i, { pointCode: e.target.value })
                       }
-                      className="w-24"
+                      aria-label={`Código de la estación ${i + 1}`}
+                      className="w-32"
                     />
                   </td>
                   <td className="py-2 pr-3">
                     <AngleReadingsCell
                       station={station}
+                      stationNumber={i + 1}
                       issue={issue}
                       readingIssue={readingIssue(station)}
                       disabled={disabled}
@@ -273,6 +285,7 @@ export function StationsTable({
                                 : (e.target.value as DeflectionDirection),
                           })
                         }
+                        aria-label={`Sentido de la estación ${i + 1}`}
                         className="w-28"
                       />
                     </td>
@@ -285,6 +298,7 @@ export function StationsTable({
                       onChange={(e) =>
                         update(i, { distance: e.target.value })
                       }
+                      aria-label={`Distancia de la estación ${i + 1} (m)`}
                       className="w-28"
                     />
                   </td>
@@ -362,6 +376,7 @@ export function StationsTable({
                   <p className="mb-1 text-xs font-medium text-ink-2">Ángulo</p>
                   <AngleReadingsCell
                     station={station}
+                    stationNumber={i + 1}
                     issue={issue}
                     readingIssue={readingIssue(station)}
                     disabled={disabled}

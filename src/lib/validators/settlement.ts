@@ -183,12 +183,16 @@ export function validateVisitClose(
   points: PointInput[],
   previousVisitDate: string | null,
   siteVisits: readonly SiteVisit[],
-  book: { arithmeticCheckOk: boolean } | null = null,
+  book: { arithmeticCheckOk: boolean; turningPoint?: string | null } | null = null,
 ): VisitCaptureIssues {
   const issues = validateVisitCapture(visit, points, previousVisitDate);
   const messages: string[] = [];
 
-  if (book && !book.arithmeticCheckOk) {
+  // Un punto de cambio incompleto dice qué fila corregir (Fase 24); si no lo
+  // hay, el mensaje genérico de la comprobación aritmética.
+  if (book?.turningPoint) {
+    issues.errors.book = book.turningPoint;
+  } else if (book && !book.arithmeticCheckOk) {
     issues.errors.book =
       "La comprobación aritmética de la libreta no cuadra: ΣV+ − ΣV− no coincide con el desnivel.";
   }

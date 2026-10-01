@@ -19,6 +19,7 @@ import type {
   SettlementReading,
 } from "@/types/settlement";
 import { worst } from "@/lib/calculations/settlement";
+import { countGroupOf, NO_PROCESSES, type ProcessCounts } from "@/lib/process-counts";
 import type { EligibleCandidate } from "@/lib/reports/eligibility";
 import type { Report } from "@/types/report";
 
@@ -122,13 +123,17 @@ export async function getDashboardKpis(
     // «Fuera de tolerancia» no aplica a una visita: lo equivalente es que
     // algún lugar tenga al menos un punto en alerta o alarma (ver JSDoc). Se
     // trae el `site_id` de cada lectura afectada (no `head: true`, hace falta
-    // la fila) y se reduce a lugares únicos abajo.
+    // la fila) y se reduce a lugares únicos abajo. Solo en visitas abiertas
+    // de lugares activos (Fase 24): como en poligonales y nivelaciones, el KPI
+    // pide revisar lo que falta cerrar, no lo ya cerrado.
     supabase
       .from("settlement_readings")
       .select(
-        "settlement_visits!inner(site_id, sites!inner(projects!inner(status)))",
+        "settlement_visits!inner(site_id, status, sites!inner(status, projects!inner(status)))",
       )
       .in("alert_status", ["alert", "alarm"])
+      .eq("settlement_visits.status", "calculated")
+      .eq("settlement_visits.sites.status", "active")
       .eq("settlement_visits.sites.projects.status", "active"),
   ]);
   if (calculatedVisitsError) throw calculatedVisitsError;
@@ -190,26 +195,30 @@ export async function getDashboardProjects(
  * del lugar completo, no cada visita individual.
  *
  * Un proyecto sin procesos no aparece en el resultado; quien consulte debe
- * tratar la ausencia como 0.
+ * tratar la ausencia como `NO_PROCESSES`.
  */
 export async function getProcessCountsByProject(
   supabase: Client,
-): Promise<Record<string, number>> {
+): Promise<Record<string, ProcessCounts>> {
   const [polygonal, leveling, sites] = await Promise.all([
-    supabase.from("polygonal_processes").select("project_id"),
-    supabase.from("leveling_processes").select("project_id"),
-    supabase.from("sites").select("project_id").eq("kind", "settlement"),
+    supabase.from("polygonal_processes").select("project_id, status"),
+    supabase.from("leveling_processes").select("project_id, status"),
+    supabase.from("sites").select("project_id, status").eq("kind", "settlement"),
   ]);
 
   for (const { error } of [polygonal, leveling, sites]) {
     if (error) throw error;
   }
 
-  const counts: Record<string, number> = {};
+  // Por estado desde la Fase 24: la tarjeta distingue en curso, cerrados y
+  // rechazados.
+  const counts: Record<string, ProcessCounts> = {};
   for (const rows of [polygonal.data, leveling.data, sites.data]) {
-    for (const { project_id } of rows ?? []) {
+    for (const { project_id, status } of rows ?? []) {
       if (project_id == null) continue;
-      counts[project_id] = (counts[project_id] ?? 0) + 1;
+      const current = counts[project_id] ?? { ...NO_PROCESSES };
+      current[countGroupOf(status)] += 1;
+      counts[project_id] = current;
     }
   }
   return counts;

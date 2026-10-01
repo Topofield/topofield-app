@@ -6,6 +6,7 @@ import {
   crearProyectoDemo,
   faltaProyectoDemo,
 } from "@/lib/demo/crear-proyecto-demo";
+import { NO_PROCESSES } from "@/lib/process-counts";
 import { createClient } from "@/lib/supabase/server";
 import {
   getDashboardKpis,
@@ -111,7 +112,7 @@ export default async function DashboardPage({
               <ProjectCard
                 key={project.id}
                 project={project}
-                processCount={processCounts[project.id] ?? 0}
+                counts={processCounts[project.id] ?? NO_PROCESSES}
               />
             ))}
           </div>

@@ -1,7 +1,7 @@
 import { Alert, Card, StatusIndicator } from "@/components/design-system";
 import { useMemo } from "react";
 import { compareHomologousPoints } from "@/lib/calculations/leveling";
-import { evaluateLevelingClosure } from "@/lib/validators/leveling";
+import { evaluateLevelingClosure, turningPointBlocker } from "@/lib/validators/leveling";
 import {
   POINT_TYPE_LABELS,
   RUN_TYPE_LABELS,
@@ -38,18 +38,25 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
   const closure = evaluateLevelingClosure(result, type);
   const arithmeticDifference = result.sumBacksights - result.sumForesights;
   const homologous = useMemo(() => compareHomologousPoints(result), [result]);
+  const turningPoint = turningPointBlocker(result);
 
   return (
     <div className="flex flex-col gap-6">
       {/* Bloque 1: comprobación aritmética. */}
       <Card title="Comprobación aritmética">
         <div className="flex flex-col gap-4">
-          {!result.arithmeticCheckOk && (
-            <Alert variant="error" title="La comprobación aritmética no cuadra">
-              ΣV+ − ΣV− no coincide con el desnivel total del recorrido: hay un
-              error de suma o de traslado de datos. Revisa la libreta antes de
-              continuar.
+          {turningPoint ? (
+            <Alert variant="error" title="Hay un punto de cambio incompleto">
+              {turningPoint}
             </Alert>
+          ) : (
+            !result.arithmeticCheckOk && (
+              <Alert variant="error" title="La comprobación aritmética no cuadra">
+                ΣV+ − ΣV− no coincide con el desnivel total del recorrido: hay un
+                error de suma o de traslado de datos. Revisa la libreta antes de
+                continuar.
+              </Alert>
+            )
           )}
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
             <div>

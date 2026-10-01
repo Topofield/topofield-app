@@ -259,6 +259,8 @@ export async function savePolygonalProcessAction(
         angleMin: st.angleMin,
         angleSec: st.angleSec,
         distance: st.horizontalDistance,
+        // Cada lectura, que es lo que se guarda (Fase 24).
+        readings: st.readings,
       },
       expectStationCapture(payload.type, i, payload.stations.length),
     ),
