@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-30 · Fase 24 cerrada · 899 tests y 48
+**Última actualización:** 2026-09-30 · Fase 25 cerrada · 921 tests y 59
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -78,6 +78,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 22 | El proceso en una pantalla | cerrada |
 | 23 | Integridad | cerrada |
 | 24 | Pulido | cerrada |
+| 25 | Catálogo de equipos | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -175,6 +176,7 @@ src/
 │   ├── (app)/               pantallas autenticadas
 │   │   ├── dashboard/
 │   │   ├── manual/          manual de usuario (§ 12)
+│   │   ├── equipos/         catálogo de equipos del usuario (Fase 25)
 │   │   ├── projects/new/    alta de proyecto
 │   │   └── projects/[id]/
 │   │       ├── polygonal/new/, polygonal/[pid]/   alta; pestañas Proceso · Informe (Fase 22) y export/ (Excel)
@@ -191,6 +193,7 @@ src/
 │   ├── auth/                formulario de registro
 │   ├── design-system/       componentes propios reutilizables
 │   ├── process/             la pantalla común de un proceso y su informe (Fase 22)
+│   ├── equipment/           catálogo de equipos: página, selector de los formularios y su contexto (Fase 25)
 │   ├── navigation/          guarda de cambios sin guardar (Fase 22)
 │   ├── polygonal/           editor de poligonales
 │   ├── leveling/            editor de nivelación, veredicto y perfil
@@ -208,6 +211,7 @@ src/
 │   ├── errors/              errores de la base traducidos para el usuario (Fase 22)
 │   ├── auth/                mensajes de error de autenticación
 │   ├── theme.ts, theme-server.ts   tema claro y oscuro por cookie (Fase 20)
+│   ├── equipment.ts         del catálogo de equipos a los campos de los formularios (Fase 25)
 │   ├── process-list.ts      filtrado y orden del listado del hub (los tres módulos)
 │   ├── process-status.ts    tonos de estado de procesos, visitas y lugares
 │   ├── supabase/            clientes y consultas
@@ -260,6 +264,7 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (con el formulario completo, Fase 18), `saveVisitAction` (con libreta: ver § 4), `closeVisitAction`, `deleteVisitAction` (solo la última y abierta, Fase 22) |
 | `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction` (C0 y coordenadas fijas con lecturas cerradas, Fase 23), `deletePointAction`, `retirePointAction`, `undoRetirementAction` (Fase 11) |
 | `(app)/projects/[id]/reports/actions.ts` | `createReportAction`, `deleteReportAction` |
+| `(app)/equipos/actions.ts` | `createEquipmentAction`, `updateEquipmentAction`, `deleteEquipmentAction` (Fase 25) |
 
 ### Guardados en una transacción (Fase 23)
 
@@ -361,22 +366,37 @@ poder testearlos sin levantar el servidor. Dos detalles que se rompen fácil:
 
 ## 4. Modelo de datos
 
-Once tablas en `public`:
+Quince tablas en `public`:
 
 ```
 profiles         perfil del usuario (1:1 con auth.users)
+equipment        catálogo de equipos del usuario (Fase 25)
 projects         proyecto topográfico
 ├── reference_points      puntos de coordenadas conocidas
 ├── sites                 lugar de monitoreo (entidad transversal, Fase 5)
 │   ├── settlement_points     catálogo de puntos de control
 │   └── settlement_visits     visitas sucesivas en el tiempo
-│       └── settlement_readings   lectura por punto en cada visita
+│       ├── settlement_readings       lectura por punto en cada visita
+│       └── settlement_book_readings  libreta de nivelación de la visita (Fase 18)
 ├── polygonal_processes   levantamiento poligonal — site_id NOT NULL
 │   └── polygonal_stations    estaciones del levantamiento
+│       └── polygonal_angle_readings  lecturas de cada ángulo (Fase 7)
 ├── leveling_processes    levantamiento de nivelación — site_id NOT NULL
 │   └── leveling_readings     lecturas de la libreta
 └── reports               informes emitidos (Fase 6)
 ```
+
+**`equipment` es una plantilla, no una referencia (Fase 25).** Guarda las
+estaciones totales y los niveles de cada usuario; elegir uno en un formulario
+**copia** sus valores en las columnas `equipment_*` y de precisión del
+proceso o de la visita, que siguen siendo la fuente del informe y siguen bajo
+la inmutabilidad. Ningún proceso referencia `equipment`, así que corregir o
+borrar un equipo no cambia nada medido ni informado —el agujero por el que la
+Fase 8 descartó una tabla referenciada por id—. Las escalas de sus columnas
+son las de los procesos; un CHECK deja vacíos los campos del otro tipo y un
+índice único sobre marca, modelo y serie (sin mayúsculas ni espacios) evita
+el mismo aparato dos veces. `lib/equipment.ts` convierte entre la fila y los
+campos de los formularios.
 
 **`reports` no guarda los datos del informe**, solo qué trabajos incluye y en
 qué orden (`included_processes`, JSONB). Se aparta del `§3.2` del PRD principal
@@ -607,10 +627,10 @@ insuficiente» en § 6.
 
 ### Row Level Security
 
-Las diez tablas tienen RLS activo, con políticas para SELECT, INSERT, UPDATE y
-DELETE.
+Las quince tablas tienen RLS activo, con políticas para las operaciones que
+admiten.
 
-`projects` filtra por `user_id = auth.uid()`. Las tablas hijas heredan la
+`projects` y `equipment` (Fase 25) filtran por `user_id = auth.uid()`. Las tablas hijas heredan la
 propiedad mediante `EXISTS` sobre el proyecto contenedor:
 
 ```sql
@@ -1135,7 +1155,9 @@ Tolerancia angular = K·√n, donde n es el número de ángulos medidos. Nivelac
 usa su propio coeficiente, `LEVELING_TOLERANCE_K` (3/6/12/24 mm, tolerancia
 K·√D en km) — ver § 4 y § 7 del PRD principal. La discrepancia entre ida y
 vuelta se contrasta contra K·√D·√2, con D la menor de las dos distancias; si
-a un recorrido le faltan, no se evalúa (Fase 23).
+a un recorrido le faltan, no se evalúa (Fase 23). `CALIBRATION_MAX_MONTHS`
+(12) es la antigüedad de la calibración a partir de la cual el formulario de
+equipo avisa (Fase 25).
 
 ### Aviso de equipo insuficiente (Fase 8)
 
@@ -1374,6 +1396,17 @@ La regla de las lecturas existe aparte porque el ángulo de la estación es el
 1′05″ y la regla de 0-59 nunca la veía. El editor y la Server Action pasan las
 lecturas crudas (`readingsDraft`) al mismo validador.
 | Ángulo de 0° o 360° exacto | Advertencia, no bloquea |
+
+### El equipo del catálogo (Fase 25)
+
+`validateEquipmentItem` (`validators/equipment.ts`) valida un equipo antes de
+guardarlo en el catálogo, en la página y en las Server Actions: marca o
+modelo; calibración válida y no futura; precisiones positivas —o no negativas
+los dos términos de distancia— que quepan en su columna. Solo mira los campos
+de su tipo. `calibrationOverdue` dice si una calibración tiene más de
+`CALIBRATION_MAX_MONTHS` a una fecha de referencia: la de la visita en
+asentamientos, hoy en poligonal y nivelación. Avisa, no bloquea. El equipo que
+se teclea en un proceso sigue sin validarse (fuera del alcance de la fase).
 
 ### Capa 2 — cierre
 
@@ -1620,6 +1653,13 @@ tolerancias y los tipos del proyecto, y `StatusIndicator` el tipo de los
 niveles del semáforo. Son controles de formulario del dominio que se
 quedaron aquí porque los usan los tres módulos.
 
+El catálogo de equipos (Fase 25) **no** entró en los fieldsets: ganaron solo
+un `order` opcional y dos huecos, `header` y `footer`. El selector, el botón
+«Guardar en el catálogo», la acción que llama y el aviso de calibración viven
+en `components/equipment/` (`TotalStationEquipment`, `LevelEquipment`), y el
+catálogo llega por un contexto que carga el layout de las pantallas
+autenticadas.
+
 Es un criterio verificable leyendo los imports, y explica la separación que ya
 existe: `Breadcrumbs` recibe `{ label, href }[]` y sirve a cualquier jerarquía;
 `ProcessTable` importa `PolygonalProcess` y conoce estados y tolerancias.
@@ -1749,7 +1789,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-899 tests en 61 archivos, Vitest, entorno `node` **sin jsdom**. Además, 48
+921 tests en 64 archivos, Vitest, entorno `node` **sin jsdom**. Además, 59
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -1795,6 +1835,9 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
 | `components/polygonal/stations-table.test.ts` | 3 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24) |
 | `lib/export/workbook-colors.test.ts` | 4 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24) |
+| `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
+| `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
+| `components/equipment/equipment-picker.test.ts` | 5 | El selector ofrece solo los equipos de su tipo, no duplica lo guardado, avisa de la calibración y no aparece en un cerrado (Fase 25) |
 | `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` (fuera del manual) cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
 | `lib/utils/parse.test.ts` | 10 | **Coma o punto decimal**: signo, espacios, estados intermedios (`1,`, `,5`); vacío es `null` y lo inválido también, nunca `NaN`; separador de miles, exponentes y letras inválidos (Fase 20) |
 | `components/design-system/number-input.test.ts` | 8 | `NumberInput`: texto con teclado decimal, lo inválido se marca en vez del error del validador; el contador de celdas inválidas; `DmsInput` con segundos decimales (Fase 20) |
@@ -1824,6 +1867,7 @@ que se deshace, así que no depende del seed ni lo toca.
 |---|---|---|
 | `guardados_atomicos.test.sql` | 28 | Las cuatro funciones de guardado: guardan; una carga que falla a mitad no cambia la cabecera ni las filas de antes; la georreferenciación mueve un cerrado y rechaza una estación ajena; la propagación no toca otro lugar; otro usuario no escribe con ninguna de las cuatro (RLS) |
 | `c0_con_lecturas_cerradas.test.sql` | 7 | Con lectura cerrada, la C0 y las coordenadas no cambian y el código y la ubicación sí; reescribir el mismo valor pasa; sin ella, todo cambia |
+| `catalogo_equipos.test.sql` | 11 | Alta con el dueño por defecto; campos del otro tipo, sin marca ni modelo y el mismo aparato rechazados; editar o borrar un equipo no cambia el proceso que lo copió; otro usuario no ve ni escribe (Fase 25) |
 | `rango_lecturas.test.sql` | 7 | El CHECK de las lecturas de ángulo: los límites y 360°00′00″ exacto se guardan; 65″, 60′, 360°00′01″, 361° y segundos negativos no, y no se pierde lo de antes (Fase 24) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 
@@ -2376,7 +2420,10 @@ HTTP con sesión de navegador (12 KB, tres hojas, catálogo y cotas correctos).
 override deja de hacer falta porque el padre se actualiza, se puede quitar y
 comprobar con `npm audit` que sigue en cero.
 
-**No hay catálogo de equipos reutilizable entre procesos (Fase 8, diferido a
+**Cerrado en la Fase 25 — el catálogo de equipos**, como plantilla: el
+proceso copia los valores y no referencia el catálogo, así que editarlo no
+cambia ningún informe (§ 4). El texto original queda como registro. **No hay
+catálogo de equipos reutilizable entre procesos (Fase 8, diferido a
 propósito).** Cada poligonal, cada nivelación y cada visita de asentamiento
 recaptura marca, modelo, serie, fecha de calibración y precisión del
 instrumento, aunque sea el mismo aparato físico que el proceso anterior. Se
@@ -2695,11 +2742,11 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-30):** la nube tiene aplicadas las **veintiséis**
-migraciones, hasta `20260930040000_rango_lecturas_angulo` (Fase 24), empujada
-antes del merge de su PR, con 0 lecturas fuera de rango contadas antes.
-Verificado con consultas al esquema: el CHECK `polygonal_angle_readings_dms_range`
-activo. Las de la Fase 23 se verificaron al aplicarse: El Verjón con su
+**Estado actual (2026-09-30):** la nube tiene aplicadas las **veintisiete**
+migraciones, hasta `20260930050000_catalogo_equipos` (Fase 25), empujada antes
+del merge de su PR: la tabla `equipment` con RLS, sus cuatro políticas, el
+índice único y sus CHECK, y el catálogo vacío. La de la Fase 24 dejó el CHECK
+`polygonal_angle_readings_dms_range` activo. Las de la Fase 23 se verificaron al aplicarse: El Verjón con su
 veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `SECURITY INVOKER` y sin `EXECUTE` para `anon`, sus dos triggers activos,
 `reports` sin política de `UPDATE` y cero procesos calculados con el veredicto

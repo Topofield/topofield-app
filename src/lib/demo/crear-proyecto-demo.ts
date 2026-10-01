@@ -16,6 +16,7 @@ import type { IncludedProcess } from "@/types/report";
 import { coverOf } from "@/lib/reports/cover";
 import {
   ASENTAMIENTO_DEMO,
+  EQUIPOS_DEMO,
   NIVELACION_VERJON,
   nivelacionTramo2,
   PROCESOS_DEMO,
@@ -23,6 +24,7 @@ import {
   REFERENCIAS_DEMO,
 } from "./fixtures";
 import { insertarAsentamiento } from "./insertar-asentamiento";
+import { insertarEquipos } from "./insertar-equipos";
 import { insertarInforme } from "./insertar-informe";
 import { insertarNivelacion } from "./insertar-nivelacion";
 import { insertarPoligonal } from "./insertar-poligonal";
@@ -245,6 +247,10 @@ export async function crearProyectoDemo(
       informe.included,
     );
   }
+
+  // El catálogo de equipos, al final y sin que nada de la demo dependa de él
+  // (Fase 25): si fallara, el proyecto ya está creado.
+  await insertarEquipos(supabase, userId, EQUIPOS_DEMO);
 
   return true;
 }

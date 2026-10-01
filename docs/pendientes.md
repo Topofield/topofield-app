@@ -23,7 +23,11 @@ nivelación, veredicto de la abierta con vuelta).
 El 2026-09-30, tras la revisión de pendientes, el usuario pidió una **Fase 24
 de pulido** con la deuda visible de la § 11 y lo que encontró la puesta al día
 de la documentación: «Pulido (Fase 24)», al final. La fase se abrió y se
-cerró ese mismo día ([`prds/23-pulido.md`](./prds/23-pulido.md)). No queda
+cerró ese mismo día ([`prds/23-pulido.md`](./prds/23-pulido.md)).
+
+Ese mismo día el usuario pidió el **catálogo de equipos**, diferido desde la
+Fase 8: «Catálogo de equipos (Fase 25)», al final, cerrada ese mismo día
+([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)). No queda
 ninguna petición abierta.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
@@ -431,3 +435,15 @@ llega ya normalizado. Hay que confirmarlo en el código.
 
 Una nivelación se guarda con un punto de cambio sin V−; solo la comprobación
 aritmética impide cerrarla. Decidir si es captura parcial legítima o un hueco.
+
+## Catálogo de equipos (Fase 25)
+
+> **Resuelta en la Fase 25** ([`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md)).
+> Se conserva el texto de la petición como registro.
+
+Pedida el 2026-09-30 al revisar los pendientes: «sí, prepara el PRD del
+catálogo de equipos». Viene de la § 11 de la doc técnica: cada poligonal,
+nivelación y visita recaptura marca, modelo, serie, calibración y precisión
+del mismo aparato. La Fase 8 lo difirió porque una tabla referenciada por id
+cambiaría en silencio el equipo de los informes cerrados; se reabre con el
+congelado resuelto: el catálogo es una plantilla y el proceso copia.

@@ -34,7 +34,8 @@ La aplicación está publicada en
 9. [Trabajo en campo](#9-trabajo-en-campo)
 10. [Informes](#10-informes)
 11. [Exportar a Excel](#11-exportar-a-excel)
-12. [Preguntas frecuentes](#12-preguntas-frecuentes)
+12. [El catálogo de equipos](#12-el-catálogo-de-equipos)
+13. [Preguntas frecuentes](#13-preguntas-frecuentes)
 
 ---
 
@@ -1346,7 +1347,36 @@ falta.
 
 ---
 
-## 12. Preguntas frecuentes
+## 12. El catálogo de equipos
+
+![Catálogo de equipos](../../public/manual/31-equipos.png)
+
+**Equipos**, en la cabecera, guarda sus estaciones totales y sus niveles para
+no teclearlos en cada proceso. Cada equipo lleva marca, modelo, número de
+serie, fecha de calibración y precisión: angular y de distancia en una
+estación total; tipo y desviación típica en un nivel. Cada sección tiene
+**Agregar**, y cada equipo **Editar** y **Eliminar**.
+
+En el formulario de equipo de cada poligonal, nivelación y visita:
+
+- **Tomar del catálogo** copia los datos del equipo elegido en los campos, que
+  siguen editables.
+- **Guardar en el catálogo** guarda lo que ha tecleado. Si el mismo aparato
+  —misma marca, modelo y serie— ya está, el botón dice «Ya está en el
+  catálogo».
+
+> **El catálogo es una plantilla.** Cada proceso guarda su propia copia del
+> equipo: corregir o eliminar un equipo del catálogo no cambia ningún
+> proceso, visita ni informe ya hecho.
+
+**Calibración de más de un año.** La lista y el formulario avisan cuando la
+fecha de calibración tiene más de 12 meses: a la fecha de la visita en
+asentamientos, a hoy en poligonal y nivelación. Es un aviso; el proceso se
+guarda igual.
+
+---
+
+## 13. Preguntas frecuentes
 
 **La aplicación se ve oscura (o clara). ¿Cómo la cambio?**
 Con el icono de la cabecera: **Sistema**, **Claro** u **Oscuro** (§ 2). Con
@@ -1375,7 +1405,8 @@ En cada proceso, no en el proyecto: cada poligonal, cada nivelación y cada
 visita de asentamiento declara los suyos, en su propia configuración. Un mismo
 proyecto puede así tener una poligonal de tercer orden medida con una estación
 total y, meses después, una red de control de primer orden medida con otra —
-cada una con el instrumento con que realmente se trabajó.
+cada una con el instrumento con que realmente se trabajó. Si es el de siempre,
+tómelo del catálogo de equipos (§ 12).
 
 **Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?**
 Sí, al recalcularlo. Uno cerrado conserva su veredicto original, porque es

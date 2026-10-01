@@ -100,6 +100,14 @@ export const SIGHT_BALANCE_LIMIT_M: Record<PrecisionOrder, number> = {
 export const MIDDLE_WIRE_TOLERANCE_M = 0.002;
 
 /**
+ * Antigüedad de la calibración a partir de la cual el formulario de equipo
+ * avisa (Fase 25). Doce meses es la revisión periódica habitual de un
+ * instrumento topográfico; la ISO 17123 no fija un plazo. Avisa, no bloquea:
+ * la fecha la juzga el topógrafo.
+ */
+export const CALIBRATION_MAX_MONTHS = 12;
+
+/**
  * Tolerancia de cierre de nivelación en milímetros: K·√D_km.
  *
  * IMPORTANTE: `distanceKm` es la longitud del recorrido en UN SOLO SENTIDO,

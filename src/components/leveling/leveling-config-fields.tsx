@@ -1,9 +1,9 @@
 import {
   Input,
-  LevelFieldset,
   PrecisionOrderSelect,
   Select,
 } from "@/components/design-system";
+import { LevelEquipment } from "@/components/equipment/equipment-picker";
 import {
   EMPTY_LEVEL,
   type LevelFields,
@@ -105,7 +105,7 @@ export function LevelingConfigFields({
         disabled={disabled}
         onChange={(v) => set("precisionOrder", v)}
       />
-      <LevelFieldset
+      <LevelEquipment
         value={value.level}
         onChange={(v) => set("level", v)}
         order={value.precisionOrder}

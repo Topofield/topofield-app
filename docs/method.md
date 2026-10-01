@@ -34,6 +34,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 22 | El proceso en una pantalla | [`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md) | cerrada |
 | 23 | Integridad | [`prds/22-integridad.md`](./prds/22-integridad.md) | cerrada |
 | 24 | Pulido | [`prds/23-pulido.md`](./prds/23-pulido.md) | cerrada |
+| 25 | Catálogo de equipos | [`prds/24-catalogo-equipos.md`](./prds/24-catalogo-equipos.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -547,6 +548,34 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 25 — Catálogo de equipos (2026-09-30)
+
+Cada usuario da de alta sus estaciones totales y sus niveles en la página
+«Equipos» y los elige en los seis formularios de equipo, o guarda en el
+catálogo lo que está tecleando. El catálogo es una plantilla: el proceso copia
+los valores y no lo referencia, así que corregirlo no cambia ningún informe
+—la condición con la que la Fase 8 lo había diferido—. Aviso de calibración a
+más de un año. 921 tests y 59 pruebas de base. Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una decisión diferida se reabre con la condición que la difirió.** La § 11
+  decía «con el congelado resuelto, no solo con menos tecleo»; plantearlo así
+  dio la primera pregunta al usuario y el diseño entero.
+- **Lo que necesitan muchos formularios va mejor en un contexto que en
+  props.** El catálogo hacía falta en seis formularios a través de dos
+  componentes de configuración; el layout lo carga una vez, y las acciones,
+  que ya revalidan el layout, lo mantienen fresco.
+- **Una inserción idempotente en la demo tiene que mirar qué sobrevive a un
+  borrado.** `TRUNCATE projects` no vacía `equipment`: regenerar la demo
+  habría chocado con el índice único. Se insertan solo los equipos que faltan.
+- **Un enlace más en la cabecera se nota primero en el teléfono.** No hubo
+  desborde medible, pero la palabra del logo se pegaba a los enlaces y
+  «Cerrar sesión» partía línea: solo la captura lo mostró.
+- **Las cifras de la doc técnica caducan en silencio**: «once tablas» y «diez
+  tablas con RLS» llevaban varias fases sin ser ciertas (hay quince). Al
+  añadir una tabla se recuenta.
 
 ### Cierre Fase 24 — Pulido (2026-09-30)
 

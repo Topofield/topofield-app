@@ -2150,8 +2150,48 @@ export default function ManualPage() {
         </p>
       </Seccion>
 
-      {/* ── 10. Preguntas frecuentes ───────────────────────────────────── */}
-      <Seccion id="faq" titulo="12. Preguntas frecuentes">
+      <Seccion id="equipos" titulo="12. El catálogo de equipos">
+        <Captura {...CAPTURAS.equipos} />
+
+        <p>
+          <strong>Equipos</strong>, en la cabecera, guarda sus estaciones
+          totales y sus niveles para no teclearlos en cada proceso. Cada equipo
+          lleva marca, modelo, número de serie, fecha de calibración y
+          precisión: angular y de distancia en una estación total; tipo y
+          desviación típica en un nivel. Cada sección tiene{" "}
+          <strong>Agregar</strong>, y cada equipo <strong>Editar</strong> y{" "}
+          <strong>Eliminar</strong>.
+        </p>
+
+        <p>En el formulario de equipo de cada poligonal, nivelación y visita:</p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Tomar del catálogo</strong> copia los datos del equipo
+            elegido en los campos, que siguen editables.
+          </li>
+          <li>
+            <strong>Guardar en el catálogo</strong> guarda lo que ha tecleado.
+            Si el mismo aparato —misma marca, modelo y serie— ya está, el botón
+            dice «Ya está en el catálogo».
+          </li>
+        </ul>
+
+        <Nota titulo="El catálogo es una plantilla">
+          Cada proceso guarda su propia copia del equipo: corregir o eliminar
+          un equipo del catálogo no cambia ningún proceso, visita ni informe
+          ya hecho.
+        </Nota>
+
+        <p>
+          <strong>Calibración de más de un año.</strong> La lista y el
+          formulario avisan cuando la fecha de calibración tiene más de 12
+          meses: a la fecha de la visita en asentamientos, a hoy en poligonal y
+          nivelación. Es un aviso; el proceso se guarda igual.
+        </p>
+      </Seccion>
+
+      {/* ── 13. Preguntas frecuentes ───────────────────────────────────── */}
+      <Seccion id="faq" titulo="13. Preguntas frecuentes">
         <dl className="flex flex-col gap-5">
           {PREGUNTAS.map((p) => (
             <div key={p.pregunta}>

@@ -334,6 +334,11 @@ await page.goto(`${BASE}/projects/${proyecto}/polygonal/${cerrado}?tab=informe`,
 });
 await capturar("30-informe-del-proceso", { fullPage: true });
 
+// El catálogo de equipos (Fase 25): los del seed y la demo, dos con el aviso
+// de calibración de más de un año.
+await page.goto(`${BASE}/equipos`, { waitUntil: "networkidle" });
+await capturar("31-equipos", { fullPage: true });
+
 // Campo
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUntil: "networkidle" });
