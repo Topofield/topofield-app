@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-09-30 · Fase 23 cerrada · 871 tests y 41
+**Última actualización:** 2026-09-30 · Fase 24 cerrada · 899 tests y 48
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -77,6 +77,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 21 | La demo con las carteras reales | cerrada |
 | 22 | El proceso en una pantalla | cerrada |
 | 23 | Integridad | cerrada |
+| 24 | Pulido | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -414,7 +415,10 @@ principal» original; el relleno desactivó el trigger de inmutabilidad de
 ### Convenciones que gobiernan el esquema
 
 **Los ángulos se almacenan en tres columnas** (`*_deg`, `*_min`, `*_sec`), nunca
-como decimal. La conversión a decimal ocurre solo dentro del motor de cálculo.
+como decimal. Desde la Fase 24, un CHECK en `polygonal_angle_readings` exige
+grados de 0 a 359, minutos de 0 a 59 y segundos en [0, 60), o 360°00′00″
+exacto —el redondeo de 359.99999° en grados decimales—: la lectura cruda se
+guardaba tal cual, y 90°00′65″ entraba con 65 segundos. La conversión a decimal ocurre solo dentro del motor de cálculo.
 Es lo que registra el topógrafo en su cartera, y evita pérdida por redondeo en
 la ida y vuelta.
 
@@ -1362,7 +1366,13 @@ la posición de la estación.
 | Distancia ≤ 0 o > 1000 m | Error, bloquea |
 | Distancia obligatoria ausente | Error, bloquea |
 | Minutos o segundos fuera de 0-59 | Error, bloquea |
+| Una lectura con grados fuera de 0-359 (salvo 360°00′00″ exacto), minutos o segundos fuera de 0-59, o grados y minutos con decimales (`readingDmsError`, Fase 24) | Error, bloquea: «Lectura N: …» |
 | Ángulo obligatorio incompleto | Error, bloquea |
+
+La regla de las lecturas existe aparte porque el ángulo de la estación es el
+**promedio**, que llega normalizado: una lectura de 65″ se promediaba como
+1′05″ y la regla de 0-59 nunca la veía. El editor y la Server Action pasan las
+lecturas crudas (`readingsDraft`) al mismo validador.
 | Ángulo de 0° o 360° exacto | Advertencia, no bloquea |
 
 ### Capa 2 — cierre
@@ -1393,6 +1403,13 @@ rechazadas. La abierta **sin vuelta** se cierra en cuanto está calculada: no
 hay contra qué juzgarla. La abierta **con vuelta** se juzga desde la Fase 23
 por la discrepancia: sin distancias en la ida o en la vuelta no hay veredicto
 y el cierre se bloquea; fuera de T·√2, solo rechazado.
+Antes que cualquier veredicto, un **punto de cambio incompleto** —con V+ y sin
+V−, o al revés, fuera de la primera y la última fila— bloquea el cierre con un
+mensaje que nombra la fila y el recorrido (`turningPointBlocker`, Fase 24). Va
+primero porque dice qué corregir, y porque **la vuelta no pasa por la
+comprobación aritmética**: `computeLeveling` devuelve la de la ida. En la
+captura es solo un aviso en la celda (`validateRunCapture`): guardar a medias
+es legítimo. La libreta de la visita usa las mismas funciones.
 `levelingProcessVerdict` guarda ese veredicto en `meets_tolerance` —lo leen el
 hub, el dashboard, el resumen del informe y `deriveLevelingCloseStatus`—, y
 `discrepancy_tolerance_mm` y `meets_discrepancy` guardan la discrepancia con
@@ -1732,7 +1749,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-871 tests en 57 archivos, Vitest, entorno `node` **sin jsdom**. Además, 41
+899 tests en 61 archivos, Vitest, entorno `node` **sin jsdom**. Además, 48
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -1741,9 +1758,9 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/calculations/leveling.test.ts` | 80 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 22 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16) |
-| `lib/validators/polygonal.test.ts` | 66 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15) |
+| `lib/validators/polygonal.test.ts` | 71 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24) |
 | `lib/validators/settlement.test.ts` | 45 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0 o las coordenadas, a la escala de la base (Fase 23) |
-| `lib/validators/leveling.test.ts` | 46 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23) |
+| `lib/validators/leveling.test.ts` | 53 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24) |
 | `lib/calculations/polygonal.test.ts` | 40 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
 | `lib/utils/format.test.ts` | 30 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22) |
@@ -1761,7 +1778,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/export/settlement-workbook.test.ts` | 15 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18) |
 | `lib/calculations/settlement-book.test.ts` | 18 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18); el amarre no se compensa y las intermedias conservan su acumulado (Fase 19) |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
-| `lib/validators/settlement-book.test.ts` | 13 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18) |
+| `lib/validators/settlement-book.test.ts` | 14 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18); el punto de cambio incompleto bloquea con su fila (Fase 24) |
 | `lib/calculations/settlement-summary.test.ts` | 10 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, peor distorsión `1/∞`, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
 | `components/leveling/readings-table.test.ts` | 3 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18); una fila sin V+ ni V− no hereda la cota del punto anterior (Fase 22) |
@@ -1774,6 +1791,10 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/reports/including.test.ts` | 2 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22) |
 | `lib/reports/leveling-report.test.ts` | 5 | La sección de nivelación con vuelta: la abierta sin filas de cierre, con su discrepancia y «fuera de tolerancia»; la cerrada con los dos; el resumen de precisiones de cada una (Fase 23) |
 | `lib/reports/cover.test.ts` | 2 | La portada del informe sale de `cover`, no del proyecto (Fase 23) |
+| `lib/reports/state.test.ts` | 4 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24) |
+| `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
+| `components/polygonal/stations-table.test.ts` | 3 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24) |
+| `lib/export/workbook-colors.test.ts` | 4 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24) |
 | `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` (fuera del manual) cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
 | `lib/utils/parse.test.ts` | 10 | **Coma o punto decimal**: signo, espacios, estados intermedios (`1,`, `,5`); vacío es `null` y lo inválido también, nunca `NaN`; separador de miles, exponentes y letras inválidos (Fase 20) |
 | `components/design-system/number-input.test.ts` | 8 | `NumberInput`: texto con teclado decimal, lo inválido se marca en vez del error del validador; el contador de celdas inválidas; `DmsInput` con segundos decimales (Fase 20) |
@@ -1803,6 +1824,7 @@ que se deshace, así que no depende del seed ni lo toca.
 |---|---|---|
 | `guardados_atomicos.test.sql` | 28 | Las cuatro funciones de guardado: guardan; una carga que falla a mitad no cambia la cabecera ni las filas de antes; la georreferenciación mueve un cerrado y rechaza una estación ajena; la propagación no toca otro lugar; otro usuario no escribe con ninguna de las cuatro (RLS) |
 | `c0_con_lecturas_cerradas.test.sql` | 7 | Con lectura cerrada, la C0 y las coordenadas no cambian y el código y la ubicación sí; reescribir el mismo valor pasa; sin ella, todo cambia |
+| `rango_lecturas.test.sql` | 7 | El CHECK de las lecturas de ángulo: los límites y 360°00′00″ exacto se guardan; 65″, 60′, 360°00′01″, 361° y segundos negativos no, y no se pierde lo de antes (Fase 24) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
@@ -1899,9 +1921,15 @@ Para abrirlo —jurado, compañeros, cualquier prueba con terceros— hay que
 verificar un dominio propio en Resend y cambiar el remitente a ese dominio. Es
 configuración de paneles, no código. Ver § 13.
 
-**`relative_precision` se persiste como texto ya formateado.** El mismo proceso
-se lee `1:1001` en el listado y `1:1.001` en el editor, porque hay cuatro copias
-de `formatPrecision` con criterios distintos.
+**`relative_precision` se persiste como texto ya formateado.** La presentación
+ya es una sola: `formatPrecision` (`lib/utils/format.ts`) es el único
+formateador y lo usan el hub, el editor, el veredicto, el diálogo de cierre, el
+informe y el Excel —comprobado en la Fase 24—. El «`1:1001` en el listado y
+`1:1.001` en el editor» que registraba esta entrada era de antes de unificarlo.
+Lo que queda es guardar el número en vez de la cadena, y la Fase 24 decidió
+**no hacerlo**: la columna está en procesos cerrados, migrarla exigiría saltarse
+la inmutabilidad, y `parsePrecision` ya ordena bien. El texto original sigue
+como registro.
 
 El problema de ordenamiento que esto causaba ya está sorteado: `parsePrecision`
 (`src/lib/process-list.ts`) extrae el valor numérico antes de comparar, para que
@@ -1916,12 +1944,17 @@ pero esa guarda solo está cubierta por inspección de código. Importa porque l
 acción es alcanzable con un payload construido a mano, sin pasar por el
 selector.
 
-**El campo de código de punto trunca los códigos largos.** El input de la tabla
+**Cerrado en la Fase 24 — el código de punto ya no se corta**: el campo de
+escritorio mide `w-32`. El texto original queda como registro. **El campo de
+código de punto trunca los códigos largos.** El input de la tabla
 de estaciones mide `w-24` y «Famarena_5» se ve como «Famaren». El valor está
 intacto —la tabla de resultados lo muestra completo—, es solo el ancho. Previo a
 la Fase 7; se arregla cuando se toque el sistema de diseño de la tabla.
 
-**`getProcessCountsByProject` no distingue el estado del proceso.** La tarjeta
+**Cerrado en la Fase 24 — la tarjeta desglosa por estado**: «15 procesos · 11
+en curso · 3 cerrados · 1 rechazado» (`processCountsLabel`,
+`lib/process-counts.ts`). El texto original queda como registro.
+**`getProcessCountsByProject` no distinguía el estado del proceso.** La tarjeta
 dice «7 procesos» contando borradores, calculados, cerrados y rechazados por
 igual. Desde la Fase 5 cuenta los tres módulos (poligonales, nivelaciones y
 lugares de control de asentamientos, un lugar = un trabajo); desde la Fase 22,
@@ -1935,12 +1968,15 @@ sin los lugares de agrupación. Sigue sin haber desglose del tipo «7 procesos
 pantallas de proceso arman su cabecera, con las migas, en la página
 (`ProcessShell`); los editores ya no reciben `projectName`.
 
-**Faltan `loading.tsx` en las rutas de alta.** Desde la Fase 22 las tres
+**Cerrado en la Fase 24 — las altas tienen su esqueleto** (`FormLoading`, en
+`components/process/`), y la tarjeta de proyecto gana el fondo `sel` al pasar
+el cursor. El texto original queda como registro. **Faltaban `loading.tsx` en
+las rutas de alta.** Desde la Fase 22 las tres
 pantallas de proceso —y con ellas la visita y su editor— tienen su esqueleto
 (`ProcessLoading`); antes mostraban el del hub. «Nuevo proyecto» y los `new`
 de cada módulo siguen heredando el del proyecto o ninguno.
 
-**`ProjectCard` no tiene hover de fondo**, a diferencia de las filas del hub.
+**`ProjectCard` no tenía hover de fondo**, a diferencia de las filas del hub.
 
 **El fixture «Enlace P1-P3»** del seed tiene su punto de llegada redondeado a 5
 decimales, lo que deja un error residual de 3.8e-7 m y una precisión de
@@ -2303,8 +2339,11 @@ afirmando algo que el código contradice.
 > nombra estos tres como excepciones: controles de formulario del dominio que
 > usan los tres módulos.
 
-**El campo de distancia de la tabla de estaciones no tiene nombre accesible en
-escritorio.** En la vista de tarjetas (móvil) lleva `aria-label="Distancia
+**Cerrado en la Fase 24 — la fila de escritorio de la tabla de estaciones
+nombra cada campo** con el número de estación: código, sentido, distancia y
+cada lectura de ángulo (un grupo con nombre alrededor de «Grados», «Minutos» y
+«Segundos»). El texto original queda como registro. **El campo de distancia de
+la tabla de estaciones no tiene nombre accesible en escritorio.** En la vista de tarjetas (móvil) lleva `aria-label="Distancia
 (m)"`; en la tabla de escritorio, ninguno, y un lector de pantalla lo anuncia
 como «campo numérico» sin más. Se vio al verificar la Fase 13 con Playwright,
 que no pudo localizarlo por su etiqueta.
@@ -2501,7 +2540,10 @@ es decidir un formateador de milímetros y aplicarlo en todo el módulo. La Fase
 y la coma solo se acepta al teclear; al unificar, son las gráficas las que
 cambian.
 
-**El Excel conserva la paleta anterior (Fase 20).** `lib/export/workbook.ts`
+**Cerrado en la Fase 24 — el Excel usa la paleta de la identidad**
+(`WORKBOOK_COLORS`, copias de los tokens del tema claro que un test compara con
+`globals.css`). El texto original queda como registro. **El Excel conserva la
+paleta anterior (Fase 20).** `lib/export/workbook.ts`
 pinta los títulos y las cabeceras con el azul y los grises de antes de la
 identidad del prototipo. Quedó fuera de alcance, como los correos de Supabase
 Auth: son documentos fuera de la app. Llevarlo a la paleta nueva es cambiar

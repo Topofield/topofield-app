@@ -33,7 +33,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 21 | La demo con las carteras reales | [`prds/20-demo-carteras-reales.md`](./prds/20-demo-carteras-reales.md) | cerrada |
 | 22 | El proceso en una pantalla | [`prds/21-proceso-en-una-pantalla.md`](./prds/21-proceso-en-una-pantalla.md) | cerrada |
 | 23 | Integridad | [`prds/22-integridad.md`](./prds/22-integridad.md) | cerrada |
-| 24 | Pulido | [`prds/23-pulido.md`](./prds/23-pulido.md) | en curso |
+| 24 | Pulido | [`prds/23-pulido.md`](./prds/23-pulido.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -547,6 +547,38 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 24 — Pulido (2026-09-30)
+
+Diez detalles de la deuda visible y de la puesta al día de la documentación.
+Una lectura de ángulo fuera de rango ya no se guarda (validador y CHECK); un
+punto de cambio incompleto avisa y el cierre dice qué fila, también en la
+vuelta; el informe de un rechazado tiene su marca; la tarjeta desglosa por
+estado y el KPI no cuenta lugares cerrados; la tabla de estaciones, el Excel y
+las altas quedan al día. 899 tests y 48 pruebas de base. Divergencias en el
+propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una entrada de la § 11 puede llevar meses resuelta.** PU1 —cuatro
+  formateadores de precisión— ya se había unificado; la entrada describía el
+  estado de antes. Antes de planear una deuda, se comprueba en el código.
+- **Validar lo que se guarda, no lo que se muestra.** La regla de 0-59 miraba
+  el promedio normalizado, y lo que llegaba a la base eran las lecturas
+  crudas. El validador tiene que recibir el mismo dato que la carga: aquí, una
+  sola función (`readingsDraft`) para las dos.
+- **Una comprobación que solo mira un recorrido deja el otro sin guarda.** La
+  comprobación aritmética era de la ida; la vuelta, que desde la Fase 23
+  decide el veredicto de la abierta, no la tenía. Salió al implementar PU10,
+  no al planear: el PRD se actualizó antes de seguir.
+- **Una regla de rango tiene que admitir lo que produce el propio redondeo.**
+  `decimalToDms(359.99999)` da 360°00′00″, y la regla nueva lo rechazaba: lo
+  encontró la revisión de código, no los tests, que probaban 360° como dato
+  tecleado y no como resultado de una conversión.
+- **`git add -p` no sirve en este entorno**, y un `| tail -1` tras
+  `npm run typecheck` traga su código de salida. Para separar dos cambios de un
+  mismo archivo en dos commits, se escribe la versión intermedia y se restaura
+  la completa.
 
 ### Cierre Fase 23 — Integridad (2026-09-30)
 

@@ -1,7 +1,8 @@
 # PRD-de-fase 24 — Pulido
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-09-30
+**Fecha de cierre:** 2026-09-30
 
 **Rama:** `fase-24-pulido`
 **Petición:** del usuario, 2026-09-30, tras revisar los pendientes: «Sí, Fase
@@ -9,6 +10,26 @@
 día de la documentación (PU1 a PU10 en `pendientes.md`).
 **Módulo:** transversal — tabla de estaciones, nivelación y libreta de la
 visita, dashboard, informe del proceso, Excel y pantallas de alta
+
+> **Divergencias de la implementación:**
+>
+> - **PU10 cubre también la vuelta** (hallazgo 6, anotado durante la
+>   ejecución): la comprobación aritmética del motor es solo de la ida, así
+>   que un punto de cambio incompleto en la vuelta no impedía cerrar.
+> - **PU9 admite 360°00′00″ exacto**, en el validador y en el CHECK: es lo
+>   que da `decimalToDms` al redondear 359.99999° capturado en grados
+>   decimales, y la regla de la estación ya lo acepta con un aviso. Lo
+>   encontró la revisión de código. Además, grados y minutos con decimales se
+>   rechazan con su propio mensaje: son columnas enteras y antes fallaban con
+>   un error genérico de la base.
+> - **PU5:** las secciones del Excel también van en `ink`, como los títulos.
+> - **PU3:** cada lectura de ángulo se nombra con un grupo («Lectura N de la
+>   estación M») alrededor de «Grados», «Minutos» y «Segundos».
+> - **PU8:** con un rechazado, la lista de consolidados dice «Un informe
+>   consolidado no incluye procesos rechazados».
+> - **Hallado en la verificación en pantalla:** el dev server no recompiló
+>   `globals.css` a la primera (la marca de rechazado salía sin su borde); una
+>   segunda edición del archivo lo resolvió. No afecta al código.
 
 ## Propósito
 

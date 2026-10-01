@@ -22,8 +22,9 @@ nivelación, veredicto de la abierta con vuelta).
 
 El 2026-09-30, tras la revisión de pendientes, el usuario pidió una **Fase 24
 de pulido** con la deuda visible de la § 11 y lo que encontró la puesta al día
-de la documentación: «Pulido (Fase 24)», al final. La fase se abrió ese mismo
-día ([`prds/23-pulido.md`](./prds/23-pulido.md)).
+de la documentación: «Pulido (Fase 24)», al final. La fase se abrió y se
+cerró ese mismo día ([`prds/23-pulido.md`](./prds/23-pulido.md)). No queda
+ninguna petición abierta.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -372,7 +373,9 @@ El respaldo `Math.min(...) || Infinity` de la tolerancia de discrepancia en
 
 ## Pulido (Fase 24)
 
-> **En curso en la Fase 24** ([`prds/23-pulido.md`](./prds/23-pulido.md)).
+> **Resuelta en la Fase 24** ([`prds/23-pulido.md`](./prds/23-pulido.md)).
+> PU1 ya estaba resuelto en el código y se cerró en la documentación; PU9 se
+> confirmó (la lectura cruda se guardaba con 65″).
 > Se conserva el texto de la petición como registro.
 
 Pedida el 2026-09-30. Las cinco primeras vienen de la § 11 de la doc técnica;
