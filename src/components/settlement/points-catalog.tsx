@@ -19,7 +19,7 @@ import {
   undoRetirementAction,
   type PointPayload,
 } from "@/app/(app)/projects/[id]/sites/[siteId]/point-actions";
-import { formatCoordinate, formatDateOnly, formatElevation } from "@/lib/utils/format";
+import { formatDateOnly, formatElevation } from "@/lib/utils/format";
 import { REFERENCE_LOCKED_MESSAGE } from "@/lib/validators/settlement";
 import type { SettlementPoint } from "@/types/settlement";
 import { readNumberText } from "@/lib/utils/parse";
@@ -53,8 +53,8 @@ interface PointsCatalogProps {
    */
   undoBlockers: Record<string, string | null>;
   /**
-   * Puntos con lecturas en visitas cerradas (Fase 23): su C0 y sus
-   * coordenadas ya no cambian, así que el diálogo de edición las bloquea.
+   * Puntos con lecturas en visitas cerradas (Fase 23): su C0 ya no cambia,
+   * así que el diálogo de edición la bloquea.
    */
   referenceLocked: string[];
 }
@@ -62,8 +62,6 @@ interface PointsCatalogProps {
 interface FormState {
   code: string;
   locationDescription: string;
-  northing: string;
-  easting: string;
   initialElevation: string;
   activeFrom: string;
 }
@@ -71,8 +69,6 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   code: "",
   locationDescription: "",
-  northing: "",
-  easting: "",
   initialElevation: "",
   activeFrom: "",
 };
@@ -82,8 +78,6 @@ function formOf(point: SettlementPoint | null): FormState {
   return {
     code: point.code,
     locationDescription: point.location_description,
-    northing: point.northing === null ? "" : String(point.northing),
-    easting: point.easting === null ? "" : String(point.easting),
     initialElevation:
       point.initial_elevation === null ? "" : String(point.initial_elevation),
     activeFrom: point.active_from ?? "",
@@ -113,7 +107,7 @@ function PointState({ point }: { point: SettlementPoint }) {
 }
 
 /**
- * Parsea una coordenada opcional, con coma o punto decimal, a número
+ * Parsea un número opcional, con coma o punto decimal, a número
  * redondeado, o null si viene vacía. Devuelve `ok:false` si el texto no es un
  * número.
  */
@@ -185,22 +179,6 @@ export function PointsCatalog({
       fieldErrors.locationDescription = "La ubicación es obligatoria.";
     }
 
-    const north = parseOptionalNumber(form.northing, 3);
-    if (!north.ok) fieldErrors.northing = "El Norte debe ser un número.";
-
-    const east = parseOptionalNumber(form.easting, 3);
-    if (!east.ok) fieldErrors.easting = "El Este debe ser un número.";
-
-    if (
-      north.ok &&
-      east.ok &&
-      (north.value !== null) !== (east.value !== null)
-    ) {
-      const message = "Indica las dos coordenadas (N y E) o ninguna.";
-      fieldErrors.northing = message;
-      fieldErrors.easting = message;
-    }
-
     const initialElevation = parseOptionalNumber(form.initialElevation, 4);
     if (!initialElevation.ok) {
       fieldErrors.initialElevation = "La cota C0 debe ser un número.";
@@ -217,14 +195,12 @@ export function PointsCatalog({
     }
     setErrors({});
 
-    if (!north.ok || !east.ok || !initialElevation.ok) return;
+    if (!initialElevation.ok) return;
 
     const payload: PointPayload = {
       siteId,
       code,
       locationDescription,
-      northing: north.value,
-      easting: east.value,
       // Un punto de alta no lleva C0: su línea base es su primera lectura.
       initialElevation: isAltaForm ? null : initialElevation.value,
       activeFrom: isAltaForm ? form.activeFrom : null,
@@ -350,8 +326,6 @@ export function PointsCatalog({
               <tr className="border-b border-rule text-left text-xs text-ink-2">
                 <th className="py-2 pr-3 font-medium">Código</th>
                 <th className="py-2 pr-3 font-medium">Ubicación</th>
-                <th className="py-2 pr-3 font-medium">Norte</th>
-                <th className="py-2 pr-3 font-medium">Este</th>
                 <th className="py-2 pr-3 font-medium">Cota C0</th>
                 <th className="py-2 pr-3 font-medium">Estado</th>
                 {!disabled && <th className="py-2 pr-3" />}
@@ -368,12 +342,6 @@ export function PointsCatalog({
                   </td>
                   <td className="py-2 pr-3 text-ink-2">
                     {item.location_description}
-                  </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
-                    {formatCoordinate(item.northing)}
-                  </td>
-                  <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
-                    {formatCoordinate(item.easting)}
                   </td>
                   <td className="py-2 pr-3 font-mono tabular-nums text-ink-2">
                     {item.initial_elevation != null
@@ -465,22 +433,8 @@ export function PointsCatalog({
                 error={errors.locationDescription}
               />
             </div>
-            <div className={isAltaForm ? "grid gap-4 sm:grid-cols-2" : "grid gap-4 sm:grid-cols-3"}>
-              <NumberInput
-                label="Norte"
-                value={form.northing}
-                onChange={set("northing")}
-                error={errors.northing}
-                disabled={referenceIsLocked}
-              />
-              <NumberInput
-                label="Este"
-                value={form.easting}
-                onChange={set("easting")}
-                error={errors.easting}
-                disabled={referenceIsLocked}
-              />
-              {!isAltaForm && (
+            {!isAltaForm && (
+              <div className="grid gap-4 sm:grid-cols-2">
                 <NumberInput
                   label="Cota C0"
                   value={form.initialElevation}
@@ -488,8 +442,8 @@ export function PointsCatalog({
                   error={errors.initialElevation}
                   disabled={referenceIsLocked}
                 />
-              )}
-            </div>
+              </div>
+            )}
             {referenceIsLocked && (
               <p className="text-sm text-ink-2">{REFERENCE_LOCKED_MESSAGE}</p>
             )}

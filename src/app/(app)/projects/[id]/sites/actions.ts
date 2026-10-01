@@ -266,7 +266,7 @@ export async function duplicateSiteAction(siteId: string): Promise<ActionResult>
 
   const { data: puntos, error: pointsError } = await supabase
     .from("settlement_points")
-    .select("code, location_description, northing, easting, initial_elevation")
+    .select("code, location_description, initial_elevation")
     .eq("site_id", siteId)
     .is("retired_on", null)
     .order("code");

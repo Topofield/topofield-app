@@ -9,7 +9,7 @@ interface PlaceTabProps {
   site: Site;
   points: Awaited<ReturnType<typeof getSitePoints>>;
   visits: Awaited<ReturnType<typeof getVisits>>;
-  /** Puntos con lecturas en visitas cerradas: C0 y coordenadas fijas (Fase 23). */
+  /** Puntos con lecturas en visitas cerradas: C0 fija (Fase 23). */
   referenceLocked: string[];
 }
 
