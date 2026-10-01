@@ -1,5 +1,19 @@
 # Análisis de la cartera de nivelación El Verjón
 
+> **Nota de la auditoría del cálculo (Fase 26, 2026-10-01).** Este análisis
+> se conserva como registro de su momento. Dos precisiones
+> ([`../auditoria-calculo.md`](../auditoria-calculo.md)):
+>
+> - El «2.º orden → no cumple» de la tabla final juzga la discrepancia de
+>   5.0 mm contra la tolerancia de la ida sola, 3.719 mm. El motor la juzga
+>   contra K·√D_mín·√2, el criterio del marco teórico (§ 8.1): 5.26 mm, y
+>   cumple. Con la FGCS, que no lleva el √2, no cumpliría (auditoría, D-2).
+> - La hoja «CIERRE CORREGIDO» de `TRABAJO NIVELACION EL VERJON-corregido.xlsx`
+>   juzga sin √2 y compensa la ida con la discrepancia entera sobre la
+>   distancia de la ida: D4 queda en 3315.088, cuando el promedio de los dos
+>   recorridos da 3315.0855 (auditoría, § 4).
+
+
 Verificación de `TRABAJO NIVELACION EL VERJON.xlsx`. Nivelación geométrica
 compuesta de **D1 a D4**, medida en ida (`NIVELACION`) y vuelta
 (`CONTRANIVELACION`). Es el insumo de la **Fase 9** (cadena de distancias de

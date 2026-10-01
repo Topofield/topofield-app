@@ -839,6 +839,7 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Asentamiento acumulado > umbral | Semáforo según nivel |
 | Distorsión angular > límite configurado | Alerta en tabla de diferenciales |
 | Tendencia de velocidad creciente (aceleración) | Indicador de advertencia |
+| Lectura fuera de tendencia (Fase 12) | Aviso al capturar, al cerrar y en el panel; no bloquea |
 
 ### 5.4 Tolerancias por Orden
 
@@ -981,13 +982,19 @@ Paso 4: Resolver por mínimos cuadrados ponderados:
   Con pesos W_i = 1/d_i (lados más largos reciben mayor corrección)
   
 Paso 5: Sistema matricial 2×2:
-  | Σ(cos²Az_i/d_i)        Σ(cosAz_i×sinAz_i/d_i) | | k1 |   | -Error_N |
-  | Σ(cosAz_i×sinAz_i/d_i) Σ(sin²Az_i/d_i)         | | k2 | = | -Error_E |
+  | Σ(d_i×cos²Az_i)        Σ(d_i×cosAz_i×sinAz_i) | | k1 |   | -Error_N |
+  | Σ(d_i×cosAz_i×sinAz_i) Σ(d_i×sin²Az_i)         | | k2 | = | -Error_E |
   
-  Donde: δd_i = k1×cosAz_i + k2×sinAz_i
+  Donde: δd_i = d_i×(k1×cosAz_i + k2×sinAz_i)
 
 Paso 6: Recalcular proyecciones con distancias corregidas (d_i + δd_i)
 ```
+
+> **Corregido en la Fase 26** (2026-10-01, auditoría del cálculo). El sistema
+> decía Σ(cos²Az_i/d_i) con δd_i = k1×cosAz_i + k2×sinAz_i, que no cierra la
+> poligonal: en TT4 deja −140 mm. Minimizar Σ(δd_i²/d_i) da δd_i proporcional
+> a d_i, y con él la matriz con d_i multiplicando —el Crandall clásico, con
+> lat²/L y lat·dep/L—. El motor siempre lo calculó así.
 
 ### 6.6 Poligonal Abierta con Control — Deflexiones
 
@@ -1094,7 +1101,7 @@ de la sección completa (entre los BM extremos):
   Discrepancia  = |Δh_ida - (-Δh_vuelta)|
   Tolerancia_iv = Tolerancia × √2
 
-Si Discrepancia ≤ Tolerancia_iv → se adopta el desnivel promediado:
+Desnivel promediado, que se calcula siempre y se informa:
 
   Δh_adoptado = (Δh_ida - Δh_vuelta) / 2
 
@@ -1102,7 +1109,20 @@ Si Discrepancia ≤ Tolerancia_iv → se adopta el desnivel promediado:
 NO alimenta la compensación: la corrección proporcional (§ 6.8) se aplica al
 recorrido de ida usando el error de cierre de la propia ida (Cota_calculada -
 Cota_conocida), no el desnivel adoptado. NO se promedia tramo a tramo.
+
+Veredicto:
+  - abierta con vuelta: Discrepancia ≤ Tolerancia_iv (Fase 23);
+  - cerrada o de enlace con vuelta: cada recorrido cumple su propia
+    tolerancia, K × √D con su distancia (Fase 26). La discrepancia es control.
 ```
+
+> **Precisado en la Fase 26** (2026-10-01, auditoría del cálculo). El texto
+> decía que el desnivel se adopta «si la discrepancia cumple»; el motor lo
+> calcula siempre, porque es informativo. Y en una cerrada o de enlace con
+> vuelta solo se juzgaba la discrepancia, |e_ida + e_vuelta|, donde dos errores
+> de signo contrario se cancelan: ahora se juzga cada recorrido. Si el desnivel
+> adoptado debe entrar en la compensación queda pendiente (CR1 en
+> `docs/pendientes.md`).
 
 ### 6.10 Asentamientos — Cálculos
 
@@ -1111,7 +1131,9 @@ Asentamiento parcial:
   Δs_parcial = Cota_visita_n - Cota_visita_(n-1)   (en mm)
 
 Asentamiento acumulado:
-  Δs_acumulado = Cota_visita_n - Cota_C0   (en mm)
+  Δs_acumulado = Cota_visita_n - Cota_base   (en mm)
+  Cota_base = C0 si el catálogo la trae; si no, la primera lectura del punto
+  (Fase 11)
 
 Velocidad:
   Δt_meses = (fecha_n - fecha_(n-1)) en días / 30.4375
@@ -1119,6 +1141,8 @@ Velocidad:
 
 Asentamiento diferencial entre puntos i y j:
   Δs_diferencial = |Δs_acumulado_i - Δs_acumulado_j|
+  sobre el periodo común: si las líneas base son de fechas distintas, desde la
+  más reciente de las dos (Fase 11)
 
 Distorsión angular:
   L = √((N_i-N_j)² + (E_i-E_j)²)   (distancia horizontal, en m)
@@ -1141,7 +1165,10 @@ Casos frontera que la fórmula no dice y el motor debe respetar:
 - `Δs_diferencial = 0` → distorsión `1/∞`, que es **normal**: dos puntos que se
   asientan igual no tienen distorsión entre sí.
 - Un par con coordenadas ausentes queda **fuera** de la tabla de diferenciales;
-  calcularlo con L = 0 daría distorsión infinita y aparentaría normalidad.
+  calcularlo con L = 0 daría β_inverso = 0, una distorsión de 1/0: una falsa
+  alarma (precisado en la Fase 26; antes decía «aparentaría normalidad»).
+- Desde la Fase 26 una visita no comparte fecha con otra del mismo lugar, así
+  que Δt = 0 ya no se da con datos guardados; el motor lo sigue tolerando.
 - El signo se conserva: un valor positivo es un levantamiento y se muestra como
   tal, no en valor absoluto.
 

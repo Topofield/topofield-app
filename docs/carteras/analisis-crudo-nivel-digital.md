@@ -1,5 +1,12 @@
 # Análisis del crudo de nivel digital — `CRDUDO-TRAMO2.L`
 
+> **Nota de la auditoría del cálculo (Fase 26, 2026-10-01).** Este análisis
+> se conserva como registro de su momento. La tolerancia de 10.03 mm de abajo
+> usa la distancia de un solo sentido; el motor lee el crudo como un recorrido
+> de 1.397 km —o como ida y vuelta— y da 14.18 mm, como ya corrigió el PRD de
+> la Fase 16 ([`../auditoria-calculo.md`](../auditoria-calculo.md), § 3).
+
+
 Formato nativo de un **nivel digital Leica**, entregado el 2026-09-23. Es el
 insumo de **N4** (importar lecturas desde archivo) y la razón por la que esa
 petición dejó de estar bloqueada. Se deja escrito para no rederivarlo.

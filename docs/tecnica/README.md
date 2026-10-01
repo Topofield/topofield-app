@@ -918,12 +918,29 @@ Hay dos esquemas de cierre, y `has_closing_row` los distingue:
 
 | Esquema | Última fila | Suma teórica | Ejemplo |
 |---|---|---|---|
-| Contra el amarre | Ángulo del último lado de vuelta a la referencia, sin distancia | `(n−2)·180 + 360` sobre n+1 ángulos | cartera TT4 |
+| Contra el amarre | Ángulo del último lado de vuelta a la referencia, sin distancia | `(n−2)·180 + 360·k` sobre n+1 ángulos (exteriores: `(n+2)·180 + 360·k`) | cartera TT4 |
 | Contra el primer lado | Ángulo interior del vértice de arranque | `(n−2)·180` sobre n ángulos; la orientación solo fija el datum | cartera Vivero |
 
-En ambos, el **control de reorientación** compara el último azimut de la cadena
-contra su objetivo y expone la discrepancia en segundos. Avisa, no bloquea: es
-control de calidad del levantamiento, no criterio de tolerancia.
+**El 360·k de la fila de cierre (Fase 26, C-1).** Con fila de cierre, el
+vértice de arranque aporta dos lecturas —orientación (amarre → primera
+estación) y cierre (última estación → amarre)— que suman su ángulo más 360·k:
+k = 1 si el amarre queda fuera del barrido horario que va de la vista atrás a
+la adelante, y k = 0 si queda dentro. Hasta la Fase 26 el +360 era fijo: TT4
+tiene k = 1, pero con el amarre del otro lado —o en una exterior recorrida en
+sentido horario con el amarre fuera— la poligonal salía con 360° de error. El
+motor saca k de la propia suma, redondeando a 0 o 1; fuera de ese rango deja
+1, para que una poligonal declarada interior siendo exterior, a 720°, se siga
+viendo como error.
+
+**En las abiertas (Fase 26, C-2)** el amarre también orienta: el primer lado
+sale del azimut hacia el amarre más el ángulo de orientación de la primera
+fila, que la tabla rotula así. Ese ángulo fija el datum y no se corrige, como
+en la cerrada sin fila de cierre.
+
+Hasta la Fase 26 había un **control de reorientación** que comparaba el último
+azimut de la cadena con su objetivo. Se quitó: calculado con los ángulos
+corregidos daba siempre 0, y con los crudos coincidía con el error angular,
+que ya se muestra.
 
 ### Las hojas de Excel de referencia
 
@@ -1151,11 +1168,19 @@ Viven en `tolerances.ts`, **nunca hardcodeadas en componentes**:
 | `tercer_orden` | 15 | 1:5.000 |
 | `ordinario` | 30 | 1:3.000 |
 
-Tolerancia angular = K·√n, donde n es el número de ángulos medidos. Nivelación
-usa su propio coeficiente, `LEVELING_TOLERANCE_K` (3/6/12/24 mm, tolerancia
-K·√D en km) — ver § 4 y § 7 del PRD principal. La discrepancia entre ida y
-vuelta se contrasta contra K·√D·√2, con D la menor de las dos distancias; si
-a un recorrido le faltan, no se evalúa (Fase 23). `CALIBRATION_MAX_MONTHS`
+Tolerancia angular = K·√n, donde n es el número de ángulos que entran en la
+condición: los vértices de una cerrada (más el de cierre si hay fila de
+cierre) o las deflexiones de una abierta con control. Nivelación usa su propio
+coeficiente, `LEVELING_TOLERANCE_K` (3/6/12/24 mm, tolerancia K·√D en km) — ver
+§ 4 y § 7 del PRD principal. En una cerrada o de enlace con vuelta, **cada
+recorrido** se juzga con K·√D sobre su propia distancia (Fase 26, C-10). La
+discrepancia entre ida y vuelta se contrasta contra K·√D·√2, con D la menor de
+las dos distancias; si a un recorrido le faltan, no se evalúa (Fase 23). El
+error y la tolerancia se comparan con un margen de 10⁻⁶ mm (`withinTolerance`,
+Fase 26, C-13): el error sale de restar cotas en coma flotante, y sin margen
+un cierre exactamente igual a la tolerancia cumplía o no según la cota del BM.
+Las tolerancias son las del marco teórico; la FGCS (1984) no lleva el √2 de la
+discrepancia y sus clases están corridas (auditoría del cálculo, § 6). `CALIBRATION_MAX_MONTHS`
 (12) es la antigüedad de la calibración a partir de la cual el formulario de
 equipo avisa (Fase 25).
 
@@ -1186,8 +1211,10 @@ la validación de captura (§ 7).
 
 ### Umbral de cierre exacto
 
-`computePolygonal` considera exacto un cierre con `linearError <= 1e-9` m y
-devuelve `relativePrecision: Infinity`, que se presenta como `1:∞`.
+En la **cerrada**, `computePolygonal` considera exacto un cierre con
+`linearError <= 1e-9` m y devuelve `relativePrecision: Infinity`, que se
+presenta como `1:∞`. La abierta con control solo trata como exacto el cierre
+igual a 0.
 
 El umbral existe porque un cierre geométricamente exacto deja un residuo de
 punto flotante (~1e-14) que producía precisiones absurdas como
@@ -1258,8 +1285,8 @@ verificadas independientemente contra el marco teórico del dominio (ver
 `computeDifferentials` calcula la distorsión angular entre cada par de
 puntos como `1/((L×1000)/Δs_diferencial)`; un diferencial de 0 da `1/∞`,
 clasificado normal, y un par sin coordenadas en alguno de sus puntos queda
-fuera de la tabla en vez de calcularse con `L=0` (que daría una distorsión
-infinita y aparentaría normalidad falsa).
+fuera de la tabla en vez de calcularse con `L=0`, que daría X = 0: una
+distorsión de 1/0, es decir, una falsa alarma.
 
 **Periodo común (Fase 11).** Si los dos puntos de un par tienen líneas base
 de fechas distintas —uno se dio de alta a mitad del monitoreo—, restar
@@ -1375,7 +1402,10 @@ Toda celda numérica es texto hasta que la lee `lib/utils/parse.ts`:
   migración encontró cinco sitios así (azimut al amarre y al reasignar,
   distancia desde los hilos, catálogo de puntos, cota del BM) y los umbrales
   del lugar, que guardaban números en el estado y borraban el separador al
-  teclearlo; cada umbral guarda ahora su texto.
+  teclearlo; cada umbral guarda ahora su texto. La auditoría del cálculo
+  encontró dos más, arreglados en la Fase 26 (C-5): las lecturas de ángulo del
+  editor (`readingValues`) y la vista en grados decimales
+  (`dmsFieldsToDecimal`). Una lectura con «12,5″» se perdía del promedio.
 
 ### Capa 1 — captura
 
@@ -1431,19 +1461,27 @@ bloquea el cierre; una **precisión insuficiente** significa que el trabajo se
 hizo pero no alcanza la calidad exigida, y se documenta como rechazado.
 
 **Nivelación** (`evaluateLevelingClosure(result, type)`): la cerrada y la de
-enlace se juzgan por su cierre, y fuera de tolerancia solo se cierran como
-rechazadas. La abierta **sin vuelta** se cierra en cuanto está calculada: no
+enlace se juzgan por su cierre —el de la ida y, si la hay, el de la vuelta,
+cada uno con su tolerancia (Fase 26, C-10)—, y si alguno no cumple solo se
+cierran como rechazadas; sin la tolerancia de alguno, por falta de
+distancias, no se cierran. Antes la vuelta solo pesaba por la discrepancia,
+|e_ida + e_vuelta|, y dos errores de signo contrario se cancelaban. La abierta **sin vuelta** se cierra en cuanto está calculada: no
 hay contra qué juzgarla. La abierta **con vuelta** se juzga desde la Fase 23
 por la discrepancia: sin distancias en la ida o en la vuelta no hay veredicto
 y el cierre se bloquea; fuera de T·√2, solo rechazado.
 Antes que cualquier veredicto, un **punto de cambio incompleto** —con V+ y sin
 V−, o al revés, fuera de la primera y la última fila— bloquea el cierre con un
 mensaje que nombra la fila y el recorrido (`turningPointBlocker`, Fase 24). Va
-primero porque dice qué corregir, y porque **la vuelta no pasa por la
-comprobación aritmética**: `computeLeveling` devuelve la de la ida. En la
-captura es solo un aviso en la celda (`validateRunCapture`): guardar a medias
-es legítimo. La libreta de la visita usa las mismas funciones.
-`levelingProcessVerdict` guarda ese veredicto en `meets_tolerance` —lo leen el
+primero porque dice qué corregir. Después va la **comprobación aritmética** de
+los dos recorridos: hasta la Fase 26 (C-12) `computeLeveling` devolvía solo la
+de la ida, y un BM interior de la vuelta con solo V+ pasaba. El mensaje dice
+qué recorrido no cuadra. En la captura el punto de cambio incompleto es solo
+un aviso en la celda (`validateRunCapture`): guardar a medias es legítimo. Una
+distancia por visual en cero o negativa es error de captura (Fase 26, C-11) y
+un CHECK la rechaza en la base. La libreta de la visita usa las mismas
+funciones.
+`levelingProcessVerdict` guarda ese veredicto —en cerrada y de enlace, los dos
+recorridos— en `meets_tolerance` —lo leen el
 hub, el dashboard, el resumen del informe y `deriveLevelingCloseStatus`—, y
 `discrepancy_tolerance_mm` y `meets_discrepancy` guardan la discrepancia con
 cualquier tipo que tenga vuelta; en cerrada y de enlace es un control más. La
@@ -1459,17 +1497,22 @@ bloquea nada**.
 
 - **Captura** — cota vacía o no numérica: error. Cota que se aleja más de 1 m
   de C0: advertencia, no error (podría ser un terraplén real sobre turba; el
-  error de transcripción es la lectura más probable, pero no la única). Fecha
-  de visita anterior o igual a la visita previa: error — evita un intervalo
-  negativo que invertiría el signo de la velocidad. Punto duplicado o
-  fantasma en la misma visita: error.
+  error de transcripción es la lectura más probable, pero no la única). La
+  fecha de la visita tiene que quedar **entre** la de su visita anterior y la
+  de su siguiente, por número (`neighborVisitDates`, Fase 26, C-16): antes o
+  igual a la anterior invertiría o anularía el intervalo, y después de la
+  siguiente reordenaría la serie y cambiaría el parcial de visitas ya
+  cerradas. Un índice único `(site_id, date)` lo garantiza en la base. Punto
+  duplicado o fantasma en la misma visita: error.
 - **Cierre** — exige lectura de todos los puntos **vigentes** en la fecha de
   la visita; una visita cerrada es el registro inmutable de una fecha, y
   cerrarla incompleta deja un hueco que ya no se puede rellenar. Además, no
-  cierra una visita si alguno de sus puntos sin C0 tiene la línea base en una
-  visita **anterior abierta**: si esa lectura siguiera editable, cambiarla
-  movería el acumulado que se recalcula en vivo para la visita ya cerrada
-  (Fase 11).
+  cierra una visita si sigue **abierta una visita anterior** contra cuyas
+  lecturas se calcula: la de la lectura anterior de cada punto —parcial,
+  velocidad y alerta (Fase 26, C-15)— y, para un punto sin C0, la de su línea
+  base (Fase 11). Si esa lectura siguiera editable, cambiarla movería lo que el
+  panel, el informe y el Excel recalculan en vivo para la visita ya cerrada.
+  El mensaje dice qué visita cerrar antes y por qué puntos.
 - **Estadística** — clasifica el semáforo, pero **no participa en si se
   puede guardar o cerrar**. Un punto en alarma se guarda y se cierra con
   normalidad: es el hallazgo que el monitoreo existe para documentar, no un
