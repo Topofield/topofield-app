@@ -35,6 +35,9 @@ nivelación, y acción de guardado de la poligonal
 >   dice «Poligonal cerrada»; los dos diálogos se remiten el uno al otro. Sin
 >   desborde. Los errores de consola fueron del entorno local («JWT issued
 >   at future», el reloj de WSL).
+> - **Sin migraciones.** En producción ningún proceso tiene un amarre de
+>   otro proyecto, así que el filtro de PU15 no deja ninguno sin guardar
+>   (consulta de solo lectura). La revisión de código no encontró defectos.
 
 ## Propósito
 
