@@ -2,6 +2,7 @@ import { formatEquipmentLine, formatKmPrecision } from "@/lib/utils/format";
 import { fixed } from "@/lib/reports/values";
 import type { LevelingSectionData } from "@/lib/reports/sections";
 import { LEVEL_TYPE_LABELS, PRECISION_ORDER_LABELS } from "@/types/project";
+import { adoptedNote, storedAdoptedElevations } from "@/lib/reports/adopted";
 import {
   levelingTypeLabel,
   POINT_TYPE_LABELS,
@@ -14,6 +15,8 @@ import {
 /** Cuerpo de la sección de una nivelación: datos y cotas corregidas. */
 export function LevelingReportSection({ data }: { data: LevelingSectionData }) {
   const { process, readings } = data;
+  // Una cota por punto (Fase 28), de las filas guardadas.
+  const adopted = storedAdoptedElevations(process, readings);
   return (
     <>
       <dl className="report-pairs">
@@ -78,6 +81,27 @@ export function LevelingReportSection({ data }: { data: LevelingSectionData }) {
           ))}
         </tbody>
       </table>
+      {adopted && (
+        <table className="report-table">
+          <caption>Cotas adoptadas</caption>
+          <thead>
+            <tr>
+              <th>Punto</th>
+              <th>Cota adoptada (m)</th>
+              <th>Origen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {adopted.map((a) => (
+              <tr key={a.pointCode}>
+                <td>{a.pointCode}</td>
+                <td className="num">{a.elevation.toFixed(4)}</td>
+                <td>{adoptedNote(a)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </>
   );
 }

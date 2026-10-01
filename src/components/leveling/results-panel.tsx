@@ -2,9 +2,11 @@ import { Alert, Card, StatusIndicator } from "@/components/design-system";
 import { useMemo } from "react";
 import { compareHomologousPoints } from "@/lib/calculations/leveling";
 import { evaluateLevelingClosure, turningPointBlocker } from "@/lib/validators/leveling";
+import { adoptedNote } from "@/lib/reports/adopted";
 import {
   POINT_TYPE_LABELS,
   RUN_TYPE_LABELS,
+  type AdoptedElevation,
   type LevelingResult,
   type LevelingType,
 } from "@/types/leveling";
@@ -27,6 +29,8 @@ function formatKm(value: number | null): string {
 interface ResultsPanelProps {
   result: LevelingResult;
   type: LevelingType;
+  /** Una cota por punto (Fase 28), o `null` si el trabajo no se compensó. */
+  adopted: AdoptedElevation[] | null;
 }
 
 /**
@@ -34,7 +38,7 @@ interface ResultsPanelProps {
  * cierre, ida y vuelta, y cotas corregidas. Consume `LevelingResult` ya
  * calculado por `computeLeveling` en el editor — no recalcula nada.
  */
-export function ResultsPanel({ result, type }: ResultsPanelProps) {
+export function ResultsPanel({ result, type, adopted }: ResultsPanelProps) {
   const closure = evaluateLevelingClosure(result, type);
   const arithmeticDifference = result.sumBacksights - result.sumForesights;
   const homologous = useMemo(() => compareHomologousPoints(result), [result]);
@@ -216,9 +220,21 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
                 </dd>
               </div>
             </dl>
+            {result.circuitClosureMm != null && (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div>
+                  <dt className="text-ink-2">Cierre del circuito ida + vuelta</dt>
+                  <dd className="font-mono tabular-nums text-ink">
+                    {`${formatMm(result.circuitClosureMm)} mm`}
+                  </dd>
+                </div>
+              </dl>
+            )}
             <p className="text-xs text-ink-2">
-              El desnivel adoptado es el promedio de ida y vuelta. Las cotas
-              corregidas se calculan con el cierre de la ida.
+              {type === "open"
+                ? "Ida y vuelta se compensan como un circuito sobre el BM de partida: su cierre se reparte por distancia a lo largo de los dos recorridos."
+                : "Cada recorrido se compensa con su propio cierre, por distancia."}{" "}
+              El BM de partida conserva su cota.
             </p>
             {result.meetsDiscrepancy != null ? (
               <StatusIndicator
@@ -295,12 +311,14 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
         </Card>
       )}
 
-      {/* Bloque 4: cotas corregidas de la ida (§4.4). */}
+      {/* Bloque 4: cotas corregidas de cada fila (§4.4), de la ida y, desde la
+          Fase 28, también de la vuelta. */}
       <Card title="Cotas corregidas">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left text-xs text-ink-2">
+                {result.return && <th className="py-2 pr-3 font-medium">Recorrido</th>}
                 <th className="py-2 pr-3 font-medium">Punto</th>
                 <th className="py-2 pr-3 font-medium">Dist. acum. (km)</th>
                 <th className="py-2 pr-3 font-medium">Corrección (mm)</th>
@@ -308,11 +326,17 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               </tr>
             </thead>
             <tbody>
-              {result.forward.readings.map((reading, i) => (
+              {[
+                ...result.forward.readings.map((reading) => ({ run: "forward" as const, reading })),
+                ...(result.return?.readings ?? []).map((reading) => ({ run: "return" as const, reading })),
+              ].map(({ run, reading }, i) => (
                 <tr
-                  key={`${reading.pointCode}-${i}`}
+                  key={`${run}-${reading.pointCode}-${i}`}
                   className="border-b border-rule"
                 >
+                  {result.return && (
+                    <td className="py-2 pr-3 text-ink-2">{RUN_TYPE_LABELS[run]}</td>
+                  )}
                   <td className="py-2 pr-3 text-ink">
                     {reading.pointCode}
                   </td>
@@ -329,7 +353,7 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
               ))}
               {result.forward.readings.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-ink-2">
+                  <td colSpan={result.return ? 5 : 4} className="py-6 text-center text-ink-2">
                     Aún no hay lecturas.
                   </td>
                 </tr>
@@ -338,6 +362,41 @@ export function ResultsPanel({ result, type }: ResultsPanelProps) {
           </table>
         </div>
       </Card>
+
+      {/* Bloque 5: una cota por punto (Fase 28). */}
+      {adopted && adopted.length > 0 && (
+        <Card title="Cotas adoptadas">
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-ink-2">
+              Una cota por punto: la compensada si se leyó una vez, y el
+              promedio de sus cotas compensadas si se leyó dos. El BM de
+              partida conserva su cota conocida.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-rule text-left text-xs text-ink-2">
+                    <th className="py-2 pr-3 font-medium">Punto</th>
+                    <th className="py-2 pr-3 font-medium">Cota adoptada</th>
+                    <th className="py-2 pr-3 font-medium">Origen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adopted.map((a) => (
+                    <tr key={a.pointCode} className="border-b border-rule">
+                      <td className="py-2 pr-3 text-ink">{a.pointCode}</td>
+                      <td className="py-2 pr-3 font-mono tabular-nums font-medium text-ink">
+                        {formatElevation(a.elevation)}
+                      </td>
+                      <td className="py-2 pr-3 text-ink-2">{adoptedNote(a)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

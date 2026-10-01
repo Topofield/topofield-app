@@ -11,6 +11,7 @@ import {
 } from "@/components/design-system";
 import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 import {
+  adoptedElevationsOf,
   computeLeveling,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
@@ -194,13 +195,13 @@ export function LevelingEditor({
   // en vivo, así que el cierre y la tolerancia deben recalcular con el mismo
   // valor que ve el usuario, no con el que tenía el proceso al cargar la
   // página (mismo problema que se corrigió en polygonal-editor.tsx).
-  const result = useMemo(
-    () =>
-      computeLeveling(
-        buildInput(config, forward, back, config.precisionOrder, process.distances_reconstructed),
-      ),
+  const input = useMemo(
+    () => buildInput(config, forward, back, config.precisionOrder, process.distances_reconstructed),
     [config, forward, back, process.distances_reconstructed],
   );
+  const result = useMemo(() => computeLeveling(input), [input]);
+  // Una cota por punto (Fase 28).
+  const adopted = useMemo(() => adoptedElevationsOf(result, input), [result, input]);
 
   // La distancia total se DERIVA de las distancias por visual de la libreta.
   // Antes se tecleaba, y de ella depende la tolerancia K·√D: un número que
@@ -472,7 +473,7 @@ export function LevelingEditor({
           </Card>
         )}
 
-        <ResultsPanel result={result} type={config.type} />
+        <ResultsPanel result={result} type={config.type} adopted={adopted} />
 
         {!readOnly && (
           <ActionBar

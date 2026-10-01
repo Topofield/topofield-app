@@ -63,13 +63,36 @@ function process(over: Partial<LevelingProcessRow> = {}): LevelingProcessRow {
 }
 
 describe("buildLevelingWorkbook", () => {
-  it("crea las tres hojas del § 4.8", () => {
+  it("crea las tres hojas del § 4.8 y la de cotas adoptadas (Fase 28)", () => {
     const wb = buildLevelingWorkbook(process(), [reading()]);
     expect(wb.worksheets.map((w) => w.name)).toEqual([
       "Datos Crudos",
       "Cálculos",
+      "Cotas adoptadas",
       "Resumen",
     ]);
+  });
+
+  it("las cotas adoptadas: el BM de partida fijo y el promedio de un punto leído dos veces", () => {
+    const wb = buildLevelingWorkbook(process({ type: "open", has_return_run: true }), [
+      reading({ point_code: "BM-1", elevation_corrected: "100.0000" }),
+      reading({ reading_order: 2, point_code: "C1", point_type: "pc", elevation_corrected: "100.5004" }),
+      reading({ reading_order: 3, point_code: "D4", point_type: "bm", elevation_corrected: "101.0000" }),
+      reading({ run_type: "return", point_code: "D4", elevation_corrected: "101.0000" }),
+      reading({ run_type: "return", reading_order: 2, point_code: "C1", point_type: "pc", elevation_corrected: "100.4996" }),
+      reading({ run_type: "return", reading_order: 3, point_code: "BM-1", elevation_corrected: "100.0000" }),
+    ]);
+    const s = wb.getWorksheet("Cotas adoptadas")!;
+    const fila = (n: number) => [1, 2, 3, 4].map((c) => s.getRow(n).getCell(c).value);
+    expect(fila(4)).toEqual(["BM-1", 100, 2, "BM de cota conocida"]);
+    expect(fila(5)).toEqual(["C1", 100.5, 2, "Promedio de 2 cotas compensadas"]);
+    expect(s.getRow(5).getCell(2).numFmt).toBe("0.0000");
+  });
+
+  it("sin compensación no hay cotas adoptadas, y la hoja lo dice", () => {
+    const wb = buildLevelingWorkbook(process({ meets_tolerance: false }), [reading()]);
+    const s = wb.getWorksheet("Cotas adoptadas")!;
+    expect(s.getRow(3).getCell(1).value).toBe("Sin cotas adoptadas");
   });
 
   it("aplica 4 decimales a las cotas y a las lecturas", () => {
@@ -172,7 +195,7 @@ describe("buildLevelingWorkbook", () => {
   });
 
   it("exporta un proceso sin lecturas sin romperse", () => {
-    expect(buildLevelingWorkbook(process(), []).worksheets).toHaveLength(3);
+    expect(buildLevelingWorkbook(process(), []).worksheets).toHaveLength(4);
   });
 
   // Mismo agujero que en poligonal (§ Fase 8): el orden y el equipo del nivel
