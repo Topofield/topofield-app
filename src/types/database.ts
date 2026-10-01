@@ -34,6 +34,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      equipment: {
+        Row: {
+          angular_precision_seconds: number | null
+          brand: string | null
+          calibration_date: string | null
+          created_at: string
+          distance_precision_mm: number | null
+          distance_precision_ppm: number | null
+          id: string
+          kind: string
+          km_precision_mm: number | null
+          level_type: string | null
+          model: string | null
+          serial: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          angular_precision_seconds?: number | null
+          brand?: string | null
+          calibration_date?: string | null
+          created_at?: string
+          distance_precision_mm?: number | null
+          distance_precision_ppm?: number | null
+          id?: string
+          kind: string
+          km_precision_mm?: number | null
+          level_type?: string | null
+          model?: string | null
+          serial?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          angular_precision_seconds?: number | null
+          brand?: string | null
+          calibration_date?: string | null
+          created_at?: string
+          distance_precision_mm?: number | null
+          distance_precision_ppm?: number | null
+          id?: string
+          kind?: string
+          km_precision_mm?: number | null
+          level_type?: string | null
+          model?: string | null
+          serial?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       leveling_processes: {
         Row: {
           closed_at: string | null
