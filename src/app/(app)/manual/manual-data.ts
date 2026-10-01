@@ -37,9 +37,9 @@ export const CAPTURAS = {
   },
   nuevoProyecto: {
     src: "/manual/03-nuevo-proyecto.png",
-    alt: "Formulario de creación de proyecto, en su primer paso de datos básicos.",
+    alt: "Formulario de creación de proyecto: datos básicos, datum y proyección en una sola página, con el botón Crear proyecto.",
     width: 2560,
-    height: 1600,
+    height: 1762,
   },
   hubProyecto: {
     src: "/manual/04-hub-proyecto.png",
@@ -161,7 +161,7 @@ export const CAPTURAS = {
     src: "/manual/22-georreferenciar.png",
     alt: "Diálogo Georreferenciar sobre la cartera Vivero en sistema local: D1 y D3 con sus coordenadas reales, rotación 35° 00′ 07.8″, factor de escala 1.000000 y la tabla de coordenadas actuales frente a reales.",
     width: 1344,
-    height: 1988,
+    height: 2100,
   },
   minimosCuadrados: {
     src: "/manual/21-minimos-cuadrados.png",
