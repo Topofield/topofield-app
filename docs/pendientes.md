@@ -45,6 +45,12 @@ eligió corregir primero:
 - después, los criterios que eligió cambiar, **sin fase**: «Criterios del
   cálculo», al final.
 
+Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
+control de asentamientos **dejen de tener posición**: sin coordenadas ni
+distorsión angular. Es A3, en «Control de asentamientos». Va como **Fase 29**,
+después de cerrar la 28 (decisión del usuario), y retira la distorsión de CR2
+(D-9).
+
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
 registro.
@@ -316,6 +322,61 @@ ellas la serie que justifica el monitoreo.
 Consecuencias a resolver cuando se abra: qué hace `computeHistory` con un BM
 retirado a media serie, qué muestra la gráfica, y si el informe lo lista.
 
+### A3 · Puntos de control sin posición
+
+> **Fase 29**, después de cerrar la 28 (decisión del usuario, 2026-10-01). Su
+> PRD se redacta al abrirla.
+
+Pedida el 2026-10-01, al revisar el proceso de demo de asentamientos:
+«Necesito quitar todo lo que hace referencia a que la espacialidad de los
+puntos, no vamos a manejar ni coordenadas ni distancias conocidas entre
+puntos (Distorsión angular)».
+
+Un punto de control queda con código, ubicación (texto), C0 y su serie de
+cotas. Sin Norte ni Este no hay distancia entre puntos y, sin distancia, no
+hay distorsión angular.
+
+**Decisiones tomadas el 2026-10-01:**
+
+- **Los diferenciales se van con la distorsión.** El diferencial
+  |Δsᵢ − Δsⱼ| no necesita coordenadas, pero sin posición no se sabe qué pares
+  son vecinos, y una tabla de todos contra todos (28 pares en Torre Alameda)
+  no dice nada. Se quitan el cálculo, la tarjeta del panel y la hoja del
+  Excel. El asentamiento máximo y el promedio siguen.
+- **Las columnas se borran con una migración**, no se dejan muertas:
+  `settlement_points.northing`, `settlement_points.easting` y
+  `sites.angular_distortion_limit`. El trigger de la Fase 23 vuelve a vigilar
+  solo la C0. Es irreversible: las coordenadas que haya en producción se
+  pierden con el `db push`, que va con el visto bueno del usuario.
+- **El catálogo de puntos de referencia del proyecto no cambia.** Lo
+  comparten las poligonales, y un BM de amarre ya puede ir sin coordenadas.
+
+**Lo que se quita.** Es el inventario de la petición; el PRD lo verifica.
+
+| Capa | Qué |
+|---|---|
+| Base | Las tres columnas, y las coordenadas del trigger `c0_con_lecturas_cerradas` y de su prueba pgTAP |
+| Motor | `horizontalDistance` y `computeDifferentials` (`settlement.ts`), `worstDistortion` (`settlement-summary.ts`), `DifferentialPair` y `angularDistortionLimit` (`types/settlement.ts`) |
+| Captura | Norte y Este en el catálogo de puntos, con su regla «las dos o ninguna»; el límite 1/X en los umbrales del lugar; la copia de los tres al duplicar un lugar; la comparación de coordenadas en `validators/settlement.ts` y `point-actions.ts` |
+| Panel | El KPI «Distorsión angular» y la tarjeta «Asentamientos diferenciales y distorsión angular» |
+| Excel | Las columnas Norte y Este, la hoja de diferenciales, la fila del límite y «Pares que superan la distorsión» |
+| Demo y seed | Las coordenadas de los puntos de Torre Alameda y de los lugares del seed |
+| Documentación | El manual en sus dos copias y sus capturas; PRD principal § 3, § 4 y § 6.10; doc técnica |
+
+**Lo que no cambia:** el informe consolidado, que no muestra ni coordenadas ni
+distorsión de asentamientos, así que ningún informe emitido cambia con la
+migración. El semáforo tampoco: la distorsión nunca entró en él.
+
+**Por decidir al redactar el PRD:**
+
+- El panel se queda con cinco KPIs: qué ocupa el sexto hueco, o cómo se
+  reacomoda la rejilla.
+- BM-1 y BM-2 de Torre Alameda llevan coordenadas ficticias en el catálogo de
+  referencia del proyecto: si se quitan también.
+- El marco teórico (`docs/marco-teorico/mt-control_asentamientos.docx`)
+  explica la distorsión. Es material de la monografía y la app no lo toca; si
+  se anota allí que queda fuera del alcance, lo decide el usuario.
+
 ---
 
 ## Interfaz
@@ -484,12 +545,13 @@ punto deja de tener dos cotas. Hace falta un método de corrección nuevo para
 que lo cerrado conserve el suyo, y revisar el criterio de la vuelta de la
 Fase 26 (C-10).
 
-### CR2 · Estabilidad de los BMs y distorsión en el semáforo (D-13, D-9)
+### CR2 · Estabilidad de los BMs (D-13)
 
 - Avisar si la libreta de una visita no nivela entre BM-1 y BM-2: un BM movido
   hace que todos los puntos «se asienten» a la vez (marco teórico § 2.3).
-- La distorsión angular entra en el semáforo con los cuatro niveles del marco
-  (§ 4.1), entre puntos vecinos y descontando el giro rígido.
+
+La segunda mitad, la distorsión angular en el semáforo (D-9), se retiró el
+2026-10-01: los puntos de control dejan de tener posición (A3).
 
 ### CR3 · Rigor estadístico (D-3, D-6, D-7)
 
