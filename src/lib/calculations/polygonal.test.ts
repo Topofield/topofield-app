@@ -590,3 +590,64 @@ describe("polygonalTraces — la sin compensar cierra con el error de cierre", (
     expect(polygonalTraces(input, computePolygonal(input))).toBeNull();
   });
 });
+
+// Mínimos cuadrados (Fase 26, C-7 y C-9): casos que antes no se ajustaban.
+describe("computePolygonal — mínimos cuadrados en los bordes", () => {
+  it("una abierta con control ya ajustada converge (C-7)", () => {
+    // Salió de una búsqueda aleatoria: con el umbral de 1e-10 σ el cambio
+    // entre iteraciones se estancaba en el ruido de coma flotante y el
+    // resultado era «no converge». Los valores van tal cual: redondeados, el
+    // ruido cambia y el fallo no se reproduce.
+    const r = computePolygonal({
+      type: "open_controlled",
+      method: "least_squares",
+      order: "tercer_orden",
+      angleType: "interior",
+      hasOrientation: false,
+      hasClosingRow: false,
+      startNorth: 1000,
+      startEast: 2000,
+      startAzimuth: 56.04694604873657,
+      endNorth: 1078.6008522017971,
+      endEast: 2209.0243418916502,
+      endAzimuth: null,
+      leastSquares: { sigmaAngleSeconds: 5, sigmaDistanceM: 0.003, distanceMeasurements: 1 },
+      stations: [
+        { pointCode: "P0", angle: Number.NaN, deflectionDirection: null, distance: 183.59706505775452, readings: [] },
+        st("P1", 56.83420915073819, 61.57452806472779, "right"),
+        { pointCode: "P2", angle: Number.NaN, deflectionDirection: null, distance: null, readings: [] },
+      ],
+    });
+    expect(r.adjustment?.status).toBe("adjusted");
+  });
+
+  it("σ angular muy pequeña con σ de distancia grande no es «singular» (C-9)", () => {
+    // Cuadrado de 100 m con +2″ de error angular y 4 mm de más en un lado. La
+    // condición angular, en rad², quedaba por debajo del pivote relativo.
+    const r = computePolygonal({
+      type: "closed",
+      method: "least_squares",
+      order: "tercer_orden",
+      angleType: "interior",
+      hasOrientation: false,
+      hasClosingRow: false,
+      startNorth: 1000,
+      startEast: 1000,
+      startAzimuth: 0,
+      endNorth: null,
+      endEast: null,
+      endAzimuth: null,
+      leastSquares: { sigmaAngleSeconds: 0.01, sigmaDistanceM: 0.5, distanceMeasurements: 1 },
+      stations: [
+        st("V0", 90 + 2 / 3600, 100),
+        st("V1", 90, 100.004),
+        st("V2", 90, 100),
+        st("V3", 90, 100),
+      ],
+    });
+    expect(r.adjustment?.status).toBe("adjusted");
+    if (r.adjustment?.status !== "adjusted") return;
+    // Los 2″ se reparten por igual: −0.5″ por ángulo.
+    for (const c of r.adjustment.angleCorrectionsSec) expect(c).toBeCloseTo(-0.5, 6);
+  });
+});

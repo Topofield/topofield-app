@@ -66,16 +66,35 @@ export function solveLinear(M: number[][], b: number[]): number[] {
 }
 
 /**
+ * Resuelve N·k = b escalando antes filas y columnas por 1/√Nᵢᵢ (Fase 26, C-9).
+ * Las condiciones mezclan unidades —la angular en radianes², las de cierre en
+ * metros²— y sin escalar, una σ angular pequeña con una σ de distancia grande
+ * dejaba el pivote angular por debajo del umbral relativo de `solveLinear`:
+ * «sistema singular» con un sistema que no lo es. Escalado, la diagonal es 1 y
+ * el umbral mide lo que debe: dependencia entre condiciones.
+ */
+function solveScaled(N: number[][], b: number[]): number[] {
+  const d = N.map((row, i) => row[i]!);
+  if (!d.every((x) => x > 0)) throw new SingularSystemError();
+  const s = d.map((x) => 1 / Math.sqrt(x));
+  const scaled = N.map((row, i) => row.map((x, j) => x * s[i]! * s[j]!));
+  const y = solveLinear(scaled, b.map((x, i) => x * s[i]!));
+  return y.map((x, i) => x * s[i]!);
+}
+
+/**
  * Ajusta por ecuaciones de condición hasta que las correcciones cambien menos
  * que `tolerance` (en las unidades de cada observación relativa a su σ) o se
  * llegue a `maxIterations`.
  */
 export function adjustByConditions(
   model: ConditionModel,
-  // 1e-10 σ: por debajo, el cambio entre iteraciones es ruido de coma flotante
-  // —una corrección angular en radianes ronda 1e-5—, y exigir 1e-12 solo
-  // añadía iteraciones que no movían nada.
-  { tolerance = 1e-10, maxIterations = 10 } = {},
+  // 1e-8 σ: el cambio entre iteraciones se estanca en el ruido de coma
+  // flotante, que puede quedar por encima de 1e-10 σ —con 1e-10, alguna
+  // abierta con control terminaba en «no converge» con las condiciones ya
+  // cumplidas a 1e-13 m (Fase 26, C-7)—. 1e-8 σ de un ángulo de 5″ son
+  // 2·10⁻¹³ rad: nada que se vea en una coordenada.
+  { tolerance = 1e-8, maxIterations = 10 } = {},
 ): ConditionAdjustment {
   const l0 = model.observations;
   const q = model.sigmas.map((s) => s * s);
@@ -95,7 +114,7 @@ export function adjustByConditions(
         A[i]!.reduce((acc, a, x) => acc + a * q[x]! * A[j]![x]!, 0),
       ),
     );
-    const k = solveLinear(N, w.map((x) => -x));
+    const k = solveScaled(N, w.map((x) => -x));
     const v = l0.map((_, x) => q[x]! * A.reduce((acc, row, i) => acc + row[x]! * k[i]!, 0));
 
     // Cambio relativo a cada σ, para comparar ángulos y distancias en la misma escala.
