@@ -8,7 +8,13 @@
 //  - Abierta sin control: Az_i = Az_{i-1} + 180° + ángulo horizontal_i (caso 3).
 //  - Abierta con control: Az_i = Az_{i-1} ± deflexión_i (+ derecha, − izquierda).
 
-import { cosDeg, degreesToSeconds, normalizeAzimuth, sinDeg } from "./angles";
+import {
+  cosDeg,
+  degreesToSeconds,
+  normalizeAzimuth,
+  readingSpreadSeconds,
+  sinDeg,
+} from "./angles";
 import { adjustByConditions, SingularSystemError } from "./least-squares";
 import { angularTolerance, minRelativePrecision } from "./tolerances";
 import type {
@@ -34,9 +40,7 @@ function finiteOrNull(x: number | null | undefined): number | null {
 
 /** Dispersión entre lecturas de un mismo ángulo, en segundos de arco. */
 function dispersionSeconds(readings: ReadingInput[]): number | null {
-  if (readings.length < 2) return null;
-  const values = readings.map((r) => r.angle);
-  return degreesToSeconds(Math.max(...values) - Math.min(...values));
+  return readingSpreadSeconds(readings.map((r) => r.angle));
 }
 
 /** Resultado por estación vacío (datos insuficientes para calcular). */

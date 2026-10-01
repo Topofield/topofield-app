@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
 import {
+  averageReadings,
   azimuthFromCoordinates,
   decimalToDms,
   dmsToDecimal,
@@ -118,16 +119,20 @@ function angleOrNaN(
  * Promedio de las lecturas de una estación, en grados decimales. Sin lecturas
  * cae al ángulo que venga en el draft, que es el camino de los datos sin
  * reiteración.
+ *
+ * Es el mismo promedio del editor, redondeado a la décima de segundo que se
+ * guarda (Fase 26, C-4): antes el servidor calculaba con el promedio sin
+ * redondear, y el error angular guardado no era el que mostraban el editor y
+ * el informe.
  */
 function averageAngle(st: StationDraft): number {
   if (st.readings.length === 0) {
     return angleOrNaN(st.angleDeg, st.angleMin, st.angleSec);
   }
-  const total = st.readings.reduce(
-    (a, r) => a + dmsToDecimal(r.deg, r.min, r.sec),
-    0,
+  return (
+    averageReadings(st.readings.map((r) => dmsToDecimal(r.deg, r.min, r.sec))) ??
+    Number.NaN
   );
-  return total / st.readings.length;
 }
 
 function buildInput(payload: SavePolygonalPayload): PolygonalInput {

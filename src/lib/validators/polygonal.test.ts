@@ -718,3 +718,24 @@ describe("lecturas fuera de rango (Fase 24)", () => {
     expect(readingDmsError({ deg: Number.NaN, min: 0, sec: 0 })).toBeNull();
   });
 });
+
+describe("decimales que la base no guarda (Fase 26, C-4)", () => {
+  it("una lectura con segundos de dos decimales se rechaza", () => {
+    expect(readingDmsError({ deg: 45, min: 30, sec: 12.35 })).toBe(
+      "Los segundos admiten una sola cifra decimal.",
+    );
+    expect(readingDmsError({ deg: 45, min: 30, sec: 12.3 })).toBeNull();
+  });
+
+  it("el ángulo de la estación, igual", () => {
+    const r = validatePolygonalStation(capture({ angleSec: 0.25 }), EXPECT_BOTH);
+    expect(r.errors.angle).toBe("Los segundos admiten una sola cifra decimal.");
+  });
+
+  it("una distancia con más de cuatro decimales se rechaza", () => {
+    expect(validatePolygonalStation(capture({ distance: 100.12345 }), EXPECT_BOTH).errors.distance).toBe(
+      "La distancia admite hasta cuatro decimales.",
+    );
+    expect(validatePolygonalStation(capture({ distance: 100.1234 }), EXPECT_BOTH).errors.distance).toBeUndefined();
+  });
+});

@@ -1,7 +1,7 @@
 // Validación del proceso poligonal — funciones puras (PRD § 5.1 capa de
 // captura, § 5.2 capa de cierre). Sin React, sin Supabase.
 
-import { degreesToSeconds } from "@/lib/calculations/angles";
+import { readingSpreadSeconds } from "@/lib/calculations/angles";
 import { readingDispersionTolerance } from "@/lib/calculations/tolerances";
 import type {
   PolygonalResult,
@@ -89,6 +89,8 @@ export function validatePolygonalStation(
     errors.distance = "La distancia debe ser mayor que cero.";
   } else if (distance > 1000) {
     errors.distance = "La distancia no puede superar los 1000 m.";
+  } else if (hasMoreDecimals(distance, 4)) {
+    errors.distance = "La distancia admite hasta cuatro decimales.";
   }
 
   // Ángulo: minutos/segundos fuera de [0,60) bloquean; 0° o 360° advierten.
@@ -102,6 +104,8 @@ export function validatePolygonalStation(
     errors.angle = "Los minutos deben estar entre 0 y 59.";
   } else if (angleSec < 0 || angleSec >= 60) {
     errors.angle = "Los segundos deben estar entre 0 y 59.";
+  } else if (hasMoreDecimals(angleSec, 1)) {
+    errors.angle = SECONDS_DECIMALS_MESSAGE;
   } else if (
     angleMin === 0 &&
     angleSec === 0 &&
@@ -148,7 +152,22 @@ export function readingDmsError(reading: {
   if (deg < 0 || (deg >= 360 && !fullTurn)) return "Los grados deben estar entre 0 y 359.";
   if (min < 0 || min >= 60) return "Los minutos deben estar entre 0 y 59.";
   if (sec < 0 || sec >= 60) return "Los segundos deben estar entre 0 y 59.";
+  if (hasMoreDecimals(sec, 1)) return SECONDS_DECIMALS_MESSAGE;
   return null;
+}
+
+const SECONDS_DECIMALS_MESSAGE = "Los segundos admiten una sola cifra decimal.";
+
+/**
+ * ¿Tiene `value` más cifras decimales que `digits`? Las columnas guardan los
+ * segundos a la décima y las distancias a la diezmilésima: un valor más fino se
+ * redondearía al guardarlo y el cálculo del servidor no sería el que se guarda
+ * (Fase 26, C-4). El margen absorbe la representación binaria (12.3 × 10 no da
+ * 123 exacto).
+ */
+function hasMoreDecimals(value: number, digits: number): boolean {
+  const scaled = value * 10 ** digits;
+  return Math.abs(scaled - Math.round(scaled)) > 1e-6;
 }
 
 /** ¿Tiene la lista de issues algún error bloqueante? */
@@ -285,8 +304,7 @@ export function validateReadings(
   if (readings.length < 2) return {};
   if (!Number.isFinite(instrumentSeconds)) return {};
 
-  const values = readings.map((r) => r.angle);
-  const dispersion = degreesToSeconds(Math.max(...values) - Math.min(...values));
+  const dispersion = readingSpreadSeconds(readings.map((r) => r.angle)) ?? 0;
   const limit = readingDispersionTolerance(instrumentSeconds);
   if (dispersion > limit) {
     return {

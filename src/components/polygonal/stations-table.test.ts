@@ -52,3 +52,17 @@ describe("StationsTable — nombres accesibles (Fase 24)", () => {
     expect(campo?.some((tag) => /\bw-24\b/.test(tag))).toBe(false);
   });
 });
+
+describe("readingValues — coma decimal (Fase 26, C-5)", () => {
+  it("una lectura con coma cuenta igual que con punto", async () => {
+    const { readingValues, averageOf } = await import("./polygonal-draft");
+    const lecturas = [
+      { deg: "45", min: "0", sec: "12,5" },
+      { deg: "45", min: "0", sec: "14" },
+      { deg: "45", min: "0", sec: "15" },
+    ];
+    expect(readingValues(lecturas)).toHaveLength(3);
+    // (12.5 + 14 + 15) / 3 = 13.83″ → 13.8″, lo mismo que guarda el servidor.
+    expect(averageOf(lecturas)).toEqual({ deg: "45", min: "0", sec: "13.8" });
+  });
+});
