@@ -95,17 +95,21 @@ export function accumulateDistances(
   readings: ReadingInput[],
   { reconstructed = false }: { reconstructed?: boolean } = {},
 ): number[] {
+  // En milímetros enteros (Fase 26, C-14): sumando metros en coma flotante,
+  // 164.5 m llegaban como 164.49999999999997 y la columna en km guardaba
+  // 0.164. Las distancias se capturan al milímetro, como mucho.
+  const mm = (d: number | null) => Math.round((d ?? 0) * 1000);
   let running = 0;
   return readings.map((reading) => {
-    if (reading.pointType === "intermediate") return running;
+    if (reading.pointType === "intermediate") return running / 1000;
     const { back, fore } = resolveVisualDistances(reading);
     if (reconstructed) {
-      running += (fore ?? 0) + (back ?? 0);
-      return running;
+      running += mm(fore) + mm(back);
+      return running / 1000;
     }
-    const here = running + (fore ?? 0);
-    running = here + (back ?? 0);
-    return here;
+    const here = running + mm(fore);
+    running = here + mm(back);
+    return here / 1000;
   });
 }
 
@@ -125,6 +129,20 @@ export function totalDistanceFromReadings(readings: ReadingInput[]): number {
 
 /** Tolerancia de la comprobación aritmética, en metros (0.1 mm). */
 const ARITHMETIC_EPSILON = 0.0001;
+
+/**
+ * ¿Cumple un error la tolerancia? |error| ≤ T con un margen de 1e-6 mm
+ * (Fase 26, C-13): el error sale de restar cotas en coma flotante y arrastra
+ * ruido del orden de 1e-10 mm. Sin margen, un cierre exactamente igual a la
+ * tolerancia —12.0 mm frente a 12.0 mm en 1 km de tercer orden— cumplía o no
+ * según la cota del BM. Las lecturas van a 0.1 mm, así que el margen no
+ * cambia ningún veredicto que se pueda medir.
+ */
+export function withinTolerance(errorMm: number, toleranceMm: number): boolean {
+  return Math.abs(errorMm) <= toleranceMm + TOLERANCE_MARGIN_MM;
+}
+
+const TOLERANCE_MARGIN_MM = 1e-6;
 
 export interface RunComputation {
   readings: ComputedReading[];
@@ -338,7 +356,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
 
     if (hasValidDistance) {
       toleranceMm = levelingTolerance(input.order, totalDistanceKm);
-      meetsTolerance = Math.abs(closureErrorMm) <= toleranceMm;
+      meetsTolerance = withinTolerance(closureErrorMm, toleranceMm);
 
       // Solo se compensa un trabajo que cumple la tolerancia. Si no cumple,
       // se repite el levantamiento (marco teórico § 8.1).
@@ -394,7 +412,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       const pairDistanceKm = Math.min(totalDistanceKm, returnDistanceKm);
       discrepancyToleranceMm =
         levelingTolerance(input.order, pairDistanceKm) * Math.SQRT2;
-      meetsDiscrepancy = discrepancyMm <= discrepancyToleranceMm;
+      meetsDiscrepancy = withinTolerance(discrepancyMm, discrepancyToleranceMm);
     }
     adoptedHeightDifference =
       (forward.heightDifference - back.heightDifference) / 2;

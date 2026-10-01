@@ -1051,3 +1051,35 @@ describe("levelingProcessVerdict", () => {
     expect(levelingProcessVerdict({ ...base, meetsTolerance: null, return: null }, "open")).toBeNull();
   });
 });
+
+// Fase 26 — aritmética sin ruido de coma flotante (C-13, C-14).
+describe("computeLeveling — sin ruido de coma flotante (Fase 26)", () => {
+  it("un cierre exactamente igual a la tolerancia cumple, sea cual sea la cota (C-13)", () => {
+    // 1 km de tercer orden: T = 12 mm, y el error es 1.512 − 1.500 = 12 mm.
+    for (const startElevation of [100, 1000, 2541.7545, 3288.5]) {
+      const result = computeLeveling({
+        ...CLOSED_INPUT,
+        startElevation,
+        forward: [
+          bare({ pointCode: "BM", pointType: "bm", backsight: 1.512, backDistanceM: 500 }),
+          bare({ pointCode: "BM", pointType: "bm", foresight: 1.5, foreDistanceM: 500 }),
+        ],
+      });
+      expect(result.toleranceMm).toBe(12);
+      expect(result.closureErrorMm).toBeCloseTo(12, 6);
+      expect(result.meetsTolerance).toBe(true);
+    }
+  });
+
+  it("la distancia acumulada se suma en milímetros (C-14)", () => {
+    // 49.8 + 47.3 + 39.3 + 28.1 = 164.5 m, que en coma flotante da
+    // 164.49999999999997 y la columna en km guardaba como 0.164.
+    const rows = [
+      bare({ pointCode: "A", pointType: "bm", backsight: 1, backDistanceM: 49.8 }),
+      bare({ pointCode: "B", foresight: 1, foreDistanceM: 47.3, backsight: 1, backDistanceM: 39.3 }),
+      bare({ pointCode: "C", pointType: "bm", foresight: 1, foreDistanceM: 28.1 }),
+    ];
+    expect(accumulateDistances(rows)).toEqual([0, 97.1, 164.5]);
+    expect(totalDistanceFromReadings(rows)).toBe(0.1645);
+  });
+});
