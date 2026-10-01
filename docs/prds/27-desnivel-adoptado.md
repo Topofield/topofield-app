@@ -1,7 +1,8 @@
 # PRD-de-fase 28 — Ida y vuelta en la compensación
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-01
+**Fecha de cierre:** 2026-10-01
 
 **Rama:** `fase-28-ida-y-vuelta`
 **Petición:** del usuario, 2026-10-01. Es CR1 de `pendientes.md`, que nació
@@ -12,6 +13,26 @@ después: «ajusta también la documentación sobre estas fórmulas para tenerla
 allí para la monografía».
 **Módulo:** nivelación — motor, resultados, informe, Excel y los fundamentos
 matemáticos del módulo
+
+> **Divergencias de la implementación:**
+>
+> - **El resultado gana `circuitClosureMm`**, el cierre del circuito de una
+>   abierta, con su signo. El panel lo muestra y explica cómo se compensó.
+> - **Las cotas corregidas del panel incluyen la vuelta**, con una columna de
+>   recorrido: antes solo mostraba la ida, que era la única compensada.
+> - **El punto de vuelta figura como «Promedio de 2 cotas compensadas»**
+>   porque se lee dos veces (fin de la ida y comienzo de la vuelta), aunque
+>   sus dos cotas sean iguales. El documento de fundamentos dice lo mismo.
+> - **El ejemplo 1 de los fundamentos queda como test** (`leveling.test.ts`),
+>   para que el documento no deje de ser cierto si cambia el motor.
+> - **Recálculo:** en local se guardó El Verjón desde el editor; sus filas
+>   pasaron a las cotas nuevas (D1 3288.5000 en las dos puntas, D4 3315.0855,
+>   C 1 3289.4414 y 3289.4386). En producción, tras el merge, con el visto
+>   bueno del usuario.
+> - **Verificación en pantalla** en local, a 1280 px en claro y 390 px en
+>   oscuro, sin desborde: El Verjón (cierre del circuito −5.0 mm, cotas
+>   corregidas de los dos recorridos, cotas adoptadas, informe y Excel) y el
+>   tramo 2 (C14 = 2542.2271 en el editor y en el informe, C10 fijo).
 
 ## Propósito
 

@@ -42,8 +42,11 @@ eligió corregir primero:
 - **Fase 27** — segundo pulido
   ([`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md)), **cerrada**
   el 2026-10-01;
-- después, los criterios que eligió cambiar, **sin fase**: «Criterios del
-  cálculo», al final.
+- **Fase 28** — ida y vuelta en la compensación (CR1)
+  ([`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md)),
+  **cerrada** el 2026-10-01;
+- después, los otros criterios que eligió cambiar, **sin fase**: «Criterios
+  del cálculo», al final.
 
 Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
 control de asentamientos **dejen de tener posición**: sin coordenadas ni
@@ -542,9 +545,9 @@ fase, después de la 27. El resto de la § 2 queda documentado, sin cambio.
 
 ### CR1 · Desnivel adoptado en la compensación (D-1)
 
-> **En curso en la Fase 28** ([`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md)),
-> abierta el 2026-10-01: ida y vuelta compensadas como circuito y una cota por
-> punto, con el BM de partida fijo.
+> **Resuelta en la Fase 28** ([`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md)),
+> cerrada el 2026-10-01: ida y vuelta compensadas como circuito y una cota por
+> punto, con el BM de partida fijo. Las fórmulas, en `docs/math/nivelacion.html`.
 
 Hoy las cotas de una nivelación con vuelta salen solo de la ida, compensada
 con su propio cierre. Ida y vuelta son dos observaciones del mismo desnivel:
