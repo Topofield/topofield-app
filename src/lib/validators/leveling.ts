@@ -118,6 +118,14 @@ export function validateReadingCapture(
       errors.foreDistanceM =
         "Falta la distancia de la V−: sin ella el recorrido no acumula.";
     }
+    // Cero o negativa no es una medición: resta del acumulado y rebaja la
+    // tolerancia K·√D sin aviso (Fase 26, C-11). La base lo impide también.
+    if (back != null && back <= 0) {
+      errors.backDistanceM = "La distancia debe ser mayor que cero.";
+    }
+    if (fore != null && fore <= 0) {
+      errors.foreDistanceM = "La distancia debe ser mayor que cero.";
+    }
   }
 
   for (const field of ["backsight", "foresight"] as const) {

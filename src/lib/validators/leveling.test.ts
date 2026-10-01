@@ -617,3 +617,16 @@ describe("punto de cambio incompleto (Fase 24)", () => {
     ).toBeNull();
   });
 });
+
+describe("validateReadingCapture — distancias por visual (Fase 26, C-11)", () => {
+  it("una distancia en cero o negativa es error de captura", () => {
+    const negativa = validateReadingCapture(
+      bare({ pointType: "pc", backsight: 1.2, backDistanceM: -50, foresight: 1.1, foreDistanceM: 30 }),
+    );
+    expect(negativa.errors.backDistanceM).toBe("La distancia debe ser mayor que cero.");
+    const cero = validateReadingCapture(
+      bare({ pointType: "pc", backsight: 1.2, backDistanceM: 30, foresight: 1.1, foreDistanceM: 0 }),
+    );
+    expect(cero.errors.foreDistanceM).toBe("La distancia debe ser mayor que cero.");
+  });
+});
