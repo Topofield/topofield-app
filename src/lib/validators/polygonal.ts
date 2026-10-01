@@ -1,7 +1,12 @@
 // Validación del proceso poligonal — funciones puras (PRD § 5.1 capa de
 // captura, § 5.2 capa de cierre). Sin React, sin Supabase.
 
-import { readingSpreadSeconds } from "@/lib/calculations/angles";
+import {
+  azimuthFromCoordinates,
+  decimalToDms,
+  readingSpreadSeconds,
+  type Dms,
+} from "@/lib/calculations/angles";
 import { readingDispersionTolerance } from "@/lib/calculations/tolerances";
 import type {
   PolygonalResult,
@@ -422,4 +427,28 @@ export function validateGeoreferencePoints(
     return "Las dos estaciones están en el mismo sitio: no definen una dirección.";
   }
   return null;
+}
+
+// --- Azimut de partida desde el punto de amarre ------------------------------
+
+/**
+ * El azimut del arranque hacia el punto de amarre, en DMS, o por qué no se
+ * puede calcular (Fase 27, PU15). Lo usa la acción de guardado, que se puede
+ * llamar con una carga hecha a mano: el selector del editor solo ofrece
+ * puntos del proyecto con coordenadas, pero el servidor no puede suponerlo.
+ * `reference` es `null` si el punto no existe en el catálogo del proyecto.
+ */
+export function referenceStartAzimuth(
+  start: { north: number; east: number },
+  reference: { north: number | string | null; east: number | string | null } | null,
+): Dms | { error: string } {
+  if (reference === null) {
+    return { error: "El punto de amarre no está en el catálogo del proyecto." };
+  }
+  if (reference.north == null || reference.east == null) {
+    return { error: "El punto de amarre no tiene coordenadas." };
+  }
+  return decimalToDms(
+    azimuthFromCoordinates(start.north, start.east, Number(reference.north), Number(reference.east)),
+  );
 }
