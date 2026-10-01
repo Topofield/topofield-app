@@ -1,7 +1,8 @@
 # PRD-de-fase 26 — Correcciones del cálculo
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-01
+**Fecha de cierre:** 2026-10-01
 
 **Rama:** `fase-26-correcciones-calculo`
 **Petición:** del usuario, 2026-10-01: «haz double check de las fórmulas y
@@ -9,6 +10,39 @@ métodos de cálculo que usamos en cada módulo». Después de leer la auditorí
 eligió «Correcciones primero»: esta fase va antes del segundo pulido (Fase 27).
 **Módulo:** transversal — motor y validadores de poligonal, nivelación y
 asentamientos, sus acciones de servidor y la documentación
+
+> **Divergencias de la implementación:**
+>
+> - **Dos errores más, fuera de la auditoría.** **C-19:** al implementar C-2
+>   salió que el servidor validaba las estaciones sin la fila de cierre: una
+>   cerrada amarrada con fila de cierre, como TT4, no se podía guardar desde
+>   el editor. **C-20:** al verificar C-2 en pantalla salió que el editor
+>   nunca recibió el catálogo de puntos (desde la Fase 3): un proceso
+>   amarrado se veía «Sin amarre / manual», sin azimut calculado ni casilla
+>   de fila de cierre. Los dos se corrigieron en la fase.
+> - **C-13 con un margen, no redondeando.** El error se compara con
+>   `|E| ≤ T + 1e-6 mm` (`withinTolerance`). Redondear E y T a 0.1 mm habría
+>   cambiado la tolerancia en hasta 0.05 mm; el margen solo absorbe el ruido.
+> - **C-4 rechaza además lo que la base redondearía:** segundos con más de una
+>   cifra decimal y distancias con más de cuatro. Era el mismo tipo de fallo
+>   que señalaba la auditoría.
+> - **C-10 bloquea sin tolerancia.** Una cerrada o de enlace sin la tolerancia
+>   de algún recorrido —le faltan distancias— ya no ofrece cerrar en el
+>   diálogo; el servidor ya lo rechazaba.
+> - **C-2:** el ángulo de orientación de una abierta fija el datum y no se
+>   corrige, como en la cerrada sin fila de cierre. La casilla de la fila de
+>   cierre se muestra solo en las cerradas, que son las que la usan.
+> - **C-15 conserva la regla de la línea base** junto a la nueva: con datos
+>   anteriores a la fase, una visita cerrada con la anterior abierta podría
+>   existir (en producción no hay ninguna).
+> - **Verificación en pantalla.** C-19, C-2/C-20, C-10, C-11, C-15 y C-16 se
+>   vieron en local a 1280 px en claro y 390 px en oscuro, sin errores de
+>   consola ni desborde. C-1 se cubre con tests del motor: en local no hay
+>   una cerrada amarrada del otro lado. Visto al verificar: con los tres
+>   hilos capturados, la distancia tecleada se ignora aunque la celda la
+>   muestre (anotado en la § 11).
+> - **Lint:** `equipment-picker.test.ts` (Fase 25) pasaba los hijos como prop;
+>   corregido en la fase.
 
 ## Propósito
 

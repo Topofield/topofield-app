@@ -71,7 +71,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Consultar `PRD-TopoField.md` por sección según la tarea: `§3` modelo de datos y SQL · `§4.6` cierre y bloqueo · `§5` reglas de validación (`§5.4` tolerancias por orden) · `§6` algoritmos de cálculo · `§9` orden de implementación.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 25, todas cerradas.
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 26, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.
@@ -79,6 +79,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 
 ## Documentación de handoff
 - `docs/tecnica/README.md` → arquitectura, modelo de datos, seguridad, motor de cálculo, sistema de diseño, cómo añadir un módulo y deuda técnica. Es la referencia para desarrollar.
+- `docs/auditoria-calculo.md` → auditoría del motor de cálculo (Fase 26): qué se verificó contra las carteras, los errores corregidos y los criterios por decidir.
 - `docs/manual/README.md` → manual de usuario, con capturas de la app real. Es la **fuente de la redacción**.
 - `src/app/(app)/manual/` → la ruta `/manual` de la app: el mismo manual maquetado con el sistema de diseño, visible para el usuario final y en producción. IMPORTANT: el texto vive **por duplicado** en los dos sitios y no hay generación automática; al editar uno, editar el otro en el mismo commit.
 - `docs/manual/capturas.mjs` → regenera las capturas en `public/manual/` (copia única; el Markdown las referencia con ruta relativa).

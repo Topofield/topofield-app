@@ -25,6 +25,44 @@ scripts están fuera del repositorio, en el directorio temporal de la sesión.
 
 ---
 
+## Estado de la remediación (Fase 26, 2026-10-01)
+
+Corregido en la Fase 26 ([`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md)),
+cada hallazgo con el test que lo habría detectado. Con los del motor de
+nivelación, mínimos cuadrados y el redondeo se comprobó además que fallan con
+el código anterior. Los dos últimos hallazgos de la tabla no estaban en la
+auditoría: salieron al implementar y al verificar en pantalla.
+
+| Hallazgo | Severidad | Estado | Commit |
+|---|---|---|---|
+| C-1 fila de cierre con 360·k | ALTA | **Corregido** | `1156271` |
+| C-2 amarre en las abiertas | ALTA | **Corregido** | `1156271` |
+| C-3 el diálogo de la abierta con control | MEDIA | **Corregido** | `1156271` |
+| C-4 un solo promedio de lecturas | MEDIA | **Corregido** | `33bbf3c` |
+| C-5 coma decimal en las lecturas | MEDIA | **Corregido** | `33bbf3c` |
+| C-6 promedio a través de 0°/360° | MEDIA | **Corregido** | `33bbf3c` |
+| C-7 convergencia de mínimos cuadrados | MEDIA | **Corregido** | `d050182` |
+| C-8 control de reorientación | BAJA | **Quitado** (decisión 3 del PRD) | `1156271` |
+| C-9 «singular» falso | BAJA | **Corregido** | `d050182` |
+| C-10 la vuelta de una cerrada o de enlace | ALTA | **Corregido**: cada recorrido con su K·√D (decisión 2) | `d2bac3e` |
+| C-11 distancias en cero o negativas | MEDIA | **Corregido**, con CHECK en la base | `7085c1a` |
+| C-12 comprobación aritmética de la vuelta | MEDIA | **Corregido** | `d2bac3e` |
+| C-13 cierre igual a la tolerancia | BAJA | **Corregido**: margen de 1e-6 mm | `398501e` |
+| C-14 acumulado en coma flotante | BAJA | **Corregido**: milímetros enteros | `398501e` |
+| C-15 cerrar con la anterior abierta | ALTA | **Corregido** | `9ed00a2` |
+| C-16 fecha entre las vecinas | ALTA | **Corregido**, con índice único en la base | `06f9881` |
+| C-17 aviso de redondeo falso | BAJA | **Corregido** | `33bbf3c` |
+| C-18 empates de redondeo | BAJA | **Corregido** | `5e5fe6b` |
+| C-19 el servidor no guardaba una cerrada con fila de cierre | ALTA | **Corregido**: hallado al implementar C-2 | `1156271` |
+| C-20 el editor no mostraba el amarre | MEDIA | **Corregido**: hallado al verificar C-2 | `3537730` |
+
+La § 3 (documentación) se corrigió en `58a673b`, `ec22c34` y `922d8cb`. La
+§ 2 (criterios) sigue abierta: el usuario pidió cambiar D-1, D-3, D-4 a D-10
+y D-13, anotados como CR1 a CR4 en [`pendientes.md`](./pendientes.md). La § 4
+es material del usuario y no se tocó.
+
+---
+
 ## 0. Resumen
 
 **Las fórmulas de libro están bien.** Sobre las carteras reales del usuario, el

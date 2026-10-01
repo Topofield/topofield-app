@@ -37,7 +37,8 @@ eligió corregir primero:
 
 - **Fase 26** — correcciones del cálculo
   ([`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md)),
-  **en curso**;
+  **cerrada** el 2026-10-01: los 18 errores y dos más que salieron al
+  implementar;
 - **Fase 27** — segundo pulido
   ([`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md)), redactada;
 - después, los criterios que eligió cambiar, **sin fase**: «Criterios del
