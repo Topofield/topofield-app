@@ -1160,6 +1160,49 @@ export default function ManualPage() {
         </ul>
 
         <p>
+          <strong>Cómo se compensa con vuelta.</strong> Si el trabajo cumple,
+          las dos medidas entran en las cotas:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            En una <strong>abierta</strong>, ida y vuelta forman un{" "}
+            <strong>circuito</strong> que sale del BM de partida y vuelve a
+            él. Lo que la vuelta llega de más o de menos al BM es el error del
+            circuito, y se reparte por distancia a lo largo de los dos
+            recorridos, como en una cerrada.
+          </li>
+          <li>
+            En una <strong>cerrada</strong> o <strong>de enlace</strong>, cada
+            recorrido se compensa con su propio cierre: la ida contra su cota
+            conocida y la vuelta contra la del BM de partida.
+          </li>
+        </ul>
+
+        <p>
+          <strong>La cota del BM de partida no cambia nunca</strong>, y
+          tampoco la del BM de llegada en una de enlace: son datos, no
+          mediciones.
+        </p>
+
+        <p>
+          <strong>Cotas adoptadas.</strong> Si la vuelta pasa por los mismos
+          puntos, cada uno queda en la libreta con dos cotas compensadas, una
+          por pasada. Resultados, el informe y el Excel añaden una tabla,{" "}
+          <strong>Cotas adoptadas</strong>, con una sola cota por punto: el
+          promedio de las dos si se leyó dos veces, su cota compensada si se
+          leyó una, y la cota conocida en el BM de partida.
+        </p>
+
+        <p>
+          En El Verjón el circuito mide 781.9 m y cierra en −5.0 mm. D4 queda
+          en 3315.0855, el promedio de lo que dicen la ida (3315.083) y la
+          vuelta (3315.088), y C1 en 3289.4400, entre sus dos cotas
+          compensadas, 3289.4414 y 3289.4386. Lo mismo vale para un recorrido
+          único que vuelve por sus propios puntos, como el tramo 2.
+        </p>
+
+        <p>
           <strong>Puntos homólogos.</strong> Si la ida y la vuelta pasan por
           los mismos puntos, Resultados añade una tabla que compara la cota de
           cada punto en los dos recorridos: cota de la vuelta menos cota de la
