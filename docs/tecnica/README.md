@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-01 · Fase 26 cerrada · 966 tests y 67
+**Última actualización:** 2026-10-01 · Fase 27 cerrada · 976 tests y 67
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -1832,7 +1832,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-966 tests en 64 archivos, Vitest, entorno `node` **sin jsdom**. Además, 67
+976 tests en 66 archivos, Vitest, entorno `node` **sin jsdom**. Además, 67
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -1841,7 +1841,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/calculations/leveling.test.ts` | 86 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
-| `lib/validators/polygonal.test.ts` | 77 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26) |
+| `lib/validators/polygonal.test.ts` | 80 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27) |
 | `lib/validators/settlement.test.ts` | 50 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0 o las coordenadas, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
 | `lib/validators/leveling.test.ts` | 58 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
@@ -1877,6 +1877,8 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/reports/state.test.ts` | 4 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24) |
 | `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
 | `components/polygonal/stations-table.test.ts` | 6 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24); la fila de orientación de una abierta amarrada y la coma decimal en las lecturas (Fase 26) |
+| `components/projects/new-project-form.test.ts` | 2 | El alta de proyecto: un solo botón, de envío, y los datos básicos con el sistema de referencia (Fase 27) |
+| `components/projects/hub-rows.test.ts` | 5 | El tipo de un proceso: «Abierta con ida y vuelta», y como frase en las filas del hub (Fase 27) |
 | `lib/export/workbook-colors.test.ts` | 4 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24) |
 | `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
 | `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
@@ -2025,7 +2027,7 @@ El problema de ordenamiento que esto causaba ya está sorteado: `parsePrecision`
 presentación. Lo que corresponde es extraer un formateador único a
 `src/lib/utils/format.ts` y evaluar guardar el número en vez de la cadena.
 
-**El rechazo de un amarre sin coordenadas no tiene test automatizado.** El
+**Cerrado en la Fase 27 — el rechazo del amarre tiene test** (`referenceStartAzimuth`, en `validators/polygonal.ts`), con un mensaje propio para un punto que no está en el catálogo y la consulta filtrada por el proyecto del proceso. El texto original queda como registro. **El rechazo de un amarre sin coordenadas no tiene test automatizado.** El
 selector de punto de amarre excluye los `reference_points` sin `north`/`east`
 —verificado en la app— y `resolveStartAzimuth` en la Server Action los rechaza,
 pero esa guarda solo está cubierta por inspección de código. Importa porque la
@@ -2499,7 +2501,7 @@ cambiaría en silencio el equipo de los informes de procesos ya cerrados. Si
 reteclear el mismo equipo en cada proceso se vuelve molesto en el uso real, se
 reabre como mejora — con el congelado resuelto, no solo con menos tecleo.
 
-**El formulario de proyecto quedó más corto (Fase 8).** Al perder los siete
+**Cerrado en la Fase 27 — el alta de proyecto es un solo formulario.** Al revisarlo en pantalla salió un fallo: «Siguiente» creaba el proyecto sin mostrar el paso 2, porque React cambiaba el `type` del mismo botón antes de la acción por defecto del clic. El texto original queda como registro. **El formulario de proyecto quedó más corto (Fase 8).** Al perder los siete
 campos de equipo y precisión, el paso 2 del asistente pasó de «Equipo y
 precisión» a «Datum y proyección» — dos campos únicamente. Se decidió no
 fusionarlo con el paso 1 porque el sistema de referencia es una agrupación
@@ -2605,7 +2607,7 @@ guarda una lectura por visual, así que el import promedia. Llevar a
 nivelación el modelo de lecturas múltiples de la Fase 7 sería una fase
 propia.
 
-**«Abierta sin control» con vuelta se lee raro (Fase 16).** Es la etiqueta de
+**Cerrado en la Fase 27 — la abierta con vuelta se rotula «Abierta con ida y vuelta»** (`levelingTypeLabel`) en el hub, la cabecera, el cierre, el informe, el Excel y el diálogo de importar; el selector ofrece «Abierta» y explica qué la controla. El texto original queda como registro. **«Abierta sin control» con vuelta se lee raro (Fase 16).** Es la etiqueta de
 `open`, y el crudo leído como ida y vuelta queda así aunque sí tenga un
 control: la discrepancia entre los dos recorridos. Cambiar la etiqueta toca
 el manual y el informe; quedó fuera de la fase.
@@ -2613,8 +2615,8 @@ el manual y el informe; quedó fuera de la fase.
 **Dos diálogos para mover una poligonal (Fase 15).** «Asignar coordenadas
 reales» (arranque + azimut, solo sin cerrar, sin anotación) y «Georreferenciar»
 (dos estaciones, cualquier estado, anotado) resuelven casi lo mismo. Desde la
-Fase 22 están juntos, en la tarjeta del dibujo; unificarlos sigue fuera de
-alcance.
+Fase 22 están juntos, en la tarjeta del dibujo. En la Fase 27 el usuario
+decidió mantenerlos aparte; cada uno dice en una línea cuándo usar el otro.
 
 **Los pesos no pueden guardarse fuera del rango ni de la escala de sus
 columnas.** El validador rechaza σ angular fuera de 0.01″–9999.99″ o con más
@@ -2700,7 +2702,7 @@ en el manual (§ 4.4 y preguntas frecuentes). El atributo
 `data-unsaved-guard-skip`, para que un enlace no pase por la guarda, existe y
 tiene test, pero hoy ningún enlace lo usa.
 
-**«Cerrada» y «Cerrado» en la misma fila del hub (Fase 22).** El tipo de una
+**Cerrado en la Fase 27 — el tipo va como frase en el hub** («Poligonal cerrada», «Nivelación de enlace»), igual que en la cabecera del proceso; el badge sigue diciendo el estado. El texto original queda como registro. **«Cerrada» y «Cerrado» en la misma fila del hub (Fase 22).** El tipo de una
 poligonal o nivelación («Poligonal · Cerrada») va en el subtítulo y el estado
 («Cerrado») en su badge. Son cosas distintas —circuito que vuelve al origen y
 proceso sellado— con la misma palabra, a centímetros. No se renombró ninguno:

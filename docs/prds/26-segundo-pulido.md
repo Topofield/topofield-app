@@ -1,7 +1,8 @@
 # PRD-de-fase 27 — Segundo pulido
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-01
+**Fecha de cierre:** 2026-10-01
 
 **Rama:** `fase-27-segundo-pulido`
 **Petición:** del usuario, 2026-10-01, tras revisar los pendientes: «corrige
@@ -11,6 +12,29 @@ Va después de la Fase 26 (correcciones del cálculo), por decisión del usuario
 Se abrió el mismo día, al cerrar la 26: «sí, abre la fase 27 del pulido».
 **Módulo:** transversal — alta de proyecto, etiquetas de tipo de poligonal y
 nivelación, y acción de guardado de la poligonal
+
+> **Divergencias de la implementación:**
+>
+> - **PU11:** el asistente pasó a `new-project-form.tsx` (`NewProjectForm`);
+>   el archivo viejo se renombró. La captura del alta se toma a página
+>   completa para que se vea «Crear proyecto».
+> - **PU12:** además de los sitios previstos, el diálogo de importar una
+>   libreta y el filtro de tipo del hub. El filtro, como el selector, ofrece
+>   «Abierta», porque reúne las abiertas con y sin vuelta.
+>   `levelingKindLabel` (la frase del hub y de la cabecera) vive junto a
+>   `levelingTypeLabel`, en `types/leveling.ts`.
+> - **PU16 sin test de render:** los dos diálogos guardan su estado de
+>   apertura dentro del componente, y un render estático solo muestra el
+>   botón. Se verificó en pantalla.
+> - **PU15:** el commit lleva el prefijo `fix:`, porque además del test filtra
+>   la consulta por el proyecto.
+> - **Verificación en pantalla** en local, a 1280 px en claro y 390 px en
+>   oscuro: el alta crea el proyecto con su proyección (CTM12) al pulsar
+>   «Crear proyecto»; el hub, la cabecera, el selector, el cierre, el
+>   informe y el Excel de El Verjón dicen «Abierta con ida y vuelta»; el hub
+>   dice «Poligonal cerrada»; los dos diálogos se remiten el uno al otro. Sin
+>   desborde. Los errores de consola fueron del entorno local («JWT issued
+>   at future», el reloj de WSL).
 
 ## Propósito
 
