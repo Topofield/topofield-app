@@ -38,6 +38,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 26 | Correcciones del cálculo | [`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md) | cerrada |
 | 27 | Segundo pulido | [`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md) | cerrada |
 | 28 | Ida y vuelta en la compensación | [`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md) | cerrada |
+| 29 | Puntos de control sin posición | [`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md) | en curso |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
