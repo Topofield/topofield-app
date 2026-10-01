@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, Logo, ThemeSelect } from "@/components/design-system";
+import { Button, Logo, LogoMark, ThemeSelect } from "@/components/design-system";
 import { EquipmentCatalogProvider } from "@/components/equipment/catalog-context";
 import { createClient } from "@/lib/supabase/server";
 import { getEquipment } from "@/lib/supabase/queries";
@@ -35,13 +35,16 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-rule bg-card">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
+          {/* En el teléfono, solo el isotipo: con «Equipos» (Fase 25) la
+              palabra ya no cabe junto a los enlaces y el cierre de sesión. */}
           <Link
             href="/dashboard"
             aria-label="TopoField — ir al dashboard"
-            className="rounded-md transition-opacity hover:opacity-80"
+            className="shrink-0 rounded-md transition-opacity hover:opacity-80"
           >
-            <Logo />
+            <LogoMark className="h-6 w-6 text-mira-strong sm:hidden" />
+            <Logo className="hidden sm:inline-flex" />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <span data-user-email className="hidden text-sm text-ink-2 sm:inline">
@@ -63,7 +66,7 @@ export default async function AppLayout({
             </Link>
             <ThemeSelect initial={theme} />
             <form action={signOutAction}>
-              <Button type="submit" variant="ghost" size="sm">
+              <Button type="submit" variant="ghost" size="sm" className="whitespace-nowrap">
                 Cerrar sesión
               </Button>
             </form>
