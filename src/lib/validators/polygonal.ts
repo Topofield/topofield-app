@@ -129,6 +129,10 @@ export function validatePolygonalStation(
  * y los minutos son columnas enteras; el CHECK de `polygonal_angle_readings`
  * exige los mismos rangos. Un número que no es número lo marca la celda
  * (`NumberInput`), no esta regla.
+ *
+ * 360°00′00″ exacto pasa, como en la regla de la estación, que solo avisa: es
+ * lo que da `decimalToDms` al redondear 359.99999° en grados decimales, y
+ * rechazarlo bloquearía una lectura legítima.
  */
 export function readingDmsError(reading: {
   deg: number;
@@ -140,7 +144,8 @@ export function readingDmsError(reading: {
   if (!Number.isInteger(deg) || !Number.isInteger(min)) {
     return "Los grados y los minutos van sin decimales.";
   }
-  if (deg < 0 || deg >= 360) return "Los grados deben estar entre 0 y 359.";
+  const fullTurn = deg === 360 && min === 0 && sec === 0;
+  if (deg < 0 || (deg >= 360 && !fullTurn)) return "Los grados deben estar entre 0 y 359.";
   if (min < 0 || min >= 60) return "Los minutos deben estar entre 0 y 59.";
   if (sec < 0 || sec >= 60) return "Los segundos deben estar entre 0 y 59.";
   return null;

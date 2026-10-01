@@ -707,7 +707,10 @@ describe("lecturas fuera de rango (Fase 24)", () => {
   it("readingDmsError: límites y columnas enteras", () => {
     expect(readingDmsError({ deg: 0, min: 0, sec: 0 })).toBeNull();
     expect(readingDmsError({ deg: 359, min: 59, sec: 59.9 })).toBeNull();
-    expect(readingDmsError({ deg: 360, min: 0, sec: 0 })).toBe("Los grados deben estar entre 0 y 359.");
+    // 360°00′00″ exacto pasa: es el redondeo de 359.99999° en decimal.
+    expect(readingDmsError({ deg: 360, min: 0, sec: 0 })).toBeNull();
+    expect(readingDmsError({ deg: 360, min: 0, sec: 0.1 })).toBe("Los grados deben estar entre 0 y 359.");
+    expect(readingDmsError({ deg: 361, min: 0, sec: 0 })).toBe("Los grados deben estar entre 0 y 359.");
     expect(readingDmsError({ deg: -1, min: 0, sec: 0 })).toBe("Los grados deben estar entre 0 y 359.");
     expect(readingDmsError({ deg: 90, min: 0, sec: 60 })).toBe("Los segundos deben estar entre 0 y 59.");
     expect(readingDmsError({ deg: 90, min: 30.5, sec: 0 })).toBe("Los grados y los minutos van sin decimales.");
