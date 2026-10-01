@@ -43,6 +43,12 @@ asentamientos, sus acciones de servidor y la documentación
 >   muestre (anotado en la § 11).
 > - **Lint:** `equipment-picker.test.ts` (Fase 25) pasaba los hijos como prop;
 >   corregido en la fase.
+> - **La revisión de código encontró un caso de C-10:** con la ida sin
+>   tolerancia (sin distancias) y la vuelta fuera de la suya, el veredicto
+>   guardado era `false` y el servidor habría dejado cerrar como rechazado lo
+>   que el diálogo bloquea. `levelingProcessVerdict` mira ahora primero si a
+>   algún recorrido le falta la tolerancia, como `evaluateLevelingClosure`.
+>   La otra revisión no encontró defectos.
 
 ## Propósito
 

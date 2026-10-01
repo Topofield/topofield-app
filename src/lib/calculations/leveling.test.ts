@@ -1138,7 +1138,11 @@ describe("levelingProcessVerdict — con vuelta en cerrada y de enlace (Fase 26,
     expect(levelingProcessVerdict({ ...base, meetsTolerance: true, return: run(false) }, "link")).toBe(false);
     expect(levelingProcessVerdict({ ...base, meetsTolerance: false, return: run(true) }, "closed")).toBe(false);
   });
-  it("sin tolerancia de la vuelta no hay veredicto", () => {
+  it("sin tolerancia de un recorrido no hay veredicto, aunque el otro no cumpla", () => {
+    // Como el diálogo de cierre: si se guardara false, el servidor dejaría
+    // cerrar como rechazado lo que el diálogo bloquea (revisión de la Fase 26).
     expect(levelingProcessVerdict({ ...base, meetsTolerance: true, return: run(null) }, "closed")).toBeNull();
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: null, return: run(false) }, "closed")).toBeNull();
+    expect(levelingProcessVerdict({ ...base, meetsTolerance: false, return: run(null) }, "link")).toBeNull();
   });
 });

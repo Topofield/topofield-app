@@ -491,12 +491,14 @@ export function levelingProcessVerdict(
   type: LevelingType,
 ): boolean | null {
   if (type === "open") return result.return ? result.meetsDiscrepancy : null;
-  // Con vuelta, cumplen los dos recorridos (Fase 26, C-10). Uno que no cumple
-  // decide; uno sin tolerancia —le faltan distancias— deja el veredicto en
-  // blanco.
+  // Con vuelta, cumplen los dos recorridos (Fase 26, C-10). Un recorrido sin
+  // tolerancia —le faltan distancias— deja el veredicto en blanco aunque el
+  // otro no cumpla: así el servidor no cierra lo que el diálogo bloquea
+  // (`evaluateLevelingClosure`), y quien lo cierre como rechazado lo hará con
+  // los dos recorridos juzgados. Sin eso, uno que no cumple decide.
   const runs = [result.meetsTolerance, result.return ? result.return.meetsTolerance : true];
-  if (runs.includes(false)) return false;
-  return runs.includes(null) ? null : true;
+  if (runs.includes(null)) return null;
+  return !runs.includes(false);
 }
 
 /**
