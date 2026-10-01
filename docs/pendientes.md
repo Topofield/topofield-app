@@ -472,6 +472,10 @@ fase, después de la 27. El resto de la § 2 queda documentado, sin cambio.
 
 ### CR1 · Desnivel adoptado en la compensación (D-1)
 
+> **En curso en la Fase 28** ([`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md)),
+> abierta el 2026-10-01: ida y vuelta compensadas como circuito y una cota por
+> punto, con el BM de partida fijo.
+
 Hoy las cotas de una nivelación con vuelta salen solo de la ida, compensada
 con su propio cierre. Ida y vuelta son dos observaciones del mismo desnivel:
 compensar el lazo ida + vuelta las combina, como dice el marco teórico
