@@ -46,7 +46,7 @@ const dini: Equipment = {
 
 function render(element: ReturnType<typeof createElement>, equipment: Equipment[] = [leica, dini]) {
   return renderToStaticMarkup(
-    createElement(EquipmentCatalogProvider, { equipment, today: "2026-09-30" }, element),
+    createElement(EquipmentCatalogProvider, { equipment, today: "2026-09-30", children: element }),
   );
 }
 
