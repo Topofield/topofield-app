@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, Logo, ThemeSelect } from "@/components/design-system";
+import { EquipmentCatalogProvider } from "@/components/equipment/catalog-context";
 import { createClient } from "@/lib/supabase/server";
+import { getEquipment } from "@/lib/supabase/queries";
+import { todayInBogota } from "@/lib/utils/format";
 import { readThemeChoice } from "@/lib/theme-server";
 import { signOutAction } from "./actions";
 
@@ -26,6 +29,8 @@ export default async function AppLayout({
   }
 
   const theme = await readThemeChoice();
+  // El catálogo de equipos para los formularios de equipo (Fase 25).
+  const equipment = await getEquipment(supabase);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -66,7 +71,9 @@ export default async function AppLayout({
         </div>
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {children}
+        <EquipmentCatalogProvider equipment={equipment} today={todayInBogota()}>
+          {children}
+        </EquipmentCatalogProvider>
       </main>
     </div>
   );

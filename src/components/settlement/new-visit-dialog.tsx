@@ -6,11 +6,11 @@ import {
   Alert,
   Button,
   Input,
-  LevelFieldset,
   Modal,
   PrecisionOrderSelect,
   Select,
 } from "@/components/design-system";
+import { LevelEquipment } from "@/components/equipment/equipment-picker";
 import { BmSelector, type BmValue } from "@/components/leveling/bm-selector";
 import { parseNumber } from "@/lib/utils/parse";
 import { createVisitAction } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
@@ -185,7 +185,12 @@ export function NewVisitDialog({
             />
           )}
           <PrecisionOrderSelect kind="leveling" value={order} onChange={setOrder} />
-          <LevelFieldset value={level} onChange={setLevel} order={order} />
+          <LevelEquipment
+            value={level}
+            onChange={setLevel}
+            order={order}
+            referenceDate={date || undefined}
+          />
           {previous && (
             <p className="text-sm text-ink-2">
               El nivelador, el amarre, el orden y el equipo vienen de la visita{" "}

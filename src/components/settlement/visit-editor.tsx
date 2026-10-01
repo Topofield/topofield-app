@@ -9,13 +9,13 @@ import {
   Card,
   Input,
   InvalidNumbersContext,
-  LevelFieldset,
   NumberInput,
   PrecisionOrderSelect,
   Select,
   Textarea,
   useInvalidNumbers,
 } from "@/components/design-system";
+import { LevelEquipment } from "@/components/equipment/equipment-picker";
 import { BmSelector, type BmValue } from "@/components/leveling/bm-selector";
 import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 import type { ReadingDraftState } from "@/components/leveling/readings-table";
@@ -555,11 +555,12 @@ export function VisitEditor({
             />
           </div>
           <div className="mt-4">
-            <LevelFieldset
+            <LevelEquipment
               value={header.level}
               onChange={(v) => updateHeader("level", v)}
               order={header.precisionOrder}
               disabled={disabled}
+              referenceDate={header.date || undefined}
             />
           </div>
           <div className="mt-4">

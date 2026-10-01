@@ -5,8 +5,8 @@ import {
   NumberInput,
   PrecisionOrderSelect,
   Select,
-  TotalStationFieldset,
 } from "@/components/design-system";
+import { TotalStationEquipment } from "@/components/equipment/equipment-picker";
 import {
   azimuthFromCoordinates,
   decimalToDms,
@@ -156,7 +156,7 @@ export function PolygonalConfigFields({
         disabled={disabled}
         onChange={(v) => set("precisionOrder", v)}
       />
-      <TotalStationFieldset
+      <TotalStationEquipment
         value={value.totalStation}
         onChange={(v) => set("totalStation", v)}
         order={value.precisionOrder}
