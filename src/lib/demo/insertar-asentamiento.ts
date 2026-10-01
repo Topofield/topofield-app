@@ -68,8 +68,6 @@ export async function insertarAsentamiento(
         site_id: lugar.id,
         code: p.code,
         location_description: p.locationDescription,
-        northing: p.northing,
-        easting: p.easting,
         initial_elevation: p.c0,
       })),
     )
@@ -80,8 +78,6 @@ export async function insertarAsentamiento(
   const points: PointInput[] = fixture.points.map((p) => ({
     id: idPorCodigo.get(p.code)!,
     code: p.code,
-    northing: p.northing,
-    easting: p.easting,
     initialElevation: p.c0,
     // Torre Alameda no tiene altas ni bajas: todos sus puntos son originales.
     activeFrom: null,

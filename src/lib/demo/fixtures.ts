@@ -107,8 +107,6 @@ export const REFERENCIAS_DEMO: ReferenciaDemo[] = [
   ...ALAMEDA_AMARRES.map((a) => ({
     code: a.code,
     type: a.type,
-    north: a.north,
-    east: a.east,
     elevation: a.elevation,
     description: a.description,
   })),
