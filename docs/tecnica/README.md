@@ -2820,10 +2820,14 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-09-30):** la nube tiene aplicadas las **veintisiete**
-migraciones, hasta `20260930050000_catalogo_equipos` (Fase 25), empujada antes
-del merge de su PR: la tabla `equipment` con RLS, sus cuatro políticas, el
-índice único y sus CHECK, y el catálogo vacío. La de la Fase 24 dejó el CHECK
+**Estado actual (2026-10-01):** la nube tiene aplicadas las **veintinueve**
+migraciones, hasta `20261001020000_visita_fecha_unica` (Fase 26), empujadas
+antes del merge de su PR. Las dos de la Fase 26 —el CHECK de distancias por
+visual positivas en `leveling_readings` y `settlement_book_readings`, y el
+índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
+filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
+la tabla `equipment` con RLS, sus cuatro políticas, el índice único y sus
+CHECK. La de la Fase 24 dejó el CHECK
 `polygonal_angle_readings_dms_range` activo. Las de la Fase 23 se verificaron al aplicarse: El Verjón con su
 veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `SECURITY INVOKER` y sin `EXECUTE` para `anon`, sus dos triggers activos,
