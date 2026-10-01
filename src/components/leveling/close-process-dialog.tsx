@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Alert, Button, Modal } from "@/components/design-system";
 import { evaluateLevelingClosure } from "@/lib/validators/leveling";
 import { closeLevelingProcessAction } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
-import { LEVELING_TYPE_LABELS, type LevelingResult, type LevelingType } from "@/types/leveling";
+import { levelingTypeLabel, type LevelingResult, type LevelingType } from "@/types/leveling";
 
 function formatMm(value: number | null): string {
   return value == null ? "—" : `${value.toFixed(1)} mm`;
@@ -121,7 +121,7 @@ export function CloseProcessDialog({
               <div className="rounded-md border border-rule px-4 py-2">
                 <SummaryRow
                   label="Tipo de nivelación"
-                  value={LEVELING_TYPE_LABELS[type]}
+                  value={levelingTypeLabel(type, result.return !== null)}
                 />
                 {/* Una abierta no cierra contra cota conocida: sin filas vacías
                     de cierre. Con vuelta, su veredicto es la discrepancia. */}

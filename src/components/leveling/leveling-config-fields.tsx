@@ -10,7 +10,7 @@ import {
   type PrecisionOrder,
 } from "@/types/project";
 import {
-  LEVELING_TYPE_LABELS,
+  LEVELING_TYPE_CHOICE_LABELS,
   LEVELING_TYPES,
   type LevelingType,
 } from "@/types/leveling";
@@ -19,7 +19,7 @@ import type { ReferencePoint } from "@/types/project";
 
 const LEVELING_TYPE_OPTIONS = LEVELING_TYPES.map((value) => ({
   value,
-  label: LEVELING_TYPE_LABELS[value],
+  label: LEVELING_TYPE_CHOICE_LABELS[value],
 }));
 
 /** Estado de UI de la configuración de un proceso de nivelación (todo texto). */
@@ -79,6 +79,11 @@ export function LevelingConfigFields({
           label="Tipo de nivelación"
           options={LEVELING_TYPE_OPTIONS}
           value={value.type}
+          helperText={
+            value.type === "open"
+              ? "Sin cota conocida de llegada. Con recorrido de vuelta, la discrepancia entre ida y vuelta es su control; sin vuelta, no tiene control de cierre."
+              : undefined
+          }
           disabled={disabled}
           onChange={(e) => {
             const nextType = e.target.value as LevelingType;

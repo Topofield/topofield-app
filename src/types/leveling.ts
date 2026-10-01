@@ -202,6 +202,35 @@ export const LEVELING_TYPE_LABELS: Record<LevelingType, string> = {
   open: "Abierta sin control",
 };
 
+/**
+ * El tipo de un proceso tal como se muestra (Fase 27, PU12). Una abierta con
+ * vuelta no es «sin control»: la discrepancia entre ida y vuelta la controla y
+ * es su veredicto desde la Fase 23.
+ */
+export function levelingTypeLabel(type: LevelingType, hasReturnRun: boolean): string {
+  if (type === "open" && hasReturnRun) return "Abierta con ida y vuelta";
+  return LEVELING_TYPE_LABELS[type];
+}
+
+/**
+ * «Nivelación cerrada · ida y vuelta», «Nivelación abierta con ida y vuelta»:
+ * el tipo como frase, para el hub y la cabecera del proceso (Fase 27, PU12 y
+ * PU13). La abierta ya dice la vuelta en su tipo; las demás la añaden.
+ */
+export function levelingKindLabel(type: LevelingType, hasReturnRun: boolean): string {
+  const tipo = levelingTypeLabel(type, hasReturnRun).toLowerCase();
+  return `Nivelación ${tipo}${hasReturnRun && type !== "open" ? " · ida y vuelta" : ""}`;
+}
+
+/**
+ * El tipo en un selector, que se elige antes de capturar la vuelta: la
+ * abierta se ofrece como «Abierta» y el campo explica qué la controla.
+ */
+export const LEVELING_TYPE_CHOICE_LABELS: Record<LevelingType, string> = {
+  ...LEVELING_TYPE_LABELS,
+  open: "Abierta",
+};
+
 export const POINT_TYPE_LABELS: Record<PointType, string> = {
   bm: "BM",
   pc: "Punto de cambio",
