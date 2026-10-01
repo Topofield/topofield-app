@@ -22,6 +22,7 @@ import { worst } from "@/lib/calculations/settlement";
 import { countGroupOf, NO_PROCESSES, type ProcessCounts } from "@/lib/process-counts";
 import type { EligibleCandidate } from "@/lib/reports/eligibility";
 import type { Report } from "@/types/report";
+import type { Equipment } from "@/types/equipment";
 
 type Client = SupabaseClient<Database>;
 
@@ -711,6 +712,22 @@ export async function getReports(
     .order("generated_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as Report[];
+}
+
+/**
+ * El catálogo de equipos del usuario (Fase 25), por tipo, marca y modelo. RLS
+ * lo limita a sus filas.
+ */
+export async function getEquipment(supabase: Client): Promise<Equipment[]> {
+  const { data, error } = await supabase
+    .from("equipment")
+    .select("*")
+    .order("kind")
+    .order("brand", { nullsFirst: false })
+    .order("model", { nullsFirst: false })
+    .order("serial", { nullsFirst: false });
+  if (error) throw error;
+  return (data ?? []) as Equipment[];
 }
 
 /** Un informe por id. */

@@ -261,3 +261,8 @@ export function formatCoordinate(value: number | string | null | undefined): str
 export function formatElevation(value: number | string | null | undefined): string {
   return fixedOrDash(value, 4);
 }
+
+/** Hoy en Bogotá, como `YYYY-MM-DD` (`en-CA` da ese formato). */
+export function todayInBogota(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+}

@@ -45,6 +45,12 @@ export default async function AppLayout({
             {/* Visible también en móvil, al contrario que el correo: la ayuda
                 hace falta sobre todo en el teléfono, en campo. */}
             <Link
+              href="/equipos"
+              className="text-sm font-medium text-ink underline-offset-2 hover:underline"
+            >
+              Equipos
+            </Link>
+            <Link
               href="/manual"
               className="text-sm font-medium text-ink underline-offset-2 hover:underline"
             >
