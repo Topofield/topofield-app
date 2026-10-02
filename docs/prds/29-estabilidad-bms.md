@@ -55,7 +55,9 @@ Excel, la demo y el seed
 >   comentario de `ALAMEDA_BM_FUERA`.
 > - **Consulta previa en producción** (`db push --dry-run`, solo lectura): la
 >   única migración pendiente es `20261001040000_estabilidad_bms.sql`.
-> - **Producción, pendiente:** el `db push` y, después, el merge.
+> - **Producción** (2026-10-02): `db push` y, después, merge del #19.
+>   Verificado: la columna es `numeric(10,4)`, `save_visit` la escribe, sigue
+>   siendo `SECURITY INVOKER` y `anon` no tiene `EXECUTE`.
 
 ## Propósito
 

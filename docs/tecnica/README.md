@@ -2873,8 +2873,8 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-01):** la nube tiene aplicadas las **treinta**
-migraciones, hasta `20261001030000_puntos_sin_posicion` (Fase 29). Todas se
+**Estado actual (2026-10-02):** la nube tiene aplicadas las **treinta y una**
+migraciones, hasta `20261001040000_estabilidad_bms` (Fase 30). Todas se
 empujaron antes del merge de su PR, salvo la de la Fase 29, que borra y fue
 después (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
@@ -2888,9 +2888,10 @@ veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `reports` sin política de `UPDATE` y cero procesos calculados con el veredicto
 nulo.
 
-**Pendiente:** `20261001040000_estabilidad_bms` (Fase 30), que añade
-`settlement_book_readings.catalog_elevation` y recrea `save_visit`. Solo
-añade: va **antes** del merge, con el visto bueno del usuario.
+La de la Fase 30 añade `settlement_book_readings.catalog_elevation` y recrea
+`save_visit`; se aplicó antes del merge del PR #19. Verificado: la columna es
+`numeric(10,4)`, `save_visit` la escribe, sigue siendo `SECURITY INVOKER` y
+solo `authenticated` tiene `EXECUTE` (además de `postgres` y `service_role`).
 
 La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
 Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo
