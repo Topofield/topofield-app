@@ -4,10 +4,8 @@
 import {
   azimuthFromCoordinates,
   decimalToDms,
-  readingSpreadSeconds,
   type Dms,
 } from "@/lib/calculations/angles";
-import { readingDispersionTolerance } from "@/lib/calculations/tolerances";
 import type {
   PolygonalResult,
   PolygonalType,
@@ -291,42 +289,19 @@ export function evaluatePolygonalClosure(
 }
 
 /**
- * Valida las lecturas de un ángulo.
+ * Valida las lecturas de un ángulo: que estén las que exige el proceso.
  *
- * La dispersión (máx − mín) es control de calidad de la captura: tres lecturas
- * que difieren 40" dicen algo que el promedio esconde. Se contrasta con la
- * precisión angular del equipo DEL PROCESO
- * (`polygonal_processes.angular_precision_seconds`, desde la Fase 8), no con
- * la tolerancia del orden: el orden gobierna el cierre de la poligonal,
- * mientras que repetir una lectura mide repetibilidad.
- *
- * `instrumentSeconds` no finito significa «el proceso no declaró equipo», y
- * entonces la dispersión NO se evalúa: sin vara no hay comparación. Misma
- * política que `totalStationMeetsOrder` en `tolerances.ts` — la función no
- * opina sobre lo que no sabe. Es deliberado que la ausencia llegue como
- * `NaN` y no como `0`: `Number(null)` es `0`, y un 0 aquí daba una tolerancia
- * de 0" contra la que cualquier par de lecturas distintas dispara el aviso
- * «…sobre los 0.0" que admite un equipo de 0"», que es falso y absurdo.
- *
- * Avisa, no bloquea — misma política que el resto del editor.
+ * Hasta la Fase 31 avisaba además si su dispersión superaba el doble de la
+ * precisión del equipo; ese aviso se quitó por decisión del usuario (D-5): el
+ * criterio saltaba en buena parte de los datos correctos. La dispersión se
+ * sigue mostrando como dato junto al promedio.
  */
 export function validateReadings(
   readings: ReadingInput[],
   min: number,
-  instrumentSeconds: number,
-): { error?: string; warning?: string } {
+): { error?: string } {
   if (readings.length < min) {
     return { error: `Faltan lecturas: se exigen ${min} y hay ${readings.length}.` };
-  }
-  if (readings.length < 2) return {};
-  if (!Number.isFinite(instrumentSeconds)) return {};
-
-  const dispersion = readingSpreadSeconds(readings.map((r) => r.angle)) ?? 0;
-  const limit = readingDispersionTolerance(instrumentSeconds);
-  if (dispersion > limit) {
-    return {
-      warning: `Dispersión de ${dispersion.toFixed(1)}" entre lecturas, sobre los ${limit.toFixed(1)}" que admite un equipo de ${instrumentSeconds}".`,
-    };
   }
   return {};
 }

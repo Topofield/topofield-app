@@ -4,7 +4,6 @@ import {
   minRelativePrecision,
   levelingTolerance,
   LEVELING_TOLERANCE_K,
-  readingDispersionTolerance,
 } from "./tolerances";
 
 describe("angularTolerance", () => {
@@ -140,12 +139,5 @@ describe("thresholdsOf", () => {
       accumulated_alarm: preset.accumulatedAlarm,
     });
     expect(leido).toEqual(preset);
-  });
-});
-
-describe("readingDispersionTolerance", () => {
-  it("admite el doble de la precisión angular del equipo", () => {
-    expect(readingDispersionTolerance(5)).toBe(10);
-    expect(readingDispersionTolerance(2)).toBe(4);
   });
 });

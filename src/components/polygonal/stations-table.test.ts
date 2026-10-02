@@ -28,7 +28,6 @@ function render(showDeflection: boolean) {
       issues: [],
       showDeflection,
       readingsMin: 1,
-      angularPrecisionSeconds: Number.NaN,
       angleFormat: "dms",
     }),
   );
@@ -63,7 +62,6 @@ describe("StationsTable — fila de orientación (Fase 26, C-2)", () => {
         issues: [],
         showDeflection: true,
         readingsMin: 1,
-        angularPrecisionSeconds: Number.NaN,
         angleFormat: "dms",
         orientationRow,
       }),
