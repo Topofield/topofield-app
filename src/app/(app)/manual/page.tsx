@@ -532,14 +532,10 @@ export default function ManualPage() {
           Donde <em>n</em> es el número de ángulos medidos.
         </p>
 
-        <Nota>
-          Si la precisión angular del equipo no alcanza para el orden
-          elegido, la aplicación se lo advierte junto al campo de precisión
-          angular — por ejemplo, una estación de 5″ con primer orden
-          declarado (cuya tolerancia parte de 1″). Es un aviso, no un
-          bloqueo: puede seguir capturando, porque la decisión de si el
-          equipo basta es suya. Un equipo que cumple justo el orden (5″ con
-          tercer orden, cuya tolerancia parte de 15″) no dispara el aviso.
+        <Nota titulo="El cierre juzga el trabajo, no el equipo">
+          La marca, el modelo y la precisión del equipo se registran para el
+          informe; la aplicación no opina si el equipo alcanza el orden. Lo
+          que dice si la medición cumple es el veredicto de cierre.
         </Nota>
 
         <h3 className="mt-4 text-lg font-semibold">5.3 El editor</h3>
@@ -638,10 +634,9 @@ export default function ManualPage() {
         </p>
 
         <p>
-          La dispersión avisa cuando supera lo que su equipo resuelve. Tres
-          lecturas que difieren 40″ con un teodolito de 5″ no son
-          repetibilidad: son un error de puntería o de tecleo. Es un aviso, no
-          un bloqueo.
+          La dispersión es un dato, sin aviso: la aplicación no la juzga. Si
+          las lecturas de un ángulo difieren mucho, conviene revisarlas antes
+          de cerrar.
         </p>
 
         <p>
@@ -1000,15 +995,6 @@ export default function ManualPage() {
           llegada. Marque <strong>Incluye recorrido de vuelta</strong> si va a
           medir ida y vuelta.
         </p>
-
-        <Nota>
-          Si la desviación típica del nivel no alcanza para el orden elegido,
-          la aplicación se lo advierte junto al campo de desviación típica —
-          por ejemplo, un nivel de obra de 5.0 mm/km con primer orden
-          declarado (cuya tolerancia parte de 3 mm/km). Es un aviso, no un
-          bloqueo: 2.5 mm/km con primer orden es ajustado pero posible, y no
-          lo dispara.
-        </Nota>
 
         <h3 className="mt-4 text-lg font-semibold">6.5 El editor</h3>
 
@@ -1483,14 +1469,6 @@ export default function ManualPage() {
           lleva su propio equipo, no el lugar.
         </p>
 
-        <Nota>
-          Si la desviación típica del nivel no alcanza para el orden que
-          declaró la visita, la aplicación se lo advierte, con el mismo
-          criterio que en nivelación (§ 6.5): un nivel de 5.0 mm/km con
-          primer orden (K = 3) avisa; uno de 2.5 mm/km, ajustado pero
-          posible, no. Es un aviso, no un bloqueo.
-        </Nota>
-
         <p>
           <strong>La libreta de nivelación.</strong> En una visita con
           libreta, las cotas de los puntos de control{" "}
@@ -1739,8 +1717,12 @@ export default function ManualPage() {
         </Tabla>
 
         <p>
-          Un punto dado de alta a mitad del monitoreo mide su acumulado desde
-          su propia línea base, así que el promedio mezcla las dos.
+          El <strong>promedio es encadenado</strong>: el de la visita anterior
+          más la media de lo que se movieron los puntos medidos en las dos. Un
+          punto dado de alta entra con acumulado 0 y uno dado de baja deja de
+          contar; la media de los acumulados se movería con eso sin que nada
+          se asentara, el encadenado no. Sin altas ni bajas, los dos
+          coinciden.
         </p>
 
         <p>
@@ -1819,6 +1801,15 @@ export default function ManualPage() {
         </p>
 
         <p>
+          <strong>Tendencia.</strong> Desde la tercera visita de un punto, la
+          columna dice si <strong>acelera</strong> —su velocidad crece más de
+          lo que explica el error de una lectura, con el mismo margen del
+          aviso de lectura fuera de tendencia: 1.5, 3, 6 o 12 mm según el
+          orden de la visita— o <strong>converge</strong>. Un solo salto
+          dentro de ese margen no basta para decir que un punto acelera.
+        </p>
+
+        <p>
           <strong>Un dato en alarma se registra con normalidad.</strong> El
           semáforo es un diagnóstico, no un control de captura: la aplicación{" "}
           <strong>nunca</strong> impide guardar una visita ni cerrarla por
@@ -1846,7 +1837,8 @@ export default function ManualPage() {
 
         <p>
           <strong>Indicadores.</strong> El asentamiento máximo; el promedio,
-          con su diferencia frente a la visita anterior; el mayor movimiento
+          con su diferencia frente a la visita anterior —la media de lo que se
+          movieron los puntos medidos en las dos—; el mayor movimiento
           desde la anterior; los puntos en alerta, de los medidos; el{" "}
           <strong>cierre de nivelación</strong>, con la tolerancia y si
           cumple; y la peor alerta junto al estado de la visita. Si otro BM de

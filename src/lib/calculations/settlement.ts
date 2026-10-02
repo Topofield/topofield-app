@@ -294,18 +294,28 @@ export function classifyReadings(
 /**
  * Tendencia de cada punto comparando sus dos últimas velocidades (§ 5.3).
  *
- * Un punto solo aparece en el resultado si tiene **al menos dos velocidades**,
- * lo que exige tres visitas. Con menos no se incluye: devolver `"converging"`
- * afirmaría una convergencia que nadie ha comprobado.
+ * **Acelera** si la velocidad crece en magnitud más de lo que el error de una
+ * lectura explica (Fase 31, D-10): |v_última| − |v_anterior| > m/Δt, con m el
+ * margen del orden de la última visita —el de la lectura fuera de tendencia,
+ * `trendDeviationMargin`— y Δt su intervalo en meses. Si no, **converge**.
+ * Hasta la Fase 31 bastaba cualquier aumento, y el ruido de medición hacía
+ * «acelerar» puntos que se estaban frenando.
+ *
+ * Un punto solo aparece si tiene **al menos dos velocidades** (tres visitas) y
+ * se conoce el orden de su última visita: sin eso no se afirma nada. Las
+ * visitas llegan en orden cronológico, como las da `computeHistory`.
  */
-export function computeTrends(visits: VisitResult[]): Record<string, Trend> {
-  const velocities = new Map<string, number[]>();
+export function computeTrends(
+  visits: VisitResult[],
+  orderByVisit: ReadonlyMap<string, PrecisionOrder>,
+): Record<string, Trend> {
+  const velocities = new Map<string, { velocity: number; date: string; visitId: string }[]>();
 
   for (const visit of visits) {
     for (const reading of visit.readings) {
       if (reading.velocity === null) continue;
       const list = velocities.get(reading.pointId) ?? [];
-      list.push(reading.velocity);
+      list.push({ velocity: reading.velocity, date: visit.date, visitId: visit.visitId });
       velocities.set(reading.pointId, list);
     }
   }
@@ -313,9 +323,15 @@ export function computeTrends(visits: VisitResult[]): Record<string, Trend> {
   const trends: Record<string, Trend> = {};
   for (const [pointId, list] of velocities) {
     if (list.length < 2) continue;
-    const last = Math.abs(list[list.length - 1]!);
-    const previous = Math.abs(list[list.length - 2]!);
-    trends[pointId] = last > previous ? "accelerating" : "converging";
+    const last = list[list.length - 1]!;
+    const previous = list[list.length - 2]!;
+    const order = orderByVisit.get(last.visitId);
+    if (!order) continue;
+    const months = monthsBetween(previous.date, last.date);
+    if (months <= 0) continue;
+    const increase = Math.abs(last.velocity) - Math.abs(previous.velocity);
+    trends[pointId] =
+      increase > trendDeviationMargin(order) / months ? "accelerating" : "converging";
   }
   return trends;
 }
@@ -398,8 +414,9 @@ export function detectTrendDeviations(
 }
 
 /**
- * Histórico completo de un lugar: visitas calculadas y clasificadas, y
- * tendencia por punto.
+ * Histórico completo de un lugar: visitas calculadas y clasificadas. La
+ * tendencia de cada punto la calcula aparte `computeTrends`, que necesita el
+ * orden de cada visita (Fase 31).
  */
 export function computeHistory(
   points: PointInput[],
@@ -411,8 +428,5 @@ export function computeHistory(
     thresholds,
   );
 
-  return {
-    visits: computed,
-    trends: computeTrends(computed),
-  };
+  return { visits: computed };
 }

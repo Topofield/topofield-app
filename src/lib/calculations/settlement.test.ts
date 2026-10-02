@@ -472,13 +472,17 @@ describe("classifyReadings", () => {
   });
 });
 
-describe("computeTrends", () => {
+describe("computeTrends (Fase 31, D-10)", () => {
+  /** El mismo orden para todas las visitas. */
+  const orden = (visitas: { visitId: string }[], order: PrecisionOrder = "tercer_orden") =>
+    new Map(visitas.map((v) => [v.visitId, order]));
+
   it("no afirma nada con menos de 3 visitas", () => {
     const visitas = computeSettlements(
       [P1],
       [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 99.994)],
     );
-    expect(computeTrends(visitas)).toEqual({});
+    expect(computeTrends(visitas, orden(visitas))).toEqual({});
   });
 
   it("marca convergente cuando la velocidad decrece en magnitud", () => {
@@ -490,24 +494,75 @@ describe("computeTrends", () => {
         visita(2, "2025-03-15", 99.992), // −2.0 mm
       ],
     );
-    expect(computeTrends(visitas).p1).toBe("converging");
+    expect(computeTrends(visitas, orden(visitas)).p1).toBe("converging");
   });
 
-  it("marca acelerando cuando la velocidad crece en magnitud", () => {
+  it("acelera cuando la velocidad crece más que el margen del orden", () => {
+    // De −1.96 a −10.87 mm/mes: 8.9 mm/mes más, sobre un margen de tercer
+    // orden de 6 mm en 0.92 meses (6.52 mm/mes).
     const visitas = computeSettlements(
       [P1],
       [
         visita(0, "2025-01-15", 100.0),
         visita(1, "2025-02-15", 99.998), // −2.0 mm
-        visita(2, "2025-03-15", 99.99), // −8.0 mm
+        visita(2, "2025-03-15", 99.988), // −10.0 mm
       ],
     );
-    expect(computeTrends(visitas).p1).toBe("accelerating");
+    expect(computeTrends(visitas, orden(visitas)).p1).toBe("accelerating");
+  });
+
+  it("un aumento dentro del ruido no es aceleración", () => {
+    // De −1.96 a −6.52 mm/mes: 4.6 mm/mes más, bajo el margen de 6.52. Antes de
+    // la Fase 31 cualquier aumento contaba.
+    const visitas = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        visita(1, "2025-02-15", 99.998), // −2.0 mm
+        visita(2, "2025-03-15", 99.992), // −6.0 mm
+      ],
+    );
+    expect(computeTrends(visitas, orden(visitas)).p1).toBe("converging");
+  });
+
+  it("el margen es el del orden de la última visita", () => {
+    const visitas = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        visita(1, "2025-02-15", 99.998),
+        visita(2, "2025-03-15", 99.992),
+      ],
+    );
+    // Primer orden: 1.5 mm en 0.92 meses, 1.63 mm/mes; el aumento de 4.6 lo supera.
+    expect(computeTrends(visitas, orden(visitas, "primer_orden")).p1).toBe("accelerating");
+  });
+
+  it("en la frontera exacta del margen no acelera, y 0.1 mm más allá sí", () => {
+    // Sin movimiento antes (velocidad 0): acelera si el parcial supera el margen.
+    const serie = (ultima: number) =>
+      computeSettlements(
+        [P1],
+        [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 100.0), visita(2, "2025-03-15", ultima)],
+      );
+    const justo = serie(99.994); // −6.0 mm: el margen de tercer orden
+    expect(computeTrends(justo, orden(justo)).p1).toBe("converging");
+    const pasado = serie(99.9939); // −6.1 mm
+    expect(computeTrends(pasado, orden(pasado)).p1).toBe("accelerating");
+  });
+
+  it("sin el orden de la última visita no afirma tendencia", () => {
+    const visitas = computeSettlements(
+      [P1],
+      [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 99.998), visita(2, "2025-03-15", 99.988)],
+    );
+    const sinUltima = new Map(visitas.slice(0, 2).map((v) => [v.visitId, "tercer_orden" as const]));
+    expect(computeTrends(visitas, sinUltima)).toEqual({});
   });
 });
 
 describe("computeHistory", () => {
-  it("compone visitas clasificadas y tendencias", () => {
+  it("compone las visitas clasificadas", () => {
     const A2: PointInput = { ...A, initialElevation: 100 };
     const B2: PointInput = { ...B, initialElevation: 100 };
     const visitas: VisitInput[] = [
@@ -532,13 +587,11 @@ describe("computeHistory", () => {
     ];
     const h = computeHistory([A2, B2], visitas, T);
     expect(h.visits).toHaveLength(2);
-    expect(h.trends).toEqual({});
   });
 
   it("devuelve estructuras vacías si no hay visitas", () => {
     const h = computeHistory([A], [], T);
     expect(h.visits).toEqual([]);
-    expect(h.trends).toEqual({});
   });
 });
 

@@ -34,7 +34,7 @@ Lo que cada proyecto puede incluir en un informe —solo lo cerrado—:
 | Proyecto | Trabajos cerrados |
 |---|---|
 | Lote catastral | Poligonales **Cuadrado oficial (cerrado)** y **Poligonal Famarena — Sede Vivero — sistema local**; nivelación **Circuito BM-2 (cerrado oficialmente)** |
-| Red geodésica | Ninguno: sus dos poligonales están calculadas |
+| Red geodésica | Ninguno: su poligonal está calculada |
 | Edificio en monitoreo | Control de asentamientos **Edificio Norte** |
 | Proyecto de ejemplo | **Poligonal V10 — cartera TT4**, **Tramo 2 — crudo del nivel digital Leica** y **Torre Alameda** |
 
@@ -134,7 +134,7 @@ Lo que cada proyecto puede incluir en un informe —solo lo cerrado—:
 
 ### 7. Proyecto sin nada cerrado
 
-- Abrir **Red geodésica** (dos poligonales calculadas, nada cerrado) → tab
+- Abrir **Red geodésica** (una poligonal calculada, nada cerrado) → tab
   Informes. ✓ «Aún no hay informes».
 - **Generar Nuevo Informe**. ✓ Muestra el estado vacío «Todavía no hay
   procesos cerrados», sin formulario.

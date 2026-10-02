@@ -330,12 +330,10 @@ decimales** (ver [§ 5.3](#53-el-editor)).
 
 Donde *n* es el número de ángulos medidos.
 
-> **Si la precisión angular del equipo no alcanza para el orden elegido, la
-> aplicación se lo advierte** junto al campo de precisión angular — por
-> ejemplo, una estación de 5″ con primer orden declarado (cuya tolerancia
-> parte de 1″). Es un aviso, no un bloqueo: puede seguir capturando, porque la
-> decisión de si el equipo basta es suya. Un equipo que cumple justo el orden
-> (5″ con tercer orden, cuya tolerancia parte de 15″) no dispara el aviso.
+> **El cierre juzga el trabajo, no el equipo.** La marca, el modelo y la
+> precisión del equipo se registran para el informe; la aplicación no opina
+> si el equipo alcanza el orden. Lo que dice si la medición cumple es el
+> veredicto de cierre.
 
 ### 5.3 El editor
 
@@ -399,9 +397,8 @@ dispersión entre lecturas y cuántas lleva de las exigidas —por ejemplo
 y un botón para añadir más. El proceso exige un mínimo configurable, 3 por
 defecto, y el promedio es el que alimenta el cálculo.
 
-La dispersión avisa cuando supera lo que su equipo resuelve. Tres lecturas que
-difieren 40″ con un teodolito de 5″ no son repetibilidad: son un error de
-puntería o de tecleo. Es un aviso, no un bloqueo.
+La dispersión es un dato, sin aviso: la aplicación no la juzga. Si las
+lecturas de un ángulo difieren mucho, conviene revisarlas antes de cerrar.
 
 Los errores de captura se marcan al momento: una distancia de cero o mayor a
 1000 m, minutos o segundos fuera del rango 0-59 —en cada lectura, no solo en
@@ -621,12 +618,6 @@ tiene registrado. Indique también el **orden de precisión** y los datos del
 
 Si el tipo es *de enlace*, deberá indicar además el BM de llegada. Marque
 **Incluye recorrido de vuelta** si va a medir ida y vuelta.
-
-> **Si la desviación típica del nivel no alcanza para el orden elegido, la
-> aplicación se lo advierte** junto al campo de desviación típica — por
-> ejemplo, un nivel de obra de 5.0 mm/km con primer orden declarado (cuya
-> tolerancia parte de 3 mm/km). Es un aviso, no un bloqueo: 2.5 mm/km con
-> primer orden es ajustado pero posible, y no lo dispara.
 
 ### 6.5 El editor
 
@@ -921,11 +912,6 @@ doble nivelación (ISO 17123-2). El instrumento puede cambiar entre una visita
 y la siguiente —pueden pasar meses—, así que cada visita lleva su propio
 equipo, no el lugar.
 
-> **Si la desviación típica del nivel no alcanza para el orden que declaró la
-> visita, la aplicación se lo advierte**, con el mismo criterio que en
-> nivelación (§ 6.5): un nivel de 5.0 mm/km con primer orden (K = 3) avisa; uno
-> de 2.5 mm/km, ajustado pero posible, no. Es un aviso, no un bloqueo.
-
 **La libreta de nivelación.** En una visita con libreta, las cotas de los
 puntos de control **no se teclean: salen de la libreta**. Es la misma tabla
 de la nivelación (§ 6.2 a § 6.5) —V+, V−, distancia a cada mira, hilos con
@@ -1072,13 +1058,16 @@ acumulado que dibujan las gráficas.
 | Indicador | Qué muestra |
 |---|---|
 | Asentamiento máximo | El acumulado de mayor magnitud en la última visita, con su punto. Un levantamiento también cuenta |
-| Promedio actual | La media del acumulado de los puntos medidos en la última visita |
+| Promedio actual | El promedio encadenado de la última visita (ver abajo) |
 | Velocidad máxima | La de mayor magnitud en la última visita, en mm/mes, con su punto |
 | Visitas en alerta | Cuántas visitas tienen algún punto en precaución o más |
 | Visitas | El total, con la fecha de la lectura base y la de la última |
 
-Un punto dado de alta a mitad del monitoreo mide su acumulado desde su propia
-línea base, así que el promedio mezcla las dos.
+El **promedio es encadenado**: el de la visita anterior más la media de lo que
+se movieron los puntos medidos en las dos. Un punto dado de alta entra con
+acumulado 0 y uno dado de baja deja de contar; la media de los acumulados se
+movería con eso sin que nada se asentara, el encadenado no. Sin altas ni bajas,
+los dos coinciden.
 
 **Visitas.** De la más reciente a la más antigua; pulse una fila para abrir
 la visita (§ 7.5). Por visita: el promedio y el máximo del acumulado, el BM
@@ -1125,6 +1114,12 @@ gravedad del movimiento. Es útil cuando el mismo punto sale en **Alerta** y
 **Acelerando**: la marca indica que lo más probable es una lectura mal tomada,
 no una aceleración real.
 
+**Tendencia.** Desde la tercera visita de un punto, la columna dice si
+**acelera** —su velocidad crece más de lo que explica el error de una lectura,
+con el mismo margen del aviso de lectura fuera de tendencia: 1.5, 3, 6 o 12 mm
+según el orden de la visita— o **converge**. Un solo salto dentro de ese
+margen no basta para decir que un punto acelera.
+
 **Un dato en alarma se registra con normalidad.** El semáforo es un
 diagnóstico, no un control de captura: la aplicación **nunca** impide guardar
 una visita ni cerrarla por tener puntos en alerta o alarma. Un asentamiento
@@ -1143,7 +1138,8 @@ visitas con libreta, y **Editar** y **Cerrar visita** mientras siga abierta.
 Una visita cerrada no se edita.
 
 **Indicadores.** El asentamiento máximo; el promedio, con su diferencia
-frente a la visita anterior; el mayor movimiento desde la anterior; los puntos
+frente a la visita anterior —la media de lo que se movieron los puntos medidos
+en las dos—; el mayor movimiento desde la anterior; los puntos
 en alerta, de los medidos; el **cierre de nivelación**, con la tolerancia y si
 cumple; y la peor alerta junto al estado de la visita. Si otro BM de la libreta
 no nivela con el amarre, un aviso debajo lo dice, con las dos cotas (§ 7.3).
@@ -1476,10 +1472,9 @@ Sí: **Georreferenciar** (§ 5.5), con dos estaciones de coordenadas conocidas.
 Funciona también sobre un proceso cerrado, y no cambia su veredicto.
 
 **¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?**
-La aplicación se lo advierte junto al campo de precisión del equipo,
-comparando la precisión que declaró con la tolerancia del orden. Es un aviso,
-no un bloqueo: puede seguir capturando y cerrando con normalidad. La decisión
-de si el equipo basta para el trabajo es suya, no de la aplicación.
+La aplicación no lo juzga: registra el equipo para el informe, y lo que dice si
+el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no
+da para el orden, lo más probable es que el cierre no cumpla.
 
 **Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición
 está bien?**

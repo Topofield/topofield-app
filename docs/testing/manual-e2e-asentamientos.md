@@ -5,8 +5,9 @@ contra los datos precargados por la seed. Cubre los criterios del PRD-de-fase 5
 usando la UI tal como la usaría un usuario, y los de las fases 11, 12 y 18
 (libreta de nivelación y panel del lugar, pasos 11 a 20), la 22 (la pantalla
 del lugar con sus pestañas), la 23 (C0 fija, paso 3 bis), la 29 (los
-puntos sin posición: pasos 3, 3 bis y 11) y la 30 (los BM de control: pasos
-11, 12, 12 bis, 13, 15 y 18).
+puntos sin posición: pasos 3, 3 bis y 11), la 30 (los BM de control: pasos
+11, 12, 12 bis, 13, 15 y 18) y la 31 (el promedio encadenado y la tendencia:
+pasos 5 y 6).
 
 ## Preparación
 
@@ -132,9 +133,11 @@ referencia: sirve para el arranque en frío (paso 19).
   - **P-05** (borde sur, intermedio) no aparece: está de baja y no tiene
     lectura en la última visita. Su historia sigue en la gráfica.
   - **P-04** sale en **alerta** por velocidad (6.9 mm/mes), con la marca
-    **⚠ Lectura fuera de tendencia** y la tendencia **Acelerando**: en la
+    **⚠ Lectura fuera de tendencia** y la tendencia **Convergente**: en la
     visita 5 sube 7,0 mm cuando venía bajando. Es la lectura mal tomada que
     siembra el seed (Fase 12). Debajo de la marca se lee el aviso completo.
+    No sale **Acelerando**: su velocidad crece 5.75 mm/mes, dentro del margen
+    de ruido de tercer orden (5.89 en ese intervalo, Fase 31).
   - El resto (P-01…P-03 y P-07) queda en **normal**.
 - ✓ El acumulado de **P-06** en la última visita es ≈ **−50.5 mm** (cruza el
   umbral de acumulado de 50 mm → alerta por acumulado).
@@ -147,9 +150,16 @@ referencia: sirve para el arranque en frío (paso 19).
 - ✓ Los chips dicen **P-05 (de baja)** y **P-07 (alta 15 de marzo de 2025)**.
   En **Ver datos en tabla**, la serie de P-05 termina el 15 abr 2025 y la de
   P-07 empieza en 0.0 el 15 mar 2025.
-- ✓ El indicador de **tendencia** marca los puntos como **convergentes**: la
-  magnitud de la velocidad decrece en cada visita sucesiva (serie de
-  consolidación que se estabiliza). La excepción es P-04 (ver paso 5).
+- ✓ El indicador de **tendencia** marca todos los puntos como
+  **convergentes**: la magnitud de la velocidad decrece en cada visita
+  sucesiva (serie de consolidación que se estabiliza), y el salto de P-04
+  queda dentro del ruido (ver paso 5).
+- ✓ **Promedio encadenado** (Fase 31): **Promedio actual** −16.7 mm, y en la
+  tabla **Visitas** las visitas 2 a 5 dicen −12.8, −15.5, −17.0 y −16.7. La
+  media de los acumulados daba −11.0, −13.6, −14.6 y −14.3: el alta de P-07
+  (visita 2) y la baja de P-05 (visita 4) la movían sin que nada se asentara.
+  En la vista de la visita 5: promedio −16.7 mm, «+0.3 mm frente a la
+  anterior».
 
 ### 7. Registrar una visita nueva
 
@@ -464,7 +474,8 @@ con lecturas cerradas no cambia. Los pasos 3, 3 bis y 11 cubren la Fase 29:
 sin Norte ni Este en el catálogo, sin límite de distorsión, cinco indicadores
 y sin tabla de diferenciales. Los pasos 11, 12, 12 bis, 13, 15 y 18 cubren la
 Fase 30: el BM de control que nivela y el que no, en el panel, la vista, el
-registro, el cierre, el editor y el Excel. El paso 7 bis cubre
+registro, el cierre, el editor y el Excel. Los pasos 5 y 6 cubren la Fase 31:
+el promedio encadenado y «Acelerando» solo por encima del ruido. El paso 7 bis cubre
 el PRD-de-fase 12: el aviso de lectura fuera de tendencia. Los pasos 11 a 20
 cubren el PRD-de-fase 18: el panel y la vista de la visita, el registro de
 nivelación, la libreta digitada e importada, el cierre fuera de tolerancia,

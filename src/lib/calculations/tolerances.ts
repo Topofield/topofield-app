@@ -22,24 +22,6 @@ export const MIN_RELATIVE_PRECISION: Record<PrecisionOrder, number> = {
 };
 
 /**
- * Factor sobre la precisión angular del equipo que se admite como dispersión
- * entre lecturas de un mismo ángulo.
- *
- * La vara correcta aquí es el instrumento y no el orden de precisión: el orden
- * gobierna el cierre de la poligonal, mientras que repetir una lectura mide
- * repetibilidad. Un equipo de 5" no distingue dos punterías que difieren 4",
- * pero 36" de separación no es repetibilidad, es un error de puntería o de
- * transcripción. El 2 es criterio, no norma citada: es el umbral a partir del
- * cual vale la pena que el capturador mire otra vez.
- */
-export const READING_DISPERSION_FACTOR = 2;
-
-/** Dispersión máxima admitida entre lecturas de un ángulo, en segundos. */
-export function readingDispersionTolerance(instrumentSeconds: number): number {
-  return READING_DISPERSION_FACTOR * instrumentSeconds;
-}
-
-/**
  * Tolerancia angular en segundos de arco: K·√n, donde n es el número de
  * ángulos que entran en la condición: los vértices en una cerrada (más el de
  * cierre si hay fila de cierre) y las deflexiones en una abierta con control.
@@ -259,46 +241,4 @@ export function thresholdsOf(site: SiteThresholdColumns): Thresholds {
     accumulatedAlert: Number(site.accumulated_alert),
     accumulatedAlarm: Number(site.accumulated_alarm),
   };
-}
-
-// ============================================================================
-// Validación de suficiencia del equipo (Fase 8).
-// ============================================================================
-
-/**
- * ¿La estación total declarada puede entregar el orden exigido?
- *
- * La comparación es directa entre coeficientes, y no con un margen, porque la
- * tolerancia angular escala como `K·√n` y la desviación del instrumento escala
- * igual, como `σ·√n`: el `√n` se cancela. Un umbral con margen —«avisa si σ
- * pasa de la mitad de K»— sería un criterio estadístico inventado, y haría
- * saltar el aviso en el emparejamiento correcto de 1″ con primer orden.
- *
- * Es estrictamente mayor: `σ = K` es justo el instrumento que corresponde al
- * orden, no un problema.
- *
- * Sin dato de precisión devuelve `true`: la función no opina sobre lo que no
- * sabe, y quien llama no debe pintar un aviso por un campo vacío.
- */
-export function totalStationMeetsOrder(
-  order: PrecisionOrder,
-  angularPrecisionSeconds: number,
-): boolean {
-  if (!Number.isFinite(angularPrecisionSeconds)) return true;
-  return angularPrecisionSeconds <= ANGULAR_TOLERANCE_K[order];
-}
-
-/**
- * ¿El nivel declarado puede entregar el orden exigido?
- *
- * Mismo razonamiento que `totalStationMeetsOrder`: la tolerancia de nivelación
- * es `K·√D` y la desviación típica del instrumento (ISO 17123-2, en mm por km
- * de doble nivelación) escala como `σ·√D`.
- */
-export function levelMeetsOrder(
-  order: PrecisionOrder,
-  kmPrecisionMm: number,
-): boolean {
-  if (!Number.isFinite(kmPrecisionMm)) return true;
-  return kmPrecisionMm <= LEVELING_TOLERANCE_K[order];
 }

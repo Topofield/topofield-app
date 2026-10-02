@@ -159,7 +159,6 @@ export function PolygonalConfigFields({
       <TotalStationEquipment
         value={value.totalStation}
         onChange={(v) => set("totalStation", v)}
-        order={value.precisionOrder}
         disabled={disabled}
       />
 

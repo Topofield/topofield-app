@@ -12,7 +12,7 @@ import {
   bookRowOf,
   computeVisitBook,
 } from "@/lib/calculations/settlement-book";
-import { summarizeVisit } from "@/lib/calculations/settlement-summary";
+import { summarizeSite } from "@/lib/calculations/settlement-summary";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { turningPointBlocker } from "@/lib/validators/leveling";
 import {
@@ -45,8 +45,11 @@ export default async function VisitPage({ params }: VisitPageProps) {
 
   const index = history.visits.findIndex((v) => v.visitId === visit.id);
   const result = history.visits[index]!;
-  const summary = summarizeVisit(result);
-  const previous = index > 0 ? summarizeVisit(history.visits[index - 1]!) : null;
+  // Del resumen del lugar, no de la visita sola: el promedio es el encadenado
+  // y depende de las visitas anteriores (Fase 31, D-8).
+  const siteSummary = summarizeSite(history);
+  const summary = siteSummary.visits[index]!;
+  const previous = index > 0 ? siteSummary.visits[index - 1]! : null;
 
   const deviations =
     detectTrendDeviations(

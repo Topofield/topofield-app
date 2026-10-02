@@ -27,12 +27,10 @@ describe("verdictFor", () => {
       resultWith({ meetsTolerance: true, relativePrecision: 8000 }),
       "closed",
       "tercer_orden",
-      true,
     );
     expect(v.tone).toBe("ok");
     expect(v.title).toBe("Cumple tercer orden");
     expect(v.achieved).toBe("1:8.000");
-    expect(v.caveat).toBeNull();
   });
 
   it("marca incumplimiento cuando no alcanza la tolerancia", () => {
@@ -40,7 +38,6 @@ describe("verdictFor", () => {
       resultWith({ meetsTolerance: false, relativePrecision: 1001 }),
       "closed",
       "tercer_orden",
-      true,
     );
     expect(v.tone).toBe("danger");
     expect(v.title).toBe("No cumple tercer orden");
@@ -53,7 +50,6 @@ describe("verdictFor", () => {
       resultWith({ meetsTolerance: true, relativePrecision: Infinity }),
       "closed",
       "tercer_orden",
-      true,
     );
     expect(v.tone).toBe("ok");
     expect(v.title).toBe("Cumple tercer orden");
@@ -65,7 +61,6 @@ describe("verdictFor", () => {
       resultWith({}),
       "open_uncontrolled",
       "tercer_orden",
-      true,
     );
     expect(v.tone).toBe("neutral");
     expect(v.title).toBe("Sin verificación de cierre");
@@ -74,64 +69,10 @@ describe("verdictFor", () => {
   });
 
   it("señala datos incompletos cuando falta el cálculo", () => {
-    const v = verdictFor(resultWith({}), "closed", "tercer_orden", true);
+    const v = verdictFor(resultWith({}), "closed", "tercer_orden");
     expect(v.tone).toBe("neutral");
     expect(v.title).toBe("Datos incompletos");
     expect(v.achieved).toBeNull();
     expect(v.required).toBeNull();
-  });
-});
-
-// El verde es la afirmación más fuerte de la aplicación y sale de un único
-// estadístico de cierre. Con un equipo que no da para el orden declarado
-// —una estación de 5″ contra primer orden, K = 1″— el veredicto sigue siendo
-// verde (es un enunciado sobre las MEDIDAS, y es cierto), pero acota su
-// alcance. El cálculo no cambia: `tone`, `title` y `meets_tolerance` siguen
-// siendo lo que eran.
-describe("verdictFor — matiz de equipo insuficiente", () => {
-  it("matiza el verde cuando el instrumento no alcanza el orden", () => {
-    const v = verdictFor(
-      resultWith({ meetsTolerance: true, relativePrecision: Infinity }),
-      "closed",
-      "primer_orden",
-      false,
-    );
-    expect(v.tone).toBe("ok");
-    expect(v.title).toBe("Cumple primer orden");
-    expect(v.caveat).toBe(
-      "El cierre cumple, pero el equipo declarado no alcanza el orden declarado (K = 1″).",
-    );
-  });
-
-  it("no matiza cuando el instrumento sí alcanza el orden", () => {
-    const v = verdictFor(
-      resultWith({ meetsTolerance: true, relativePrecision: Infinity }),
-      "closed",
-      "primer_orden",
-      true,
-    );
-    expect(v.caveat).toBeNull();
-  });
-
-  it("no matiza el veredicto rojo: ahí ya no hay afirmación que acotar", () => {
-    const v = verdictFor(
-      resultWith({ meetsTolerance: false, relativePrecision: 1001 }),
-      "closed",
-      "primer_orden",
-      false,
-    );
-    expect(v.tone).toBe("danger");
-    expect(v.caveat).toBeNull();
-  });
-
-  it("no matiza la poligonal abierta sin control, que no afirma cierre", () => {
-    const v = verdictFor(
-      resultWith({}),
-      "open_uncontrolled",
-      "primer_orden",
-      false,
-    );
-    expect(v.tone).toBe("neutral");
-    expect(v.caveat).toBeNull();
   });
 });

@@ -80,16 +80,6 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
           process={process}
           stations={stations}
           referencePoints={referencePoints}
-          // `NaN` y no `0` cuando el proceso no declaró precisión angular: la
-          // columna es nullable y `Number(null)` es 0, no NaN, de modo que la
-          // tolerancia de dispersión salía 0" y avisaba en toda estación con
-          // dos lecturas distintas. `validateReadings` salta el control si no
-          // es finito.
-          angularPrecisionSeconds={
-            process.angular_precision_seconds == null
-              ? Number.NaN
-              : Number(process.angular_precision_seconds)
-          }
         />
       ) : (
         <ProcessReport

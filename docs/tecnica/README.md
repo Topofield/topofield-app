@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-02 · Fase 30 cerrada · 991 tests y 74
+**Última actualización:** 2026-10-02 · Fase 31 cerrada · 984 tests y 74
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -623,8 +623,7 @@ leía `project.precision_order`/`project.equipment_*` **en vivo**; editar el
 equipo del proyecto reescribía todos los informes ya emitidos, incluidos los
 de procesos cerrados. Ahora lee del proceso incluido en el informe, que es
 inmutable una vez cerrado (§ 5) — el congelado del informe es una consecuencia
-de dónde vive el dato, no un mecanismo aparte. Ver también «Aviso de equipo
-insuficiente» en § 6.
+de dónde vive el dato, no un mecanismo aparte.
 
 ---
 
@@ -969,11 +968,11 @@ configurable por proceso, 3 por defecto) y la estación guarda el **promedio**,
 recalculado por el servidor: es derivado, no un dato que el cliente pueda
 contradecir.
 
-La dispersión (máx − mín) se contrasta con
-`polygonal_processes.angular_precision_seconds` —la precisión del equipo del
-**proceso** desde la Fase 8, antes era la del proyecto— y no con la tolerancia
-del orden. El orden gobierna el cierre de la poligonal; repetir una lectura
-mide repetibilidad. El factor admitido vive en `READING_DISPERSION_FACTOR`.
+La dispersión (máx − mín) se muestra como dato junto al promedio, sin juicio.
+Hasta la Fase 31 avisaba si superaba el doble de la precisión angular del
+equipo (`READING_DISPERSION_FACTOR`); el usuario la quitó (D-5), porque con
+ese umbral saltaba en el 32–58 % de los datos correctos. `validateReadings`
+solo exige el mínimo de lecturas.
 
 ### Captura en grados decimales (Fase 13)
 
@@ -1190,30 +1189,24 @@ discrepancia y sus clases están corridas (auditoría del cálculo, § 6). `CALI
 (12) es la antigüedad de la calibración a partir de la cual el formulario de
 equipo avisa (Fase 25).
 
-### Aviso de equipo insuficiente (Fase 8)
+### Sin aviso de equipo insuficiente (Fase 31)
 
-`totalStationMeetsOrder(order, angularPrecisionSeconds)` y
-`levelMeetsOrder(order, kmPrecisionMm)`, en `tolerances.ts`, responden si el
-instrumento declarado puede entregar el orden elegido. La comparación es
-directa entre coeficientes —`σ > K`— y no con un margen: la tolerancia escala
-como `K·√n` (o `K·√D` en nivelación) y la desviación del instrumento escala
-igual, como `σ·√n`, así que el factor se cancela y un umbral con margen sería
-un criterio estadístico inventado. Es estrictamente mayor: `σ = K` es
-justo el instrumento que corresponde al orden, no un problema. Sin dato de
-precisión, ninguna de las dos función opina —devuelve `true`—, porque un campo
-vacío no es un instrumento insuficiente.
+La Fase 8 añadió `totalStationMeetsOrder` y `levelMeetsOrder`: avisaban si la
+precisión declarada del equipo superaba el coeficiente K del orden, en el
+formulario de equipo, en una nota del veredicto verde de la poligonal y con un
+asterisco en el resumen de precisiones del informe. La Fase 31 los quitó (D-4)
+por decisión del usuario, tras consultar la FGCS 1984:
 
-| Módulo | Regla | Avisa | No avisa |
-|---|---|---|---|
-| Poligonal | `angularPrecisionSeconds > ANGULAR_TOLERANCE_K[orden]` | 5″ con primer orden (K=1″) | 1″ con primer orden; 5″ con tercer orden (K=15″) |
-| Nivelación | `kmPrecisionMm > LEVELING_TOLERANCE_K[orden]` | 5.0 mm/km con primer orden (K=3) | 2.5 mm/km con primer orden (ajustado, no imposible) |
-| Asentamientos | igual que nivelación, sobre el `km_precision_mm` de la **visita** | igual que nivelación | igual que nivelación |
+- la norma exige el instrumento por orden con requisitos fijos (la resolución
+  del teodolito, la repetibilidad de la línea de visual del nivel), no
+  comparando su σ con K;
+- σ ≤ K le decía «alcanza» a un equipo que falla el cierre entre el 32 y el
+  48 % de las veces;
+- lo que juzga el trabajo es el cierre contra la tolerancia, que la app ya
+  evalúa.
 
-El aviso vive en `TotalStationFieldset`/`LevelFieldset`
-(`design-system/equipment-fields.tsx`), compartidos por los tres formularios de
-configuración de proceso (poligonal, nivelación, visita de asentamiento) junto
-al `PrecisionOrderSelect`. Avisa, no bloquea — misma política que el resto de
-la validación de captura (§ 7).
+El equipo se sigue capturando, guardando y mostrando en el informe y el Excel:
+es trazabilidad, no un control.
 
 ### Umbral de cierre exacto
 
@@ -1358,11 +1351,23 @@ visita (en vivo, con el orden de la cabecera) y la página del panel. Avisa,
 no bloquea y no se persiste. Tampoco cambia el semáforo ni `computeTrends`.
 
 `computeHistory` compone todo lo anterior sobre la serie completa de un
-lugar: ordena las visitas **por fecha, no por `visit_number`** —hay un test
-que fija ese contrato— y añade `computeTrends`, que solo emite tendencia
-(`accelerating` / `converging`) con al menos tres visitas (dos velocidades
-que comparar). Con menos, el punto queda sin indicador: devolver
-`"converging"` afirmaría una convergencia que nadie ha comprobado.
+lugar: ordena las visitas **por fecha, no por `visit_number`**; hay un test
+que fija ese contrato.
+
+`computeTrends(visitas, órdenes)` da la tendencia de cada punto, y solo con
+al menos tres visitas (dos velocidades que comparar). Desde la Fase 31 (D-10)
+un punto **acelera** si |V_última| − |V_anterior| > m/Δt, con m el margen de
+la lectura fuera de tendencia del orden de la última visita y Δt su intervalo
+en meses; si no, **converge**. Antes bastaba cualquier aumento, y el ruido de
+medición hacía «acelerar» puntos que se frenaban (TA-01 y TA-02 de Torre
+Alameda, P-04 de Torre Central). Como `detectTrendDeviations`, necesita el
+orden de cada visita: por eso salió de `computeHistory`, y la llaman el panel
+y el Excel. Sin el orden de la última visita, el punto no lleva tendencia.
+
+`settlement-summary.ts` da el **promedio encadenado** de cada visita
+(`chainedMeans`, Fase 31, D-8): el de la anterior con lecturas más la media de
+los parciales de los puntos medidos en las dos. `summarizeSite` lo usa, y la
+vista de la visita toma de ahí su promedio y el de la anterior.
 
 ---
 
@@ -1735,13 +1740,15 @@ genéricas: `cn`, el analizador de números (`lib/utils/parse`, que usan
 `ThemeSelect`).
 
 Excepciones conocidas, anteriores a la Fase 20 y comprobadas al revisarla:
-`PrecisionOrderSelect` y los `…Fieldset` de equipo (Fase 8) importan las
-tolerancias y los tipos del proyecto, y `StatusIndicator` el tipo de los
+`PrecisionOrderSelect` importa las tolerancias y los tipos del proyecto, los
+`…Fieldset` de equipo (Fase 8) los tipos —las tolerancias, solo hasta que la
+Fase 31 quitó el aviso de equipo—, y `StatusIndicator` el tipo de los
 niveles del semáforo. Son controles de formulario del dominio que se
 quedaron aquí porque los usan los tres módulos.
 
 El catálogo de equipos (Fase 25) **no** entró en los fieldsets: ganaron solo
-un `order` opcional y dos huecos, `header` y `footer`. El selector, el botón
+dos huecos, `header` y `footer` (el `order` opcional que tenían servía al aviso
+de equipo y salió con él en la Fase 31). El selector, el botón
 «Guardar en el catálogo», la acción que llama y el aviso de calibración viven
 en `components/equipment/` (`TotalStationEquipment`, `LevelEquipment`), y el
 catálogo llega por un contexto que carga el layout de las pantallas
@@ -1881,17 +1888,17 @@ pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/settlement.test.ts` | 65 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
+| `lib/calculations/settlement.test.ts` | 69 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12); «Acelerando» solo por encima del margen del orden, en la frontera y sin orden conocido (Fase 31) |
 | `lib/calculations/leveling.test.ts` | 95 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26); la vuelta compensada en cerrada y de enlace, la cota adoptada y el ejemplo 1 de `docs/math/nivelacion.html` (Fase 28) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
-| `lib/validators/polygonal.test.ts` | 80 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27) |
+| `lib/validators/polygonal.test.ts` | 76 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la dispersión entre lecturas ya no avisa (Fase 31) |
 | `lib/validators/settlement.test.ts` | 49 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
 | `lib/validators/leveling.test.ts` | 58 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
 | `lib/utils/format.test.ts` | 33 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26) |
-| `lib/calculations/tolerances.test.ts` | 21 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
+| `lib/calculations/tolerances.test.ts` | 12 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
@@ -1906,7 +1913,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/calculations/settlement-book.test.ts` | 30 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18); el amarre no se compensa y las intermedias conservan su acumulado (Fase 19); la comprobación de los BM de control —nivela, no nivela, la frontera, sin distancias, filas que no cuentan, el mismo BM dos veces—, `catalogElevationsOf` y la libreta guardada (Fase 30) |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
 | `lib/validators/settlement-book.test.ts` | 17 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18); el punto de cambio incompleto bloquea con su fila (Fase 24); el mensaje de la comprobación de un BM, que no culpa a ninguno (Fase 30) |
-| `lib/calculations/settlement-summary.test.ts` | 9 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
+| `lib/calculations/settlement-summary.test.ts` | 15 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas; siguiente umbral de acumulado (Fase 18); el promedio encadenado con altas, bajas, visitas sin lecturas y sin puntos comunes (Fase 31) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
 | `components/leveling/readings-table.test.ts` | 3 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18); una fila sin V+ ni V− no hereda la cota del punto anterior (Fase 22) |
 | `lib/errors/user-message.test.ts` | 4 | **Errores de la base para el usuario**: cada código conocido traducido sin dejar pasar el texto de Postgres; el check de un trigger propio, en español, pasa; el de una columna, no; código desconocido, el mensaje de la acción (Fase 22) |
@@ -1937,7 +1944,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `components/design-system/theme-select.test.ts` | 2 | El selector de tema: etiqueta, tres opciones, arranque en la elección de la cookie (Fase 20) |
 | `lib/design/tokens-retirados.test.ts` | 2 | **Ninguna clase ni `var()` usa un token retirado** ni la paleta de Tailwind en todo `src/`, ni un color literal en `fill` o `stroke` (Fase 20) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
-| `components/polygonal/closure-verdict.test.tsx` | 9 | Decisión del veredicto |
+| `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto (sin la nota de equipo desde la Fase 31) |
 | `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
 | `lib/export/leveling-workbook.test.ts` | 12 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta, equipo y orden del proceso (Fase 8); tolerancia y veredicto de la discrepancia en el Resumen (Fase 23); la hoja de cotas adoptadas (Fase 28) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
@@ -2528,9 +2535,9 @@ uno con su test, y encontró dos más al implementar y verificar: el servidor
 rechazaba guardar una cerrada con fila de cierre (C-19) y el editor no
 mostraba el amarre (C-20). Lo que queda abierto de la auditoría son
 **criterios**, no errores: los que el usuario pidió cambiar están en
-`pendientes.md` (CR3 y CR4; CR1 se resolvió en la Fase 28 y CR2 en la Fase
-30, después de que la Fase 29 retirara su distorsión, D-9); el resto,
-documentado en la § 2 de la auditoría.
+`pendientes.md` (CR3; CR1 se resolvió en la Fase 28, CR2 en la 30 —después
+de que la 29 retirara su distorsión, D-9— y CR4 en la 31, que quitó D-4 y
+D-5); el resto, documentado en la § 2 de la auditoría.
 
 **Una distancia tecleada que los hilos tapan (Fase 26, visto al verificar).**
 Con los tres hilos capturados, la distancia sale de ellos (Fase 9) y la que
@@ -2732,7 +2739,11 @@ de una visita eso llena la columna de cotas repetidas antes de medir. Es
 cosmético y existe igual en nivelación; se resolvería mostrando «—» en las
 filas sin V+ ni V−.
 
-**El promedio mezcla líneas base cuando hay altas (Fase 18, aceptado).** El
+**Cerrado en la Fase 31 — el promedio es encadenado** (`chainedMeans`, D-8):
+el de la visita anterior más la media de los parciales de los puntos medidos
+en las dos, así que ni las altas ni las bajas lo mueven. El texto original
+queda como registro. **El promedio mezcla líneas base cuando hay altas (Fase
+18, aceptado).** El
 KPI «Promedio» y la línea de tendencia promedian los acumulados de la visita;
 un punto dado de alta a mitad del monitoreo parte de 0 y tira del promedio
 hacia arriba. El PRD de la fase lo acepta y lo dice; separar la serie por

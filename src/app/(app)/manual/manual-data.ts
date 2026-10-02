@@ -207,7 +207,7 @@ export const CAPTURAS = {
     src: "/manual/31-equipos.png",
     alt: "Página Equipos: estaciones totales y niveles del catálogo, con su calibración —dos con el aviso de más de un año— y su precisión.",
     width: 2560,
-    height: 1874,
+    height: 1776,
   },
   informeDelProceso: {
     src: "/manual/30-informe-del-proceso.png",
@@ -459,7 +459,7 @@ export const INDICADORES_LUGAR = [
   },
   {
     indicador: "Promedio actual",
-    muestra: "La media del acumulado de los puntos medidos en la última visita",
+    muestra: "El promedio encadenado de la última visita (ver abajo)",
   },
   {
     indicador: "Velocidad máxima",
@@ -602,7 +602,7 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?",
     respuesta:
-      "La aplicación se lo advierte junto al campo de precisión del equipo, comparando la precisión que declaró con la tolerancia del orden. Es un aviso, no un bloqueo: puede seguir capturando y cerrando con normalidad. La decisión de si el equipo basta para el trabajo es suya, no de la aplicación.",
+      "La aplicación no lo juzga: registra el equipo para el informe, y lo que dice si el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no da para el orden, lo más probable es que el cierre no cumpla.",
   },
   {
     pregunta:

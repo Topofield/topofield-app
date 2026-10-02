@@ -164,11 +164,6 @@ export type Trend = "converging" | "accelerating";
 
 export interface SettlementHistory {
   visits: VisitResult[];
-  /**
-   * Tendencia por punto. Un punto solo aparece si tiene al menos 2 velocidades
-   * (es decir, 3 visitas): con menos no se afirma nada.
-   */
-  trends: Record<string, Trend>;
 }
 
 /**

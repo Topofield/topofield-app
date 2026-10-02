@@ -11,7 +11,6 @@ import {
 } from "@/components/design-system";
 import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 import { computePolygonal } from "@/lib/calculations/polygonal";
-import { totalStationMeetsOrder } from "@/lib/calculations/tolerances";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   expectStationCapture,
@@ -55,19 +54,12 @@ interface PolygonalEditorProps {
   stations: PolygonalStationWithReadings[];
   /** Catálogo del proyecto, para elegir y georreferenciar el amarre. */
   referencePoints?: ReferencePoint[];
-  /**
-   * Precisión angular del equipo del proceso, para la dispersión entre
-   * lecturas. `NaN` cuando el proceso no la declaró: `validateReadings` salta
-   * el control en ese caso en vez de comparar contra una tolerancia de 0".
-   */
-  angularPrecisionSeconds: number;
 }
 
 export function PolygonalEditor({
   process,
   stations: initialStations,
   referencePoints = [],
-  angularPrecisionSeconds,
 }: PolygonalEditorProps) {
   const readOnly = process.status === "closed" || process.status === "rejected";
   const amarre = referencePoints.find(
@@ -297,14 +289,6 @@ export function PolygonalEditor({
           result={result}
           type={config.type}
           order={config.precisionOrder}
-          // Solo matiza el texto del veredicto verde: no entra en `meets_tolerance`
-          // ni en el cálculo. Sin precisión declarada devuelve `true` y no hay
-          // matiz, que es lo correcto — no se opina sobre lo que no se sabe.
-          instrumentMeetsOrder={totalStationMeetsOrder(
-            config.precisionOrder,
-            parseNumber(config.totalStation.angularPrecisionSeconds) ??
-              Number.NaN,
-          )}
         />
 
         <div className="flex flex-wrap items-center gap-3">
@@ -361,10 +345,6 @@ export function PolygonalEditor({
             result={result}
             issues={issues}
             readingsMin={parseNumber(config.angleReadingsMin) ?? 3}
-            angularPrecisionSeconds={
-              parseNumber(config.totalStation.angularPrecisionSeconds) ??
-              angularPrecisionSeconds
-            }
             showDeflection={config.type === "open_controlled"}
             orientationRow={config.type !== "closed" && hasOrientation}
             disabled={readOnly}

@@ -84,7 +84,7 @@ function AngleReadingsCell({
   /** Número de la estación, para nombrar sus lecturas (Fase 24). */
   stationNumber: number;
   issue?: CaptureIssues;
-  readingIssue?: { error?: string; warning?: string };
+  readingIssue?: { error?: string };
   disabled?: boolean;
   format: AngleInputFormat;
   onChange: (readings: DmsValue[]) => void;
@@ -132,9 +132,6 @@ function AngleReadingsCell({
       {readingIssue?.error && (
         <p className="text-xs text-warning">{readingIssue.error}</p>
       )}
-      {readingIssue?.warning && (
-        <p className="text-xs text-warning">{readingIssue.warning}</p>
-      )}
 
       {open && (
         <div className="mt-1 flex flex-col gap-1 rounded-md bg-paper p-2">
@@ -180,8 +177,6 @@ interface StationsTableProps {
   showDeflection: boolean;
   /** Mínimo de lecturas que exige el proceso. */
   readingsMin: number;
-  /** Precisión angular del equipo, para la dispersión. */
-  angularPrecisionSeconds: number;
   disabled?: boolean;
   /** Formato de captura de los ángulos (Fase 13, P1). */
   angleFormat: AngleInputFormat;
@@ -202,7 +197,6 @@ export function StationsTable({
   issues,
   showDeflection,
   readingsMin,
-  angularPrecisionSeconds,
   disabled,
   angleFormat,
   orientationRow = false,
@@ -212,15 +206,12 @@ export function StationsTable({
   }
 
   /** Diagnóstico de las lecturas de una estación. */
-  function readingIssue(station: StationDraftState): {
-    error?: string;
-    warning?: string;
-  } {
+  function readingIssue(station: StationDraftState): { error?: string } {
     const readings = readingValues(station.readings).map((angle, i) => ({
       order: i + 1,
       angle,
     }));
-    return validateReadings(readings, readingsMin, angularPrecisionSeconds);
+    return validateReadings(readings, readingsMin);
   }
 
   return (

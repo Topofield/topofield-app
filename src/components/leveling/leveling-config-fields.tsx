@@ -113,7 +113,6 @@ export function LevelingConfigFields({
       <LevelEquipment
         value={value.level}
         onChange={(v) => set("level", v)}
-        order={value.precisionOrder}
         disabled={disabled}
       />
 
