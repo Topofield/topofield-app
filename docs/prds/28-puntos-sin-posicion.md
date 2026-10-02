@@ -38,7 +38,14 @@ demo, seed y documentación
 >   de sesión.
 > - **El seed se corrió también contra el esquema viejo**, antes de la
 >   migración, para comprobar que el código nuevo funciona con él (hallazgo 3).
-> - **Producción, pendiente:** la consulta previa, el merge y el `db push`.
+> - **La revisión de código no encontró defectos.** Solo un comentario del
+>   seed que seguía citando el default de distorsión (`53e26ac`).
+> - **Consulta previa en producción** (solo lectura, 2026-10-01): 8 puntos con
+>   coordenadas, todos de Torre Alameda en el «Proyecto de ejemplo»; BM-1 y
+>   BM-2 de la demo, uno de cada uno; ninguna poligonal amarrada a ellos y
+>   ningún lugar con un límite distinto de 1/500. El `db push` no se lleva
+>   ningún dato real.
+> - **Producción, pendiente:** el merge y, después, el `db push`.
 
 ## Propósito
 
