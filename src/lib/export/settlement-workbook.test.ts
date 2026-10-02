@@ -345,6 +345,7 @@ describe("buildSettlementWorkbook", () => {
       instrument_height: null,
       elevation_calculated: null,
       elevation_corrected: null,
+      catalog_elevation: null,
       ...over,
     };
   }
@@ -448,9 +449,9 @@ describe("buildSettlementWorkbook", () => {
     );
   }
 
-  /** Valores de las columnas A..I de una fila de la hoja. */
+  /** Valores de las columnas A..J de una fila de la hoja. */
   function fila(sheet: ExcelJS.Worksheet, r: number): unknown[] {
-    return Array.from({ length: 9 }, (_, i) => sheet.getCell(r, i + 1).value);
+    return Array.from({ length: 10 }, (_, i) => sheet.getCell(r, i + 1).value);
   }
 
   it("la hoja «Libretas» lista las visitas en libreta con su cabecera y sus filas", () => {
@@ -469,16 +470,17 @@ describe("buildSettlementWorkbook", () => {
       "Dist. V− (m)",
       "Cota (m)",
       "Cota compensada (m)",
+      "Cota de catálogo (m)",
     ]);
     // Ordenadas por `reading_order`, con el tipo en español y en número.
     expect(fila(hoja, 5)).toEqual([
-      "BM-1", "BM", 1.2345, 20.5, 101.2345, null, null, 100, 100,
+      "BM-1", "BM", 1.2345, 20.5, 101.2345, null, null, 100, 100, null,
     ]);
     expect(fila(hoja, 6)).toEqual([
-      "P-01", "Punto de cambio", 1.5, 19.8, 101.501, 1.2335, 21, 100.001, 100.0005,
+      "P-01", "Punto de cambio", 1.5, 19.8, 101.501, 1.2335, 21, 100.001, 100.0005, null,
     ]);
     expect(fila(hoja, 7)).toEqual([
-      "BM-1", "BM", null, null, null, 1.501, 20, 100.001, 100,
+      "BM-1", "BM", null, null, null, 1.501, 20, 100.001, 100, null,
     ]);
     expect(hoja.getCell("C6").numFmt).toBe("0.0000");
     expect(hoja.getCell("D6").numFmt).toBe("0.000");
@@ -494,6 +496,27 @@ describe("buildSettlementWorkbook", () => {
     expect(hoja.getCell("A11").value).toBe("BM-1");
     expect(hoja.getCell("A12").value).toBe("P-02");
     expect(hoja.getCell("B12").value).toBe("Intermedio");
+  });
+
+  it("la hoja «Libretas» da la cota de catálogo del BM de control (Fase 30)", () => {
+    const libreta = [
+      bookRow({ reading_order: 1, backsight: "1.5000", elevation_calculated: "100.0000" }),
+      bookRow({
+        reading_order: 2,
+        point_code: "BM-2",
+        point_type: "pc",
+        backsight: "1.4000",
+        foresight: "0.6550",
+        elevation_calculated: "100.8450",
+        catalog_elevation: "100.8450",
+      }),
+      bookRow({ reading_order: 3, foresight: "2.2450", elevation_calculated: "100.0000" }),
+    ];
+    const hoja = buildConLibretas(VISITAS_MIXTAS, { v2: libreta }).getWorksheet("Libretas")!;
+    expect(hoja.getCell("A6").value).toBe("BM-2");
+    expect(hoja.getCell("J6").value).toBe(100.845);
+    expect(hoja.getCell("J6").numFmt).toBe("0.0000");
+    expect(hoja.getCell("J5").value).toBeNull();
   });
 
   it("la hoja «Libretas» deja fuera las visitas en cotas directas", () => {

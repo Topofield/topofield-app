@@ -111,6 +111,8 @@ export interface BookReadingRow {
   instrument_height: number | string | null;
   elevation_calculated: number | string | null;
   elevation_corrected: number | string | null;
+  /** La cota de catálogo de un BM de control (Fase 30); null en las demás filas. */
+  catalog_elevation: number | string | null;
 }
 
 function num(value: number | string | null | undefined): number | null {
@@ -460,7 +462,7 @@ function sheetBooks(
   const s = wb.addWorksheet("Libretas");
   s.columns = [
     { width: 14 }, { width: 16 }, { width: 11 }, { width: 12 }, { width: 11 },
-    { width: 11 }, { width: 12 }, { width: 12 }, { width: 17 },
+    { width: 11 }, { width: 12 }, { width: 12 }, { width: 17 }, { width: 17 },
   ];
 
   setSheetTitle(s, `${site.name} — libretas de nivelación de las visitas`);
@@ -478,7 +480,7 @@ function sheetBooks(
     null, null,
     DECIMALS.elevation, DECIMALS.coordinate, DECIMALS.elevation,
     DECIMALS.elevation, DECIMALS.coordinate,
-    DECIMALS.elevation, DECIMALS.elevation,
+    DECIMALS.elevation, DECIMALS.elevation, DECIMALS.elevation,
   ];
 
   let row = 3;
@@ -495,6 +497,7 @@ function sheetBooks(
       "Dist. V− (m)",
       "Cota (m)",
       "Cota compensada (m)",
+      "Cota de catálogo (m)",
     ]);
     row += 1;
 
@@ -515,6 +518,7 @@ function sheetBooks(
           num(r.fore_distance_m),
           num(r.elevation_calculated),
           num(r.elevation_corrected),
+          num(r.catalog_elevation),
         ],
         formats,
       );
