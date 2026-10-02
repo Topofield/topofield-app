@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBookTemplate,
+  catalogElevationsOf,
+  checkBenchmarks,
   computeVisitBook,
   deriveControlElevations,
 } from "./settlement-book";
@@ -312,5 +314,139 @@ describe("buildBookTemplate", () => {
       "BM-1",
     );
     expect(t).toHaveLength(3);
+  });
+});
+
+// --- Estabilidad de los BMs (Fase 30) -----------------------------------------
+// La libreta del prototipo con su punto de cambio renombrado BM-2: un BM de
+// control. Su cota calculada es exactamente CP (100.3400) y su distancia
+// acumulada, 40 + 42 m = 0.082 km: la tolerancia de tercer orden es
+// 12·√0.082 = 3.44 mm.
+
+function bookThroughBm2(): BookRow[] {
+  return prototypeBook().map((r) => (r.pointCode === "CP-1" ? { ...r, pointCode: "BM-2" } : r));
+}
+
+/** La cota de catálogo de BM-2 en la fila del punto de cambio; null en las demás. */
+function catalogAtBm2(rows: BookRow[], elevation: number): (number | null)[] {
+  return rows.map((r) => (r.pointCode === "BM-2" ? elevation : null));
+}
+
+/** Amarre BM-1, BM-2 como punto de cambio a 0.25 km del amarre y cierre en BM-1. */
+function shortBook(bm2Elevation: number, withDistances = true): BookRow[] {
+  const d = (m: number) => (withDistances ? m : null);
+  const fsBm2 = Number((1.5 - (bm2Elevation - BM)).toFixed(4));
+  return [
+    row("BM-1", "bm", 1.5, null, d(100), null),
+    row("BM-2", "pc", 1.4, fsBm2, d(100), d(150)),
+    row("BM-1", "bm", null, Number((1.4 + bm2Elevation - BM).toFixed(4)), null, d(150)),
+  ];
+}
+
+describe("checkBenchmarks", () => {
+  it("un BM que nivela con el amarre: diferencia, tolerancia K·√L y cumple", () => {
+    const rows = bookThroughBm2();
+    const r = computeVisitBook(rows, BM, "tercer_orden");
+    const [check, ...rest] = checkBenchmarks(r.forward.readings, catalogAtBm2(rows, 100.3412), "tercer_orden");
+    expect(rest).toEqual([]);
+    expect(check).toMatchObject({ rowIndex: 5, code: "BM-2", catalogElevation: 100.3412, measuredElevation: 100.34 });
+    expect(check!.differenceMm).toBeCloseTo(-1.2, 9);
+    expect(check!.toleranceMm).toBeCloseTo(12 * Math.sqrt(0.082), 9);
+    expect(check!.meetsTolerance).toBe(true);
+  });
+
+  it("un BM que no nivela, por encima o por debajo de su cota de catálogo", () => {
+    const rows = bookThroughBm2();
+    const r = computeVisitBook(rows, BM, "tercer_orden");
+    const arriba = checkBenchmarks(r.forward.readings, catalogAtBm2(rows, 100.335), "tercer_orden")[0]!;
+    expect(arriba.differenceMm).toBeCloseTo(5.0, 9);
+    expect(arriba.meetsTolerance).toBe(false);
+    const abajo = checkBenchmarks(r.forward.readings, catalogAtBm2(rows, 100.345), "tercer_orden")[0]!;
+    expect(abajo.differenceMm).toBeCloseTo(-5.0, 9);
+    expect(abajo.meetsTolerance).toBe(false);
+  });
+
+  it("compara la cota calculada, no la compensada", () => {
+    const rows = bookThroughBm2();
+    const r = computeVisitBook(rows, BM, "tercer_orden");
+    // El cierre de +1.3 mm se compensa: la cota corregida de BM-2 se mueve, la
+    // calculada no.
+    expect(r.forward.readings[5]!.elevationCorrected).not.toBeCloseTo(100.34, 5);
+    const check = checkBenchmarks(r.forward.readings, catalogAtBm2(rows, 100.34), "tercer_orden")[0]!;
+    expect(check.differenceMm).toBe(0);
+  });
+
+  it("en la frontera exacta de la tolerancia cumple, y 0.1 mm más allá no", () => {
+    // L = 0.25 km: tolerancia de tercer orden 12·√0.25 = 6.0 mm.
+    const enFrontera = shortBook(100.506);
+    const r1 = computeVisitBook(enFrontera, BM, "tercer_orden");
+    const c1 = checkBenchmarks(r1.forward.readings, catalogAtBm2(enFrontera, 100.5), "tercer_orden")[0]!;
+    expect(c1.toleranceMm).toBeCloseTo(6.0, 9);
+    expect(c1.differenceMm).toBeCloseTo(6.0, 9);
+    expect(c1.meetsTolerance).toBe(true);
+
+    const fuera = shortBook(100.5061);
+    const r2 = computeVisitBook(fuera, BM, "tercer_orden");
+    const c2 = checkBenchmarks(r2.forward.readings, catalogAtBm2(fuera, 100.5), "tercer_orden")[0]!;
+    expect(c2.differenceMm).toBeCloseTo(6.1, 9);
+    expect(c2.meetsTolerance).toBe(false);
+  });
+
+  it("sin distancias da la diferencia, sin tolerancia ni veredicto", () => {
+    const rows = shortBook(100.502, false);
+    const r = computeVisitBook(rows, BM, "tercer_orden");
+    const check = checkBenchmarks(r.forward.readings, catalogAtBm2(rows, 100.5), "tercer_orden")[0]!;
+    expect(check.differenceMm).toBeCloseTo(2.0, 9);
+    expect(check.toleranceMm).toBeNull();
+    expect(check.meetsTolerance).toBeNull();
+  });
+
+  it("solo comprueba las filas con cota de catálogo y vista menos", () => {
+    const rows = bookThroughBm2();
+    const r = computeVisitBook(rows, BM, "tercer_orden");
+    // El amarre (fila 0) no tiene V−: aunque traiga cota, no se comprueba.
+    const catalog = rows.map((_, i) => (i === 0 ? 100 : null));
+    expect(checkBenchmarks(r.forward.readings, catalog, "tercer_orden")).toEqual([]);
+  });
+
+  it("el mismo BM leído dos veces da dos comprobaciones, en el orden de la libreta", () => {
+    const rows = bookThroughBm2();
+    rows[2] = { ...rows[2]!, pointCode: "BM-2" };
+    const r = computeVisitBook(rows, BM, "tercer_orden");
+    const checks = checkBenchmarks(r.forward.readings, catalogAtBm2(rows, 100.34), "tercer_orden");
+    expect(checks.map((c) => c.rowIndex)).toEqual([2, 5]);
+  });
+});
+
+describe("catalogElevationsOf", () => {
+  const catalog = [
+    { code: "BM-1", type: "bm" as const, elevation: 100 },
+    // PostgREST entrega los DECIMAL como cadena.
+    { code: "BM-2", type: "bm" as const, elevation: "100.8450" as unknown as number },
+    { code: "BM-3", type: "bm" as const, elevation: null },
+    { code: "GPS-1", type: "gps" as const, elevation: 101.2 },
+    { code: "PC-01", type: "bm" as const, elevation: 100.61 },
+  ];
+  const lectura = (code: string, foresight: number | null = 1.2) => ({ pointCode: code, foresight });
+
+  it("da la cota del catálogo a la fila de otro BM con vista menos", () => {
+    expect(catalogElevationsOf([lectura("BM-2"), lectura(" bm-2 ")], catalog, "BM-1", POINTS)).toEqual([
+      100.845, 100.845,
+    ]);
+  });
+
+  it("no la da al amarre, a un BM sin cota, a un punto que no es BM ni a una fila sin vista menos", () => {
+    expect(
+      catalogElevationsOf(
+        [lectura("BM-1"), lectura("BM-3"), lectura("GPS-1"), lectura("BM-2", null), lectura("CP-1")],
+        catalog,
+        "BM-1",
+        POINTS,
+      ),
+    ).toEqual([null, null, null, null, null]);
+  });
+
+  it("un código que también es punto de control es punto de control", () => {
+    expect(catalogElevationsOf([lectura("PC-01")], catalog, "BM-1", POINTS)).toEqual([null]);
   });
 });

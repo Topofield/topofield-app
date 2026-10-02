@@ -198,6 +198,24 @@ export interface BookRowPayload {
   foreDistanceM: number | null;
 }
 
+/**
+ * La comprobación de un BM de control en la libreta de una visita (Fase 30):
+ * otro BM del catálogo por el que pasa el circuito, comparado con su cota de
+ * catálogo. Si no nivela, uno de los dos BM pudo moverse.
+ */
+export interface BenchmarkCheck {
+  rowIndex: number;
+  code: string;
+  catalogElevation: number;
+  /** La cota CALCULADA de la libreta, sin compensar, a 4 decimales. */
+  measuredElevation: number;
+  /** Calculada − catálogo, en mm a 0.1. */
+  differenceMm: number;
+  /** K·√L con L la distancia acumulada hasta la fila. Null sin distancias. */
+  toleranceMm: number | null;
+  meetsTolerance: boolean | null;
+}
+
 /** Una cota derivada de la libreta: la de la fila `rowIndex`. */
 export interface DerivedElevation {
   pointId: string;

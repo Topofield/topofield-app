@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookIssueMessage, validateVisitBook } from "./settlement-book";
+import { benchmarkCheckMessage, bookIssueMessage, validateVisitBook } from "./settlement-book";
 import { validateVisitClose } from "./settlement";
 import type { PointType, ReadingInput as BookRow } from "@/types/leveling";
 import type { PointInput, VisitInput } from "@/types/settlement";
@@ -122,6 +122,39 @@ describe("bookIssueMessage", () => {
     expect(
       bookIssueMessage({ kind: "missing", level: "warning", pointId: "x", code: "PC-04" }),
     ).toBe("PC-04 no tiene vista menos en la libreta: queda sin cota.");
+  });
+});
+
+describe("benchmarkCheckMessage (Fase 30)", () => {
+  const base = {
+    rowIndex: 5,
+    code: "BM-2",
+    catalogElevation: 100.345,
+    measuredElevation: 100.3438,
+    differenceMm: -1.2,
+    toleranceMm: 3.436,
+    meetsTolerance: true,
+  };
+
+  it("dice que nivela, con la diferencia y la tolerancia", () => {
+    expect(benchmarkCheckMessage(base, "BM-1")).toBe("BM-2 nivela con BM-1: -1.2 mm, tolerancia 3.4 mm.");
+  });
+
+  it("si no nivela, da las dos cotas y no culpa a ningún BM", () => {
+    expect(
+      benchmarkCheckMessage(
+        { ...base, measuredElevation: 100.35, differenceMm: 5, meetsTolerance: false },
+        "BM-1",
+      ),
+    ).toBe(
+      "BM-2 no nivela con BM-1: la libreta lo da en 100.3500 y el catálogo en 100.3450 (+5.0 mm, tolerancia 3.4 mm). Uno de los dos BM pudo moverse, o hay un error en la libreta o en la cota del catálogo.",
+    );
+  });
+
+  it("sin distancias da la diferencia y dice que no se evalúa", () => {
+    expect(
+      benchmarkCheckMessage({ ...base, differenceMm: 2, toleranceMm: null, meetsTolerance: null }, "BM-1"),
+    ).toBe("BM-2 frente a BM-1: +2.0 mm. Sin distancias por visual no se evalúa la tolerancia.");
   });
 });
 

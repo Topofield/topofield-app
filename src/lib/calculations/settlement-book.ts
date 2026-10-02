@@ -7,15 +7,18 @@
 // control —que dejan de teclearse— y la plantilla para capturar en campo. Ver
 // docs/prds/17-libreta-panel-asentamientos.md.
 
-import { computeLeveling, samePointCode } from "./leveling";
+import { computeLeveling, samePointCode, withinTolerance } from "./leveling";
 import { isPointActiveOn } from "./settlement";
+import { levelingTolerance } from "./tolerances";
 import type {
+  ComputedReading,
   LevelingResult,
   PointType,
   ReadingInput as BookRowInput,
 } from "@/types/leveling";
-import type { PrecisionOrder } from "@/types/project";
+import type { PrecisionOrder, ReferencePoint } from "@/types/project";
 import type {
+  BenchmarkCheck,
   BookIssue,
   BookRowPayload,
   DerivedElevation,
@@ -169,6 +172,81 @@ export function deriveControlElevations(
   issues.sort((a, b) => position(a) - position(b));
   readings.sort((a, b) => a.rowIndex - b.rowIndex);
   return { readings, issues };
+}
+
+/**
+ * La cota de catálogo de cada fila de la libreta que es **otro BM** (Fase 30):
+ * un punto de referencia de tipo BM, con cota, distinto del amarre y que no es
+ * un punto de control del lugar —si un código es las dos cosas, gana el punto
+ * de control, como en `deriveControlElevations`—. Solo las filas con vista
+ * menos, que son las que dan cota. Las demás, null.
+ *
+ * Es lo que el guardado copia en `settlement_book_readings.catalog_elevation`,
+ * como la visita copia la cota del amarre: corregir después el catálogo no
+ * cambia la comprobación de una visita cerrada.
+ */
+export function catalogElevationsOf(
+  rows: { pointCode: string; foresight: number | null }[],
+  catalog: Pick<ReferencePoint, "code" | "type" | "elevation">[],
+  amarreCode: string,
+  points: Pick<PointInput, "code">[],
+): (number | null)[] {
+  return rows.map((r) => {
+    if (r.foresight == null) return null;
+    if (samePointCode(r.pointCode, amarreCode)) return null;
+    if (points.some((p) => samePointCode(p.code, r.pointCode))) return null;
+    const bm = catalog.find(
+      (c) => c.type === "bm" && c.elevation != null && samePointCode(c.code, r.pointCode),
+    );
+    return bm ? Number(bm.elevation) : null;
+  });
+}
+
+/**
+ * Comprueba los BM de control de la libreta (Fase 30, CR2): cada fila con cota
+ * de catálogo y vista menos se compara con esa cota.
+ *
+ * - Se compara la cota CALCULADA, no la compensada: es el desnivel medido
+ *   desde el amarre; la compensada ya repartió el error del circuito.
+ * - La tolerancia es la de una línea entre dos puntos conocidos, K·√L del orden
+ *   de la visita, con L la distancia acumulada hasta la fila. La frontera es la
+ *   del cierre (`withinTolerance`, C-13). Sin distancias no hay veredicto.
+ * - La diferencia va a 0.1 mm desde la cota a 4 decimales, que es como se
+ *   guarda: el editor, que calcula en vivo, y la vista, que lee la libreta
+ *   guardada, dan el mismo número.
+ *
+ * Con dos BM no se sabe cuál se movió; eso lo dice el mensaje, no el cálculo.
+ */
+export function checkBenchmarks(
+  readings: Pick<ComputedReading, "pointCode" | "foresight" | "elevationCalculated" | "distanceAccumulatedKm">[],
+  catalogElevations: (number | null)[],
+  order: PrecisionOrder,
+): BenchmarkCheck[] {
+  const checks: BenchmarkCheck[] = [];
+  readings.forEach((r, rowIndex) => {
+    const catalogElevation = catalogElevations[rowIndex];
+    if (catalogElevation == null || r.foresight == null) return;
+    const measuredElevation = round4(r.elevationCalculated);
+    const difference = Math.round((measuredElevation - catalogElevation) * 1e4) / 10;
+    const differenceMm = Object.is(difference, -0) ? 0 : difference;
+    // Como el cierre: sin una distancia válida no hay tolerancia. El motor deja
+    // el acumulado en 0 cuando la libreta no trae distancias.
+    const distanceKm = r.distanceAccumulatedKm;
+    const toleranceMm =
+      distanceKm != null && Number.isFinite(distanceKm) && distanceKm > 0
+        ? levelingTolerance(order, distanceKm)
+        : null;
+    checks.push({
+      rowIndex,
+      code: r.pointCode.trim(),
+      catalogElevation,
+      measuredElevation,
+      differenceMm,
+      toleranceMm,
+      meetsTolerance: toleranceMm != null ? withinTolerance(differenceMm, toleranceMm) : null,
+    });
+  });
+  return checks;
 }
 
 export interface TemplateRow {
