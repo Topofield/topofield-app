@@ -34,7 +34,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 26 | Correcciones del cálculo | `25-correcciones-calculo.md` | cerrada |
 | 27 | Segundo pulido | `26-segundo-pulido.md` | cerrada |
 | 28 | Ida y vuelta en la compensación | `27-desnivel-adoptado.md` | cerrada |
-| 29 | Puntos de control sin posición | `28-puntos-sin-posicion.md` | en curso |
+| 29 | Puntos de control sin posición | `28-puntos-sin-posicion.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

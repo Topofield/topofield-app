@@ -51,8 +51,8 @@ eligió corregir primero:
 Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
 control de asentamientos **dejen de tener posición**: sin coordenadas ni
 distorsión angular. Es A3, en «Control de asentamientos», y la **Fase 29**
-([`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md)), **en
-curso**, abierta después de cerrar la 28 (decisión del usuario). Retira la
+([`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md)),
+**cerrada** el 2026-10-01, después de la 28 (decisión del usuario). Retiró la
 distorsión de CR2 (D-9).
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
@@ -328,8 +328,8 @@ retirado a media serie, qué muestra la gráfica, y si el informe lo lista.
 
 ### A3 · Puntos de control sin posición
 
-> **En curso en la Fase 29** ([`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md)),
-> abierta el 2026-10-01, después de cerrar la 28.
+> **Resuelta en la Fase 29** ([`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md)),
+> cerrada el 2026-10-01. Se conserva el texto de la petición como registro.
 
 Pedida el 2026-10-01, al revisar el proceso de demo de asentamientos:
 «Necesito quitar todo lo que hace referencia a que la espacialidad de los

@@ -2513,7 +2513,9 @@ uno con su test, y encontró dos más al implementar y verificar: el servidor
 rechazaba guardar una cerrada con fila de cierre (C-19) y el editor no
 mostraba el amarre (C-20). Lo que queda abierto de la auditoría son
 **criterios**, no errores: los que el usuario pidió cambiar están en
-`pendientes.md` (CR1 a CR4); el resto, documentado en la § 2 de la auditoría.
+`pendientes.md` (CR2 a CR4; CR1 se resolvió en la Fase 28, y la distorsión
+de CR2, D-9, se retiró en la Fase 29); el resto, documentado en la § 2 de la
+auditoría.
 
 **Una distancia tecleada que los hilos tapan (Fase 26, visto al verificar).**
 Con los tres hilos capturados, la distancia sale de ellos (Fase 9) y la que

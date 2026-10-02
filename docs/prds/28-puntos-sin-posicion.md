@@ -1,7 +1,8 @@
 # PRD-de-fase 29 — Puntos de control sin posición
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-01
+**Fecha de cierre:** 2026-10-01
 
 **Rama:** `fase-29-puntos-sin-posicion`
 **Petición:** del usuario, 2026-10-01. Es A3 de `pendientes.md`. Al revisar el
@@ -13,6 +14,31 @@ nivelaciones no llevan nada relacionado con coordenadas», y «sí, quita
 también BM-01 y BM-02 del seed».
 **Módulo:** control de asentamientos — base, motor, captura, panel, Excel,
 demo, seed y documentación
+
+> **Divergencias de la implementación:**
+>
+> - **También cambian las capturas 05 y 29.** La 05 es el catálogo de
+>   referencia de «Lote catastral», con BM-01 y BM-02 sin coordenadas; la 29,
+>   el panel en oscuro sin el KPI. El PRD nombraba solo la 13, la 14 y la 15.
+> - **`ThresholdCell` pierde `integer` y `helperText`**: solo los usaba el
+>   límite 1/X.
+> - **`ComputedReading.baselineDate` se queda**: fecha la línea base del punto.
+>   Solo cambió su comentario, que decía que la necesitaban los diferenciales.
+> - **El manual explica por qué no hay coordenadas** (§ 7.2) y que un lugar
+>   cerrado antes del cambio tampoco muestra la distorsión (riesgo 3).
+> - **`CLAUDE.md` recoge además** la posición de los puntos en «Out of scope»
+>   y el orden de despliegue de una migración que borra. La doc técnica
+>   (§ 13) explica el razonamiento.
+> - **La prueba pgTAP comprueba también el mensaje** del trigger: 8 pruebas
+>   en vez de 7.
+> - **Verificación en pantalla** en local, a 1280 px en claro y a 390 px en
+>   oscuro: 53 comprobaciones, sin desborde ni errores de página. Cubren el
+>   panel, Puntos y lugar, Editar TA-08, el lugar nuevo, el catálogo de
+>   referencia, el Excel, duplicar Edificio Norte y la demo del primer inicio
+>   de sesión.
+> - **El seed se corrió también contra el esquema viejo**, antes de la
+>   migración, para comprobar que el código nuevo funciona con él (hallazgo 3).
+> - **Producción, pendiente:** la consulta previa, el merge y el `db push`.
 
 ## Propósito
 
