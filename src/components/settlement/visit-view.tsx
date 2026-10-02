@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  Alert,
   Badge,
   Button,
   buttonClasses,
@@ -34,11 +35,13 @@ import {
   ALERT_LEVEL_LABELS,
   VISIT_STATUS_LABELS,
   type AlertLevel,
+  type BenchmarkCheck,
   type CaptureMode,
   type SettlementBookReading,
   type VisitStatus,
 } from "@/types/settlement";
 import { VISIT_STATUS_TONE } from "@/lib/process-status";
+import { benchmarkCheckMessage } from "@/lib/validators/settlement-book";
 
 
 const LEVEL_NAMES = { caution: "precaución", alert: "alerta", alarm: "alarma" } as const;
@@ -84,6 +87,8 @@ interface VisitViewProps {
   arithmeticCheckOk: boolean | null;
   /** Punto de cambio incompleto de la libreta guardada, con su fila (Fase 24). */
   bookTurningPoint: string | null;
+  /** Los BM de control de la libreta guardada (Fase 30). */
+  benchmarkChecks: BenchmarkCheck[];
   summary: VisitSummary;
   /** Promedio de la visita anterior, para el Δ del KPI. */
   previousMean: number | null;
@@ -123,6 +128,10 @@ export function VisitView(props: VisitViewProps) {
     props.captureMode === "book"
       ? formatBookClosure(props.closureErrorMm, props.toleranceMm, props.meetsTolerance)
       : null;
+  const amarreCode = props.amarre?.code ?? "";
+  const benchmarkWarnings = props.benchmarkChecks
+    .filter((check) => check.meetsTolerance === false)
+    .map((check) => benchmarkCheckMessage(check, amarreCode));
 
   function select(pointId: string) {
     setSelected((prev) => (prev === pointId ? null : pointId));
@@ -281,6 +290,12 @@ export function VisitView(props: VisitViewProps) {
           hint="Peor nivel de alerta de la visita"
         />
       </div>
+
+      {benchmarkWarnings.map((warning) => (
+        <Alert key={warning} variant="warning">
+          {warning}
+        </Alert>
+      ))}
 
       {/* `minmax(0, …)`: sin él, la tarjeta crece al ancho de su tabla en vez
           de desplazarla, y la página entera desborda en un teléfono. */}
@@ -459,6 +474,7 @@ export function VisitView(props: VisitViewProps) {
         closureErrorMm={props.closureErrorMm}
         toleranceMm={props.toleranceMm}
         meetsTolerance={props.meetsTolerance}
+        benchmarkChecks={props.benchmarkChecks}
         selectedPointId={current?.pointId ?? null}
       />
 
@@ -481,6 +497,7 @@ export function VisitView(props: VisitViewProps) {
                 meetsTolerance: props.meetsTolerance,
                 arithmeticCheckOk: props.arithmeticCheckOk,
                 turningPoint: props.bookTurningPoint,
+                benchmarkWarnings,
               }
             : null
         }

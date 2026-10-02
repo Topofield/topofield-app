@@ -44,6 +44,8 @@ interface CloseVisitDialogProps {
     arithmeticCheckOk: boolean;
     /** Punto de cambio incompleto, con su fila (Fase 24); bloquea igual. */
     turningPoint?: string | null;
+    /** Los BM de control que no nivelan con el amarre (Fase 30); no bloquean. */
+    benchmarkWarnings?: string[];
   } | null;
 }
 
@@ -163,6 +165,11 @@ export function CloseVisitDialog({
             igual, con sus cotas sin compensar.
           </Alert>
         )}
+        {book?.benchmarkWarnings?.map((warning) => (
+          <Alert key={warning} variant="warning">
+            {warning} La visita se cierra igual.
+          </Alert>
+        ))}
 
         {worstAlert === "alarm" || worstAlert === "alert" ? (
           <Alert variant="warning">

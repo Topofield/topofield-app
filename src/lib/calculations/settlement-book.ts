@@ -226,6 +226,7 @@ export function checkBenchmarks(
   readings.forEach((r, rowIndex) => {
     const catalogElevation = catalogElevations[rowIndex];
     if (catalogElevation == null || r.foresight == null) return;
+    if (!Number.isFinite(r.elevationCalculated)) return;
     const measuredElevation = round4(r.elevationCalculated);
     const difference = Math.round((measuredElevation - catalogElevation) * 1e4) / 10;
     const differenceMm = Object.is(difference, -0) ? 0 : difference;
@@ -247,6 +248,31 @@ export function checkBenchmarks(
     });
   });
   return checks;
+}
+
+/**
+ * Las comprobaciones de los BM de control de una libreta YA GUARDADA (Fase 30),
+ * con la cota de catálogo que se copió al guardarla. Lo usan la vista de la
+ * visita y el panel, que no recalculan la libreta: leen sus filas.
+ */
+export function benchmarkChecksOfBook(
+  rows: Pick<
+    SettlementBookReading,
+    "point_code" | "foresight" | "elevation_calculated" | "distance_accumulated_km" | "catalog_elevation"
+  >[],
+  order: PrecisionOrder,
+): BenchmarkCheck[] {
+  const n = (v: number | string | null) => (v === null ? null : Number(v));
+  return checkBenchmarks(
+    rows.map((r) => ({
+      pointCode: r.point_code,
+      foresight: n(r.foresight),
+      elevationCalculated: n(r.elevation_calculated) ?? Number.NaN,
+      distanceAccumulatedKm: n(r.distance_accumulated_km),
+    })),
+    rows.map((r) => n(r.catalog_elevation)),
+    order,
+  );
 }
 
 export interface TemplateRow {

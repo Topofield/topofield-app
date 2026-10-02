@@ -28,6 +28,8 @@ export interface VisitTableRow {
   closureErrorMm: number | null;
   toleranceMm: number | null;
   meetsTolerance: boolean | null;
+  /** «BM-2 no nivela con BM-1», si algún BM de control no nivela (Fase 30). */
+  bmWarning: string | null;
   worstAlert: AlertLevel;
 }
 
@@ -122,6 +124,12 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                       {row.amarre.elevation != null && (
                         <span className="font-mono tabular-nums text-ink-2">
                           {row.amarre.elevation.toFixed(4)}
+                        </span>
+                      )}
+                      {row.bmWarning && (
+                        <span className="font-semibold text-warning" title={row.bmWarning}>
+                          <span aria-hidden> ⚠</span>
+                          <span className="sr-only"> ({row.bmWarning})</span>
                         </span>
                       )}
                     </>

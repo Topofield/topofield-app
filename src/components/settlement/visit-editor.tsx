@@ -41,6 +41,8 @@ import {
 import {
   bookRowInputOf,
   buildBookTemplate,
+  catalogElevationsOf,
+  checkBenchmarks,
   computeVisitBook,
   deriveControlElevations,
   type TemplateRow,
@@ -48,7 +50,7 @@ import {
 import { samePointCode } from "@/lib/calculations/leveling";
 import { formatDateOnly, formatTrendDeviation } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
-import { validateVisitBook } from "@/lib/validators/settlement-book";
+import { benchmarkCheckMessage, validateVisitBook } from "@/lib/validators/settlement-book";
 import { turningPointBlocker } from "@/lib/validators/leveling";
 import {
   closeVisitAction,
@@ -260,6 +262,19 @@ export function VisitEditor({
         ? deriveControlElevations(bookResult, pointInputs, vigenciaDate)
         : { readings: [], issues: [] },
     [bookResult, pointInputs, vigenciaDate],
+  );
+  // Los BM de control (Fase 30), con el catálogo en vivo: es lo que el
+  // guardado copiará en sus filas.
+  const benchmarkChecks = useMemo(
+    () =>
+      bookResult
+        ? checkBenchmarks(
+            bookResult.forward.readings,
+            catalogElevationsOf(bookResult.forward.readings, referencePoints, header.amarre.code, pointInputs),
+            header.precisionOrder,
+          )
+        : [],
+    [bookResult, referencePoints, header.amarre.code, pointInputs, header.precisionOrder],
   );
 
   // Cotas de la visita: las derivadas de la libreta o las tecleadas.
@@ -576,6 +591,7 @@ export function VisitEditor({
             rowIssues={bookCheck.rowIssues}
             errors={bookCheck.errors}
             derivationIssues={derivation.issues}
+            benchmarkChecks={benchmarkChecks}
             levelType={header.level.levelType === "" ? null : header.level.levelType}
             disabled={disabled}
             pointCodes={pointCodes}
@@ -672,6 +688,9 @@ export function VisitEditor({
                   meetsTolerance: bookResult.meetsTolerance,
                   arithmeticCheckOk: bookResult.arithmeticCheckOk,
                   turningPoint: turningPointBlocker(bookResult),
+                  benchmarkWarnings: benchmarkChecks
+                    .filter((check) => check.meetsTolerance === false)
+                    .map((check) => benchmarkCheckMessage(check, header.amarre.code)),
                 }
               : null
           }

@@ -7,6 +7,7 @@ import {
   pointInputOf,
 } from "@/lib/calculations/settlement";
 import {
+  benchmarkChecksOfBook,
   bookRowInputOf,
   bookRowOf,
   computeVisitBook,
@@ -107,6 +108,9 @@ export default async function VisitPage({ params }: VisitPageProps) {
   const arithmeticCheckOk = bookResult?.arithmeticCheckOk ?? null;
   // Un punto de cambio incompleto bloquea el cierre y dice qué fila (Fase 24).
   const bookTurningPoint = bookResult ? turningPointBlocker(bookResult) : null;
+  // Los BM de control, con la cota de catálogo que se copió al guardar (Fase 30).
+  const benchmarkChecks =
+    visit.capture_mode === "book" ? benchmarkChecksOfBook(data.book, visit.precision_order) : [];
 
   const prev = index > 0 ? allVisits[index - 1] : null;
   const next = allVisits[index + 1] ?? null;
@@ -144,6 +148,7 @@ export default async function VisitPage({ params }: VisitPageProps) {
         meetsTolerance={visit.meets_tolerance}
         arithmeticCheckOk={arithmeticCheckOk}
         bookTurningPoint={bookTurningPoint}
+        benchmarkChecks={benchmarkChecks}
         summary={summary}
         previousMean={previous?.mean ?? null}
         rows={rows}

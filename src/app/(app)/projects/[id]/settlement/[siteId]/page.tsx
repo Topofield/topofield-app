@@ -12,6 +12,7 @@ import {
   getReferencePoints,
   getPointIdsWithClosedReadings,
   getSettlementReadingsBySite,
+  getSiteBooks,
   getSite,
   getSitePoints,
   getVisits,
@@ -102,6 +103,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
           sitePoints={sitePoints}
           visits={visits}
           readingsBySite={await getSettlementReadingsBySite(supabase, site.id)}
+          booksByVisit={await getSiteBooks(supabase, site.id)}
         />
       )}
       {activeTab === "lugar" && (

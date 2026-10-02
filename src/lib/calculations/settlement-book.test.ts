@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBookTemplate,
+  benchmarkChecksOfBook,
   catalogElevationsOf,
   checkBenchmarks,
   computeVisitBook,
@@ -448,5 +449,37 @@ describe("catalogElevationsOf", () => {
 
   it("un código que también es punto de control es punto de control", () => {
     expect(catalogElevationsOf([lectura("PC-01")], catalog, "BM-1", POINTS)).toEqual([null]);
+  });
+});
+
+describe("benchmarkChecksOfBook", () => {
+  // Las filas como llegan de la base: los DECIMAL, como cadena.
+  const fila = (over: Record<string, unknown>) => ({
+    point_code: "PC-01",
+    foresight: "1.2000",
+    elevation_calculated: "100.3000",
+    distance_accumulated_km: "0.040",
+    catalog_elevation: null,
+    ...over,
+  }) as unknown as Parameters<typeof benchmarkChecksOfBook>[0][number];
+
+  it("comprueba la libreta guardada con la copia de la cota de catálogo", () => {
+    const [check, ...rest] = benchmarkChecksOfBook(
+      [
+        fila({ point_code: "BM-1", foresight: null, elevation_calculated: "100.0000", distance_accumulated_km: "0.000" }),
+        fila({}),
+        fila({ point_code: "BM-2", elevation_calculated: "100.8512", distance_accumulated_km: "0.250", catalog_elevation: "100.8450" }),
+      ],
+      "tercer_orden",
+    );
+    expect(rest).toEqual([]);
+    expect(check).toMatchObject({ rowIndex: 2, code: "BM-2", catalogElevation: 100.845, measuredElevation: 100.8512 });
+    expect(check!.differenceMm).toBeCloseTo(6.2, 9);
+    expect(check!.toleranceMm).toBeCloseTo(6.0, 9);
+    expect(check!.meetsTolerance).toBe(false);
+  });
+
+  it("una libreta sin BM de control no da comprobaciones", () => {
+    expect(benchmarkChecksOfBook([fila({})], "tercer_orden")).toEqual([]);
   });
 });
