@@ -254,7 +254,7 @@ describe("bookRowsToPersist (Fase 18)", () => {
     const result = computeVisitBook(rows.map(bookRowInputOf), 100, "tercer_orden");
     const out = bookRowsToPersist("v1", rows, result.forward.readings, [
       { id: "p1", code: "PC-01" },
-    ]);
+    ], [null, null, null]);
     expect(out.map((r) => r.reading_order)).toEqual([1, 2, 3]);
     expect(out.map((r) => r.point_id)).toEqual([null, "p1", null]);
     expect(out[1]!.point_code).toBe("pc-01");
@@ -262,6 +262,12 @@ describe("bookRowsToPersist (Fase 18)", () => {
     expect(out[0]!.back_distance_m).toBeCloseTo(20, 9);
     expect(out[1]!.elevation_calculated).toBeCloseTo(100.3, 9);
     expect(out.every((r) => r.visit_id === "v1")).toBe(true);
+  });
+
+  it("sella la cota de catálogo solo en las filas de los BM de control (Fase 30)", () => {
+    const result = computeVisitBook(rows.map(bookRowInputOf), 100, "tercer_orden");
+    const out = bookRowsToPersist("v1", rows, result.forward.readings, [], [null, 100.845, null]);
+    expect(out.map((r) => r.catalog_elevation)).toEqual([null, 100.845, null]);
   });
 });
 

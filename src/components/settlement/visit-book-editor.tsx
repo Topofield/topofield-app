@@ -12,11 +12,11 @@ import type { TemplateRow } from "@/lib/calculations/settlement-book";
 import type { LibretaRow } from "@/lib/import/leveling";
 import { formatBookClosure } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
-import { bookIssueMessage } from "@/lib/validators/settlement-book";
+import { benchmarkCheckMessage, bookIssueMessage } from "@/lib/validators/settlement-book";
 import { turningPointBlocker, type ReadingCaptureIssues } from "@/lib/validators/leveling";
 import type { LevelingResult } from "@/types/leveling";
 import type { LevelType } from "@/types/project";
-import type { BookIssue, BookRowPayload } from "@/types/settlement";
+import type { BenchmarkCheck, BookIssue, BookRowPayload } from "@/types/settlement";
 
 // --- Conversiones entre el borrador (texto) y la libreta (números) ----------
 
@@ -91,6 +91,8 @@ interface VisitBookEditorProps {
   errors: string[];
   /** Lo que encontró la derivación de cotas. */
   derivationIssues: BookIssue[];
+  /** Los BM de control por los que pasa la libreta (Fase 30). */
+  benchmarkChecks: BenchmarkCheck[];
   levelType: LevelType | null;
   disabled: boolean;
   /** Códigos del catálogo del lugar, para sugerir y para marcar las filas. */
@@ -112,6 +114,7 @@ export function VisitBookEditor({
   rowIssues,
   errors,
   derivationIssues,
+  benchmarkChecks,
   levelType,
   disabled,
   pointCodes,
@@ -198,6 +201,22 @@ export function VisitBookEditor({
             Sin distancias por visual no se evalúa la tolerancia ni se compensa
             el cierre.
           </Alert>
+        )}
+        {benchmarkChecks
+          .filter((check) => check.meetsTolerance === false)
+          .map((check) => (
+            <Alert key={`bm-${check.rowIndex}`} variant="warning">
+              {benchmarkCheckMessage(check, amarreCode)}
+            </Alert>
+          ))}
+        {benchmarkChecks.some((check) => check.meetsTolerance !== false) && (
+          <ul className="flex flex-col gap-1 text-sm text-ink-2">
+            {benchmarkChecks
+              .filter((check) => check.meetsTolerance !== false)
+              .map((check) => (
+                <li key={`bm-${check.rowIndex}`}>{benchmarkCheckMessage(check, amarreCode)}</li>
+              ))}
+          </ul>
         )}
         {derivationIssues.length > 0 && (
           <ul className="flex flex-col gap-1 text-sm">

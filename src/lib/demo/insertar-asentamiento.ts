@@ -18,12 +18,14 @@ import { totalDistanceFromReadings } from "@/lib/calculations/leveling";
 import { computeHistory } from "@/lib/calculations/settlement";
 import {
   bookRowInputOf,
+  catalogElevationsOf,
   computeVisitBook,
   deriveControlElevations,
 } from "@/lib/calculations/settlement-book";
 import { bookRowsToPersist } from "@/lib/calculations/settlement-persistence";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
 import { generateVisitBook } from "./libreta-asentamientos";
+import { ALAMEDA_AMARRES } from "./torre-alameda";
 import type { Database } from "@/types/database";
 import type { PointInput, VisitInput } from "@/types/settlement";
 import type { AsentamientoDemo } from "./fixtures";
@@ -86,14 +88,16 @@ export async function insertarAsentamiento(
 
   // La libreta de cada visita, hacia atrás desde la serie, con el BM de amarre
   // de esa visita; las cotas salen de ella por el motor, como al guardar desde
-  // el editor. Las semillas son las del seed: la misma libreta en los dos.
+  // el editor. Las semillas son las del seed: la misma libreta en los dos. La
+  // primera armada lee también el otro BM, para comprobar que nivelan (Fase 30).
   const books = fixture.visits.map((v, i) => {
     const rows = generateVisitBook({
       amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
-      targets: v.targets,
+      targets: [v.bmControl, ...v.targets],
       closureMm: v.closureMm,
       order: fixture.precisionOrder,
       seed: 100 + i,
+      perSetup: 5,
     });
     const result = computeVisitBook(
       rows.map(bookRowInputOf),
@@ -148,7 +152,13 @@ export async function insertarAsentamiento(
   // --- Libretas y lecturas de todas las visitas, una escritura cada una. -------
   const libretas = fixture.visits.flatMap((_, i) => {
     const book = books[i]!;
-    return bookRowsToPersist(visitaId.get(i)!, book.rows, book.result.forward.readings, points);
+    const catalog = catalogElevationsOf(
+      book.result.forward.readings,
+      ALAMEDA_AMARRES,
+      fixture.visits[i]!.amarre.code,
+      points,
+    );
+    return bookRowsToPersist(visitaId.get(i)!, book.rows, book.result.forward.readings, points, catalog);
   });
   const { error: errLibretas } = await supabase.from("settlement_book_readings").insert(libretas);
   if (errLibretas) throw errLibretas;

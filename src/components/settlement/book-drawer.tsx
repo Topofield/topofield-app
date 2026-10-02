@@ -3,7 +3,8 @@
 import { Drawer } from "@/components/design-system";
 import { formatBookClosure, formatDateOnly } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import type { SettlementBookReading } from "@/types/settlement";
+import { benchmarkCheckMessage } from "@/lib/validators/settlement-book";
+import type { BenchmarkCheck, SettlementBookReading } from "@/types/settlement";
 
 interface BookDrawerProps {
   open: boolean;
@@ -17,6 +18,8 @@ interface BookDrawerProps {
   closureErrorMm: number | null;
   toleranceMm: number | null;
   meetsTolerance: boolean | null;
+  /** Los BM de control de la libreta (Fase 30). */
+  benchmarkChecks: BenchmarkCheck[];
   /** El punto seleccionado en la vista, cuya fila se marca además. */
   selectedPointId: string | null;
 }
@@ -56,6 +59,7 @@ export function BookDrawer({
   closureErrorMm,
   toleranceMm,
   meetsTolerance,
+  benchmarkChecks,
   selectedPointId,
 }: BookDrawerProps) {
   const closure = formatBookClosure(closureErrorMm, toleranceMm, meetsTolerance);
@@ -177,6 +181,18 @@ export function BookDrawer({
           </div>
         ))}
       </dl>
+      {benchmarkChecks.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-1 text-sm">
+          {benchmarkChecks.map((check) => (
+            <li
+              key={check.rowIndex}
+              className={check.meetsTolerance === false ? "text-warning" : "text-ink-2"}
+            >
+              {benchmarkCheckMessage(check, amarre?.code ?? "")}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="mt-3 text-sm text-ink-2">
         Tolerancia de cierre K·√D, con D la longitud del circuito en km. Las
         cotas de los puntos de control salen de las cotas compensadas; si el

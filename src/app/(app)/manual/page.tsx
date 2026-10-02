@@ -1564,6 +1564,49 @@ export default function ManualPage() {
         </Nota>
 
         <p>
+          <strong>Comprobar los BM.</strong> Todas las cotas de la visita salen
+          del BM de amarre. Si ese BM se movió, todos los puntos parecen
+          asentarse a la vez. Para detectarlo, haga pasar el circuito también
+          por <strong>otro BM del catálogo</strong> (§ 4.2), por ejemplo como
+          una lectura más de la primera armada. Es lo que recomienda el
+          protocolo de campo: nivelar primero entre BMs.
+        </p>
+
+        <p>
+          La aplicación compara la cota que la libreta le da a ese BM —la
+          calculada, antes de compensar— con la del catálogo. La tolerancia es
+          K·√L del orden de la visita, con L la distancia desde el amarre
+          hasta ese BM.
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            Si nivela, el resumen de la libreta lo dice: «BM-2 nivela con BM-1:
+            -0.4 mm, tolerancia 2.0 mm.»
+          </li>
+          <li>
+            Si no, avisa con las dos cotas. Uno de los dos BM pudo moverse, o
+            hay un error en la libreta o en la cota del catálogo. Con dos BM
+            no se sabe cuál se movió; con un tercero, comparándolos entre sí,
+            sí.
+          </li>
+        </ul>
+
+        <p>
+          <strong>Solo avisa</strong>: la visita se guarda y se cierra igual.
+          El aviso queda en el editor, junto al amarre en la tabla de visitas
+          del panel, en la vista de la visita y al cerrarla.
+        </p>
+
+        <p>
+          Cuentan los puntos de referencia de tipo BM, con cota y distintos
+          del amarre. Un código que también es punto de control del lugar se
+          trata como punto de control. Al guardar, la visita conserva la cota
+          de catálogo con que se comparó: si después se corrige el catálogo,
+          una visita cerrada no cambia.
+        </p>
+
+        <p>
           <strong>Importar la libreta.</strong> Con un nivel digital,{" "}
           <strong>Importar desde archivo</strong> pasa a la libreta el archivo{" "}
           <strong>.L de Leica</strong> o la <strong>plantilla CSV</strong> de
@@ -1707,7 +1750,9 @@ export default function ManualPage() {
             § 7.5
           </a>
           ). Por visita: el promedio y el máximo del acumulado, el BM de
-          amarre con su cota, el <strong>mayor Δ</strong> desde la anterior,
+          amarre con su cota —con <strong>⚠</strong> si otro BM de la
+          libreta no nivela con él (§ 7.3)—, el <strong>mayor Δ</strong>{" "}
+          desde la anterior,
           el <strong>cierre</strong> de la libreta en mm —con{" "}
           <strong>⚠</strong> si supera la tolerancia; en cotas directas, el
           tecleado—, la peor alerta y el estado: borrador, calculada o
@@ -1804,7 +1849,9 @@ export default function ManualPage() {
           con su diferencia frente a la visita anterior; el mayor movimiento
           desde la anterior; los puntos en alerta, de los medidos; el{" "}
           <strong>cierre de nivelación</strong>, con la tolerancia y si
-          cumple; y la peor alerta junto al estado de la visita.
+          cumple; y la peor alerta junto al estado de la visita. Si otro BM de
+          la libreta no nivela con el amarre, un aviso debajo lo dice, con las
+          dos cotas (§ 7.3).
         </p>
 
         <p>
@@ -1830,7 +1877,8 @@ export default function ManualPage() {
           libreta tal como se guardó: la fecha, el nivelador, el equipo y el
           BM de amarre; por fila, la armada, el punto, V+, AI, la vista
           intermedia (V. int.), V−, la cota y la cota compensada; y al pie
-          ΣV+, ΣV−, el error de cierre y la tolerancia. Las vistas intermedias
+          ΣV+, ΣV−, el error de cierre, la tolerancia y la comprobación de
+          cada BM de control (§ 7.3). Las vistas intermedias
           de los puntos de control van resaltadas: de ellas sale la cota del
           punto. Se cierra con <strong>Cerrar</strong> o con Esc.
         </p>
@@ -1855,7 +1903,9 @@ export default function ManualPage() {
             Si la comprobación aritmética no cuadra, no se puede cerrar
           </strong>
           : corrija la libreta. Si el cierre supera la tolerancia, solo avisa:
-          la visita se cierra con sus cotas sin compensar.
+          la visita se cierra con sus cotas sin compensar. Lo mismo si otro BM
+          no nivela con el amarre (§ 7.3): el diálogo lo recuerda y la visita
+          se cierra igual.
         </p>
 
         <Nota titulo="Cierre las visitas en orden">
@@ -2175,7 +2225,8 @@ export default function ManualPage() {
           <strong>«Visitas»</strong> con el modo de captura, el BM de amarre,
           el cierre y la tolerancia de cada una, y el libro lleva una cuarta
           hoja, <strong>«Libretas»</strong>: la libreta de cada visita que la
-          tiene, con sus cotas calculadas y compensadas.
+          tiene, con sus cotas calculadas y compensadas y la cota de catálogo
+          de los BM de control (§ 7.3).
         </p>
 
         <p>

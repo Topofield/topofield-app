@@ -45,8 +45,10 @@ eligió corregir primero:
 - **Fase 28** — ida y vuelta en la compensación (CR1)
   ([`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md)),
   **cerrada** el 2026-10-01;
-- después, los otros criterios que eligió cambiar, **sin fase**: «Criterios
-  del cálculo», al final.
+- **Fase 30** — estabilidad de los BMs (CR2)
+  ([`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md)),
+  **cerrada** el 2026-10-02;
+- después, CR3 y CR4, **sin fase**: «Criterios del cálculo», al final.
 
 Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
 control de asentamientos **dejen de tener posición**: sin coordenadas ni
@@ -563,6 +565,11 @@ que lo cerrado conserve el suyo, y revisar el criterio de la vuelta de la
 Fase 26 (C-10).
 
 ### CR2 · Estabilidad de los BMs (D-13)
+
+> **Resuelta en la Fase 30** ([`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md)),
+> cerrada el 2026-10-02: cuando la libreta de una visita pasa por otro BM del
+> catálogo, la app compara su cota y avisa si no nivela. Se conserva el texto
+> de la petición como registro.
 
 - Avisar si la libreta de una visita no nivela entre BM-1 y BM-2: un BM movido
   hace que todos los puntos «se asienten» a la vez (marco teórico § 2.3).

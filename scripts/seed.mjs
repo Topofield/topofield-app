@@ -58,6 +58,7 @@ import {
 import { computeHistory } from "../src/lib/calculations/settlement.ts";
 import {
   bookRowInputOf,
+  catalogElevationsOf,
   computeVisitBook,
   deriveControlElevations,
 } from "../src/lib/calculations/settlement-book.ts";
@@ -1355,12 +1356,14 @@ async function insertBookSite(projectId, userId, cfg) {
   }));
 
   const books = cfg.visits.map((v, i) => {
+    // La primera armada lee también el otro BM (Fase 30), como en la demo.
     const rows = generateVisitBook({
       amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
-      targets: v.targets,
+      targets: [v.bmControl, ...v.targets],
       closureMm: v.closureMm,
       order: LEVEL_DIGITAL_MONITOREO.precision_order,
       seed: 100 + i,
+      perSetup: 5,
     });
     const result = computeVisitBook(
       rows.map(bookRowInputOf),
@@ -1412,7 +1415,15 @@ async function insertBookSite(projectId, userId, cfg) {
 
     const { error: bookErr } = await admin
       .from("settlement_book_readings")
-      .insert(bookRowsToPersist(visitRow.id, rows, result.forward.readings, points));
+      .insert(
+        bookRowsToPersist(
+          visitRow.id,
+          rows,
+          result.forward.readings,
+          points,
+          catalogElevationsOf(result.forward.readings, ALAMEDA_AMARRES, v.amarre.code, points),
+        ),
+      );
     if (bookErr) throw bookErr;
 
     const { error: readingsErr } = await admin.from("settlement_readings").insert(

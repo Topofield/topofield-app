@@ -537,6 +537,13 @@ La libreta vive en `settlement_book_readings`, espejo de `leveling_readings` sin
 `settlement_readings.elevation` se **deriva** de la libreta (cota compensada de
 la fila del punto) y la escribe el servidor.
 
+**Añadido en la Fase 30.** `settlement_book_readings.catalog_elevation
+DECIMAL(10,4)`: en la fila de otro BM del catálogo por el que pasa el circuito,
+la cota que ese BM tenía en el catálogo al guardar la visita. Con ella se
+comprueba que el BM de control nivela con el amarre (§ 5.3), y una visita
+cerrada la conserva aunque después se corrija el catálogo, como conserva la del
+amarre.
+
 #### `reports`
 ```sql
 CREATE TABLE reports (
@@ -839,6 +846,7 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Asentamiento acumulado > umbral | Semáforo según nivel |
 | Tendencia de velocidad creciente (aceleración) | Indicador de advertencia |
 | Lectura fuera de tendencia (Fase 12) | Aviso al capturar, al cerrar y en el panel; no bloquea |
+| Otro BM del catálogo que no nivela con el amarre (Fase 30) | Cota calculada de la libreta frente a la de catálogo, con K·√L hasta ese BM: aviso en el editor, la vista, el cierre y el panel; no bloquea |
 
 ### 5.4 Tolerancias por Orden
 

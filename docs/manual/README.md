@@ -960,6 +960,7 @@ La libreta avisa de lo que no cuadra:
 | Situación | Qué ocurre |
 |---|---|
 | El cierre supera la tolerancia | **Solo avisa.** La visita se guarda y se cierra igual, con sus cotas sin compensar |
+| Otro BM del catálogo no nivela con el amarre | **Solo avisa**: ver «Comprobar los BM», abajo |
 | Faltan las distancias por visual | Avisa: sin distancias no se evalúa la tolerancia ni se compensa |
 | Todavía no se leyó el amarre de cierre | «Libreta incompleta»: aún no hay error de cierre |
 | La primera o la última fila no es el BM de amarre | **No se puede guardar** |
@@ -974,6 +975,31 @@ La libreta avisa de lo que no cuadra:
 > y al cerrarla. Conviene revisar la libreta o repetir la nivelación. La
 > comprobación aritmética sí bloquea el cierre, porque una suma que no cuadra
 > es un error de la libreta.
+
+**Comprobar los BM.** Todas las cotas de la visita salen del BM de amarre. Si
+ese BM se movió, todos los puntos parecen asentarse a la vez. Para detectarlo,
+haga pasar el circuito también por **otro BM del catálogo** (§ 4.2), por
+ejemplo como una lectura más de la primera armada. Es lo que recomienda el
+protocolo de campo: nivelar primero entre BMs.
+
+La aplicación compara la cota que la libreta le da a ese BM —la calculada,
+antes de compensar— con la del catálogo. La tolerancia es K·√L del orden de
+la visita, con L la distancia desde el amarre hasta ese BM.
+
+- Si nivela, el resumen de la libreta lo dice: «BM-2 nivela con BM-1:
+  -0.4 mm, tolerancia 2.0 mm.»
+- Si no, avisa con las dos cotas. Uno de los dos BM pudo moverse, o hay un
+  error en la libreta o en la cota del catálogo. Con dos BM no se sabe cuál
+  se movió; con un tercero, comparándolos entre sí, sí.
+
+**Solo avisa**: la visita se guarda y se cierra igual. El aviso queda en el
+editor, junto al amarre en la tabla de visitas del panel, en la vista de la
+visita y al cerrarla.
+
+Cuentan los puntos de referencia de tipo BM, con cota y distintos del amarre.
+Un código que también es punto de control del lugar se trata como punto de
+control. Al guardar, la visita conserva la cota de catálogo con que se
+comparó: si después se corrige el catálogo, una visita cerrada no cambia.
 
 **Importar la libreta.** Con un nivel digital, **Importar desde archivo** pasa
 a la libreta el archivo **.L de Leica** o la **plantilla CSV** de TopoField,
@@ -1056,7 +1082,8 @@ línea base, así que el promedio mezcla las dos.
 
 **Visitas.** De la más reciente a la más antigua; pulse una fila para abrir
 la visita (§ 7.5). Por visita: el promedio y el máximo del acumulado, el BM
-de amarre con su cota, el **mayor Δ** desde la anterior, el **cierre** de la
+de amarre con su cota —con **⚠** si otro BM de la libreta no nivela con él
+(§ 7.3)—, el **mayor Δ** desde la anterior, el **cierre** de la
 libreta en mm —con **⚠** si supera la tolerancia; en cotas directas, el
 tecleado—, la peor alerta y el estado: borrador, calculada o cerrada.
 
@@ -1118,7 +1145,8 @@ Una visita cerrada no se edita.
 **Indicadores.** El asentamiento máximo; el promedio, con su diferencia
 frente a la visita anterior; el mayor movimiento desde la anterior; los puntos
 en alerta, de los medidos; el **cierre de nivelación**, con la tolerancia y si
-cumple; y la peor alerta junto al estado de la visita.
+cumple; y la peor alerta junto al estado de la visita. Si otro BM de la libreta
+no nivela con el amarre, un aviso debajo lo dice, con las dos cotas (§ 7.3).
 
 **Puntos de control.** Por punto: la cota base (su C0 o su primera lectura),
 la cota actual, el acumulado, el Δ desde la anterior, la velocidad y la
@@ -1134,7 +1162,8 @@ seleccionar su punto.
 **Registro de nivelación.** Un panel lateral con la libreta tal como se
 guardó: la fecha, el nivelador, el equipo y el BM de amarre; por fila, la
 armada, el punto, V+, AI, la vista intermedia (V. int.), V−, la cota y la
-cota compensada; y al pie ΣV+, ΣV−, el error de cierre y la tolerancia. Las
+cota compensada; y al pie ΣV+, ΣV−, el error de cierre, la tolerancia y la
+comprobación de cada BM de control (§ 7.3). Las
 vistas intermedias de los puntos de control van resaltadas: de ellas sale la
 cota del punto. Se cierra con **Cerrar** o con Esc.
 
@@ -1149,7 +1178,8 @@ todos los puntos **vigentes** en su fecha; los de baja no.
 En una visita con libreta, el diálogo de cierre muestra además el cierre de la
 libreta. **Si la comprobación aritmética no cuadra, no se puede cerrar**:
 corrija la libreta. Si el cierre supera la tolerancia, solo avisa: la visita
-se cierra con sus cotas sin compensar.
+se cierra con sus cotas sin compensar. Lo mismo si otro BM no nivela con el
+amarre (§ 7.3): el diálogo lo recuerda y la visita se cierra igual.
 
 > **Cierre las visitas en orden.** El parcial, la velocidad y la alerta de
 > cada punto se miden contra su lectura anterior, y un punto sin C0 acumula
@@ -1365,7 +1395,8 @@ Si la poligonal se georreferenció, «Resumen» lleva además la sección
 En control de asentamientos, «Datos Crudos» añade un bloque **«Visitas»**
 con el modo de captura, el BM de amarre, el cierre y la tolerancia de cada
 una, y el libro lleva una cuarta hoja, **«Libretas»**: la libreta de cada
-visita que la tiene, con sus cotas calculadas y compensadas.
+visita que la tiene, con sus cotas calculadas y compensadas y la cota de
+catálogo de los BM de control (§ 7.3).
 
 A diferencia del informe, la exportación funciona **en cualquier estado**:
 también sobre un borrador. Las celdas que aún no se han calculado salen

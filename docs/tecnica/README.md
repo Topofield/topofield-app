@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-01 · Fase 29 cerrada · 973 tests y 68
+**Última actualización:** 2026-10-02 · Fase 30 cerrada · 991 tests y 74
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -563,6 +563,11 @@ catálogo `reference_points` no cambia la cota con que se calculó. En `book`,
 `closure_error_mm`, `tolerance_mm`, `meets_tolerance` y `total_distance_km`
 son derivados; en `direct`, `closure_error_mm` es el tecleado y los otros van
 en `null`.
+
+Lo mismo con **otro BM del catálogo** por el que pase el circuito (Fase 30): su
+fila de libreta guarda la cota que tenía en el catálogo al guardar la visita
+(`catalog_elevation`), contra la que se comprueba que nivela con el amarre
+(§ 6). Una visita cerrada la conserva: sus filas ya son inmutables.
 
 La tabla nueva reutiliza sin cambios los triggers
 `reject_write_on_closed_visit_reading()` y
@@ -1377,6 +1382,15 @@ que comparar). Con menos, el punto queda sin indicador: devolver
   mismo punto son un error; un punto fuera de vigencia avisa y no da cota; uno
   vigente sin V− avisa. Un código que no es punto de control es una radiación
   normal.
+- `checkBenchmarks(filas, cotasDeCatálogo, orden)` (Fase 30): compara la cota
+  **calculada** de cada fila con cota de catálogo y V− —otro BM por el que pasa
+  el circuito— con esa cota, con la tolerancia K·√L del orden de la visita (L
+  acumulada hasta la fila) y la frontera del cierre (`withinTolerance`, C-13).
+  Sin distancias no hay veredicto. `catalogElevationsOf` decide qué filas son
+  BM de control —de tipo BM, con cota, distintos del amarre y que no sean
+  punto de control— y el guardado copia su cota en
+  `settlement_book_readings.catalog_elevation`. `benchmarkChecksOfBook` hace
+  lo mismo desde la libreta guardada, para la vista y el panel.
 - `buildBookTemplate(anterior, puntos, fecha, amarre)`: la plantilla del editor
   —la secuencia de la visita anterior con el amarre nuevo, sin los puntos de
   baja y con los de alta antes del cierre; o, sin anterior, amarre → puntos
@@ -1882,16 +1896,16 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
 | `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
-| `lib/calculations/settlement-persistence.test.ts` | 18 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18) |
+| `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |
 | `lib/calculations/angles.test.ts` | 22 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13); promedio y dispersión de lecturas a través de 0°/360°, redondeo a 0.1″, coma decimal y sin aviso falso en la vista decimal (Fase 26) |
-| `lib/demo/fixtures.test.ts` | 18 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo y sin compensar cuando no cumple (Fase 28) |
+| `lib/demo/fixtures.test.ts` | 19 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo y sin compensar cuando no cumple (Fase 28); Torre Alameda pasa por el otro BM, que nivela en todas las visitas salvo la 13 (Fase 30) |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
 | `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
-| `lib/export/settlement-workbook.test.ts` | 15 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18); sin coordenadas, diferenciales ni límite de distorsión (Fase 29) |
-| `lib/calculations/settlement-book.test.ts` | 18 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18); el amarre no se compensa y las intermedias conservan su acumulado (Fase 19) |
+| `lib/export/settlement-workbook.test.ts` | 16 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18); sin coordenadas, diferenciales ni límite de distorsión (Fase 29); la columna «Cota de catálogo (m)» de la hoja «Libretas» (Fase 30) |
+| `lib/calculations/settlement-book.test.ts` | 30 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18); el amarre no se compensa y las intermedias conservan su acumulado (Fase 19); la comprobación de los BM de control —nivela, no nivela, la frontera, sin distancias, filas que no cuentan, el mismo BM dos veces—, `catalogElevationsOf` y la libreta guardada (Fase 30) |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
-| `lib/validators/settlement-book.test.ts` | 14 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18); el punto de cambio incompleto bloquea con su fila (Fase 24) |
+| `lib/validators/settlement-book.test.ts` | 17 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18); el punto de cambio incompleto bloquea con su fila (Fase 24); el mensaje de la comprobación de un BM, que no culpa a ninguno (Fase 30) |
 | `lib/calculations/settlement-summary.test.ts` | 9 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
 | `components/leveling/readings-table.test.ts` | 3 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18); una fila sin V+ ni V− no hereda la cota del punto anterior (Fase 22) |
@@ -1946,6 +1960,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `rango_lecturas.test.sql` | 7 | El CHECK de las lecturas de ángulo: los límites y 360°00′00″ exacto se guardan; 65″, 60′, 360°00′01″, 361° y segundos negativos no, y no se pierde lo de antes (Fase 24) |
 | `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
+| `estabilidad_bms.test.sql` | 6 | `save_visit` guarda la cota de catálogo de un BM de control; una visita cerrada no la deja cambiar y la conserva aunque se corrija el catálogo (Fase 30) |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -2513,9 +2528,9 @@ uno con su test, y encontró dos más al implementar y verificar: el servidor
 rechazaba guardar una cerrada con fila de cierre (C-19) y el editor no
 mostraba el amarre (C-20). Lo que queda abierto de la auditoría son
 **criterios**, no errores: los que el usuario pidió cambiar están en
-`pendientes.md` (CR2 a CR4; CR1 se resolvió en la Fase 28, y la distorsión
-de CR2, D-9, se retiró en la Fase 29); el resto, documentado en la § 2 de la
-auditoría.
+`pendientes.md` (CR3 y CR4; CR1 se resolvió en la Fase 28 y CR2 en la Fase
+30, después de que la Fase 29 retirara su distorsión, D-9); el resto,
+documentado en la § 2 de la auditoría.
 
 **Una distancia tecleada que los hilos tapan (Fase 26, visto al verificar).**
 Con los tres hilos capturados, la distancia sale de ellos (Fase 9) y la que
@@ -2858,8 +2873,8 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-01):** la nube tiene aplicadas las **treinta**
-migraciones, hasta `20261001030000_puntos_sin_posicion` (Fase 29). Todas se
+**Estado actual (2026-10-02):** la nube tiene aplicadas las **treinta y una**
+migraciones, hasta `20261001040000_estabilidad_bms` (Fase 30). Todas se
 empujaron antes del merge de su PR, salvo la de la Fase 29, que borra y fue
 después (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
@@ -2872,6 +2887,11 @@ veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `SECURITY INVOKER` y sin `EXECUTE` para `anon`, sus dos triggers activos,
 `reports` sin política de `UPDATE` y cero procesos calculados con el veredicto
 nulo.
+
+La de la Fase 30 añade `settlement_book_readings.catalog_elevation` y recrea
+`save_visit`; se aplicó antes del merge del PR #19. Verificado: la columna es
+`numeric(10,4)`, `save_visit` la escribe, sigue siendo `SECURITY INVOKER` y
+solo `authenticated` tiene `EXECUTE` (además de `postgres` y `service_role`).
 
 La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
 Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo

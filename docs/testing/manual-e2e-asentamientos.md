@@ -4,8 +4,9 @@ Recorrido paso a paso para verificar el módulo de control de asentamientos
 contra los datos precargados por la seed. Cubre los criterios del PRD-de-fase 5
 usando la UI tal como la usaría un usuario, y los de las fases 11, 12 y 18
 (libreta de nivelación y panel del lugar, pasos 11 a 20), la 22 (la pantalla
-del lugar con sus pestañas), la 23 (C0 fija, paso 3 bis) y la 29 (los
-puntos sin posición: pasos 3, 3 bis y 11).
+del lugar con sus pestañas), la 23 (C0 fija, paso 3 bis), la 29 (los
+puntos sin posición: pasos 3, 3 bis y 11) y la 30 (los BM de control: pasos
+11, 12, 12 bis, 13, 15 y 18).
 
 ## Preparación
 
@@ -255,7 +256,8 @@ referencia: sirve para el arranque en frío (paso 19).
   11 nov 2025, promedio −20.5, máximo −29.0 TA-07, amarre BM-1 100.0000,
   mayor Δ −0.6 TA-02, cierre −2.3, Precaución, Calculada. Las visitas 5 y 11
   tienen amarre **BM-2 100.8450**. La **visita 9** muestra **⚠ +9.8** en
-  Cierre.
+  Cierre, y la **13**, un **⚠** junto al amarre: al pasar el puntero, «BM-2 no
+  nivela con BM-1» (Fase 30). Ninguna otra visita lo lleva.
 - Pulsar la fila de la visita 12 (fuera del enlace). ✓ Abre su vista. Volver
   con la miga **Torre Alameda** (en el teléfono, **‹ Torre Alameda**).
 - ✓ **Tendencia del asentamiento**: el promedio con su banda mínimo–máximo y
@@ -285,14 +287,28 @@ referencia: sirve para el arranque en frío (paso 19).
   (−50 mm).» Pulsar la barra de TA-03 en **Asentamiento acumulado por
   punto**. ✓ Pasa a TA-03.
 - **Ver registro de nivelación**. ✓ Panel lateral con fecha, nivelador,
-  equipo y «BM-1, cota 100.0000»; dos armadas (BM-1 y CP-1); las vistas
-  intermedias de TA-01…TA-08 resaltadas; Σ vistas más 2.4263, Σ vistas menos
-  2.4279, error de cierre −1.6 mm, «Dentro de tolerancia (±4.0 mm)». Esc lo
-  cierra y devuelve el foco al botón.
+  equipo y «BM-1, cota 100.0000»; dos armadas (BM-1 y CP-1); BM-2 como
+  intermedia de la primera, sin resaltar, y las vistas intermedias de
+  TA-01…TA-08 resaltadas; Σ vistas más 2.4900, Σ vistas menos 2.4916, error de
+  cierre −1.6 mm, «Dentro de tolerancia (±4.0 mm)» y «BM-2 nivela con BM-1:
+  -0.4 mm, tolerancia 2.0 mm.» Esc lo cierra y devuelve el foco al botón.
 - Flecha →. ✓ Visita 13. Flecha → otra vez. ✓ Deshabilitada.
 - Abrir la **visita 3** (cerrada). ✓ Sin **Editar** ni **Cerrar visita**.
   Escribir a mano `…/visits/[visitId]/editar` en la URL. ✓ Redirige a la
   vista.
+
+### 12 bis. Un BM que no nivela (Fase 30)
+
+- Abrir la **visita 13**. ✓ Bajo los indicadores, el aviso «BM-2 no nivela
+  con BM-1: la libreta lo da en 100.8524 y el catálogo en 100.8450 (+7.4 mm,
+  tolerancia 2.0 mm). Uno de los dos BM pudo moverse, o hay un error en la
+  libreta o en la cota del catálogo.»
+- **Ver registro de nivelación**. ✓ Al pie, la misma frase. Esc.
+- **Cerrar visita**. ✓ El diálogo repite el aviso y añade «La visita se
+  cierra igual.»; marcar la confirmación habilitaría el cierre. **Cancelar**
+  (la visita 12 sigue abierta y el servidor no dejaría cerrarla).
+- **Editar**. ✓ En la libreta, el mismo aviso en amarillo, en vivo. Salir sin
+  guardar.
 
 ### 13. Crear una visita digitando la libreta
 
@@ -303,9 +319,9 @@ referencia: sirve para el arranque en frío (paso 19).
   catálogo…») y **Crear y abrir**. ✓ «Elige el BM de amarre de la visita, con
   su cota.» Volver a elegir BM-1 y **Crear y abrir**.
 - ✓ El editor abre en **Libreta de nivelación** con la plantilla de la visita
-  13: BM-1, TA-01…TA-04, CP-1, TA-05…TA-08 y BM-1, sin lecturas. Bajo el
+  13: BM-1, BM-2, TA-01…TA-04, CP-1, TA-05…TA-08 y BM-1, sin lecturas. Bajo el
   código, «BM de amarre» en la primera y la última fila y «Punto de control»
-  en las TA.
+  en las TA; BM-2 no lleva nota.
 - Escribir «TA» en el punto de una fila. ✓ El navegador sugiere los códigos
   del catálogo y BM-1. Dejar el código como estaba.
 - **Insertar** en la fila de TA-04. ✓ Aparece una fila vacía debajo.
@@ -314,20 +330,22 @@ referencia: sirve para el arranque en frío (paso 19).
 
   | Punto | V+ | Dist V+ | V− | Dist V− |
   |---|---|---|---|---|
-  | BM-1 | 1.6146 | 28.363 | | |
-  | TA-01 | | | 1.0191 | |
-  | TA-02 | | | 1.0479 | |
-  | TA-03 | | | 1.1058 | |
-  | TA-04 | | | 1.1347 | |
-  | CP-1 | 0.8117 | 28.207 | 1.2152 | 27.818 |
-  | TA-05 | | | 0.7712 | |
-  | TA-06 | | | 0.7135 | |
-  | TA-07 | | | 0.6750 | |
-  | TA-08 | | | 0.6275 | |
-  | BM-1 | | | 1.2127 | 28.270 |
+  | BM-1 | 1.8637 | 28.363 | | |
+  | BM-2 | | | 1.0191 | |
+  | TA-01 | | | 1.2682 | |
+  | TA-02 | | | 1.2970 | |
+  | TA-03 | | | 1.3549 | |
+  | TA-04 | | | 1.3838 | |
+  | CP-1 | 0.6263 | 28.207 | 1.2152 | 27.818 |
+  | TA-05 | | | 0.8349 | |
+  | TA-06 | | | 0.7772 | |
+  | TA-07 | | | 0.7387 | |
+  | TA-08 | | | 0.6912 | |
+  | BM-1 | | | 1.2764 | 28.270 |
 
-- ✓ Resumen: Σ vistas más 2.4263, Σ vistas menos 2.4279, error de cierre
-  −1.6 mm, «Dentro de tolerancia (±4.0 mm)». ✓ **Cotas de los puntos de
+- ✓ Resumen: Σ vistas más 2.4900, Σ vistas menos 2.4916, error de cierre
+  −1.6 mm, «Dentro de tolerancia (±4.0 mm)», y debajo «BM-2 nivela con BM-1:
+  -0.4 mm, tolerancia 2.0 mm.» (Fase 30). ✓ **Cotas de los puntos de
   control**, en solo lectura, repite las de la visita 12: TA-07 100.5373.
 - **Guardar visita**. ✓ «Visita guardada.» **Ver la visita**: ✓ la vista
   ofrece **Ver registro de nivelación** con esa libreta.
@@ -335,7 +353,7 @@ referencia: sirve para el arranque en frío (paso 19).
 ### 14. Libreta fuera de tolerancia
 
 - En el editor de la visita del paso 13, cambiar la V− del BM-1 de cierre a
-  `1.2027`.
+  `1.2664`.
 - ✓ Error de cierre +8.4 mm, «Fuera de tolerancia (±4.0 mm)» y el aviso «El
   cierre supera la tolerancia: las cotas no se compensan. Conviene revisar la
   libreta o repetir la nivelación.» La cota de TA-07 pasa a **100.5361**, la
@@ -358,10 +376,10 @@ referencia: sirve para el arranque en frío (paso 19).
   posterior a la última, **Crear y abrir**. ✓ El editor abre con el diálogo
   **Importar la libreta de la visita**.
 - **Descargar plantilla CSV** y reemplazar sus filas por la libreta del paso
-  13 (`ida,BM-1,bm,1.6146,,28.363,`, `ida,TA-01,radiacion,,1.0191,,`, …,
-  `ida,CP-1,pc,0.8117,1.2152,28.207,27.818`, …, `ida,BM-1,bm,,1.2127,,28.270`).
+  13 (`ida,BM-1,bm,1.8637,,28.363,`, `ida,BM-2,radiacion,,1.0191,,`, …,
+  `ida,CP-1,pc,0.6263,1.2152,28.207,27.818`, …, `ida,BM-1,bm,,1.2764,,28.270`).
   Elegirla. ✓ Formato «Plantilla CSV de TopoField», armadas · visuales leídas
-  2 · 12, BM de amarre BM-1 y las notas «BM de amarre» y «Punto de control».
+  2 · 13, BM de amarre BM-1 y las notas «BM de amarre» y «Punto de control».
   Sin aviso de reemplazo: la plantilla precargada no tiene lecturas.
 - **Usar estas lecturas**. ✓ La libreta se llena y el resumen da −1.6 mm; nada
   se ha guardado todavía. **Guardar visita**.
@@ -399,6 +417,9 @@ referencia: sirve para el arranque en frío (paso 19).
 - **Exportar a Excel** en Torre Alameda. ✓ El libro tiene la hoja
   **«Libretas»** con una cabecera y las filas de cada visita, y «Datos Crudos»
   un bloque **«Visitas»** con captura, BM de amarre, cota, cierre y tolerancia.
+  ✓ En «Libretas», la columna **«Cota de catálogo (m)»** solo tiene valor en
+  la fila del otro BM: en la visita 13, BM-2 con cota 100.8524 y cota de
+  catálogo 100.8450 (Fase 30).
 - **Exportar a Excel** en Edificio Torre Central. ✓ «Libretas» dice «Ninguna
   visita de este lugar tiene libreta de nivelación.»
 
@@ -441,7 +462,9 @@ Panel, Puntos y lugar e Informe, y la eliminación de la última visita. El paso
 3 bis, con su comprobación en el paso 8, cubre la Fase 23: la C0 de un punto
 con lecturas cerradas no cambia. Los pasos 3, 3 bis y 11 cubren la Fase 29:
 sin Norte ni Este en el catálogo, sin límite de distorsión, cinco indicadores
-y sin tabla de diferenciales. El paso 7 bis cubre
+y sin tabla de diferenciales. Los pasos 11, 12, 12 bis, 13, 15 y 18 cubren la
+Fase 30: el BM de control que nivela y el que no, en el panel, la vista, el
+registro, el cierre, el editor y el Excel. El paso 7 bis cubre
 el PRD-de-fase 12: el aviso de lectura fuera de tendencia. Los pasos 11 a 20
 cubren el PRD-de-fase 18: el panel y la vista de la visita, el registro de
 nivelación, la libreta digitada e importada, el cierre fuera de tolerancia,

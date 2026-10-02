@@ -6,6 +6,7 @@ import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import {
   bookRowInputOf,
   bookRowOf,
+  catalogElevationsOf,
   computeVisitBook,
   deriveControlElevations,
 } from "@/lib/calculations/settlement-book";
@@ -393,6 +394,26 @@ export async function saveVisitAction(
   const round = (v: number | null, d: number) =>
     v == null ? null : Number(v.toFixed(d));
 
+  // La cota de catálogo de los BM de control se copia en su fila (Fase 30),
+  // como la del amarre en la visita: corregir después el catálogo no cambia la
+  // comprobación de una visita cerrada.
+  let catalogElevations: (number | null)[] = [];
+  if (book) {
+    const { data: catalog, error: catalogError } = await supabase
+      .from("reference_points")
+      .select("code, type, elevation")
+      .eq("project_id", context.site.project_id);
+    if (catalogError) {
+      return { ok: false, error: logDbError(catalogError, "No se pudo guardar la visita.") };
+    }
+    catalogElevations = catalogElevationsOf(
+      book.forward.readings,
+      catalog ?? [],
+      amarreCode,
+      context.points,
+    );
+  }
+
   // La libreta se guarda por (visit_id, reading_order) y se purgan las filas
   // sobrantes. En `direct` la purga se lleva la libreta entera: el editor ya
   // avisó.
@@ -402,6 +423,7 @@ export async function saveVisitAction(
         payload.book,
         book.forward.readings,
         context.points,
+        catalogElevations,
       )
     : [];
 

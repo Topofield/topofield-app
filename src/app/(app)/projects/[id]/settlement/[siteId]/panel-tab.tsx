@@ -10,11 +10,13 @@ import {
   detectTrendDeviations,
   pointInputOf,
 } from "@/lib/calculations/settlement";
+import { benchmarkChecksOfBook } from "@/lib/calculations/settlement-book";
 import { summarizeSite } from "@/lib/calculations/settlement-summary";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { formatTrendDeviation, settlementPointLabel } from "@/lib/utils/format";
 import type {
   getSettlementReadingsBySite,
+  getSiteBooks,
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
@@ -28,18 +30,20 @@ interface PanelTabProps {
   sitePoints: Awaited<ReturnType<typeof getSitePoints>>;
   visits: Awaited<ReturnType<typeof getVisits>>;
   readingsBySite: Awaited<ReturnType<typeof getSettlementReadingsBySite>>;
+  /** Las libretas de las visitas, para la comprobación de los BM (Fase 30). */
+  booksByVisit: Awaited<ReturnType<typeof getSiteBooks>>;
 }
 
 /**
  * Pestaña Panel del control de asentamientos (Fase 18, layout del prototipo;
  * pestaña desde la Fase 22): umbrales, KPIs, visitas, tendencia, evolución
- * por punto, semáforo de la última visita y diferenciales. El histórico se
+ * por punto y semáforo de la última visita. El histórico se
  * calcula en el servidor con `computeHistory` —el mismo motor que usan las
  * Server Actions al guardar—, con los umbrales vigentes: una visita cerrada se
  * reclasifica si se editan los umbrales. Sus lecturas no cambian, porque una
  * visita solo se cierra con las anteriores cerradas (Fase 26, C-15).
  */
-export function PanelTab({ project, site, sitePoints, visits, readingsBySite }: PanelTabProps) {
+export function PanelTab({ project, site, sitePoints, visits, readingsBySite, booksByVisit }: PanelTabProps) {
   const points: PointInput[] = sitePoints.map(pointInputOf);
   const codes = Object.fromEntries(points.map((p) => [p.id, p.code]));
 
@@ -80,6 +84,13 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite }: 
     v ? { code: codes[v.pointId] ?? "—", value: v.value } : null;
   const visitRows: VisitTableRow[] = visits.map((visit) => {
     const s = summaryById.get(visit.id);
+    // Los BM de control que no nivelan con el amarre (Fase 30).
+    const notLeveling =
+      visit.capture_mode === "book"
+        ? benchmarkChecksOfBook(booksByVisit[visit.id] ?? [], visit.precision_order).filter(
+            (check) => check.meetsTolerance === false,
+          )
+        : [];
     return {
       visitId: visit.id,
       visitNumber: visit.visit_number,
@@ -99,6 +110,10 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite }: 
       closureErrorMm: visit.closure_error_mm == null ? null : Number(visit.closure_error_mm),
       toleranceMm: visit.tolerance_mm == null ? null : Number(visit.tolerance_mm),
       meetsTolerance: visit.meets_tolerance,
+      bmWarning:
+        notLeveling.length > 0
+          ? `${notLeveling.map((check) => check.code).join(" y ")} no nivela con ${visit.reference_bm_code ?? "el amarre"}`
+          : null,
       worstAlert: s?.worstAlert ?? "normal",
     };
   });

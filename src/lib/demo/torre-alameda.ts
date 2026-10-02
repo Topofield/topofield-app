@@ -34,6 +34,12 @@ export interface VisitaAlameda {
   /** Error de cierre de la libreta, en mm (múltiplos de 0.1). */
   closureMm: number;
   amarre: AmarreAlameda;
+  /**
+   * El otro BM, por el que también pasa la libreta para comprobar que los dos
+   * nivelan (Fase 30): su código y la cota que la libreta debe darle, que es la
+   * del catálogo salvo en la visita `ALAMEDA_BM_FUERA`.
+   */
+  bmControl: { code: string; elevation: number };
   operator: string;
 }
 
@@ -60,6 +66,15 @@ const ALAMEDA_BASE = "2025-01-07";
 const ALAMEDA_BM2 = new Set([5, 11]);
 /** La visita que cierra fuera de tolerancia. */
 export const ALAMEDA_OUT_OF_TOLERANCE = 9;
+/**
+ * La visita en que BM-2 ya no nivela con BM-1 (Fase 30): su cota compensada
+ * queda 8 mm por encima de la de catálogo, y la calculada, que es la que se
+ * compara, 7.4. Sus puntos de control salen de BM-1, que no se movió. En el
+ * seed es la última y queda abierta (`openLast`); la demo la cierra con el
+ * resto del lugar, y el aviso se conserva porque la cota de catálogo es una
+ * copia guardada en la libreta.
+ */
+export const ALAMEDA_BM_FUERA = 13;
 
 /** La serie de Torre Alameda: consolidación que se acelera con la carga (como el prototipo). */
 export function alamedaVisits(): VisitaAlameda[] {
@@ -79,11 +94,14 @@ export function alamedaVisits(): VisitaAlameda[] {
     });
     const closureMm =
       i === ALAMEDA_OUT_OF_TOLERANCE ? 9.8 : Number((rnd() * 6).toFixed(1));
+    const otro = ALAMEDA_AMARRES[ALAMEDA_BM2.has(i) ? 0 : 1];
+    const desplazamientoM = i === ALAMEDA_BM_FUERA ? 0.008 : 0;
     return {
       date: date.toISOString().slice(0, 10),
       targets,
       closureMm,
       amarre: ALAMEDA_AMARRES[ALAMEDA_BM2.has(i) ? 1 : 0],
+      bmControl: { code: otro.code, elevation: Number((otro.elevation + desplazamientoM).toFixed(4)) },
       operator: i % 2 === 0 ? "J. Rodríguez" : "L. Cárdenas",
     };
   });

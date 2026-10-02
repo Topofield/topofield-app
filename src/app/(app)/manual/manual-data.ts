@@ -123,7 +123,7 @@ export const CAPTURAS = {
   },
   panelAsentamientos: {
     src: "/manual/15-panel-asentamientos.png",
-    alt: "Panel del lugar Torre Alameda: los cinco indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
+    alt: "Panel del lugar Torre Alameda: los cinco indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠ y el ⚠ junto al amarre de la visita 13, donde BM-2 no nivela con BM-1, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
     width: 2560,
     height: 5436,
   },
@@ -135,9 +135,9 @@ export const CAPTURAS = {
   },
   importarLibretaVisita: {
     src: "/manual/26-importar-libreta-visita.png",
-    alt: "Diálogo Importar la libreta de la visita con la plantilla CSV: dos armadas y doce visuales, BM de amarre BM-1, el aviso de que la libreta actual se reemplazará y la libreta con los puntos de control marcados.",
+    alt: "Diálogo Importar la libreta de la visita con la plantilla CSV: dos armadas y trece visuales, BM de amarre BM-1, el aviso de que la libreta actual se reemplazará y la libreta con los puntos de control marcados.",
     width: 1344,
-    height: 2136,
+    height: 2236,
   },
   vistaVisita: {
     src: "/manual/27-vista-visita.png",
@@ -147,7 +147,7 @@ export const CAPTURAS = {
   },
   registroNivelacion: {
     src: "/manual/28-registro-nivelacion.png",
-    alt: "Panel lateral Registro de nivelación de la visita 12: la libreta en dos armadas con las vistas intermedias de los puntos de control resaltadas, ΣV+, ΣV−, error de cierre de −1.6 mm dentro de la tolerancia de ±4.5 mm.",
+    alt: "Panel lateral Registro de nivelación de la visita 12: la libreta en dos armadas con las vistas intermedias de los puntos de control resaltadas, ΣV+, ΣV−, error de cierre de −1.6 mm dentro de la tolerancia de ±4.0 mm, y la comprobación de BM-2, que nivela con BM-1.",
     width: 1536,
     height: 1600,
   },
@@ -171,9 +171,9 @@ export const CAPTURAS = {
   },
   editorVisita: {
     src: "/manual/16-editor-visita.png",
-    alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas y su resumen de cierre, y debajo las cotas de los puntos de control que salen de ella.",
+    alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas, su resumen de cierre y la comprobación de BM-2, y debajo las cotas de los puntos de control que salen de ella.",
     width: 2560,
-    height: 6122,
+    height: 6308,
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
@@ -414,6 +414,10 @@ export const AVISOS_LIBRETA = [
     situacion: "El cierre supera la tolerancia",
     ocurre:
       "Solo avisa. La visita se guarda y se cierra igual, con sus cotas sin compensar",
+  },
+  {
+    situacion: "Otro BM del catálogo no nivela con el amarre",
+    ocurre: "Solo avisa: ver «Comprobar los BM», abajo",
   },
   {
     situacion: "Faltan las distancias por visual",

@@ -795,6 +795,7 @@ export type Database = {
           back_lower_m: number | null
           back_upper_m: number | null
           backsight: number | null
+          catalog_elevation: number | null
           correction_applied: number | null
           created_at: string
           distance_accumulated_km: number | null
@@ -817,6 +818,7 @@ export type Database = {
           back_lower_m?: number | null
           back_upper_m?: number | null
           backsight?: number | null
+          catalog_elevation?: number | null
           correction_applied?: number | null
           created_at?: string
           distance_accumulated_km?: number | null
@@ -839,6 +841,7 @@ export type Database = {
           back_lower_m?: number | null
           back_upper_m?: number | null
           backsight?: number | null
+          catalog_elevation?: number | null
           correction_applied?: number | null
           created_at?: string
           distance_accumulated_km?: number | null

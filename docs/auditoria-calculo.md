@@ -62,7 +62,10 @@ y D-13, anotados como CR1 a CR4 en [`pendientes.md`](./pendientes.md). D-9 se
 retiró el 2026-10-01: los puntos de control dejan de tener posición (A3 de
 `pendientes.md`). **D-1 (CR1) se resolvió en la Fase 28**: ida y vuelta
 entran en la compensación y cada punto leído dos veces recibe el promedio de
-sus cotas compensadas. La § 4 es material del usuario y no se tocó.
+sus cotas compensadas. **D-13 (CR2) se resolvió en la Fase 30**: si la
+libreta de una visita pasa por otro BM del catálogo, la app compara su cota
+calculada con la de catálogo y avisa si no nivela. La § 4 es material del
+usuario y no se tocó.
 
 ---
 
