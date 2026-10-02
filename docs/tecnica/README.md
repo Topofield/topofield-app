@@ -2858,9 +2858,10 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-01):** la nube tiene aplicadas las **veintinueve**
-migraciones, hasta `20261001020000_visita_fecha_unica` (Fase 26), empujadas
-antes del merge de su PR. Las dos de la Fase 26 —el CHECK de distancias por
+**Estado actual (2026-10-01):** la nube tiene aplicadas las **treinta**
+migraciones, hasta `20261001030000_puntos_sin_posicion` (Fase 29). Todas se
+empujaron antes del merge de su PR, salvo la de la Fase 29, que borra y fue
+después (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
 índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
 filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
@@ -2872,9 +2873,11 @@ veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `reports` sin política de `UPDATE` y cero procesos calculados con el veredicto
 nulo.
 
-**Pendiente:** `20261001030000_puntos_sin_posicion` (Fase 29), que borra la
-posición de los puntos de control. Va **después** del merge, con el visto bueno
-del usuario (ver abajo).
+La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
+Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo
+la demo tenía coordenadas: los 8 puntos de Torre Alameda y BM-1 y BM-2.
+Verificado después: las tres columnas no existen, el trigger de la C0 vigila
+solo `initial_elevation`, y BM-1 y BM-2 conservan su cota sin coordenadas.
 
 **Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
 mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de
