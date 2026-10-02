@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-01 · Fase 28 cerrada · 994 tests y 67
+**Última actualización:** 2026-10-01 · Fase 29 cerrada · 973 tests y 68
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -262,7 +262,7 @@ Action donde se aplican las guardas de negocio.
 | `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction`, `closeLevelingProcessAction`, `duplicateLevelingProcessAction`, `renameLevelingProcessAction`, `deleteLevelingProcessAction` (Fase 22) |
 | `(app)/projects/[id]/sites/actions.ts` | `createSiteAction`, `saveSiteAction`, `closeSiteAction`, `renameSiteAction`, `duplicateSiteAction`, `deleteSiteAction` (Fase 22) |
 | `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (con el formulario completo, Fase 18), `saveVisitAction` (con libreta: ver § 4), `closeVisitAction`, `deleteVisitAction` (solo la última y abierta, Fase 22) |
-| `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction` (C0 y coordenadas fijas con lecturas cerradas, Fase 23), `deletePointAction`, `retirePointAction`, `undoRetirementAction` (Fase 11) |
+| `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction` (C0 fija con lecturas cerradas, Fase 23), `deletePointAction`, `retirePointAction`, `undoRetirementAction` (Fase 11) |
 | `(app)/projects/[id]/reports/actions.ts` | `createReportAction`, `deleteReportAction` |
 | `(app)/equipos/actions.ts` | `createEquipmentAction`, `updateEquipmentAction`, `deleteEquipmentAction` (Fase 25) |
 
@@ -723,16 +723,17 @@ sin problema; borrar uno cerrado ya lo impedía el trigger de `sites`.
 **Lo que dependía de lo cerrado sin serlo (Fase 23).** Dos filas abiertas
 alimentaban resultados cerrados:
 
-- **La C0 y las coordenadas de un punto.** El acumulado es `(cota − C0) ×
-  1000` y las coordenadas dan la distorsión angular; el panel y el informe
-  recalculan en vivo, así que corregir la C0 cambiaba los números de visitas
-  ya cerradas. `settlement_points_reject_reference_change_with_closed_readings`
+- **La C0 de un punto.** El acumulado es `(cota − C0) × 1000`; el panel y el
+  informe recalculan en vivo, así que corregir la C0 cambiaba los números de
+  visitas ya cerradas. `settlement_points_reject_reference_change_with_closed_readings`
   (`20260930020000_c0_con_lecturas_cerradas.sql`) rechaza con `23001` cambiar
-  `initial_elevation`, `northing` o `easting` si el punto tiene una lectura en
-  una visita cerrada; reescribir el mismo valor pasa (`WHEN … IS DISTINCT
-  FROM`). El código y la ubicación se siguen editando. `savePointAction` lo
-  comprueba antes con un mensaje (`pointReferenceChanged`, a la escala de la
-  columna) y el catálogo bloquea esos campos.
+  `initial_elevation` si el punto tiene una lectura en una visita cerrada;
+  reescribir el mismo valor pasa (`WHEN … IS DISTINCT FROM`). El código y la
+  ubicación se siguen editando. `savePointAction` lo comprueba antes con un
+  mensaje (`pointReferenceChanged`, a la escala de la columna) y el catálogo
+  bloquea el campo. Hasta la Fase 29 vigilaba también las coordenadas;
+  `20261001030000_puntos_sin_posicion.sql` las borró y recreó el trigger
+  solo sobre la C0.
 - **El informe emitido.** `reports` admitía `UPDATE` y su portada leía el
   proyecto. `reports_reject_update` (`20260930030000_informe_congelado.sql`)
   rechaza todo `UPDATE` y se retiró la política de `UPDATE`: para una sesión,
@@ -866,7 +867,7 @@ testear los algoritmos de forma aislada y es lo que sostiene la monografía.
 | `georeference.ts` | `fitTwoPoints`, `georeferenceInput`, `applyTransform`, `scaleWithinOrder` — georreferenciación rígida desde dos puntos (Fase 15) |
 | `least-squares.ts` | `adjustByConditions` — ajuste por ecuaciones de condición, genérico; `solveLinear`; `sigma0Reading` (Fase 14) |
 | `leveling.ts` | `computeLeveling` — libreta, corrección proporcional, cierre, ida y vuelta |
-| `settlement.ts` | `computeSettlements`, `computeDifferentials`, `classifyAlert`, `computeTrends`, `computeHistory` |
+| `settlement.ts` | `computeSettlements`, `classifyAlert`, `computeTrends`, `computeHistory` |
 | `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `LEVELING_TOLERANCE_K`, `DAYS_PER_MONTH`, `SETTLEMENT_THRESHOLD_PRESETS`, `angularTolerance`, `minRelativePrecision`, `levelingTolerance`, `thresholdsFor` |
 
 ### `computePolygonal`
@@ -1290,7 +1291,7 @@ para todos. Las nivelaciones abiertas guardadas se recalcularon; las cerradas
 conservan sus filas. En producción, la única cerrada, el tramo 2, es un solo
 recorrido y se compensa como antes.
 
-### `computeSettlements`, `computeDifferentials`, `classifyAlert`
+### `computeSettlements` y `classifyAlert`
 
 El motor de asentamientos, en `settlement.ts`, se apoya en tres piezas
 verificadas independientemente contra el marco teórico del dominio (ver
@@ -1315,20 +1316,15 @@ verificadas independientemente contra el marco teórico del dominio (ver
   estados del marco teórico tampoco sirven como fixture: no se derivan de
   ningún juego de umbrales consistente (mismo documento, hallazgo 3).
 
-`computeDifferentials` calcula la distorsión angular entre cada par de
-puntos como `1/((L×1000)/Δs_diferencial)`; un diferencial de 0 da `1/∞`,
-clasificado normal, y un par sin coordenadas en alguno de sus puntos queda
-fuera de la tabla en vez de calcularse con `L=0`, que daría X = 0: una
-distorsión de 1/0, es decir, una falsa alarma.
-
-**Periodo común (Fase 11).** Si los dos puntos de un par tienen líneas base
-de fechas distintas —uno se dio de alta a mitad del monitoreo—, restar
-acumulados compararía periodos distintos. Se mide entonces desde `t0`, la
-más tardía de las dos, con una sola fórmula para ambos puntos
-(`cota − cota_en_t0`). Si alguno no se midió en `t0`, el par queda fuera.
-Cada `DifferentialPair` lleva los dos asentamientos que resta
-(`settlementAMm`, `settlementBMm`) y su `sinceDate`, para que la tabla
-muestre números que restados den el diferencial.
+**Sin posición (Fase 29).** Hasta la Fase 29, `computeDifferentials`
+calculaba el asentamiento diferencial de cada par de puntos y su distorsión
+angular, `1/((L×1000)/Δs_diferencial)`, con L desde las coordenadas Norte y
+Este del catálogo y, para un punto de alta, sobre el periodo común (Fase 11).
+El usuario decidió que los puntos de control no tienen posición: sin distancia
+no hay distorsión, y el diferencial solo existía para ella. Se quitaron la
+función, `horizontalDistance`, `DifferentialPair`, el límite 1/X del lugar, el
+KPI y la tabla del panel y del Excel. Los resultados de cada punto
+—asentamiento, velocidad, semáforo y tendencia— no cambiaron.
 
 **Lectura fuera de tendencia (Fase 12).** `detectTrendDeviations` marca una
 lectura que va **contra** la dirección de su punto más que un margen, o que lo
@@ -1388,11 +1384,12 @@ que comparar). Con menos, el punto queda sin indicador: devolver
 
 `lib/calculations/settlement-summary.ts` resume el histórico para los KPIs del
 panel y de la visita (extremos con signo, promedio, mayor movimiento,
-velocidad, alertas, peor distorsión angular) y `nextAccumulatedThreshold` da
-la nota del historial del punto. Dos KPIs del prototipo se sustituyeron: su
-«velocidad reciente» dividía entre «un mes» el cambio de cuatro visitas —el
-error del marco teórico que encontró la Fase 5— y su «diferencial máximo»
-ignoraba la distancia; se usan la velocidad del motor y la peor distorsión.
+velocidad y alertas) y `nextAccumulatedThreshold` da la nota del historial del
+punto. La «velocidad reciente» del prototipo dividía entre «un mes» el cambio
+de cuatro visitas —el error del marco teórico que encontró la Fase 5—; se usa
+la velocidad del motor. Su «diferencial máximo» no está: la Fase 18 lo cambió
+por la peor distorsión angular, y la Fase 29 quitó la distorsión con las
+coordenadas. El panel del lugar tiene cinco KPIs.
 
 `lib/demo/libreta-asentamientos.ts` (`generateVisitBook`) construye una
 libreta **hacia atrás** desde una serie: elige las intermedias para que la cota
@@ -1870,17 +1867,17 @@ pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/settlement.test.ts` | 83 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), diferenciales, distorsión angular, `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, diferenciales sobre el periodo común, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
+| `lib/calculations/settlement.test.ts` | 65 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12) |
 | `lib/calculations/leveling.test.ts` | 95 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26); la vuelta compensada en cerrada y de enlace, la cota adoptada y el ejemplo 1 de `docs/math/nivelacion.html` (Fase 28) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
 | `lib/validators/polygonal.test.ts` | 80 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27) |
-| `lib/validators/settlement.test.ts` | 50 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0 o las coordenadas, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
+| `lib/validators/settlement.test.ts` | 49 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
 | `lib/validators/leveling.test.ts` | 58 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
 | `lib/utils/format.test.ts` | 33 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26) |
-| `lib/calculations/tolerances.test.ts` | 22 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
+| `lib/calculations/tolerances.test.ts` | 21 | Tolerancias por orden, presets de asentamientos, `thresholdsOf` y el aviso de equipo insuficiente (`totalStationMeetsOrder`/`levelMeetsOrder`, Fase 8) |
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
@@ -1891,11 +1888,11 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
 | `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
-| `lib/export/settlement-workbook.test.ts` | 15 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, `1/∞`, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18) |
+| `lib/export/settlement-workbook.test.ts` | 15 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18); sin coordenadas, diferenciales ni límite de distorsión (Fase 29) |
 | `lib/calculations/settlement-book.test.ts` | 18 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18); el amarre no se compensa y las intermedias conservan su acumulado (Fase 19) |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
 | `lib/validators/settlement-book.test.ts` | 14 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18); el punto de cambio incompleto bloquea con su fila (Fase 24) |
-| `lib/calculations/settlement-summary.test.ts` | 10 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, peor distorsión `1/∞`, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
+| `lib/calculations/settlement-summary.test.ts` | 9 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas, promedio con un alta; siguiente umbral de acumulado (Fase 18) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
 | `components/leveling/readings-table.test.ts` | 3 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18); una fila sin V+ ni V− no hereda la cota del punto anterior (Fase 22) |
 | `lib/errors/user-message.test.ts` | 4 | **Errores de la base para el usuario**: cada código conocido traducido sin dejar pasar el texto de Postgres; el check de un trigger propio, en español, pasa; el de una columna, no; código desconocido, el mensaje de la acción (Fase 22) |
@@ -1944,7 +1941,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | Archivo | Pruebas | Cubre |
 |---|---|---|
 | `guardados_atomicos.test.sql` | 28 | Las cuatro funciones de guardado: guardan; una carga que falla a mitad no cambia la cabecera ni las filas de antes; la georreferenciación mueve un cerrado y rechaza una estación ajena; la propagación no toca otro lugar; otro usuario no escribe con ninguna de las cuatro (RLS) |
-| `c0_con_lecturas_cerradas.test.sql` | 7 | Con lectura cerrada, la C0 y las coordenadas no cambian y el código y la ubicación sí; reescribir el mismo valor pasa; sin ella, todo cambia |
+| `c0_con_lecturas_cerradas.test.sql` | 8 | Con lectura cerrada, la C0 no cambia —con el mensaje— y el código y la ubicación sí; reescribir el mismo valor pasa; sin ella, la C0 cambia; las columnas de la posición ya no existen (Fase 29) |
 | `catalogo_equipos.test.sql` | 11 | Alta con el dueño por defecto; campos del otro tipo, sin marca ni modelo y el mismo aparato rechazados; editar o borrar un equipo no cambia el proceso que lo copió; otro usuario no ve ni escribe (Fase 25) |
 | `rango_lecturas.test.sql` | 7 | El CHECK de las lecturas de ángulo: los límites y 360°00′00″ exacto se guardan; 65″, 60′, 360°00′01″, 361° y segundos negativos no, y no se pierde lo de antes (Fase 24) |
 | `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
@@ -1952,7 +1949,7 @@ que se deshace, así que no depende del seed ni lo toca.
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
-lectura ya tienen cobertura. Lo que **sigue sin tests** es la E/S de los Server
+lectura ya tienen cobertura (la última salió en la Fase 29, con la función). Lo que **sigue sin tests** es la E/S de los Server
 Actions, salvo los cuatro guardados que desde la Fase 23 escriben por funciones
 de Postgres con pruebas pgTAP; ver [deuda técnica](#11-deuda-técnica-conocida).
 
@@ -2242,7 +2239,7 @@ lugar— y de las nueve acciones que mutan el módulo, tres las tocan:
 |---|---|---|
 | `saveVisitAction` | cotas y fechas | cubierto desde la Fase 5 |
 | `saveSiteAction` | umbrales | la puerta que esta deuda documentaba |
-| `savePointAction` | **C0 y coordenadas** | **no estaba documentada** |
+| `savePointAction` | **C0** (y las coordenadas, hasta la Fase 29) | **no estaba documentada** |
 
 `savePointAction` importa porque el acumulado es `(cota − C0) × 1000`: corregir
 la cota base de un punto deja obsoletas todas sus lecturas persistidas. Es
@@ -2311,6 +2308,8 @@ visitas).
 > no distingue un lugar de monitoreo de uno que solo agrupa—.
 
 **Cerrado — `niceTicks` y `computeDifferentials` cubren sus casos extremos.**
+`computeDifferentials` ya no existe: la Fase 29 la quitó con las coordenadas
+de los puntos. El texto queda como registro.
 `niceTicks` tiene tests de rango degenerado (min = max dentro y fuera de cero,
 rango minúsculo, dominio negativo, cruce por cero, `count` de 1 y 0), y
 documenta un límite conocido: con el rango invertido devuelve `[]`, que no se
@@ -2433,8 +2432,8 @@ de cada captura y todas se regeneraron sin él. La CSP no se relajó: abriría
 `eval` en desarrollo solo por una captura.
 
 **Cerrado en la Fase 23 — la C0 de un punto con lecturas cerradas.** Un
-trigger y `savePointAction` la bloquean, junto con las coordenadas, y el
-catálogo lo explica (§ 5). El texto original queda como registro: la C0 de un
+trigger y `savePointAction` la bloquean, y el catálogo lo explica (§ 5).
+Bloqueaban también las coordenadas hasta que la Fase 29 las quitó. El texto original queda como registro: la C0 de un
 punto vigente seguía siendo editable aunque tuviera lecturas cerradas (Fase 11,
 fuera de alcance). El acumulado se recalcula en vivo
 contra la C0, así que corregirla reescribe el histórico que el panel, el
@@ -2871,6 +2870,10 @@ veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `reports` sin política de `UPDATE` y cero procesos calculados con el veredicto
 nulo.
 
+**Pendiente:** `20261001030000_puntos_sin_posicion` (Fase 29), que borra la
+posición de los puntos de control. Va **después** del merge, con el visto bueno
+del usuario (ver abajo).
+
 **Cómo llegó ahí.** La nube se había quedado en la migración del 2026-08-26
 mientras `main` desplegaba el código de las fases 7 a 17: **el despliegue de
 Vercel no aplica migraciones**, y nadie las empujó. Al aplicarlas afloraron dos
@@ -2899,6 +2902,13 @@ actuales.
 **El orden importa cuando hay auto-deploy.** Vercel despliega solo al empujar a
 `main`, así que la migración va **primero** y el `git push` después: al revés,
 el despliegue serviría código que espera tablas que la base todavía no tiene.
+
+**Salvo cuando la migración borra** (Fase 29). Ahí el orden se invierte: el
+código nuevo ya no nombra lo que se borra y funciona con el esquema viejo,
+pero el viejo falla con el nuevo, porque inserta o selecciona columnas que ya
+no existen. Primero el merge y después el `db push`. La regla para decidir es
+la misma en los dos casos: qué combinación de código y esquema funciona
+mientras dura la ventana entre los dos pasos.
 
 Para consultar la base de producción, `db query` necesita `--linked`; sin esa
 bandera consulta la local y los resultados engañan:
