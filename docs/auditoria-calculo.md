@@ -64,7 +64,10 @@ retiró el 2026-10-01: los puntos de control dejan de tener posición (A3 de
 entran en la compensación y cada punto leído dos veces recibe el promedio de
 sus cotas compensadas. **D-13 (CR2) se resolvió en la Fase 30**: si la
 libreta de una visita pasa por otro BM del catálogo, la app compara su cota
-calculada con la de catálogo y avisa si no nivela. La § 4 es material del
+calculada con la de catálogo y avisa si no nivela. **CR4 se resolvió en la
+Fase 31**: D-4 y D-5 se descartaron —tras consultar la FGCS, el usuario quitó
+los avisos de equipo insuficiente y de dispersión—, D-8 pasó al promedio
+encadenado y D-10 exige superar el margen de ruido. La § 4 es material del
 usuario y no se tocó.
 
 ---
@@ -437,9 +440,9 @@ solo comprueba que las proyecciones corregidas sumen cero.
 | `LEVELING_TOLERANCE_K` | 3/6/12/24 mm·√D | Marco de nivelación § 8 | Clases corridas frente a la FGCS (3/4/6/8/12) |
 | Ida-vuelta | K·√D_mín·√2 | Marco § 8.1 | La FGCS no lleva √2 (D-2) |
 | `SIGHT_BALANCE_LIMIT_M` | 2/3/4/6 m | Sin fuente | Marco 2/5/10; FGCS 2/5/5/10/10 (D-3) |
-| `READING_DISPERSION_FACTOR` | 2·σ | Criterio propio | Estricto (D-5) |
+| `READING_DISPERSION_FACTOR` | 2·σ | Criterio propio | Estricto (D-5). Quitado en la Fase 31, con su aviso |
 | `SIGMA0_BAND` | [0.5, 2] | Sin fuente | No equivale a χ² (D-6) |
-| Equipo suficiente | σ ≤ K | Sin fuente | Indulgente (D-4) |
+| Equipo suficiente | σ ≤ K | Sin fuente | Indulgente (D-4). Quitado en la Fase 31, con su aviso: la FGCS exige el instrumento con requisitos fijos por orden |
 | `TREND_DEVIATION_REFERENCE_KM` | 0.25 | Decisión de la Fase 12 | Equivale a un circuito de 0.5 km (D-7) |
 | Velocidad | 2/5/10 mm/mes | Marco de asentamientos § 4.1 | Coincide |
 | Acumulado, edificio y presa | 25/50/75 y 10/25/50 mm | Marco § 4.1 | Coincide; terraplén y «otro» sin fuente |

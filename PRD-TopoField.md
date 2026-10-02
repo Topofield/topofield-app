@@ -844,7 +844,7 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Velocidad > umbral alerta | Semáforo naranja |
 | Velocidad > umbral alarma | Semáforo rojo |
 | Asentamiento acumulado > umbral | Semáforo según nivel |
-| Tendencia de velocidad creciente (aceleración) | Indicador de advertencia |
+| Tendencia de velocidad creciente (aceleración) | Indicador de advertencia, solo si la velocidad crece más que el margen de ruido del orden (Fase 31) |
 | Lectura fuera de tendencia (Fase 12) | Aviso al capturar, al cerrar y en el panel; no bloquea |
 | Otro BM del catálogo que no nivela con el amarre (Fase 30) | Cota calculada de la libreta frente a la de catálogo, con K·√L hasta ese BM: aviso en el editor, la vista, el cierre y el panel; no bloquea |
 
@@ -1163,6 +1163,16 @@ Velocidad:
   Δt_meses = (fecha_n - fecha_(n-1)) en días / 30.4375
   V = Δs_parcial / Δt_meses   (mm/mes)
 ```
+
+**Añadido en la Fase 31 (2026-10-02).**
+
+- **Promedio de la visita, encadenado:** el de la visita anterior con
+  lecturas más la media de (cota − cota anterior) × 1000 de los puntos medidos
+  en las dos. La media de los acumulados mezcla líneas base cuando hay altas o
+  bajas; sin ellas, los dos coinciden.
+- **Tendencia:** un punto acelera si |V_última| − |V_anterior| > m/Δt, con m el
+  margen de la lectura fuera de tendencia del orden de la última visita (Fase
+  12) y Δt su intervalo en meses. Si no, converge.
 
 **Quitado en la Fase 29 (2026-10-01).** El asentamiento diferencial entre dos
 puntos y la distorsión angular, `1/((L × 1000) / Δs_diferencial)`: los puntos

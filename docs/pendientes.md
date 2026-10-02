@@ -48,7 +48,10 @@ eligió corregir primero:
 - **Fase 30** — estabilidad de los BMs (CR2)
   ([`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md)),
   **cerrada** el 2026-10-02;
-- después, CR3 y CR4, **sin fase**: «Criterios del cálculo», al final.
+- **Fase 31** — avisos del cálculo (CR4)
+  ([`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md)),
+  **cerrada** el 2026-10-02;
+- después, CR3, **sin fase**: «Criterios del cálculo», al final.
 
 Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
 control de asentamientos **dejen de tener posición**: sin coordenadas ni
@@ -587,10 +590,11 @@ La segunda mitad, la distorsión angular en el semáforo (D-9), se retiró el
 
 ### CR4 · Avisos (D-4, D-5, D-8, D-10)
 
-> **En curso en la Fase 31** ([`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md)),
-> abierta el 2026-10-02. Tras consultar la norma, el usuario decidió quitar
-> los avisos de equipo insuficiente (D-4) y de dispersión (D-5); D-8 y D-10
-> siguen la recomendación de la auditoría.
+> **Resuelta en la Fase 31** ([`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md)),
+> cerrada el 2026-10-02. Tras consultar la norma, el usuario quitó los avisos
+> de equipo insuficiente (D-4) y de dispersión (D-5); D-8 pasó al promedio
+> encadenado y D-10 exige superar el margen de ruido. Se conserva el texto de
+> la petición como registro.
 
 - Equipo insuficiente comparado con la tolerancia como error máximo.
 - Dispersión de lecturas con el cuantil del rango de m lecturas.
