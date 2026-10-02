@@ -564,6 +564,10 @@ Fase 26 (C-10).
 
 ### CR2 · Estabilidad de los BMs (D-13)
 
+> **En curso en la Fase 30** ([`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md)),
+> abierta el 2026-10-02: cuando la libreta de una visita pasa por otro BM del
+> catálogo, la app compara su cota y avisa si no nivela.
+
 - Avisar si la libreta de una visita no nivela entre BM-1 y BM-2: un BM movido
   hace que todos los puntos «se asienten» a la vez (marco teórico § 2.3).
 
