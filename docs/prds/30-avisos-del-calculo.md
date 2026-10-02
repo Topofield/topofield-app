@@ -34,6 +34,9 @@ promedio y tendencia
 > - **Consulta previa en producción** (solo lectura): ningún proceso ni
 >   visita cumplía la regla vieja de equipo insuficiente, así que ninguno de
 >   los tres informes emitidos llevaba el asterisco, y ninguno cambia.
+> - **La revisión de código no encontró defectos** de funcionamiento: solo
+>   el comentario de cabecera del seed, que contaba dos poligonales en Red
+>   geodésica (`e457ba4`).
 > - **Producción, pendiente:** el merge. Sin `db push`.
 
 ## Propósito
