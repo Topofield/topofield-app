@@ -30,7 +30,11 @@ export interface VisitSummary {
   readingCount: number;
   /** El acumulado de mayor valor absoluto, CON su signo: un levantamiento también es un hallazgo. */
   maxSettlement: PointValue | null;
-  /** Media de los acumulados de la visita. */
+  /**
+   * El promedio de la visita. En `summarizeSite`, el encadenado (Fase 31,
+   * D-8, ver `chainedMeans`); `summarizeVisit`, que no conoce las visitas
+   * anteriores, da la media de los acumulados.
+   */
   mean: number | null;
   /** Menor y mayor acumulado: la banda de la tendencia. */
   min: number | null;
@@ -98,8 +102,63 @@ export function summarizeVisit(visit: VisitResult): VisitSummary {
   };
 }
 
+/**
+ * El promedio de asentamientos de cada visita, **encadenado** (Fase 31, D-8):
+ * el de la visita anterior con lecturas más la media de (cota − cota anterior)
+ * × 1000 de los puntos medidos en las dos.
+ *
+ * La media de los acumulados mezcla líneas base: un punto dado de alta entra
+ * con acumulado 0 y tira del promedio hacia arriba, y uno dado de baja se lo
+ * lleva. Encadenado, el promedio solo se mueve con lo que se asientan los
+ * puntos medidos en las dos visitas. Sin altas ni bajas da lo mismo que la
+ * media.
+ *
+ * - La primera visita con lecturas arranca en la media de sus acumulados (no
+ *   es cero si la C0 viene de otra medición).
+ * - Una visita sin lecturas no tiene promedio, y la siguiente se encadena con
+ *   la anterior que sí tenía.
+ * - Sin ningún punto en común con la anterior, no hay parcial que promediar:
+ *   la cadena se reinicia con la media de los acumulados.
+ */
+export function chainedMeans(visits: VisitResult[]): (number | null)[] {
+  const average = (values: number[]) =>
+    values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+
+  const means: (number | null)[] = [];
+  let previous: VisitResult | null = null;
+  let previousMean: number | null = null;
+  for (const visit of visits) {
+    if (visit.readings.length === 0) {
+      means.push(null);
+      continue;
+    }
+    let mean = average(
+      visit.readings
+        .map((r) => r.accumulatedSettlement)
+        .filter((x): x is number => x != null),
+    );
+    if (previous && previousMean != null) {
+      const before = new Map(previous.readings.map((r) => [r.pointId, r.elevation]));
+      const partials = visit.readings.flatMap((r) => {
+        const elevation = before.get(r.pointId);
+        return elevation === undefined ? [] : [(r.elevation - elevation) * 1000];
+      });
+      const step = average(partials);
+      if (step != null) mean = previousMean + step;
+    }
+    means.push(mean);
+    previous = visit;
+    previousMean = mean;
+  }
+  return means;
+}
+
 export function summarizeSite(history: SettlementHistory): SiteSummary {
-  const visits = history.visits.map(summarizeVisit);
+  const means = chainedMeans(history.visits);
+  const visits = history.visits.map((visit, i) => ({
+    ...summarizeVisit(visit),
+    mean: means[i] ?? null,
+  }));
   return {
     visits,
     latest: visits.at(-1) ?? null,

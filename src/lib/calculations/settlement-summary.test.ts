@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  chainedMeans,
   nextAccumulatedThreshold,
   summarizeSite,
   summarizeVisit,
@@ -107,8 +108,10 @@ describe("summarizeSite", () => {
     expect(s.baseDate).toBe("2025-01-01");
     expect(s.lastDate).toBe("2025-03-01");
     expect(s.visitsInAlert).toBe(2);
-    // El promedio mezcla líneas base cuando hay altas: se acepta (PRD, «KPIs»).
-    expect(s.latest!.mean).toBeCloseTo(-38 / 3, 9);
+    // El promedio es el encadenado (Fase 31, D-8): «c» entra de alta en la
+    // visita 2 y no tira del promedio hacia 0. La media de acumulados daba
+    // −38/3 = −12.67.
+    expect(s.latest!.mean).toBeCloseTo(-19, 9);
   });
 
   it("un lugar sin visitas no tiene resumen", () => {
@@ -117,6 +120,64 @@ describe("summarizeSite", () => {
     expect(s.baseDate).toBeNull();
     expect(s.lastDate).toBeNull();
     expect(s.visitsInAlert).toBe(0);
+  });
+});
+
+describe("chainedMeans (Fase 31, D-8)", () => {
+  it("sin altas ni bajas es la media de los acumulados", () => {
+    const means = chainedMeans([
+      visit(0, "2025-01-01", [reading("a", 0, null, null), reading("b", 0, null, null)]),
+      visit(1, "2025-02-01", [reading("a", -5, -5, -5), reading("b", -9, -9, -9)]),
+      visit(2, "2025-03-01", [reading("a", -8, -3, -3), reading("b", -10, -1, -1)]),
+    ]);
+    expect(means[0]).toBeCloseTo(0, 9);
+    expect(means[1]).toBeCloseTo(-7, 9);
+    expect(means[2]).toBeCloseTo(-9, 9);
+  });
+
+  it("un alta no tira del promedio: entra en la cadena desde su segunda lectura", () => {
+    const means = chainedMeans([
+      visit(0, "2025-01-01", [reading("a", 0, null, null), reading("b", 0, null, null)]),
+      visit(1, "2025-02-01", [reading("a", -5, -5, -5), reading("b", -28, -28, -28)]),
+      visit(2, "2025-03-01", [reading("a", -8, -3, -3), reading("b", -30, -2, -2), reading("c", 0, null, null)]),
+    ]);
+    // Visita 2: −16.5 más la media de los parciales de «a» y «b», −2.5.
+    expect(means[2]).toBeCloseTo(-19, 9);
+  });
+
+  it("una baja tampoco: el promedio sigue con los puntos que quedan", () => {
+    const means = chainedMeans([
+      visit(0, "2025-01-01", [reading("a", 0, null, null), reading("b", 0, null, null)]),
+      visit(1, "2025-02-01", [reading("a", -2, -2, -2), reading("b", -20, -20, -20)]),
+      // «b», el que más bajaba, se da de baja: la media de acumulados saltaría
+      // de −11 a −3.
+      visit(2, "2025-03-01", [reading("a", -3, -1, -1)]),
+    ]);
+    expect(means[2]).toBeCloseTo(-12, 9);
+  });
+
+  it("una visita sin lecturas no tiene promedio, y la siguiente se encadena con la anterior que sí", () => {
+    const means = chainedMeans([
+      visit(0, "2025-01-01", [reading("a", 0, null, null)]),
+      visit(1, "2025-02-01", []),
+      visit(2, "2025-03-01", [reading("a", -4, -4, -2)]),
+    ]);
+    expect(means[1]).toBeNull();
+    expect(means[2]).toBeCloseTo(-4, 9);
+  });
+
+  it("sin ningún punto en común con la anterior, la cadena se reinicia con la media de acumulados", () => {
+    const means = chainedMeans([
+      visit(0, "2025-01-01", [reading("a", 0, null, null)]),
+      visit(1, "2025-02-01", [reading("b", -6, null, null), reading("c", -2, null, null)]),
+    ]);
+    expect(means[1]).toBeCloseTo(-4, 9);
+  });
+
+  it("arranca en la media de acumulados de la primera visita, aunque no sea cero", () => {
+    // Una C0 de otra medición: la visita 0 ya muestra lo que se movió.
+    const means = chainedMeans([visit(0, "2025-01-01", [reading("a", -3, null, null), reading("b", -1, null, null)])]);
+    expect(means[0]).toBeCloseTo(-2, 9);
   });
 });
 
