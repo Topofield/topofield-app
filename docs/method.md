@@ -39,7 +39,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 27 | Segundo pulido | [`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md) | cerrada |
 | 28 | Ida y vuelta en la compensación | [`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md) | cerrada |
 | 29 | Puntos de control sin posición | [`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md) | cerrada |
-| 30 | Estabilidad de los BMs | [`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md) | en curso |
+| 30 | Estabilidad de los BMs | [`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -553,6 +553,31 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 30 — Estabilidad de los BMs (2026-10-02)
+
+CR2 (D-13): cuando la libreta de una visita pasa por otro BM del catálogo, la
+app compara su cota calculada con la de catálogo, copiada en la fila al
+guardar, con la tolerancia K·√L hasta ese BM. Si no nivela, avisa sin
+bloquear en el editor, el registro, la vista, el cierre y el panel. La demo
+pasa por el otro BM en todas las visitas, y la 13 no nivela. 991 tests y 74
+pruebas de base. Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Los números de ejemplo de un PRD se calculan, no se estiman.** El PRD
+  dio una tolerancia de 3.8 a 5.4 mm suponiendo el BM a 0.1–0.2 km; la demo
+  lo lee en la primera armada, a 28 m, y la tolerancia es de 2.0 mm. El caso
+  seguía siendo válido, pero el número del PRD no salía de ningún cálculo.
+- **Una plantilla que hereda de los datos arrastra los cambios a las guías.**
+  La libreta de una visita nueva se precarga con la de la anterior, así que
+  meter BM-2 en la demo cambió la tabla que el paso 13 de la guía e2e hace
+  teclear. Al cambiar un fixture, conviene buscar sus números en
+  `docs/testing/`, no solo en los tests.
+- **Un aviso que no culpa sigue siendo útil.** Con dos BM no se sabe cuál se
+  movió, y una cota de catálogo mal tecleada da el mismo síntoma. El mensaje
+  da las dos cotas y las tres causas posibles, y deja la decisión al
+  topógrafo.
 
 ### Cierre Fase 29 — Puntos de control sin posición (2026-10-01)
 

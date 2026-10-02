@@ -1,7 +1,8 @@
 # PRD-de-fase 30 — Estabilidad de los BMs
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-02
+**Fecha de cierre:** 2026-10-02
 
 **Rama:** `fase-30-estabilidad-bms`
 **Petición:** del usuario, 2026-10-01. Es CR2 de `pendientes.md`, que nació
@@ -10,6 +11,43 @@ visita no nivela entre BM-1 y BM-2». Al cerrar la Fase 29 pidió: «sí, abre l
 fase 30 con CR2».
 **Módulo:** control de asentamientos — la libreta de la visita, el panel, el
 Excel, la demo y el seed
+
+> **Divergencias de la implementación:**
+>
+> - **La tolerancia del ejemplo es de 2.0 mm, no de 3.8 a 5.4.** La demo lee
+>   el otro BM como intermedia de la primera armada, a unos 28 m del amarre,
+>   no a 0.1–0.2 km. En la visita 13, BM-2 queda **7.4 mm** por encima, no 8:
+>   el generador fija la cota compensada, y la calculada difiere en la parte
+>   del cierre que le toca. En las otras trece visitas, entre −0.7 y +0.6 mm.
+> - **`perSetup: 5`** en la demo y el seed: el otro BM entra en la primera
+>   armada sin añadir una tercera.
+> - **`bookRowOf` no lee la columna.** La vista y el panel leen la libreta
+>   guardada con `benchmarkChecksOfBook`, una función que el PRD no nombraba.
+> - **El diálogo de cierre del editor usa la comprobación en vivo**, la misma
+>   que muestra el editor; el de la vista, la copia guardada. Para confirmar,
+>   el editor exige no tener cambios sin guardar, así que coinciden salvo que
+>   el catálogo cambie entre el guardado y el cierre.
+> - **Sin distancias, el motor deja el acumulado en 0**, no en null:
+>   `checkBenchmarks` trata una distancia nula o 0 como «sin distancias», con
+>   el mismo criterio que el cierre.
+> - **Capturas:** cambian la 15, la 16, la 26 (la libreta importada trae la
+>   fila de BM-2: 13 visuales) y la 28; la 27 no, porque muestra la visita 12,
+>   que nivela y no lleva aviso. El texto alternativo de la 28 decía ±4.5 mm
+>   donde la imagen muestra ±4.0: se corrigió.
+> - **El ⚠ del amarre usa la fuente monoespaciada**, como el de la columna
+>   Cierre: en la fuente de texto salía más grande.
+> - **Un residuo de la Fase 29:** el docstring de `PanelTab` todavía nombraba
+>   los diferenciales.
+> - **La guía e2e de asentamientos** cambia más de lo previsto: la libreta de
+>   la visita 12 pasa ahora por BM-2, y el paso 13 la teclea entera. Se añadió
+>   el paso 12 bis.
+> - **Verificación en pantalla** en local, a 1280 px en claro y a 390 px en
+>   oscuro: 25 comprobaciones, sin desborde ni errores de página. Cubren el ⚠
+>   del panel solo en la visita 13, la vista, el registro, el diálogo de
+>   cierre, el editor de la 13 (no nivela) y el de la 12 (nivela), el Excel y
+>   la demo del primer inicio de sesión.
+> - **Producción, pendiente:** una consulta de solo lectura, el `db push` y,
+>   después, el merge.
 
 ## Propósito
 
