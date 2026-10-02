@@ -7,6 +7,7 @@ import { SiteTrend } from "@/components/settlement/site-trend";
 import { VisitsTable, type VisitTableRow } from "@/components/settlement/visits-table";
 import {
   computeHistory,
+  computeTrends,
   detectTrendDeviations,
   pointInputOf,
 } from "@/lib/calculations/settlement";
@@ -66,12 +67,15 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite, bo
     alarm: thresholds.accumulatedAlarm,
   };
 
-  // Aviso de lectura fuera de tendencia de la última visita (Fase 12). El
-  // margen sale del orden que declaró cada visita.
+  // Aviso de lectura fuera de tendencia de la última visita (Fase 12) y
+  // tendencia de cada punto (Fase 31): los dos márgenes salen del orden que
+  // declaró cada visita.
+  const orderByVisit = new Map(visits.map((v) => [v.id, v.precision_order]));
+  const trends = computeTrends(history.visits, orderByVisit);
   const lastVisitId = history.visits.at(-1)?.visitId;
   const deviations = detectTrendDeviations(
     history.visits,
-    new Map(visits.map((v) => [v.id, v.precision_order])),
+    orderByVisit,
   );
   const lastVisitTrendWarnings = Object.fromEntries(
     [...(lastVisitId ? (deviations.get(lastVisitId) ?? []) : [])].map(
@@ -197,7 +201,7 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite, bo
       <AnalysisPanel
         points={points}
         visits={history.visits}
-        trends={history.trends}
+        trends={trends}
         lastVisitTrendWarnings={lastVisitTrendWarnings}
       />
     </div>

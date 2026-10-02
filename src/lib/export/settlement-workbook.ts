@@ -8,6 +8,7 @@
 // cada visita que se capturó con ella.
 
 import type ExcelJS from "exceljs";
+import { computeTrends } from "@/lib/calculations/settlement";
 import {
   DECIMALS,
   equipmentLine,
@@ -324,9 +325,13 @@ function sheetSummary(
   setSheetTitle(s, `${site.name} — resumen`);
 
   const worst = history.visits[history.visits.length - 1]?.worstAlert ?? null;
-  const acelerando = Object.values(history.trends).filter(
-    (t) => t === "accelerating",
-  ).length;
+  // La tendencia necesita el orden de cada visita para su margen de ruido
+  // (Fase 31, D-10).
+  const trends = computeTrends(
+    history.visits,
+    new Map(visits.map((v) => [v.id, v.precision_order])),
+  );
+  const acelerando = Object.values(trends).filter((t) => t === "accelerating").length;
 
   let row0 = 3;
   const pares = projectPairs(project);

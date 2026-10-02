@@ -98,7 +98,6 @@ describe("summarizeSite", () => {
       // Un alta: «c» entra con su primera lectura y acumulado 0.
       visit(2, "2025-03-01", [reading("a", -8, -3, -3.1, "caution"), reading("b", -30, -2, -2), reading("c", 0, null, null)], "caution"),
     ],
-    trends: {},
   };
 
   it("resume el lugar con la última visita y el histórico", () => {
@@ -115,7 +114,7 @@ describe("summarizeSite", () => {
   });
 
   it("un lugar sin visitas no tiene resumen", () => {
-    const s = summarizeSite({ visits: [], trends: {} });
+    const s = summarizeSite({ visits: [] });
     expect(s.latest).toBeNull();
     expect(s.baseDate).toBeNull();
     expect(s.lastDate).toBeNull();
