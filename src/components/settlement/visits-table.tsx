@@ -127,7 +127,7 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                         </span>
                       )}
                       {row.bmWarning && (
-                        <span className="font-semibold text-warning" title={row.bmWarning}>
+                        <span className="font-mono font-semibold text-warning" title={row.bmWarning}>
                           <span aria-hidden> ⚠</span>
                           <span className="sr-only"> ({row.bmWarning})</span>
                         </span>
