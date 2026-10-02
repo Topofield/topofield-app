@@ -16,7 +16,7 @@ import type {
   PointType,
   ReadingInput as BookRowInput,
 } from "@/types/leveling";
-import type { PrecisionOrder, ReferencePoint } from "@/types/project";
+import type { PrecisionOrder } from "@/types/project";
 import type {
   BenchmarkCheck,
   BookIssue,
@@ -187,7 +187,7 @@ export function deriveControlElevations(
  */
 export function catalogElevationsOf(
   rows: { pointCode: string; foresight: number | null }[],
-  catalog: Pick<ReferencePoint, "code" | "type" | "elevation">[],
+  catalog: { code: string; type: string; elevation: number | null }[],
   amarreCode: string,
   points: Pick<PointInput, "code">[],
 ): (number | null)[] {

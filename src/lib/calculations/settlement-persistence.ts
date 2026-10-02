@@ -145,12 +145,15 @@ export function visitsToRewrite({
  *   la tecleada sola dejaría vacía la celda de una libreta por taquimetría.
  * - `point_id` enlaza la fila con su punto de control por código. Lo usa el
  *   renombrado de puntos (decisión 20); la derivación de cotas no lo necesita.
+ * - `catalog_elevation` es la cota de catálogo de un BM de control, por fila
+ *   (`catalogElevationsOf`, Fase 30): la copia que conserva una visita cerrada.
  */
 export function bookRowsToPersist(
   visitId: string,
   rows: BookRowPayload[],
   computed: BookComputedRow[],
   points: Pick<PointInput, "id" | "code">[],
+  catalogElevations: (number | null)[],
 ) {
   return rows.map((row, i) => {
     const r = computed[i];
@@ -174,6 +177,7 @@ export function bookRowsToPersist(
       elevation_calculated: r?.elevationCalculated ?? null,
       elevation_corrected: r?.elevationCorrected ?? null,
       correction_applied: r?.correctionApplied ?? null,
+      catalog_elevation: catalogElevations[i] ?? null,
     };
   });
 }

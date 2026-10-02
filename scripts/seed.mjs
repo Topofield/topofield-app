@@ -1412,7 +1412,7 @@ async function insertBookSite(projectId, userId, cfg) {
 
     const { error: bookErr } = await admin
       .from("settlement_book_readings")
-      .insert(bookRowsToPersist(visitRow.id, rows, result.forward.readings, points));
+      .insert(bookRowsToPersist(visitRow.id, rows, result.forward.readings, points, []));
     if (bookErr) throw bookErr;
 
     const { error: readingsErr } = await admin.from("settlement_readings").insert(

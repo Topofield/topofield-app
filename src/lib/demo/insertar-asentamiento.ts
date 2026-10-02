@@ -148,7 +148,7 @@ export async function insertarAsentamiento(
   // --- Libretas y lecturas de todas las visitas, una escritura cada una. -------
   const libretas = fixture.visits.flatMap((_, i) => {
     const book = books[i]!;
-    return bookRowsToPersist(visitaId.get(i)!, book.rows, book.result.forward.readings, points);
+    return bookRowsToPersist(visitaId.get(i)!, book.rows, book.result.forward.readings, points, []);
   });
   const { error: errLibretas } = await supabase.from("settlement_book_readings").insert(libretas);
   if (errLibretas) throw errLibretas;
