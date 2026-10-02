@@ -302,7 +302,8 @@ export function classifyReadings(
  * «acelerar» puntos que se estaban frenando.
  *
  * Un punto solo aparece si tiene **al menos dos velocidades** (tres visitas) y
- * se conoce el orden de su última visita: sin eso no se afirma nada.
+ * se conoce el orden de su última visita: sin eso no se afirma nada. Las
+ * visitas llegan en orden cronológico, como las da `computeHistory`.
  */
 export function computeTrends(
   visits: VisitResult[],

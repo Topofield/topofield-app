@@ -8,7 +8,7 @@
 //    (primer_orden) y "Edificio en monitoreo" (tercer_orden).
 //  - Cada proyecto con al menos un lugar (`sites`), obligatorio desde la
 //    Fase 5 para los procesos de poligonal y nivelación.
-//  - 15 procesos poligonales (13 en "Lote catastral", 2 en "Red geodésica")
+//  - 14 procesos poligonales (13 en "Lote catastral", 1 en "Red geodésica")
 //    que cubren los 3 tipos, los 4 métodos y los estados calculated, closed y
 //    rejected.
 //  - 2 procesos de nivelación: uno calculado (editable, para la captura del
