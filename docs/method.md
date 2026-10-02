@@ -40,6 +40,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 28 | Ida y vuelta en la compensación | [`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md) | cerrada |
 | 29 | Puntos de control sin posición | [`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md) | cerrada |
 | 30 | Estabilidad de los BMs | [`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md) | cerrada |
+| 31 | Avisos del cálculo | [`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md) | en curso |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 

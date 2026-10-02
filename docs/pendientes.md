@@ -587,6 +587,11 @@ La segunda mitad, la distorsión angular en el semáforo (D-9), se retiró el
 
 ### CR4 · Avisos (D-4, D-5, D-8, D-10)
 
+> **En curso en la Fase 31** ([`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md)),
+> abierta el 2026-10-02. Tras consultar la norma, el usuario decidió quitar
+> los avisos de equipo insuficiente (D-4) y de dispersión (D-5); D-8 y D-10
+> siguen la recomendación de la auditoría.
+
 - Equipo insuficiente comparado con la tolerancia como error máximo.
 - Dispersión de lecturas con el cuantil del rango de m lecturas.
 - Promedio encadenado de asentamientos.
