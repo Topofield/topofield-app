@@ -1,7 +1,8 @@
 # PRD-de-fase 31 — Avisos del cálculo
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-02
+**Fecha de cierre:** 2026-10-02
 
 **Rama:** `fase-31-avisos`
 **Petición:** del usuario, 2026-10-02: «abre la fase 31 con CR4». Es CR4 de
@@ -10,6 +11,30 @@ D-5, D-8 y D-10. Sobre D-4 y D-5 pidió: «consulta si eso es válido y útil, t
 vez ni necesitamos eso». Después de la consulta decidió quitar los dos.
 **Módulo:** poligonal, nivelación y control de asentamientos — avisos,
 promedio y tendencia
+
+> **Divergencias de la implementación:**
+>
+> - **`Verdict.caveat` desaparece entero.** Solo existía para la nota de
+>   equipo. `validateReadings` pierde también su `warning` y la precisión
+>   angular que recibía.
+> - **El `order` de los formularios de equipo** sale de toda la cadena: los
+>   dos fieldsets, el selector del catálogo y los cuatro formularios que lo
+>   pasaban.
+> - **La estación «Genérica TS-5» sale también del catálogo de equipos del
+>   seed**: era el equipo de la poligonal que se quitó.
+> - **El manual explica ahora la regla de la tendencia**, que antes no
+>   documentaba.
+> - **Capturas:** la 02 (el dashboard: Red geodésica con una poligonal y 18
+>   procesos listos para cerrar), la 15 (la tendencia de Torre Alameda) y la
+>   31 (el catálogo de equipos).
+> - **Verificación en pantalla** en local, a 1280 px en claro y a 390 px en
+>   oscuro: 29 comprobaciones, sin desborde ni errores de página. La primera
+>   pasada falló en dos, por la comprobación y no por la app: el título del
+>   veredicto se pinta en mayúsculas por CSS.
+> - **Consulta previa en producción** (solo lectura): ningún proceso ni
+>   visita cumplía la regla vieja de equipo insuficiente, así que ninguno de
+>   los tres informes emitidos llevaba el asterisco, y ninguno cambia.
+> - **Producción, pendiente:** el merge. Sin `db push`.
 
 ## Propósito
 

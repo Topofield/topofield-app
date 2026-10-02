@@ -40,7 +40,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 28 | Ida y vuelta en la compensación | [`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md) | cerrada |
 | 29 | Puntos de control sin posición | [`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md) | cerrada |
 | 30 | Estabilidad de los BMs | [`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md) | cerrada |
-| 31 | Avisos del cálculo | [`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md) | en curso |
+| 31 | Avisos del cálculo | [`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -554,6 +554,34 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 31 — Avisos del cálculo (2026-10-02)
+
+CR4: tras consultar la FGCS 1984, el usuario quitó los avisos de equipo
+insuficiente (D-4) y de dispersión entre lecturas (D-5). El promedio de
+asentamientos pasó a encadenado (D-8), y «Acelerando» exige que la velocidad
+crezca más que el margen de ruido del orden (D-10). Sin migración. 984 tests
+y 74 pruebas de base. Divergencias en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Antes de corregir un aviso, preguntar si hace falta.** La auditoría
+  proponía recalibrar D-4 y D-5; el usuario preguntó si servían. La norma
+  resolvió las dos: el instrumento se exige con requisitos fijos, no con σ
+  contra K, y el cierre ya juzga el trabajo. Quitar un aviso mal fundado
+  simplifica más que corregirlo.
+- **Una cifra ambigua de la auditoría se resuelve con la otra cifra que da.**
+  «3.64 σ» no decía si σ era la del instrumento o la de una lectura de
+  ángulo; reproducir el «35–58 %» de falsas alarmas dejó claro que era la de
+  la lectura (√2·σ).
+- **Una regla nueva sobre un dato sembrado cambia lo que las guías
+  esperan.** P-04 de Torre Central dejó de acelerar porque su salto es justo
+  la lectura mal tomada que siembra el seed. El cambio era el buscado, pero
+  la guía e2e lo daba por hecho: conviene buscar en `docs/testing/` cada
+  dato que la regla toca.
+- **Una comprobación de pantalla que busca texto debe ignorar el estilo.** El
+  título del veredicto se pinta en mayúsculas por CSS, e `innerText` lo
+  devuelve así: el fallo era de la comprobación, no de la app.
 
 ### Cierre Fase 30 — Estabilidad de los BMs (2026-10-02)
 
