@@ -45,7 +45,10 @@ demo, seed y documentación
 >   BM-2 de la demo, uno de cada uno; ninguna poligonal amarrada a ellos y
 >   ningún lugar con un límite distinto de 1/500. El `db push` no se lleva
 >   ningún dato real.
-> - **Producción, pendiente:** el merge y, después, el `db push`.
+> - **Producción** (2026-10-01): merge del #17 (`4cece3e`), despliegue de
+>   Vercel y, después, el `db push`. Verificado: las tres columnas no
+>   existen, el trigger vigila solo la C0, y BM-1 y BM-2 de la demo conservan
+>   su cota sin coordenadas.
 
 ## Propósito
 
