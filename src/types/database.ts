@@ -878,11 +878,9 @@ export type Database = {
           active_from: string | null
           code: string
           created_at: string
-          easting: number | null
           id: string
           initial_elevation: number | null
           location_description: string
-          northing: number | null
           retired_on: string | null
           retirement_reason: string | null
           site_id: string
@@ -891,11 +889,9 @@ export type Database = {
           active_from?: string | null
           code: string
           created_at?: string
-          easting?: number | null
           id?: string
           initial_elevation?: number | null
           location_description: string
-          northing?: number | null
           retired_on?: string | null
           retirement_reason?: string | null
           site_id: string
@@ -904,11 +900,9 @@ export type Database = {
           active_from?: string | null
           code?: string
           created_at?: string
-          easting?: number | null
           id?: string
           initial_elevation?: number | null
           location_description?: string
-          northing?: number | null
           retired_on?: string | null
           retirement_reason?: string | null
           site_id?: string
@@ -1074,7 +1068,6 @@ export type Database = {
           accumulated_alarm: number
           accumulated_alert: number
           accumulated_caution: number
-          angular_distortion_limit: number
           closed_at: string | null
           closed_by: string | null
           created_at: string
@@ -1095,7 +1088,6 @@ export type Database = {
           accumulated_alarm?: number
           accumulated_alert?: number
           accumulated_caution?: number
-          angular_distortion_limit?: number
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
@@ -1116,7 +1108,6 @@ export type Database = {
           accumulated_alarm?: number
           accumulated_alert?: number
           accumulated_caution?: number
-          angular_distortion_limit?: number
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
