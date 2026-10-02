@@ -3,18 +3,9 @@ import { Input } from "./input";
 import { NumberInput } from "./number-input";
 import { Select } from "./select";
 import {
-  ANGULAR_TOLERANCE_K,
-  LEVELING_TOLERANCE_K,
-  levelMeetsOrder,
-  totalStationMeetsOrder,
-} from "@/lib/calculations/tolerances";
-import { parseNumber } from "@/lib/utils/parse";
-import {
   LEVEL_TYPE_OPTIONS,
-  PRECISION_ORDER_LABELS,
   type LevelFields,
   type LevelType,
-  type PrecisionOrder,
   type TotalStationFields,
 } from "@/types/project";
 
@@ -30,11 +21,6 @@ import {
 interface TotalStationFieldsetProps {
   value: TotalStationFields;
   onChange: (value: TotalStationFields) => void;
-  /**
-   * Orden de precisión declarado del proceso, para el aviso de suficiencia.
-   * Sin él no hay aviso: el catálogo de equipos no tiene orden (Fase 25).
-   */
-  order?: PrecisionOrder;
   disabled?: boolean;
   /** Va tras la leyenda: el selector del catálogo (Fase 25). */
   header?: ReactNode;
@@ -42,11 +28,13 @@ interface TotalStationFieldsetProps {
   footer?: ReactNode;
 }
 
-/** Equipo de estación total (ISO 17123-3 y -4), con aviso si no alcanza el orden. */
+/**
+ * Equipo de estación total (ISO 17123-3 y -4). Es trazabilidad: la Fase 31
+ * quitó el aviso de si alcanza el orden, porque lo juzga el cierre.
+ */
 export function TotalStationFieldset({
   value,
   onChange,
-  order,
   disabled,
   header,
   footer,
@@ -57,10 +45,6 @@ export function TotalStationFieldset({
   ) {
     onChange({ ...value, [key]: fieldValue });
   }
-
-  const angularPrecisionSeconds =
-    parseNumber(value.angularPrecisionSeconds) ?? Number.NaN;
-  const meetsOrder = order == null || totalStationMeetsOrder(order, angularPrecisionSeconds);
 
   return (
     <fieldset className="flex flex-col gap-4 rounded-md border border-rule p-4">
@@ -105,13 +89,6 @@ export function TotalStationFieldset({
         onChange={(e) => set("angularPrecisionSeconds", e.target.value)}
         helperText="ISO 17123-3."
       />
-      {!meetsOrder && order != null && (
-        <p className="text-sm text-warning">
-          Una precisión de {value.angularPrecisionSeconds}″ no alcanza para{" "}
-          {PRECISION_ORDER_LABELS[order].toLowerCase()}, cuya tolerancia parte
-          de {ANGULAR_TOLERANCE_K[order]}″.
-        </p>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <NumberInput
@@ -136,8 +113,6 @@ export function TotalStationFieldset({
 interface LevelFieldsetProps {
   value: LevelFields;
   onChange: (value: LevelFields) => void;
-  /** Orden de precisión del proceso; sin él no hay aviso de suficiencia. */
-  order?: PrecisionOrder;
   disabled?: boolean;
   /** Va tras la leyenda: el selector del catálogo (Fase 25). */
   header?: ReactNode;
@@ -145,11 +120,10 @@ interface LevelFieldsetProps {
   footer?: ReactNode;
 }
 
-/** Equipo de nivel (ISO 17123-2), con aviso si no alcanza el orden. */
+/** Equipo de nivel (ISO 17123-2). Ver `TotalStationFieldset`. */
 export function LevelFieldset({
   value,
   onChange,
-  order,
   disabled,
   header,
   footer,
@@ -160,9 +134,6 @@ export function LevelFieldset({
   ) {
     onChange({ ...value, [key]: fieldValue });
   }
-
-  const kmPrecisionMm = parseNumber(value.kmPrecisionMm) ?? Number.NaN;
-  const meetsOrder = order == null || levelMeetsOrder(order, kmPrecisionMm);
 
   return (
     <fieldset className="flex flex-col gap-4 rounded-md border border-rule p-4">
@@ -215,13 +186,6 @@ export function LevelFieldset({
           helperText="ISO 17123-2."
         />
       </div>
-      {!meetsOrder && order != null && (
-        <p className="text-sm text-warning">
-          Una precisión de {value.kmPrecisionMm} mm/km no alcanza para{" "}
-          {PRECISION_ORDER_LABELS[order].toLowerCase()}, cuya tolerancia parte
-          de {LEVELING_TOLERANCE_K[order]} mm/km.
-        </p>
-      )}
       {footer}
     </fieldset>
   );

@@ -1,6 +1,6 @@
 import type { PrecisionSummaryRow } from "@/lib/reports/summary";
 
-/** Resumen consolidado de precisiones, con su nota si algún equipo no alcanza. */
+/** Resumen consolidado de precisiones. */
 export function PrecisionSummary({
   rows,
   title = "Resumen consolidado de precisiones",
@@ -8,7 +8,6 @@ export function PrecisionSummary({
   rows: PrecisionSummaryRow[];
   title?: string;
 }) {
-  const hayEquipoInsuficiente = rows.some((f) => f.marcar);
   return (
     <section className="report-section report-break">
       <h2>{title}</h2>
@@ -31,18 +30,11 @@ export function PrecisionSummary({
               <td>{f.equipo}</td>
               <td>
                 {f.cumple === null ? "—" : f.cumple ? "Sí" : "No"}
-                {f.marcar && <sup> (*)</sup>}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {hayEquipoInsuficiente && (
-        <p className="report-footnote">
-          (*) El cierre cumple la tolerancia de su orden, pero la precisión del equipo declarado
-          no alcanza el coeficiente K de ese orden.
-        </p>
-      )}
     </section>
   );
 }

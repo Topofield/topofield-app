@@ -11,7 +11,6 @@ import {
 } from "@/components/design-system";
 import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes";
 import { computePolygonal } from "@/lib/calculations/polygonal";
-import { totalStationMeetsOrder } from "@/lib/calculations/tolerances";
 import { parseNumber } from "@/lib/utils/parse";
 import {
   expectStationCapture,
@@ -297,14 +296,6 @@ export function PolygonalEditor({
           result={result}
           type={config.type}
           order={config.precisionOrder}
-          // Solo matiza el texto del veredicto verde: no entra en `meets_tolerance`
-          // ni en el cálculo. Sin precisión declarada devuelve `true` y no hay
-          // matiz, que es lo correcto — no se opina sobre lo que no se sabe.
-          instrumentMeetsOrder={totalStationMeetsOrder(
-            config.precisionOrder,
-            parseNumber(config.totalStation.angularPrecisionSeconds) ??
-              Number.NaN,
-          )}
         />
 
         <div className="flex flex-wrap items-center gap-3">

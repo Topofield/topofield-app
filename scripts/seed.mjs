@@ -629,21 +629,6 @@ const TOTAL_STATION_PRIMER_ORDEN = {
   distance_precision_ppm: 2,
 };
 
-// Fixture deliberada del aviso de equipo insuficiente: primer orden
-// (K = 1″) capturado con una estación de 5″, muy por debajo de lo exigido.
-// El nombre y las notas del proceso lo dejan explícito — es un fixture del
-// aviso, no un dato mal capturado que alguien deba corregir después.
-const TOTAL_STATION_INSUFICIENTE = {
-  precision_order: "primer_orden",
-  equipment_brand: "Genérica",
-  equipment_model: "TS-5",
-  equipment_serial: "S/N 000",
-  equipment_calibration_date: null,
-  angular_precision_seconds: 5,
-  distance_precision_mm: 5,
-  distance_precision_ppm: 5,
-};
-
 // 1.0 mm/km es la cifra ISO 17123-2 del DiNi 12 con mira ordinaria (no
 // ínvar) — ver el comentario de cabecera de este bloque.
 const LEVEL_DIGITAL_TERCER_ORDEN = {
@@ -671,7 +656,7 @@ const LEVEL_DIGITAL_MONITOREO = {
 // El nivel de respaldo del programa de monitoreo, para la campaña de abril.
 // Un automático Leica NA720: 2.5 mm/km de catálogo (ISO 17123-2), holgado
 // dentro del K = 12 mm de tercer orden, así que la visita sigue siendo
-// coherente y no dispara el aviso de equipo insuficiente. Existe porque
+// coherente con su orden. Existe porque
 // entre una campaña y la siguiente pueden pasar meses y cambiar el
 // instrumento — que es la razón de ser de esta fase— y el seed no lo
 // demostraba en ninguna parte.
@@ -701,7 +686,7 @@ const LEVEL_AUTOMATICO_NIVELACION = {
  * de más de un año.
  */
 const EQUIPMENT_CATALOG = [
-  ...[TOTAL_STATION_TERCER_ORDEN, TOTAL_STATION_PRIMER_ORDEN, TOTAL_STATION_INSUFICIENTE].map((e) => ({
+  ...[TOTAL_STATION_TERCER_ORDEN, TOTAL_STATION_PRIMER_ORDEN].map((e) => ({
     kind: "total_station",
     brand: e.equipment_brand,
     model: e.equipment_model,
@@ -880,10 +865,9 @@ const PROCESSES = [
   },
 ];
 
-// Procesos de "Red geodésica" (primer orden). Cuadrados que cierran exacto a
-// propósito: el error de cierre no es el punto aquí, lo es el contraste entre
-// equipo y orden, así que la geometría se deja limpia para que el único aviso
-// visible sea el de equipo insuficiente.
+// Procesos de "Red geodésica" (primer orden): un cuadrado que cierra exacto
+// con una estación de 1″. Hasta la Fase 31 había un segundo, con una estación
+// de 5″, para mostrar el aviso de equipo insuficiente, que se quitó.
 const GEODESICA_PROCESSES = [
   {
     name: "Cuadrado de control 200×4 (red geodésica)",
@@ -903,27 +887,7 @@ const GEODESICA_PROCESSES = [
       { code: "G4", angle: [90, 0, 0], distance: 200 },
     ],
     notes:
-      "Cuadrado de control que cierra exacto. Primer orden (K=1″) con estación de 1″: el equipo alcanza justo la tolerancia angular exigida, sin aviso.",
-  },
-  {
-    name: "Poligonal con equipo insuficiente (fixture del aviso)",
-    type: "closed",
-    angle_type: "interior",
-    startPointCode: "H1",
-    startNorth: 5200,
-    startEast: 5200,
-    startAz: [0, 0, 0],
-    correctionMethod: "bowditch",
-    status: "calculated",
-    ...TOTAL_STATION_INSUFICIENTE,
-    stations: [
-      { code: "H1", angle: [90, 0, 0], distance: 150 },
-      { code: "H2", angle: [90, 0, 0], distance: 150 },
-      { code: "H3", angle: [90, 0, 0], distance: 150 },
-      { code: "H4", angle: [90, 0, 0], distance: 150 },
-    ],
-    notes:
-      "Fixture deliberada del aviso de equipo insuficiente: declara primer orden (K=1″) pero se captura con una estación de 5″ genérica, muy por debajo de lo exigido. No es un dato mal capturado — es a propósito, para ver el aviso sin tener que teclearlo.",
+      "Cuadrado de control que cierra exacto. Primer orden (K=1″) con estación de 1″.",
   },
 ];
 
@@ -1589,12 +1553,9 @@ async function main() {
     );
   }
 
-  // "Red geodésica": el emparejamiento primer orden + estación de 1″ que el
-  // proyecto ya tenía, más la fixture deliberada del aviso de equipo
-  // insuficiente (mismo primer orden, estación de 5″). Aquí cada proceso
-  // lleva SU equipo declarado en su propio literal: son distintos, y un array
-  // paralelo emparejado por índice era exactamente lo frágil que había que
-  // quitar.
+  // "Red geodésica": el cuadrado de primer orden con estación de 1″. Cada
+  // proceso lleva SU equipo declarado en su propio literal: un array paralelo
+  // emparejado por índice era exactamente lo frágil que había que quitar.
   for (const spec of GEODESICA_PROCESSES) {
     await insertPolygonal(geodesica, geodesicaSite, spec, userId);
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);

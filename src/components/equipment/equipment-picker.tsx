@@ -13,13 +13,12 @@ import {
 } from "@/lib/equipment";
 import { calibrationOverdue, type EquipmentInput } from "@/lib/validators/equipment";
 import type { Equipment, EquipmentKind } from "@/types/equipment";
-import type { LevelFields, PrecisionOrder, TotalStationFields } from "@/types/project";
+import type { LevelFields, TotalStationFields } from "@/types/project";
 import { useEquipmentCatalog } from "./catalog-context";
 
 interface PickerProps<F> {
   value: F;
   onChange: (value: F) => void;
-  order?: PrecisionOrder;
   disabled?: boolean;
   /**
    * Fecha contra la que se juzga la calibración: la de la visita en
@@ -128,7 +127,6 @@ function useItems(kind: EquipmentKind) {
 export function TotalStationEquipment({
   value,
   onChange,
-  order,
   disabled,
   referenceDate,
 }: PickerProps<TotalStationFields>) {
@@ -137,7 +135,6 @@ export function TotalStationEquipment({
     <TotalStationFieldset
       value={value}
       onChange={onChange}
-      order={order}
       disabled={disabled}
       header={
         disabled ? null : (
@@ -161,7 +158,6 @@ export function TotalStationEquipment({
 export function LevelEquipment({
   value,
   onChange,
-  order,
   disabled,
   referenceDate,
 }: PickerProps<LevelFields>) {
@@ -170,7 +166,6 @@ export function LevelEquipment({
     <LevelFieldset
       value={value}
       onChange={onChange}
-      order={order}
       disabled={disabled}
       header={
         disabled ? null : <CatalogSelect items={items} onPick={(item) => onChange(levelFieldsOf(item))} />

@@ -188,7 +188,6 @@ export function NewVisitDialog({
           <LevelEquipment
             value={level}
             onChange={setLevel}
-            order={order}
             referenceDate={date || undefined}
           />
           {previous && (

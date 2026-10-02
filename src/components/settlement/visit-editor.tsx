@@ -573,7 +573,6 @@ export function VisitEditor({
             <LevelEquipment
               value={header.level}
               onChange={(v) => updateHeader("level", v)}
-              order={header.precisionOrder}
               disabled={disabled}
               referenceDate={header.date || undefined}
             />
