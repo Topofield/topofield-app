@@ -24,18 +24,14 @@ const cellText = (n: number) => (Number.isFinite(n) ? String(n) : "");
  */
 function ThresholdCell({
   label,
-  helperText,
   value,
   onChange,
   disabled,
-  integer,
 }: {
   label: string;
-  helperText?: string;
   value: number;
   onChange: (value: number) => void;
   disabled?: boolean;
-  integer?: boolean;
 }) {
   const [text, setText] = useState(() => cellText(value));
   const [known, setKnown] = useState(value);
@@ -46,8 +42,6 @@ function ThresholdCell({
   return (
     <NumberInput
       label={label}
-      helperText={helperText}
-      integer={integer}
       value={text}
       disabled={disabled}
       onChange={(e) => {
@@ -61,7 +55,7 @@ function ThresholdCell({
 }
 
 /**
- * Los siete umbrales de alerta de un lugar.
+ * Los seis umbrales de alerta de un lugar.
  *
  * El preset lo aplica el contenedor al cambiar el tipo de estructura; aquí solo
  * se editan. Así el usuario puede apartarse del preset sin que un efecto se lo
@@ -128,15 +122,6 @@ export function ThresholdsFields({
           />
         </div>
       </fieldset>
-
-      <ThresholdCell
-        integer
-        label="Límite de distorsión angular (1/X)"
-        helperText="Un X menor es más severo: 1/300 es peor que 1/500."
-        value={value.angularDistortionLimit}
-        onChange={set("angularDistortionLimit")}
-        disabled={disabled}
-      />
     </div>
   );
 }

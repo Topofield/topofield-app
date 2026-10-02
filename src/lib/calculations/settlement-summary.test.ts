@@ -6,7 +6,6 @@ import {
 } from "./settlement-summary";
 import type {
   ComputedReading,
-  DifferentialPair,
   SettlementHistory,
   VisitResult,
 } from "@/types/settlement";
@@ -90,20 +89,6 @@ describe("summarizeVisit", () => {
   });
 });
 
-function pair(a: string, b: string, inverse: number, exceeds = false): DifferentialPair {
-  return {
-    pointIdA: a,
-    pointIdB: b,
-    differentialMm: 5,
-    settlementAMm: -10,
-    settlementBMm: -15,
-    sinceDate: "2025-01-01",
-    distanceM: 10,
-    distortionInverse: inverse,
-    exceedsLimit: exceeds,
-  };
-}
-
 describe("summarizeSite", () => {
   const history: SettlementHistory = {
     visits: [
@@ -112,7 +97,6 @@ describe("summarizeSite", () => {
       // Un alta: «c» entra con su primera lectura y acumulado 0.
       visit(2, "2025-03-01", [reading("a", -8, -3, -3.1, "caution"), reading("b", -30, -2, -2), reading("c", 0, null, null)], "caution"),
     ],
-    differentials: [pair("a", "b", 2000), pair("a", "c", 400, true), pair("b", "c", Infinity)],
     trends: {},
   };
 
@@ -123,23 +107,16 @@ describe("summarizeSite", () => {
     expect(s.baseDate).toBe("2025-01-01");
     expect(s.lastDate).toBe("2025-03-01");
     expect(s.visitsInAlert).toBe(2);
-    expect(s.worstDistortion).toMatchObject({ pointIdA: "a", pointIdB: "c", distortionInverse: 400 });
     // El promedio mezcla líneas base cuando hay altas: se acepta (PRD, «KPIs»).
     expect(s.latest!.mean).toBeCloseTo(-38 / 3, 9);
   });
 
   it("un lugar sin visitas no tiene resumen", () => {
-    const s = summarizeSite({ visits: [], differentials: [], trends: {} });
+    const s = summarizeSite({ visits: [], trends: {} });
     expect(s.latest).toBeNull();
     expect(s.baseDate).toBeNull();
     expect(s.lastDate).toBeNull();
     expect(s.visitsInAlert).toBe(0);
-    expect(s.worstDistortion).toBeNull();
-  });
-
-  it("si todos los pares se asientan igual, la peor distorsión es 1/∞", () => {
-    const s = summarizeSite({ ...history, differentials: [pair("a", "b", Infinity)] });
-    expect(s.worstDistortion!.distortionInverse).toBe(Infinity);
   });
 });
 

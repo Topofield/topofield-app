@@ -52,7 +52,7 @@ interface SiteFormProps {
 
 /**
  * Alta o edición de un lugar: nombre, descripción, tipo de estructura y los
- * siete umbrales de alerta.
+ * seis umbrales de alerta.
  *
  * Al cambiar el tipo de estructura se aplica el preset de umbrales en el
  * callback del evento, nunca en un efecto: `react-hooks/set-state-in-effect`
@@ -133,7 +133,6 @@ export function SiteForm({
       accumulatedCaution: thresholds.accumulatedCaution,
       accumulatedAlert: thresholds.accumulatedAlert,
       accumulatedAlarm: thresholds.accumulatedAlarm,
-      angularDistortionLimit: thresholds.angularDistortionLimit,
       notes: notes.trim() === "" ? null : notes.trim(),
     };
 

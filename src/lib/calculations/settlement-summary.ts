@@ -2,18 +2,17 @@
 // Funciones puras de TypeScript: sin React, sin hooks, sin Supabase.
 //
 // Todo sale del resultado de `computeHistory`: estos KPIs no calculan
-// asentamientos, los resumen. Dos del prototipo se sustituyen a propósito (PRD
-// de la Fase 18, «KPIs»): la «velocidad reciente» dividía el cambio del
+// asentamientos, los resumen. La «velocidad reciente» del prototipo se
+// sustituye a propósito (PRD de la Fase 18, «KPIs»): dividía el cambio del
 // promedio de cuatro visitas entre «un mes», que solo vale si las visitas son
-// semanales —el mismo error que la Fase 5 encontró en el marco teórico—, y el
-// «diferencial máximo» ignoraba la distancia entre puntos. Aquí se usan la
-// velocidad del motor (mes = 30.4375 d) y la peor distorsión angular.
+// semanales —el mismo error que la Fase 5 encontró en el marco teórico—. Aquí
+// se usa la velocidad del motor (mes = 30.4375 d). Su «diferencial máximo» no
+// está: los puntos de control no tienen posición (Fase 29).
 
 import { ALERT_LEVELS } from "@/types/settlement";
 import type {
   AlertLevel,
   ComputedReading,
-  DifferentialPair,
   SettlementHistory,
   VisitResult,
 } from "@/types/settlement";
@@ -54,11 +53,6 @@ export interface SiteSummary {
   lastDate: string | null;
   /** Visitas cuyo peor nivel es ≥ precaución. */
   visitsInAlert: number;
-  /**
-   * El par con la peor distorsión angular de la última visita (el menor X de
-   * 1/X). Puede ser `Infinity` si todos los pares se asientan igual.
-   */
-  worstDistortion: DifferentialPair | null;
 }
 
 /** El valor de mayor magnitud entre las lecturas que lo tienen. */
@@ -106,18 +100,12 @@ export function summarizeVisit(visit: VisitResult): VisitSummary {
 
 export function summarizeSite(history: SettlementHistory): SiteSummary {
   const visits = history.visits.map(summarizeVisit);
-  const worstDistortion = history.differentials.reduce<DifferentialPair | null>(
-    (worst, p) =>
-      worst == null || p.distortionInverse < worst.distortionInverse ? p : worst,
-    null,
-  );
   return {
     visits,
     latest: visits.at(-1) ?? null,
     baseDate: visits[0]?.date ?? null,
     lastDate: visits.at(-1)?.date ?? null,
     visitsInAlert: visits.filter((v) => v.worstAlert !== "normal").length,
-    worstDistortion,
   };
 }
 

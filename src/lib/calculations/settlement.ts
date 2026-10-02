@@ -1,10 +1,13 @@
 // Cálculos del control de asentamientos (PRD § 6.10 y § 6.11).
 // Funciones puras de TypeScript: sin React, sin hooks, sin Supabase.
 //
-// Las fórmulas de asentamiento parcial, acumulado y distorsión angular se
-// verificaron correctas contra los tres casos de estudio del marco teórico
-// (35 valores, todos exactos). La VELOCIDAD no: el documento la calcula mal
-// por no definir el mes. Ver docs/prds/04-asentamientos.md, hallazgo 2.
+// Las fórmulas de asentamiento parcial y acumulado se verificaron correctas
+// contra los tres casos de estudio del marco teórico. La VELOCIDAD no: el
+// documento la calcula mal por no definir el mes. Ver
+// docs/prds/04-asentamientos.md, hallazgo 2.
+//
+// Los puntos de control no tienen posición (Fase 29): sin coordenadas no hay
+// distancia entre puntos, ni diferenciales, ni distorsión angular.
 
 import {
   DAYS_PER_MONTH,
@@ -15,7 +18,6 @@ import type { PrecisionOrder } from "@/types/project";
 import type {
   AlertLevel,
   ComputedReading,
-  DifferentialPair,
   PointInput,
   SettlementHistory,
   SettlementPoint,
@@ -45,8 +47,6 @@ export function pointInputOf(
     SettlementPoint,
     | "id"
     | "code"
-    | "northing"
-    | "easting"
     | "initial_elevation"
     | "active_from"
     | "retired_on"
@@ -55,8 +55,6 @@ export function pointInputOf(
   return {
     id: row.id,
     code: row.code,
-    northing: row.northing === null ? null : Number(row.northing),
-    easting: row.easting === null ? null : Number(row.easting),
     initialElevation:
       row.initial_elevation === null ? null : Number(row.initial_elevation),
     activeFrom: row.active_from,
@@ -209,139 +207,6 @@ export function computeSettlements(
       worstAlert: "normal" as AlertLevel,
     };
   });
-}
-
-/**
- * Distancia horizontal entre dos puntos, en metros, desde sus coordenadas N/E.
- * Null si a alguno le faltan coordenadas.
- */
-export function horizontalDistance(
-  a: PointInput,
-  b: PointInput,
-): number | null {
-  if (
-    a.northing === null ||
-    a.easting === null ||
-    b.northing === null ||
-    b.easting === null
-  ) {
-    return null;
-  }
-  const dn = a.northing - b.northing;
-  const de = a.easting - b.easting;
-  return Math.sqrt(dn * dn + de * de);
-}
-
-/**
- * Asentamientos diferenciales y distorsión angular de cada par de puntos
- * (§ 6.10), para las lecturas de una visita.
- *
- * **Periodo común (Fase 11).** Si los dos puntos tienen la misma fecha de
- * línea base —todos los puntos originales—, el diferencial es la diferencia
- * de acumulados, como siempre. Si no —un BM dado de alta a mitad del
- * monitoreo—, restar acumulados compararía asentamientos de periodos
- * distintos. Entonces se mide desde `t0`, la más tardía de las dos líneas
- * base, con una sola fórmula para los dos puntos:
- *
- *   asentamiento desde t0 = cota − cota_en_t0
- *   cota_en_t0 = la línea base del punto si es de fecha t0,
- *                o su lectura en la visita de fecha t0 si no.
- *
- * `elevationAt(pointId, date)` da esa lectura. Si el punto no se midió en
- * `t0`, el par queda fuera, como un par sin coordenadas.
- *
- * La distorsión se expresa como `1/X`, donde `X = (L × 1000) / Δs_diferencial`.
- * Un X MENOR es más severo: 1/300 es peor que 1/500. De ahí que `exceedsLimit`
- * compare `distortionInverse < limit`.
- *
- * Dos exclusiones deliberadas, ambas para no fabricar un resultado que el dato
- * no respalda:
- * - Un par sin coordenadas en algún punto queda fuera. Calcularlo con L = 0
- *   daría X = 0, una distorsión de 1/0: una falsa alarma.
- * - Un par donde algún punto no tiene acumulado queda fuera: no hay nada que
- *   comparar.
- *
- * Un diferencial de 0 sí se incluye, con `distortionInverse = Infinity`: dos
- * puntos que se asientan igual no tienen distorsión entre sí, y eso es un
- * resultado legítimo, no un dato ausente.
- */
-export function computeDifferentials(
-  points: PointInput[],
-  readings: ComputedReading[],
-  angularDistortionLimit: number,
-  elevationAt: (pointId: string, date: string) => number | undefined,
-): DifferentialPair[] {
-  const byId = new Map(points.map((p) => [p.id, p]));
-
-  /** Asentamiento en mm desde `t0`, o null si no se midió en `t0`. */
-  const settlementSince = (r: ComputedReading, t0: string): number | null => {
-    const at =
-      r.baselineDate === t0 ? r.baselineElevation : elevationAt(r.pointId, t0);
-    return at === undefined ? null : (r.elevation - at) * 1000;
-  };
-
-  const pairs: DifferentialPair[] = [];
-
-  for (let i = 0; i < readings.length; i++) {
-    for (let j = i + 1; j < readings.length; j++) {
-      const readingA = readings[i];
-      const readingB = readings[j];
-      if (!readingA || !readingB) continue;
-
-      const idA = readingA.pointId;
-      const idB = readingB.pointId;
-      const pointA = byId.get(idA);
-      const pointB = byId.get(idB);
-      if (!pointA || !pointB) continue;
-
-      const accA = readingA.accumulatedSettlement;
-      const accB = readingB.accumulatedSettlement;
-      if (accA == null || accB == null) continue;
-
-      const distanceM = horizontalDistance(pointA, pointB);
-      if (distanceM === null) continue;
-
-      let settlementA: number;
-      let settlementB: number;
-      let sinceDate: string;
-      if (readingA.baselineDate === readingB.baselineDate) {
-        settlementA = accA;
-        settlementB = accB;
-        sinceDate = readingA.baselineDate;
-      } else {
-        const t0 =
-          readingA.baselineDate > readingB.baselineDate
-            ? readingA.baselineDate
-            : readingB.baselineDate;
-        const sinceA = settlementSince(readingA, t0);
-        const sinceB = settlementSince(readingB, t0);
-        if (sinceA === null || sinceB === null) continue;
-        settlementA = round(sinceA, 1);
-        settlementB = round(sinceB, 1);
-        sinceDate = t0;
-      }
-
-      const differentialMm = round(Math.abs(settlementA - settlementB), 1);
-      const distortionInverse =
-        differentialMm === 0
-          ? Number.POSITIVE_INFINITY
-          : (distanceM * 1000) / differentialMm;
-
-      pairs.push({
-        pointIdA: idA,
-        pointIdB: idB,
-        differentialMm,
-        settlementAMm: settlementA,
-        settlementBMm: settlementB,
-        sinceDate,
-        distanceM,
-        distortionInverse,
-        exceedsLimit: distortionInverse < angularDistortionLimit,
-      });
-    }
-  }
-
-  return pairs;
 }
 
 /**
@@ -533,8 +398,8 @@ export function detectTrendDeviations(
 }
 
 /**
- * Histórico completo de un lugar: visitas calculadas y clasificadas,
- * diferenciales de la **última** visita y tendencia por punto.
+ * Histórico completo de un lugar: visitas calculadas y clasificadas, y
+ * tendencia por punto.
  */
 export function computeHistory(
   points: PointInput[],
@@ -546,29 +411,8 @@ export function computeHistory(
     thresholds,
   );
 
-  // Cota de cada punto en cada fecha de visita, para los diferenciales sobre
-  // el periodo común. Las fechas de visita son únicas por lugar (la captura
-  // exige que cada una sea posterior a la anterior).
-  const elevations = new Map<string, number>();
-  for (const visit of computed) {
-    for (const r of visit.readings) {
-      elevations.set(`${r.pointId}|${visit.date}`, r.elevation);
-    }
-  }
-
-  const last = computed[computed.length - 1];
-  const differentials = last
-    ? computeDifferentials(
-        points,
-        last.readings,
-        thresholds.angularDistortionLimit,
-        (pointId, date) => elevations.get(`${pointId}|${date}`),
-      )
-    : [];
-
   return {
     visits: computed,
-    differentials,
     trends: computeTrends(computed),
   };
 }

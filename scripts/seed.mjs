@@ -1034,16 +1034,12 @@ const REFERENCE_POINTS = [
   {
     code: "BM-01",
     type: "bm",
-    north: 1000,
-    east: 1000,
     elevation: 2630.0,
     description: "BM principal del lote (esquina NW)",
   },
   {
     code: "BM-02",
     type: "bm",
-    north: 1050,
-    east: 1020,
     elevation: 2630.5,
     description: "BM secundario",
   },
@@ -1074,12 +1070,12 @@ const REFERENCE_POINTS = [
 // ----------------------------------------------------------------------------
 
 const SETTLEMENT_POINTS = [
-  { code: "P-01", location_description: "Esquina NW", northing: 2000.0, easting: 1000.0, initial_elevation: 100.0 },
-  { code: "P-02", location_description: "Esquina NE", northing: 2000.0, easting: 1030.0, initial_elevation: 100.0 },
-  { code: "P-03", location_description: "Centro", northing: 1985.0, easting: 1015.0, initial_elevation: 100.0 },
-  { code: "P-04", location_description: "Esquina SW", northing: 1970.0, easting: 1000.0, initial_elevation: 100.0 },
-  { code: "P-05", location_description: "Borde sur, intermedio", northing: 1970.0, easting: 1015.0, initial_elevation: 100.0 },
-  { code: "P-06", location_description: "Esquina SE (mayor carga)", northing: 1970.0, easting: 1030.0, initial_elevation: 100.0 },
+  { code: "P-01", location_description: "Esquina NW", initial_elevation: 100.0 },
+  { code: "P-02", location_description: "Esquina NE", initial_elevation: 100.0 },
+  { code: "P-03", location_description: "Centro", initial_elevation: 100.0 },
+  { code: "P-04", location_description: "Esquina SW", initial_elevation: 100.0 },
+  { code: "P-05", location_description: "Borde sur, intermedio", initial_elevation: 100.0 },
+  { code: "P-06", location_description: "Esquina SE (mayor carga)", initial_elevation: 100.0 },
   // Fase 11 — los dos casos del estado de los BMs, para las capturas y para
   // verificar contra la base que ninguna lectura cae fuera de vigencia.
   //
@@ -1090,8 +1086,6 @@ const SETTLEMENT_POINTS = [
   {
     code: "P-07",
     location_description: "Ampliación, fachada este",
-    northing: 1985.0,
-    easting: 1045.0,
     initial_elevation: null,
     active_from: "2025-03-15",
     seed_base_elevation: 100.25,
@@ -1153,10 +1147,10 @@ const VISIT_SPECS = [
 // Central" —que queda ABIERTO y editable para las capturas del editor de lugar
 // y de visita del manual— para no volver esas capturas de solo lectura.
 const NORTE_POINTS = [
-  { code: "N-01", location_description: "Esquina NW", northing: 3000.0, easting: 2000.0, initial_elevation: 100.0 },
-  { code: "N-02", location_description: "Esquina NE", northing: 3000.0, easting: 2020.0, initial_elevation: 100.0 },
-  { code: "N-03", location_description: "Esquina SW", northing: 2985.0, easting: 2000.0, initial_elevation: 100.0 },
-  { code: "N-04", location_description: "Esquina SE (mayor carga)", northing: 2985.0, easting: 2020.0, initial_elevation: 100.0 },
+  { code: "N-01", location_description: "Esquina NW", initial_elevation: 100.0 },
+  { code: "N-02", location_description: "Esquina NE", initial_elevation: 100.0 },
+  { code: "N-03", location_description: "Esquina SW", initial_elevation: 100.0 },
+  { code: "N-04", location_description: "Esquina SE (mayor carga)", initial_elevation: 100.0 },
 ];
 
 const NORTE_PARTIALS_MM = {
@@ -1205,9 +1199,9 @@ function cotaEn(partialsMm, point, visitIndex) {
  */
 async function insertSettlementSite(projectId, userId, cfg) {
   // Los umbrales no se envían: los DEFAULT de la tabla `sites` son los mismos
-  // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75,
-  // distorsión 1/500), así que el lugar queda coherente con el preset del
-  // motor sin duplicar las constantes aquí.
+  // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75),
+  // así que el lugar queda coherente con el preset del motor sin duplicar las
+  // constantes aquí.
   const siteId = await createSite(projectId, {
     name: cfg.name,
     description: cfg.description,
@@ -1234,8 +1228,6 @@ async function insertSettlementSite(projectId, userId, cfg) {
   const points = cfg.points.map((p) => ({
     id: pointIdByCode.get(p.code),
     code: p.code,
-    northing: p.northing,
-    easting: p.easting,
     initialElevation: p.initial_elevation,
     activeFrom: p.active_from ?? null,
     // La baja se aplica al final (ver `cfg.retirements`); para el motor no
@@ -1348,8 +1340,6 @@ async function insertBookSite(projectId, userId, cfg) {
         site_id: siteId,
         code: p.code,
         location_description: p.location_description,
-        northing: p.northing,
-        easting: p.easting,
         initial_elevation: p.c0,
       })),
     )
@@ -1359,8 +1349,6 @@ async function insertBookSite(projectId, userId, cfg) {
   const points = cfg.points.map((p) => ({
     id: idByCode.get(p.code),
     code: p.code,
-    northing: p.northing,
-    easting: p.easting,
     initialElevation: p.c0,
     activeFrom: null,
     retiredOn: null,

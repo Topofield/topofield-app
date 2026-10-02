@@ -1351,12 +1351,6 @@ export default function ManualPage() {
         </p>
 
         <p>
-          También define el <strong>límite de distorsión angular</strong>,
-          expresado como <code>1/X</code>: un X menor es más severo (1/300 es
-          peor que 1/500).
-        </p>
-
-        <p>
           Al abrir un lugar desde el proyecto se ve su pantalla (4.4), con tres
           pestañas: <strong>Panel</strong>, con el historial del monitoreo
           (7.4); <strong>Puntos y lugar</strong>, con los datos, los umbrales y
@@ -1373,11 +1367,16 @@ export default function ManualPage() {
 
         <p>
           Ya creado el lugar, en su pestaña <strong>Puntos y lugar</strong>{" "}
-          agregue sus <strong>puntos de control</strong>:
-          código, ubicación, coordenadas Norte/Este (opcionales, pero
-          necesarias para calcular distorsión angular entre puntos) y la{" "}
-          <strong>cota inicial (C0)</strong> — la referencia contra la que se
-          mide el asentamiento acumulado de todas las visitas futuras.
+          agregue sus <strong>puntos de control</strong>: código, ubicación
+          y la <strong>cota inicial (C0)</strong> — la referencia contra la que
+          se mide el asentamiento acumulado de todas las visitas futuras.
+        </p>
+
+        <p>
+          Los puntos no llevan coordenadas: el módulo mide cuánto baja cada
+          punto, no dónde está, así que no calcula distancias entre puntos,
+          asentamientos diferenciales ni distorsión angular. Un lugar cerrado
+          antes de este cambio tampoco los muestra ya.
         </p>
 
         <p>
@@ -1388,10 +1387,9 @@ export default function ManualPage() {
 
         <p>
           Cuando un punto ya se midió en una visita <strong>cerrada</strong>,
-          su C0 y sus coordenadas quedan fijas: los asentamientos con que se
-          cerró esa visita dependen de ellas. El diálogo{" "}
-          <strong>Editar</strong> las muestra bloqueadas; el código y la
-          ubicación se siguen pudiendo cambiar.
+          su C0 queda fija: los asentamientos con que se cerró esa visita
+          dependen de ella. El diálogo <strong>Editar</strong> la muestra
+          bloqueada; el código y la ubicación se siguen pudiendo cambiar.
         </p>
 
         <p>
@@ -1684,7 +1682,7 @@ export default function ManualPage() {
         </p>
 
         <p>
-          <strong>Indicadores.</strong> Seis, sobre la última visita y el
+          <strong>Indicadores.</strong> Cinco, sobre la última visita y el
           histórico:
         </p>
 
@@ -1782,24 +1780,6 @@ export default function ManualPage() {
           tener puntos en alerta o alarma. Un asentamiento alarmante es
           exactamente el hallazgo que este módulo existe para documentar;
           bloquearlo ocultaría el dato que más importa.
-        </p>
-
-        <p>
-          <strong>Diferenciales y distorsión angular.</strong> Compara cada
-          par de puntos: cuánto difieren sus asentamientos acumulados y qué
-          distorsión angular implica esa diferencia dada la distancia entre
-          ellos, como <code>1/X</code>. Un par sin coordenadas capturadas
-          queda fuera de esta tabla en vez de calcularse con una distancia de
-          cero.
-        </p>
-
-        <p>
-          Si uno de los dos puntos se dio de alta a mitad del monitoreo, los
-          dos asentamientos se miden <strong>desde la fecha de ese alta</strong>{" "}
-          —el periodo que ambos comparten— y la fila lo indica debajo del par
-          («desde el 15 de marzo de 2025»). Comparar un punto que lleva meses
-          bajando con uno recién instalado daría una distorsión que no
-          significa nada.
         </p>
 
         <h3 id="vista-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">

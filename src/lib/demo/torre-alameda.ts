@@ -14,8 +14,6 @@ export interface AmarreAlameda {
   code: string;
   /** Tipo en el catálogo de puntos de referencia del proyecto. */
   type: "bm";
-  north: number;
-  east: number;
   elevation: number;
   description: string;
 }
@@ -23,8 +21,6 @@ export interface AmarreAlameda {
 export interface PuntoAlameda {
   code: string;
   locationDescription: string;
-  northing: number;
-  easting: number;
   /** Cota inicial C0. */
   c0: number;
   /** Asentamiento final de la serie, en mm (negativo = baja). */
@@ -42,19 +38,19 @@ export interface VisitaAlameda {
 }
 
 export const ALAMEDA_AMARRES: [AmarreAlameda, AmarreAlameda] = [
-  { code: "BM-1", type: "bm", north: 5000, east: 5000, elevation: 100.0, description: "BM de amarre de Torre Alameda (andén norte)" },
-  { code: "BM-2", type: "bm", north: 5040, east: 5060, elevation: 100.845, description: "BM de amarre alterno de Torre Alameda (portería)" },
+  { code: "BM-1", type: "bm", elevation: 100.0, description: "BM de amarre de Torre Alameda (andén norte)" },
+  { code: "BM-2", type: "bm", elevation: 100.845, description: "BM de amarre alterno de Torre Alameda (portería)" },
 ];
 
 export const ALAMEDA_POINTS: PuntoAlameda[] = [
-  { code: "TA-01", locationDescription: "Columna A1", northing: 5100.0, easting: 5100.0, c0: 100.612, finalMm: -18 },
-  { code: "TA-02", locationDescription: "Columna A2", northing: 5100.0, easting: 5118.0, c0: 100.587, finalMm: -22 },
-  { code: "TA-03", locationDescription: "Columna A3", northing: 5100.0, easting: 5136.0, c0: 100.534, finalMm: -27 },
-  { code: "TA-04", locationDescription: "Columna A4", northing: 5100.0, easting: 5154.0, c0: 100.498, finalMm: -19 },
-  { code: "TA-05", locationDescription: "Columna B1", northing: 5082.0, easting: 5100.0, c0: 100.455, finalMm: -15 },
-  { code: "TA-06", locationDescription: "Columna B2", northing: 5082.0, easting: 5118.0, c0: 100.521, finalMm: -24 },
-  { code: "TA-07", locationDescription: "Columna B3 (núcleo)", northing: 5082.0, easting: 5136.0, c0: 100.566, finalMm: -31 },
-  { code: "TA-08", locationDescription: "Columna B4", northing: 5082.0, easting: 5154.0, c0: 100.603, finalMm: -20 },
+  { code: "TA-01", locationDescription: "Columna A1", c0: 100.612, finalMm: -18 },
+  { code: "TA-02", locationDescription: "Columna A2", c0: 100.587, finalMm: -22 },
+  { code: "TA-03", locationDescription: "Columna A3", c0: 100.534, finalMm: -27 },
+  { code: "TA-04", locationDescription: "Columna A4", c0: 100.498, finalMm: -19 },
+  { code: "TA-05", locationDescription: "Columna B1", c0: 100.455, finalMm: -15 },
+  { code: "TA-06", locationDescription: "Columna B2", c0: 100.521, finalMm: -24 },
+  { code: "TA-07", locationDescription: "Columna B3 (núcleo)", c0: 100.566, finalMm: -31 },
+  { code: "TA-08", locationDescription: "Columna B4", c0: 100.603, finalMm: -20 },
 ];
 
 /** Días desde la lectura base: quincenal al principio, luego mensual. */

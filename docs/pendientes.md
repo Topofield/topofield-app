@@ -50,9 +50,10 @@ eligió corregir primero:
 
 Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
 control de asentamientos **dejen de tener posición**: sin coordenadas ni
-distorsión angular. Es A3, en «Control de asentamientos». Va como **Fase 29**,
-después de cerrar la 28 (decisión del usuario), y retira la distorsión de CR2
-(D-9).
+distorsión angular. Es A3, en «Control de asentamientos», y la **Fase 29**
+([`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md)),
+**cerrada** el 2026-10-01, después de la 28 (decisión del usuario). Retiró la
+distorsión de CR2 (D-9).
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -327,8 +328,8 @@ retirado a media serie, qué muestra la gráfica, y si el informe lo lista.
 
 ### A3 · Puntos de control sin posición
 
-> **Fase 29**, después de cerrar la 28 (decisión del usuario, 2026-10-01). Su
-> PRD se redacta al abrirla.
+> **Resuelta en la Fase 29** ([`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md)),
+> cerrada el 2026-10-01. Se conserva el texto de la petición como registro.
 
 Pedida el 2026-10-01, al revisar el proceso de demo de asentamientos:
 «Necesito quitar todo lo que hace referencia a que la espacialidad de los
@@ -360,6 +361,10 @@ hay distorsión angular.
   el Excel o el informe del módulo, ni la libreta de la visita, ni la
   nivelación de la demo. Esas coordenadas solo las usan las poligonales: el
   amarre, el azimut y la georreferenciación.
+- **BM-01 y BM-02 del seed también** (petición del usuario). Están en el
+  catálogo de «Lote catastral» y ningún proceso del seed los usa como amarre;
+  el selector del BM de partida de una nivelación toma de ellos el código y la
+  cota. GPS-1 conserva las suyas: es un punto GPS.
 
 **Lo que se quita.** Es el inventario de la petición; el PRD lo verifica.
 
@@ -370,7 +375,7 @@ hay distorsión angular.
 | Captura | Norte y Este en el catálogo de puntos, con su regla «las dos o ninguna»; el límite 1/X en los umbrales del lugar; la copia de los tres al duplicar un lugar; la comparación de coordenadas en `validators/settlement.ts` y `point-actions.ts` |
 | Panel | El KPI «Distorsión angular» y la tarjeta «Asentamientos diferenciales y distorsión angular» |
 | Excel | Las columnas Norte y Este, la hoja de diferenciales, la fila del límite y «Pares que superan la distorsión» |
-| Demo y seed | Las coordenadas de los puntos de Torre Alameda y de los lugares del seed, y las de BM-1 y BM-2 (`north` y `east` de `AmarreAlameda` en `torre-alameda.ts` y su copia en `fixtures.ts`) |
+| Demo y seed | Las coordenadas de los puntos de Torre Alameda y de los lugares del seed, las de BM-1 y BM-2 (`north` y `east` de `AmarreAlameda` en `torre-alameda.ts` y su copia en `fixtures.ts`), y las de BM-01 y BM-02 (`REFERENCE_POINTS` en `scripts/seed.mjs`) |
 | Documentación | El manual en sus dos copias y sus capturas; PRD principal § 3, § 4 y § 6.10; doc técnica |
 
 **Lo que no cambia:** el informe consolidado, que no muestra ni coordenadas ni

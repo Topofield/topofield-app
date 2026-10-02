@@ -16,7 +16,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Supabase local: `npx supabase start`
 - Supabase migrar (dev local): `npx supabase db reset` (recrea el volumen y reaplica todas las migraciones)
 - Datos de prueba: `npx supabase db reset && npm run seed` (el seed no es idempotente; el «Proyecto de ejemplo» lo crea la app en el primer inicio de sesión)
-- Supabase migrar (cloud, producción): `npx supabase db push` (aplica solo las migraciones nuevas). Va **antes** del merge a `main` —Vercel despliega al instante— y solo con el visto bueno del usuario.
+- Supabase migrar (cloud, producción): `npx supabase db push` (aplica solo las migraciones nuevas). Va **antes** del merge a `main` —Vercel despliega al instante— y solo con el visto bueno del usuario. Una migración que **borra** columnas va **después** del merge: el código viejo no funciona sin ellas (doc técnica § 13).
 - Supabase types: `npx supabase gen types typescript --local 2>/dev/null > src/types/database.ts`. Si el formato generado difiere del commiteado, añadir a mano solo lo nuevo.
 
 ## Architecture
@@ -62,7 +62,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - No usar shadcn/ui ni ninguna librería de componentes. El sistema de diseño está en `src/components/design-system/` y se construye sobre Tailwind puro.
 - Las coordenadas van a 3 decimales (0.000), las cotas a 4 decimales (0.0000), los ángulos en DMS.
 - Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado. Única excepción: la **posición** de una poligonal (coordenadas, proyecciones, azimuts, arranque y llegada) se puede reescribir al georreferenciarla (Fase 15); los triggers admiten solo esas columnas.
-- Lo que alimenta un resultado cerrado también queda fijo: la C0 y las coordenadas de un punto con lecturas en una visita cerrada no cambian (trigger en `settlement_points`), y un informe emitido no admite UPDATE: guarda su portada en `reports.cover` y solo se elimina y se regenera.
+- Lo que alimenta un resultado cerrado también queda fijo: la C0 de un punto con lecturas en una visita cerrada no cambia (trigger en `settlement_points`), y un informe emitido no admite UPDATE: guarda su portada en `reports.cover` y solo se elimina y se regenera.
 - Los guardados que escriben varias tablas van por una función de Postgres (`supabase.rpc`: `save_polygonal_process`, `save_leveling_process`, `save_visit`, `georeference_polygonal`) para que sean atómicos. Son `SECURITY INVOKER`, con columnas explícitas, y solo escriben: el cálculo sigue en TypeScript, en la Server Action.
 - El catálogo de equipos (`equipment`) es una **plantilla**: elegir un equipo copia sus datos en las columnas `equipment_*` y de precisión del proceso o de la visita. Ningún proceso lo referencia, así que editar o borrar un equipo nunca cambia lo ya medido ni informado.
 - Cada tabla tiene Row Level Security (RLS) en Supabase. El user solo ve sus propios proyectos.
@@ -71,7 +71,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Consultar `PRD-TopoField.md` por sección según la tarea: `§3` modelo de datos y SQL · `§4.6` cierre y bloqueo · `§5` reglas de validación (`§5.4` tolerancias por orden) · `§6` algoritmos de cálculo · `§9` orden de implementación.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 28, todas cerradas.
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 29, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.
@@ -101,4 +101,5 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Firma digital criptográfica (solo cierre con timestamp)
 - Múltiples roles de usuario (solo hay 1 rol)
 - Visualización geoespacial en mapa
+- Posición de los puntos de control de asentamientos: ni coordenadas, ni distancias entre puntos, ni distorsión angular (Fase 29)
 - `supabase/` migrations se editan manualmente, no autogenerar

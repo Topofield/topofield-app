@@ -847,9 +847,6 @@ el tipo aplica un juego de **umbrales de alerta** típico para ese tipo de
 estructura — de velocidad y de asentamiento acumulado — que puede editar a
 continuación si el caso lo requiere.
 
-También define el **límite de distorsión angular**, expresado como `1/X`: un
-X menor es más severo (1/300 es peor que 1/500).
-
 Al abrir un lugar desde el proyecto se ve su pantalla
 ([§ 4.4](#44-la-pantalla-de-un-proceso)), con tres pestañas: **Panel**, con
 el historial del monitoreo (§ 7.4); **Puntos y lugar**, con los datos, los
@@ -861,19 +858,22 @@ umbrales y el catálogo de puntos (§ 7.2); e **Informe**. En la cabecera,
 ![Pestaña Puntos y lugar, con el catálogo de puntos](../../public/manual/14-editor-lugar.png)
 
 Ya creado el lugar, en su pestaña **Puntos y lugar** agregue sus **puntos de
-control**: código, ubicación,
-coordenadas Norte/Este (opcionales, pero necesarias para calcular distorsión
-angular entre puntos) y la **cota inicial (C0)** — la referencia contra la
-que se mide el asentamiento acumulado de todas las visitas futuras.
+control**: código, ubicación y la **cota inicial (C0)** — la referencia
+contra la que se mide el asentamiento acumulado de todas las visitas futuras.
+
+Los puntos no llevan coordenadas: el módulo mide cuánto baja cada punto, no
+dónde está, así que no calcula distancias entre puntos, asentamientos
+diferenciales ni distorsión angular. Un lugar cerrado antes de este cambio
+tampoco los muestra ya.
 
 La C0 es opcional. Si la deja vacía, la **línea base del punto es su primera
 lectura**: esa lectura queda con acumulado 0 y las siguientes se miden contra
 ella.
 
-Cuando un punto ya se midió en una visita **cerrada**, su C0 y sus coordenadas
-quedan fijas: los asentamientos con que se cerró esa visita dependen de ellas.
-El diálogo **Editar** las muestra bloqueadas; el código y la ubicación se
-siguen pudiendo cambiar.
+Cuando un punto ya se midió en una visita **cerrada**, su C0 queda fija: los
+asentamientos con que se cerró esa visita dependen de ella. El diálogo
+**Editar** la muestra bloqueada; el código y la ubicación se siguen pudiendo
+cambiar.
 
 **Renombrar un punto** cambia también su código en la libreta de las visitas
 **abiertas** (§ 7.3), para que su cota siga saliendo de su fila. Las visitas
@@ -1041,13 +1041,12 @@ historial completo. La cabecera dice cuántos puntos de control tiene y la
 fecha de la lectura base; arriba del panel, la leyenda de los tres umbrales de
 acumulado que dibujan las gráficas.
 
-**Indicadores.** Seis, sobre la última visita y el histórico:
+**Indicadores.** Cinco, sobre la última visita y el histórico:
 
 | Indicador | Qué muestra |
 |---|---|
 | Asentamiento máximo | El acumulado de mayor magnitud en la última visita, con su punto. Un levantamiento también cuenta |
 | Promedio actual | La media del acumulado de los puntos medidos en la última visita |
-| Distorsión angular | El par con la peor distorsión en la última visita, y si supera el límite del lugar |
 | Velocidad máxima | La de mayor magnitud en la última visita, en mm/mes, con su punto |
 | Visitas en alerta | Cuántas visitas tienen algún punto en precaución o más |
 | Visitas | El total, con la fecha de la lectura base y la de la última |
@@ -1104,18 +1103,6 @@ diagnóstico, no un control de captura: la aplicación **nunca** impide guardar
 una visita ni cerrarla por tener puntos en alerta o alarma. Un asentamiento
 alarmante es exactamente el hallazgo que este módulo existe para documentar;
 bloquearlo ocultaría el dato que más importa.
-
-**Diferenciales y distorsión angular.** Compara cada par de puntos: cuánto
-difieren sus asentamientos acumulados y qué **distorsión angular** implica
-esa diferencia dada la distancia entre ellos, como `1/X`. Un par sin
-coordenadas capturadas queda fuera de esta tabla en vez de calcularse con una
-distancia de cero.
-
-Si uno de los dos puntos se dio de alta a mitad del monitoreo, los dos
-asentamientos se miden **desde la fecha de ese alta** —el periodo que ambos
-comparten— y la fila lo indica debajo del par («desde el 15 de marzo de
-2025»). Comparar un punto que lleva meses bajando con uno recién instalado
-daría una distorsión que no significa nada.
 
 ### 7.5 La vista de una visita
 

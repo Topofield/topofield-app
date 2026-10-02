@@ -119,13 +119,13 @@ export const CAPTURAS = {
     src: "/manual/14-editor-lugar.png",
     alt: "Pestaña Puntos y lugar: datos generales, umbrales y catálogo de puntos de control.",
     width: 2560,
-    height: 3302,
+    height: 3062,
   },
   panelAsentamientos: {
     src: "/manual/15-panel-asentamientos.png",
-    alt: "Panel del lugar Torre Alameda: los seis indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
+    alt: "Panel del lugar Torre Alameda: los cinco indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
     width: 2560,
-    height: 5438,
+    height: 5436,
   },
   nuevaVisita: {
     src: "/manual/25-nueva-visita.png",
@@ -456,11 +456,6 @@ export const INDICADORES_LUGAR = [
   {
     indicador: "Promedio actual",
     muestra: "La media del acumulado de los puntos medidos en la última visita",
-  },
-  {
-    indicador: "Distorsión angular",
-    muestra:
-      "El par con la peor distorsión en la última visita, y si supera el límite del lugar",
   },
   {
     indicador: "Velocidad máxima",

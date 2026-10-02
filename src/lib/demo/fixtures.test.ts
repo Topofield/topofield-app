@@ -134,8 +134,6 @@ describe("asentamientos de la demo — Torre Alameda", () => {
   const points: PointInput[] = f.points.map((p) => ({
     id: p.code,
     code: p.code,
-    northing: p.northing,
-    easting: p.easting,
     initialElevation: p.c0,
     activeFrom: null,
     retiredOn: null,

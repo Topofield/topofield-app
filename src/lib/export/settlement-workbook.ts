@@ -48,8 +48,6 @@ export interface PointRow {
   id: string;
   code: string;
   location_description: string | null;
-  northing: number | string | null;
-  easting: number | string | null;
   initial_elevation: number | string | null;
   /** Vigencia del punto (Fase 11): fecha de alta, de baja y motivo. */
   active_from: string | null;
@@ -121,11 +119,6 @@ function num(value: number | string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Formatea la distorsión como `1/X`, con `1/∞` cuando no hay diferencial. */
-function distortion(inverse: number): string {
-  return Number.isFinite(inverse) ? `1/${Math.round(inverse)}` : "1/∞";
-}
-
 /** Milímetros a un decimal con signo explícito: `+1.2`, `-0.8`, `0.0`. */
 function signedMm(value: number): string {
   const r = Math.round(value * 10) / 10;
@@ -152,8 +145,6 @@ function sheetRawData(
   setHeaders(s, 4, [
     "Código",
     "Ubicación",
-    "Norte (m)",
-    "Este (m)",
     "Cota C0 (m)",
     "Alta",
     "Baja",
@@ -166,16 +157,13 @@ function sheetRawData(
       [
         p.code,
         p.location_description,
-        num(p.northing),
-        num(p.easting),
         num(p.initial_elevation),
         p.active_from,
         p.retired_on,
         p.retirement_reason,
       ],
       [
-        null, null, DECIMALS.coordinate, DECIMALS.coordinate, DECIMALS.elevation,
-        null, null, null,
+        null, null, DECIMALS.elevation, null, null, null,
       ],
     );
   });
@@ -317,37 +305,6 @@ function sheetCalculations(
       row += 1;
     }
   }
-
-  // Diferenciales de la última visita: es donde el § 6.10 los evalúa.
-  row += 1;
-  writeSection(s, row, "Asentamientos diferenciales (última visita)");
-  row += 1;
-  setHeaders(s, row, [
-    "Punto A",
-    "Punto B",
-    "Diferencial (mm)",
-    "Distancia (m)",
-    "Distorsión",
-    "¿Supera el límite?",
-  ]);
-  row += 1;
-
-  for (const pair of history.differentials) {
-    writeRow(
-      s,
-      row,
-      [
-        codeById.get(pair.pointIdA) ?? pair.pointIdA,
-        codeById.get(pair.pointIdB) ?? pair.pointIdB,
-        pair.differentialMm,
-        pair.distanceM,
-        distortion(pair.distortionInverse),
-        pair.exceedsLimit ? "Sí" : "No",
-      ],
-      [null, null, 1, DECIMALS.coordinate, null, null],
-    );
-    row += 1;
-  }
 }
 
 function sheetSummary(
@@ -431,7 +388,6 @@ function sheetSummary(
     ["Acumulado — precaución (mm)", thresholds.accumulatedCaution],
     ["Acumulado — alerta (mm)", thresholds.accumulatedAlert],
     ["Acumulado — alarma (mm)", thresholds.accumulatedAlarm],
-    ["Límite de distorsión angular", `1/${thresholds.angularDistortionLimit}`],
   ]);
 
   row += 1;
@@ -442,10 +398,6 @@ function sheetSummary(
       worst ? ALERT_LEVEL_LABELS[worst as AlertLevel] : null,
     ],
     ["Puntos con tendencia creciente", acelerando],
-    [
-      "Pares que superan la distorsión",
-      history.differentials.filter((d) => d.exceedsLimit).length,
-    ],
   ]);
 
   row += 1;

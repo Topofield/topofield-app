@@ -425,7 +425,6 @@ CREATE TABLE sites (
   accumulated_caution DECIMAL(8,2) NOT NULL DEFAULT 25.0, -- mm
   accumulated_alert   DECIMAL(8,2) NOT NULL DEFAULT 50.0,
   accumulated_alarm   DECIMAL(8,2) NOT NULL DEFAULT 75.0,
-  angular_distortion_limit INT NOT NULL DEFAULT 500,      -- el X de 1/X
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed')),
   closed_at TIMESTAMPTZ,
   closed_by TEXT,
@@ -442,9 +441,10 @@ Dos correcciones respecto a lo que definía `settlement_systems`:
   es 25/50/75. Un sistema creado con los defaults clasificaba un edificio con
   criterio de presa. Ahora el default es el de edificio y el preset real lo fija
   el `structure_type`.
-- **`angular_distortion_limit` es `INT`, no `TEXT`.** Guardarlo como `'1/500'`
-  obligaba a parsear una cadena en cada comparación numérica. Se guarda el
-  denominador y se formatea al mostrar.
+- **`angular_distortion_limit` era `INT`, no `TEXT`.** Guardarlo como `'1/500'`
+  obligaba a parsear una cadena en cada comparación numérica. La Fase 29 quitó
+  la columna: los puntos de control no tienen posición (ver
+  `settlement_points`).
 
 #### `settlement_points`
 ```sql
@@ -453,17 +453,17 @@ CREATE TABLE settlement_points (
   site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   location_description TEXT NOT NULL,       -- ej: "Columna A1 — Esquina NW"
-  northing DECIMAL(12,3),                   -- para la distorsión angular
-  easting  DECIMAL(12,3),
   initial_elevation DECIMAL(10,4),          -- C0
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (site_id, code)
 );
 ```
 
-`northing`/`easting` se añadieron en la Fase 5: la distorsión angular del `§6.10`
-necesita la distancia horizontal entre puntos, y sin coordenadas habría que
-capturarla par por par.
+**Quitado en la Fase 29.** `northing`/`easting` se añadieron en la Fase 5 para la
+distorsión angular del `§6.10`, que necesita la distancia horizontal entre
+puntos. El usuario decidió que los puntos de control no tienen posición: sin
+coordenadas no hay distancia, ni asentamientos diferenciales, ni distorsión
+angular. La migración borró las dos columnas.
 
 #### `settlement_visits`
 
@@ -691,8 +691,9 @@ la configuración vive en el **lugar** (`sites`), no en un «sistema».
 
 **Configuración del lugar (una vez):**
 - Nombre, descripción, tipo de estructura (aplica el preset de umbrales)
-- Catálogo de puntos: tabla editable (código, ubicación, coordenadas N/E, cota C0)
-- Umbrales de alerta: editables (velocidad, acumulado, distorsión angular)
+- Catálogo de puntos: tabla editable (código, ubicación, cota C0). Sin
+  coordenadas desde la Fase 29
+- Umbrales de alerta: editables (velocidad y acumulado)
 
 **Gestión de visitas:**
 - Lista cronológica de visitas
@@ -711,7 +712,6 @@ la configuración vive en el **lugar** (`sites`), no en un «sistema».
 
 **Panel de análisis (lateral en desktop, debajo en mobile):**
 - Gráfica: asentamiento acumulado vs tiempo (multi-punto seleccionable)
-- Tabla de asentamientos diferenciales con distorsión angular
 - Indicador semáforo por punto e indicador de tendencia (aceleración)
 
 ### 4.6 Cierre y Bloqueo de Procesos
@@ -837,7 +837,6 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Velocidad > umbral alerta | Semáforo naranja |
 | Velocidad > umbral alarma | Semáforo rojo |
 | Asentamiento acumulado > umbral | Semáforo según nivel |
-| Distorsión angular > límite configurado | Alerta en tabla de diferenciales |
 | Tendencia de velocidad creciente (aceleración) | Indicador de advertencia |
 | Lectura fuera de tendencia (Fase 12) | Aviso al capturar, al cerrar y en el panel; no bloquea |
 
@@ -1155,17 +1154,12 @@ Asentamiento acumulado:
 Velocidad:
   Δt_meses = (fecha_n - fecha_(n-1)) en días / 30.4375
   V = Δs_parcial / Δt_meses   (mm/mes)
-
-Asentamiento diferencial entre puntos i y j:
-  Δs_diferencial = |Δs_acumulado_i - Δs_acumulado_j|
-  sobre el periodo común: si las líneas base son de fechas distintas, desde la
-  más reciente de las dos (Fase 11)
-
-Distorsión angular:
-  L = √((N_i-N_j)² + (E_i-E_j)²)   (distancia horizontal, en m)
-  β_inverso = (L × 1000) / Δs_diferencial
-  Se expresa como 1/β_inverso (ej: 1/2,500)
 ```
+
+**Quitado en la Fase 29 (2026-10-01).** El asentamiento diferencial entre dos
+puntos y la distorsión angular, `1/((L × 1000) / Δs_diferencial)`: los puntos
+de control no tienen posición (decisión del usuario), así que no hay distancia
+L entre ellos.
 
 **Precisado en la Fase 5 (2026-08-25).** Un mes son **30.4375 días**
 (`365.25/12`), fijado como constante en `tolerances.ts`. Antes esta sección decía
@@ -1179,19 +1173,15 @@ Casos frontera que la fórmula no dice y el motor debe respetar:
 
 - `Δt = 0` (dos visitas el mismo día) → velocidad `null`, nunca `Infinity` ni
   `NaN`.
-- `Δs_diferencial = 0` → distorsión `1/∞`, que es **normal**: dos puntos que se
-  asientan igual no tienen distorsión entre sí.
-- Un par con coordenadas ausentes queda **fuera** de la tabla de diferenciales;
-  calcularlo con L = 0 daría β_inverso = 0, una distorsión de 1/0: una falsa
-  alarma (precisado en la Fase 26; antes decía «aparentaría normalidad»).
 - Desde la Fase 26 una visita no comparte fecha con otra del mismo lugar, así
   que Δt = 0 ya no se da con datos guardados; el motor lo sigue tolerando.
 - El signo se conserva: un valor positivo es un levantamiento y se muestra como
   tal, no en valor absoluto.
 
-Las fórmulas de asentamiento parcial, acumulado y distorsión angular **sí se
-verificaron correctas** contra los tres casos de estudio del marco teórico
-(35 valores, todos exactos).
+Las fórmulas de asentamiento parcial y acumulado **sí se verificaron
+correctas** contra los tres casos de estudio del marco teórico. La
+verificación, de 35 valores todos exactos, incluyó también la distorsión
+angular que la Fase 29 quitó.
 
 ### 6.11 Clasificación de Alertas en Asentamientos
 

@@ -4,10 +4,8 @@ import {
   EmptyState,
   StatusIndicator,
 } from "@/components/design-system";
-import { DifferentialsTable } from "@/components/settlement/differentials-table";
 import {
   ALERT_LEVEL_LABELS,
-  type DifferentialPair,
   type PointInput,
   type Trend,
   type VisitResult,
@@ -22,7 +20,6 @@ interface AnalysisPanelProps {
   points: PointInput[];
   /** Visitas ya calculadas y clasificadas, en orden cronológico. */
   visits: VisitResult[];
-  differentials: DifferentialPair[];
   /** Tendencia por punto; un punto sin entrada aún no tiene 3 visitas. */
   trends: Record<string, Trend>;
   /**
@@ -40,20 +37,19 @@ function formatMm(value: number | null): string {
 }
 
 /**
- * Panel de análisis de un lugar: semáforo por punto de la última visita,
- * tendencia por punto y tabla de asentamientos diferenciales. La gráfica de
+ * Panel de análisis de un lugar: semáforo por punto de la última visita y
+ * tendencia por punto. La tabla de asentamientos diferenciales salió en la
+ * Fase 29, con las coordenadas de los puntos. La gráfica de
  * evolución por punto salió de aquí en la Fase 18: la sustituye la dispersión
  * en el tiempo de `charts/points-scatter.tsx`.
  */
 export function AnalysisPanel({
   points,
   visits,
-  differentials,
   trends,
   lastVisitTrendWarnings,
 }: AnalysisPanelProps) {
   const lastVisit = visits.at(-1) ?? null;
-  const hasReadings = visits.some((v) => v.readings.length > 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,16 +120,6 @@ export function AnalysisPanel({
           </div>
         )}
       </Card>
-
-      <Card title="Asentamientos diferenciales y distorsión angular">
-        <DifferentialsTable
-          points={points}
-          differentials={differentials}
-          hasReadings={hasReadings}
-          siteBaselineDate={visits[0]?.date ?? null}
-        />
-      </Card>
-
     </div>
   );
 }

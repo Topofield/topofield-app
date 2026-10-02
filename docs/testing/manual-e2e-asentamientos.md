@@ -4,7 +4,8 @@ Recorrido paso a paso para verificar el módulo de control de asentamientos
 contra los datos precargados por la seed. Cubre los criterios del PRD-de-fase 5
 usando la UI tal como la usaría un usuario, y los de las fases 11, 12 y 18
 (libreta de nivelación y panel del lugar, pasos 11 a 20), la 22 (la pantalla
-del lugar con sus pestañas) y la 23 (C0 y coordenadas fijas, paso 3 bis).
+del lugar con sus pestañas), la 23 (C0 fija, paso 3 bis) y la 29 (los
+puntos sin posición: pasos 3, 3 bis y 11).
 
 ## Preparación
 
@@ -73,26 +74,27 @@ referencia: sirve para el arranque en frío (paso 19).
   **Informe**.
 - Pasar a **Puntos y lugar**.
 - ✓ **Datos del lugar** muestra tipo de estructura **Edificio** y sus umbrales
-  (velocidad 2 / 5 / 10 mm/mes, acumulado 25 / 50 / 75 mm, distorsión 1/500),
+  (velocidad 2 / 5 / 10 mm/mes y acumulado 25 / 50 / 75 mm), sin límite de
+  distorsión angular,
   con **Guardar** y **Cerrar lugar** en la barra del pie.
-- ✓ El catálogo lista **7 puntos**. `P-01` a `P-06` tienen su descripción de
-  ubicación, norte, este y cota inicial (100.0000).
+- ✓ El catálogo lista **7 puntos**, con las columnas Código, Ubicación, Cota
+  C0 y Estado, sin Norte ni Este. `P-01` a `P-06` tienen su descripción de
+  ubicación y cota inicial (100.0000).
 - ✓ **P-05** figura **De baja desde el 1 de mayo de 2025**, con el motivo
   «Destruido por la obra del andén sur.», y en lugar de *Editar* ofrece
   **Deshacer baja**.
 - ✓ **P-07** figura **Alta el 15 de marzo de 2025** y su cota C0 dice
   «Primera lectura».
 
-### 3 bis. C0 y coordenadas fijas (Fase 23)
+### 3 bis. C0 fija (Fase 23)
 
 - En **Puntos y lugar** de Edificio Torre Central, **Editar** P-01. ✓ Código,
-  Ubicación, Norte, Este y Cota C0 editables, sin aviso: ninguna visita del
-  lugar está cerrada todavía. **Cancelar**.
+  Ubicación y Cota C0 editables, sin aviso: ninguna visita del lugar está
+  cerrada todavía. No hay campos Norte ni Este (Fase 29). **Cancelar**.
 - Abrir **Torre Alameda** (visitas 0–11 cerradas), pestaña **Puntos y lugar**,
-  y **Editar** TA-08. ✓ Norte, Este y Cota C0 salen deshabilitados, con el
-  aviso «El punto tiene lecturas en visitas cerradas: su C0 y sus coordenadas
-  ya no cambian. El código y la ubicación sí.»; Código y Ubicación siguen
-  editables. **Cancelar**.
+  y **Editar** TA-08. ✓ Cota C0 sale deshabilitada, con el aviso «El punto
+  tiene lecturas en visitas cerradas: su C0 ya no cambia. El código y la
+  ubicación sí.»; Código y Ubicación siguen editables. **Cancelar**.
 - En **Edificio Norte** (lugar cerrado), pestaña **Puntos y lugar**, ✓ el
   catálogo no tiene **Editar** ni ninguna otra acción, ni **Agregar punto**.
 - El paso 8 comprueba el cambio en Torre Central: al cerrar su visita 0, P-01
@@ -144,9 +146,6 @@ referencia: sirve para el arranque en frío (paso 19).
 - ✓ Los chips dicen **P-05 (de baja)** y **P-07 (alta 15 de marzo de 2025)**.
   En **Ver datos en tabla**, la serie de P-05 termina el 15 abr 2025 y la de
   P-07 empieza en 0.0 el 15 mar 2025.
-- ✓ En **diferenciales**, los pares con P-07 llevan debajo «desde el 15 de
-  marzo de 2025», y sus dos columnas de asentamiento restadas dan el
-  diferencial: **P-01 – P-07** muestra −2.8 y −5.0 y un diferencial de 2.2.
 - ✓ El indicador de **tendencia** marca los puntos como **convergentes**: la
   magnitud de la velocidad decrece en cada visita sucesiva (serie de
   consolidación que se estabiliza). La excepción es P-04 (ver paso 5).
@@ -194,8 +193,8 @@ referencia: sirve para el arranque en frío (paso 19).
 - Cerrar en orden las visitas **0, 1, 2 y 3**.
 - ✓ Cada una queda en estado **cerrada** y sus lecturas pasan a solo lectura;
   el resto del lugar sigue admitiendo visitas nuevas.
-- En **Puntos y lugar**, **Editar** P-01. ✓ Ahora Norte, Este y Cota C0 salen
-  deshabilitados con el aviso de la Fase 23 (paso 3 bis). **Cancelar**.
+- En **Puntos y lugar**, **Editar** P-01. ✓ Ahora Cota C0 sale deshabilitada
+  con el aviso de la Fase 23 (paso 3 bis). **Cancelar**.
 - Cerrar la **visita 4**. ✓ Cierra sin lectura de P-05: está de baja desde el
   1 de mayo.
 
@@ -247,11 +246,11 @@ referencia: sirve para el arranque en frío (paso 19).
   **Exportar a Excel** y **Ver informe**, y las pestañas **Panel**, **Puntos y
   lugar** e **Informe** (Fase 22). En el panel, la leyenda Precaución -25 mm,
   Alerta -50 mm y Alarma -75 mm.
-- ✓ Indicadores: **Asentamiento máximo** −29.0 mm (TA-07), **Promedio actual**
-  −20.5 mm (8 puntos de control medidos), **Distorsión angular** 1/1.682
-  (TA-07 – TA-08, dentro del límite 1/500), **Velocidad máxima**
+- ✓ Cinco indicadores: **Asentamiento máximo** −29.0 mm (TA-07), **Promedio
+  actual** −20.5 mm (8 puntos de control medidos), **Velocidad máxima**
   −0.65 mm/mes (TA-02), **Visitas en alerta** 13 de 14 y **Visitas** 14
-  (base 7 ene 2025 · última 11 nov 2025).
+  (base 7 ene 2025 · última 11 nov 2025). Sin **Distorsión angular** (Fase
+  29).
 - ✓ La tabla **Visitas** va de la 13 a la 0 («Visita 0 (base)»). La 13:
   11 nov 2025, promedio −20.5, máximo −29.0 TA-07, amarre BM-1 100.0000,
   mayor Δ −0.6 TA-02, cierre −2.3, Precaución, Calculada. Las visitas 5 y 11
@@ -266,8 +265,8 @@ referencia: sirve para el arranque en frío (paso 19).
 - ✓ **Evolución por punto**: chips **Todos** y TA-01…TA-08 con su último valor
   (TA-07 −29.0 mm). Pulsar **TA-07**. ✓ Se resalta y el resto se atenúa.
   **Ver datos en tabla** despliega los valores.
-- ✓ Siguen **Semáforo por punto (última visita)** y **Asentamientos
-  diferenciales y distorsión angular**.
+- ✓ Sigue **Semáforo por punto (última visita)**, la última tarjeta del panel:
+  ya no hay **Asentamientos diferenciales y distorsión angular** (Fase 29).
 
 ### 12. Vista de una visita y registro de nivelación
 
@@ -377,7 +376,7 @@ referencia: sirve para el arranque en frío (paso 19).
 ### 16. Renombrar un punto con libretas abiertas
 
 - En el catálogo de Torre Alameda (pestaña **Puntos y lugar**), **Editar**
-  TA-08 (✓ con la C0 y las coordenadas bloqueadas, paso 3 bis) y cambiar el
+  TA-08 (✓ con la C0 bloqueada, paso 3 bis) y cambiar el
   código a `TA-08X`.
 - Abrir el editor de la **visita 13**. ✓ La fila de la libreta dice TA-08X,
   con la nota «Punto de control». **Guardar visita**. ✓ La cota de TA-08X
@@ -439,8 +438,10 @@ cubre el PRD-de-fase 11: baja, deshacer la baja, alta y la regla de cierre de
 la línea base. Los pasos 2, 3 y 9 y el **Eliminar** del paso 7 cubren el
 PRD-de-fase 22: el listado del hub, la pantalla del lugar con sus pestañas
 Panel, Puntos y lugar e Informe, y la eliminación de la última visita. El paso
-3 bis, con su comprobación en el paso 8, cubre la Fase 23: la C0 y las
-coordenadas de un punto con lecturas cerradas no cambian. El paso 7 bis cubre
+3 bis, con su comprobación en el paso 8, cubre la Fase 23: la C0 de un punto
+con lecturas cerradas no cambia. Los pasos 3, 3 bis y 11 cubren la Fase 29:
+sin Norte ni Este en el catálogo, sin límite de distorsión, cinco indicadores
+y sin tabla de diferenciales. El paso 7 bis cubre
 el PRD-de-fase 12: el aviso de lectura fuera de tendencia. Los pasos 11 a 20
 cubren el PRD-de-fase 18: el panel y la vista de la visita, el registro de
 nivelación, la libreta digitada e importada, el cierre fuera de tolerancia,

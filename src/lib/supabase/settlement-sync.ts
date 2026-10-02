@@ -14,15 +14,15 @@ import { logDbError } from "@/lib/errors/user-message";
  *
  * Existe porque el `alert_status`, el parcial, el acumulado y la velocidad se
  * **persisten** en `settlement_readings`, y por tanto son una caché derivada
- * de tres entradas: las cotas de las visitas, el catálogo de puntos (C0 y
- * coordenadas) y los umbrales del lugar. Cualquier mutación de esas tres
+ * de tres entradas: las cotas de las visitas, la C0 de cada punto del catálogo
+ * y los umbrales del lugar. Cualquier mutación de esas tres
  * entradas deja la caché obsoleta.
  *
  * `saveVisitAction` ya cubre la primera entrada. Esta función cubre las otras
  * dos, que son las puertas que el cierre de la Fase 5 dejó abiertas:
  *
  *   · editar los umbrales del lugar  → `saveSiteAction`
- *   · editar la C0 o las coordenadas → `savePointAction`
+ *   · editar la C0                   → `savePointAction`
  *
  * Las visitas CERRADAS no se tocan: conservan la clasificación con la que se
  * cerraron, que es lo correcto para la trazabilidad. `visitsToRewrite` decide

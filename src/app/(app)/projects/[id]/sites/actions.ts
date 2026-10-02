@@ -23,7 +23,6 @@ export interface SitePayload {
   accumulatedCaution: number;
   accumulatedAlert: number;
   accumulatedAlarm: number;
-  angularDistortionLimit: number;
   notes: string | null;
 }
 
@@ -48,7 +47,6 @@ function validateThresholds(payload: SitePayload): string | null {
     ["precaución de acumulado", ac],
     ["alerta de acumulado", aa],
     ["alarma de acumulado", am],
-    ["límite de distorsión", payload.angularDistortionLimit],
   ] as const) {
     if (!Number.isFinite(valor) || valor <= 0) {
       return `El umbral de ${nombre} debe ser un número positivo.`;
@@ -89,7 +87,6 @@ export async function createSiteAction(
       accumulated_caution: payload.accumulatedCaution,
       accumulated_alert: payload.accumulatedAlert,
       accumulated_alarm: payload.accumulatedAlarm,
-      angular_distortion_limit: payload.angularDistortionLimit,
       notes: payload.notes,
     })
     .select("id")
@@ -143,7 +140,6 @@ export async function saveSiteAction(
       accumulated_caution: payload.accumulatedCaution,
       accumulated_alert: payload.accumulatedAlert,
       accumulated_alarm: payload.accumulatedAlarm,
-      angular_distortion_limit: payload.angularDistortionLimit,
       notes: payload.notes,
     })
     .eq("id", siteId);
@@ -261,7 +257,6 @@ export async function duplicateSiteAction(siteId: string): Promise<ActionResult>
       accumulated_caution: original.accumulated_caution,
       accumulated_alert: original.accumulated_alert,
       accumulated_alarm: original.accumulated_alarm,
-      angular_distortion_limit: original.angular_distortion_limit,
       notes: original.notes,
       kind: "settlement",
     })
@@ -271,7 +266,7 @@ export async function duplicateSiteAction(siteId: string): Promise<ActionResult>
 
   const { data: puntos, error: pointsError } = await supabase
     .from("settlement_points")
-    .select("code, location_description, northing, easting, initial_elevation")
+    .select("code, location_description, initial_elevation")
     .eq("site_id", siteId)
     .is("retired_on", null)
     .order("code");

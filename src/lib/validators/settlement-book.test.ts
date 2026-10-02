@@ -129,8 +129,6 @@ describe("validateVisitClose — libreta (Fase 18)", () => {
   const P1: PointInput = {
     id: "p1",
     code: "PC-01",
-    northing: null,
-    easting: null,
     initialElevation: 100,
     activeFrom: null,
     retiredOn: null,

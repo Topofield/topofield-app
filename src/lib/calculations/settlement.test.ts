@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   classifyAlert,
   classifyReadings,
-  computeDifferentials,
   computeHistory,
   computeSettlements,
   computeTrends,
   daysBetween,
   detectTrendDeviations,
-  horizontalDistance,
   isPointActiveOn,
   monthsBetween,
   pointInputOf,
@@ -16,7 +14,6 @@ import {
 import { thresholdsFor, trendDeviationMargin } from "./tolerances";
 import type { PrecisionOrder } from "@/types/project";
 import type {
-  ComputedReading,
   PointInput,
   Thresholds,
   VisitInput,
@@ -25,8 +22,6 @@ import type {
 const P1: PointInput = {
   id: "p1",
   code: "P-01",
-  northing: 0,
-  easting: 0,
   initialElevation: 100.0,
   activeFrom: null,
   retiredOn: null,
@@ -203,8 +198,6 @@ describe("pointInputOf", () => {
     const fila = {
       id: "p1",
       code: "P-01",
-      northing: "2000.000" as unknown as number,
-      easting: null,
       initial_elevation: "100.0000" as unknown as number,
       active_from: "2025-03-15",
       retired_on: null,
@@ -212,12 +205,11 @@ describe("pointInputOf", () => {
     expect(pointInputOf(fila)).toEqual({
       id: "p1",
       code: "P-01",
-      northing: 2000,
-      easting: null,
       initialElevation: 100,
       activeFrom: "2025-03-15",
       retiredOn: null,
     });
+    expect(pointInputOf({ ...fila, initial_elevation: null }).initialElevation).toBeNull();
   });
 });
 
@@ -375,33 +367,9 @@ describe("computeSettlements — orden", () => {
   });
 });
 
-/** Lectura ya calculada, para probar los diferenciales aisladamente. */
-function lectura(
-  pointId: string,
-  accumulated: number | null,
-): ComputedReading {
-  return {
-    pointId,
-    elevation: 100,
-    partialSettlement: null,
-    accumulatedSettlement: accumulated,
-    velocity: null,
-    alertStatus: "normal",
-    // Misma línea base para todos: el caso de los puntos originales, donde el
-    // diferencial es la diferencia de acumulados (Fase 5).
-    baselineDate: "2025-01-15",
-    baselineElevation: 100,
-  };
-}
-
-/** Sin histórico: basta cuando todas las lecturas comparten línea base. */
-const sinHistorico = () => undefined;
-
 const A: PointInput = {
   id: "a",
   code: "P-A",
-  northing: 0,
-  easting: 0,
   initialElevation: 100,
   activeFrom: null,
   retiredOn: null,
@@ -409,213 +377,10 @@ const A: PointInput = {
 const B: PointInput = {
   id: "b",
   code: "P-B",
-  northing: 0,
-  easting: 6,
   initialElevation: 100,
   activeFrom: null,
   retiredOn: null,
 };
-
-describe("horizontalDistance", () => {
-  it("es la distancia euclidiana en el plano N/E", () => {
-    expect(horizontalDistance(A, B)).toBeCloseTo(6, 10);
-    const C: PointInput = { ...A, id: "c", northing: 3, easting: 4 };
-    expect(horizontalDistance(A, C)).toBeCloseTo(5, 10);
-  });
-
-  it("es null si a algún punto le faltan coordenadas", () => {
-    const sinCoords: PointInput = { ...B, northing: null };
-    expect(horizontalDistance(A, sinCoords)).toBeNull();
-  });
-});
-
-describe("computeDifferentials", () => {
-  // Distinto del caso «al punto le faltan coordenadas»: aquí el punto SÍ está
-  // en el catálogo y con N/E, pero no se le midió en esta visita. No debe
-  // aparecer en ningún par —no hay asentamiento que comparar— y sobre todo no
-  // debe contarse como diferencial 0, que se leería como distorsión infinita,
-  // es decir, como normalidad perfecta.
-  it("excluye un punto del catálogo que no tiene lectura en la visita", () => {
-    const C: PointInput = { id: "c", code: "P-C", northing: 0, easting: 12, initialElevation: 100, activeFrom: null, retiredOn: null };
-    const pairs = computeDifferentials(
-      [A, B, C],
-      [lectura("a", -10), lectura("b", -4)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs).toHaveLength(1);
-    const ids = pairs.flatMap((p) => [p.pointIdA, p.pointIdB]);
-    expect(ids).not.toContain("c");
-  });
-
-  it("no produce pares si solo un punto tiene lectura", () => {
-    expect(
-      computeDifferentials([A, B], [lectura("a", -10)], 500, sinHistorico),
-    ).toEqual([]);
-  });
-
-  // Una lectura cuyo acumulado es null (el punto no tiene C0) tampoco puede
-  // compararse: se descarta igual que la ausencia de lectura.
-  it("excluye una lectura con acumulado nulo", () => {
-    const pairs = computeDifferentials(
-      [A, B],
-      [lectura("a", -10), lectura("b", null)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs).toEqual([]);
-  });
-
-  it("calcula el diferencial y la distorsión como 1/X", () => {
-    // Diferencial |−1.8 − (−2.5)| = 0.7 mm sobre 6 m ⇒ 6000/0.7 = 1/8571.4
-    const pairs = computeDifferentials(
-      [A, B],
-      [lectura("a", -1.8), lectura("b", -2.5)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs).toHaveLength(1);
-    expect(pairs[0]?.differentialMm).toBeCloseTo(0.7, 6);
-    expect(pairs[0]?.distanceM).toBeCloseTo(6, 6);
-    expect(pairs[0]?.distortionInverse).toBeCloseTo(8571.43, 1);
-    expect(pairs[0]?.exceedsLimit).toBe(false);
-  });
-
-  it("marca el par que supera el límite: 1/X con X MENOR que el límite", () => {
-    // 20 mm sobre 6 m ⇒ 1/300, más severo que 1/500 ⇒ excede.
-    const pairs = computeDifferentials(
-      [A, B],
-      [lectura("a", 0), lectura("b", -20)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs[0]?.distortionInverse).toBeCloseTo(300, 6);
-    expect(pairs[0]?.exceedsLimit).toBe(true);
-  });
-
-  it("un diferencial de 0 da 1/∞ y NO excede el límite", () => {
-    // Dos puntos que se asientan igual no tienen distorsión entre sí.
-    const pairs = computeDifferentials(
-      [A, B],
-      [lectura("a", -5), lectura("b", -5)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs[0]?.differentialMm).toBe(0);
-    expect(pairs[0]?.distortionInverse).toBe(Number.POSITIVE_INFINITY);
-    expect(pairs[0]?.exceedsLimit).toBe(false);
-  });
-
-  it("excluye el par si a un punto le faltan coordenadas", () => {
-    // Calcularlo con L = 0 daría X = 0, una distorsión de 1/0: falsa alarma.
-    const sinCoords: PointInput = { ...B, easting: null };
-    const pairs = computeDifferentials(
-      [A, sinCoords],
-      [lectura("a", 0), lectura("b", -20)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs).toHaveLength(0);
-  });
-
-  it("excluye el par si a un punto le falta el acumulado", () => {
-    const pairs = computeDifferentials(
-      [A, B],
-      [lectura("a", -5), lectura("b", null)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs).toHaveLength(0);
-  });
-
-  it("genera cada par una sola vez, sin repetir el simétrico", () => {
-    const C: PointInput = { ...A, id: "c", easting: 12 };
-    const pairs = computeDifferentials(
-      [A, B, C],
-      [lectura("a", -1), lectura("b", -2), lectura("c", -3)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs).toHaveLength(3); // a-b, a-c, b-c
-  });
-
-  describe("periodo común (Fase 11)", () => {
-    // P-07 entra el 15/03. P-01 lleva C0 = 100.000 desde el 15/01 y el 15/03
-    // midió 99.991; hoy mide 99.989. P-07 midió 101.2345 al darse de alta y
-    // hoy 101.2315. Desde t0 = 15/03:
-    //   P-01: (99.989 − 99.991) × 1000 = −2.0 mm
-    //   P-07: (101.2315 − 101.2345) × 1000 = −3.0 mm   ⇒ diferencial 1.0 mm
-    // Restar acumulados habría dado |−11.0 − (−3.0)| = 8.0 mm: la distorsión
-    // de un periodo que P-07 no vivió.
-    const p01: ComputedReading = {
-      ...lectura("a", -11.0),
-      elevation: 99.989,
-      baselineDate: "2025-01-15",
-      baselineElevation: 100.0,
-    };
-    const p07: ComputedReading = {
-      ...lectura("b", -3.0),
-      elevation: 101.2315,
-      baselineDate: "2025-03-15",
-      baselineElevation: 101.2345,
-    };
-    const cotas: Record<string, number> = { "a|2025-03-15": 99.991 };
-    const cotaEn = (id: string, fecha: string) => cotas[`${id}|${fecha}`];
-
-    it("mide los dos puntos desde la línea base más tardía", () => {
-      const pairs = computeDifferentials([A, B], [p01, p07], 500, cotaEn);
-      expect(pairs).toHaveLength(1);
-      expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);
-    });
-
-    // La tabla del panel muestra estos dos números junto al diferencial. Antes
-    // mostraba los acumulados (−11.0 y −3.0), que restados no dan 1.0: se vio
-    // en pantalla al verificar la fase.
-    it("devuelve los dos asentamientos del periodo común, que restados dan el diferencial", () => {
-      const [pair] = computeDifferentials([A, B], [p01, p07], 500, cotaEn);
-      expect(pair?.settlementAMm).toBeCloseTo(-2.0, 6);
-      expect(pair?.settlementBMm).toBeCloseTo(-3.0, 6);
-      expect(pair?.sinceDate).toBe("2025-03-15");
-    });
-
-    it("es simétrico: el orden del par no cambia el resultado", () => {
-      const pairs = computeDifferentials([A, B], [p07, p01], 500, cotaEn);
-      expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);
-    });
-
-    it("un punto con C0 que no se midió en la visita 0 se mide desde t0, no desde la C0", () => {
-      // Es el defecto que encontró la revisión del PRD: «usar su acumulado»
-      // habría medido P-02 desde su C0 (visita 0) aunque t0 sea su primera
-      // lectura. Aquí P-02 tiene C0 = 100.0 fechada el 15/01, y P-07, alta el
-      // 15/03. t0 = 15/03 y P-02 midió 99.996 ese día y 99.994 hoy: −2.0 mm.
-      const p02: ComputedReading = {
-        ...lectura("a", -6.0),
-        elevation: 99.994,
-        baselineDate: "2025-01-15",
-        baselineElevation: 100.0,
-      };
-      const pairs = computeDifferentials([A, B], [p02, p07], 500, (id, f) =>
-        id === "a" && f === "2025-03-15" ? 99.996 : undefined,
-      );
-      expect(pairs[0]?.differentialMm).toBeCloseTo(1.0, 6);
-    });
-
-    it("excluye el par si un punto no se midió en t0", () => {
-      const pairs = computeDifferentials([A, B], [p01, p07], 500, sinHistorico);
-      expect(pairs).toEqual([]);
-    });
-  });
-
-  it("el diferencial es siempre positivo, sea cual sea el orden", () => {
-    const pairs = computeDifferentials(
-      [A, B],
-      [lectura("a", -5), lectura("b", -1)],
-      500,
-    sinHistorico,
-    );
-    expect(pairs[0]?.differentialMm).toBeCloseTo(4, 6);
-  });
-});
 
 const T: Thresholds = thresholdsFor("edificio");
 // velocidad 2/5/10 mm/mes · acumulado 25/50/75 mm
@@ -742,7 +507,7 @@ describe("computeTrends", () => {
 });
 
 describe("computeHistory", () => {
-  it("compone visitas clasificadas, diferenciales de la última y tendencias", () => {
+  it("compone visitas clasificadas y tendencias", () => {
     const A2: PointInput = { ...A, initialElevation: 100 };
     const B2: PointInput = { ...B, initialElevation: 100 };
     const visitas: VisitInput[] = [
@@ -767,46 +532,12 @@ describe("computeHistory", () => {
     ];
     const h = computeHistory([A2, B2], visitas, T);
     expect(h.visits).toHaveLength(2);
-    // Los diferenciales se calculan sobre la ÚLTIMA visita.
-    expect(h.differentials).toHaveLength(1);
-    expect(h.differentials[0]?.differentialMm).toBeCloseTo(1.0, 6);
     expect(h.trends).toEqual({});
-  });
-
-  it("calcula los diferenciales de un punto de alta sobre el periodo común", () => {
-    // La ruta real: computeHistory arma la búsqueda de cotas por fecha que
-    // computeDifferentials necesita. Mismos números que el test aislado.
-    const A7: PointInput = { ...B, initialElevation: null, activeFrom: "2025-03-15" };
-    const visitas: VisitInput[] = [
-      { id: "v0", visitNumber: 0, date: "2025-01-15", readings: [{ pointId: "a", elevation: 100.0 }] },
-      {
-        id: "v2",
-        visitNumber: 2,
-        date: "2025-03-15",
-        readings: [
-          { pointId: "a", elevation: 99.991 },
-          { pointId: "b", elevation: 101.2345 },
-        ],
-      },
-      {
-        id: "v3",
-        visitNumber: 3,
-        date: "2025-04-15",
-        readings: [
-          { pointId: "a", elevation: 99.989 },
-          { pointId: "b", elevation: 101.2315 },
-        ],
-      },
-    ];
-    const h = computeHistory([A, A7], visitas, T);
-    expect(h.differentials).toHaveLength(1);
-    expect(h.differentials[0]?.differentialMm).toBeCloseTo(1.0, 6);
   });
 
   it("devuelve estructuras vacías si no hay visitas", () => {
     const h = computeHistory([A], [], T);
     expect(h.visits).toEqual([]);
-    expect(h.differentials).toEqual([]);
     expect(h.trends).toEqual({});
   });
 });

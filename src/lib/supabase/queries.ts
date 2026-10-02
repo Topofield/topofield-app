@@ -464,7 +464,7 @@ export async function getVisit(
 
 /**
  * Todas las lecturas de un lugar, agrupadas por visita — la serie temporal que
- * alimenta la gráfica, los diferenciales y las tendencias.
+ * alimenta la gráfica y las tendencias.
  *
  * Una sola consulta con join en vez de una por visita: un lugar con 12 visitas
  * haría 12 viajes a la base al pintar el panel.
@@ -490,7 +490,7 @@ export async function getSettlementReadingsBySite(
 
 /**
  * Los puntos del lugar con alguna lectura en una visita cerrada (Fase 23): su
- * C0 y sus coordenadas ya no cambian.
+ * C0 ya no cambia.
  */
 export async function getPointIdsWithClosedReadings(
   supabase: Client,

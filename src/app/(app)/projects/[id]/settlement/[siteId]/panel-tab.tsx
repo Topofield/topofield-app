@@ -142,7 +142,7 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite }: 
         </li>
       </ul>
 
-      <SiteKpis summary={summary} codes={codes} distortionLimit={thresholds.angularDistortionLimit} />
+      <SiteKpis summary={summary} codes={codes} />
 
       <Card
         title="Visitas"
@@ -182,7 +182,6 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite }: 
       <AnalysisPanel
         points={points}
         visits={history.visits}
-        differentials={history.differentials}
         trends={history.trends}
         lastVisitTrendWarnings={lastVisitTrendWarnings}
       />

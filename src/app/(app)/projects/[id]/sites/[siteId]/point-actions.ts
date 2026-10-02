@@ -29,8 +29,6 @@ export interface PointPayload {
   siteId: string;
   code: string;
   locationDescription: string;
-  northing: number | null;
-  easting: number | null;
   initialElevation: number | null;
   /**
    * Fecha de alta (Fase 11). Obligatoria al crear un punto en un lugar que ya
@@ -40,23 +38,13 @@ export interface PointPayload {
   activeFrom: string | null;
 }
 
-/**
- * Valida los campos que controla el usuario. Las coordenadas N/E son
- * opcionales, pero si viene una debe venir la otra: con solo N o solo E no se
- * puede calcular ninguna distancia, y el par quedaría silenciosamente fuera
- * de la tabla de diferenciales.
- */
+/** Valida los campos que controla el usuario. */
 function validatePointPayload(payload: PointPayload): string | null {
   if (payload.code.trim() === "") {
     return "El punto necesita un código.";
   }
   if (payload.locationDescription.trim() === "") {
     return "El punto necesita una descripción de ubicación.";
-  }
-  const tieneN = payload.northing !== null;
-  const tieneE = payload.easting !== null;
-  if (tieneN !== tieneE) {
-    return "Indica las dos coordenadas (N y E) o ninguna.";
   }
   return null;
 }
@@ -177,8 +165,6 @@ export async function createPointAction(
       site_id: payload.siteId,
       code: payload.code.trim(),
       location_description: payload.locationDescription.trim(),
-      northing: payload.northing,
-      easting: payload.easting,
       initial_elevation: isAlta ? null : payload.initialElevation,
       active_from: isAlta ? payload.activeFrom : null,
     })
@@ -218,9 +204,8 @@ export async function savePointAction(
   const current = await loadPoint(supabase, payload.siteId, pointId);
   if (!current) return { ok: false, error: "Punto no encontrado." };
 
-  // Un punto de baja ya no tiene datos abiertos: editar su C0 o sus
-  // coordenadas solo reescribiría su historia cerrada, que el panel recalcula
-  // en vivo. Para corregirlo, primero se deshace la baja, si todavía se puede.
+  // Un punto de baja ya no tiene datos abiertos: editar su C0 solo
+  // reescribiría su historia cerrada, que el panel recalcula en vivo. Para corregirlo, primero se deshace la baja, si todavía se puede.
   if (current.retired_on !== null) {
     return {
       ok: false,
@@ -245,9 +230,9 @@ export async function savePointAction(
     activeFrom = payload.activeFrom;
   }
 
-  // La C0 y las coordenadas de un punto medido en una visita cerrada ya no
-  // cambian (Fase 23): los resultados con que se cerró dependen de ellas. El
-  // trigger de la base garantiza lo mismo; aquí se da el mensaje.
+  // La C0 de un punto medido en una visita cerrada ya no cambia (Fase 23):
+  // los resultados con que se cerró dependen de ella. El trigger de la base
+  // garantiza lo mismo; aquí se da el mensaje.
   const initialElevation = isAlta ? null : payload.initialElevation;
   if (pointReferenceChanged(current, { ...payload, initialElevation })) {
     const { count, error: countError } = await supabase
@@ -266,8 +251,6 @@ export async function savePointAction(
     .update({
       code: payload.code.trim(),
       location_description: payload.locationDescription.trim(),
-      northing: payload.northing,
-      easting: payload.easting,
       initial_elevation: initialElevation,
       active_from: activeFrom,
     })
@@ -309,9 +292,8 @@ export async function savePointAction(
     }
   }
 
-  // La C0 y las coordenadas del punto acaban de cambiar, y de ellas dependen
-  // valores YA PERSISTIDOS en `settlement_readings`: el acumulado es
-  // `(cota − C0) × 1000` y las coordenadas alimentan la distorsión angular.
+  // La C0 del punto puede haber cambiado, y de ella dependen valores YA
+  // PERSISTIDOS en `settlement_readings`: el acumulado es `(cota − C0) × 1000`.
   // Sin recalcular, las lecturas guardadas conservan los números de la C0
   // vieja mientras el panel del lugar los recalcula en vivo — la misma
   // divergencia que la edición de umbrales, por una puerta distinta.

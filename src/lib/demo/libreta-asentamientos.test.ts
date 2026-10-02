@@ -22,8 +22,6 @@ const TARGETS = [
 const POINTS: PointInput[] = TARGETS.map((t) => ({
   id: t.code,
   code: t.code,
-  northing: null,
-  easting: null,
   initialElevation: null,
   activeFrom: null,
   retiredOn: null,

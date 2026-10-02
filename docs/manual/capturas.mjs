@@ -246,8 +246,8 @@ await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/${lugarMonitoreo}`,
 await capturar("14-editor-lugar", { fullPage: true });
 
 // Fase 18 — Torre Alameda, con libreta en cada visita. El panel se recorta al
-// final del semáforo: la tabla de diferenciales de 8 puntos (28 pares) solo
-// alargaba la imagen.
+// final del semáforo, su última tarjeta desde que la Fase 29 quitó la tabla de
+// diferenciales.
 const panelLibreta = `${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarLibreta}`;
 await page.goto(panelLibreta, { waitUntil: "networkidle" });
 await page.waitForTimeout(900);

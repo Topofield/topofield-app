@@ -38,6 +38,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 26 | Correcciones del cálculo | [`prds/25-correcciones-calculo.md`](./prds/25-correcciones-calculo.md) | cerrada |
 | 27 | Segundo pulido | [`prds/26-segundo-pulido.md`](./prds/26-segundo-pulido.md) | cerrada |
 | 28 | Ida y vuelta en la compensación | [`prds/27-desnivel-adoptado.md`](./prds/27-desnivel-adoptado.md) | cerrada |
+| 29 | Puntos de control sin posición | [`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -551,6 +552,38 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 29 — Puntos de control sin posición (2026-10-01)
+
+A3: los puntos de control de asentamientos dejan de tener Norte y Este, y con
+ellos se van la distorsión angular, los diferenciales y el límite 1/X del
+lugar. BM-1 y BM-2 de la demo y BM-01 y BM-02 del seed quedan sin
+coordenadas; la migración limpia los de los proyectos de ejemplo existentes
+por su huella completa. 973 tests y 68 pruebas de base. Divergencias en el
+propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una migración que borra invierte el orden del despliegue.** La regla «`db
+  push` antes del merge» protege al código nuevo que necesita columnas nuevas.
+  Cuando la migración quita columnas, el que se rompe es el código viejo, que
+  inserta y selecciona lo que ya no existe. Lo que decide el orden es qué
+  combinación de código y esquema funciona durante la ventana entre los dos
+  pasos. Quedó en la doc técnica (§ 13) y en `CLAUDE.md`.
+- **El mismo razonamiento ordena los commits.** Primero el código dejó de usar
+  las columnas, con cada commit compilando contra el esquema que tenía, y la
+  migración fue la última. Correr el seed contra el esquema viejo, antes de la
+  migración, comprobó la compatibilidad que el despliegue necesita.
+- **Quitar también se verifica.** Los tests de asentamiento, velocidad,
+  semáforo y tendencia pasaron sin tocar sus valores esperados: es la prueba
+  de que quitar la distorsión no cambió nada más. La limpieza de datos de
+  producción se probó con señuelos —un BM-1 con otras coordenadas y otro con
+  otra descripción— en una transacción revertida, antes de escribirla en la
+  migración.
+- **Una petición condicional se responde comprobando la condición.** El
+  usuario pidió quitar las coordenadas de los BM «si las nivelaciones no
+  llevan nada relacionado con coordenadas». La respuesta salió de recorrer
+  todo lo que lee un punto de referencia, no de suponerlo.
 
 ### Cierre Fase 28 — Ida y vuelta en la compensación (2026-10-01)
 
