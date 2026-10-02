@@ -67,9 +67,12 @@ const ALAMEDA_BM2 = new Set([5, 11]);
 /** La visita que cierra fuera de tolerancia. */
 export const ALAMEDA_OUT_OF_TOLERANCE = 9;
 /**
- * La visita en que BM-2 ya no nivela con BM-1 (Fase 30): la libreta lo da
- * 8 mm por encima de su cota de catálogo. Es la última, abierta, así que no
- * cambia nada cerrado; sus puntos de control salen de BM-1, que no se movió.
+ * La visita en que BM-2 ya no nivela con BM-1 (Fase 30): su cota compensada
+ * queda 8 mm por encima de la de catálogo, y la calculada, que es la que se
+ * compara, 7.4. Sus puntos de control salen de BM-1, que no se movió. En el
+ * seed es la última y queda abierta (`openLast`); la demo la cierra con el
+ * resto del lugar, y el aviso se conserva porque la cota de catálogo es una
+ * copia guardada en la libreta.
  */
 export const ALAMEDA_BM_FUERA = 13;
 

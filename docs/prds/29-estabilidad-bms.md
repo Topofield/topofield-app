@@ -19,6 +19,11 @@ Excel, la demo y el seed
 >   no a 0.1–0.2 km. En la visita 13, BM-2 queda **7.4 mm** por encima, no 8:
 >   el generador fija la cota compensada, y la calculada difiere en la parte
 >   del cierre que le toca. En las otras trece visitas, entre −0.7 y +0.6 mm.
+> - **La visita 13 solo queda abierta en el seed.** La demo del primer inicio
+>   de sesión cierra todas las visitas y el lugar; el aviso de la 13 se
+>   conserva porque la cota de catálogo es una copia guardada (criterio de
+>   aceptación 3). Lo encontró la revisión de código en el comentario de
+>   `ALAMEDA_BM_FUERA`, que decía «abierta» para los dos.
 > - **`perSetup: 5`** en la demo y el seed: el otro BM entra en la primera
 >   armada sin añadir una tercera.
 > - **`bookRowOf` no lee la columna.** La vista y el panel leen la libreta
@@ -46,8 +51,11 @@ Excel, la demo y el seed
 >   del panel solo en la visita 13, la vista, el registro, el diálogo de
 >   cierre, el editor de la 13 (no nivela) y el de la 12 (nivela), el Excel y
 >   la demo del primer inicio de sesión.
-> - **Producción, pendiente:** una consulta de solo lectura, el `db push` y,
->   después, el merge.
+> - **La revisión de código no encontró defectos** de funcionamiento; solo el
+>   comentario de `ALAMEDA_BM_FUERA`.
+> - **Consulta previa en producción** (`db push --dry-run`, solo lectura): la
+>   única migración pendiente es `20261001040000_estabilidad_bms.sql`.
+> - **Producción, pendiente:** el `db push` y, después, el merge.
 
 ## Propósito
 
