@@ -7,6 +7,8 @@ import {
 } from "@/lib/calculations/leveling";
 import { computeHistory } from "@/lib/calculations/settlement";
 import {
+  catalogElevationsOf,
+  checkBenchmarks,
   bookRowInputOf,
   computeVisitBook,
   deriveControlElevations,
@@ -26,7 +28,7 @@ import {
 } from "./fixtures";
 import { resultadosDe } from "./insertar-poligonal";
 import { generateVisitBook } from "./libreta-asentamientos";
-import { ALAMEDA_OUT_OF_TOLERANCE } from "./torre-alameda";
+import { ALAMEDA_AMARRES, ALAMEDA_BM_FUERA, ALAMEDA_OUT_OF_TOLERANCE } from "./torre-alameda";
 
 // Fase 21: la demo son las carteras reales. Cada fixture pasa por el motor tal
 // como lo harán los `insertar-*.ts`, y se comprueba lo que la cartera enseña.
@@ -141,13 +143,19 @@ describe("asentamientos de la demo — Torre Alameda", () => {
   const books = f.visits.map((v, i) => {
     const rows = generateVisitBook({
       amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
-      targets: v.targets,
+      targets: [v.bmControl, ...v.targets],
       closureMm: v.closureMm,
       order: f.precisionOrder,
       seed: 100 + i,
+      perSetup: 5,
     });
     const result = computeVisitBook(rows.map(bookRowInputOf), v.amarre.elevation, f.precisionOrder);
-    return { result, derived: deriveControlElevations(result, points, v.date) };
+    const catalog = catalogElevationsOf(result.forward.readings, ALAMEDA_AMARRES, v.amarre.code, points);
+    return {
+      result,
+      derived: deriveControlElevations(result, points, v.date),
+      checks: checkBenchmarks(result.forward.readings, catalog, f.precisionOrder),
+    };
   });
 
   it("ocho puntos, catorce visitas y los dos BMs de amarre en el catálogo", () => {
@@ -171,6 +179,17 @@ describe("asentamientos de la demo — Torre Alameda", () => {
         expect(Math.abs(got - t.elevation)).toBeLessThanOrEqual(0.0001 + 1e-9);
       }
     });
+  });
+
+  it("cada libreta pasa por el otro BM, que nivela salvo en la visita 13 (Fase 30)", () => {
+    books.forEach((b, i) => {
+      expect(b.checks).toHaveLength(1);
+      expect(b.checks[0]!.code).toBe(f.visits[i]!.amarre.code === "BM-1" ? "BM-2" : "BM-1");
+    });
+    const fuera = books.flatMap((b, i) => (b.checks[0]!.meetsTolerance === false ? [i] : []));
+    expect(fuera).toEqual([ALAMEDA_BM_FUERA]);
+    // En la 13, BM-2 queda unos 8 mm por encima de su cota de catálogo.
+    expect(books[ALAMEDA_BM_FUERA]!.checks[0]!.differenceMm).toBeGreaterThan(7);
   });
 
   it("el semáforo no sale todo verde", () => {
