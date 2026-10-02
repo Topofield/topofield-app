@@ -1199,9 +1199,9 @@ function cotaEn(partialsMm, point, visitIndex) {
  */
 async function insertSettlementSite(projectId, userId, cfg) {
   // Los umbrales no se envían: los DEFAULT de la tabla `sites` son los mismos
-  // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75,
-  // distorsión 1/500), así que el lugar queda coherente con el preset del
-  // motor sin duplicar las constantes aquí.
+  // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75),
+  // así que el lugar queda coherente con el preset del motor sin duplicar las
+  // constantes aquí.
   const siteId = await createSite(projectId, {
     name: cfg.name,
     description: cfg.description,
