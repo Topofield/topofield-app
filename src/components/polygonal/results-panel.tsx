@@ -73,6 +73,12 @@ export function ResultsPanel({
 }: ResultsPanelProps) {
   const leastSquares = method === "least_squares";
   const adjustment = result.adjustment;
+  // Con 3 decimales, como σ₀: con 2, un σ₀ de 1.766 saldría «peor» junto a un
+  // intervalo que dice 1.77.
+  const sigma0Bounds =
+    adjustment?.status === "adjusted"
+      ? sigma0Interval(adjustment.conditions).map((x) => x.toFixed(3))
+      : null;
   // La abierta sin control no tiene nada que corregir, así que no hay selector.
   // Salvo si el proceso ya tiene mínimos cuadrados (se cambió el tipo después):
   // entonces se muestra, para poder elegir otro método y guardar.
@@ -263,8 +269,7 @@ export function ResultsPanel({
             <p className="mt-1 text-xs text-ink-2">
               σ₀ compara lo medido con los pesos supuestos. Con r ={" "}
               {adjustment.conditions} condiciones, la prueba χ² al 95 % espera
-              σ₀ entre {sigma0Interval(adjustment.conditions)[0].toFixed(2)} y{" "}
-              {sigma0Interval(adjustment.conditions)[1].toFixed(2)}.
+              σ₀ entre {sigma0Bounds?.[0]} y {sigma0Bounds?.[1]}.
             </p>
           </div>
         </div>
