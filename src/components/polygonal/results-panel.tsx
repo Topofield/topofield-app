@@ -1,6 +1,6 @@
 import { Alert, NumberInput, Select } from "@/components/design-system";
 import { decimalToDms } from "@/lib/calculations/angles";
-import { SIGMA0_BAND, sigma0Reading } from "@/lib/calculations/least-squares";
+import { sigma0Interval, sigma0Reading } from "@/lib/calculations/least-squares";
 import { formatPrecision } from "@/lib/utils/format";
 import {
   CORRECTION_METHOD_OPTIONS,
@@ -258,11 +258,13 @@ export function ResultsPanel({
           <div className="max-w-md">
             <Row label="σ₀" value={adjustment.sigma0.toFixed(3)} />
             <p className="mt-1 text-sm text-ink-2">
-              {SIGMA0_TEXT[sigma0Reading(adjustment.sigma0)]}
+              {SIGMA0_TEXT[sigma0Reading(adjustment.sigma0, adjustment.conditions)]}
             </p>
             <p className="mt-1 text-xs text-ink-2">
-              σ₀ compara lo medido con los pesos supuestos: cerca de 1 (entre{" "}
-              {SIGMA0_BAND[0]} y {SIGMA0_BAND[1]}) es lo esperado.
+              σ₀ compara lo medido con los pesos supuestos. Con r ={" "}
+              {adjustment.conditions} condiciones, la prueba χ² al 95 % espera
+              σ₀ entre {sigma0Interval(adjustment.conditions)[0].toFixed(2)} y{" "}
+              {sigma0Interval(adjustment.conditions)[1].toFixed(2)}.
             </p>
           </div>
         </div>

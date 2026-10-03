@@ -236,8 +236,8 @@ export type LeastSquaresAdjustment =
       adjustedDistances: (number | null)[];
       /** Desviación típica a posteriori de la unidad de peso. */
       sigma0: number;
-      /** Número de condiciones (3, o 2 sin azimut de llegada). */
-      conditions: number;
+      /** Número de condiciones, la redundancia r (3, o 2 sin azimut de llegada). */
+      conditions: 2 | 3;
       iterations: number;
     };
 

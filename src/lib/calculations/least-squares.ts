@@ -141,19 +141,38 @@ export function adjustByConditions(
   };
 }
 
+/** Redundancia r de una poligonal: 3 condiciones, o 2 sin azimut de llegada. */
+export type Redundancy = 2 | 3;
+
 /**
- * Banda en que σ₀ se lee como «≈ 1». Decisión con nombre y sin prueba
- * estadística detrás (la χ² queda fuera de la fase): con pocas condiciones,
- * σ₀ fluctúa mucho aunque los pesos sean los correctos, así que la banda es
- * ancha. Solo cambia el texto que acompaña a σ₀; no decide nada.
+ * Valores críticos de la prueba χ² bilateral al 95 % para cada redundancia r:
+ * el inferior y el superior (Fase 32, D-6).
+ *
+ * Con pesos correctos, r·σ₀² sigue una χ² con r grados de libertad (Ghilani y
+ * Wolf, *Adjustment Computations*, § 5.4 y § 16.7). USACE EM 1110-2-1009
+ * (2018) la pide al 95 % (§ 9-5.h y § 9-2.g). Sustituye a la banda [0.5, 2]
+ * sobre σ₀, que no tenía fuente y con r = 2 o 3 juzgaba mal entre el 15 y el
+ * 24 % de los ajustes correctos. Solo están r = 2 y r = 3 porque son los
+ * únicos que da una poligonal. Sigue sin decidir nada: solo cambia el texto
+ * que acompaña a σ₀.
  */
-export const SIGMA0_BAND: readonly [number, number] = [0.5, 2];
+export const SIGMA0_CHI2_95: Record<Redundancy, readonly [number, number]> = {
+  2: [0.0506356, 7.3777589],
+  3: [0.2157953, 9.3484036],
+};
+
+/** Intervalo de σ₀ que acepta la prueba: [√(χ²inf/r), √(χ²sup/r)]. */
+export function sigma0Interval(r: Redundancy): [number, number] {
+  const [lo, hi] = SIGMA0_CHI2_95[r];
+  return [Math.sqrt(lo / r), Math.sqrt(hi / r)];
+}
 
 export type Sigma0Reading = "consistent" | "worse" | "pessimistic";
 
-/** Lectura de σ₀ frente a los pesos supuestos. */
-export function sigma0Reading(sigma0: number): Sigma0Reading {
-  if (sigma0 > SIGMA0_BAND[1]) return "worse";
-  if (sigma0 < SIGMA0_BAND[0]) return "pessimistic";
+/** Lectura de σ₀ frente a los pesos supuestos, con la prueba χ² de su r. */
+export function sigma0Reading(sigma0: number, r: Redundancy): Sigma0Reading {
+  const [lo, hi] = sigma0Interval(r);
+  if (sigma0 > hi) return "worse";
+  if (sigma0 < lo) return "pessimistic";
   return "consistent";
 }

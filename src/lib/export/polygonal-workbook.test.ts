@@ -331,7 +331,7 @@ describe("buildPolygonalWorkbook — mínimos cuadrados (Fase 14)", () => {
     distanceCorrectionsM: [-0.00393],
     adjustedDistances: [32.953],
     sigma0: 0.6981,
-    conditions: 3,
+    conditions: 3 as const,
     iterations: 3,
   };
   const ls = process({
