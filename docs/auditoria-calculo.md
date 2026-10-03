@@ -67,8 +67,13 @@ libreta de una visita pasa por otro BM del catálogo, la app compara su cota
 calculada con la de catálogo y avisa si no nivela. **CR4 se resolvió en la
 Fase 31**: D-4 y D-5 se descartaron —tras consultar la FGCS, el usuario quitó
 los avisos de equipo insuficiente y de dispersión—, D-8 pasó al promedio
-encadenado y D-10 exige superar el margen de ruido. La § 4 es material del
-usuario y no se tocó.
+encadenado y D-10 exige superar el margen de ruido. **CR3 se resolvió en la
+Fase 32**, tras consultar la FGCS 1984, NGS 3, Ghilani y USACE EM 1110-2-1009:
+D-3 pasó a los límites de equilibrado de la FGCS, por armada y acumulado por
+sección; D-6, a la prueba χ² bilateral al 95 %; y D-7, al margen con la
+longitud real del circuito de cada visita, sin el suelo de 1 mm. Ya no queda
+ningún criterio pedido por resolver. La § 4 es material del usuario y no se
+tocó.
 
 ---
 
@@ -439,11 +444,12 @@ solo comprueba que las proyecciones corregidas sumen cero.
 | `MIN_RELATIVE_PRECISION` | 1:100 000 / 20 000 / 5 000 / 3 000 | Marco § 8 | Coincide con la FGCS en tres órdenes |
 | `LEVELING_TOLERANCE_K` | 3/6/12/24 mm·√D | Marco de nivelación § 8 | Clases corridas frente a la FGCS (3/4/6/8/12) |
 | Ida-vuelta | K·√D_mín·√2 | Marco § 8.1 | La FGCS no lleva √2 (D-2) |
-| `SIGHT_BALANCE_LIMIT_M` | 2/3/4/6 m | Sin fuente | Marco 2/5/10; FGCS 2/5/5/10/10 (D-3) |
+| `SIGHT_BALANCE_LIMIT_M` | 2/5/10/10 m | FGCS 1984, § 3.5 (Fase 32) | Antes 2/3/4/6, sin fuente (D-3). Coincide con el marco; ordinario toma el del tercero |
+| `SECTION_BALANCE_LIMIT_M` | 4/10/10/10 m | FGCS 1984, § 3.5 (Fase 32) | El acumulado de la sección, nuevo (D-3) |
 | `READING_DISPERSION_FACTOR` | 2·σ | Criterio propio | Estricto (D-5). Quitado en la Fase 31, con su aviso |
-| `SIGMA0_BAND` | [0.5, 2] | Sin fuente | No equivale a χ² (D-6) |
+| `SIGMA0_CHI2_95` | χ² bilateral al 95 %, r = 2 y 3 | Ghilani, § 16.7; USACE EM 1110-2-1009, § 9-5.h (Fase 32) | Sustituye a `SIGMA0_BAND` = [0.5, 2] sobre σ₀, sin fuente (D-6) |
 | Equipo suficiente | σ ≤ K | Sin fuente | Indulgente (D-4). Quitado en la Fase 31, con su aviso: la FGCS exige el instrumento con requisitos fijos por orden |
-| `TREND_DEVIATION_REFERENCE_KM` | 0.25 | Decisión de la Fase 12 | Equivale a un circuito de 0.5 km (D-7) |
+| `DIRECT_CAPTURE_CIRCUIT_KM` | 0.5 km | Fase 32 | Solo para una visita sin libreta. El margen sale del circuito de cada visita, ½·√(Tₚ² + Tₙ²) (USACE EM 1110-2-1009, § 2-3.b). Sustituye a `TREND_DEVIATION_REFERENCE_KM` = 0.25, de la Fase 12 (D-7) |
 | Velocidad | 2/5/10 mm/mes | Marco de asentamientos § 4.1 | Coincide |
 | Acumulado, edificio y presa | 25/50/75 y 10/25/50 mm | Marco § 4.1 | Coincide; terraplén y «otro» sin fuente |
 | Distorsión angular | 1/500 | Marco § 4.1 (Eurocódigo 7) | Coincide |
@@ -454,3 +460,11 @@ Fuente externa: FGCC (1984), *Standards and Specifications for Geodetic
 Control Networks*. La página de NGS no respondió; los valores de nivelación
 se tomaron de sus resúmenes y los de poligonal de segundo y tercer orden, de
 memoria del revisor. **Conviene confirmarlos antes de citarlos.**
+
+**Confirmado en la Fase 32** sobre el PDF de NGS
+(`geodesy.noaa.gov/FGCS/tech_pub/1984-stds-specs-geodetic-control-networks.pdf`,
+§ 3.5, p. 3-7 y 3-8): en nivelación, el cierre de sección 3/4/6/8/12 mm·√D,
+la diferencia de visuales 2/5/5/10/10 m por armada y 4/10/10/10/10 m por
+sección, y la colimación máxima de 0.05 mm/m (0.10 en tercer orden), para 1.º
+I, 1.º II, 2.º I, 2.º II y 3.º. NGS 3 (tabla 3-1) da las mismas. Los valores
+de poligonal siguen sin confirmar.

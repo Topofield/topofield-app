@@ -185,9 +185,14 @@ Circuito BM-2); las de carteras reales, en **Proyecto de ejemplo** (El Verjón
   intermedio AUX1) y **Vuelta** (D4 → D1, 12 filas, con AUX 1). La distancia
   total de la configuración, 0.384 km, es la de la ida; la vuelta acumula
   0.398 km.
-- ✓ En la vuelta aparecen avisos de equilibrado, por ejemplo «Armada C 1 →
-  D1: visuales desequilibradas, 19.7 m de diferencia; el límite del orden es
-  4 m.» Avisan, no bloquean.
+- ✓ Avisos de equilibrado con los límites de la FGCS (Fase 32). En la ida,
+  cuatro por armada —C 1 → C 2, C 2 → C 3, C 3 → C 4 y C 7 → D3— y en D4 el
+  del acumulado: «Sección D1 → D4: las visuales de atrás suman 53.3 m más que
+  las de adelante; el límite acumulado del orden es 10 m.» En la vuelta, uno
+  por armada, «Armada C 1 → D1: visuales desequilibradas, 19.7 m de
+  diferencia; el límite del orden es 10 m.», y en D1 «Sección D4 → D1: las
+  visuales de adelante suman 52.2 m más que las de atrás…». Avisan, no
+  bloquean.
 - ✓ No hay tarjeta Cierre. La tarjeta **Ida y vuelta** muestra: desnivel ida
   26.5830, desnivel vuelta −26.5880, errores de cierre «—» (abierta),
   **Discrepancia 5.0 mm**, **Tolerancia (T·√2) 10.5 mm** (T = 12 · √0.384,

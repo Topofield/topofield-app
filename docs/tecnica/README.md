@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-02 · Fase 31 cerrada · 984 tests y 74
+**Última actualización:** 2026-10-02 · Fase 32 cerrada · 1015 tests y 74
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -79,6 +79,13 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 23 | Integridad | cerrada |
 | 24 | Pulido | cerrada |
 | 25 | Catálogo de equipos | cerrada |
+| 26 | Correcciones del cálculo | cerrada |
+| 27 | Segundo pulido | cerrada |
+| 28 | Ida y vuelta en la compensación | cerrada |
+| 29 | Puntos de control sin posición | cerrada |
+| 30 | Estabilidad de los BMs | cerrada |
+| 31 | Avisos del cálculo | cerrada |
+| 32 | Rigor estadístico | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -1154,8 +1161,13 @@ control, dos lineales más la angular si hay azimut de llegada. El sistema es de
 - El **veredicto no cambia**: error angular, lineal y precisión relativa son
   los de la cartera medida, antes de ajustar. Solo cambian las coordenadas,
   los ángulos corregidos y los azimuts.
-- σ₀ = √(vᵀPv / r). `sigma0Reading` lo lee contra `SIGMA0_BAND = [0.5, 2]`:
-  una banda con nombre, no una prueba χ² (fuera de alcance).
+- σ₀ = √(vᵀPv / r). Desde la Fase 32 (D-6), `sigma0Reading(σ₀, r)` lo lee
+  con la **prueba χ² bilateral al 95 %** de su redundancia (Ghilani, § 5.4 y
+  § 16.7; USACE EM 1110-2-1009): `sigma0Interval(r)` da [√(χ²inf/r),
+  √(χ²sup/r)], de 0.16 a 1.92 con r = 2 y de 0.27 a 1.77 con r = 3.
+  `SIGMA0_CHI2_95` solo tiene esas dos r, las únicas que da una poligonal
+  (`conditions: 2 | 3`). Solo cambia el texto que acompaña a σ₀, que dice r y
+  el intervalo; no decide nada.
 
 Sobre la cartera Vivero con los pesos de la hoja (2″, 0.011 m, 2 mediciones)
 reproduce el cálculo independiente del PRD, y no los valores del análisis de
@@ -1188,6 +1200,12 @@ Las tolerancias son las del marco teórico; la FGCS (1984) no lleva el √2 de l
 discrepancia y sus clases están corridas (auditoría del cálculo, § 6). `CALIBRATION_MAX_MONTHS`
 (12) es la antigüedad de la calibración a partir de la cual el formulario de
 equipo avisa (Fase 25).
+
+El **equilibrado de visuales** tiene dos límites, los de la FGCS (1984), § 3.5,
+para la clase de cada orden (Fase 32, D-3): `SIGHT_BALANCE_LIMIT_M`, 2 / 5 / 10
+/ 10 m por armada, y `SECTION_BALANCE_LIMIT_M`, 4 / 10 / 10 / 10 m acumulados
+por sección. Ordinario no está en la norma y toma los del tercer orden. Ver
+§ 11, «Equilibrado de visuales».
 
 ### Sin aviso de equipo insuficiente (Fase 31)
 
@@ -1337,32 +1355,47 @@ excesiva   si  d · parcial >  2 · |V_prev| · Δt + m
 
 Moverse menos de lo previsto nunca avisa. Es a propósito: el criterio obvio,
 extrapolar la velocidad anterior, marcaba lecturas correctas en consolidación,
-que frena. El margen es `m = K_orden · √0.25`, la tolerancia de cierre de un
-circuito de referencia de 250 m con la `K` de nivelación del orden de la visita
-(`trendDeviationMargin`, 1.5 / 3 / 6 / 12 mm). La longitud de referencia
-(`TREND_DEVIATION_REFERENCE_KM`) y el factor 2 (`TREND_DEVIATION_RATE_FACTOR`)
-son decisiones con nombre en `tolerances.ts`. Solo evalúa desde la tercera
-lectura del punto. P-09 del marco teórico y las series del seed son tests de
-regresión: no dan ningún aviso con ninguno de los cuatro márgenes.
+que frena. Desde la Fase 32 (D-7), el margen es el ruido de las dos cotas que
+se comparan, con la tolerancia del circuito de cada visita
+(`trendDeviationMargin(anterior, actual)`):
+
+```
+m = ½ · √(Tₚ² + Tₙ²),   T = K_orden · √L
+```
+
+con L la longitud de su libreta (`total_distance_km`) o, sin libreta,
+`DIRECT_CAPTURE_CIRCUIT_KM` (0.5 km). Es el criterio de USACE EM 1110-2-1009
+(§ 2-3.b), 1.96·√(σₚ² + σₙ²), si K·√L es el límite al 95 % del cierre (NGS 3,
+§ 3.1.3) y la cota de un punto compensado tiene, como mucho, σ_km·√(L/4). Dos
+visitas sin libreta dan el margen de antes, K·√0.25: 1.5 / 3 / 6 / 12 mm.
+Torre Alameda, con circuitos de 0.112 km, pasa de 6.0 a 2.8 mm en tercer
+orden. El factor 2 (`TREND_DEVIATION_RATE_FACTOR`) sigue siendo una decisión
+con nombre. Solo evalúa desde la tercera lectura del punto. P-09 del marco
+teórico y las series del seed son tests de regresión: no dan ningún aviso con
+ninguno de los cuatro órdenes.
 
 Es una función aparte, y no un campo de `computeSettlements`, porque necesita
-el orden de cada visita, que `VisitInput` no lleva. La llaman el editor de
-visita (en vivo, con el orden de la cabecera) y la página del panel. Avisa,
+el circuito de cada visita (`VisitCircuit`: orden y km), que `VisitInput` no
+lleva. `visitCircuitsOf` lo lee de las filas de la base, con el `Number()` de
+la DECIMAL. La llaman el editor de visita (en vivo, con el orden de la
+cabecera y la longitud de la libreta que se captura), la vista de la visita y
+la página del panel. Avisa,
 no bloquea y no se persiste. Tampoco cambia el semáforo ni `computeTrends`.
 
 `computeHistory` compone todo lo anterior sobre la serie completa de un
 lugar: ordena las visitas **por fecha, no por `visit_number`**; hay un test
 que fija ese contrato.
 
-`computeTrends(visitas, órdenes)` da la tendencia de cada punto, y solo con
+`computeTrends(visitas, circuitos)` da la tendencia de cada punto, y solo con
 al menos tres visitas (dos velocidades que comparar). Desde la Fase 31 (D-10)
 un punto **acelera** si |V_última| − |V_anterior| > m/Δt, con m el margen de
-la lectura fuera de tendencia del orden de la última visita y Δt su intervalo
-en meses; si no, **converge**. Antes bastaba cualquier aumento, y el ruido de
-medición hacía «acelerar» puntos que se frenaban (TA-01 y TA-02 de Torre
-Alameda, P-04 de Torre Central). Como `detectTrendDeviations`, necesita el
-orden de cada visita: por eso salió de `computeHistory`, y la llaman el panel
-y el Excel. Sin el orden de la última visita, el punto no lleva tendencia.
+la lectura fuera de tendencia —desde la Fase 32, el de las dos visitas de la
+última velocidad— y Δt su intervalo en meses; si no, **converge**. Antes
+bastaba cualquier aumento, y el ruido de medición hacía «acelerar» puntos que
+se frenaban (TA-01 y TA-02 de Torre Alameda, P-04 de Torre Central). Como
+`detectTrendDeviations`, necesita el circuito de cada visita: por eso salió de
+`computeHistory`, y la llaman el panel y el Excel. Sin el circuito de esas dos
+visitas, el punto no lleva tendencia.
 
 `settlement-summary.ts` da el **promedio encadenado** de cada visita
 (`chainedMeans`, Fase 31, D-8): el de la anterior con lecturas más la media de
@@ -1883,18 +1916,18 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-994 tests en 66 archivos, Vitest, entorno `node` **sin jsdom**. Además, 67
+1015 tests en 66 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/settlement.test.ts` | 69 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12); «Acelerando» solo por encima del margen del orden, en la frontera y sin orden conocido (Fase 31) |
+| `lib/calculations/settlement.test.ts` | 77 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12); «Acelerando» solo por encima del margen, en la frontera y sin orden conocido (Fase 31); el margen con el circuito de cada visita —el de antes sin libreta, 2.84 mm con los de Torre Alameda, 10.39 con 1.5 km, dos órdenes, longitud 0—, `visitCircuitsOf` con la DECIMAL como cadena, un aviso y una aceleración que solo salen con circuitos cortos, y sin el circuito de la visita anterior no se evalúa (Fase 32) |
 | `lib/calculations/leveling.test.ts` | 95 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26); la vuelta compensada en cerrada y de enlace, la cota adoptada y el ejemplo 1 de `docs/math/nivelacion.html` (Fase 28) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
 | `lib/validators/polygonal.test.ts` | 76 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la dispersión entre lecturas ya no avisa (Fase 31) |
 | `lib/validators/settlement.test.ts` | 49 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
-| `lib/validators/leveling.test.ts` | 58 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón: avisos exactamente en C 2, C 3, C 4, C 7, D3 y C 8, con la armada en el texto (Fase 19); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
+| `lib/validators/leveling.test.ts` | 74 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón, con la armada en el texto (Fase 19): desde la Fase 32, avisos exactamente en C 2, C 3, C 4 y D3, y en la vuelta solo C 1 → D1; los límites de la FGCS por orden, en la frontera y con restas que en coma flotante no dan exacto; el **acumulado de la sección**: +53.3 m en la ida y −52.2 m en la vuelta de El Verjón con su texto, el tramo 2 sin aviso, el límite de 4 m en primer orden, la frontera, el reinicio en un BM intermedio, un recorrido a medias, una armada sin distancia, sin evaluar con distancias reconstruidas y por `validateRunCapture` sin bloquear (Fase 32); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
 | `lib/utils/format.test.ts` | 33 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26) |
@@ -1902,17 +1935,17 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
-| `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14) |
+| `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal |
 | `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |
 | `lib/calculations/angles.test.ts` | 22 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13); promedio y dispersión de lecturas a través de 0°/360°, redondeo a 0.1″, coma decimal y sin aviso falso en la vista decimal (Fase 26) |
-| `lib/demo/fixtures.test.ts` | 19 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo y sin compensar cuando no cumple (Fase 28); Torre Alameda pasa por el otro BM, que nivela en todas las visitas salvo la 13 (Fase 30) |
+| `lib/demo/fixtures.test.ts` | 20 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo y sin compensar cuando no cumple (Fase 28); Torre Alameda pasa por el otro BM, que nivela en todas las visitas salvo la 13 (Fase 30); con el margen de sus circuitos reales, ni avisos de tendencia ni «Acelerando» (Fase 32) |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
 | `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
-| `lib/export/settlement-workbook.test.ts` | 16 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18); sin coordenadas, diferenciales ni límite de distorsión (Fase 29); la columna «Cota de catálogo (m)» de la hoja «Libretas» (Fase 30) |
+| `lib/export/settlement-workbook.test.ts` | 17 | Libro de asentamientos: catálogo con alta, baja y motivo, códigos en vez de UUID, equipo por visita en Datos Crudos (Fase 8); hoja «Libretas» y bloque de visitas (Fase 18); sin coordenadas, diferenciales ni límite de distorsión (Fase 29); la columna «Cota de catálogo (m)» de la hoja «Libretas» (Fase 30); «Puntos con tendencia creciente» con el circuito de cada visita, leído como cadena (Fase 32) |
 | `lib/calculations/settlement-book.test.ts` | 30 | Libreta de la visita: la del prototipo por `computeVisitBook` (cierre 1.30 mm, tolerancia 4.87), sin distancias, a medias como recorrido abierto; derivación compensada y redondeada, fuera de tolerancia, punto de control como punto de cambio, duplicado, fuera de vigencia, ausente, código ajeno; plantilla (Fase 18); el amarre no se compensa y las intermedias conservan su acumulado (Fase 19); la comprobación de los BM de control —nivela, no nivela, la frontera, sin distancias, filas que no cuentan, el mismo BM dos veces—, `catalogElevationsOf` y la libreta guardada (Fase 30) |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
-| `lib/validators/settlement-book.test.ts` | 17 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18); el punto de cambio incompleto bloquea con su fila (Fase 24); el mensaje de la comprobación de un BM, que no culpa a ninguno (Fase 30) |
+| `lib/validators/settlement-book.test.ts` | 18 | Validación de la libreta: amarre obligatorio con lecturas, arranque y cierre en él, tipo BM, errores de nivelación que se propagan, números no finitos; mensajes; la comprobación aritmética bloquea el cierre y la tolerancia no (Fase 18); el punto de cambio incompleto bloquea con su fila (Fase 24); el mensaje de la comprobación de un BM, que no culpa a ninguno (Fase 30); el aviso del acumulado del equilibrado en la fila de cierre (Fase 32) |
 | `lib/calculations/settlement-summary.test.ts` | 15 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas; siguiente umbral de acumulado (Fase 18); el promedio encadenado con altas, bajas, visitas sin lecturas y sin puntos comunes (Fase 31) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
 | `components/leveling/readings-table.test.ts` | 3 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18); una fila sin V+ ni V− no hereda la cota del punto anterior (Fase 22) |
@@ -2176,7 +2209,19 @@ armada. Ahora se compara la V+ de una fila `bm`/`pc` con la V− de la
 **siguiente fila no intermedia**, que es lo que calcula la hoja de campo; las
 intermedias no abren ni cierran armada. El aviso va en la celda de la V− que
 cierra la armada y la nombra: «Armada C 1 → C 2: visuales desequilibradas,
-10.8 m de diferencia; el límite del orden es 4 m».
+10.8 m de diferencia; el límite del orden es 10 m».
+
+**Con la norma y el acumulado desde la Fase 32 (D-3).** Los límites por
+armada eran 2/3/4/6 m, sin fuente; ahora son los de la FGCS (1984), § 3.5:
+2/5/10/10 m. Y `validateSectionBalances` controla el **acumulado de la
+sección**, Σ(d_V+ − d_V−) de BM a BM, con 4/10/10/10 m: el error de
+colimación de una sección es C·ΣΔs (NGS 3, § 5.5.2), y una ida y una vuelta
+que se desequilibran igual se sesgan igual sin que la discrepancia lo vea (El
+Verjón: +53.3 y −52.2 m). Sin BM de cierre se juzga en la última armada, así
+que avisa mientras se captura. Va en `warnings.sectionBalance`, en la V− que
+cierra la sección. Las dos comparaciones llevan un margen de 10⁻⁹ m: `35.2 −
+30.2` da 5.0000000000000036 y una armada justo en el límite avisaba. La app no
+aplica la corrección de colimación −C·ΣΔs, que necesita la C medida.
 
 **Salvedad:** en procesos con `distances_reconstructed = true` el equilibrado
 **no se evalúa**. Son los que existían antes de la Fase 9, cuyas distancias por
@@ -2465,14 +2510,15 @@ para los puntos **de baja**, que ya no se editan. Para los vigentes, la regla
 natural es bloquear la C0 en cuanto el punto tenga una lectura cerrada. Va a
 la **Fase 23** (I2 en `pendientes.md`).
 
-**El margen del aviso de lectura fuera de tendencia es fijo por orden (Fase
-12, decisión deliberada).** Sale de un circuito de referencia de 250 m
-(`TREND_DEVIATION_REFERENCE_KM`), razonable para un edificio y posiblemente
-corto para una presa. Si un usuario lo pide, el paso natural es hacerlo un
-umbral editable del lugar, junto a los de velocidad y acumulado, lo que exige
-migración y resincronización. La auditoría del cálculo (Fase 26, D-7)
-recomienda en cambio derivarlo de la longitud real de los dos circuitos: el
-margen fijo equivale a uno de 0.5 km. Pendiente como CR3.
+**Resuelto en la Fase 32 — el margen del aviso de lectura fuera de
+tendencia.** Era fijo por orden (Fase 12): un circuito de referencia de 250 m
+(`TREND_DEVIATION_REFERENCE_KM`), equivalente a dos circuitos de 0.5 km. La
+auditoría (D-7) recomendó derivarlo de la longitud real, y ahora sale de la
+tolerancia del circuito de cada visita (§ 6, «Lectura fuera de tendencia»).
+Las visitas sin libreta no tienen longitud y cuentan como 0.5 km. No se hizo
+umbral editable: se acabaría ajustando para silenciar el aviso. **Queda sin
+validar contra una serie real**: Torre Alameda es sintética, y en ella el
+margen baja a 2.8 mm sin dar avisos.
 
 **Tres componentes del sistema de diseño conocen el dominio.** La § 8 dice que
 un componente del sistema de diseño no importa nada de `@/types/*` ni de
@@ -2533,11 +2579,11 @@ reales y encontraron 18 errores en esquemas que esas carteras no cubren, en
 reglas de validación y en límites numéricos; la Fase 26 los corrigió, cada
 uno con su test, y encontró dos más al implementar y verificar: el servidor
 rechazaba guardar una cerrada con fila de cierre (C-19) y el editor no
-mostraba el amarre (C-20). Lo que queda abierto de la auditoría son
-**criterios**, no errores: los que el usuario pidió cambiar están en
-`pendientes.md` (CR3; CR1 se resolvió en la Fase 28, CR2 en la 30 —después
-de que la 29 retirara su distorsión, D-9— y CR4 en la 31, que quitó D-4 y
-D-5); el resto, documentado en la § 2 de la auditoría.
+mostraba el amarre (C-20). Los **criterios** que el usuario pidió cambiar
+están todos resueltos: CR1 en la Fase 28, CR2 en la 30 —después de que la 29
+retirara su distorsión, D-9—, CR4 en la 31, que quitó D-4 y D-5, y CR3 en la
+32 (D-3, D-6 y D-7). El resto queda documentado en la § 2 de la auditoría,
+sin cambio.
 
 **Una distancia tecleada que los hilos tapan (Fase 26, visto al verificar).**
 Con los tres hilos capturados, la distancia sale de ellos (Fase 9) y la que
@@ -2597,13 +2643,12 @@ trigger al emitir, o guardar en la fila un snapshot de la portada— son
 candidatas a una fase posterior, no un parche suelto: hay que decidir antes si
 un informe emitido se puede reeditar o solo reemitir.
 
-**La banda de σ₀ es una decisión, no una prueba (Fase 14).** `SIGMA0_BAND =
-[0.5, 2]` solo cambia el texto que acompaña a σ₀. Con 2 o 3 condiciones σ₀
-fluctúa mucho aunque los pesos sean los correctos, así que la banda es ancha;
-la prueba χ² con sus grados de libertad sería lo riguroso y quedó fuera de
-alcance. Si algún día σ₀ decide algo, hay que cambiarla por la prueba. La
-auditoría del cálculo (Fase 26, D-6) lo cuantificó —con r = 3 un σ₀ de 1.61
-ya es significativo— y el usuario pidió la prueba χ²: CR3 en `pendientes.md`.
+**Resuelto en la Fase 32 — la banda de σ₀.** `SIGMA0_BAND = [0.5, 2]`
+(Fase 14) no tenía fuente y, con r = 2 o 3, juzgaba mal entre el 15 y el 24 %
+de los ajustes correctos. Su pariente con fuente, la banda de USACE, es sobre
+σ₀² y está pensada para redes con mucha redundancia: con r = 2 o 3 fallaría
+la mitad de las veces. La sustituye la prueba χ² bilateral al 95 % de su r
+(§ 6). Sigue sin decidir nada: solo cambia el texto.
 
 **Mínimos cuadrados en una abierta sin control (Fase 14).** El selector no lo
 ofrece ahí, pero un proceso con el método al que después se le cambia el tipo

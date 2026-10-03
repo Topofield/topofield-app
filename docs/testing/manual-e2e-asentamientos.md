@@ -137,7 +137,8 @@ referencia: sirve para el arranque en frío (paso 19).
     visita 5 sube 7,0 mm cuando venía bajando. Es la lectura mal tomada que
     siembra el seed (Fase 12). Debajo de la marca se lee el aviso completo.
     No sale **Acelerando**: su velocidad crece 5.75 mm/mes, dentro del margen
-    de ruido de tercer orden (5.89 en ese intervalo, Fase 31).
+    de ruido de tercer orden (5.89 en ese intervalo, Fase 31). Torre Central
+    se captura sin libreta, así que su margen es el de antes de la Fase 32.
   - El resto (P-01…P-03 y P-07) queda en **normal**.
 - ✓ El acumulado de **P-06** en la última visita es ≈ **−50.5 mm** (cruza el
   umbral de acumulado de 50 mm → alerta por acumulado).
@@ -279,6 +280,10 @@ referencia: sirve para el arranque en frío (paso 19).
   **Ver datos en tabla** despliega los valores.
 - ✓ Sigue **Semáforo por punto (última visita)**, la última tarjeta del panel:
   ya no hay **Asentamientos diferenciales y distorsión angular** (Fase 29).
+- ✓ Ningún punto lleva **⚠ Lectura fuera de tendencia** ni sale
+  **Acelerando**: los ocho, **Convergente**. Sus circuitos miden 0.112 km, así
+  que el margen de ruido baja de 6.0 a 2.8 mm (Fase 32), y la serie sigue sin
+  avisos.
 
 ### 12. Vista de una visita y registro de nivelación
 
@@ -475,7 +480,9 @@ sin Norte ni Este en el catálogo, sin límite de distorsión, cinco indicadores
 y sin tabla de diferenciales. Los pasos 11, 12, 12 bis, 13, 15 y 18 cubren la
 Fase 30: el BM de control que nivela y el que no, en el panel, la vista, el
 registro, el cierre, el editor y el Excel. Los pasos 5 y 6 cubren la Fase 31:
-el promedio encadenado y «Acelerando» solo por encima del ruido. El paso 7 bis cubre
+el promedio encadenado y «Acelerando» solo por encima del ruido. Los pasos 5
+y 11 cubren la Fase 32: el margen de ruido con el circuito de cada visita, el
+de antes en Torre Central y sin avisos en Torre Alameda. El paso 7 bis cubre
 el PRD-de-fase 12: el aviso de lectura fuera de tendencia. Los pasos 11 a 20
 cubren el PRD-de-fase 18: el panel y la vista de la visita, el registro de
 nivelación, la libreta digitada e importada, el cierre fuera de tolerancia,

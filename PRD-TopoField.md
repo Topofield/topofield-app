@@ -819,6 +819,8 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Poligonal | Segundos de ángulo fuera de rango (≥ 60) | Borde rojo, bloquea |
 | Nivelación | Lectura de mira < 0 o > 4.000 m | Borde rojo |
 | Nivelación | Lectura atrás = lectura adelante exacta | Borde amarillo |
+| Nivelación | Equilibrado de visuales: \|d_V+ − d_V−\| de una armada > 2 / 5 / 10 / 10 m (Fase 19; límites de la Fase 32) | Aviso en la V− que cierra la armada; no bloquea |
+| Nivelación | Equilibrado acumulado: \|Σ(d_V+ − d_V−)\| de una sección, de BM a BM, > 4 / 10 / 10 / 10 m (Fase 32) | Aviso en la V− que cierra la sección; no bloquea |
 | Asentamiento | Cota actual > cota C0 (ascenso en vez de descenso) | Borde amarillo, tooltip "posible error de lectura" |
 | Todos | Campo numérico vacío cuando es requerido | Borde rojo |
 
@@ -844,8 +846,8 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Velocidad > umbral alerta | Semáforo naranja |
 | Velocidad > umbral alarma | Semáforo rojo |
 | Asentamiento acumulado > umbral | Semáforo según nivel |
-| Tendencia de velocidad creciente (aceleración) | Indicador de advertencia, solo si la velocidad crece más que el margen de ruido del orden (Fase 31) |
-| Lectura fuera de tendencia (Fase 12) | Aviso al capturar, al cerrar y en el panel; no bloquea |
+| Tendencia de velocidad creciente (aceleración) | Indicador de advertencia, solo si la velocidad crece más que el margen de ruido de las dos visitas (Fases 31 y 32) |
+| Lectura fuera de tendencia (Fase 12) | Aviso al capturar, al cerrar y en el panel; no bloquea. Margen por el circuito de cada visita (Fase 32) |
 | Otro BM del catálogo que no nivela con el amarre (Fase 30) | Cota calculada de la libreta frente a la de catálogo, con K·√L hasta ese BM: aviso en el editor, la vista, el cierre y el panel; no bloquea |
 
 ### 5.4 Tolerancias por Orden
@@ -870,8 +872,27 @@ const TOLERANCES = {
     tercer_orden:  12,
     ordinario:     24,
   },
+  sight_balance: { // |d_V+ − d_V−| por armada (m)
+    primer_orden:  2,
+    segundo_orden: 5,
+    tercer_orden:  10,
+    ordinario:     10,
+  },
+  section_balance: { // |Σ(d_V+ − d_V−)| por sección, de BM a BM (m)
+    primer_orden:  4,
+    segundo_orden: 10,
+    tercer_orden:  10,
+    ordinario:     10,
+  },
 };
 ```
+
+**Añadido en la Fase 32 (2026-10-02).** Los límites del equilibrado son los de
+la FGCS (1984), § 3.5, para las clases cuya tolerancia de cierre es la de cada
+orden: 1.º I, 2.º I y 3.º. Ordinario no está en la norma y toma los del tercer
+orden. El acumulado se controla porque el error de colimación de una sección
+es C·Σ(d_V+ − d_V−) (NGS 3, § 5.5.2). Ver
+`docs/prds/31-rigor-estadistico.md`.
 
 ---
 
@@ -1173,6 +1194,18 @@ Velocidad:
 - **Tendencia:** un punto acelera si |V_última| − |V_anterior| > m/Δt, con m el
   margen de la lectura fuera de tendencia del orden de la última visita (Fase
   12) y Δt su intervalo en meses. Si no, converge.
+
+**Cambiado en la Fase 32 (2026-10-02).** El margen de ruido del parcial entre
+dos visitas —el de la lectura fuera de tendencia y el de la tendencia— sale de
+la tolerancia del circuito de cada una:
+
+```
+m = ½ · √(Tₚ² + Tₙ²),   T = K · √L   (L: longitud de la libreta; 0.5 km sin libreta)
+```
+
+Es el criterio de USACE EM 1110-2-1009 (2018), § 2-3.b, 1.96·√(σₚ² + σₙ²), si
+K·√L es el límite al 95 % del cierre del circuito. Hasta la Fase 32 era K·√0.25
+para todas, con el orden de la última visita.
 
 **Quitado en la Fase 29 (2026-10-01).** El asentamiento diferencial entre dos
 puntos y la distorsión angular, `1/((L × 1000) / Δs_diferencial)`: los puntos
