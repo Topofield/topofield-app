@@ -10,8 +10,9 @@ import {
   isPointActiveOn,
   monthsBetween,
   pointInputOf,
+  visitCircuitsOf,
 } from "./settlement";
-import { thresholdsFor, trendDeviationMargin } from "./tolerances";
+import { accelerationMargin, thresholdsFor, trendDeviationMargin } from "./tolerances";
 import type { PrecisionOrder } from "@/types/project";
 import type {
   PointInput,
@@ -473,9 +474,12 @@ describe("classifyReadings", () => {
 });
 
 describe("computeTrends (Fase 31, D-10)", () => {
-  /** El mismo orden para todas las visitas. */
-  const orden = (visitas: { visitId: string }[], order: PrecisionOrder = "tercer_orden") =>
-    new Map(visitas.map((v) => [v.visitId, order]));
+  /** El mismo orden para todas las visitas, sin libreta salvo que se dé su circuito. */
+  const orden = (
+    visitas: { visitId: string }[],
+    order: PrecisionOrder = "tercer_orden",
+    km: number | null = null,
+  ) => new Map(visitas.map((v) => [v.visitId, { order, km }]));
 
   it("no afirma nada con menos de 3 visitas", () => {
     const visitas = computeSettlements(
@@ -498,21 +502,21 @@ describe("computeTrends (Fase 31, D-10)", () => {
   });
 
   it("acelera cuando la velocidad crece más que el margen del orden", () => {
-    // De −1.96 a −10.87 mm/mes: 8.9 mm/mes más, sobre un margen de tercer
-    // orden de 6 mm en 0.92 meses (6.52 mm/mes).
+    // De −1.96 a −15.22 mm/mes: 13.3 mm/mes más, sobre el margen de tres cotas
+    // de tercer orden sin libreta, 10.76 mm/mes con intervalos de 31 y 28 días.
     const visitas = computeSettlements(
       [P1],
       [
         visita(0, "2025-01-15", 100.0),
         visita(1, "2025-02-15", 99.998), // −2.0 mm
-        visita(2, "2025-03-15", 99.988), // −10.0 mm
+        visita(2, "2025-03-15", 99.984), // −14.0 mm
       ],
     );
     expect(computeTrends(visitas, orden(visitas)).p1).toBe("accelerating");
   });
 
   it("un aumento dentro del ruido no es aceleración", () => {
-    // De −1.96 a −6.52 mm/mes: 4.6 mm/mes más, bajo el margen de 6.52. Antes de
+    // De −1.96 a −6.52 mm/mes: 4.6 mm/mes más, bajo el margen de 10.76. Antes de
     // la Fase 31 cualquier aumento contaba.
     const visitas = computeSettlements(
       [P1],
@@ -525,7 +529,7 @@ describe("computeTrends (Fase 31, D-10)", () => {
     expect(computeTrends(visitas, orden(visitas)).p1).toBe("converging");
   });
 
-  it("el margen es el del orden de la última visita", () => {
+  it("el margen depende del orden de las visitas", () => {
     const visitas = computeSettlements(
       [P1],
       [
@@ -534,21 +538,23 @@ describe("computeTrends (Fase 31, D-10)", () => {
         visita(2, "2025-03-15", 99.992),
       ],
     );
-    // Primer orden: 1.5 mm en 0.92 meses, 1.63 mm/mes; el aumento de 4.6 lo supera.
+    // Primer orden: el margen de tres cotas es 2.69 mm/mes; el aumento de 4.6 lo supera.
     expect(computeTrends(visitas, orden(visitas, "primer_orden")).p1).toBe("accelerating");
   });
 
-  it("en la frontera exacta del margen no acelera, y 0.1 mm más allá sí", () => {
-    // Sin movimiento antes (velocidad 0): acelera si el parcial supera el margen.
+  it("en la frontera: con intervalos iguales acelera si el parcial pasa de 6·√3 = 10.39 mm", () => {
+    // Sin movimiento antes (velocidad 0) y dos intervalos de 30 días: acelera
+    // si el parcial supera el margen de tres cotas por el intervalo, 6·√3 mm
+    // en tercer orden sin libreta.
     const serie = (ultima: number) =>
       computeSettlements(
         [P1],
-        [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 100.0), visita(2, "2025-03-15", ultima)],
+        [visita(0, "2025-01-01", 100.0), visita(1, "2025-01-31", 100.0), visita(2, "2025-03-02", ultima)],
       );
-    const justo = serie(99.994); // −6.0 mm: el margen de tercer orden
-    expect(computeTrends(justo, orden(justo)).p1).toBe("converging");
-    const pasado = serie(99.9939); // −6.1 mm
-    expect(computeTrends(pasado, orden(pasado)).p1).toBe("accelerating");
+    const dentro = serie(99.9897); // −10.3 mm
+    expect(computeTrends(dentro, orden(dentro)).p1).toBe("converging");
+    const fuera = serie(99.9895); // −10.5 mm
+    expect(computeTrends(fuera, orden(fuera)).p1).toBe("accelerating");
   });
 
   it("sin el orden de la última visita no afirma tendencia", () => {
@@ -556,8 +562,47 @@ describe("computeTrends (Fase 31, D-10)", () => {
       [P1],
       [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 99.998), visita(2, "2025-03-15", 99.988)],
     );
-    const sinUltima = new Map(visitas.slice(0, 2).map((v) => [v.visitId, "tercer_orden" as const]));
+    const sinUltima = orden(visitas.slice(0, 2));
     expect(computeTrends(visitas, sinUltima)).toEqual({});
+  });
+
+  it("con circuitos cortos el margen baja y el mismo aumento acelera (Fase 32, D-7)", () => {
+    // De −1.96 a −7.61 mm/mes: 5.65 mm/mes más. Sin libreta el margen de tres
+    // cotas es 10.76 mm/mes; con los circuitos de 0.112 km de Torre Alameda,
+    // 5.09.
+    const visitas = computeSettlements(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100.0),
+        visita(1, "2025-02-15", 99.998), // −2.0 mm
+        visita(2, "2025-03-15", 99.991), // −7.0 mm
+      ],
+    );
+    expect(computeTrends(visitas, orden(visitas)).p1).toBe("converging");
+    expect(computeTrends(visitas, orden(visitas, "tercer_orden", 0.112)).p1).toBe("accelerating");
+  });
+
+  it("un punto que se salta una visita toma los circuitos de sus lecturas (Fase 32)", () => {
+    // P1 no se mide en v2, cuyo circuito es de 10 km. Sus tres lecturas son las
+    // de v0, v1 y v3, todas de 0.112 km: margen 3.74 mm/mes, y el aumento,
+    // 4.23, lo supera. Con el circuito de v2 el margen pasaría de 16.
+    const P2: PointInput = { ...P1, id: "p2", code: "P-02" };
+    const visitas = computeSettlements(
+      [P1, P2],
+      [
+        { id: "v0", visitNumber: 0, date: "2025-01-15", readings: [{ pointId: "p1", elevation: 100 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v1", visitNumber: 1, date: "2025-02-15", readings: [{ pointId: "p1", elevation: 99.998 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v2", visitNumber: 2, date: "2025-03-15", readings: [{ pointId: "p2", elevation: 100 }] },
+        { id: "v3", visitNumber: 3, date: "2025-04-15", readings: [{ pointId: "p1", elevation: 99.986 }, { pointId: "p2", elevation: 100 }] },
+      ],
+    );
+    const circuitos = new Map(
+      ["v0", "v1", "v2", "v3"].map((id) => [
+        id,
+        { order: "tercer_orden" as const, km: id === "v2" ? 10 : 0.112 },
+      ]),
+    );
+    expect(computeTrends(visitas, circuitos).p1).toBe("accelerating");
   });
 });
 
@@ -616,6 +661,7 @@ function avisosDeSerie(
   dias: number[],
   orden: PrecisionOrder,
   punto: PointInput = P1,
+  km: number | null = null,
 ): string[] {
   let fecha = Date.parse("2025-01-15T00:00:00Z");
   let cota = 100;
@@ -626,16 +672,70 @@ function avisosDeSerie(
     visitas.push(visita(i + 1, new Date(fecha).toISOString().slice(0, 10), cota));
   });
   const h = computeHistory([punto], visitas, T);
-  const ordenes = new Map(visitas.map((v) => [v.id, orden]));
-  const avisos = detectTrendDeviations(h.visits, ordenes);
+  const circuitos = new Map(visitas.map((v) => [v.id, { order: orden, km }]));
+  const avisos = detectTrendDeviations(h.visits, circuitos);
   return [...avisos.entries()].flatMap(([vid, porPunto]) =>
     [...porPunto.values()].map((a) => `${vid}:${a.kind}`),
   );
 }
 
-describe("trendDeviationMargin", () => {
-  it("es la tolerancia de cierre K·√0.25 del orden: 1.5 / 3 / 6 / 12 mm", () => {
-    expect(ORDENES.map(trendDeviationMargin)).toEqual([1.5, 3, 6, 12]);
+describe("visitCircuitsOf (Fase 32, D-7)", () => {
+  it("lee el orden y la longitud de cada visita; la DECIMAL llega como cadena", () => {
+    const circuitos = visitCircuitsOf([
+      { id: "v0", precision_order: "tercer_orden", total_distance_km: "0.112" },
+      { id: "v1", precision_order: "segundo_orden", total_distance_km: null },
+    ]);
+    expect(circuitos.get("v0")).toEqual({ order: "tercer_orden", km: 0.112 });
+    expect(circuitos.get("v1")).toEqual({ order: "segundo_orden", km: null });
+  });
+});
+
+describe("accelerationMargin (Fase 32)", () => {
+  // «Acelerando» compara dos velocidades, que dependen de tres cotas:
+  // ½·√(T₁²/Δt₁² + T₂²·(1/Δt₁ + 1/Δt₂)² + T₃²/Δt₂²), en mm/mes.
+  const sinLibreta = { order: "tercer_orden" as const, km: null };
+
+  it("con todo igual es √3 veces el de una diferencia: 6·√3 = 10.39 mm/mes en un mes", () => {
+    expect(accelerationMargin(sinLibreta, sinLibreta, sinLibreta, 1, 1)).toBeCloseTo(10.39, 2);
+  });
+
+  it("con circuitos de 0.112 km e intervalos de un mes: 4.92 mm/mes", () => {
+    const c = { order: "tercer_orden" as const, km: 0.112 };
+    expect(accelerationMargin(c, c, c, 1, 1)).toBeCloseTo(4.92, 2);
+  });
+
+  it("con intervalos distintos, 2 y 1 meses: ½·√(18 + 162 + 72) = 7.94 mm/mes", () => {
+    expect(accelerationMargin(sinLibreta, sinLibreta, sinLibreta, 2, 1)).toBeCloseTo(7.94, 2);
+  });
+});
+
+describe("trendDeviationMargin (Fase 32, D-7)", () => {
+  // m = ½·√(Tₚ² + Tₙ²), con T = K·√L la tolerancia del circuito de cada visita:
+  // el criterio de USACE EM 1110-2-1009 (§ 2-3.b), 1.96·√(σₚ² + σₙ²), si K·√L
+  // es el límite al 95 % del cierre.
+  const sinLibreta = (order: PrecisionOrder) => ({ order, km: null });
+
+  it("dos visitas sin libreta: el margen de antes, 1.5 / 3 / 6 / 12 mm", () => {
+    expect(ORDENES.map((o) => trendDeviationMargin(sinLibreta(o), sinLibreta(o)))).toEqual([1.5, 3, 6, 12]);
+  });
+
+  it("circuitos de 0.112 km en tercer orden (Torre Alameda): 2.84 mm", () => {
+    const c = { order: "tercer_orden" as const, km: 0.112 };
+    expect(trendDeviationMargin(c, c)).toBeCloseTo(2.84, 2);
+  });
+
+  it("circuitos de 1.5 km en tercer orden (una presa): 10.39 mm", () => {
+    const c = { order: "tercer_orden" as const, km: 1.5 };
+    expect(trendDeviationMargin(c, c)).toBeCloseTo(10.39, 2);
+  });
+
+  it("cada visita con su orden: segundo y tercero sin libreta, ½·√(18 + 72) = 4.74 mm", () => {
+    expect(trendDeviationMargin(sinLibreta("segundo_orden"), sinLibreta("tercer_orden"))).toBeCloseTo(4.74, 2);
+  });
+
+  it("una longitud de 0 cuenta como visita sin libreta", () => {
+    const cero = { order: "tercer_orden" as const, km: 0 };
+    expect(trendDeviationMargin(cero, cero)).toBe(6);
   });
 });
 
@@ -687,6 +787,13 @@ describe("detectTrendDeviations — la regla", () => {
     expect(avisosDeSerie([-3, 2], [30, 30], "tercer_orden")).toEqual([]);
   });
 
+  it("con circuitos cortos avisa lo que con el margen fijo pasaba (Fase 32, D-7)", () => {
+    // Subir 3.5 mm en un punto que baja: dentro de 6 mm, fuera de los 2.84 de
+    // dos circuitos de 0.112 km.
+    expect(avisosDeSerie([-3, 3.5], [30, 30], "tercer_orden")).toEqual([]);
+    expect(avisosDeSerie([-3, 3.5], [30, 30], "tercer_orden", P1, 0.112)).toEqual(["v2:contrary"]);
+  });
+
   it("no evalúa la segunda lectura del punto: no hay velocidad previa", () => {
     expect(avisosDeSerie([50], [30], "primer_orden")).toEqual([]);
   });
@@ -708,6 +815,44 @@ describe("detectTrendDeviations — la regla", () => {
     expect(detectTrendDeviations(h.visits, new Map()).size).toBe(0);
   });
 
+  it("un punto que se salta una visita toma el circuito de su lectura anterior (Fase 32)", () => {
+    // P1 no se mide en v2, de 10 km. Sube 4 mm en v3 contra su tendencia: con
+    // los circuitos de v1 y v3 (0.112 km) el margen es 2.84 mm y avisa; con el
+    // de v2 sería de 19 mm.
+    const P2: PointInput = { ...P1, id: "p2", code: "P-02" };
+    const h = computeHistory(
+      [P1, P2],
+      [
+        { id: "v0", visitNumber: 0, date: "2025-01-15", readings: [{ pointId: "p1", elevation: 100 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v1", visitNumber: 1, date: "2025-02-15", readings: [{ pointId: "p1", elevation: 99.997 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v2", visitNumber: 2, date: "2025-03-15", readings: [{ pointId: "p2", elevation: 100 }] },
+        { id: "v3", visitNumber: 3, date: "2025-04-15", readings: [{ pointId: "p1", elevation: 100.001 }, { pointId: "p2", elevation: 100 }] },
+      ],
+      T,
+    );
+    const circuitos = new Map(
+      ["v0", "v1", "v2", "v3"].map((id) => [
+        id,
+        { order: "tercer_orden" as const, km: id === "v2" ? 10 : 0.112 },
+      ]),
+    );
+    expect(detectTrendDeviations(h.visits, circuitos).get("v3")?.get("p1")?.kind).toBe("contrary");
+  });
+
+  it("no evalúa sin el circuito de la visita anterior", () => {
+    const h = computeHistory(
+      [P1],
+      [
+        visita(0, "2025-01-15", 100),
+        visita(1, "2025-02-15", 99.997),
+        visita(2, "2025-03-15", 100.02),
+      ],
+      T,
+    );
+    const soloLaUltima = new Map([["v2", { order: "tercer_orden" as const, km: null }]]);
+    expect(detectTrendDeviations(h.visits, soloLaUltima).size).toBe(0);
+  });
+
   it("devuelve el parcial, la velocidad previa, lo previsto y el margen para el mensaje", () => {
     const h = computeHistory(
       [P1],
@@ -720,7 +865,7 @@ describe("detectTrendDeviations — la regla", () => {
     );
     const aviso = detectTrendDeviations(
       h.visits,
-      new Map(h.visits.map((v) => [v.visitId, "tercer_orden" as PrecisionOrder])),
+      new Map(h.visits.map((v) => [v.visitId, { order: "tercer_orden" as PrecisionOrder, km: null }])),
     )
       .get("v2")
       ?.get("p1");
@@ -746,7 +891,7 @@ describe("detectTrendDeviations — huecos, alta y baja (Fase 11)", () => {
     readings: lecturas.map(([pointId, elevation]) => ({ pointId, elevation })),
   });
   const tercero = (vs: VisitInput[]) =>
-    new Map(vs.map((v) => [v.id, "tercer_orden" as PrecisionOrder]));
+    new Map(vs.map((v) => [v.id, { order: "tercer_orden" as PrecisionOrder, km: null }]));
 
   it("con un hueco, compara contra la última lectura real y el intervalo real", () => {
     // P1 se mide el 15/01, 15/02 (−3 mm) y, saltándose el 15/03, el 15/04.

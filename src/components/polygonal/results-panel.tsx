@@ -1,6 +1,6 @@
 import { Alert, NumberInput, Select } from "@/components/design-system";
 import { decimalToDms } from "@/lib/calculations/angles";
-import { SIGMA0_BAND, sigma0Reading } from "@/lib/calculations/least-squares";
+import { sigma0Interval, sigma0Reading } from "@/lib/calculations/least-squares";
 import { formatPrecision } from "@/lib/utils/format";
 import {
   CORRECTION_METHOD_OPTIONS,
@@ -73,6 +73,12 @@ export function ResultsPanel({
 }: ResultsPanelProps) {
   const leastSquares = method === "least_squares";
   const adjustment = result.adjustment;
+  // Con 3 decimales, como σ₀: con 2, un σ₀ de 1.766 saldría «peor» junto a un
+  // intervalo que dice 1.77.
+  const sigma0Bounds =
+    adjustment?.status === "adjusted"
+      ? sigma0Interval(adjustment.conditions).map((x) => x.toFixed(3))
+      : null;
   // La abierta sin control no tiene nada que corregir, así que no hay selector.
   // Salvo si el proceso ya tiene mínimos cuadrados (se cambió el tipo después):
   // entonces se muestra, para poder elegir otro método y guardar.
@@ -258,11 +264,12 @@ export function ResultsPanel({
           <div className="max-w-md">
             <Row label="σ₀" value={adjustment.sigma0.toFixed(3)} />
             <p className="mt-1 text-sm text-ink-2">
-              {SIGMA0_TEXT[sigma0Reading(adjustment.sigma0)]}
+              {SIGMA0_TEXT[sigma0Reading(adjustment.sigma0, adjustment.conditions)]}
             </p>
             <p className="mt-1 text-xs text-ink-2">
-              σ₀ compara lo medido con los pesos supuestos: cerca de 1 (entre{" "}
-              {SIGMA0_BAND[0]} y {SIGMA0_BAND[1]}) es lo esperado.
+              σ₀ compara lo medido con los pesos supuestos. Con r ={" "}
+              {adjustment.conditions} condiciones, la prueba χ² al 95 % espera
+              σ₀ entre {sigma0Bounds?.[0]} y {sigma0Bounds?.[1]}.
             </p>
           </div>
         </div>

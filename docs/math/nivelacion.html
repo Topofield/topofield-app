@@ -78,8 +78,8 @@ base de datos ni la interfaz.</p>
 <table>
 <tr><th>Archivo</th><th>Qué hace</th></tr>
 <tr><td><code>leveling.ts</code></td><td>El motor: altura de instrumento, cotas, comprobación aritmética, distancias, cierre, compensación, ida y vuelta, cotas adoptadas y puntos homólogos. La función principal es <code>computeLeveling(input)</code>.</td></tr>
-<tr><td><code>tolerances.ts</code></td><td>Las constantes por orden de precisión: K de la tolerancia, límite del equilibrado de visuales y tolerancia del hilo medio.</td></tr>
-<tr><td><code>src/lib/validators/leveling.ts</code></td><td>Las reglas de captura (qué se puede guardar) y de cierre (qué se puede cerrar y si solo como rechazado).</td></tr>
+<tr><td><code>tolerances.ts</code></td><td>Las constantes por orden de precisión: K de la tolerancia, límites del equilibrado de visuales (por armada y por sección) y tolerancia del hilo medio.</td></tr>
+<tr><td><code>src/lib/validators/leveling.ts</code></td><td>Las reglas de captura (qué se puede guardar, y los avisos de equilibrado) y de cierre (qué se puede cerrar y si solo como rechazado).</td></tr>
 <tr><td><code>src/lib/import/leveling/</code></td><td>La lectura de libretas de nivel digital (formato <code>.L</code> de Leica y plantilla CSV).</td></tr>
 </table>
 
@@ -256,12 +256,28 @@ ese punto.</p>
 <h2 id="equilibrado">8. El equilibrado de visuales</h2>
 <p>Igualar la distancia de la vista más y la de la vista menos de cada armada
 cancela el error de colimación del nivel (la visual no perfectamente
-horizontal). La aplicación avisa, sin bloquear, cuando en una armada:</p>
-<div class="formula">| d<sub>V+</sub> − d<sub>V−</sub> | &gt; límite del orden&nbsp;&nbsp;&nbsp;(2 / 3 / 4 / 6 m en primer, segundo y tercer orden y ordinario)</div>
-<p class="note">Estos límites son un criterio de la aplicación. El marco
-teórico (§ 7) da 2, 5 y 10 m, y la FGCS 2, 5, 5, 10 y 10 m. El control del
-desequilibrio <em>acumulado</em> de la sección, que es el que sesga el
-resultado, está pendiente (CR3).</p>
+horizontal), y reduce los de curvatura y refracción. Si la visual sale
+inclinada C milímetros por metro, el error de una armada es
+C · (d<sub>V+</sub> − d<sub>V−</sub>), y el de una sección, la suma de los de
+sus armadas (NGS 3, § 5.5.2):</p>
+<div class="formula">Error de colimación de la sección = C · Σ (d<sub>V+</sub> − d<sub>V−</sub>)</div>
+<p>Armadas dentro de su límite pueden sumar un desequilibrio grande si se
+desequilibran siempre hacia el mismo lado. Por eso la aplicación avisa, sin
+bloquear, de las dos cosas:</p>
+<div class="formula">| d<sub>V+</sub> − d<sub>V−</sub> | &gt; límite por armada&nbsp;&nbsp;&nbsp;(2 / 5 / 10 / 10 m)</div>
+<div class="formula">| Σ (d<sub>V+</sub> − d<sub>V−</sub>) | &gt; límite por sección&nbsp;&nbsp;&nbsp;(4 / 10 / 10 / 10 m)</div>
+<p>en primer, segundo y tercer orden y ordinario. Son los límites de la FGCS
+(1984, § 3.5) para las clases cuya tolerancia de cierre es la de cada orden de
+la aplicación —3, 6 y 12 mm·√D—, y el marco teórico (§ 7) da los mismos por
+armada. Ordinario no está en la norma y toma los del tercer orden. Una sección
+va de un BM al siguiente; sin BM de cierre, el acumulado se juzga en la última
+armada.</p>
+<p class="note">En El Verjón (tercer orden) las armadas suman +53.3 m en la ida y
+−52.2 m en la vuelta. Con la colimación máxima que la norma admite en tercer
+orden (0.10 mm/m), el desnivel adoptado puede sesgarse hasta 5.3 mm, frente a
+una tolerancia K·√D de 7.4 mm, y la discrepancia entre ida y vuelta no lo ve:
+los dos recorridos se sesgan igual. Hasta la Fase 32 los límites eran 2/3/4/6
+m por armada, sin fuente, y no se controlaba el acumulado.</p>
 
 <h2 id="ejemplo1">9. Ejemplo 1: un circuito corto</h2>
 <p>Abierta de A (cota conocida 100.000 m) a B, con ida y vuelta por el mismo
@@ -371,8 +387,9 @@ ida (3315.083) y vuelta (3315.088) ponderado por sus distancias.</p>
 <ul>
   <li>Marco teórico del proyecto, <em>Nivelaciones de precisión</em> (<code>docs/marco-teorico/mt-nivelaciones_precision.docx</code>): tolerancias por orden (§ 8), ida y vuelta y el √2 (§ 8.1), la vuelta que «convierte la abierta en cerrada» (§ 2.5, § 4.5), equilibrado de visuales (§ 7).</li>
   <li>Wolf, P. R. y Ghilani, C. D., <em>Elementary Surveying</em> y <em>Adjustment Computations</em>: nivelación diferencial, compensación proporcional a la distancia y ajuste por mínimos cuadrados.</li>
-  <li>FGCC (1984), <em>Standards and Specifications for Geodetic Control Networks</em>: para comparar tolerancias y equilibrado.</li>
-  <li>ISO 17123-2: la desviación típica del nivel por km de doble nivelación, que la aplicación usa para el aviso de equipo.</li>
+  <li>FGCC (1984), <em>Standards and Specifications for Geodetic Control Networks</em>: tolerancias, y equilibrado de visuales por armada y por sección (§ 3.5).</li>
+  <li>NOAA Manual NOS NGS 3, <em>Geodetic Leveling</em> (Schomaker y Berry, 1981): por qué se controla el equilibrado acumulado de la sección (§ 3.1.2, § 5.5.2).</li>
+  <li>ISO 17123-2: la desviación típica del nivel por km de doble nivelación, que se declara con el equipo.</li>
 </ul>
 <h3>11.2. Decisiones del proyecto, por fase</h3>
 <table>
@@ -384,6 +401,7 @@ ida (3315.083) y vuelta (3315.088) ponderado por sus distancias.</p>
 <tr><td>23</td><td>El veredicto de una abierta con vuelta es su discrepancia.</td></tr>
 <tr><td>26</td><td>Cada recorrido de una cerrada o de enlace con vuelta, con su tolerancia; comprobación aritmética de los dos recorridos; distancias por visual positivas; acumulado en milímetros; margen en la comparación con la tolerancia.</td></tr>
 <tr><td>28</td><td>Ida y vuelta en la compensación: circuito por distancia en una abierta, cada recorrido con su cierre en una cerrada o de enlace, una cota adoptada por punto y el BM de partida fijo.</td></tr>
+<tr><td>32</td><td>Equilibrado con los límites de la FGCS: por armada y acumulado por sección.</td></tr>
 </table>
 <p class="small muted">Verificación: los números de los ejemplos están en
 <code>src/lib/calculations/leveling.test.ts</code> y

@@ -58,7 +58,7 @@ export default async function VisitEditPage({
         referencePoints={data.referencePoints}
         points={data.points}
         otherVisits={data.otherVisits}
-        otherVisitOrders={data.otherVisitOrders}
+        otherVisitCircuits={data.otherVisitCircuits}
         thresholds={thresholdsOf(site)}
         disabled={false}
         siteClosed={false}

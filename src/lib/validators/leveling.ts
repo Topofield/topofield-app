@@ -10,6 +10,7 @@
 import { resolveVisualDistances } from "@/lib/calculations/leveling";
 import {
   MIDDLE_WIRE_TOLERANCE_M,
+  SECTION_BALANCE_LIMIT_M,
   SIGHT_BALANCE_LIMIT_M,
 } from "@/lib/calculations/tolerances";
 import type {
@@ -39,7 +40,7 @@ export interface ReadingCaptureIssues {
     >
   >;
   warnings: Partial<
-    Record<"backsight" | "foresight" | "sightBalance", string>
+    Record<"backsight" | "foresight" | "sightBalance" | "sectionBalance", string>
   >;
 }
 
@@ -52,7 +53,8 @@ const MAX_READING = 4;
 // distancia por visual, que es lo que la comparación necesita. La deuda que la
 // Fase 4 registró —una sola `distance_m` por fila no bastaba— queda pagada.
 // Avisa, no bloquea: es un juicio sobre la calidad de una medición correcta en
-// su forma. Ver `validateSightBalances`, más abajo: por armada desde la Fase 19.
+// su forma. Ver `validateSightBalances`, más abajo: por armada desde la Fase 19,
+// y `validateSectionBalances`, el acumulado de la sección, desde la 32.
 
 /**
  * Tipos de punto que entran en la comprobación aritmética y en el acumulado
@@ -187,7 +189,7 @@ export function validateSightBalances(
     const { back, fore } = resolveVisualDistances(reading);
     if (opener && reading.foresight != null && opener.back != null && fore != null) {
       const diff = Math.abs(opener.back - fore);
-      if (diff > limit) {
+      if (exceeds(diff, limit)) {
         warnings[index] =
           `Armada ${opener.code} → ${reading.pointCode.trim()}: visuales desequilibradas, ` +
           `${diff.toFixed(1)} m de diferencia; el límite del orden es ${limit} m.`;
@@ -195,6 +197,74 @@ export function validateSightBalances(
     }
     opener = reading.backsight != null ? { code: reading.pointCode.trim(), back } : null;
   });
+  return warnings;
+}
+
+/**
+ * ¿Pasa `value` de `limit`? Con un margen de coma flotante: 35.2 − 30.2 da
+ * 5.0000000000000036, y una armada exactamente en el límite avisaría.
+ */
+function exceeds(value: number, limit: number): boolean {
+  return value - limit > 1e-9;
+}
+
+/**
+ * Equilibrado acumulado de cada sección (Fase 32, D-3): la suma de
+ * d_V+ − d_V− de sus armadas, contra el límite acumulado del orden.
+ *
+ * Una SECCIÓN va de un BM al siguiente (NGS 3, § 3.1.1). Arranca con la
+ * primera armada y se juzga en la fila BM cuya V− la cierra; ese BM, si tiene
+ * V+, abre la siguiente. Sin BM de cierre —un recorrido abierto o a medias—,
+ * se juzga en la última armada: así el aviso sale en cuanto el acumulado pasa
+ * el límite, como pide NGS 3 (§ 3.5.2), para corregirlo en las armadas que
+ * faltan.
+ *
+ * Las armadas son las de `validateSightBalances`, y solo suman las que tienen
+ * las dos distancias. Con distancias reconstruidas no se evalúa.
+ *
+ * Devuelve el aviso por fila, en la fila que cierra la sección.
+ */
+export function validateSectionBalances(
+  readings: ReadingInput[],
+  order: PrecisionOrder,
+  distancesReconstructed: boolean,
+): (string | undefined)[] {
+  const warnings: (string | undefined)[] = readings.map(() => undefined);
+  if (distancesReconstructed) return warnings;
+
+  const limit = SECTION_BALANCE_LIMIT_M[order];
+  let opener: { code: string; back: number | null } | null = null;
+  let section: { start: string; sum: number; lastClose: number } | null = null;
+
+  const judge = (index: number) => {
+    if (!section || !exceeds(Math.abs(section.sum), limit)) return;
+    const [longer, shorter] = section.sum > 0 ? ["atrás", "adelante"] : ["adelante", "atrás"];
+    warnings[index] =
+      `Sección ${section.start} → ${readings[index]!.pointCode.trim()}: las visuales de ` +
+      `${longer} suman ${Math.abs(section.sum).toFixed(1)} m más que las de ${shorter}; ` +
+      `el límite acumulado del orden es ${limit} m.`;
+  };
+
+  for (const [index, reading] of readings.entries()) {
+    if (reading.pointType === "intermediate") continue;
+    const { back, fore } = resolveVisualDistances(reading);
+    if (reading.foresight != null) {
+      if (opener) {
+        section ??= { start: opener.code, sum: 0, lastClose: index };
+        if (opener.back != null && fore != null) section.sum += opener.back - fore;
+        section.lastClose = index;
+      }
+      // Un BM con V− cierra la sección aunque su armada no exista —al punto
+      // anterior le falta la V+, en una captura a medias—: si no, la sección
+      // seguiría abierta y se sumaría con la siguiente.
+      if (reading.pointType === "bm" && section) {
+        judge(index);
+        section = null;
+      }
+    }
+    opener = reading.backsight != null ? { code: reading.pointCode.trim(), back } : null;
+  }
+  if (section) judge(section.lastClose);
   return warnings;
 }
 
@@ -305,6 +375,7 @@ export function validateRunCapture(
   const lastIndex = readings.length - 1;
   const mustEndInBm = levelingType !== "open";
   const balance = validateSightBalances(readings, order, distancesReconstructed);
+  const sectionBalance = validateSectionBalances(readings, order, distancesReconstructed);
   return readings.map((reading, index) => {
     const issues = validateReadingCapture(reading);
     let errors = issues.errors;
@@ -355,12 +426,11 @@ export function validateRunCapture(
       };
     }
 
-    return {
-      errors,
-      warnings: balance[index]
-        ? { ...warnings, sightBalance: balance[index] }
-        : warnings,
-    };
+    if (balance[index]) warnings = { ...warnings, sightBalance: balance[index] };
+    if (sectionBalance[index]) {
+      warnings = { ...warnings, sectionBalance: sectionBalance[index] };
+    }
+    return { errors, warnings };
   });
 }
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   adjustByConditions,
   SingularSystemError,
-  SIGMA0_BAND,
+  sigma0Interval,
   sigma0Reading,
   solveLinear,
 } from "./least-squares";
@@ -310,13 +310,42 @@ describe("adjustByConditions — coeficientes analíticos contra diferencias fin
   });
 });
 
-describe("sigma0Reading", () => {
-  it("lee σ₀ dentro, por encima y por debajo de la banda", () => {
-    expect(sigma0Reading(0.698)).toBe("consistent");
-    expect(sigma0Reading(SIGMA0_BAND[0])).toBe("consistent");
-    expect(sigma0Reading(SIGMA0_BAND[1])).toBe("consistent");
-    expect(sigma0Reading(3.1)).toBe("worse");
-    expect(sigma0Reading(0.2)).toBe("pessimistic");
+describe("lectura de σ₀ con la prueba χ² al 95 % (Fase 32, D-6)", () => {
+  // Ghilani y Wolf, Adjustment Computations, § 5.4 y § 16.7: χ² = r·σ₀²,
+  // bilateral. Valores críticos al 95 %: r = 2 → 0.0506 y 7.3778; r = 3 →
+  // 0.2158 y 9.3484. El intervalo de σ₀ es √(χ²/r).
+  it("el intervalo de σ₀ con r = 2 y con r = 3", () => {
+    const [lo2, hi2] = sigma0Interval(2);
+    expect(lo2).toBeCloseTo(0.159, 3);
+    expect(hi2).toBeCloseTo(1.921, 3);
+    const [lo3, hi3] = sigma0Interval(3);
+    expect(lo3).toBeCloseTo(0.268, 3);
+    expect(hi3).toBeCloseTo(1.765, 3);
+  });
+
+  it("la Vivero (σ₀ = 0.698, r = 3) es consistente", () => {
+    const a = adjusted(computePolygonal(fromCartera(CARTERA_VIVERO, "least_squares")));
+    expect(a.conditions).toBe(3);
+    expect(sigma0Reading(a.sigma0, a.conditions)).toBe("consistent");
+  });
+
+  it("con r = 3, las fronteras: 0.268 y 1.766 fuera, 0.269 y 1.765 dentro", () => {
+    expect(sigma0Reading(0.268, 3)).toBe("pessimistic");
+    expect(sigma0Reading(0.269, 3)).toBe("consistent");
+    expect(sigma0Reading(1.765, 3)).toBe("consistent");
+    expect(sigma0Reading(1.766, 3)).toBe("worse");
+  });
+
+  it("la redundancia cuenta: 1.8 y 0.2 caben con r = 2 y no con r = 3", () => {
+    expect(sigma0Reading(1.8, 2)).toBe("consistent");
+    expect(sigma0Reading(0.2, 2)).toBe("consistent");
+    expect(sigma0Reading(1.8, 3)).toBe("worse");
+    expect(sigma0Reading(0.2, 3)).toBe("pessimistic");
+  });
+
+  it("lo que la banda [0.5, 2] juzgaba mal: 0.4 es consistente y 1.9 peor, con r = 3", () => {
+    expect(sigma0Reading(0.4, 3)).toBe("consistent");
+    expect(sigma0Reading(1.9, 3)).toBe("worse");
   });
 });
 

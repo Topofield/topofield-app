@@ -101,6 +101,21 @@ describe("validateVisitBook", () => {
     expect(r.rowIssues[0]!.errors.pointType).toBe("El amarre es de tipo BM.");
   });
 
+  it("avisa del acumulado del equilibrado en la fila de cierre, sin bloquear (Fase 32)", () => {
+    // Dos armadas con la V+ 15 m más larga: 30 m acumulados en el circuito,
+    // frente a 10 m de tercer orden.
+    const book = [
+      row("BM-1", "bm", 1.5, null, 45, null),
+      row("PC-01", "intermediate", null, 1.2),
+      row("CP-1", "pc", 1.4, 1.3, 45, 30),
+      row("BM-1", "bm", null, 1.6, null, 30),
+    ];
+    const r = validateVisitBook(book, AMARRE, "tercer_orden");
+    expect(r.rowIssues.at(-1)?.warnings.sectionBalance).toContain("Sección BM-1 → BM-1");
+    expect(r.rowIssues.at(-1)?.warnings.sectionBalance).toContain("30.0 m");
+    expect(r.errors).toEqual([]);
+  });
+
   it("propaga los errores de captura de nivelación", () => {
     const rows = [row("BM-1", "bm", 5.2, null, 30, null), BOOK[1]!, BOOK[2]!];
     const r = validateVisitBook(rows, AMARRE, "tercer_orden");

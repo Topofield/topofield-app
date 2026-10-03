@@ -309,6 +309,8 @@ catálogo, dos nivelaciones y una Torre Alameda cerrada.
   corrección angular.
 - ✓ Coordenadas: D1 100117.464 / 101515.631, D3 100182.240 / 101581.781.
 - ✓ σ₀ = **0.698** y «Los pesos supuestos describen bien las observaciones».
+  Debajo: «Con r = 3 condiciones, la prueba χ² al 95 % espera σ₀ entre 0.268 y
+  1.765» (Fase 32).
 - ✓ El veredicto (error angular −4.0″, error lineal 0.0100, 1:24.717) es el
   mismo que en la Vivero con Bowditch.
 - Cambiar σ angular a **4**. ✓ Las correcciones cambian en vivo y se cargan
