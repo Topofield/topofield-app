@@ -142,6 +142,35 @@ dos circuitos de 0.5 km.**
   el margen sale de la misma tolerancia con que la app juzga el cierre de ese
   circuito, que no tiene suelo.
 
+### 4. El margen de «Acelerando» (hallado en la revisión de código)
+
+«Acelerando» (Fase 31) compara dos velocidades: |v₂| − |v₁| > m/Δt₂. Pero
+v₂ − v₁ = (h₃ − h₂)/Δt₂ − (h₂ − h₁)/Δt₁ depende de **tres** cotas, y con
+intervalos iguales su ruido es √6·σ. El margen de una sola diferencia, m, solo
+cubre √2·σ: el umbral queda en 1.13 σ, y con velocidad constante sale un
+«Acelerando» falso en hasta el 13 % de los puntos, si el trabajo tiene justo
+la precisión de su orden. Con el margen fijo de 6 mm, en los circuitos de
+0.112 km de Torre Alameda, era el 0.8 %: el fallo venía de la Fase 31, y esta
+fase lo agrava al bajar el margen.
+
+El margen de «Acelerando» sale del mismo criterio de USACE, con las tres
+cotas:
+
+```
+margen = ½ · √(T₁²/Δt₁² + T₂²·(1/Δt₁ + 1/Δt₂)² + T₃²/Δt₂²)   [mm/mes]
+```
+
+con T la tolerancia del circuito de cada visita. Con todo igual es √3 veces
+m/Δt. Los falsos bajan al 2.5 % como mucho.
+
+| Caso | Umbral de la Fase 31 (m/Δt) | Con tres cotas |
+|---|---|---|
+| Torre Alameda, últimas tres visitas | 3.09 mm/mes (6.52 antes de esta fase) | 5.35 mm/mes |
+| Torre Central, P-04 (sin libreta) | 5.89 mm/mes | 10.37 mm/mes |
+
+Ningún punto de la demo ni del seed cambia de etiqueta: TA-02 crece 0.54
+mm/mes, y P-04 5.75.
+
 ## Alcance
 
 ### A. D-3: el equilibrado con la norma
@@ -198,7 +227,8 @@ dos circuitos de 0.5 km.**
   - `detectTrendDeviations` y `computeTrends` reciben, por visita, su orden y
     su longitud (`{ order, km }`) en lugar de solo el orden;
   - el margen de una lectura es el del par de visitas que forman su parcial;
-  - el de «Acelerando», el del par de su última velocidad.
+  - el de «Acelerando», `accelerationMargin`, el de las tres visitas de sus
+    dos últimas velocidades (hallazgo 4).
 - **Los llamadores** pasan la longitud guardada (`total_distance_km`):
   - el panel;
   - la vista de la visita;
@@ -243,6 +273,9 @@ dos circuitos de 0.5 km.**
 2. **D-6, la prueba χ² al 95 %**, con r a la vista.
 3. **D-7, la longitud real, sin suelo**, con 0.5 km para las visitas sin
    libreta.
+4. **«Acelerando», con el margen de tres cotas** (hallazgo 4), tras la
+   revisión de código. La otra opción era dejarlo y documentar que es más
+   sensible que el aviso de lectura fuera de tendencia.
 
 ## Decisiones
 
@@ -257,6 +290,7 @@ dos circuitos de 0.5 km.**
 | 7 | Cada visita con su orden y su circuito | USACE usa el σ de cada época. Hoy se usaba solo el orden de la última |
 | 8 | 0.5 km para una visita sin libreta | Deja igual que hoy a las visitas en captura directa, que no tienen longitud |
 | 9 | La longitud guardada, no recalculada de la libreta | `total_distance_km` ya está en la fila de la visita y es la misma cifra: el guardado la saca de la libreta. El panel y el Excel no necesitan cargar las libretas |
+| 10 | «Acelerando» con su propio margen, de tres cotas | Compara dos velocidades, que dependen de tres cotas. El margen de una diferencia lo dejaba con un 13 % de falsos en circuitos cortos (hallazgo 4) |
 
 ## Pruebas
 
@@ -268,6 +302,7 @@ dos circuitos de 0.5 km.**
 | D-6 | `sigma0Interval(2)` y `sigma0Interval(3)` con los valores del hallazgo 2; Vivero consistente; 1.8 con r = 3, «peor»; 0.2 con r = 3, «pesimista»; las fronteras |
 | D-7 margen | Igual que hoy con dos visitas sin libreta; 2.8 mm con los circuitos de Torre Alameda; dos órdenes distintos; longitud 0 o null usa 0.5 km |
 | D-7 avisos | Una lectura que hoy pasa con 6 mm y avisa con 2.8; Torre Alameda sin avisos ni «Acelerando»; P-04 de Torre Central igual que hoy |
+| «Acelerando» | `accelerationMargin`: √3 veces el de una diferencia con todo igual, 4.92 mm con circuitos de 0.112 km, intervalos distintos; la frontera; un aumento que converge sin libreta y acelera con circuitos cortos; un punto que se salta una visita toma los circuitos de sus lecturas, no los de la visita saltada |
 
 **En pantalla (local), claro y oscuro, 1280 y 390 px:**
 - la libreta de El Verjón, ida y vuelta, con los avisos por armada y de
@@ -282,9 +317,9 @@ dos circuitos de 0.5 km.**
    de la visita. Ninguno bloquea.
 2. σ₀ se lee con la prueba χ² al 95 % de su r, que se muestra con el
    intervalo. Ninguna pantalla habla de la banda de 0.5 a 2.
-3. El margen de la lectura fuera de tendencia y el de «Acelerando» salen del
-   orden y del circuito de las dos visitas. Una visita sin libreta da el
-   margen de hoy.
+3. El margen de la lectura fuera de tendencia sale del orden y del circuito de
+   las dos visitas; el de «Acelerando», de los de sus tres visitas. Dos
+   visitas sin libreta dan el margen de lectura de hoy.
 4. En la demo y en el seed, ningún punto pasa a acelerar ni a salirse de
    tendencia.
 5. Nada guardado cambia y no hay migración.
