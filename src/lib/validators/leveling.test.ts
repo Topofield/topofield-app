@@ -9,7 +9,8 @@
 // completo (`ReadingCaptureIssues`, `hasReadingErrors`).
 
 import { describe, expect, it } from "vitest";
-import { CARTERA_VERJON } from "@/lib/demo/carteras";
+import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
+import { nivelacionTramo2 } from "@/lib/demo/fixtures";
 import {
   evaluateLevelingClosure,
   findIncompleteTurningPoint,
@@ -17,9 +18,11 @@ import {
   turningPointBlocker,
   validateReadingCapture,
   validateRunCapture,
+  validateSectionBalances,
   validateSightBalances,
 } from "./leveling";
 import type { LevelingResult, ReadingInput } from "@/types/leveling";
+import type { PrecisionOrder } from "@/types/project";
 
 // --- Ayudantes ---------------------------------------------------------------
 
@@ -151,9 +154,9 @@ describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
   ];
 
   it("avisa del desequilibrio desde validateRunCapture", () => {
-    // tercer_orden admite 4 m; aquí hay 20.
+    // tercer_orden admite 10 m; aquí las dos armadas difieren 15.
     const issues = validateRunCapture(
-      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      armada({ backDistanceM: 45, foreDistanceM: 15 }),
       "closed",
       "tercer_orden",
       false,
@@ -168,7 +171,7 @@ describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
 
   it("no lo evalúa en un proceso reconstruido por el backfill", () => {
     const issues = validateRunCapture(
-      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      armada({ backDistanceM: 45, foreDistanceM: 15 }),
       "closed",
       "tercer_orden",
       true,
@@ -178,7 +181,7 @@ describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
 
   it("el aviso NO bloquea el guardado", () => {
     const issues = validateRunCapture(
-      armada({ backDistanceM: 40, foreDistanceM: 20 }),
+      armada({ backDistanceM: 45, foreDistanceM: 15 }),
       "closed",
       "tercer_orden",
       false,
@@ -197,11 +200,11 @@ describe("equilibrado de visuales, por armada (Fase 19, N7)", () => {
   ];
 
   it("avisa en la V− que cierra la armada, y la nombra", () => {
-    // tercer_orden admite 4 m; aquí hay 20.
+    // tercer_orden admite 10 m; aquí hay 20.
     const w = validateSightBalances(armada(40, 20), "tercer_orden", false);
     expect(w[0]).toBeUndefined();
     expect(w[1]).toBe(
-      "Armada BM-1 → BM-2: visuales desequilibradas, 20.0 m de diferencia; el límite del orden es 4 m.",
+      "Armada BM-1 → BM-2: visuales desequilibradas, 20.0 m de diferencia; el límite del orden es 10 m.",
     );
   });
 
@@ -232,31 +235,191 @@ describe("equilibrado de visuales, por armada (Fase 19, N7)", () => {
     expect(validateSightBalances(rows, "tercer_orden", false)).toEqual([undefined, undefined]);
   });
 
-  it("la ida de El Verjón: avisa en C 2, C 3, C 4, C 7, D3 y C 8, no en C 1, C 5, C 6 ni D4", () => {
+  it("la ida de El Verjón: avisa en C 2, C 3, C 4 y D3, no en C 7 ni C 8", () => {
     // docs/carteras/TRABAJO NIVELACION EL VERJON-corregido.xlsx: la hoja de
     // campo calcula cada armada como V+ del punto i + V− del punto i+1
     // (M4 = I3 + K6…). La fila C 1 compara 28.1 con 28.5 y parecía equilibrada;
-    // su armada con C 2 difiere 10.8 m.
-    const rows: ReadingInput[] = CARTERA_VERJON.ida.map((r) =>
-      bare({
-        pointCode: r.code,
-        pointType: r.type,
-        backsight: r.backsight,
-        foresight: r.foresight,
-        backDistanceM: r.backDistanceM,
-        foreDistanceM: r.foreDistanceM,
-      }),
-    );
+    // su armada con C 2 difiere 10.8 m. Con el límite de tercer orden de la
+    // FGCS (10 m, Fase 32), C 6 → C 7 (8.2 m) y D3 → C 8 (7.1 m) ya no avisan.
+    const rows = deCartera(CARTERA_VERJON.ida);
     const w = validateSightBalances(rows, "tercer_orden", false);
     const flagged = rows.filter((_, i) => w[i]).map((r) => r.pointCode);
-    expect(flagged).toEqual(["C 2", "C 3", "C 4", "C 7", "D3", "C 8"]);
+    expect(flagged).toEqual(["C 2", "C 3", "C 4", "D3"]);
     expect(w[2]).toContain("Armada C 1 → C 2");
     expect(w[2]).toContain("10.8 m");
     expect(w[5]).toContain("Armada C 3 → C 4");
     expect(w[9]).toContain("Armada C 7 → D3");
     expect(w[9]).toContain("15.8 m");
   });
+
+  it("la vuelta de El Verjón: solo avisa C 1 → D1, con 19.7 m", () => {
+    const rows = deCartera(CARTERA_VERJON.vuelta);
+    const w = validateSightBalances(rows, "tercer_orden", false);
+    const flagged = rows.filter((_, i) => w[i]).map((r) => r.pointCode);
+    expect(flagged).toEqual(["D1"]);
+    expect(w.at(-1)).toContain("Armada C 1 → D1");
+    expect(w.at(-1)).toContain("19.7 m");
+  });
 });
+
+describe("límites del equilibrado por armada: los de la FGCS 1984 (Fase 32, D-3)", () => {
+  // FGCS 1984, § 3.5, p. 3-7 (y NGS 3, tabla 3-1): 2 m en 1.º I, 5 m en 2.º I
+  // y 10 m en 3.º. Ordinario no está en la norma y toma el del tercero. La
+  // diferencia igual al límite no avisa; 0.1 m más, sí. Las distancias son de
+  // las que en coma flotante no restan exacto (35.2 − 30.2 = 5.0000000000000036).
+  const armada = (back: number, fore: number) => [
+    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: back }),
+    bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: fore }),
+  ];
+  const cases: { order: PrecisionOrder; back: number; atLimit: number; over: number; limit: string }[] = [
+    { order: "primer_orden", back: 30.2, atLimit: 32.2, over: 32.3, limit: "2 m" },
+    { order: "segundo_orden", back: 30.2, atLimit: 35.2, over: 35.3, limit: "5 m" },
+    { order: "tercer_orden", back: 30.2, atLimit: 40.2, over: 40.3, limit: "10 m" },
+    // La V− más larga que la V+: el límite vale en los dos sentidos.
+    { order: "ordinario", back: 40.2, atLimit: 30.2, over: 30.1, limit: "10 m" },
+  ];
+
+  for (const c of cases) {
+    it(`${c.order}: avisa por encima de ${c.limit}, no en el límite`, () => {
+      expect(validateSightBalances(armada(c.back, c.atLimit), c.order, false)[1]).toBeUndefined();
+      expect(validateSightBalances(armada(c.back, c.over), c.order, false)[1]).toContain(
+        `el límite del orden es ${c.limit}.`,
+      );
+    });
+  }
+});
+
+describe("acumulado del equilibrado por sección (Fase 32, D-3)", () => {
+  // FGCS 1984, § 3.5, p. 3-7: la diferencia acumulada por sección no pasa de
+  // 4 m en 1.º I y de 10 m en los demás órdenes. NGS 3 (§ 5.5.2): el error de
+  // colimación de una sección es −C·ΣΔs, y depende del acumulado.
+  const bm = (code: string, back: number | null, fore: number | null, bd: number | null, fd: number | null) =>
+    bare({ pointCode: code, pointType: "bm", backsight: back, foresight: fore, backDistanceM: bd, foreDistanceM: fd });
+  const pc = (code: string, bd: number, fd: number) =>
+    bare({ pointCode: code, pointType: "pc", backsight: 1.5, foresight: 1.2, backDistanceM: bd, foreDistanceM: fd });
+
+  it("la ida de El Verjón: +53.3 m, avisa en D4 y nombra la sección", () => {
+    const rows = deCartera(CARTERA_VERJON.ida);
+    const w = validateSectionBalances(rows, "tercer_orden", false);
+    expect(w.slice(0, -1).every((x) => x === undefined)).toBe(true);
+    expect(w.at(-1)).toBe(
+      "Sección D1 → D4: las visuales de atrás suman 53.3 m más que las de adelante; el límite acumulado del orden es 10 m.",
+    );
+  });
+
+  it("la vuelta de El Verjón: −52.2 m, avisa en D1 con el signo contrario", () => {
+    const rows = deCartera(CARTERA_VERJON.vuelta);
+    const w = validateSectionBalances(rows, "tercer_orden", false);
+    expect(w.slice(0, -1).every((x) => x === undefined)).toBe(true);
+    expect(w.at(-1)).toBe(
+      "Sección D4 → D1: las visuales de adelante suman 52.2 m más que las de atrás; el límite acumulado del orden es 10 m.",
+    );
+  });
+
+  it("el tramo 2 acumula 1.4 m: no avisa", () => {
+    const rows = nivelacionTramo2().forward.map((r) =>
+      bare({
+        pointCode: r.code,
+        pointType: r.type,
+        backsight: r.back ?? null,
+        foresight: r.fore ?? null,
+        backDistanceM: r.backDistanceM ?? null,
+        foreDistanceM: r.foreDistanceM ?? null,
+      }),
+    );
+    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
+  });
+
+  it("primer orden: avisa por encima de 4 m, no en el límite", () => {
+    // Dos armadas de +2 m: cada una en el límite por armada, 4 m acumulados.
+    const enLimite = [bm("BM-1", 1.5, null, 32.2, null), pc("PC-1", 32.2, 30.2), bm("BM-2", null, 1.2, null, 30.2)];
+    expect(validateSectionBalances(enLimite, "primer_orden", false).at(-1)).toBeUndefined();
+    const pasa = [bm("BM-1", 1.5, null, 32.3, null), pc("PC-1", 32.2, 30.2), bm("BM-2", null, 1.2, null, 30.2)];
+    expect(validateSectionBalances(pasa, "primer_orden", false).at(-1)).toContain(
+      "el límite acumulado del orden es 4 m.",
+    );
+  });
+
+  it("exactamente en el límite no avisa, aunque la suma en coma flotante no dé 10", () => {
+    // 3.3 + 3.3 + 3.4 = 10.0 m, que en coma flotante suma 9.999999999999993 o
+    // 10.000000000000002 según el orden.
+    const rows = [
+      bm("BM-1", 1.5, null, 33.3, null),
+      pc("PC-1", 33.3, 30.0),
+      pc("PC-2", 33.4, 30.0),
+      bm("BM-2", null, 1.2, null, 30.0),
+    ];
+    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
+  });
+
+  it("un BM intermedio cierra una sección y abre otra", () => {
+    // +8 m en cada sección: 16 m en el recorrido, pero ninguna sección pasa de 10.
+    const rows = [
+      bm("BM-1", 1.5, null, 38, null),
+      bm("BM-2", 1.4, 1.3, 38, 30),
+      bm("BM-3", null, 1.2, null, 30),
+    ];
+    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
+  });
+
+  it("la segunda sección avisa con su BM de arranque", () => {
+    const rows = [
+      bm("BM-1", 1.5, null, 30, null),
+      bm("BM-2", 1.4, 1.3, 42, 30),
+      bm("BM-3", null, 1.2, null, 30),
+    ];
+    const w = validateSectionBalances(rows, "tercer_orden", false);
+    expect(w[1]).toBeUndefined();
+    expect(w[2]).toBe(
+      "Sección BM-2 → BM-3: las visuales de atrás suman 12.0 m más que las de adelante; el límite acumulado del orden es 10 m.",
+    );
+  });
+
+  it("un recorrido a medias avisa en su última armada", () => {
+    // Sin BM de cierre todavía: el acumulado se juzga en la última V−, para
+    // corregirlo en las armadas siguientes (NGS 3, § 3.5.2).
+    const rows = [bm("BM-1", 1.5, null, 40, null), pc("PC-1", 40, 30), pc("PC-2", 40, 30)];
+    const w = validateSectionBalances(rows, "tercer_orden", false);
+    expect(w[1]).toBeUndefined();
+    expect(w[2]).toContain("Sección BM-1 → PC-2: las visuales de atrás suman 20.0 m");
+  });
+
+  it("una armada sin una de sus distancias no suma", () => {
+    const rows = [
+      bm("BM-1", 1.5, null, 45, null),
+      pc("PC-1", 45, 30),
+      bm("BM-2", null, 1.2, null, null),
+    ];
+    // Solo cuenta BM-1 → PC-1 (+15 m); PC-1 → BM-2 no tiene la V−.
+    expect(validateSectionBalances(rows, "tercer_orden", false).at(-1)).toContain("suman 15.0 m");
+  });
+
+  it("NO evalúa en un proceso reconstruido por el backfill", () => {
+    const rows = deCartera(CARTERA_VERJON.ida);
+    expect(validateSectionBalances(rows, "tercer_orden", true).every((x) => x === undefined)).toBe(true);
+  });
+
+  it("llega a la captura por validateRunCapture, sin bloquear", () => {
+    const issues = validateRunCapture(deCartera(CARTERA_VERJON.ida), "open", "tercer_orden", false);
+    expect(issues.at(-1)?.warnings.sectionBalance).toContain("Sección D1 → D4");
+    expect(issues.slice(0, -1).every((i) => i.warnings.sectionBalance === undefined)).toBe(true);
+    expect(hasReadingErrors(issues)).toBe(false);
+  });
+});
+
+/** Las filas de una cartera de campo como lecturas del validador. */
+function deCartera(lecturas: LecturaCartera[]): ReadingInput[] {
+  return lecturas.map((r) =>
+    bare({
+      pointCode: r.code,
+      pointType: r.type,
+      backsight: r.backsight,
+      foresight: r.foresight,
+      backDistanceM: r.backDistanceM,
+      foreDistanceM: r.foreDistanceM,
+    }),
+  );
+}
 
 /** Resultado de cierre; por defecto todo cumple, cada caso altera lo que prueba. */
 function resultWith(over: Partial<LevelingResult> = {}): LevelingResult {

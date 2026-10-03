@@ -66,12 +66,38 @@ export const LEVELING_TOLERANCE_K: Record<PrecisionOrder, number> = {
  * una sola `distance_m` por fila no permitía comprobarla: el equilibrado
  * compara d_V+ con d_V− DENTRO de una armada. La Fase 9 captura las
  * dos distancias por separado y la deuda se paga aquí.
+ *
+ * Los límites son los de la FGCS (1984), § 3.5, p. 3-7, y NGS 3, tabla 3-1
+ * (Fase 32, D-3): 2 m en primer orden clase I, 5 m en segundo orden clase I y
+ * 10 m en tercer orden, que son los de la K de cada orden de la app. El marco
+ * teórico (§ 7) da los mismos. Ordinario no está en la norma y toma el del
+ * tercer orden, el más laxo. Hasta la Fase 32 eran 2/3/4/6 m, sin fuente.
  */
 export const SIGHT_BALANCE_LIMIT_M: Record<PrecisionOrder, number> = {
   primer_orden: 2,
-  segundo_orden: 3,
-  tercer_orden: 4,
-  ordinario: 6,
+  segundo_orden: 5,
+  tercer_orden: 10,
+  ordinario: 10,
+};
+
+/**
+ * Equilibrado acumulado de una sección —de BM a BM—: diferencia máxima entre
+ * la suma de las distancias de las V+ y la de las V− de sus armadas, en metros
+ * (Fase 32, D-3).
+ *
+ * El error de colimación de una sección es −C·ΣΔs (NGS 3, § 5.5.2): depende
+ * del desequilibrio acumulado, no del de cada armada, y armadas dentro de su
+ * límite pueden sumar uno grande. Una ida y vuelta que se desequilibran igual
+ * se sesgan igual, y la discrepancia entre las dos no lo ve.
+ *
+ * FGCS (1984), § 3.5, p. 3-7, y NGS 3, tabla 3-1: 4 m en primer orden clase I
+ * y 10 m en los demás. Ordinario, como el tercer orden.
+ */
+export const SECTION_BALANCE_LIMIT_M: Record<PrecisionOrder, number> = {
+  primer_orden: 4,
+  segundo_orden: 10,
+  tercer_orden: 10,
+  ordinario: 10,
 };
 
 /**

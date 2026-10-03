@@ -400,7 +400,7 @@ export function ReadingsTable({
                         "w-24",
                         warningClass(
                           issue?.errors.foreDistanceM,
-                          issue?.warnings.sightBalance,
+                          issue?.warnings.sightBalance ?? issue?.warnings.sectionBalance,
                         ),
                       )}
                       onChange={(e) =>
@@ -409,10 +409,17 @@ export function ReadingsTable({
                     />
                     {/* El equilibrado compara las DOS visuales de la armada,
                         así que el aviso se pinta en la celda de la V−, que
-                        es la segunda que el usuario teclea. */}
+                        es la segunda que el usuario teclea. El acumulado de
+                        la sección (Fase 32) va debajo, en la V− que la
+                        cierra. */}
                     {issue?.warnings.sightBalance && (
                       <p className="mt-1 w-48 text-xs text-warning">
                         {issue.warnings.sightBalance}
+                      </p>
+                    )}
+                    {issue?.warnings.sectionBalance && (
+                      <p className="mt-1 w-48 text-xs text-warning">
+                        {issue.warnings.sectionBalance}
                       </p>
                     )}
                   </td>
