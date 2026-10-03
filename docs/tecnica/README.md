@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-02 · Fase 32 cerrada · 1015 tests y 74
+**Última actualización:** 2026-10-02 · Fase 32 cerrada · 1021 tests y 74
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -1164,10 +1164,10 @@ control, dos lineales más la angular si hay azimut de llegada. El sistema es de
 - σ₀ = √(vᵀPv / r). Desde la Fase 32 (D-6), `sigma0Reading(σ₀, r)` lo lee
   con la **prueba χ² bilateral al 95 %** de su redundancia (Ghilani, § 5.4 y
   § 16.7; USACE EM 1110-2-1009): `sigma0Interval(r)` da [√(χ²inf/r),
-  √(χ²sup/r)], de 0.16 a 1.92 con r = 2 y de 0.27 a 1.77 con r = 3.
+  √(χ²sup/r)], de 0.159 a 1.921 con r = 2 y de 0.268 a 1.765 con r = 3.
   `SIGMA0_CHI2_95` solo tiene esas dos r, las únicas que da una poligonal
   (`conditions: 2 | 3`). Solo cambia el texto que acompaña a σ₀, que dice r y
-  el intervalo; no decide nada.
+  el intervalo con tres decimales, como σ₀; no decide nada.
 
 Sobre la cartera Vivero con los pesos de la hoja (2″, 0.011 m, 2 mediciones)
 reproduce el cálculo independiente del PRD, y no los valores del análisis de
@@ -1388,14 +1388,24 @@ que fija ese contrato.
 
 `computeTrends(visitas, circuitos)` da la tendencia de cada punto, y solo con
 al menos tres visitas (dos velocidades que comparar). Desde la Fase 31 (D-10)
-un punto **acelera** si |V_última| − |V_anterior| > m/Δt, con m el margen de
-la lectura fuera de tendencia —desde la Fase 32, el de las dos visitas de la
-última velocidad— y Δt su intervalo en meses; si no, **converge**. Antes
-bastaba cualquier aumento, y el ruido de medición hacía «acelerar» puntos que
-se frenaban (TA-01 y TA-02 de Torre Alameda, P-04 de Torre Central). Como
-`detectTrendDeviations`, necesita el circuito de cada visita: por eso salió de
-`computeHistory`, y la llaman el panel y el Excel. Sin el circuito de esas dos
-visitas, el punto no lleva tendencia.
+un punto **acelera** si |V_última| − |V_anterior| pasa de un margen de ruido;
+si no, **converge**. Antes bastaba cualquier aumento, y el ruido de medición
+hacía «acelerar» puntos que se frenaban (TA-01 y TA-02 de Torre Alameda, P-04
+de Torre Central). Desde la Fase 32 el margen es `accelerationMargin`: las dos
+velocidades dependen de las tres últimas cotas **del punto** —una visita
+saltada no entra—, y el margen suma el ruido de las tres con el mismo criterio
+de USACE:
+
+```
+margen = ½ · √(T₁²/Δt₁² + T₂²·(1/Δt₁ + 1/Δt₂)² + T₃²/Δt₂²)   [mm/mes]
+```
+
+Con todo igual es √3 veces m/Δt. La Fase 31 usaba m/Δt, el margen de una sola
+diferencia: el umbral quedaba en 1.13 σ, y con los circuitos cortos de la Fase
+32 daba hasta un 13 % de «Acelerando» falsos. Lo halló la revisión de código
+de la fase. Como `detectTrendDeviations`, necesita el circuito de cada visita:
+por eso salió de `computeHistory`, y la llaman el panel y el Excel. Sin el
+circuito de alguna de las tres visitas, el punto no lleva tendencia.
 
 `settlement-summary.ts` da el **promedio encadenado** de cada visita
 (`chainedMeans`, Fase 31, D-8): el de la anterior con lecturas más la media de
@@ -1916,18 +1926,18 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1015 tests en 66 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
+1021 tests en 66 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/settlement.test.ts` | 77 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12); «Acelerando» solo por encima del margen, en la frontera y sin orden conocido (Fase 31); el margen con el circuito de cada visita —el de antes sin libreta, 2.84 mm con los de Torre Alameda, 10.39 con 1.5 km, dos órdenes, longitud 0—, `visitCircuitsOf` con la DECIMAL como cadena, un aviso y una aceleración que solo salen con circuitos cortos, y sin el circuito de la visita anterior no se evalúa (Fase 32) |
+| `lib/calculations/settlement.test.ts` | 82 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12); «Acelerando» solo por encima del margen, en la frontera y sin orden conocido (Fase 31); el margen con el circuito de cada visita —el de antes sin libreta, 2.84 mm con los de Torre Alameda, 10.39 con 1.5 km, dos órdenes, longitud 0—, `visitCircuitsOf` con la DECIMAL como cadena, un aviso y una aceleración que solo salen con circuitos cortos, y sin el circuito de la visita anterior no se evalúa; `accelerationMargin` (√3 veces con todo igual, circuitos cortos, intervalos distintos), «Acelerando» en su frontera de 6·√3 mm, y un punto que se salta una visita toma los circuitos de sus lecturas, en el aviso y en la tendencia (Fase 32) |
 | `lib/calculations/leveling.test.ts` | 95 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26); la vuelta compensada en cerrada y de enlace, la cota adoptada y el ejemplo 1 de `docs/math/nivelacion.html` (Fase 28) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
 | `lib/validators/polygonal.test.ts` | 76 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la dispersión entre lecturas ya no avisa (Fase 31) |
 | `lib/validators/settlement.test.ts` | 49 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
-| `lib/validators/leveling.test.ts` | 74 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón, con la armada en el texto (Fase 19): desde la Fase 32, avisos exactamente en C 2, C 3, C 4 y D3, y en la vuelta solo C 1 → D1; los límites de la FGCS por orden, en la frontera y con restas que en coma flotante no dan exacto; el **acumulado de la sección**: +53.3 m en la ida y −52.2 m en la vuelta de El Verjón con su texto, el tramo 2 sin aviso, el límite de 4 m en primer orden, la frontera, el reinicio en un BM intermedio, un recorrido a medias, una armada sin distancia, sin evaluar con distancias reconstruidas y por `validateRunCapture` sin bloquear (Fase 32); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
+| `lib/validators/leveling.test.ts` | 75 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón, con la armada en el texto (Fase 19): desde la Fase 32, avisos exactamente en C 2, C 3, C 4 y D3, y en la vuelta solo C 1 → D1; los límites de la FGCS por orden, en la frontera y con restas que en coma flotante no dan exacto; el **acumulado de la sección**: +53.3 m en la ida y −52.2 m en la vuelta de El Verjón con su texto, el tramo 2 sin aviso, el límite de 4 m en primer orden, la frontera, el reinicio en un BM intermedio, aunque al punto anterior le falte la V+, un recorrido a medias, una armada sin distancia, sin evaluar con distancias reconstruidas y por `validateRunCapture` sin bloquear (Fase 32); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
 | `lib/utils/format.test.ts` | 33 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26) |
@@ -1935,7 +1945,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
-| `lib/calculations/least-squares.test.ts` | 23 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal |
+| `lib/calculations/least-squares.test.ts` | 27 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal |
 | `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |
 | `lib/calculations/angles.test.ts` | 22 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13); promedio y dispersión de lecturas a través de 0°/360°, redondeo a 0.1″, coma decimal y sin aviso falso en la vista decimal (Fase 26) |
 | `lib/demo/fixtures.test.ts` | 20 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo y sin compensar cuando no cumple (Fase 28); Torre Alameda pasa por el otro BM, que nivela en todas las visitas salvo la 13 (Fase 30); con el margen de sus circuitos reales, ni avisos de tendencia ni «Acelerando» (Fase 32) |
@@ -2515,7 +2525,8 @@ tendencia.** Era fijo por orden (Fase 12): un circuito de referencia de 250 m
 (`TREND_DEVIATION_REFERENCE_KM`), equivalente a dos circuitos de 0.5 km. La
 auditoría (D-7) recomendó derivarlo de la longitud real, y ahora sale de la
 tolerancia del circuito de cada visita (§ 6, «Lectura fuera de tendencia»).
-Las visitas sin libreta no tienen longitud y cuentan como 0.5 km. No se hizo
+Las visitas sin libreta no tienen longitud y cuentan como 0.5 km. «Acelerando»
+tiene su propio margen, el de las tres cotas de sus dos velocidades. No se hizo
 umbral editable: se acabaría ajustando para silenciar el aviso. **Queda sin
 validar contra una serie real**: Torre Alameda es sintética, y en ella el
 margen baja a 2.8 mm sin dar avisos.

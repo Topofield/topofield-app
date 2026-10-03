@@ -846,7 +846,7 @@ esas tres secciones, la pantalla se queda sin contenido propio. Ver
 | Velocidad > umbral alerta | Semáforo naranja |
 | Velocidad > umbral alarma | Semáforo rojo |
 | Asentamiento acumulado > umbral | Semáforo según nivel |
-| Tendencia de velocidad creciente (aceleración) | Indicador de advertencia, solo si la velocidad crece más que el margen de ruido de las dos visitas (Fases 31 y 32) |
+| Tendencia de velocidad creciente (aceleración) | Indicador de advertencia, solo si la velocidad crece más que el margen de ruido de las tres cotas de sus dos velocidades (Fases 31 y 32) |
 | Lectura fuera de tendencia (Fase 12) | Aviso al capturar, al cerrar y en el panel; no bloquea. Margen por el circuito de cada visita (Fase 32) |
 | Otro BM del catálogo que no nivela con el amarre (Fase 30) | Cota calculada de la libreta frente a la de catálogo, con K·√L hasta ese BM: aviso en el editor, la vista, el cierre y el panel; no bloquea |
 
@@ -1206,6 +1206,10 @@ m = ½ · √(Tₚ² + Tₙ²),   T = K · √L   (L: longitud de la libreta; 0.
 Es el criterio de USACE EM 1110-2-1009 (2018), § 2-3.b, 1.96·√(σₚ² + σₙ²), si
 K·√L es el límite al 95 % del cierre del circuito. Hasta la Fase 32 era K·√0.25
 para todas, con el orden de la última visita.
+
+La **tendencia** usa su propio margen: sus dos velocidades dependen de las
+tres últimas cotas del punto, así que acelera si |V_última| − |V_anterior| >
+½·√(T₁²/Δt₁² + T₂²·(1/Δt₁ + 1/Δt₂)² + T₃²/Δt₂²), √3 veces m/Δt con todo igual.
 
 **Quitado en la Fase 29 (2026-10-01).** El asentamiento diferencial entre dos
 puntos y la distorsión angular, `1/((L × 1000) / Δs_diferencial)`: los puntos

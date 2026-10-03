@@ -719,8 +719,8 @@ export default function ManualPage() {
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>Dentro del intervalo</strong> (de 0.27 a 1.77 con r = 3;
-            de 0.16 a 1.92 con r = 2): los pesos describen bien sus
+            <strong>Dentro del intervalo</strong> (de 0.268 a 1.765 con r =
+            3; de 0.159 a 1.921 con r = 2): los pesos describen bien sus
             observaciones.
           </li>
           <li>
@@ -1828,10 +1828,12 @@ export default function ManualPage() {
         <p>
           <strong>Tendencia.</strong> Desde la tercera visita de un punto, la
           columna dice si <strong>acelera</strong> —su velocidad crece más de
-          lo que explica el error de una lectura, con el mismo margen del
-          aviso de lectura fuera de tendencia, el de sus dos últimas visitas—
-          o <strong>converge</strong>. Un solo salto dentro de ese margen no
-          basta para decir que un punto acelera.
+          lo que explica el error de las lecturas— o{" "}
+          <strong>converge</strong>. Las dos velocidades salen de las tres
+          últimas cotas del punto, así que el margen suma el ruido de las
+          tres, con el circuito de cada visita: es unas √3 veces el del aviso
+          de lectura fuera de tendencia. En Torre Alameda, 5,35 mm/mes. Un
+          solo salto no basta para decir que un punto acelera.
         </p>
 
         <p>

@@ -449,7 +449,7 @@ mucho; por eso se juzga con la **prueba χ² al 95 %** de su número de
 condiciones, r (3, o 2 sin azimut de llegada), que la pantalla muestra con su
 intervalo:
 
-- **Dentro del intervalo** (de 0.27 a 1.77 con r = 3; de 0.16 a 1.92 con
+- **Dentro del intervalo** (de 0.268 a 1.765 con r = 3; de 0.159 a 1.921 con
   r = 2): los pesos describen bien sus observaciones.
 - **Por encima**: midió peor de lo supuesto, o hay un error grueso en la
   cartera.
@@ -1135,10 +1135,11 @@ gravedad del movimiento. Es útil cuando el mismo punto sale en **Alerta** y
 no una aceleración real.
 
 **Tendencia.** Desde la tercera visita de un punto, la columna dice si
-**acelera** —su velocidad crece más de lo que explica el error de una lectura,
-con el mismo margen del aviso de lectura fuera de tendencia, el de sus dos
-últimas visitas— o **converge**. Un solo salto dentro de ese margen no basta
-para decir que un punto acelera.
+**acelera** —su velocidad crece más de lo que explica el error de las lecturas—
+o **converge**. Las dos velocidades salen de las tres últimas cotas del punto,
+así que el margen suma el ruido de las tres, con el circuito de cada visita: es
+unas √3 veces el del aviso de lectura fuera de tendencia. En Torre Alameda,
+5,35 mm/mes. Un solo salto no basta para decir que un punto acelera.
 
 **Un dato en alarma se registra con normalidad.** El semáforo es un
 diagnóstico, no un control de captura: la aplicación **nunca** impide guardar
