@@ -12,7 +12,7 @@ import {
   pointInputOf,
   visitCircuitsOf,
 } from "./settlement";
-import { thresholdsFor, trendDeviationMargin } from "./tolerances";
+import { accelerationMargin, thresholdsFor, trendDeviationMargin } from "./tolerances";
 import type { PrecisionOrder } from "@/types/project";
 import type {
   PointInput,
@@ -502,21 +502,21 @@ describe("computeTrends (Fase 31, D-10)", () => {
   });
 
   it("acelera cuando la velocidad crece más que el margen del orden", () => {
-    // De −1.96 a −10.87 mm/mes: 8.9 mm/mes más, sobre un margen de tercer
-    // orden de 6 mm en 0.92 meses (6.52 mm/mes).
+    // De −1.96 a −15.22 mm/mes: 13.3 mm/mes más, sobre el margen de tres cotas
+    // de tercer orden sin libreta, 10.76 mm/mes con intervalos de 31 y 28 días.
     const visitas = computeSettlements(
       [P1],
       [
         visita(0, "2025-01-15", 100.0),
         visita(1, "2025-02-15", 99.998), // −2.0 mm
-        visita(2, "2025-03-15", 99.988), // −10.0 mm
+        visita(2, "2025-03-15", 99.984), // −14.0 mm
       ],
     );
     expect(computeTrends(visitas, orden(visitas)).p1).toBe("accelerating");
   });
 
   it("un aumento dentro del ruido no es aceleración", () => {
-    // De −1.96 a −6.52 mm/mes: 4.6 mm/mes más, bajo el margen de 6.52. Antes de
+    // De −1.96 a −6.52 mm/mes: 4.6 mm/mes más, bajo el margen de 10.76. Antes de
     // la Fase 31 cualquier aumento contaba.
     const visitas = computeSettlements(
       [P1],
@@ -538,21 +538,23 @@ describe("computeTrends (Fase 31, D-10)", () => {
         visita(2, "2025-03-15", 99.992),
       ],
     );
-    // Primer orden: 1.5 mm en 0.92 meses, 1.63 mm/mes; el aumento de 4.6 lo supera.
+    // Primer orden: el margen de tres cotas es 2.69 mm/mes; el aumento de 4.6 lo supera.
     expect(computeTrends(visitas, orden(visitas, "primer_orden")).p1).toBe("accelerating");
   });
 
-  it("en la frontera exacta del margen no acelera, y 0.1 mm más allá sí", () => {
-    // Sin movimiento antes (velocidad 0): acelera si el parcial supera el margen.
+  it("en la frontera: con intervalos iguales acelera si el parcial pasa de 6·√3 = 10.39 mm", () => {
+    // Sin movimiento antes (velocidad 0) y dos intervalos de 30 días: acelera
+    // si el parcial supera el margen de tres cotas por el intervalo, 6·√3 mm
+    // en tercer orden sin libreta.
     const serie = (ultima: number) =>
       computeSettlements(
         [P1],
-        [visita(0, "2025-01-15", 100.0), visita(1, "2025-02-15", 100.0), visita(2, "2025-03-15", ultima)],
+        [visita(0, "2025-01-01", 100.0), visita(1, "2025-01-31", 100.0), visita(2, "2025-03-02", ultima)],
       );
-    const justo = serie(99.994); // −6.0 mm: el margen de tercer orden
-    expect(computeTrends(justo, orden(justo)).p1).toBe("converging");
-    const pasado = serie(99.9939); // −6.1 mm
-    expect(computeTrends(pasado, orden(pasado)).p1).toBe("accelerating");
+    const dentro = serie(99.9897); // −10.3 mm
+    expect(computeTrends(dentro, orden(dentro)).p1).toBe("converging");
+    const fuera = serie(99.9895); // −10.5 mm
+    expect(computeTrends(fuera, orden(fuera)).p1).toBe("accelerating");
   });
 
   it("sin el orden de la última visita no afirma tendencia", () => {
@@ -565,18 +567,42 @@ describe("computeTrends (Fase 31, D-10)", () => {
   });
 
   it("con circuitos cortos el margen baja y el mismo aumento acelera (Fase 32, D-7)", () => {
-    // El caso de «un aumento dentro del ruido»: 4.6 mm/mes más. Con los
-    // circuitos de 0.112 km de Torre Alameda el margen es ½·√(144·0.224) =
-    // 2.84 mm, 3.09 mm/mes en 0.92 meses.
+    // De −1.96 a −7.61 mm/mes: 5.65 mm/mes más. Sin libreta el margen de tres
+    // cotas es 10.76 mm/mes; con los circuitos de 0.112 km de Torre Alameda,
+    // 5.09.
     const visitas = computeSettlements(
       [P1],
       [
         visita(0, "2025-01-15", 100.0),
-        visita(1, "2025-02-15", 99.998),
-        visita(2, "2025-03-15", 99.992),
+        visita(1, "2025-02-15", 99.998), // −2.0 mm
+        visita(2, "2025-03-15", 99.991), // −7.0 mm
       ],
     );
+    expect(computeTrends(visitas, orden(visitas)).p1).toBe("converging");
     expect(computeTrends(visitas, orden(visitas, "tercer_orden", 0.112)).p1).toBe("accelerating");
+  });
+
+  it("un punto que se salta una visita toma los circuitos de sus lecturas (Fase 32)", () => {
+    // P1 no se mide en v2, cuyo circuito es de 10 km. Sus tres lecturas son las
+    // de v0, v1 y v3, todas de 0.112 km: margen 3.74 mm/mes, y el aumento,
+    // 4.23, lo supera. Con el circuito de v2 el margen pasaría de 16.
+    const P2: PointInput = { ...P1, id: "p2", code: "P-02" };
+    const visitas = computeSettlements(
+      [P1, P2],
+      [
+        { id: "v0", visitNumber: 0, date: "2025-01-15", readings: [{ pointId: "p1", elevation: 100 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v1", visitNumber: 1, date: "2025-02-15", readings: [{ pointId: "p1", elevation: 99.998 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v2", visitNumber: 2, date: "2025-03-15", readings: [{ pointId: "p2", elevation: 100 }] },
+        { id: "v3", visitNumber: 3, date: "2025-04-15", readings: [{ pointId: "p1", elevation: 99.986 }, { pointId: "p2", elevation: 100 }] },
+      ],
+    );
+    const circuitos = new Map(
+      ["v0", "v1", "v2", "v3"].map((id) => [
+        id,
+        { order: "tercer_orden" as const, km: id === "v2" ? 10 : 0.112 },
+      ]),
+    );
+    expect(computeTrends(visitas, circuitos).p1).toBe("accelerating");
   });
 });
 
@@ -661,6 +687,25 @@ describe("visitCircuitsOf (Fase 32, D-7)", () => {
     ]);
     expect(circuitos.get("v0")).toEqual({ order: "tercer_orden", km: 0.112 });
     expect(circuitos.get("v1")).toEqual({ order: "segundo_orden", km: null });
+  });
+});
+
+describe("accelerationMargin (Fase 32)", () => {
+  // «Acelerando» compara dos velocidades, que dependen de tres cotas:
+  // ½·√(T₁²/Δt₁² + T₂²·(1/Δt₁ + 1/Δt₂)² + T₃²/Δt₂²), en mm/mes.
+  const sinLibreta = { order: "tercer_orden" as const, km: null };
+
+  it("con todo igual es √3 veces el de una diferencia: 6·√3 = 10.39 mm/mes en un mes", () => {
+    expect(accelerationMargin(sinLibreta, sinLibreta, sinLibreta, 1, 1)).toBeCloseTo(10.39, 2);
+  });
+
+  it("con circuitos de 0.112 km e intervalos de un mes: 4.92 mm/mes", () => {
+    const c = { order: "tercer_orden" as const, km: 0.112 };
+    expect(accelerationMargin(c, c, c, 1, 1)).toBeCloseTo(4.92, 2);
+  });
+
+  it("con intervalos distintos, 2 y 1 meses: ½·√(18 + 162 + 72) = 7.94 mm/mes", () => {
+    expect(accelerationMargin(sinLibreta, sinLibreta, sinLibreta, 2, 1)).toBeCloseTo(7.94, 2);
   });
 });
 
@@ -768,6 +813,30 @@ describe("detectTrendDeviations — la regla", () => {
       T,
     );
     expect(detectTrendDeviations(h.visits, new Map()).size).toBe(0);
+  });
+
+  it("un punto que se salta una visita toma el circuito de su lectura anterior (Fase 32)", () => {
+    // P1 no se mide en v2, de 10 km. Sube 4 mm en v3 contra su tendencia: con
+    // los circuitos de v1 y v3 (0.112 km) el margen es 2.84 mm y avisa; con el
+    // de v2 sería de 19 mm.
+    const P2: PointInput = { ...P1, id: "p2", code: "P-02" };
+    const h = computeHistory(
+      [P1, P2],
+      [
+        { id: "v0", visitNumber: 0, date: "2025-01-15", readings: [{ pointId: "p1", elevation: 100 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v1", visitNumber: 1, date: "2025-02-15", readings: [{ pointId: "p1", elevation: 99.997 }, { pointId: "p2", elevation: 100 }] },
+        { id: "v2", visitNumber: 2, date: "2025-03-15", readings: [{ pointId: "p2", elevation: 100 }] },
+        { id: "v3", visitNumber: 3, date: "2025-04-15", readings: [{ pointId: "p1", elevation: 100.001 }, { pointId: "p2", elevation: 100 }] },
+      ],
+      T,
+    );
+    const circuitos = new Map(
+      ["v0", "v1", "v2", "v3"].map((id) => [
+        id,
+        { order: "tercer_orden" as const, km: id === "v2" ? 10 : 0.112 },
+      ]),
+    );
+    expect(detectTrendDeviations(h.visits, circuitos).get("v3")?.get("p1")?.kind).toBe("contrary");
   });
 
   it("no evalúa sin el circuito de la visita anterior", () => {

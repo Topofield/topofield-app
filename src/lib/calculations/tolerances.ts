@@ -188,9 +188,40 @@ export const TREND_DEVIATION_RATE_FACTOR = 2;
  * orden.
  */
 export function trendDeviationMargin(previous: VisitCircuit, current: VisitCircuit): number {
-  const term = ({ order, km }: VisitCircuit) =>
-    LEVELING_TOLERANCE_K[order] ** 2 * (km != null && km > 0 ? km : DIRECT_CAPTURE_CIRCUIT_KM);
-  return Math.sqrt(term(previous) + term(current)) / 2;
+  return Math.sqrt(squaredTolerance(previous) + squaredTolerance(current)) / 2;
+}
+
+/** T² = K²·L del circuito de una visita; sin libreta, L = `DIRECT_CAPTURE_CIRCUIT_KM`. */
+function squaredTolerance({ order, km }: VisitCircuit): number {
+  return LEVELING_TOLERANCE_K[order] ** 2 * (km != null && km > 0 ? km : DIRECT_CAPTURE_CIRCUIT_KM);
+}
+
+/**
+ * Margen de ruido, en mm/mes, del aumento de velocidad de «Acelerando» (Fase
+ * 32, hallazgo 4 del PRD). Las dos velocidades dependen de tres cotas:
+ *
+ *   v₂ − v₁ = (h₃ − h₂)/Δt₂ − (h₂ − h₁)/Δt₁
+ *   margen  = ½·√(T₁²/Δt₁² + T₂²·(1/Δt₁ + 1/Δt₂)² + T₃²/Δt₂²)
+ *
+ * con el mismo criterio de `trendDeviationMargin`: 1.96 veces el error típico,
+ * y la cota de cada visita con σ = T/(2·1.96). Con todo igual es √3 veces
+ * m/Δt. El margen de una sola diferencia, que se usaba hasta aquí, dejaba un
+ * 13 % de «Acelerando» falsos con circuitos cortos.
+ */
+export function accelerationMargin(
+  first: VisitCircuit,
+  middle: VisitCircuit,
+  last: VisitCircuit,
+  firstMonths: number,
+  lastMonths: number,
+): number {
+  return (
+    Math.sqrt(
+      squaredTolerance(first) / firstMonths ** 2 +
+        squaredTolerance(middle) * (1 / firstMonths + 1 / lastMonths) ** 2 +
+        squaredTolerance(last) / lastMonths ** 2,
+    ) / 2
+  );
 }
 
 /**

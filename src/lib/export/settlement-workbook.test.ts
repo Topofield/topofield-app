@@ -118,14 +118,13 @@ function build() {
 
 describe("buildSettlementWorkbook", () => {
   it("cuenta los puntos que aceleran con el margen del circuito de cada visita (Fase 32)", () => {
-    // P-01 pasa de −1.96 a −6.52 mm/mes: 4.56 más en 0.92 meses. Sin libreta
-    // el margen es 6 mm (6.52 mm/mes) y no acelera; con circuitos de 0.112 km,
-    // 2.84 mm (3.09 mm/mes), y sí. La longitud llega como cadena, como la
-    // entrega PostgREST.
+    // P-01 pasa de −1.96 a −7.61 mm/mes: 5.65 más. Sin libreta el margen de
+    // tres cotas es 10.76 mm/mes y no acelera; con circuitos de 0.112 km, 5.09,
+    // y sí. La longitud llega como cadena, como la entrega PostgREST.
     const inputs: VisitInput[] = [
       { id: "v0", visitNumber: 0, date: "2026-01-01", readings: [{ pointId: "p1", elevation: 100 }] },
       { id: "v1", visitNumber: 1, date: "2026-02-01", readings: [{ pointId: "p1", elevation: 99.998 }] },
-      { id: "v2", visitNumber: 2, date: "2026-03-01", readings: [{ pointId: "p1", elevation: 99.992 }] },
+      { id: "v2", visitNumber: 2, date: "2026-03-01", readings: [{ pointId: "p1", elevation: 99.991 }] },
     ];
     const history = computeHistory(POINTS, inputs, THRESHOLDS);
     const crecientes = (km: string | null) => {

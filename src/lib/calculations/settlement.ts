@@ -10,6 +10,7 @@
 // distancia entre puntos, ni diferenciales, ni distorsión angular.
 
 import {
+  accelerationMargin,
   DAYS_PER_MONTH,
   TREND_DEVIATION_RATE_FACTOR,
   trendDeviationMargin,
@@ -319,45 +320,54 @@ export function classifyReadings(
 /**
  * Tendencia de cada punto comparando sus dos últimas velocidades (§ 5.3).
  *
- * **Acelera** si la velocidad crece en magnitud más de lo que el error de una
- * lectura explica (Fase 31, D-10): |v_última| − |v_anterior| > m/Δt, con m el
- * margen de ruido de las dos visitas de la última velocidad —el de la lectura
- * fuera de tendencia, `trendDeviationMargin`— y Δt su intervalo en meses. Si
- * no, **converge**. Hasta la Fase 31 bastaba cualquier aumento, y el ruido de
- * medición hacía «acelerar» puntos que se estaban frenando.
+ * **Acelera** si la velocidad crece en magnitud más de lo que el error de las
+ * lecturas explica (Fase 31, D-10): |v_última| − |v_anterior| > margen, con el
+ * margen de ruido de las tres cotas de las dos velocidades
+ * (`accelerationMargin`, Fase 32). Si no, **converge**. Hasta la Fase 31
+ * bastaba cualquier aumento, y el ruido de medición hacía «acelerar» puntos que
+ * se estaban frenando.
  *
- * Un punto solo aparece si tiene **al menos dos velocidades** (tres visitas) y
- * se conoce el circuito de esas dos visitas: sin eso no se afirma nada. Las
- * visitas llegan en orden cronológico, como las da `computeHistory`.
+ * Las tres cotas son las tres últimas lecturas **del punto**: si se saltó una
+ * visita, esa no entra. Un punto solo aparece si tiene tres lecturas con sus
+ * dos velocidades y se conoce el circuito de las tres visitas: sin eso no se
+ * afirma nada. Las visitas llegan en orden cronológico, como las da
+ * `computeHistory`.
  */
 export function computeTrends(
   visits: VisitResult[],
   circuitByVisit: ReadonlyMap<string, VisitCircuit>,
 ): Record<string, Trend> {
-  const velocities = new Map<string, { velocity: number; date: string; visitId: string }[]>();
+  const readings = new Map<string, { velocity: number | null; date: string; visitId: string }[]>();
 
   for (const visit of visits) {
     for (const reading of visit.readings) {
-      if (reading.velocity === null) continue;
-      const list = velocities.get(reading.pointId) ?? [];
+      const list = readings.get(reading.pointId) ?? [];
       list.push({ velocity: reading.velocity, date: visit.date, visitId: visit.visitId });
-      velocities.set(reading.pointId, list);
+      readings.set(reading.pointId, list);
     }
   }
 
   const trends: Record<string, Trend> = {};
-  for (const [pointId, list] of velocities) {
-    if (list.length < 2) continue;
-    const last = list[list.length - 1]!;
-    const previous = list[list.length - 2]!;
-    const lastCircuit = circuitByVisit.get(last.visitId);
-    const previousCircuit = circuitByVisit.get(previous.visitId);
-    if (!lastCircuit || !previousCircuit) continue;
-    const months = monthsBetween(previous.date, last.date);
-    if (months <= 0) continue;
-    const increase = Math.abs(last.velocity) - Math.abs(previous.velocity);
-    const margin = trendDeviationMargin(previousCircuit, lastCircuit);
-    trends[pointId] = increase > margin / months ? "accelerating" : "converging";
+  for (const [pointId, list] of readings) {
+    if (list.length < 3) continue;
+    const first = list.at(-3)!;
+    const middle = list.at(-2)!;
+    const last = list.at(-1)!;
+    if (middle.velocity === null || last.velocity === null) continue;
+    const circuits = [first, middle, last].map((r) => circuitByVisit.get(r.visitId));
+    if (circuits.some((c) => !c)) continue;
+    const firstMonths = monthsBetween(first.date, middle.date);
+    const lastMonths = monthsBetween(middle.date, last.date);
+    if (firstMonths <= 0 || lastMonths <= 0) continue;
+    const increase = Math.abs(last.velocity) - Math.abs(middle.velocity);
+    const margin = accelerationMargin(
+      circuits[0]!,
+      circuits[1]!,
+      circuits[2]!,
+      firstMonths,
+      lastMonths,
+    );
+    trends[pointId] = increase > margin ? "accelerating" : "converging";
   }
   return trends;
 }
