@@ -55,8 +55,17 @@ cuadrados y control de asentamientos — avisos y lecturas estadísticas
 > - **Revisión de código:** un importante, el margen de «Acelerando», y
 >   menores; todos aplicados salvo un detalle de estilo: el tipo `2 | 3` se
 >   repite en `types/polygonal.ts` y en `Redundancy`.
-> - **Producción, pendiente:** la consulta de solo lectura de la tarea 6 y el
->   merge. Sin `db push`.
+> - **Consulta de producción** (solo lectura, `db query --linked`): todos los
+>   datos que estos criterios tocan son de la demo, iguales a los verificados
+>   en local.
+>   - Visitas: solo las 14 de Torre Alameda, con libreta, cerradas, de 0.111 a
+>     0.113 km y en tercer orden. El margen baja de 6.0 a 2.8 mm, sin avisos ni
+>     «Acelerando».
+>   - Nivelaciones: El Verjón y el tramo 2, con las mismas sumas de distancias
+>     que las carteras (+53.3 / −52.2 m y +1.4 m). El Verjón pasa a 5 avisos
+>     por armada y 2 de acumulado.
+>   - Mínimos cuadrados: solo la Vivero, que sigue consistente.
+> - **Producción, pendiente:** el merge. Sin `db push`.
 
 ## Propósito
 
