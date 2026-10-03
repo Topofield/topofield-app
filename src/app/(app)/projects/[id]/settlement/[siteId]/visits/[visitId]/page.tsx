@@ -5,6 +5,7 @@ import {
   detectTrendDeviations,
   isPointActiveOn,
   pointInputOf,
+  visitCircuitsOf,
 } from "@/lib/calculations/settlement";
 import {
   benchmarkChecksOfBook,
@@ -54,7 +55,7 @@ export default async function VisitPage({ params }: VisitPageProps) {
   const deviations =
     detectTrendDeviations(
       history.visits,
-      new Map(allVisits.map((v) => [v.id, v.precision_order])),
+      visitCircuitsOf(allVisits),
     ).get(visit.id) ?? new Map();
 
   const sorted = [...points].sort((a, b) =>

@@ -138,7 +138,7 @@ export function levelingTolerance(
 // ============================================================================
 
 import type { StructureType } from "@/types/site";
-import type { Thresholds } from "@/types/settlement";
+import type { Thresholds, VisitCircuit } from "@/types/settlement";
 
 /**
  * Días de un mes, para convertir un intervalo entre visitas a meses.
@@ -154,16 +154,12 @@ import type { Thresholds } from "@/types/settlement";
 export const DAYS_PER_MONTH = 365.25 / 12;
 
 /**
- * Longitud de referencia de un circuito de monitoreo alrededor de una
- * estructura, en km, para el margen del aviso de lectura fuera de tendencia
- * (Fase 12).
- *
- * Es una DECISIÓN, no una norma: 250 m es razonable para un edificio y puede
- * quedarse corto para una presa. Vive como constante con nombre para que se
- * vea y se pueda discutir sin tocar la regla. Ver
- * docs/prds/11-lectura-desfasada.md, «El margen».
+ * Circuito que se supone a una visita sin libreta, en km, para el margen de
+ * ruido de la tendencia (Fase 32, D-7). En captura directa no hay longitud;
+ * con 0.5 km, dos visitas así dan el margen de la Fase 12 (K·√0.25), que
+ * equivalía a dos circuitos de esa longitud.
  */
-export const TREND_DEVIATION_REFERENCE_KM = 0.25;
+export const DIRECT_CAPTURE_CIRCUIT_KM = 0.5;
 
 /**
  * Cuánto puede superar una lectura el ritmo anterior de su punto antes de
@@ -174,13 +170,27 @@ export const TREND_DEVIATION_REFERENCE_KM = 0.25;
 export const TREND_DEVIATION_RATE_FACTOR = 2;
 
 /**
- * Margen, en mm, que absorbe el ruido de medición en el aviso de lectura fuera
- * de tendencia: la tolerancia de cierre `K·√D` de un circuito de referencia,
- * con la K de nivelación del orden que declaró la visita. Da 1.5 / 3 / 6 / 12
- * mm de primer orden a ordinario.
+ * Margen de ruido, en mm, del parcial entre dos visitas: lo que el error de
+ * medición de las dos cotas explica (Fase 32, D-7). Lo usan el aviso de
+ * lectura fuera de tendencia y «Acelerando».
+ *
+ *   m = ½·√(Tₚ² + Tₙ²),   T = K·√L, la tolerancia del circuito de cada visita
+ *
+ * Es el criterio de USACE EM 1110-2-1009 (2018), § 2-3.b: un desplazamiento es
+ * significativo si pasa de 1.96·√(σₚ² + σₙ²). Si K·√L es el límite al 95 % del
+ * cierre de un circuito (NGS 3, § 3.1.3), σ_km = K/1.96, y la cota de un punto
+ * compensado tiene, como mucho —a mitad de circuito—, σ = σ_km·√(L/4).
+ *
+ * Cada visita entra con su orden y la longitud de su libreta; sin libreta, con
+ * `DIRECT_CAPTURE_CIRCUIT_KM`. Hasta la Fase 32 el margen era K·√0.25 para
+ * todas, con el orden de la última. Se calcula como √(Kₚ²·Lₚ + Kₙ²·Lₙ)/2, sin
+ * pasar por cada T, para que dos visitas sin libreta den 6 mm exactos en tercer
+ * orden.
  */
-export function trendDeviationMargin(order: PrecisionOrder): number {
-  return levelingTolerance(order, TREND_DEVIATION_REFERENCE_KM);
+export function trendDeviationMargin(previous: VisitCircuit, current: VisitCircuit): number {
+  const term = ({ order, km }: VisitCircuit) =>
+    LEVELING_TOLERANCE_K[order] ** 2 * (km != null && km > 0 ? km : DIRECT_CAPTURE_CIRCUIT_KM);
+  return Math.sqrt(term(previous) + term(current)) / 2;
 }
 
 /**

@@ -5,7 +5,11 @@ import {
   computeLeveling,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
-import { computeHistory } from "@/lib/calculations/settlement";
+import {
+  computeHistory,
+  computeTrends,
+  detectTrendDeviations,
+} from "@/lib/calculations/settlement";
 import {
   catalogElevationsOf,
   checkBenchmarks,
@@ -153,6 +157,7 @@ describe("asentamientos de la demo — Torre Alameda", () => {
     const catalog = catalogElevationsOf(result.forward.readings, ALAMEDA_AMARRES, v.amarre.code, points);
     return {
       result,
+      km: totalDistanceFromReadings(rows.map(bookRowInputOf)),
       derived: deriveControlElevations(result, points, v.date),
       checks: checkBenchmarks(result.forward.readings, catalog, f.precisionOrder),
     };
@@ -205,6 +210,26 @@ describe("asentamientos de la demo — Torre Alameda", () => {
     );
     const niveles = new Set(history.visits.at(-1)!.readings.map((r) => r.alertStatus));
     expect(niveles.size).toBeGreaterThan(1);
+  });
+
+  it("con el margen de sus circuitos reales, ni avisos de tendencia ni «Acelerando» (Fase 32)", () => {
+    // Circuitos de unos 0.112 km: el margen baja de 6 a 2.8 mm.
+    expect(books.every((b) => Math.abs(b.km - 0.112) < 0.002)).toBe(true);
+    const history = computeHistory(
+      points,
+      f.visits.map((v, i) => ({
+        id: `v${i}`,
+        visitNumber: i,
+        date: v.date,
+        readings: books[i]!.derived.readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
+      })),
+      thresholdsFor("edificio"),
+    );
+    const circuitos = new Map(
+      books.map((b, i) => [`v${i}`, { order: f.precisionOrder, km: b.km }]),
+    );
+    expect(detectTrendDeviations(history.visits, circuitos).size).toBe(0);
+    expect(Object.values(computeTrends(history.visits, circuitos))).not.toContain("accelerating");
   });
 });
 

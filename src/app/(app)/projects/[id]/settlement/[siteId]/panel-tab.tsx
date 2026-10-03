@@ -10,6 +10,7 @@ import {
   computeTrends,
   detectTrendDeviations,
   pointInputOf,
+  visitCircuitsOf,
 } from "@/lib/calculations/settlement";
 import { benchmarkChecksOfBook } from "@/lib/calculations/settlement-book";
 import { summarizeSite } from "@/lib/calculations/settlement-summary";
@@ -68,15 +69,12 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite, bo
   };
 
   // Aviso de lectura fuera de tendencia de la última visita (Fase 12) y
-  // tendencia de cada punto (Fase 31): los dos márgenes salen del orden que
-  // declaró cada visita.
-  const orderByVisit = new Map(visits.map((v) => [v.id, v.precision_order]));
-  const trends = computeTrends(history.visits, orderByVisit);
+  // tendencia de cada punto (Fase 31): los dos márgenes salen del orden y del
+  // circuito de cada visita (Fase 32).
+  const circuits = visitCircuitsOf(visits);
+  const trends = computeTrends(history.visits, circuits);
   const lastVisitId = history.visits.at(-1)?.visitId;
-  const deviations = detectTrendDeviations(
-    history.visits,
-    orderByVisit,
-  );
+  const deviations = detectTrendDeviations(history.visits, circuits);
   const lastVisitTrendWarnings = Object.fromEntries(
     [...(lastVisitId ? (deviations.get(lastVisitId) ?? []) : [])].map(
       ([pointId, deviation]) => [pointId, formatTrendDeviation(deviation)],

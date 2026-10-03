@@ -47,7 +47,7 @@ import {
   deriveControlElevations,
   type TemplateRow,
 } from "@/lib/calculations/settlement-book";
-import { samePointCode } from "@/lib/calculations/leveling";
+import { samePointCode, totalDistanceFromReadings } from "@/lib/calculations/leveling";
 import { formatDateOnly, formatTrendDeviation } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import { benchmarkCheckMessage, validateVisitBook } from "@/lib/validators/settlement-book";
@@ -66,6 +66,7 @@ import {
   type SettlementPoint,
   type SettlementVisit,
   type Thresholds,
+  type VisitCircuit,
   type VisitInput,
 } from "@/types/settlement";
 import type {
@@ -90,11 +91,12 @@ interface VisitEditorProps {
   /** Resto de visitas del lugar (con sus lecturas), para el histórico. */
   otherVisits: VisitInput[];
   /**
-   * Orden de precisión de cada una de las otras visitas, por id. El aviso de
-   * lectura fuera de tendencia (Fase 12) saca de él su margen; el de esta
-   * visita es el que el usuario tiene seleccionado en la cabecera.
+   * Orden y longitud de circuito de cada una de las otras visitas, por id. El
+   * aviso de lectura fuera de tendencia (Fase 12) saca de ellos su margen
+   * (Fase 32); los de esta visita son el orden de la cabecera y la longitud de
+   * la libreta que se está capturando.
    */
-  otherVisitOrders: Record<string, PrecisionOrder>;
+  otherVisitCircuits: Record<string, VisitCircuit>;
   thresholds: Thresholds;
   /** Solo lectura si el lugar o la visita están cerrados. */
   disabled: boolean;
@@ -186,7 +188,7 @@ export function VisitEditor({
   referencePoints,
   points,
   otherVisits,
-  otherVisitOrders,
+  otherVisitCircuits,
   thresholds,
   disabled,
   siteClosed,
@@ -332,12 +334,16 @@ export function VisitEditor({
     }
   }
 
-  // Lecturas fuera de tendencia (Fase 12), en vivo.
+  // Lecturas fuera de tendencia (Fase 12), en vivo. El circuito de esta visita
+  // es el de la libreta que se captura; sin libreta, null (Fase 32).
   const trendDeviations = useMemo(() => {
-    const orders = new Map<string, PrecisionOrder>(Object.entries(otherVisitOrders));
-    orders.set(visit.id, header.precisionOrder);
-    return detectTrendDeviations(history.visits, orders).get(visit.id) ?? new Map();
-  }, [history, otherVisitOrders, visit.id, header.precisionOrder]);
+    const circuits = new Map<string, VisitCircuit>(Object.entries(otherVisitCircuits));
+    circuits.set(visit.id, {
+      order: header.precisionOrder,
+      km: isBook && bookInputs.length > 0 ? totalDistanceFromReadings(bookInputs) : null,
+    });
+    return detectTrendDeviations(history.visits, circuits).get(visit.id) ?? new Map();
+  }, [history, otherVisitCircuits, visit.id, header.precisionOrder, isBook, bookInputs]);
   const trendWarnings: Record<string, string> = {};
   for (const [pointId, deviation] of trendDeviations) {
     trendWarnings[pointId] = formatTrendDeviation(deviation);
