@@ -51,7 +51,9 @@ eligió corregir primero:
 - **Fase 31** — avisos del cálculo (CR4)
   ([`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md)),
   **cerrada** el 2026-10-02;
-- después, CR3, **sin fase**: «Criterios del cálculo», al final.
+- **Fase 32** — rigor estadístico (CR3)
+  ([`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md)),
+  **en curso** desde el 2026-10-02.
 
 Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
 control de asentamientos **dejen de tener posición**: sin coordenadas ni
@@ -581,6 +583,11 @@ La segunda mitad, la distorsión angular en el semáforo (D-9), se retiró el
 2026-10-01: los puntos de control dejan de tener posición (A3).
 
 ### CR3 · Rigor estadístico (D-3, D-6, D-7)
+
+> **En curso en la Fase 32** ([`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md)),
+> abierta el 2026-10-02. Tras consultar la norma, el usuario eligió los
+> límites de la FGCS con el acumulado por sección, la prueba χ² al 95 % y el
+> margen con la longitud real de cada circuito.
 
 - Control acumulado del equilibrado de visuales en la sección, y límites por
   armada con fuente.
