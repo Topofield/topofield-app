@@ -362,6 +362,18 @@ describe("acumulado del equilibrado por sección (Fase 32, D-3)", () => {
     expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
   });
 
+  it("un BM cierra su sección aunque al punto anterior le falte la V+", () => {
+    // Captura a medias: PC-1 no tiene V+, así que la V− de BM-2 no cierra
+    // armada. BM-2 cierra igual la sección: +8 m en cada una, nunca 16.
+    const rows = [
+      bm("BM-1", 1.5, null, 38, null),
+      bare({ pointCode: "PC-1", pointType: "pc", foresight: 1.2, foreDistanceM: 30 }),
+      bm("BM-2", 1.4, 1.3, 38, 30),
+      bm("BM-3", null, 1.2, null, 30),
+    ];
+    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
+  });
+
   it("la segunda sección avisa con su BM de arranque", () => {
     const rows = [
       bm("BM-1", 1.5, null, 30, null),

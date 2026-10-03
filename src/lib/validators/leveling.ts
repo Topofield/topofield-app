@@ -234,7 +234,7 @@ export function validateSectionBalances(
 
   const limit = SECTION_BALANCE_LIMIT_M[order];
   let opener: { code: string; back: number | null } | null = null;
-  let section: { start: string; sum: number; lastClose: number | null } | null = null;
+  let section: { start: string; sum: number; lastClose: number } | null = null;
 
   const judge = (index: number) => {
     if (!section || !exceeds(Math.abs(section.sum), limit)) return;
@@ -248,18 +248,23 @@ export function validateSectionBalances(
   for (const [index, reading] of readings.entries()) {
     if (reading.pointType === "intermediate") continue;
     const { back, fore } = resolveVisualDistances(reading);
-    if (opener && reading.foresight != null) {
-      section ??= { start: opener.code, sum: 0, lastClose: null };
-      if (opener.back != null && fore != null) section.sum += opener.back - fore;
-      section.lastClose = index;
-      if (reading.pointType === "bm") {
+    if (reading.foresight != null) {
+      if (opener) {
+        section ??= { start: opener.code, sum: 0, lastClose: index };
+        if (opener.back != null && fore != null) section.sum += opener.back - fore;
+        section.lastClose = index;
+      }
+      // Un BM con V− cierra la sección aunque su armada no exista —al punto
+      // anterior le falta la V+, en una captura a medias—: si no, la sección
+      // seguiría abierta y se sumaría con la siguiente.
+      if (reading.pointType === "bm" && section) {
         judge(index);
         section = null;
       }
     }
     opener = reading.backsight != null ? { code: reading.pointCode.trim(), back } : null;
   }
-  if (section?.lastClose != null) judge(section.lastClose);
+  if (section) judge(section.lastClose);
   return warnings;
 }
 
