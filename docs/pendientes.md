@@ -8,7 +8,7 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-10-01)
+## Estado (2026-10-02)
 
 El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
 navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
@@ -53,7 +53,10 @@ eligió corregir primero:
   **cerrada** el 2026-10-02;
 - **Fase 32** — rigor estadístico (CR3)
   ([`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md)),
-  **en curso** desde el 2026-10-02.
+  **cerrada** el 2026-10-02.
+
+Con la 32 no queda ningún criterio del cálculo pedido por resolver: el resto
+de la § 2 de la auditoría queda documentado, sin cambio.
 
 Ese mismo día, con la Fase 28 ya abierta, el usuario pidió que los puntos de
 control de asentamientos **dejen de tener posición**: sin coordenadas ni
@@ -584,10 +587,12 @@ La segunda mitad, la distorsión angular en el semáforo (D-9), se retiró el
 
 ### CR3 · Rigor estadístico (D-3, D-6, D-7)
 
-> **En curso en la Fase 32** ([`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md)),
-> abierta el 2026-10-02. Tras consultar la norma, el usuario eligió los
-> límites de la FGCS con el acumulado por sección, la prueba χ² al 95 % y el
-> margen con la longitud real de cada circuito.
+> **Resuelta en la Fase 32** ([`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md)),
+> cerrada el 2026-10-02. Tras consultar la norma, el usuario eligió los
+> límites de equilibrado de la FGCS con el acumulado por sección (D-3), la
+> prueba χ² al 95 % para σ₀ (D-6) y el margen con la longitud real del
+> circuito de cada visita (D-7). Se conserva el texto de la petición como
+> registro.
 
 - Control acumulado del equilibrado de visuales en la sección, y límites por
   armada con fuente.

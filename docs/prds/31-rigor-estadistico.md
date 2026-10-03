@@ -1,7 +1,8 @@
 # PRD-de-fase 32 — Rigor estadístico
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-02
+**Fecha de cierre:** 2026-10-02
 
 **Rama:** `fase-32-rigor-estadistico`
 **Petición:** del usuario, 2026-10-02: «Quiero abrir la Fase 32 con CR3. […]
@@ -11,6 +12,51 @@ verdad hace falta antes de proponer cómo corregirlo.» Es CR3 de
 D-6 y D-7. Tras la consulta, el usuario eligió la recomendación en los tres.
 **Módulo:** nivelación (y la libreta de la visita), poligonal por mínimos
 cuadrados y control de asentamientos — avisos y lecturas estadísticas
+
+> **Divergencias de la implementación:**
+>
+> - **«Acelerando» con su propio margen, de tres cotas** (hallazgo 4 y
+>   decisión 10). Lo halló la revisión de código: el margen de una sola
+>   diferencia daba hasta un 13 % de falsos con circuitos cortos. Lo eligió el
+>   usuario frente a dejarlo documentado. Ningún punto de la demo ni del seed
+>   cambia de etiqueta.
+> - **Margen de coma flotante en el equilibrado.** `35.2 − 30.2` da
+>   5.0000000000000036: con el límite nuevo de 5 m, una armada justo en el
+>   límite avisaba. Las dos comparaciones llevan 10⁻⁹ m, con su test de
+>   frontera.
+> - **Un BM con V− cierra su sección aunque su armada no exista** (al punto
+>   anterior le falta la V+, en una captura a medias). Lo halló la revisión:
+>   la sección seguía abierta y sumaba la siguiente.
+> - **El intervalo de σ₀ va con tres decimales**, como σ₀ («entre 0.268 y
+>   1.765»), y r va en la frase de debajo, no en la fila de σ₀. Con dos
+>   decimales, un σ₀ de 1.766 salía «peor» junto a «entre 0.27 y 1.77».
+> - **`visitCircuitsOf`**, un ayudante que el PRD no nombraba: lee el circuito
+>   de las filas de la base con el `Number()` de la DECIMAL. La redundancia
+>   pasa a tipo `2 | 3`.
+> - **El PRD principal no tiene σ₀ en § 6**: nunca describió mínimos
+>   cuadrados. Se actualizaron § 5.1, § 5.3, § 5.4 y § 6.10.
+> - **Arreglos de documentación de fases anteriores**, encontrados en el
+>   barrido:
+>   - la tabla de estado de fases de la doc técnica seguía en la 25;
+>   - la § 9 decía 994 tests y 67 pruebas de base;
+>   - `nivelacion.html` atribuía a la ISO 17123-2 un «aviso de equipo» que
+>     quitó la Fase 31.
+> - **La auditoría** deja confirmadas sobre el PDF de NGS las cifras de
+>   nivelación de la FGCS (cierre, equilibrado y colimación).
+> - **Capturas:** solo la 21 (σ₀ con r y su intervalo). Ninguna captura
+>   muestra los avisos de equilibrado.
+> - **Verificación en pantalla** en local, con `db reset` y seed, a 1280 px en
+>   claro y a 390 px en oscuro: 25 comprobaciones, repetidas con el código
+>   final. Sin desborde y sin errores de la app; solo el aviso de `eval()` del
+>   modo de desarrollo.
+> - **Pruebas que el PRD pedía y no tienen test propio:** «P-04 de Torre
+>   Central igual que hoy». Lo cubren el test de dos visitas sin libreta (el
+>   margen de antes) y la verificación en pantalla.
+> - **Revisión de código:** un importante, el margen de «Acelerando», y
+>   menores; todos aplicados salvo un detalle de estilo: el tipo `2 | 3` se
+>   repite en `types/polygonal.ts` y en `Redundancy`.
+> - **Producción, pendiente:** la consulta de solo lectura de la tarea 6 y el
+>   merge. Sin `db push`.
 
 ## Propósito
 

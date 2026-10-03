@@ -41,7 +41,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 29 | Puntos de control sin posición | [`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md) | cerrada |
 | 30 | Estabilidad de los BMs | [`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md) | cerrada |
 | 31 | Avisos del cálculo | [`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md) | cerrada |
-| 32 | Rigor estadístico | [`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md) | en curso |
+| 32 | Rigor estadístico | [`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -555,6 +555,51 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 32 — Rigor estadístico (2026-10-02)
+
+CR3, tras consultar la FGCS 1984, NGS 3, Ghilani y USACE EM 1110-2-1009:
+
+- el equilibrado de visuales usa los límites de la norma por armada (2/5/10/10
+  m) y controla el acumulado de cada sección (4/10/10/10 m, D-3);
+- σ₀ se lee con la prueba χ² al 95 % de su r (D-6);
+- el margen de la lectura fuera de tendencia sale del circuito de cada visita
+  (D-7), y el de «Acelerando», de los circuitos de las tres cotas de sus dos
+  velocidades, que halló la revisión de código.
+
+Sin migración. 1021 tests y 74 pruebas de base. Las divergencias están en el
+propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una cifra con fuente puede estar aplicada a otra magnitud.** La banda
+  [0.5, 2] de σ₀ parecía no tener fuente, y la tiene en USACE. Pero allí es
+  sobre σ₀², y para redes con mucha redundancia: aplicada bien a una poligonal,
+  fallaría la mitad de las veces. Antes de decir «sin fuente» o «con fuente»,
+  hay que comprobar a qué cantidad se aplica la cifra y en qué condiciones.
+- **El margen de una magnitud derivada sigue a su propagación.** «Acelerando»
+  usaba el margen de una diferencia de cotas para comparar dos velocidades, que
+  dependen de tres. Con el margen fijo de la Fase 31 apenas se notaba (0.8 % de
+  falsos); al bajarlo esta fase, subió al 13 %. Lo vio la revisión de código,
+  no los tests: la demo es sintética y casi no tiene ruido. Cuando un umbral se
+  reutiliza para otra cantidad, hay que propagar la varianza de esa cantidad.
+- **Derivar una fórmula le da fuente y su caso por defecto.** La fórmula de la
+  auditoría para D-7 es el criterio de USACE si la tolerancia de cierre se lee
+  como un límite al 95 % (NGS 3). La derivación dio también el valor para las
+  visitas sin libreta: el circuito con el que el margen viejo coincide. Así, lo
+  que no tiene longitud no cambia.
+- **Cambiar un límite saca a la luz su frontera en coma flotante.** 35.2 − 30.2
+  da 5.0000000000000036, y con los límites viejos (3 y 4 m) nadie lo vio. Lo
+  encontró un test de frontera con distancias decimales. Las fronteras de un
+  límite se prueban con decimales, no con enteros.
+- **Un test de guarda que pasa antes del cambio hay que entenderlo.** El de
+  Torre Alameda sin avisos pasaba con el código viejo porque el margen viejo
+  daba NaN con el mapa nuevo, no porque comprobara algo. El test del Excel se
+  validó al revés: quitándole la longitud y viéndolo fallar.
+- **Las cifras de la doc técnica caducan donde nadie mira.** La tabla de
+  estado de fases seguía en la 25. La § 9 decía 994 tests y 67 pruebas,
+  mientras la cabecera decía 984 y 74. El barrido del cierre tiene que buscar
+  en todo el documento los números de la fase anterior, no solo en la cabecera.
 
 ### Cierre Fase 31 — Avisos del cálculo (2026-10-02)
 

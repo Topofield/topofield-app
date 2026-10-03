@@ -37,7 +37,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 29 | Puntos de control sin posición | `28-puntos-sin-posicion.md` | cerrada |
 | 30 | Estabilidad de los BMs | `29-estabilidad-bms.md` | cerrada |
 | 31 | Avisos del cálculo | `30-avisos-del-calculo.md` | cerrada |
-| 32 | Rigor estadístico | `31-rigor-estadistico.md` | en curso |
+| 32 | Rigor estadístico | `31-rigor-estadistico.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
