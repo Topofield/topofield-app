@@ -710,21 +710,26 @@ export default function ManualPage() {
           <strong>cada distancia</strong>, en milímetros, junto a la distancia
           ajustada. El ángulo de orientación no se ajusta: es el dato de
           partida. Debajo aparece <strong>σ₀</strong>, que compara lo medido
-          con los pesos que supuso:
+          con los pesos que supuso. Con pesos correctos ronda 1, pero con tan
+          pocas condiciones fluctúa mucho; por eso se juzga con la{" "}
+          <strong>prueba χ² al 95 %</strong> de su número de condiciones, r
+          (3, o 2 sin azimut de llegada), que la pantalla muestra con su
+          intervalo:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>Cerca de 1</strong> (entre 0.5 y 2): los pesos describen
-            bien sus observaciones.
+            <strong>Dentro del intervalo</strong> (de 0.27 a 1.77 con r = 3;
+            de 0.16 a 1.92 con r = 2): los pesos describen bien sus
+            observaciones.
           </li>
           <li>
-            <strong>Mayor que 2</strong>: midió peor de lo supuesto, o hay un
+            <strong>Por encima</strong>: midió peor de lo supuesto, o hay un
             error grueso en la cartera.
           </li>
           <li>
-            <strong>Menor que 0.5</strong>: sus σ son pesimistas; midió mejor
-            de lo declarado.
+            <strong>Por debajo</strong>: sus σ son pesimistas; midió mejor de
+            lo declarado.
           </li>
         </ul>
 
@@ -1057,8 +1062,24 @@ export default function ManualPage() {
           —«Armada C 1 → C 2»—; las vistas intermedias no abren ni cierran
           armada. Equilibrarlas cancela el error de colimación del nivel, así
           que es la regla de campo más importante de la nivelación de
-          precisión. El límite depende del orden: 2 m en primer orden, 3 en
-          segundo, 4 en tercero y 6 en ordinario.
+          precisión. El límite depende del orden y es el de la norma (FGCS,
+          1984): 2 m en primer orden, 5 en segundo y 10 en tercero y en
+          ordinario.
+        </p>
+
+        <p>
+          <strong>Equilibrado acumulado.</strong> Armadas dentro de su límite
+          pueden sumar un desequilibrio grande si se desequilibran siempre
+          hacia el mismo lado, y el error de colimación crece con esa suma. La
+          aplicación suma la diferencia de las armadas de cada{" "}
+          <strong>sección</strong> —de un BM al siguiente— y avisa en la
+          distancia V− que la cierra si pasa de 4 m en primer orden o de 10 m
+          en los demás: «Sección D1 → D4: las visuales de atrás suman 53.3 m
+          más que las de adelante». Mientras captura, el aviso sale en la
+          última armada en cuanto la suma pasa el límite, para compensarla en
+          las siguientes. Una ida y una vuelta que se desequilibran igual se
+          sesgan igual, y la discrepancia entre las dos no lo ve; este aviso,
+          sí.
         </p>
 
         <Nota titulo="Con nivel digital no se leen hilos">
@@ -1674,11 +1695,15 @@ export default function ManualPage() {
         </ul>
 
         <p>
-          El margen absorbe el ruido de medición y depende del orden de
-          precisión de la visita: 1,5 mm en primer orden, 3 en segundo, 6 en
-          tercero y 12 en ordinario. Moverse <strong>menos</strong> de lo
-          previsto nunca avisa, porque un asentamiento por consolidación
-          frena con el tiempo.
+          El margen absorbe el ruido de medición de las dos cotas que se
+          comparan y sale de la tolerancia de cierre del circuito de cada
+          visita: de su orden de precisión y de la longitud de su libreta. Con
+          dos circuitos de 112 m en tercer orden, como los de Torre Alameda,
+          es de 2,8 mm; con dos de 1,5 km, de 10,4 mm. Una visita capturada
+          sin libreta cuenta como un circuito de 500 m: entre dos visitas así,
+          el margen es de 1,5 mm en primer orden, 3 en segundo, 6 en tercero y
+          12 en ordinario. Moverse <strong>menos</strong> de lo previsto nunca
+          avisa, porque un asentamiento por consolidación frena con el tiempo.
         </p>
 
         <Nota titulo="El aviso no bloquea">
@@ -1804,9 +1829,9 @@ export default function ManualPage() {
           <strong>Tendencia.</strong> Desde la tercera visita de un punto, la
           columna dice si <strong>acelera</strong> —su velocidad crece más de
           lo que explica el error de una lectura, con el mismo margen del
-          aviso de lectura fuera de tendencia: 1.5, 3, 6 o 12 mm según el
-          orden de la visita— o <strong>converge</strong>. Un solo salto
-          dentro de ese margen no basta para decir que un punto acelera.
+          aviso de lectura fuera de tendencia, el de sus dos últimas visitas—
+          o <strong>converge</strong>. Un solo salto dentro de ese margen no
+          basta para decir que un punto acelera.
         </p>
 
         <p>

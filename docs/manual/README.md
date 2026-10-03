@@ -444,12 +444,16 @@ Con los pesos completos, **Resultados** suma una tabla con la **corrección de
 cada ángulo**, en segundos, y de **cada distancia**, en milímetros, junto a la
 distancia ajustada. El ángulo de orientación no se ajusta: es el dato de
 partida. Debajo aparece **σ₀**, que compara lo medido con los pesos que
-supuso:
+supuso. Con pesos correctos ronda 1, pero con tan pocas condiciones fluctúa
+mucho; por eso se juzga con la **prueba χ² al 95 %** de su número de
+condiciones, r (3, o 2 sin azimut de llegada), que la pantalla muestra con su
+intervalo:
 
-- **Cerca de 1** (entre 0.5 y 2): los pesos describen bien sus observaciones.
-- **Mayor que 2**: midió peor de lo supuesto, o hay un error grueso en la
+- **Dentro del intervalo** (de 0.27 a 1.77 con r = 3; de 0.16 a 1.92 con
+  r = 2): los pesos describen bien sus observaciones.
+- **Por encima**: midió peor de lo supuesto, o hay un error grueso en la
   cartera.
-- **Menor que 0.5**: sus σ son pesimistas; midió mejor de lo declarado.
+- **Por debajo**: sus σ son pesimistas; midió mejor de lo declarado.
 
 Si los pesos están pero no hay ajuste posible, un aviso dice por qué: con un
 solo lado, por ejemplo, las condiciones de llegada dependen de una sola
@@ -666,8 +670,20 @@ distancias, la aplicación avisa si quedaron muy distintas. El aviso aparece en
 la distancia V− que cierra la armada y la nombra —«Armada C 1 → C 2»—; las
 vistas intermedias no abren ni cierran armada. Equilibrarlas cancela el error
 de colimación del nivel, así que es la regla de campo más importante de la
-nivelación de precisión. El límite depende del orden: 2 m en primer orden, 3
-en segundo, 4 en tercero y 6 en ordinario.
+nivelación de precisión. El límite depende del orden y es el de la norma
+(FGCS, 1984): 2 m en primer orden, 5 en segundo y 10 en tercero y en
+ordinario.
+
+**Equilibrado acumulado.** Armadas dentro de su límite pueden sumar un
+desequilibrio grande si se desequilibran siempre hacia el mismo lado, y el
+error de colimación crece con esa suma. La aplicación suma la diferencia de
+las armadas de cada **sección** —de un BM al siguiente— y avisa en la distancia
+V− que la cierra si pasa de 4 m en primer orden o de 10 m en los demás:
+«Sección D1 → D4: las visuales de atrás suman 53.3 m más que las de
+adelante». Mientras captura, el aviso sale en la última armada en cuanto la
+suma pasa el límite, para compensarla en las siguientes. Una ida y una vuelta
+que se desequilibran igual se sesgan igual, y la discrepancia entre las dos no
+lo ve; este aviso, sí.
 
 > Con **nivel digital** el instrumento entrega la distancia y no se leen
 > hilos: se teclean la lectura y la distancia.
@@ -1034,10 +1050,14 @@ cota si la lectura:
 - lo mueve **más del doble** de lo que su ritmo anterior preveía, más el
   margen.
 
-El margen absorbe el ruido de medición y depende del orden de precisión de la
-visita: 1,5 mm en primer orden, 3 en segundo, 6 en tercero y 12 en ordinario.
-Moverse **menos** de lo previsto nunca avisa, porque un asentamiento por
-consolidación frena con el tiempo.
+El margen absorbe el ruido de medición de las dos cotas que se comparan y sale
+de la tolerancia de cierre del circuito de cada visita: de su orden de
+precisión y de la longitud de su libreta. Con dos circuitos de 112 m en tercer
+orden, como los de Torre Alameda, es de 2,8 mm; con dos de 1,5 km, de 10,4 mm.
+Una visita capturada sin libreta cuenta como un circuito de 500 m: entre dos
+visitas así, el margen es de 1,5 mm en primer orden, 3 en segundo, 6 en
+tercero y 12 en ordinario. Moverse **menos** de lo previsto nunca avisa,
+porque un asentamiento por consolidación frena con el tiempo.
 
 > **El aviso no bloquea.** Pide verificar la lectura en la libreta o volver a
 > medir; una lectura atípica también puede ser real. Si dos visitas seguidas
@@ -1116,9 +1136,9 @@ no una aceleración real.
 
 **Tendencia.** Desde la tercera visita de un punto, la columna dice si
 **acelera** —su velocidad crece más de lo que explica el error de una lectura,
-con el mismo margen del aviso de lectura fuera de tendencia: 1.5, 3, 6 o 12 mm
-según el orden de la visita— o **converge**. Un solo salto dentro de ese
-margen no basta para decir que un punto acelera.
+con el mismo margen del aviso de lectura fuera de tendencia, el de sus dos
+últimas visitas— o **converge**. Un solo salto dentro de ese margen no basta
+para decir que un punto acelera.
 
 **Un dato en alarma se registra con normalidad.** El semáforo es un
 diagnóstico, no un control de captura: la aplicación **nunca** impide guardar
