@@ -3,7 +3,9 @@ import { Badge } from "@/components/design-system";
 import { LevelingEditor } from "@/components/leveling/leveling-editor";
 import { ProcessReport } from "@/components/process/process-report";
 import { processReportState } from "@/lib/reports/state";
+import { reportsIncluding } from "@/lib/reports/including";
 import { ProcessShell } from "@/components/process/process-shell";
+import { ReopenDialog } from "@/components/process/reopen-dialog";
 import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -11,10 +13,12 @@ import {
   getLevelingReadings,
   getProjectById,
   getReferencePoints,
+  getReports,
 } from "@/lib/supabase/queries";
 import { levelingKindLabel, type LevelingType } from "@/types/leveling";
 import { PROCESS_STATUS_LABELS } from "@/types/polygonal";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
+import { reopenLevelingProcessAction } from "./actions";
 
 interface LevelingPageProps {
   params: Promise<{ id: string; pid: string }>;
@@ -52,6 +56,12 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
 
   const basePath = `/projects/${id}/leveling/${pid}`;
 
+  // Reabrir (Fase 34): solo lo cerrado, con los informes que lo incluyen.
+  const closed = process.status === "closed" || process.status === "rejected";
+  const reportTitles = closed
+    ? reportsIncluding(await getReports(supabase, id), "leveling", process.id).map((r) => r.title)
+    : [];
+
   return (
     <ProcessShell
       breadcrumbs={[
@@ -71,6 +81,15 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
       activeTab={activeTab}
       reportTab="informe"
       exportHref={`${basePath}/export`}
+      actions={
+        closed && (
+          <ReopenDialog
+            target="process"
+            action={reopenLevelingProcessAction.bind(null, process.id)}
+            reportTitles={reportTitles}
+          />
+        )
+      }
     >
       {activeTab === "proceso" ? (
         <LevelingEditor process={process} readings={readings} points={points} />
