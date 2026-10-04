@@ -26,10 +26,12 @@ interface PrintPageProps {
  * `@media print`, que oculta la navegación de la aplicación.
  *
  * El contenido se **reconstruye** en cada visita a partir de los procesos que
- * el informe referencia. Es seguro porque solo puede incluir procesos
- * cerrados, cuyas mediciones y veredicto son inmutables por trigger de base.
- * La excepción es la posición de una poligonal georreferenciada después
- * (Fase 15): el informe muestra las coordenadas nuevas, con una nota.
+ * el informe referencia: solo puede incluir procesos cerrados, cuyas
+ * mediciones y veredicto la base protege mientras sigan cerrados. Desde la
+ * Fase 34 un proceso se puede reabrir: el informe muestra entonces sus datos
+ * actuales y «—» en su registro de cierre. La posición de una poligonal
+ * georreferenciada después (Fase 15) también se muestra actualizada, con una
+ * nota.
  *
  * Las secciones son las mismas que arma la pestaña Informe de cada proceso
  * (`components/reports/sections/`, Fase 22).

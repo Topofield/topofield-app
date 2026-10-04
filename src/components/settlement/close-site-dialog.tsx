@@ -97,7 +97,7 @@ export function CloseSiteDialog({
 
         <p className="text-sm text-ink-2">
           Cerrar el lugar finaliza el monitoreo: queda en solo lectura, con
-          responsable y fecha de registro. Esta acción no se puede deshacer.
+          responsable y fecha de registro, hasta que lo reabras.
         </p>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">

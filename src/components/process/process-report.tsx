@@ -39,7 +39,8 @@ interface ProcessReportProps {
  * fuera de la impresión, los informes consolidados que lo incluyen.
  */
 export async function ProcessReport({ project, process, state, notes }: ProcessReportProps) {
-  // Cerrado conforme o rechazado: ya no cambia, y tiene fecha y registro de cierre.
+  // Cerrado conforme o rechazado: no cambia mientras siga cerrado, y tiene fecha
+  // y registro de cierre.
   const closed = state !== "draft";
   const supabase = await createClient();
   const entry: IncludedProcess = { ...process, order: 0 };

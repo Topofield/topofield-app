@@ -2,8 +2,9 @@
 //
 // Es la regla que sostiene todo el generador: como el informe NO guarda una
 // copia de los datos —se reconstruye al abrirlo—, solo puede incluir cosas que
-// ya no pueden cambiar. De ahí que la elegibilidad sea exactamente
-// «inmutable», y que se decida aquí, con tests, y no dentro de una consulta.
+// la base protege. De ahí que la elegibilidad sea exactamente «cerrado», y que
+// se decida aquí, con tests, y no dentro de una consulta. Desde la Fase 34 lo
+// cerrado se puede reabrir, y el informe que lo incluye muestra lo que haya.
 
 /** Tipo de trabajo incluible en un informe. */
 export type CandidateKind = "polygonal" | "leveling" | "site";
@@ -24,8 +25,9 @@ export interface EligibleCandidate {
  *
  * Solo si está **cerrado**, y por dos razones distintas que coinciden:
  *
- * - Un proceso cerrado es inmutable por trigger de base, así que regenerar el
- *   informe da siempre el mismo resultado.
+ * - Un proceso cerrado es inmutable por trigger de base mientras siga
+ *   cerrado, así que regenerar el informe da el mismo resultado hasta que
+ *   alguien lo reabra (Fase 34).
  * - El § 4.6 excluye explícitamente los **rechazados**: quedan como referencia
  *   pero no se informan. Un `rejected` está tan «terminado» como un `closed`,
  *   de modo que sin esta regla se colaría.

@@ -1,9 +1,9 @@
 // Tests de las capas de validación del proceso poligonal (PRD § 5.1 y § 5.2).
 //
 // La capa de cierre (`evaluatePolygonalClosure`) es la regla de negocio central
-// del § 4.6: decide si un levantamiento puede cerrarse y con qué desenlace. El
-// cierre es irreversible y la aplicación lo trata como inmutable, así que estos
-// tests cubren la matriz completa de estados por tipo de poligonal.
+// del § 4.6: decide si un levantamiento puede cerrarse y con qué desenlace. Lo
+// cerrado es inmutable mientras no se reabra (Fase 34), así que estos tests
+// cubren la matriz completa de estados por tipo de poligonal.
 
 import { describe, expect, it } from "vitest";
 import {

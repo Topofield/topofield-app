@@ -218,8 +218,7 @@ export function VisitEditor({
   // Cambios sin guardar. Mismo patrón que `polygonal-editor.tsx`: se vuelve
   // `true` con cualquier edición y `false` solo tras un guardado exitoso. El
   // diálogo de cierre lo usa para no permitir confirmar mientras haya cambios
-  // sin guardar — cerrar sellaría los valores VIEJOS de la base, de forma
-  // irreversible.
+  // sin guardar — cerrar sellaría los valores VIEJOS de la base.
   const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
 

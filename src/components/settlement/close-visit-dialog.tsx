@@ -25,7 +25,7 @@ interface CloseVisitDialogProps {
    * Hay cambios sin guardar en el editor. Mismo patrón que
    * `close-process-dialog.tsx` de poligonal: cerrar con cambios sin guardar
    * sellaría los valores VIEJOS de la base como si fueran los que se ven en
-   * pantalla — irreversible, porque una visita cerrada es inmutable.
+   * pantalla, y una visita cerrada es inmutable mientras no se reabra.
    */
   dirty: boolean;
   /**
@@ -123,7 +123,7 @@ export function CloseVisitDialog({
 
         <p className="text-sm text-ink-2">
           El cierre deja la visita en solo lectura, con responsable y fecha
-          de registro. Esta acción no se puede deshacer.
+          de registro, hasta que la reabras.
         </p>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
