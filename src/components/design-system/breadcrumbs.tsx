@@ -68,7 +68,7 @@ export function Breadcrumbs({
       {parent?.href && (
         <Link
           href={parent.href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-ink underline-offset-2 hover:underline sm:hidden"
+          className="inline-flex min-w-0 max-w-full items-center gap-1 text-sm font-medium text-ink underline-offset-2 hover:underline sm:hidden"
         >
           <span aria-hidden>‹</span>
           <span className="truncate">{parent.label}</span>

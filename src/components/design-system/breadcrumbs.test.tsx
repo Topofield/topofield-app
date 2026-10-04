@@ -73,4 +73,20 @@ describe("Breadcrumbs en la barra (Fase 33)", () => {
       expect(nav.split(" ")).toContain(c);
     }
   });
+
+  it("en el teléfono, el «‹ nivel anterior» se puede encoger y se trunca", () => {
+    // Sin min-w-0, un ítem flex no baja de su contenido: un nombre de más de
+    // unos 30 caracteres salía del hueco y tapaba Equipos, Manual y la cuenta.
+    const html = renderToStaticMarkup(
+      createElement(Breadcrumbs, {
+        items: [
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Conjunto Residencial Los Pinos — etapa 2", href: "/projects/1" },
+          { label: "Cuadrado" },
+        ],
+      }),
+    );
+    const back = html.match(/<a[^>]*class="([^"]*sm:hidden[^"]*)"/)?.[1] ?? "";
+    expect(back.split(" ")).toContain("min-w-0");
+  });
 });
