@@ -39,6 +39,7 @@ import { thresholdsOf } from "@/lib/calculations/tolerances";
 import type { Site } from "@/types/site";
 import type { LevelType, PrecisionOrder } from "@/types/project";
 import { logDbError } from "@/lib/errors/user-message";
+import { reopenBlocker, reopenPatch } from "@/lib/reopen";
 
 export interface ActionResult {
   ok: boolean;
@@ -597,6 +598,45 @@ export async function closeVisitAction(
 
   // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
   revalidatePath(`/projects/${context.site.project_id}/settlement/${siteId}`);
+  return { ok: true };
+}
+
+/**
+ * Reabre una visita cerrada (Fase 34): vuelve a `calculated`, sin registro de
+ * cierre. Con el lugar cerrado no se puede: primero se reabre el lugar, cuyo
+ * trigger rechaza escribir sus visitas.
+ */
+export async function reopenVisitAction(siteId: string, visitId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Sesión no válida." };
+
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, project_id")
+    .eq("id", siteId)
+    .maybeSingle();
+  if (!site) return { ok: false, error: "Lugar no encontrado." };
+  const { data: visit } = await supabase
+    .from("settlement_visits")
+    .select("id, status")
+    .eq("id", visitId)
+    .eq("site_id", siteId)
+    .maybeSingle();
+  if (!visit) return { ok: false, error: "Visita no encontrada." };
+  const blocker = reopenBlocker("visit", visit.status, site.status);
+  if (blocker) return { ok: false, error: blocker };
+
+  const { error } = await supabase
+    .from("settlement_visits")
+    .update(reopenPatch("visit"))
+    .eq("id", visitId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo reabrir la visita.") };
+
+  revalidatePath(`/projects/${site.project_id}/settlement/${siteId}`);
+  revalidatePath(`/projects/${site.project_id}`);
   return { ok: true };
 }
 

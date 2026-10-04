@@ -18,6 +18,7 @@ import {
   validatePolygonalStation,
 } from "@/lib/validators/polygonal";
 import { derivePolygonalCloseStatus } from "./close-status";
+import { reopenBlocker, reopenPatch } from "@/lib/reopen";
 import {
   planGeoreference,
   type ControlPoint,
@@ -459,6 +460,38 @@ export async function closePolygonalProcessAction(
   revalidatePath(
     `/projects/${process.project_id}/polygonal/${payload.processId}`,
   );
+  revalidatePath(`/projects/${process.project_id}`);
+  return { ok: true };
+}
+
+/**
+ * Reabre una poligonal cerrada o rechazada (Fase 34): vuelve a `calculated`,
+ * sin registro de cierre, y se edita como cualquier abierta. La base admite
+ * solo esa transición.
+ */
+export async function reopenPolygonalProcessAction(processId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Sesión no válida." };
+
+  const { data: process } = await supabase
+    .from("polygonal_processes")
+    .select("id, status, project_id")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  const blocker = reopenBlocker("process", process.status);
+  if (blocker) return { ok: false, error: blocker };
+
+  const { error } = await supabase
+    .from("polygonal_processes")
+    .update(reopenPatch("process"))
+    .eq("id", processId);
+  if (error) return { ok: false, error: "No se pudo reabrir el proceso." };
+
+  revalidatePath(`/projects/${process.project_id}/polygonal/${processId}`);
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
 }
