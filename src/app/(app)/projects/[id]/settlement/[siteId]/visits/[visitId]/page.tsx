@@ -16,6 +16,7 @@ import {
 import { summarizeSite } from "@/lib/calculations/settlement-summary";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { turningPointBlocker } from "@/lib/validators/leveling";
+import { reopenBlocker } from "@/lib/reopen";
 import {
   formatDateShort,
   formatEquipmentLine,
@@ -165,6 +166,11 @@ export default async function VisitPage({ params }: VisitPageProps) {
         prevHref={prev ? `${siteHref}/visits/${prev.id}` : null}
         nextHref={next ? `${siteHref}/visits/${next.id}` : null}
         editHref={open ? `${viewHref}/editar` : null}
+        reopen={
+          visit.status === "closed"
+            ? { blocked: reopenBlocker("visit", visit.status, site.status), laterVisits: next !== null }
+            : null
+        }
         isLast={next === null}
         siteHref={siteHref}
       />
