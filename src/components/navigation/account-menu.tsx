@@ -49,7 +49,7 @@ export function AccountMenu({
         </div>
         <div className="border-b border-rule px-4 py-3">
           <p className="mb-2 text-xs text-ink-2">Tema</p>
-          <ThemeSelect initial={theme} />
+          <ThemeSelect initial={theme} variant="buttons" />
         </div>
         <form action={signOut} className="p-2">
           <button

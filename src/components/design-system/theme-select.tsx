@@ -13,19 +13,26 @@ import {
 /**
  * Selector de tema: Sistema / Claro / Oscuro (Fase 20).
  *
- * Desde la Fase 33 vive en el menú de cuenta de la barra: tres botones
- * visibles, cada uno con su icono y su nombre, en un grupo con etiqueta. Hasta
- * entonces era un icono suelto en la cabecera con un `<select>` invisible
- * encima, porque ahí no cabía un control visible.
+ * Dos formas, con la misma lógica:
+ *
+ * - `icon` (por defecto): un icono con un `<select>` nativo transparente
+ *   encima. Al tocarlo aparecen las tres opciones con su nombre en el selector
+ *   del sistema operativo, y sigue siendo un control con etiqueta. El foco se
+ *   dibuja en el contenedor, porque el `<select>` es invisible. Lo usa la
+ *   pantalla de inicio de sesión, donde no cabe más.
+ * - `buttons` (Fase 33): tres botones visibles, cada uno con su icono y su
+ *   nombre, en un grupo con etiqueta. Lo usa el menú de cuenta de la barra.
  *
  * Aplica el tema al instante sobre `<html>` y guarda la cookie que el layout
  * raíz leerá en la siguiente carga.
  */
 export function ThemeSelect({
   initial,
+  variant = "icon",
   className,
 }: {
   initial: ThemeChoice;
+  variant?: "icon" | "buttons";
   className?: string;
 }) {
   const [choice, setChoice] = useState<ThemeChoice>(initial);
@@ -35,30 +42,58 @@ export function ThemeSelect({
     applyTheme(next);
   }
 
+  if (variant === "buttons") {
+    return (
+      <div
+        role="group"
+        aria-label="Tema"
+        className={cn("grid grid-cols-3 gap-1 rounded-md bg-paper p-1", className)}
+      >
+        {THEME_CHOICES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-pressed={c === choice}
+            onClick={() => apply(c)}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded px-2 py-1.5 text-xs transition-colors",
+              c === choice
+                ? "bg-card font-medium text-ink shadow-sm"
+                : "text-ink-2 hover:text-ink",
+            )}
+          >
+            <ThemeIcon choice={c} />
+            <span>{THEME_LABELS[c]}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  const label = `Tema: ${THEME_LABELS[choice]}`;
   return (
-    <div
-      role="group"
-      aria-label="Tema"
-      className={cn("grid grid-cols-3 gap-1 rounded-md bg-paper p-1", className)}
+    <span
+      title={label}
+      className={cn(
+        "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-2 transition-colors hover:bg-sel hover:text-ink",
+        "has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-offset-2 has-[select:focus-visible]:outline-mira-strong",
+        className,
+      )}
     >
-      {THEME_CHOICES.map((c) => (
-        <button
-          key={c}
-          type="button"
-          aria-pressed={c === choice}
-          onClick={() => apply(c)}
-          className={cn(
-            "flex flex-col items-center gap-1 rounded px-2 py-1.5 text-xs transition-colors",
-            c === choice
-              ? "bg-card font-medium text-ink shadow-sm"
-              : "text-ink-2 hover:text-ink",
-          )}
-        >
-          <ThemeIcon choice={c} />
-          <span>{THEME_LABELS[c]}</span>
-        </button>
-      ))}
-    </div>
+      <ThemeIcon choice={choice} />
+      <select
+        aria-label="Tema"
+        value={choice}
+        onChange={(e) => apply(e.target.value as ThemeChoice)}
+        className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+      >
+        {THEME_CHOICES.map((c) => (
+          <option key={c} value={c}>
+            {THEME_LABELS[c]}
+          </option>
+        ))}
+      </select>
+    </span>
   );
 }
 

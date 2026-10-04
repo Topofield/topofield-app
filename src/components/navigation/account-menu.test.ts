@@ -35,3 +35,11 @@ describe("accountInitial", () => {
     expect(accountInitial("")).toBe("?");
   });
 });
+
+describe("AccountMenu — el tema", () => {
+  it("usa los botones visibles, no el icono", () => {
+    const html = render("topofieldsarf@gmail.com");
+    expect(html).toMatch(/role="group"[^>]*aria-label="Tema"/);
+    expect(html).not.toContain("<select");
+  });
+});
