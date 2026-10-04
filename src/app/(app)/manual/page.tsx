@@ -162,13 +162,23 @@ export default function ManualPage() {
         <p>Puede modificarlo o archivarlo cuando quiera.</p>
         <p>Cada usuario ve únicamente sus propios proyectos.</p>
         <p>
-          <strong>Tema claro u oscuro.</strong> El icono de la cabecera, junto a{" "}
-          <strong>Manual</strong> —también arriba a la derecha en la pantalla
-          de inicio de sesión—, elige el tema: <strong>Sistema</strong> sigue
-          la configuración del teléfono o del computador, y{" "}
-          <strong>Claro</strong> u <strong>Oscuro</strong> lo fijan. La
-          elección se recuerda en ese navegador. El informe impreso sale
-          siempre en claro.
+          <strong>La barra de arriba.</strong> Queda fija mientras baja por
+          cualquier pantalla. A la izquierda, el logo vuelve al dashboard, y a
+          su lado va la <strong>ruta</strong> de la pantalla —«Dashboard ›
+          Proyecto de ejemplo › Poligonal Famarena…»—: cada nombre lleva a ese
+          nivel. En el teléfono, la ruta se reduce al nivel anterior, con «‹».
+          A la derecha, <strong>Equipos</strong> (§ 12) y{" "}
+          <strong>Manual</strong>, y un círculo con la inicial de su correo: el{" "}
+          <strong>menú de cuenta</strong>, con el correo, el tema y{" "}
+          <strong>Cerrar sesión</strong>.
+        </p>
+        <p>
+          <strong>Tema claro u oscuro.</strong> En el menú de cuenta —y con el
+          icono de arriba a la derecha en la pantalla de inicio de sesión— se
+          elige el tema: <strong>Sistema</strong> sigue la configuración del
+          teléfono o del computador, y <strong>Claro</strong> u{" "}
+          <strong>Oscuro</strong> lo fijan. La elección se recuerda en ese
+          navegador. El informe impreso sale siempre en claro.
         </p>
       </Seccion>
 
@@ -409,8 +419,8 @@ export default function ManualPage() {
         <p>
           <strong>La cabecera.</strong> El nombre, el estado y el tipo del
           proceso, y dos acciones: <strong>Exportar a Excel</strong> (§ 11) y{" "}
-          <strong>Ver informe</strong>. Las migas de arriba devuelven al
-          listado del que vino.
+          <strong>Ver informe</strong>. La ruta de la barra devuelve al listado
+          del que vino.
         </p>
 
         <p>
@@ -2098,8 +2108,8 @@ export default function ManualPage() {
 
         <p>
           <strong>A pleno sol</strong>, el tema claro se lee mejor; de noche o
-          bajo techo, el oscuro cansa menos. Se cambia con el icono de la
-          cabecera (§ 2).
+          bajo techo, el oscuro cansa menos. Se cambia en el menú de cuenta
+          (§ 2).
         </p>
 
         <Captura {...CAPTURAS.temaOscuro} />
@@ -2188,8 +2198,8 @@ export default function ManualPage() {
           pulsar un informe de la lista de la pestaña{" "}
           <strong>Informes</strong>—, y allí{" "}
           <strong>Imprimir o guardar como PDF</strong> abre el diálogo del
-          navegador: elija «Guardar como PDF» como destino. Las migas vuelven
-          al proyecto, y <strong>Eliminar informe</strong> lo borra: los
+          navegador: elija «Guardar como PDF» como destino. La ruta de la barra
+          vuelve al proyecto, y <strong>Eliminar informe</strong> lo borra: los
           procesos que incluye no cambian, y puede volver a generarlo. Un
           informe emitido no se edita: para corregirlo, elimínelo y genérelo
           de nuevo.
@@ -2261,7 +2271,7 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.equipos} />
 
         <p>
-          <strong>Equipos</strong>, en la cabecera, guarda sus estaciones
+          <strong>Equipos</strong>, en la barra de arriba, guarda sus estaciones
           totales y sus niveles para no teclearlos en cada proceso. Cada equipo
           lleva marca, modelo, número de serie, fecha de calibración y
           precisión: angular y de distancia en una estación total; tipo y

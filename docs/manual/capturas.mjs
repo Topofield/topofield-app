@@ -346,9 +346,13 @@ await capturar("17-editor-movil", { fullPage: true });
 
 // Tema oscuro (Fase 20): el panel de Torre Alameda en el teléfono, con el tema
 // forzado por la cookie del selector, como si el usuario lo hubiera elegido.
+// Con el menú de cuenta abierto (Fase 33), que es donde se elige; el correo
+// sigue oculto por el estilo de arriba.
 await page.context().addCookies([{ name: "topofield-theme", value: "dark", url: BASE }]);
 await page.goto(panelLibreta, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "Cuenta" }).click();
 await capturar("29-tema-oscuro");
+await page.keyboard.press("Escape");
 await page.context().clearCookies({ name: "topofield-theme" });
 
 await browser.close();
