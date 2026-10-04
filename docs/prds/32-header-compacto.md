@@ -1,7 +1,8 @@
 # PRD-de-fase 33 — Header compacto
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-03
+**Fecha de cierre:** 2026-10-03
 
 **Rama:** `fase-33-header-compacto`
 **Petición:** del usuario, 2026-10-03: «ayúdame a iterar sobre la navegación y
@@ -10,6 +11,58 @@ compacto». Después: «rediseña el header como recomiendes». Es HC1 de
 `pendientes.md`.
 **Módulo:** el chrome de las pantallas autenticadas: header, migas y cabecera
 de página.
+
+> **Divergencias de la implementación:**
+>
+> - **`ThemeSelect` tiene dos formas.** El PRD lo daba por cambiado entero a
+>   control visible. La pantalla de inicio de sesión también lo usa y pasó a
+>   mostrar los tres botones arriba a la derecha: el icono vuelve a ser la forma
+>   por defecto, y el menú de cuenta usa `variant="buttons"`. Se vio al
+>   redactar el manual, que menciona el icono del inicio de sesión.
+> - **El tema son tres botones con icono y nombre**, no el `<select>` visible
+>   que proponía el PRD: en un menú se elige con un toque.
+> - **Iconos propios del oficio:** un nivel sobre su trípode para Equipos y un
+>   libro para Manual, en SVG en línea.
+> - **El enlace de la sección actual** lleva la raya de mira de las pestañas
+>   sobre el borde de la barra. El PRD no lo pedía.
+> - **Una raya corta separa la ruta del logo.**
+> - **La captura 29 abre el menú de cuenta**, para enseñar dónde se elige el
+>   tema. Se regeneraron las 28 capturas que muestran la barra, y los tamaños
+>   de `manual-data.ts` siguen a los PNG (las páginas completas, 56 px más
+>   cortas).
+> - **El dev server tardó en recoger los cambios de `globals.css`**, y la
+>   primera medición de la barra dio 37 px. Antes de medir en pantalla hay que
+>   comprobar que la hoja servida trae el cambio.
+> - **Verificación en pantalla** en local: las 15 pantallas autenticadas en
+>   claro y oscuro, a 1280 y 390 px, y además a 640 y 639. La ruta queda dentro
+>   de la barra sin pisar el logo ni los iconos, el título empieza en 72 px, no
+>   hay desborde y la guarda de cambios responde a la ruta. Las anclas del
+>   manual quedan bajo la barra y al imprimir no salen ni la barra ni la ruta.
+>   El menú se probó abriendo, cerrando con Esc y al tocar fuera, cambiando el
+>   tema y cerrando la sesión. Hubo un aviso puntual del entorno: un token de
+>   Supabase «issued at future», por un desfase de reloj que no se repitió.
+> - **Revisión de código:** un crítico, dos importantes y menores, todos
+>   aplicados salvo uno que queda anotado:
+>   - **crítico:** en el móvil, un nombre de más de unos 30 caracteres en el
+>     «‹ nivel anterior» salía del hueco de la ruta, tapaba Equipos, Manual y
+>     la cuenta y se quedaba sus toques. Faltaba `min-w-0`. Se verifica ahora
+>     a 320 y 390 px con un nombre de 75 caracteres;
+>   - **importante:** el diálogo «Cerrar proceso» vive en la barra de acciones
+>     (`sticky z-20`) y quedaba por debajo de la barra. `Modal` y `Drawer` se
+>     pintan ahora en un portal sobre `<body>`;
+>   - **importante:** los esqueletos de carga reservaban la fila de migas, y
+>     el contenido saltaba 40 px al cargar;
+>   - **menores:** la barra medía 49 px (el borde se sumaba) y ahora mide 48
+>     justos, con el título en 72; las altas conservaban el margen de las
+>     migas; el fondo pasa al 90 % por contraste; el panel de cuenta lleva
+>     nombre y alinea con el botón; la galería `/design-system` y dos
+>     comentarios;
+>   - **anotado, no aplicado:** entre 640 y unos 860 px la ruta se trunca por
+>     igual y el nombre de la página actual es lo que menos se lee. Darle
+>     prioridad sin que desborde sobre los iconos queda para HC2.
+> - **El dev server se paró a mitad del cierre** y se relanzó con el visto
+>   bueno del usuario.
+> - **Producción, pendiente:** el merge. Sin migración.
 
 ## Propósito
 

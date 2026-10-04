@@ -42,7 +42,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 30 | Estabilidad de los BMs | [`prds/29-estabilidad-bms.md`](./prds/29-estabilidad-bms.md) | cerrada |
 | 31 | Avisos del cálculo | [`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md) | cerrada |
 | 32 | Rigor estadístico | [`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md) | cerrada |
-| 33 | Header compacto | [`prds/32-header-compacto.md`](./prds/32-header-compacto.md) | en curso |
+| 33 | Header compacto | [`prds/32-header-compacto.md`](./prds/32-header-compacto.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -556,6 +556,45 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 33 — Header compacto (2026-10-03)
+
+HC1: una barra superior fija de 48 px con la ruta de cada página dentro,
+Equipos y Manual con icono y un menú de cuenta con el correo, el tema y
+«Cerrar sesión». El título de una página empieza a 72 px, frente a 129 y 133.
+Sin migración. 1032 tests. Las divergencias están en el propio PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un componente compartido se cambia mirando a todos sus usuarios.**
+  `ThemeSelect` se rehízo para el menú de cuenta, y la pantalla de inicio de
+  sesión, que también lo usaba, cambió sin que nadie lo pidiera. La
+  verificación en pantalla recorrió las 15 pantallas autenticadas, no las de
+  acceso. Antes de cambiar un componente del sistema de diseño, un `grep` de
+  sus usos.
+- **Lo que solo conoce la página se puede pintar en la barra sin
+  JavaScript.** La ruta lleva nombres que tiene la página, no el layout. Un
+  portal o un contexto la habrían hecho aparecer al hidratar, con salto. Que
+  la página la pinte en el servidor y el CSS la coloque (`position: fixed`)
+  la dejó en su sitio desde el primer pintado. El precio son dos medidas en
+  CSS que hay que mantener: quedan en la § 11.
+- **Medir antes de afirmar, también en un PRD de interfaz.** Los 129, 133 y
+  72 px salieron del navegador, y la verificación los comprobó página por
+  página. «Unos 60 px» habría sido una estimación.
+- **La verificación de una barra se hace con nombres largos y a 320 px.**
+  Con los nombres del seed a 390 px todo cabía. La revisión encontró que con
+  un nombre de obra corriente, de más de 30 caracteres, la ruta tapaba los
+  iconos y se quedaba sus toques: un ítem flex sin `min-w-0` no baja de su
+  texto.
+- **Fijar una capa cambia el apilamiento de las demás.** Con la cabecera
+  estática no importaba que el diálogo de cierre viviera dentro de la barra
+  de acciones, que es `sticky` con su propio `z-index`. Con una barra fija
+  arriba, el diálogo quedó por debajo. Las capas que deben ir encima de todo
+  van en un portal.
+- **Un selector de pruebas tiene que saber que la app tiene dos versiones.**
+  La tabla de estaciones y la ruta tienen una forma para el teléfono y otra
+  para el escritorio. Tres fallos de la verificación fueron del script, que
+  tomaba la versión oculta: hay que filtrar por `:visible`.
 
 ### Cierre Fase 32 — Rigor estadístico (2026-10-02)
 

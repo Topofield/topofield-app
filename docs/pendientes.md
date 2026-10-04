@@ -67,8 +67,8 @@ distorsión de CR2 (D-9).
 
 El 2026-10-03 el usuario pidió una navegación más moderna, tipo app web, con
 un header compacto: «Navegación», al final. HC1 es la **Fase 33**
-([`prds/32-header-compacto.md`](./prds/32-header-compacto.md)), **en curso**;
-HC2 queda sin fase.
+([`prds/32-header-compacto.md`](./prds/32-header-compacto.md)), **cerrada** el
+2026-10-03; HC2 queda sin fase.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -629,7 +629,10 @@ usuario delegó el diseño: «rediseña el header como recomiendes».
 
 ### HC1 · Header compacto con la ruta
 
-> **En curso en la Fase 33** ([`prds/32-header-compacto.md`](./prds/32-header-compacto.md)).
+> **Resuelta en la Fase 33** ([`prds/32-header-compacto.md`](./prds/32-header-compacto.md)),
+> cerrada el 2026-10-03: una barra fija de 48 px con la ruta dentro, Equipos y
+> Manual con icono y un menú de cuenta. Se conserva el texto de la petición
+> como registro.
 
 El header ocupa 61 px y se va con el scroll. Debajo, cada página apila migas,
 título y pestañas: el título empieza a 129 px en escritorio y a 133 en el
@@ -642,4 +645,6 @@ cuenta con el correo, el tema y «Cerrar sesión».
 Sin fase. Es la continuación natural de HC1: un selector en cada miga de la
 barra —el proyecto, el proceso o el lugar— para ir a otro sin pasar por el hub
 ni por el dashboard. Se deja fuera de la Fase 33 para ver primero cómo
-funciona la barra.
+funciona la barra. La revisión de la Fase 33 dejó un detalle para esta misma
+iteración: entre 640 y unos 860 px la ruta se trunca por igual, y el nombre de
+la página actual es lo que menos se lee.
