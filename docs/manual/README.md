@@ -1287,8 +1287,8 @@ precisión y la fecha. Debe marcar la confirmación explícitamente.
 ![Proceso rechazado](../../public/manual/10-proceso-rechazado.png)
 
 En ambos casos el editor se abre en solo lectura: los campos están
-deshabilitados y no hay barra de acciones. Lo único que sigue disponible es
-**Georreferenciar** (§ 5.5). Su pestaña **Informe** ya no lleva la marca de
+deshabilitados y no hay barra de acciones. Siguen disponibles
+**Georreferenciar** (§ 5.5) y **Reabrir** (abajo). Su pestaña **Informe** ya no lleva la marca de
 borrador: es el informe del proceso cerrado.
 
 **Reabrir.** Un proceso cerrado o rechazado se reabre con **Reabrir**, en la

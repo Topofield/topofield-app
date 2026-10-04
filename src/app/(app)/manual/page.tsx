@@ -2068,8 +2068,9 @@ export default function ManualPage() {
 
         <p>
           En ambos casos el editor se abre en solo lectura: los campos están
-          deshabilitados y no hay barra de acciones. Lo único que sigue
-          disponible es <strong>Georreferenciar</strong> (§ 5.5). Su pestaña{" "}
+          deshabilitados y no hay barra de acciones. Siguen disponibles{" "}
+          <strong>Georreferenciar</strong> (§ 5.5) y <strong>Reabrir</strong>
+          (abajo). Su pestaña{" "}
           <strong>Informe</strong> ya no lleva la marca de borrador: es el
           informe del proceso cerrado.
         </p>

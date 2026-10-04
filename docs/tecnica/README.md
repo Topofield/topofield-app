@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-03 · Fase 34 cerrada · 1033 tests y 96
+**Última actualización:** 2026-10-03 · Fase 34 cerrada · 1033 tests y 99
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -687,7 +687,7 @@ Los triggers permiten la transición *hacia* cerrado —el cierre mismo es un
 que devuelve el estado a uno abierto (`calculated`, o `active` en un lugar) y
 deja `closed_at` y `closed_by` en null, **sin cambiar ninguna otra columna**.
 Lo reconoce `is_reopening(old_row jsonb, new_row jsonb)`
-(`20261003000000_reabrir_procesos.sql`), que comparan la genérica
+(`20261003000000_reabrir_procesos.sql`), que comparten la genérica
 `reject_update_on_closed_process()` —nivelación, lugares y visitas— y la de
 poligonal, antes de su lista blanca de posición. Reabrir y modificar en el
 mismo `UPDATE` se rechaza con `23001`: primero se reabre y después se edita.
@@ -1948,7 +1948,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1033 tests en 67 archivos, Vitest, entorno `node` **sin jsdom**. Además, 96
+1033 tests en 67 archivos, Vitest, entorno `node` **sin jsdom**. Además, 99
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2034,7 +2034,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 | `estabilidad_bms.test.sql` | 6 | `save_visit` guarda la cota de catálogo de un BM de control; una visita cerrada no la deja cambiar y la conserva aunque se corrija el catálogo (Fase 30) |
-| `reabrir_procesos.test.sql` | 22 | Reabrir una poligonal cerrada, una nivelación rechazada, un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado; lo cerrado sigue sin editarse ni borrarse, con la georreferenciación intacta; tras reabrir, estaciones, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34) |
+| `reabrir_procesos.test.sql` | 25 | Reabrir una poligonal cerrada, una nivelación rechazada, un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado en las cuatro; un rechazado no pasa a cerrado sin reabrirse; lo cerrado sigue sin editarse ni borrarse, con la georreferenciación intacta; tras reabrir, estaciones, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34) |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin

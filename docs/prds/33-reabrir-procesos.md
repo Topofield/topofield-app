@@ -21,7 +21,7 @@ documentación.
 >   cerrado: reábrelo primero.», no «Reabre primero el lugar.» (§ B).
 > - **Las Server Actions no tienen prueba propia**: la prueba Vitest es de la
 >   lógica pura que aplican (`src/lib/reopen.ts`, 12 pruebas), como en
->   `close-status`. La base la cubre `reabrir_procesos.test.sql`, con 22.
+>   `close-status`. La base la cubre `reabrir_procesos.test.sql`, con 25.
 > - **También se corrigió** el comentario de cabecera de
 >   `validators/polygonal.test.ts` («El cierre es irreversible»).
 > - **Verificación en pantalla** en local, a 1280 px y a 390 px: 32

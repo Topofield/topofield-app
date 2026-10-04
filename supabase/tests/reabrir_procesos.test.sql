@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(22);
+select plan(25);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a341', 'reabrir@topofield.test');
@@ -105,6 +105,9 @@ select throws_ok(
   $$ update leveling_processes set status = 'calculated', closed_at = null, closed_by = null,
             start_bm_elevation = 2601 where id = '00000000-0000-4000-8000-00000000e341' $$,
   '23001', null, 'nivelación: reabrir y cambiar otra columna a la vez se rechaza');
+select throws_ok(
+  $$ update leveling_processes set status = 'closed' where id = '00000000-0000-4000-8000-00000000e341' $$,
+  '23001', null, 'nivelación rechazada: no pasa a cerrada sin reabrirse');
 select lives_ok(
   $$ update leveling_processes set status = 'calculated', closed_at = null, closed_by = null
       where id = '00000000-0000-4000-8000-00000000e341' $$,
@@ -137,6 +140,13 @@ select throws_ok(
   $$ update settlement_readings set elevation = 99.99
       where visit_id = '00000000-0000-4000-8000-0000000f3410' $$,
   '23001', null, 'la visita sigue cerrada: sus lecturas no cambian');
+select throws_ok(
+  $$ update settlement_visits set status = 'calculated', closed_at = null, closed_by = null, operator = 'Otro'
+      where id = '00000000-0000-4000-8000-0000000f3410' $$,
+  '23001', null, 'visita: reabrir y cambiar otra columna a la vez se rechaza');
+select throws_ok(
+  $$ update settlement_visits set status = 'calculated' where id = '00000000-0000-4000-8000-0000000f3410' $$,
+  '23001', null, 'visita: reabrir sin borrar el registro de cierre se rechaza');
 select lives_ok(
   $$ update settlement_visits set status = 'calculated', closed_at = null, closed_by = null
       where id = '00000000-0000-4000-8000-0000000f3410' $$,
