@@ -31,7 +31,7 @@ export default async function NewLevelingPage({
           { label: "Nueva nivelación" },
         ]}
       />
-      <h1 className="mt-2 text-2xl font-bold">Nuevo proceso de nivelación</h1>
+      <h1 className="text-2xl font-bold">Nuevo proceso de nivelación</h1>
       <p className="mt-1 text-sm text-ink-2">
         Configura el proceso. Las lecturas de campo se capturan en el editor, o
         se importan aquí desde el archivo de un nivel digital.
