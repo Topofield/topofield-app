@@ -133,6 +133,9 @@ disponibles.
 
 ### N1 · Renombrar vista atrás y vista adelante
 
+> **Resuelta en la Fase 10** ([`prds/09-nomenclatura-nivelacion.md`](./prds/09-nomenclatura-nivelacion.md)).
+> Se conserva el texto de la petición como registro.
+
 La nomenclatura actual no es la que usa el topógrafo:
 
 | Hoy | Debe ser |
