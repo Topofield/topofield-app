@@ -745,6 +745,15 @@ El cierre es el mecanismo de trazabilidad. Aplica a los 3 tipos de proceso.
 > inmutables, y la base lo garantiza con una lista blanca en los triggers. Ver
 > `docs/prds/14-georreferenciacion.md`.
 
+> **Enmienda (Fase 34, 2026-10-03).** Lo cerrado se puede **reabrir** en
+> cualquier momento: una poligonal o una nivelación cerrada o rechazada, una
+> visita cerrada y un lugar cerrado. Reabrir devuelve el estado a uno abierto
+> (`calculated`, o `active` en el lugar) y borra `closed_at` y `closed_by`; se
+> vuelve a cerrar con el flujo de siempre. Mientras está cerrado, todo sigue
+> inmutable: la base admite solo esa transición, sin cambiar ninguna otra
+> columna. Un informe consolidado que incluye lo reabierto lo muestra con sus
+> datos actuales. Ver `docs/prds/33-reabrir-procesos.md`.
+
 **Proceso rechazado:**
 - Si el proceso no cumple tolerancia, el usuario puede cerrarlo como "Rechazado"
 - Se registra igualmente con timestamp y responsable

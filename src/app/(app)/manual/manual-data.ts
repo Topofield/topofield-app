@@ -566,7 +566,7 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "Cerré un proceso por error. ¿Puedo reabrirlo?",
     respuesta:
-      "No. El cierre es definitivo por diseño: es lo que da valor probatorio al registro. Cree un proceso nuevo con los datos corregidos.",
+      "Sí: con Reabrir, en la cabecera del proceso (§ 8). Vuelve a ser editable y se cierra otra vez cuando esté listo.",
   },
   {
     pregunta: "¿Por qué mi poligonal no me deja cerrar?",
