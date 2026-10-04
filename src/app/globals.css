@@ -65,13 +65,16 @@
 }
 
 @layer base {
-  /* El tema (Fase 20). Sin `data-theme`, sigue al sistema; el selector de la
-     cabecera fija `light` o `dark`. Los `light-dark()` de los tokens eligen
+  /* El tema (Fase 20). Sin `data-theme`, sigue al sistema; el selector del
+     menú de cuenta fija `light` o `dark`. Los `light-dark()` de los tokens eligen
      su valor según este `color-scheme`, que además tiñe los controles nativos
      y las barras de desplazamiento. Solo en pantalla: el papel es blanco, y el
      informe impreso sale siempre en claro (PRD, decisión 7). */
   :root {
     color-scheme: light dark;
+    /* Alto de la barra superior fija (Fase 33). Lo usan la barra, el panel
+       de cuenta que cuelga de ella y la ruta que se coloca dentro. */
+    --barra-alto: 3rem;
   }
 
   @media screen {
