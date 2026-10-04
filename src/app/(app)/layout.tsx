@@ -34,7 +34,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <AppBar email={user.email ?? ""} theme={theme} signOut={signOutAction} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-8">
         <EquipmentCatalogProvider equipment={equipment} today={todayInBogota()}>
           {children}
         </EquipmentCatalogProvider>
