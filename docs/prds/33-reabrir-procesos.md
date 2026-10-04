@@ -1,7 +1,8 @@
 # PRD-de-fase 34 — Reabrir procesos
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-03
+**Fecha de cierre:** 2026-10-03
 
 **Rama:** `fase-34-reabrir-procesos`
 **Petición:** del usuario, 2026-10-03: «necesito poder reabrir procesos para
@@ -24,6 +25,16 @@ documentación.
 >   `close-status`. La base la cubre `reabrir_procesos.test.sql`, con 25.
 > - **También se corrigió** el comentario de cabecera de
 >   `validators/polygonal.test.ts` («El cierre es irreversible»).
+> - **La revisión de código** no encontró nada crítico. Pidió tres casos pgTAP
+>   más —reabrir una visita cambiando otra columna o sin borrar el registro de
+>   cierre, y un rechazado que pasa a cerrado sin reabrirse—, que se vieron
+>   fallar con un `is_reopening` laxo antes de pasar con el real. También
+>   encontró una frase del manual que se contradecía con el botón nuevo y una
+>   errata de la doc técnica. Quedan sin hacer: pasar el error de las dos
+>   acciones de proceso por `logDbError`, avisar de los informes al borrar un
+>   proceso reabierto y revocar `execute` de `is_reopening` a `anon`.
+> - **Capturas:** cambian la 09, la 10, la 22 y la 30, por el botón en la
+>   cabecera. La 30 trae además las fechas del seed actual.
 > - **Verificación en pantalla** en local, a 1280 px y a 390 px: 32
 >   comprobaciones, sin desborde ni errores de página. Cubren los criterios
 >   a–h, reabrir dos veces desde dos pestañas y el diálogo en el móvil.
