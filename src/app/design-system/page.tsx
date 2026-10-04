@@ -416,7 +416,9 @@ export default async function DesignSystemPage() {
 
           <Demo titulo="Tabs · Breadcrumbs" nota="Ambos basados en enlaces: sin JS de cliente. Breadcrumbs se reduce al retorno en móvil.">
             <div className="space-y-6">
+              {/* En la app va fija dentro de la barra (Fase 33); aquí, en su sitio. */}
               <Breadcrumbs
+                className="static h-auto"
                 items={[
                   { label: "Dashboard", href: "/dashboard" },
                   { label: "Puente Río Bogotá", href: "/design-system" },

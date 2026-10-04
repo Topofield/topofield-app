@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils/cn";
 
 interface ModalProps {
@@ -26,7 +27,11 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
 
   if (!open) return null;
 
-  return (
+  // En un portal sobre <body> (Fase 33): un antecesor con su propio contexto
+  // de apilamiento —la barra de acciones, `sticky z-20`— dejaba el diálogo de
+  // cierre por debajo de la barra superior fija, y sus enlaces se podían
+  // pulsar con el diálogo abierto. Ningún diálogo se abre en el servidor.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       {/* Backdrop como <button> para que el cierre por clic sea accesible. */}
       <button
@@ -57,6 +62,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
           </footer>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -51,6 +51,15 @@ catálogo, dos nivelaciones y una Torre Alameda cerrada.
   procesos tiene (Lote catastral: 15 procesos). Desde la Fase 8 la tarjeta no
   muestra el orden de precisión: es un dato por proceso, no del proyecto.
 - ✓ El KPI "Proyectos activos" muestra 4.
+- ✓ La barra de arriba (Fase 33): 48 px, a todo el ancho, y fija al bajar.
+  Tiene el logo, **Equipos** y **Manual** con icono —con su nombre desde 640
+  px— y un círculo con la inicial del correo. En el dashboard no lleva ruta.
+- Pulsar el círculo. ✓ El menú de cuenta muestra el correo, el tema
+  (**Sistema**, **Claro**, **Oscuro**) y **Cerrar sesión**. Elegir **Oscuro**:
+  ✓ el tema cambia al instante. Volver a **Sistema**. ✓ El menú se cierra con
+  Esc y al tocar fuera.
+- Abrir **Manual**. ✓ El enlace lleva la raya amarilla de la sección actual.
+  Pulsar un apartado del índice: ✓ el título queda visible bajo la barra.
 
 ### 2. Hub del proyecto
 
@@ -91,8 +100,9 @@ catálogo, dos nivelaciones y una Torre Alameda cerrada.
 ### 4. Cálculo en vivo — Pentágono
 
 - Abrir **Pentágono — Caso 1 del marco teórico**.
-- ✓ La pantalla del proceso (Fase 22): migas Dashboard › Lote catastral ›
-  Pentágono…, badge **Calculado**, «Poligonal cerrada · Tercer orden»,
+- ✓ La pantalla del proceso (Fase 22): en la barra, la ruta Dashboard › Lote
+  catastral › Pentágono… (Fase 33); el título empieza justo bajo la barra, con
+  el badge **Calculado**, «Poligonal cerrada · Tercer orden»,
   **Exportar a Excel** y **Ver informe** en la cabecera, las pestañas
   **Proceso** e **Informe**, y la barra fija al pie con **Guardar** y **Cerrar
   proceso**.
@@ -410,7 +420,8 @@ Una nivelación cerrada sigue rechazando cualquier `UPDATE`.
 
 ### 16. RLS — aislamiento entre usuarios
 
-- Copiar la URL del proyecto **Lote catastral** y **Cerrar sesión**.
+- Copiar la URL del proyecto **Lote catastral** y, en el menú de cuenta (el
+  círculo con la inicial), **Cerrar sesión**.
 - En la pantalla de inicio, **Regístrate**. Llenar **Código de invitación**
   con el valor de `SIGNUP_INVITE_CODE` de `.env.local` (sin esa variable el
   registro está bloqueado), nombre, apellido, un correo nuevo (p. ej.
@@ -433,6 +444,7 @@ el 14 (mínimos cuadrados), y el 15 quinquies, el 15 (georreferenciación,
 también desde el catálogo del proyecto de ejemplo). Los pasos 3, 4, 7 y 15
 sexies cubren el PRD-de-fase 22: el listado del hub, la pantalla del proceso
 con su barra de acciones, la guarda de cambios sin guardar y la pestaña
-Informe; la nota del paso 7, el guardado atómico de la Fase 23. Cualquier
+Informe; la nota del paso 7, el guardado atómico de la Fase 23. Los pasos 1 y
+4 cubren la Fase 33: la barra fija con la ruta y el menú de cuenta. Cualquier
 discrepancia entre los números de la app, la hoja Excel y el reporte HTML
 debe documentarse y corregirse antes de pasar a Fase 4.

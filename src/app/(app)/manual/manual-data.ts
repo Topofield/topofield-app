@@ -39,19 +39,19 @@ export const CAPTURAS = {
     src: "/manual/03-nuevo-proyecto.png",
     alt: "Formulario de creación de proyecto: datos básicos, datum y proyección en una sola página, con el botón Crear proyecto.",
     width: 2560,
-    height: 1762,
+    height: 1664,
   },
   hubProyecto: {
     src: "/manual/04-hub-proyecto.png",
     alt: "Hub del proyecto: cabecera con el botón + Nuevo Proceso, las pestañas y el listado de poligonales con sus filtros y acciones.",
     width: 2560,
-    height: 2936,
+    height: 2822,
   },
   configuracionProyecto: {
     src: "/manual/05-configuracion-proyecto.png",
     alt: "Pestaña de configuración del proyecto, con la edición de datos y los puntos de referencia.",
     width: 2560,
-    height: 3284,
+    height: 3170,
   },
   nuevaPoligonal: {
     src: "/manual/06-nueva-poligonal.png",
@@ -64,7 +64,7 @@ export const CAPTURAS = {
     alt: "Editor de poligonal completo: veredicto, configuración, tabla de estaciones y resultados.",
     pie: "El editor de una poligonal que no alcanza la precisión exigida.",
     width: 2560,
-    height: 4988,
+    height: 4874,
   },
   veredicto: {
     src: "/manual/08-veredicto.png",
@@ -76,13 +76,13 @@ export const CAPTURAS = {
     src: "/manual/09-proceso-cerrado.png",
     alt: "Editor de un proceso cerrado, en solo lectura y sin botones de guardado.",
     width: 2560,
-    height: 4862,
+    height: 4748,
   },
   procesoRechazado: {
     src: "/manual/10-proceso-rechazado.png",
     alt: "Editor de un proceso rechazado, también en solo lectura.",
     width: 2560,
-    height: 4862,
+    height: 4748,
   },
   nuevaNivelacion: {
     src: "/manual/11-nueva-nivelacion.png",
@@ -107,7 +107,7 @@ export const CAPTURAS = {
     alt: "Editor de nivelación completo: veredicto, libreta, perfil, comprobación aritmética, cierre, cotas corregidas y cotas adoptadas.",
     pie: "Circuito cerrado que cumple la tolerancia: el BM final corrige exacto a su cota conocida.",
     width: 2560,
-    height: 5004,
+    height: 4890,
   },
   nuevoLugar: {
     src: "/manual/13-nuevo-lugar.png",
@@ -119,13 +119,13 @@ export const CAPTURAS = {
     src: "/manual/14-editor-lugar.png",
     alt: "Pestaña Puntos y lugar: datos generales, umbrales y catálogo de puntos de control.",
     width: 2560,
-    height: 3062,
+    height: 2948,
   },
   panelAsentamientos: {
     src: "/manual/15-panel-asentamientos.png",
     alt: "Panel del lugar Torre Alameda: los cinco indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠ y el ⚠ junto al amarre de la visita 13, donde BM-2 no nivela con BM-1, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
     width: 2560,
-    height: 5436,
+    height: 5322,
   },
   nuevaVisita: {
     src: "/manual/25-nueva-visita.png",
@@ -143,7 +143,7 @@ export const CAPTURAS = {
     src: "/manual/27-vista-visita.png",
     alt: "Vista de la visita 12 de Torre Alameda: los seis indicadores, la tabla de puntos de control con TA-07 seleccionado, su historial con la nota «Le faltan 21.3 mm para el umbral de alerta» y las barras de acumulado y de movimiento por punto.",
     width: 2560,
-    height: 2934,
+    height: 2820,
   },
   registroNivelacion: {
     src: "/manual/28-registro-nivelacion.png",
@@ -173,7 +173,7 @@ export const CAPTURAS = {
     src: "/manual/16-editor-visita.png",
     alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas, su resumen de cierre y la comprobación de BM-2, y debajo las cotas de los puntos de control que salen de ella.",
     width: 2560,
-    height: 6308,
+    height: 6194,
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
@@ -185,12 +185,12 @@ export const CAPTURAS = {
     src: "/manual/19-informe-imprimible.png",
     alt: "Informe maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados, resumen consolidado y registro de cierre.",
     width: 2560,
-    height: 3842,
+    height: 3728,
   },
   temaOscuro: {
     src: "/manual/29-tema-oscuro.png",
-    alt: "El panel de Torre Alameda en un teléfono con el tema oscuro: papel y tarjetas oscuras, la acción principal en amarillo y el icono de la luna en la cabecera.",
-    pie: "El icono de la cabecera elige el tema: aquí, Oscuro.",
+    alt: "El panel de Torre Alameda en un teléfono con el tema oscuro: papel y tarjetas oscuras, y el menú de cuenta abierto, con Oscuro elegido entre Sistema, Claro y Oscuro.",
+    pie: "El menú de cuenta elige el tema: aquí, Oscuro.",
     width: 780,
     height: 1688,
     angosta: true,
@@ -200,20 +200,20 @@ export const CAPTURAS = {
     alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
     pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
     width: 780,
-    height: 6808,
+    height: 6686,
     angosta: true,
   },
   equipos: {
     src: "/manual/31-equipos.png",
     alt: "Página Equipos: estaciones totales y niveles del catálogo, con su calibración —dos con el aviso de más de un año— y su precisión.",
     width: 2560,
-    height: 1776,
+    height: 1662,
   },
   informeDelProceso: {
     src: "/manual/30-informe-del-proceso.png",
     alt: "Pestaña Informe de una poligonal cerrada: portada, datos y resultados, dibujo, resumen de precisión y registro de cierre.",
     width: 2560,
-    height: 4846,
+    height: 4732,
   },
 } as const satisfies Record<string, Captura>;
 
@@ -561,7 +561,7 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "La aplicación se ve oscura (o clara). ¿Cómo la cambio?",
     respuesta:
-      "Con el icono de la cabecera: Sistema, Claro u Oscuro (§ 2). Con Sistema, sigue la configuración del teléfono o del computador.",
+      "En el menú de cuenta —el círculo con su inicial, arriba a la derecha—: Sistema, Claro u Oscuro (§ 2). Con Sistema, sigue la configuración del teléfono o del computador.",
   },
   {
     pregunta: "Cerré un proceso por error. ¿Puedo reabrirlo?",

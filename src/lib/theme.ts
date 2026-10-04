@@ -1,5 +1,6 @@
 // Tema claro / oscuro (Fase 20, UI1). Sin la cookie, la app sigue al sistema
-// operativo; el selector de la cabecera fuerza uno. La cookie la escribe el
+// operativo; el selector del menú de cuenta (o el del inicio de sesión)
+// fuerza uno. La cookie la escribe el
 // cliente y la lee el layout raíz en el servidor, que pone `data-theme` en
 // `<html>`: la página llega pintada con el tema correcto, sin parpadeo.
 

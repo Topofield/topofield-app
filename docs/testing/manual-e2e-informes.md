@@ -66,8 +66,9 @@ Lo que cada proyecto puede incluir en un informe —solo lo cerrado—:
 - El informe se abre directo en la vista de impresión
   (`/projects/[id]/reports/[reportId]/print`, Fase 22); la ruta sin `/print`
   redirige a ella.
-- ✓ Arriba, las migas (Dashboard › Lote catastral › título), **Eliminar
-  informe** e **Imprimir o guardar como PDF**; nada de eso sale al imprimir.
+- ✓ En la barra, la ruta (Dashboard › Lote catastral › título); arriba,
+  **Eliminar informe** e **Imprimir o guardar como PDF**. Nada de eso sale al
+  imprimir, tampoco la barra.
 - ✓ El registro de cierre nombra al responsable (Seed TopoField), no un
   identificador.
 - ✓ Con el diálogo de impresión del navegador puede guardarse como PDF.
@@ -148,7 +149,8 @@ Lo que cada proyecto puede incluir en un informe —solo lo cerrado—:
 - Tab **Informes** → abrir el informe del paso 5 (o **Informe de cierre —
   Poligonal**). ✓ La portada sigue diciendo Proyecto **Lote catastral**: se
   guardó al emitir (`reports.cover`: nombre, cliente, ubicación, datum y
-  proyección). Las migas, que no se imprimen, sí muestran el nombre nuevo.
+  proyección). La ruta de la barra, que no se imprime, sí muestra el nombre
+  nuevo.
 - Abrir **Cuadrado oficial (cerrado)** → pestaña **Informe**. ✓ Su portada
   dice **Lote catastral (renombrado)**: el informe de un proceso toma los
   datos del proyecto en vivo.

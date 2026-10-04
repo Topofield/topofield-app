@@ -113,7 +113,7 @@ const page = await browser.newPage({
 await page.addInitScript(() => {
   document.addEventListener("DOMContentLoaded", () => {
     const estilo = document.createElement("style");
-    // El correo de la cabecera es el real de la cuenta: no va en las capturas,
+    // El correo del menú de cuenta es el real: no va en las capturas,
     // que se publican en el repositorio y en /manual.
     // La barra de acciones fija (Fase 22) va estática: en una captura de
     // página completa, `sticky` la pintaba a media página.
@@ -346,9 +346,13 @@ await capturar("17-editor-movil", { fullPage: true });
 
 // Tema oscuro (Fase 20): el panel de Torre Alameda en el teléfono, con el tema
 // forzado por la cookie del selector, como si el usuario lo hubiera elegido.
+// Con el menú de cuenta abierto (Fase 33), que es donde se elige; el correo
+// sigue oculto por el estilo de arriba.
 await page.context().addCookies([{ name: "topofield-theme", value: "dark", url: BASE }]);
 await page.goto(panelLibreta, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "Cuenta" }).click();
 await capturar("29-tema-oscuro");
+await page.keyboard.press("Escape");
 await page.context().clearCookies({ name: "topofield-theme" });
 
 await browser.close();

@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils/cn";
 import { buttonClasses } from "./button";
 
@@ -87,7 +88,9 @@ export function Drawer({
   // Cerrado no se monta: nada del panel queda en el orden de tabulación.
   if (!open) return null;
 
-  return (
+  // En un portal sobre <body>, como `Modal` (Fase 33): así ningún contexto de
+  // apilamiento de un antecesor lo deja por debajo de la barra superior.
+  return createPortal(
     <div className="fixed inset-0 z-50">
       {/* Fondo como <button> para que el cierre por clic sea accesible. Fuera
           del orden de Tab: con teclado se cierra con Esc o con «Cerrar». */}
@@ -147,6 +150,7 @@ export function Drawer({
           </footer>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

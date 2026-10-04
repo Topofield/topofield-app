@@ -13,34 +13,64 @@ import {
 /**
  * Selector de tema: Sistema / Claro / Oscuro (Fase 20).
  *
- * En la cabecera no cabe un `<select>` visible junto al logo, «Manual» y
- * «Cerrar sesión» en 390 px. Se ve un icono, y encima va un `<select>` nativo
- * transparente: al tocarlo aparecen las tres opciones con su nombre en el
- * selector del sistema operativo, y sigue siendo un control con etiqueta. El
- * foco se dibuja en el contenedor, porque el `<select>` es invisible.
+ * Dos formas, con la misma lógica:
+ *
+ * - `icon` (por defecto): un icono con un `<select>` nativo transparente
+ *   encima. Al tocarlo aparecen las tres opciones con su nombre en el selector
+ *   del sistema operativo, y sigue siendo un control con etiqueta. El foco se
+ *   dibuja en el contenedor, porque el `<select>` es invisible. Lo usa la
+ *   pantalla de inicio de sesión, donde no cabe más.
+ * - `buttons` (Fase 33): tres botones visibles, cada uno con su icono y su
+ *   nombre, en un grupo con etiqueta. Lo usa el menú de cuenta de la barra.
  *
  * Aplica el tema al instante sobre `<html>` y guarda la cookie que el layout
  * raíz leerá en la siguiente carga.
  */
 export function ThemeSelect({
   initial,
+  variant = "icon",
   className,
 }: {
   initial: ThemeChoice;
+  variant?: "icon" | "buttons";
   className?: string;
 }) {
   const [choice, setChoice] = useState<ThemeChoice>(initial);
 
   function apply(next: ThemeChoice) {
     setChoice(next);
-    const attr = themeAttribute(next);
-    if (attr) document.documentElement.dataset.theme = attr;
-    else delete document.documentElement.dataset.theme;
-    document.cookie = themeCookie(next, window.location.protocol === "https:");
+    applyTheme(next);
+  }
+
+  if (variant === "buttons") {
+    return (
+      <div
+        role="group"
+        aria-label="Tema"
+        className={cn("grid grid-cols-3 gap-1 rounded-md bg-paper p-1", className)}
+      >
+        {THEME_CHOICES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-pressed={c === choice}
+            onClick={() => apply(c)}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded px-2 py-1.5 text-xs transition-colors",
+              c === choice
+                ? "bg-card font-medium text-ink shadow-sm"
+                : "text-ink-2 hover:text-ink",
+            )}
+          >
+            <ThemeIcon choice={c} />
+            <span>{THEME_LABELS[c]}</span>
+          </button>
+        ))}
+      </div>
+    );
   }
 
   const label = `Tema: ${THEME_LABELS[choice]}`;
-
   return (
     <span
       title={label}
@@ -65,6 +95,14 @@ export function ThemeSelect({
       </select>
     </span>
   );
+}
+
+/** Pone el tema en `<html>` y guarda la cookie. Solo en el navegador. */
+function applyTheme(next: ThemeChoice) {
+  const attr = themeAttribute(next);
+  if (attr) document.documentElement.dataset.theme = attr;
+  else delete document.documentElement.dataset.theme;
+  document.cookie = themeCookie(next, window.location.protocol === "https:");
 }
 
 /** Sol, luna, o un círculo a medias para «sistema». */
