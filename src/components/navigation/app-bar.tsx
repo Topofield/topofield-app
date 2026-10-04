@@ -24,8 +24,10 @@ export function AppBar({
   signOut: () => Promise<void>;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-rule bg-card/85 backdrop-blur-md">
-      <div className="flex h-(--barra-alto) items-center gap-3 px-4">
+    // El alto va en el <header>, con el borde dentro (border-box): la barra
+    // mide 48 px justos, y el título de la página empieza en 72.
+    <header className="sticky top-0 z-40 h-(--barra-alto) border-b border-rule bg-card/90 backdrop-blur-md">
+      <div className="flex h-full items-center gap-3 px-4">
         {/* En el teléfono, solo el isotipo, como desde la Fase 25. */}
         <Link
           href="/dashboard"

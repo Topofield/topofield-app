@@ -113,7 +113,7 @@ const page = await browser.newPage({
 await page.addInitScript(() => {
   document.addEventListener("DOMContentLoaded", () => {
     const estilo = document.createElement("style");
-    // El correo de la cabecera es el real de la cuenta: no va en las capturas,
+    // El correo del menú de cuenta es el real: no va en las capturas,
     // que se publican en el repositorio y en /manual.
     // La barra de acciones fija (Fase 22) va estática: en una captura de
     // página completa, `sticky` la pintaba a media página.

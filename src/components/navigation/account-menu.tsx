@@ -39,7 +39,8 @@ export function AccountMenu({
       <div
         id="cuenta"
         popover="auto"
-        className="fixed inset-auto top-[calc(var(--barra-alto)+0.375rem)] right-3 m-0 w-64 rounded-lg border border-rule bg-card p-0 text-ink shadow-lg"
+        aria-label="Cuenta"
+        className="fixed inset-auto top-[calc(var(--barra-alto)+0.375rem)] right-4 m-0 w-64 rounded-lg border border-rule bg-card p-0 text-ink shadow-lg"
       >
         <div className="border-b border-rule px-4 py-3">
           <p className="text-xs text-ink-2">Sesión iniciada como</p>
