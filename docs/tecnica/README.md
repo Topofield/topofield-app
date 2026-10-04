@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-03 · Fase 33 cerrada · 1031 tests y 74
+**Última actualización:** 2026-10-03 · Fase 33 cerrada · 1032 tests y 74
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -1646,7 +1646,9 @@ y `PrecisionOrderSelect`.
 
 Las pantallas autenticadas comparten una barra fija (`components/navigation/
 app-bar.tsx`, que monta el layout de `(app)`): `sticky`, de `--barra-alto` (48
-px) y a todo el ancho de la ventana.
+px, con el borde dentro) y a todo el ancho de la ventana. El fondo es la
+tarjeta al 90 % con desenfoque: al 85 %, el texto secundario bajaba de 4.5:1
+con contenido oscuro pasando por debajo.
 
 - **A la izquierda**, el logo, que lleva al dashboard: el isotipo por debajo de
   640 px y el logo completo desde ahí.
@@ -1669,6 +1671,13 @@ px) y a todo el ancho de la ventana.
   contexto (en el servidor no se pintan: las migas saltarían al hidratar), las
   migas desde `usePathname` (ids, no nombres) y las rutas paralelas (duplican
   rutas y consultas).
+- **En el teléfono**, el «‹ nivel anterior» lleva `min-w-0`: sin él, un nombre
+  de más de unos 30 caracteres salía del hueco, y como la ruta va por encima
+  de la barra, tapaba Equipos, Manual y la cuenta y se quedaba sus toques.
+- **`Modal` y `Drawer` se pintan en un portal sobre `<body>`.** Un antecesor
+  con su propio contexto de apilamiento —la barra de acciones, `sticky z-20`,
+  donde vive el diálogo «Cerrar proceso»— dejaba su `z-50` por debajo de la
+  barra (`z-40`) y de la ruta (`z-45`).
 - **Detalles:** `scroll-padding-top` evita que la barra tape las anclas, y al
   imprimir `globals.css` oculta todo `header` y `nav`. Con el teclado, el foco
   recorre la barra antes que la ruta, que en el documento va con la página.
@@ -1960,7 +1969,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1031 tests en 68 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
+1032 tests en 68 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2032,7 +2041,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `lib/validators/project.test.ts` | 7 | El proyecto ya no valida equipo ni orden de precisión (Fase 8); latitud y longitud con coma decimal, y un separador de miles rechazado (Fase 20) |
-| `components/design-system/breadcrumbs.test.tsx` | 6 | Resolución de la ruta; colocada en la barra, fija entre el logo y los iconos (Fase 33) |
+| `components/design-system/breadcrumbs.test.tsx` | 7 | Resolución de la ruta; colocada en la barra, fija entre el logo y los iconos, y en el teléfono el «‹ nivel anterior» puede encogerse y truncarse (Fase 33) |
 
 **Pruebas de la base (Fase 23).** `supabase/tests/`, con pgTAP, sobre la base
 local: `npx supabase test db`. Cada archivo crea sus datos en una transacción
@@ -2137,10 +2146,15 @@ Registrada durante el desarrollo, ninguna bloqueante:
 lo marcan `--ruta-inicio` y `--ruta-fin` en `globals.css`, medidos en pantalla
 con el logo y los enlaces de hoy. Si cambia el logo, o se añade o se renombra
 un enlace de la barra, hay que volver a medirlos: si no, la ruta pisa los
-iconos. Ningún test lo detecta; lo detectó la verificación en pantalla, que
-mide el solape a 390, 639, 640 y 1280 px. Tampoco funciona si un antecesor de
-la ruta crea un bloque contenedor para `fixed` (`transform`, `filter`,
-`backdrop-filter`): hoy ninguno lo hace.
+iconos. Ningún test lo detecta; lo detecta la verificación en pantalla, que
+mide el solape a 320, 390, 639, 640 y 1280 px, también con un nombre largo.
+Tampoco funciona si un antecesor de la ruta crea un bloque contenedor para
+`fixed` (`transform`, `filter`, `backdrop-filter`): hoy ninguno lo hace. Y
+cualquier capa nueva que deba ir por encima de la barra tiene que salir de
+los contextos de apilamiento de sus antecesores, como `Modal` y `Drawer`, que
+van en un portal. Entre 640 y unos 860 px la ruta se trunca por igual y el
+nombre de la página actual es lo que menos se lee; darle prioridad sin que la
+ruta desborde sobre los iconos queda para HC2.
 
 **Solo puede registrarse el dueño de la cuenta de Resend.** El remitente de
 pruebas `onboarding@resend.dev` únicamente entrega a esa dirección; a cualquier
