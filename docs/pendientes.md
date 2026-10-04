@@ -615,3 +615,16 @@ La segunda mitad, la distorsión angular en el semáforo (D-9), se retiró el
 - Dispersión de lecturas con el cuantil del rango de m lecturas.
 - Promedio encadenado de asentamientos.
 - «Acelerando» solo por encima del ruido de la velocidad.
+
+## Reabrir procesos (Fase 34)
+
+> **En curso en la Fase 34** ([`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md)),
+> abierta el 2026-10-03 en un worktree aparte mientras la 33 sigue en curso.
+> La cartera real de asentamientos, que iba a ser la 34, pasa a la 35.
+
+El 2026-10-03 el usuario pidió: «necesito poder reabrir procesos para
+modificar». Y después: «solo hazlo simple y fácil poder editar aun cerrada, o
+cambiar el estado de cerrada a abierta en cualquier momento».
+
+Hoy cerrar es irreversible y la base lo garantiza por trigger. La petición
+abarca los cuatro cierres: poligonal, nivelación, visita y lugar.
