@@ -12,6 +12,25 @@ momento».
 control de asentamientos (visita y lugar)—, la base, los informes y la
 documentación.
 
+> **Divergencias de la implementación:**
+>
+> - **`src/types/database.ts` sí cambia.** La comprobación vive en una función
+>   SQL, `is_reopening(old_row, new_row)`, que usan los dos triggers. El
+>   generador de tipos la lista en `Functions` (§ A decía que no cambiaba).
+> - **El mensaje de la visita con el lugar cerrado** es «El lugar está
+>   cerrado: reábrelo primero.», no «Reabre primero el lugar.» (§ B).
+> - **Las Server Actions no tienen prueba propia**: la prueba Vitest es de la
+>   lógica pura que aplican (`src/lib/reopen.ts`, 12 pruebas), como en
+>   `close-status`. La base la cubre `reabrir_procesos.test.sql`, con 22.
+> - **También se corrigió** el comentario de cabecera de
+>   `validators/polygonal.test.ts` («El cierre es irreversible»).
+> - **Verificación en pantalla** en local, a 1280 px y a 390 px: 32
+>   comprobaciones, sin desborde ni errores de página. Cubren los criterios
+>   a–h, reabrir dos veces desde dos pestañas y el diálogo en el móvil.
+>   «Guardar» en lo reabierto no cambió ningún dato (hash de las filas antes y
+>   después), y el registro de cierre original se restauró por SQL: la base
+>   local la comparte la sesión de la Fase 33.
+
 ## Propósito
 
 Hoy cerrar es **irreversible**: la base rechaza todo cambio sobre lo cerrado,
