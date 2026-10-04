@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-02 · Fase 32 cerrada · 1021 tests y 74
+**Última actualización:** 2026-10-03 · Fase 33 cerrada · 1031 tests y 74
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -86,6 +86,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 30 | Estabilidad de los BMs | cerrada |
 | 31 | Avisos del cálculo | cerrada |
 | 32 | Rigor estadístico | cerrada |
+| 33 | Header compacto | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -103,8 +104,8 @@ npm run dev
 
 Credenciales de los datos de ejemplo: `topofieldsarf@gmail.com` / `seed1234`.
 Es la misma cuenta que se usa en producción, con una contraseña **solo local**;
-la de producción no está en el repositorio. `capturas.mjs` oculta el correo de
-la cabecera, que es real, para que no quede en las capturas del manual.
+la de producción no está en el repositorio. `capturas.mjs` oculta el correo del
+menú de cuenta, que es real, para que no quede en las capturas del manual.
 
 **El registro exige un código de invitación.** Defina `SIGNUP_INVITE_CODE` en
 `.env.local` (ver `.env.example`); sin esa variable nadie puede registrarse, ni
@@ -201,7 +202,7 @@ src/
 │   ├── design-system/       componentes propios reutilizables
 │   ├── process/             la pantalla común de un proceso y su informe (Fase 22)
 │   ├── equipment/           catálogo de equipos: página, selector de los formularios y su contexto (Fase 25)
-│   ├── navigation/          guarda de cambios sin guardar (Fase 22)
+│   ├── navigation/          barra superior y menú de cuenta (Fase 33), guarda de cambios sin guardar (Fase 22)
 │   ├── polygonal/           editor de poligonales
 │   ├── leveling/            editor de nivelación, veredicto y perfil
 │   ├── settlement/          lugar, visitas, semáforo, gráfica
@@ -1641,11 +1642,43 @@ mano, inline.
 `Tabs` · `Textarea` · `ThemeSelect`, más `LevelFieldset`/`TotalStationFieldset`
 y `PrecisionOrderSelect`.
 
+### La barra superior (Fase 33)
+
+Las pantallas autenticadas comparten una barra fija (`components/navigation/
+app-bar.tsx`, que monta el layout de `(app)`): `sticky`, de `--barra-alto` (48
+px) y a todo el ancho de la ventana.
+
+- **A la izquierda**, el logo, que lleva al dashboard: el isotipo por debajo de
+  640 px y el logo completo desde ahí.
+- **A la derecha**, `AppBarLink` para Equipos y Manual: icono en SVG en línea
+  (no hay librería de iconos) y nombre desde 640 px. El nombre sigue siendo el
+  accesible en el teléfono (`sr-only sm:not-sr-only`). La sección actual lleva
+  `aria-current="page"` y la raya `mira-strong` de las pestañas.
+- **El menú de cuenta** (`AccountMenu`): un botón con la inicial del correo
+  abre un panel con el correo, el tema (`ThemeSelect variant="buttons"`) y
+  «Cerrar sesión». Usa el atributo `popover` de HTML: abre y cierra sin
+  JavaScript propio, se cierra al tocar fuera o con Esc y va en la capa
+  superior. Se coloca con CSS bajo la barra, porque el botón siempre está
+  arriba a la derecha. `signOut` llega como prop desde el layout.
+- **La ruta.** `Breadcrumbs` la pinta cada página en el servidor, porque solo
+  ella conoce los nombres, y el CSS la coloca sobre la barra: `fixed`, arriba,
+  en el hueco que marcan `--ruta-inicio` y `--ruta-fin` (`globals.css`,
+  medidos en pantalla, uno por tamaño). Sin JavaScript, sin parpadeo y sin
+  salto. Fuera del flujo, no ocupa fila: el título de una página empieza a 72
+  px, frente a los 129 y 133 de antes. Se descartaron un portal de React y un
+  contexto (en el servidor no se pintan: las migas saltarían al hidratar), las
+  migas desde `usePathname` (ids, no nombres) y las rutas paralelas (duplican
+  rutas y consultas).
+- **Detalles:** `scroll-padding-top` evita que la barra tape las anclas, y al
+  imprimir `globals.css` oculta todo `header` y `nav`. Con el teclado, el foco
+  recorre la barra antes que la ruta, que en el documento va con la página.
+
 ### La pantalla de un proceso (Fase 22)
 
 Poligonal, nivelación y control de asentamientos comparten la misma
 estructura, y no por copia: `components/process/process-shell.tsx` arma la
-cabecera (`PageHeader`: migas, título, badge de estado, subtítulo) con las
+cabecera (`PageHeader`: migas —que desde la Fase 33 se ven en la barra—,
+título, badge de estado, subtítulo) con las
 acciones fijas —Exportar a Excel y «Ver informe», que en la pestaña Informe
 se vuelve «Imprimir o guardar como PDF»— y las pestañas (`Tabs`, enlaces con
 `?tab=`). El Server Component de cada página decide la pestaña y monta el
@@ -1762,9 +1795,10 @@ test` dice si cumple en los dos temas.
 - **`@theme static`.** Tailwind v4 solo emite las variables que usa alguna
   utilidad, y estas también se leen con `var(--color-…)` en línea (muestras de
   `/design-system`, colores de las series, SVG del dibujo de la poligonal).
-- **Selector.** `ThemeSelect` (Sistema / Claro / Oscuro) va en la cabecera de
-  la app y en las páginas de acceso: un icono con un `<select>` nativo
-  transparente encima, porque en 390 px no cabe uno visible. Escribe la cookie
+- **Selector.** `ThemeSelect` (Sistema / Claro / Oscuro) tiene dos formas. En
+  las páginas de acceso, un icono con un `<select>` nativo transparente
+  encima, porque en 390 px no cabe uno visible. En el menú de cuenta de la
+  barra (Fase 33), `variant="buttons"`: tres botones visibles con su nombre. Escribe la cookie
   `topofield-theme` (un año, `SameSite=Lax`; «Sistema» la borra) y aplica el
   tema al instante sobre `<html>`.
 - **Sin parpadeo.** El layout raíz lee la cookie con `cookies()` (`lib/theme-
@@ -1815,8 +1849,8 @@ necesita estado de cliente que un enlace no pueda expresar.
 **Foco visible** — un solo sistema: el `outline` `mira-strong` de `@layer
 base`, que cubre `a`, `button`, `summary`, `input`, `select` y `textarea` con
 `:where()` (especificidad cero). Los componentes **no declaran su propio
-`ring`**. Excepción: `ThemeSelect`, cuyo `<select>` es transparente, dibuja el
-foco en su contenedor con `has-[select:focus-visible]`.
+`ring`**. Excepción: el icono de `ThemeSelect`, cuyo `<select>` es
+transparente, dibuja el foco en su contenedor con `has-[select:focus-visible]`.
 
 **Celda numérica** — `NumberInput` (Fase 20, UI2), nunca `type="number"`, que
 rechaza la coma decimal. Es `type="text"` con `inputMode="decimal"` (o
@@ -1926,7 +1960,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1021 tests en 66 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
+1031 tests en 68 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -1984,7 +2018,9 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/design/contrast.test.ts` | 5 | `parseThemeTokens`: `light-dark()` y hexadecimal a secas; razón y tinte (Fase 20) |
 | `lib/design/pairings.test.ts` | 4 | **Contraste como test**: cada pareja cumple en claro y en oscuro sobre el `globals.css` real, y sus tokens existen (Fase 20) |
 | `lib/validators/reference-point.test.ts` | 4 | Coordenadas y cota con coma, redondeo igual que con punto, vacío y mensajes de inválido (Fase 20) |
-| `components/design-system/theme-select.test.ts` | 2 | El selector de tema: etiqueta, tres opciones, arranque en la elección de la cookie (Fase 20) |
+| `components/design-system/theme-select.test.ts` | 4 | El selector de tema: etiqueta, tres opciones, arranque en la elección de la cookie (Fase 20); como botones, el grupo «Tema» y solo la elegida pulsada (Fase 33) |
+| `components/navigation/account-menu.test.ts` | 5 | El menú de cuenta: el botón abre el panel con `popover`; el correo, el tema con botones y «Cerrar sesión» en un formulario; la inicial del correo, también sin correo (Fase 33) |
+| `components/navigation/app-bar-link.test.ts` | 2 | Qué sección de la barra está activa: su ruta y las que cuelgan de ella, no otra que empiece igual (Fase 33) |
 | `lib/design/tokens-retirados.test.ts` | 2 | **Ninguna clase ni `var()` usa un token retirado** ni la paleta de Tailwind en todo `src/`, ni un color literal en `fill` o `stroke` (Fase 20) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
 | `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto (sin la nota de equipo desde la Fase 31) |
@@ -1996,7 +2032,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `lib/validators/project.test.ts` | 7 | El proyecto ya no valida equipo ni orden de precisión (Fase 8); latitud y longitud con coma decimal, y un separador de miles rechazado (Fase 20) |
-| `components/design-system/breadcrumbs.test.tsx` | 5 | Resolución de la ruta |
+| `components/design-system/breadcrumbs.test.tsx` | 6 | Resolución de la ruta; colocada en la barra, fija entre el logo y los iconos (Fase 33) |
 
 **Pruebas de la base (Fase 23).** `supabase/tests/`, con pgTAP, sobre la base
 local: `npx supabase test db`. Cada archivo crea sus datos en una transacción
@@ -2096,6 +2132,15 @@ Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 ## 11. Deuda técnica conocida
 
 Registrada durante el desarrollo, ninguna bloqueante:
+
+**La ruta va colocada en la barra con `position: fixed` (Fase 33).** El hueco
+lo marcan `--ruta-inicio` y `--ruta-fin` en `globals.css`, medidos en pantalla
+con el logo y los enlaces de hoy. Si cambia el logo, o se añade o se renombra
+un enlace de la barra, hay que volver a medirlos: si no, la ruta pisa los
+iconos. Ningún test lo detecta; lo detectó la verificación en pantalla, que
+mide el solape a 390, 639, 640 y 1280 px. Tampoco funciona si un antecesor de
+la ruta crea un bloque contenedor para `fixed` (`transform`, `filter`,
+`backdrop-filter`): hoy ninguno lo hace.
 
 **Solo puede registrarse el dueño de la cuenta de Resend.** El remitente de
 pruebas `onboarding@resend.dev` únicamente entrega a esa dirección; a cualquier

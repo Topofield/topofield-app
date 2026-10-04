@@ -243,7 +243,7 @@ referencia: sirve para el arranque en frío (paso 19).
 
 ### 10. RLS — aislamiento entre usuarios
 
-- Cerrar sesión y entrar con otra cuenta (registrarla exige el código de
+- Cerrar sesión desde el menú de cuenta y entrar con otra cuenta (registrarla exige el código de
   `SIGNUP_INVITE_CODE` y confirmar el correo en Mailpit: ver el paso 16 de
   `manual-e2e-poligonal.md`).
 - Intentar navegar a la URL del lugar **Edificio Torre Central**.
@@ -270,7 +270,8 @@ referencia: sirve para el arranque en frío (paso 19).
   Cierre, y la **13**, un **⚠** junto al amarre: al pasar el puntero, «BM-2 no
   nivela con BM-1» (Fase 30). Ninguna otra visita lo lleva.
 - Pulsar la fila de la visita 12 (fuera del enlace). ✓ Abre su vista. Volver
-  con la miga **Torre Alameda** (en el teléfono, **‹ Torre Alameda**).
+  con **Torre Alameda** en la ruta de la barra (en el teléfono, **‹ Torre
+  Alameda**).
 - ✓ **Tendencia del asentamiento**: el promedio con su banda mínimo–máximo y
   las líneas de −25 y −50 mm; el eje horizontal va en fechas y los cuatro
   intervalos de 14 días del principio se ven más cortos que los de 28 que
