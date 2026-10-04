@@ -227,9 +227,10 @@ como pasa hoy al cerrar.
   - tras reabrir, los hijos (estaciones, lecturas) se pueden escribir;
   - reabrir una visita de un lugar cerrado falla;
   - en poligonal, la georreferenciación de un cerrado sigue funcionando.
-- **Vitest**: las acciones de poligonal y nivelación (`actions.test.ts` ya
-  existe para las dos): rechazan lo que no está cerrado y escriben la
-  reapertura.
+- **Vitest** (`src/lib/reopen.test.ts`): las reglas y los textos de
+  reabrir —el estado al que vuelve cada uno, cuándo se puede y el aviso de
+  los informes—. Las Server Actions del proyecto no se prueban con la base
+  simulada: la prueba es de la lógica pura que aplican, como `close-status`.
 - **En pantalla**, en local: los criterios a–h, a 1280 px y a 390 px.
 
 ## Despliegue
