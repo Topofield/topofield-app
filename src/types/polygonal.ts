@@ -65,7 +65,8 @@ export type PolygonalProcess = Omit<
   angle_type: AngleType;
   correction_method: CorrectionMethod | null;
   status: ProcessStatus;
-  precision_order: PrecisionOrder;
+  /** Orden alcanzado, detectado al calcular (Fase 35); `null` si ninguno. */
+  precision_order: PrecisionOrder | null;
 };
 
 export type AngleReading = Tables<"polygonal_angle_readings">;

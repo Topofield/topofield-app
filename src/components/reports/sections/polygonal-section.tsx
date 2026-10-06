@@ -51,7 +51,7 @@ export function PolygonalReportSection({ data }: { data: PolygonalSectionData })
         <dt>Precisión relativa</dt>
         <dd>{formatPrecision(process.relative_precision)}</dd>
         <dt>Orden de precisión</dt>
-        <dd>{PRECISION_ORDER_LABELS[process.precision_order]}</dd>
+        <dd>{process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "—"}</dd>
         <dt>Equipo</dt>
         <dd>
           {formatEquipmentLine(

@@ -100,7 +100,7 @@ export function processToConfig(p: PolygonalProcess): PolygonalConfigState {
     endNorth: p.end_north != null ? String(p.end_north) : "",
     endEast: p.end_east != null ? String(p.end_east) : "",
     endAzimuth: dmsRow(p.end_azimuth_deg, p.end_azimuth_min, p.end_azimuth_sec),
-    precisionOrder: p.precision_order,
+    precisionOrder: p.precision_order ?? "tercer_orden",
     totalStation: {
       equipmentBrand: p.equipment_brand ?? "",
       equipmentModel: p.equipment_model ?? "",
@@ -244,7 +244,7 @@ export function polygonalInputOf(
     config,
     stations.map((st) => stationToDraft(st, process.angle_readings_min)),
     process.correction_method ?? "bowditch",
-    process.precision_order,
+    process.precision_order ?? "ordinario",
     weightsFromDraft(weightsToDraft(process)),
   );
 }

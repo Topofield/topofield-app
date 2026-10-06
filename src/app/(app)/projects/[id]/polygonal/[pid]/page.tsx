@@ -76,7 +76,7 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
           {PROCESS_STATUS_LABELS[process.status]}
         </Badge>
       }
-      subtitle={`Poligonal ${POLYGONAL_TYPE_LABELS[process.type].toLowerCase()} · ${PRECISION_ORDER_LABELS[process.precision_order]}`}
+      subtitle={`Poligonal ${POLYGONAL_TYPE_LABELS[process.type].toLowerCase()} · ${process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "sin orden"}`}
       basePath={basePath}
       tabs={TABS}
       activeTab={activeTab}

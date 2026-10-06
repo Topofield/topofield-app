@@ -77,7 +77,7 @@ export interface PolygonalProcessRow {
   notes: string | null;
   created_at: string | null;
   /** Orden de precisión y equipo de estación total, propios del proceso (§ Fase 8). */
-  precision_order: PrecisionOrder;
+  precision_order: PrecisionOrder | null;
   equipment_brand: string | null;
   equipment_model: string | null;
   equipment_serial: string | null;
@@ -320,7 +320,7 @@ function sheetSummary(
     process.distance_precision_ppm,
   );
   row = writePairs(s, row + 1, [
-    ["Orden de precisión", PRECISION_ORDER_LABELS[process.precision_order]],
+    ["Orden de precisión", process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "No alcanza ningún orden"],
     [
       "Equipo",
       equipmentLine(
