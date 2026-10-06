@@ -244,7 +244,7 @@ referencia: sirve para el arranque en frío (paso 19).
 ### 10. RLS — aislamiento entre usuarios
 
 - Cerrar sesión desde el menú de cuenta y entrar con otra cuenta (registrarla exige el código de
-  `SIGNUP_INVITE_CODE` y confirmar el correo en Mailpit: ver el paso 16 de
+  `SIGNUP_INVITE_CODE` y confirmar el correo en Mailpit: ver el paso 22 de
   `manual-e2e-poligonal.md`).
 - Intentar navegar a la URL del lugar **Edificio Torre Central**.
 - ✓ Devuelve 404: RLS no deja ver lugares de proyectos ajenos.
