@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-05 · Fase 34 cerrada · 1050 tests y 101
+**Última actualización:** 2026-10-06 · Fase 35 cerrada · 1111 tests y 111
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -88,6 +88,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 32 | Rigor estadístico | cerrada |
 | 33 | Header compacto | cerrada |
 | 34 | Reabrir procesos | cerrada |
+| 35 | La poligonal como la mide el topógrafo | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -188,7 +189,7 @@ src/
 │   │   ├── equipos/         catálogo de equipos del usuario (Fase 25)
 │   │   ├── projects/new/    alta de proyecto
 │   │   └── projects/[id]/
-│   │       ├── polygonal/new/, polygonal/[pid]/   alta; pestañas Proceso · Informe (Fase 22) y export/ (Excel)
+│   │       ├── polygonal/[pid]/         pasos Datos · Ajuste · Informe (Fase 35) y export/ (Excel); el alta es un popup del hub
 │   │       ├── leveling/new/, leveling/[pid]/     alta; pestañas Proceso · Informe y export/
 │   │       ├── sites/                   alta del lugar; [siteId] redirige a su pestaña
 │   │       ├── settlement/[siteId]/     pestañas Panel · Puntos y lugar · Informe; export/; visits/[visitId]/ vista y editar/
@@ -204,10 +205,10 @@ src/
 │   ├── process/             la pantalla común de un proceso y su informe (Fase 22)
 │   ├── equipment/           catálogo de equipos: página, selector de los formularios y su contexto (Fase 25)
 │   ├── navigation/          barra superior y menú de cuenta (Fase 33), guarda de cambios sin guardar (Fase 22)
-│   ├── polygonal/           editor de poligonales
+│   ├── polygonal/           pantalla por pasos de la poligonal: alta, amarre y mediciones en popups, ajuste (Fase 35)
 │   ├── leveling/            editor de nivelación, veredicto y perfil
 │   ├── settlement/          lugar, visitas, semáforo, gráfica
-│   ├── reports/             alta de informe, secciones del informe, impresión
+│   ├── reports/             alta de informe, secciones del informe, impresión, fórmulas en MathML (Fase 35)
 │   └── projects/            dashboard, hub y gestión de proyectos
 ├── lib/
 │   ├── calculations/        algoritmos puros
@@ -314,10 +315,14 @@ propósito.
 
 **El informe no se guarda: se reconstruye.** `reports` almacena qué procesos
 incluye y en qué orden, nunca una copia de sus datos ni un PDF. Reabrirlo
-vuelve a leer los procesos y a componer el documento. Eso es seguro **solo
-porque un informe únicamente puede incluir trabajos cerrados**, que son
-inmutables por trigger de base: dentro de un año dará las mismas mediciones y
-el mismo veredicto. Está verificado comparando el hash del contenido en dos
+vuelve a leer los procesos y a componer el documento. Para nivelaciones y
+lugares, eso es seguro **porque solo se incluyen cerrados**, que son
+inmutables por trigger de base: dentro de un año darán las mismas mediciones y
+el mismo veredicto. **La poligonal no se cierra desde la Fase 35**: entra
+calculada, cumpla o no un orden, y su sección muestra lo que tenga al abrir el
+informe, calculado en vivo (orden y tipo de ángulo detectados) y con una
+alerta si no alcanza ninguno (decisión del usuario: «no necesita advertir que
+se reconstruye»). Está verificado comparando el hash del contenido en dos
 lecturas. **Excepción desde la Fase 15:** si una poligonal incluida se
 georreferencia después de emitir el informe, el informe muestra las
 coordenadas nuevas, con una nota de fecha y puntos (decisión del usuario).
@@ -330,8 +335,9 @@ mismo resultado mientras lo incluido siga cerrado».
 La regla vive en `lib/reports/eligibility.ts` como función pura con tests, y se
 aplica **dos veces**: al pintar el selector y otra vez dentro de
 `createReportAction`, porque el cliente solo manda ids y uno manipulado podría
-enviar el de un proceso abierto. Un proceso `rejected` nunca es elegible — lo
-exige el § 4.6 desde la Fase 3, y esta es la primera fase que puede ejercerlo.
+enviar el de un proceso abierto. Una poligonal es elegible si está
+`calculated`; lo demás, si está `closed`. Un proceso `rejected` nunca es
+elegible — lo exige el § 4.6 desde la Fase 3.
 Para asentamientos la unidad es el **lugar cerrado**, no la visita: un lugar
 activo admite visitas nuevas y su informe cambiaría.
 
@@ -339,7 +345,7 @@ activo admite visitas nuevas y su informe cambiaría.
 en la pestaña Informe de su pantalla (`components/process/process-report.tsx`)
 y **no crea fila en `reports`**: es función de los datos del proceso, así que
 se ve también antes del cierre, con la marca «Borrador» —en pantalla y en el
-PDF—. El **informe consolidado** es el de siempre: una fila de `reports` con
+PDF—; la poligonal, sin marca ni registro de cierre, con «Fecha del informe». El **informe consolidado** es el de siempre: una fila de `reports` con
 título, selección, orden y observaciones. Los dos se arman con las mismas
 piezas: la carga de datos por tipo (`lib/reports/sections.ts`), el resumen de
 precisiones (`lib/reports/summary.ts`) y los componentes de
@@ -347,6 +353,21 @@ precisiones (`lib/reports/summary.ts`) y los componentes de
 cierre), que salieron de la ruta imprimible sin cambiar su aspecto. El
 «Responsable» del registro de cierre —y el «Cerrado por» del Excel— es el
 nombre del perfil (`lib/reports/responsible.ts`), no el UUID de `closed_by`.
+El registro de cierre omite las poligonales, y sin nada que se cierre queda
+solo su pie; el pie del consolidado no las cuenta como reabiertas
+(`reopenedAfterIssue`, `issuedFooterNote`).
+
+**La sección de la poligonal (Fase 35)** sigue la maqueta aprobada: 1.
+Resultado (cifras, orden alcanzado y por qué, o la alerta), 2. Datos de campo
+(amarre, mediciones «desde → hacia» con `captureRows`, cierre angular), 3.
+«Corrección por método …» (`polygonal-correction.tsx`, con
+`correctionBreakdown` y el ajuste por mínimos cuadrados), 4. Poligonal ajustada
+(`adjustedRows`) y 5. Coordenadas y dibujo. Las fórmulas son **MathML nativo**
+(`components/reports/math.tsx`, decisión 16): el navegador las compone en
+pantalla y en el PDF, sin librerías; `src/types/mathml.d.ts` declara los
+elementos, que `@types/react` 19 aún no trae. Una letra griega sola va con
+`mathvariant="normal"`: Chrome la pasaría a la cursiva matemática (U+1D6FC…),
+que muchas fuentes no tienen.
 Nada busca los informes que incluyen un proceso en la base
 (`included_processes` es JSONB sin tabla de unión): la pestaña filtra en
 memoria los del proyecto (`lib/reports/including.ts`).
@@ -481,16 +502,27 @@ Estas las escribe `savePolygonalProcessAction` tras cada cálculo:
 | `linear_error` | Error de cierre lineal en metros |
 | `perimeter` | Perímetro total |
 | `relative_precision` | Precisión formateada |
-| `meets_tolerance` | Si cumple el orden de precisión del proceso |
+| `precision_order` | El orden alcanzado, **detectado** (Fase 35); `null` sin verificación o si no alcanza ni el ordinario |
+| `angle_type` | El tipo de ángulo **detectado** (Fase 35): interior o exterior en la cerrada, deflexión en la abierta con control |
+| `meets_tolerance` | Si alcanza algún orden; `null` en la abierta sin control o sin datos |
 
-`status` puede ser `draft`, `in_progress`, `calculated`, `closed` o `rejected`.
-Los dos últimos son terminales.
+`status` puede ser `draft`, `in_progress` o `calculated` (Fase 35, paso 2):
+**la poligonal no se cierra**, y perdió `closed_at` y `closed_by`. Nivelación,
+visitas y lugares conservan `closed`/`rejected` y su registro de cierre.
+
+Columnas del alta (Fase 35): `location`, `responsible_name` y
+`responsible_role`, que salen en la cabecera, el informe y el Excel. Del
+equipo, el alta pide solo marca, modelo y serie; `equipment_calibration_date`
+y las precisiones del equipo quedan para los procesos anteriores, y
+`angle_readings_min` ya no se lee (§ 11). `has_closing_row` —la cartera cierra
+contra el amarre— lo escribe `save_polygonal_process` desde la Fase 35: hasta
+entonces solo lo escribía la demo, y al recargar la TT4 se recalculaba con el
+esquema equivocado.
 
 `angle_input_format` (`dms` o `decimal`, Fase 13) no es un resultado: recuerda
-cómo se **teclean** los ángulos del proceso. El almacenamiento sigue siendo DMS
-en tres columnas. Lo escribe `setAngleInputFormatAction` al conmutar, y la
-rechaza en un proceso cerrado o rechazado (`canPersistAngleFormat`); ahí el
-conmutador solo cambia la vista.
+cómo se **ven y se teclean** los ángulos del proceso —tabla, ajuste, informe y
+popups (Fase 35)—. El almacenamiento sigue siendo DMS en tres columnas. Lo
+escribe `setAngleInputFormatAction` al conmutar.
 
 `georef_at`, `georef_by`, `georef_point_a_code`, `georef_point_b_code`,
 `georef_rotation_*` (DMS) y `georef_scale_factor` (Fase 15) anotan la **última**
@@ -503,8 +535,9 @@ cuadrados, tecleados por proceso. El CHECK `polygonal_processes_ls_weights_compl
 los exige con `correction_method = 'least_squares'` y va envuelto en
 `coalesce(…, false)`: sin él, un peso en `NULL` hacía la condición `NULL`, y un
 CHECK que da `NULL` se da por cumplido. Las correcciones por observación y σ₀
-**no se guardan**: el editor, el informe y el Excel las recalculan con
-`polygonalInputOf`. El proceso cerrado es inmutable, así que da lo mismo.
+**no se guardan**: Ajuste, el informe y el Excel las recalculan con la misma
+entrada (`draftOf` e `inputOf`). Desde la Fase 35 los pesos viajan con
+cualquier método, para no perderlos al volver a mínimos cuadrados.
 
 ### `settlement_readings` — columnas de resultado
 
@@ -666,11 +699,16 @@ exists (
 
 ### Inmutabilidad de procesos cerrados
 
-El PRD (§ 4.6) exige que un proceso `closed` o `rejected` sea inmutable. La
-garantía se aplica en **dos capas**:
+El PRD (§ 4.6) exige que un proceso `closed` o `rejected` sea inmutable.
+**Desde la Fase 35 la poligonal no se cierra**: `20261005010000_ux_poligonal.sql`
+quitó sus triggers de cierre —cabecera, estaciones y lecturas— y pasó las
+cerradas a `calculated`, y `20261006000000_poligonal_sin_cierre.sql` (después
+del merge) borró `closed_at` y `closed_by` y dejó su CHECK de estado en
+`draft`, `in_progress` y `calculated`. Lo que sigue vale para nivelación,
+visitas y lugares. La garantía se aplica en **dos capas**:
 
-**Aplicación** — `savePolygonalProcessAction` y `closePolygonalProcessAction`
-rechazan cualquier operación sobre un proceso cerrado.
+**Aplicación** — las acciones de guardar y de cerrar de nivelación, visitas y
+lugares rechazan cualquier operación sobre lo cerrado.
 
 **Base de datos** — triggers `BEFORE UPDATE/DELETE`
 (`supabase/migrations/20260727180000_immutable_closed_processes.sql`) que
@@ -688,45 +726,30 @@ Los triggers permiten la transición *hacia* cerrado —el cierre mismo es un
 que devuelve el estado a uno abierto (`calculated`, o `active` en un lugar) y
 deja `closed_at` y `closed_by` en null, **sin cambiar ninguna otra columna**.
 Lo reconoce `is_reopening(old_row jsonb, new_row jsonb)`
-(`20261003000000_reabrir_procesos.sql`), que comparten la genérica
-`reject_update_on_closed_process()` —nivelación, lugares y visitas— y la de
-poligonal, antes de su lista blanca de posición. Reabrir y modificar en el
+(`20261003000000_reabrir_procesos.sql`), que usa la genérica
+`reject_update_on_closed_process()` —nivelación, lugares y visitas—; hasta la
+Fase 35 la usaba también la de poligonal. Reabrir y modificar en el
 mismo `UPDATE` se rechaza con `23001`: primero se reabre y después se edita.
 Los triggers de los hijos (estaciones, lecturas, libreta), el de las visitas
 de un lugar cerrado y el de la C0 no cambiaron: miran el estado **actual** del
 padre, así que se liberan solos al reabrirlo. Una visita de un lugar cerrado no
 se reabre hasta reabrir el lugar, porque su trigger rechaza escribirla. Lo
-prueba `reabrir_procesos.test.sql` (§ 9). Las cuatro acciones
-(`reopen…Action`) aplican las reglas puras de `src/lib/reopen.ts`; las de
-poligonal y nivelación comparten `src/lib/supabase/reopen-process.ts`.
+prueba `reabrir_procesos.test.sql` (§ 9). Las tres acciones
+(`reopen…Action`: nivelación, lugar y visita) aplican las reglas puras de
+`src/lib/reopen.ts`; la de nivelación pasa por
+`src/lib/supabase/reopen-process.ts`. La de poligonal se retiró en la Fase 35.
 `is_reopening` no la ejecuta `anon` (`20261005000000_reabrir_sin_anon.sql`),
 como las funciones de guardado: `authenticated` la conserva porque los
 triggers corren con el rol de la sesión.
 
-**Excepción de posición (Fase 15).** La cabecera de poligonal tiene su propia
-función, `reject_update_on_closed_polygonal_process()` —la genérica la
-comparten nivelación, lugares y visitas—, y la de sus estaciones
-(`reject_write_on_closed_process_station()`, que solo usa `polygonal_stations`)
-gana la misma regla. Sobre un cerrado o rechazado admiten un `UPDATE` si lo
-único que cambió está en una **lista blanca de posición**: se comparan
-`to_jsonb(new) - lista` y `to_jsonb(old) - lista`.
-
-- Cabecera: `start_north`, `start_east`, `start_azimuth_*`, `end_north`,
-  `end_east`, `end_azimuth_*`, `reference_point_id` —solo hacia `null`: el
-  amarre puede pasar a manual, no cambiar por otro—, `georef_*` y
-  `updated_at`, que pone otro trigger y no debe depender del orden en que
-  disparan.
-- Estaciones: `azimuth_*`, `delta_north`, `delta_east`, `corrected_delta_*`,
-  `north` y `east`.
-
-Ángulos, ángulos corregidos, distancias, lecturas, errores, precisión,
-`meets_tolerance` y `status` siguen bloqueados, igual que insertar o borrar
-estaciones y borrar el proceso. Verificado con `psql`: mover `north` de un
-cerrado funciona; tocar `angular_error_seconds`, `linear_error`, un ángulo,
-`status` o borrar una estación falla con `23001`; una nivelación cerrada sigue
-rechazando cualquier cambio. **Lo que se acepta:** una sesión del dueño puede
-mover por REST las coordenadas de su poligonal cerrada sin pasar por la
-acción; la garantía que se mantiene es la del veredicto.
+**Excepción de posición (Fase 15, retirada en la 35).** Mientras la poligonal
+se cerraba, sus triggers admitían sobre una cerrada un `UPDATE` que solo
+tocara una **lista blanca de posición** —arranque, azimuts, amarre hacia
+`null`, `georef_*` y las coordenadas y proyecciones de las estaciones—, para
+poder georreferenciarla. Sin cierre, la excepción y sus funciones
+(`reject_update_on_closed_polygonal_process`,
+`reject_write_on_closed_process_station`,
+`reject_write_on_closed_polygonal_reading`) sobran y se borraron.
 
 **`settlement_readings` necesitó su propia función**, no la genérica. El
 trigger de cabecera (`sites`, `settlement_visits`) reutiliza
@@ -734,9 +757,9 @@ trigger de cabecera (`sites`, `settlement_visits`) reutiliza
 `old.status`, y `'closed'` está en el conjunto de estados que rechaza incluso
 sin `'rejected'` (`settlement_visits.status` no lo tiene: una visita se
 cierra o no, nunca se rechaza). Pero la función de las filas hijas de
-poligonal y nivelación (`reject_write_on_closed_process_station()`) consulta
-`public.polygonal_processes` por nombre de tabla, así que no sirve para
-`settlement_readings`: tiene su propia función análoga que consulta
+poligonal (`reject_write_on_closed_process_station()`, borrada en la Fase 35)
+consultaba `public.polygonal_processes` por nombre de tabla, así que no servía
+para `settlement_readings`: tiene su propia función análoga que consulta
 `settlement_visits`. Verificado con un ataque real vía REST directo (PATCH,
 DELETE) contra una visita cerrada: las tres vías —lectura, cabecera de
 visita— quedan bloqueadas con el mismo código `23001`.
@@ -925,6 +948,43 @@ Ramas por tipo:
 | `open_controlled` | Cierre contra el punto de llegada conocido |
 | `open_uncontrolled` | Ninguna: `relativePrecision` y `meetsTolerance` quedan en `null` |
 
+### Orden y tipo de ángulo detectados (Fase 35)
+
+El orden de precisión y el tipo de ángulo **no se declaran**: se detectan, y
+`computePolygonalDetected(input)` —sin `order` ni `angleType`— devuelve
+`{ result, order, angleType }`. Lo usan el guardado, la pantalla por pasos
+(`usePolygonalComputation`), el informe, el Excel, la demo y el seed: todos
+calculan igual.
+
+- **Tipo de ángulo** (`detectAngleType`): interiores y exteriores solo cambian
+  la suma teórica, (n − 2)·180° frente a (n + 2)·180° —más 360°·k con fila de
+  cierre—, y difieren en 720°: el más cercano a la suma observada es el
+  medido. La abierta con control es siempre deflexión.
+- **Orden** (`detectPrecisionOrder` en `tolerances.ts`): el más alto que
+  cumple **a la vez** K·√n y la precisión relativa mínima, recorriendo de
+  primero a ordinario con una holgura de 1e-9. `null` en la abierta sin
+  control, sin precisión o si no alcanza ni el ordinario. n es
+  `result.angularConditionCount`; sin condición angular (abierta con control
+  sin azimut de llegada) se juzga solo la lineal.
+- Calcula primero con el ordinario —los errores no dependen del orden— y, si
+  alcanza otro, repite con ese orden para que tolerancia y veredicto sean los
+  suyos. Las coordenadas no dependen del orden.
+
+`observedAzimuths(input)` encadena los azimuts **sin ajustar**, con los ángulos
+medidos: los usa la tabla de mediciones del paso de Datos.
+
+### El desglose de la corrección (Fase 35)
+
+`correction-breakdown.ts` expresa la corrección del método en sus términos, sin
+recalcular la poligonal: lee las proyecciones crudas y corregidas del
+resultado. Para los proporcionales, el paso angular (`AngularStep`: error,
+ángulos, corrección por ángulo y si entra el de orientación) y, por lado, la
+corrección de ΔN y ΔE; Brújula y Tránsito, su factor −e/P o −e/Σ|Δ| por eje;
+Crandall, λ₁ y λ₂ resolviendo de nuevo su sistema 2×2, con una prueba que
+comprueba que reproduce las proyecciones del motor. Mínimos cuadrados devuelve
+el ajuste y la estación del datum. Lo consumen el paso de Ajuste y la sección
+«Corrección por método …» del informe.
+
 ### Convención de azimut (Fase 7)
 
 El instrumento pone cero en la vista atrás y gira a la derecha, así que la
@@ -943,8 +1003,8 @@ primer lado coincidía a 0.2 mm y el segundo vértice se iba 19 m en el Este.
 
 `angle_type` decide la suma teórica, no el signo: si el polígono se recorre en
 antihorario las lecturas caen como interiores (`(n−2)·180`) y en horario como
-exteriores (`(n+2)·180`). Ambos casos ocurren en campo, así que el formulario
-**no preselecciona**.
+exteriores (`(n+2)·180`). Ambos casos ocurren en campo. Hasta la Fase 34 lo
+elegía el usuario, sin preselección; desde la 35 se detecta (arriba).
 
 ### Amarre y esquemas de cierre
 
@@ -1185,9 +1245,9 @@ control, dos lineales más la angular si hay azimut de llegada. El sistema es de
 - La abierta con control **no publica deflexiones corregidas**, como con los
   otros métodos: el ajuste va en los azimuts, y cada corrección, con su signo,
   en `adjustment.angleCorrectionsSec`.
-- El **veredicto no cambia**: error angular, lineal y precisión relativa son
-  los de la cartera medida, antes de ajustar. Solo cambian las coordenadas,
-  los ángulos corregidos y los azimuts.
+- El **orden alcanzado no cambia**: error angular, lineal y precisión relativa
+  son los de la cartera medida, antes de ajustar. Solo cambian las
+  coordenadas, los ángulos corregidos y los azimuts.
 - σ₀ = √(vᵀPv / r). Desde la Fase 32 (D-6), `sigma0Reading(σ₀, r)` lo lee
   con la **prueba χ² bilateral al 95 %** de su redundancia (Ghilani, § 5.4 y
   § 16.7; USACE EM 1110-2-1009): `sigma0Interval(r)` da [√(χ²inf/r),
@@ -1528,9 +1588,17 @@ Toda celda numérica es texto hasta que la lee `lib/utils/parse.ts`:
 
 ### Capa 1 — captura
 
-`validatePolygonalStation(station, expect)` valida una estación mientras se
-teclea. `expect` indica qué celdas son obligatorias según el tipo de poligonal y
-la posición de la estación.
+`validatePolygonalStation(station, expect)` valida una estación. `expect`
+(`expectStationCapture`) indica qué celdas son obligatorias según el tipo de
+poligonal y la posición de la estación. Desde la Fase 35 cada popup guarda, así
+que la captura parcial es legítima: en una cerrada la última estación no exige
+nada salvo con fila de cierre —es el punto pendiente, el ángulo del vértice de
+arranque o el lado que vuelve a P1— y, sin amarre, P1 no exige ángulo: se mide
+al cerrar. El servidor valida con `stationCaptureIssues`, que toma como ángulo
+de la estación el **promedio de sus lecturas**: la carga de la pantalla por
+pasos solo manda las lecturas. El popup valida lo mismo antes de guardar, y el
+error se queda en él. La cabecera la revisa `polygonalHeaderProblem`: título,
+estación de partida si hay mediciones, y un Norte y un Este finitos.
 
 | Regla | Resultado |
 |---|---|
@@ -1542,8 +1610,8 @@ la posición de la estación.
 
 La regla de las lecturas existe aparte porque el ángulo de la estación es el
 **promedio**, que llega normalizado: una lectura de 65″ se promediaba como
-1′05″ y la regla de 0-59 nunca la veía. El editor y la Server Action pasan las
-lecturas crudas (`readingsDraft`) al mismo validador.
+1′05″ y la regla de 0-59 nunca la veía. El popup y la Server Action pasan las
+lecturas crudas al mismo validador.
 | Ángulo de 0° o 360° exacto | Advertencia, no bloquea |
 
 ### El equipo del catálogo (Fase 25)
@@ -1554,30 +1622,17 @@ modelo; calibración válida y no futura; precisiones positivas —o no negativa
 los dos términos de distancia— que quepan en su columna. Solo mira los campos
 de su tipo. `calibrationOverdue` dice si una calibración tiene más de
 `CALIBRATION_MAX_MONTHS` a una fecha de referencia: la de la visita en
-asentamientos, hoy en poligonal y nivelación. Avisa, no bloquea. El equipo que
+asentamientos, hoy en nivelación (la poligonal solo pide la identidad del
+equipo desde la Fase 35). Avisa, no bloquea. El equipo que
 se teclea en un proceso sigue sin validarse (fuera del alcance de la fase).
 
 ### Capa 2 — cierre
 
-`evaluatePolygonalClosure(type, result, captureHasErrors)` decide si un proceso
-puede cerrarse y con qué desenlace. **Es la regla de negocio central del
-módulo.**
-
-Devuelve `{ canClose, mustReject, blocked, messages }`:
-
-| Situación | `blocked` | `canClose` | `mustReject` |
-|---|---|---|---|
-| Errores de captura pendientes | ✔ | ✘ | ✘ |
-| Cerrada: falta cálculo | ✔ | ✘ | ✘ |
-| Cerrada: error angular fuera de tolerancia | ✔ | ✘ | ✘ |
-| Cerrada: precisión relativa insuficiente | ✘ | ✔ | ✔ |
-| Cerrada: cumple todo | ✘ | ✔ | ✘ |
-| Abierta con control: fuera de tolerancia | ✘ | ✔ | ✔ |
-| Abierta sin control: estaciones calculadas | ✘ | ✔ | ✘ |
-
-La asimetría es deliberada: un **error angular** invalida el levantamiento y
-bloquea el cierre; una **precisión insuficiente** significa que el trabajo se
-hizo pero no alcanza la calidad exigida, y se documenta como rechazado.
+La poligonal no tiene capa de cierre desde la Fase 35: no se cierra, y lo que
+decía `evaluatePolygonalClosure` —qué orden cumple— lo dice ahora el orden
+detectado (§ 6). Hasta entonces, un error angular fuera de tolerancia
+bloqueaba el cierre y una precisión relativa insuficiente lo dejaba solo como
+rechazado.
 
 **Nivelación** (`evaluateLevelingClosure(result, type)`): la cerrada y la de
 enlace se juzgan por su cierre —el de la ida y, si la hay, el de la vuelta,
@@ -1710,8 +1765,8 @@ con contenido oscuro pasando por debajo.
 
 ### La pantalla de un proceso (Fase 22)
 
-Poligonal, nivelación y control de asentamientos comparten la misma
-estructura, y no por copia: `components/process/process-shell.tsx` arma la
+Nivelación y control de asentamientos comparten la misma estructura, y no por
+copia —la poligonal tiene la suya desde la Fase 35, abajo—: `components/process/process-shell.tsx` arma la
 cabecera (`PageHeader`: migas —que desde la Fase 33 se ven en la barra—,
 título, badge de estado, subtítulo) con las
 acciones fijas —Exportar a Excel y «Ver informe», que en la pestaña Informe
@@ -1734,6 +1789,43 @@ editor o `ProcessReport`. Dentro del editor:
 dominio (§ 8, «componentes del dominio»). `PageHeader`, `ActionBar` y
 `Skeleton` sí, porque son genéricos. Los tonos de estado de los badges viven
 en `lib/process-status.ts`, una sola copia.
+
+**La poligonal por pasos (Fase 35).** `polygonal/[pid]/page.tsx` monta
+`PolygonalHeader` (cabecera en tarjeta: badges de tipo, estado y orden
+detectado —`detectedOrderOf`—, título, ubicación, responsable, equipo,
+«Guardado» con `formatSavedAt`, Editar datos, Exportar a Excel y Duplicar /
+Eliminar), `PolygonalSteps` (1 · Datos, 2 · Ajuste, 3 · Informe en `?tab=`, y
+el selector DMS / decimal) y el paso: `DatosTab`, `AjusteTab` o
+`ProcessReport`. No hay `ActionBar` ni guarda de cambios sin guardar: **cada
+popup guarda** con la carga completa (`payloadOf`) y la acción revalida la
+página. Las piezas:
+
+- `use-polygonal-draft.ts`: el borrador (`draftOf`) con lo último guardado
+  desde la página hasta que el servidor devuelve la nueva (`updated_at`
+  cambia), para que una medición encadenada no parta de un borrador viejo; y
+  el cálculo en vivo (`usePolygonalComputation`).
+- `capture-edits.ts` (puro, con pruebas): cómo cambia el borrador con cada
+  popup —medir y seguir, cerrar o llegar, el cierre angular de cada esquema,
+  editar, eliminar una intermedia y deshacer—.
+- `capture-rows.ts` (puro): las filas «desde → hacia» con su rol (0 atrás,
+  lado, cierre, cierre angular, pendiente, llegada) y `fieldTraverse`, lo
+  medido sin ajustar para el dibujo de Datos (`PolygonalPlot` en modo
+  `field`).
+- `amarre-dialog.tsx` con `ensureCatalogPointAction` y `resolveCatalogPoint`
+  (`lib/polygonal-amarre.ts`): los puntos del amarre al catálogo, sin
+  reescribir uno que exista con otras coordenadas. Guarda el código de la
+  referencia junto a su id: si el punto se borra del catálogo (la FK pasa a
+  `null`), la poligonal sigue orientada. Con mediciones, no deja poner ni
+  quitar el 0 atrás (`amarreChangeProblem`): cambiaría lo que significa el
+  primer ángulo.
+- Cada llamada a una acción va por `callAction` (`lib/errors/action-call.ts`):
+  un rechazo de red o un 500 vuelve como error al popup, que conserva lo
+  tecleado, en vez de llegar al límite de error y reemplazar la página. Deja
+  pasar las señales de navegación de Next.
+- `measurement-dialog.tsx`, `measurements-table.tsx`,
+  `angular-closure-summary.tsx`, `adjusted-table.tsx` (con `adjustedRows`),
+  `order-verdict.tsx` (con `orderChecks`), `least-squares-panel.tsx` y
+  `angle-format.ts`.
 
 El hub del proyecto usa **un solo patrón de lista para los tres módulos**
 (`components/projects/process-table.tsx` + `hub-rows.tsx`): cada módulo arma
@@ -1995,7 +2087,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1050 tests en 69 archivos, Vitest, entorno `node` **sin jsdom**. Además, 101
+1111 tests en 78 archivos, Vitest, entorno `node` **sin jsdom**. Además, 111
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2004,20 +2096,32 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/calculations/leveling.test.ts` | 95 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa, y el veredicto guardado por tipo (`levelingProcessVerdict`, Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26); la vuelta compensada en cerrada y de enlace, la cota adoptada y el ejemplo 1 de `docs/math/nivelacion.html` (Fase 28) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
-| `lib/validators/polygonal.test.ts` | 76 | Captura y cierre de poligonal, `expectStationCapture`, código de punto obligatorio; `canPersistAngleFormat` (Fase 13); pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, la abierta con control que rechaza por el error angular, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la dispersión entre lecturas ya no avisa (Fase 31) |
+| `lib/validators/polygonal.test.ts` | 63 | Captura de poligonal, `expectStationCapture`, código de punto obligatorio; pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la captura parcial de una cerrada y `stationCaptureIssues`, que valida el promedio de las lecturas, y la cabecera de un guardado hecho a mano (Fase 35) |
 | `lib/validators/settlement.test.ts` | 49 | Captura y cierre de asentamientos — incluye que la alarma no bloquea; vigencia, regla de la línea base abierta, baja, deshacer la baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); una visita no se cierra con la de su lectura anterior abierta, y la fecha entre sus vecinas (Fase 26) |
 | `lib/validators/leveling.test.ts` | 75 | Captura y cierre de nivelación; equilibrado **por armada** con la ida de El Verjón, con la armada en el texto (Fase 19): desde la Fase 32, avisos exactamente en C 2, C 3, C 4 y D3, y en la vuelta solo C 1 → D1; los límites de la FGCS por orden, en la frontera y con restas que en coma flotante no dan exacto; el **acumulado de la sección**: +53.3 m en la ida y −52.2 m en la vuelta de El Verjón con su texto, el tramo 2 sin aviso, el límite de 4 m en primer orden, la frontera, el reinicio en un BM intermedio, aunque al punto anterior le falte la V+, un recorrido a medias, una armada sin distancia, sin evaluar con distancias reconstruidas y por `validateRunCapture` sin bloquear (Fase 32); la abierta con vuelta que cumple, que no cumple (solo rechazado) y sin distancias (bloqueada) (Fase 23); el punto de cambio incompleto: aviso en la celda, fila y recorrido en el cierre, también en la vuelta (Fase 24); distancias en cero o negativas, la vuelta de una cerrada fuera de su tolerancia o sin ella, y qué recorrido no cuadra (Fase 26) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
+| `lib/calculations/polygonal-detect.test.ts` | 11 | **El orden y el tipo de ángulo detectados** (Fase 35): las fronteras de cada orden, sin verificación y sin alcanzar el ordinario; interior y exterior, con y sin fila de cierre; la TT4 en tercer orden; `observedAzimuths` y `angularConditionCount` |
+| `lib/calculations/correction-breakdown.test.ts` | 5 | El desglose de la corrección con la TT4 en los cuatro métodos, contra el motor: factores de Brújula y Tránsito, λ₁ y λ₂ de Crandall que reproducen sus proyecciones, el datum de mínimos cuadrados (Fase 35) |
 | `lib/process-list.test.ts` | 29 | Filtrado, orden y conteo del listado; el conteo de los lugares activos y cerrados (Fase 22) |
-| `lib/utils/format.test.ts` | 33 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26) |
+| `lib/utils/format.test.ts` | 34 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26); la hora del «Guardado», en Bogotá y 24 h (Fase 35) |
 | `lib/calculations/tolerances.test.ts` | 12 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
-| `lib/export/polygonal-workbook.test.ts` | 23 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo y orden del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15) |
+| `lib/export/polygonal-workbook.test.ts` | 24 | Libro de poligonal: tres hojas, decimales, DMS, borrador con celdas vacías, metadatos del proyecto, equipo del **proceso** (Fase 8); columnas y resumen del ajuste por mínimos cuadrados (Fase 14); sección de georreferenciación (Fase 15); el orden alcanzado detectado, «No alcanza ningún orden» y «Sin verificación», los datos del alta y el tipo de ángulo detectado, sin cierre, y la calibración y las precisiones solo si las hay (Fase 35) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
+| `components/polygonal/capture-rows.test.ts` | 12 | Las filas «desde → hacia» (Fase 35): la TT4 con su 0 atrás, el cierre y el cierre angular contra TT4; la Vivero; sin referencia; la abierta con control con su deflexión y su punto de llegada; el punto pendiente; la cerrada local; `fieldTraverse`, lo medido sin ajustar para el dibujo |
+| `components/polygonal/capture-edits.test.ts` | 19 | Los popups de la captura sobre el borrador (Fase 35): la TT4 capturada medición por medición es la de la hoja; el cierre angular contra el amarre, hacia el primer lado, sin amarre (el ángulo en P1) y en la abierta con control; editar, eliminar una intermedia y deshacer; a medio capturar, el cálculo no falla; con mediciones, el 0 atrás no se pone ni se quita |
+| `components/polygonal/polygonal-save.test.ts` | 9 | El borrador y la carga del guardado (Fase 35): las coordenadas de la hoja, el orden y el tipo detectados aunque lo guardado diga otra cosa, el amarre y los datos del alta en la carga, los pesos con cualquier método, la abierta sin control sin mínimos cuadrados y la referencia del catálogo con su código |
+| `components/polygonal/angle-format.test.ts` | 7 | Ángulos en DMS o decimal, segundos con signo y la lectura de los campos DMS (Fase 35) |
+| `components/polygonal/order-verdict.test.ts` | 4 | El «Por qué» del orden alcanzado, orden por orden, con y sin condición angular (Fase 35) |
+| `components/polygonal/adjusted-table.test.ts` | 2 | La poligonal ajustada al estilo de la hoja: las coordenadas del punto de llegada y la fila Σ (Fase 35) |
+| `lib/polygonal-amarre.test.ts` | 6 | Los puntos del amarre al catálogo: reutilizar, completar, crear o el conflicto con otras coordenadas (Fase 35) |
+| `components/reports/sections/polygonal-correction.test.tsx` | 5 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35) |
+| `components/reports/math.test.tsx` | 2 | Una letra griega sola va recta en MathML (Fase 35) |
+| `lib/errors/action-call.test.ts` | 3 | Un rechazo de red de una acción vuelve como error, sin lanzar, y las señales de navegación de Next pasan (Fase 35) |
 | `lib/calculations/least-squares.test.ts` | 27 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal |
 | `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, visitas cerradas intactas, velocidad como cadena y a la precisión de su columna; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |
 | `lib/calculations/angles.test.ts` | 22 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13); promedio y dispersión de lecturas a través de 0°/360°, redondeo a 0.1″, coma decimal y sin aviso falso en la vista decimal (Fase 26) |
-| `lib/demo/fixtures.test.ts` | 20 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo y sin compensar cuando no cumple (Fase 28); Torre Alameda pasa por el otro BM, que nivela en todas las visitas salvo la 13 (Fase 30); con el margen de sus circuitos reales, ni avisos de tendencia ni «Acelerando» (Fase 32) |
+| `lib/demo/fixtures.test.ts` | 20 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045) en tercer orden detectado y alimenta el informe, y la Vivero alcanza segundo orden (Fase 35); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos; el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km; Torre Alameda reproduce su serie a 0.1 mm con solo la visita 9 fuera de tolerancia; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo y sin compensar cuando no cumple (Fase 28); Torre Alameda pasa por el otro BM, que nivela en todas las visitas salvo la 13 (Fase 30); con el margen de sus circuitos reales, ni avisos de tendencia ni «Acelerando» (Fase 32) |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
 | `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
@@ -2037,12 +2141,11 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/reports/including.test.ts` | 5 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22); el aviso al borrar algo que está en informes, con uno y con varios (Fase 34) |
 | `lib/reports/leveling-report.test.ts` | 7 | La sección de nivelación con vuelta: la abierta sin filas de cierre, con su discrepancia y «fuera de tolerancia»; la cerrada con los dos; el resumen de precisiones de cada una (Fase 23); la tabla de cotas adoptadas, y sin ella si no se compensó (Fase 28) |
 | `lib/reports/cover.test.ts` | 2 | La portada del informe sale de `cover`, no del proyecto (Fase 23) |
-| `lib/reports/state.test.ts` | 7 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24); el pie del consolidado, con todo cerrado y con uno o varios reabiertos (Fase 34) |
+| `lib/reports/state.test.ts` | 9 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24); el pie del consolidado, con todo cerrado y con uno o varios reabiertos (Fase 34); sin nada que se cierre, y la poligonal que no cuenta como reabierta (Fase 35) |
 | `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
 | `lib/reopen.test.ts` | 12 | Reabrir: el estado al que vuelve cada uno, sin registro de cierre; lo cerrado o rechazado se reabre y lo abierto no; una visita de un lugar cerrado espera al lugar; el aviso de los informes, con uno y con varios (Fase 34) |
-| `components/polygonal/stations-table.test.ts` | 6 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24); la fila de orientación de una abierta amarrada y la coma decimal en las lecturas (Fase 26) |
 | `components/projects/new-project-form.test.ts` | 2 | El alta de proyecto: un solo botón, de envío, y los datos básicos con el sistema de referencia (Fase 27) |
-| `components/projects/hub-rows.test.ts` | 5 | El tipo de un proceso: «Abierta con ida y vuelta», y como frase en las filas del hub (Fase 27) |
+| `components/projects/hub-rows.test.ts` | 7 | El tipo de un proceso: «Abierta con ida y vuelta», y como frase en las filas del hub (Fase 27); la poligonal siempre «Calculado» y con sus tres acciones, y sus chips sin cerrados ni rechazados (Fase 35) |
 | `lib/export/workbook-colors.test.ts` | 4 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24) |
 | `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
 | `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
@@ -2059,13 +2162,11 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `components/navigation/app-bar-link.test.ts` | 2 | Qué sección de la barra está activa: su ruta y las que cuelgan de ella, no otra que empiece igual (Fase 33) |
 | `lib/design/tokens-retirados.test.ts` | 2 | **Ninguna clase ni `var()` usa un token retirado** ni la paleta de Tailwind en todo `src/`, ni un color literal en `fill` o `stroke` (Fase 20) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
-| `components/polygonal/closure-verdict.test.tsx` | 5 | Decisión del veredicto (sin la nota de equipo desde la Fase 31) |
-| `lib/reports/eligibility.test.ts` | 9 | **Qué puede entrar en un informe**: solo cerrados, nunca un `rejected`, nunca un lugar activo |
+| `lib/reports/eligibility.test.ts` | 11 | **Qué puede entrar en un informe**: una poligonal calculada y no en borrador (Fase 35); lo demás solo cerrado, nunca un `rejected`, nunca un lugar activo |
 | `lib/export/leveling-workbook.test.ts` | 12 | Libro de nivelación: etiquetas del dominio, orden ida/vuelta, equipo y orden del proceso (Fase 8); tolerancia y veredicto de la discrepancia en el Resumen (Fase 23); la hoja de cotas adoptadas (Fase 28) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
 | `(app)/.../leveling/[pid]/actions.test.ts` | 11 | Derivación del estado de cierre en servidor; la abierta con vuelta exige veredicto (Fase 23) |
-| `(app)/.../polygonal/[pid]/actions.test.ts` | 8 | Derivación del estado de cierre en servidor |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `lib/validators/project.test.ts` | 7 | El proyecto ya no valida equipo ni orden de precisión (Fase 8); latitud y longitud con coma decimal, y un separador de miles rechazado (Fase 20) |
 | `components/design-system/breadcrumbs.test.tsx` | 7 | Resolución de la ruta; colocada en la barra, fija entre el logo y los iconos, y en el teléfono el «‹ nivel anterior» puede encogerse y truncarse (Fase 33) |
@@ -2076,14 +2177,15 @@ que se deshace, así que no depende del seed ni lo toca.
 
 | Archivo | Pruebas | Cubre |
 |---|---|---|
-| `guardados_atomicos.test.sql` | 28 | Las cuatro funciones de guardado: guardan; una carga que falla a mitad no cambia la cabecera ni las filas de antes; la georreferenciación mueve un cerrado y rechaza una estación ajena; la propagación no toca otro lugar; otro usuario no escribe con ninguna de las cuatro (RLS) |
+| `guardados_atomicos.test.sql` | 27 | Las cuatro funciones de guardado: guardan; una carga que falla a mitad no cambia la cabecera ni las filas de antes; la georreferenciación mueve las coordenadas y rechaza una estación ajena; la propagación no toca otro lugar; otro usuario no escribe con ninguna de las cuatro (RLS) |
 | `c0_con_lecturas_cerradas.test.sql` | 8 | Con lectura cerrada, la C0 no cambia —con el mensaje— y el código y la ubicación sí; reescribir el mismo valor pasa; sin ella, la C0 cambia; las columnas de la posición ya no existen (Fase 29) |
 | `catalogo_equipos.test.sql` | 11 | Alta con el dueño por defecto; campos del otro tipo, sin marca ni modelo y el mismo aparato rechazados; editar o borrar un equipo no cambia el proceso que lo copió; otro usuario no ve ni escribe (Fase 25) |
 | `rango_lecturas.test.sql` | 7 | El CHECK de las lecturas de ángulo: los límites y 360°00′00″ exacto se guardan; 65″, 60′, 360°00′01″, 361° y segundos negativos no, y no se pierde lo de antes (Fase 24) |
 | `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 | `estabilidad_bms.test.sql` | 6 | `save_visit` guarda la cota de catálogo de un BM de control; una visita cerrada no la deja cambiar y la conserva aunque se corrija el catálogo (Fase 30) |
-| `reabrir_procesos.test.sql` | 27 | `is_reopening` la ejecuta `authenticated` y no `anon`; reabrir una poligonal cerrada, una nivelación rechazada, un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado en las cuatro; un rechazado no pasa a cerrado sin reabrirse; lo cerrado sigue sin editarse ni borrarse, con la georreferenciación intacta; tras reabrir, estaciones, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34) |
+| `reabrir_procesos.test.sql` | 18 | `is_reopening` la ejecuta `authenticated` y no `anon`; reabrir una nivelación rechazada, un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado; un rechazado no pasa a cerrado sin reabrirse; lo cerrado sigue sin editarse ni borrarse; tras reabrir, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34; la poligonal salió en la 35) |
+| `poligonal_sin_cierre.test.sql` | 20 | La poligonal sin cierre (Fase 35): las columnas del alta y `precision_order` nulo; sin triggers de cierre y la nivelación con el suyo; sin `closed_at` ni `closed_by` y el CHECK que rechaza `closed` y `rejected`; se edita siempre; `save_polygonal_process` escribe `has_closing_row`, el tipo de ángulo, el orden nulo y los datos del alta |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -2169,6 +2271,29 @@ Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 ## 11. Deuda técnica conocida
 
 Registrada durante el desarrollo, ninguna bloqueante:
+
+**Columnas de la poligonal que ya no se leen (Fase 35).** `angle_readings_min`,
+`equipment_calibration_date`, `angular_precision_seconds`,
+`distance_precision_mm` y `distance_precision_ppm` siguen en
+`polygonal_processes`: el alta pide solo la identidad del equipo y no hay
+mínimo de lecturas. Los procesos anteriores las conservan y el Excel las
+muestra si las tienen; la demo y el seed aún escriben `angle_readings_min`.
+Borrarlas es una migración destructiva para cuando nada las lea (fuera de
+alcance en el PRD de la fase).
+
+**El orden guardado de las poligonales anteriores a la Fase 35.** Hasta su
+primer guardado, `precision_order`, `angle_type` y `meets_tolerance` guardan lo
+que el usuario declaró (riesgo 2 del PRD). La cabecera, Ajuste, el informe y el
+Excel detectan en vivo; el «Cumple» del hub y del dashboard lee
+`meets_tolerance` guardado, y puede marcar ✕ una poligonal que alcanza el
+ordinario. Se corrige sola al guardarla; si hiciera falta de una vez, un
+script que re-guarde cada poligonal con `computePolygonalDetected`.
+
+**`DmsInput` nombra «Grados» a su primer campo.** Su `aria-label` manda sobre
+la etiqueta visible, así que un lector de pantalla oye «Grados» y no «Lectura 1»
+ni «Azimut a la referencia». Salió al verificar los popups de la Fase 35 (los
+scripts de prueba tienen que buscar el campo dentro de su `fieldset`); es del
+sistema de diseño y anterior a la fase.
 
 **La ruta va colocada en la barra con `position: fixed` (Fase 33).** El hueco
 lo marcan `--ruta-inicio` y `--ruta-fin` en `globals.css`, medidos en pantalla
@@ -2814,7 +2939,10 @@ propia.
 control: la discrepancia entre los dos recorridos. Cambiar la etiqueta toca
 el manual y el informe; quedó fuera de la fase.
 
-**Dos diálogos para mover una poligonal (Fase 15).** «Asignar coordenadas
+**Cerrado en la Fase 35 — un solo camino para el arranque.** «Asignar
+coordenadas reales» se retiró: el popup del amarre lo sustituye, y
+Georreferenciar queda en el paso de Ajuste. El texto original queda como
+registro. **Dos diálogos para mover una poligonal (Fase 15).** «Asignar coordenadas
 reales» (arranque + azimut, solo sin cerrar, sin anotación) y «Georreferenciar»
 (dos estaciones, cualquier estado, anotado) resuelven casi lo mismo. Desde la
 Fase 22 están juntos, en la tarjeta del dibujo. En la Fase 27 el usuario
@@ -2825,8 +2953,8 @@ columnas.** El validador rechaza σ angular fuera de 0.01″–9999.99″ o con 
 de dos decimales, y σ de distancia fuera de 0.0001–9999.9999 m o con más de
 cuatro: la base los guardaría redondeados y el ajuste recalculado al reabrir
 no coincidiría con las coordenadas guardadas. Valida los pesos presentes con
-cualquier método, porque se guardan igual; el editor descarta los inválidos
-cuando el método es otro y sus campos no se ven. Un σ de distancia de 0.05 mm,
+cualquier método, porque se guardan igual; desde la Fase 35 el paso de Ajuste
+solo los guarda completos y válidos, al salir del campo. Un σ de distancia de 0.05 mm,
 que alguien con un distanciómetro muy bueno podría querer, no cabe: habría
 que ampliar la escala de la columna.
 
@@ -3040,10 +3168,11 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-05):** la nube tiene aplicadas las **treinta y tres**
-migraciones, hasta `20261005000000_reabrir_sin_anon` (Fase 34). Todas se
-empujaron antes del merge de su PR, salvo la de la Fase 29, que borra y fue
-después (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
+**Estado actual (2026-10-06):** la nube tiene aplicadas **treinta y cuatro**
+de las treinta y cinco migraciones, hasta `20261005010000_ux_poligonal` (Fase
+35, paso 1). Falta `20261006000000_poligonal_sin_cierre`, el paso 2, que borra
+`closed_at` y `closed_by` y va después del merge (ver abajo). Todas las demás se
+empujaron antes del merge de su PR, salvo la de la Fase 29, que también borra. Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
 índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
 filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
@@ -3059,6 +3188,11 @@ La de la Fase 30 añade `settlement_book_readings.catalog_elevation` y recrea
 `save_visit`; se aplicó antes del merge del PR #19. Verificado: la columna es
 `numeric(10,4)`, `save_visit` la escribe, sigue siendo `SECURITY INVOKER` y
 solo `authenticated` tiene `EXECUTE` (además de `postgres` y `service_role`).
+
+El paso 1 de la Fase 35 se empujó antes del merge desde una copia del
+repositorio sin el paso 2, porque `db push` aplica **todas** las migraciones
+pendientes. Pasó a `calculated` la única poligonal cerrada que había, y quedaron
+tres calculadas y una en curso.
 
 La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
 Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo

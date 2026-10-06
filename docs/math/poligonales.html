@@ -61,7 +61,7 @@ de aceptar los resultados como buenos.</p>
   <li><a href="#mapa">Mapa del código</a></li>
   <li><a href="#convenciones">Convenciones</a></li>
   <li><a href="#tipos">Tres tipos de poligonal</a></li>
-  <li><a href="#metodos">Tres métodos de corrección</a></li>
+  <li><a href="#metodos">Métodos de corrección</a></li>
   <li><a href="#ejemplo">Ejemplo trabajado paso a paso</a></li>
   <li><a href="#verificacion">Tests y verificación</a></li>
 </ol>
@@ -76,7 +76,9 @@ objeto con los datos de campo y devuelven otro con los resultados.</p>
 <tr><th>Archivo</th><th>Qué hace</th></tr>
 <tr><td><code>angles.ts</code></td><td>Convierte ángulos entre grados-minutos-segundos y decimal (con acarreo de desbordamiento), normaliza azimuts al rango [0°, 360°) y expone trigonometría en grados (<code>cosDeg</code>, <code>sinDeg</code>).</td></tr>
 <tr><td><code>tolerances.ts</code></td><td>Constantes de tolerancia angular y precisión relativa mínima por orden de precisión (PRD § 5.4).</td></tr>
-<tr><td><code>polygonal.ts</code></td><td>El cálculo principal: los tres tipos de poligonal y los tres métodos de corrección. Es una función pura <code>computePolygonal(input)</code> que nunca lanza; con datos incompletos devuelve campos en <code>null</code>.</td></tr>
+<tr><td><code>polygonal.ts</code></td><td>El cálculo principal: los tres tipos de poligonal y los cuatro métodos de corrección. Es una función pura <code>computePolygonal(input)</code> que nunca lanza; con datos incompletos devuelve campos en <code>null</code>. <code>computePolygonalDetected(input)</code> detecta además el orden alcanzado y el tipo de ángulo (§ 2.3 y § 3.1).</td></tr>
+<tr><td><code>least-squares.ts</code></td><td>El ajuste por mínimos cuadrados por ecuaciones de condición (§ 4.4), sin saber de topografía.</td></tr>
+<tr><td><code>correction-breakdown.ts</code></td><td>Cómo corrigió cada método, en sus términos: el reparto angular y el factor de cada uno (§ 4). Lo usan el paso de Ajuste y el informe.</td></tr>
 </table>
 
 <h2 id="convenciones">2. Convenciones</h2>
@@ -123,19 +125,35 @@ amarre más el ángulo de orientación (Fase 26).</p>
 <tr><td>Tercer orden (topográfico)</td><td>15″ · √n</td><td>1:5 000</td></tr>
 <tr><td>Ordinario (rural)</td><td>30″ · √n</td><td>1:3 000</td></tr>
 </table>
-<p>donde <code>n</code> es el número de ángulos medidos. Implementación
+<p>donde <code>n</code> es el número de ángulos que entran en la condición
+angular: los vértices de una cerrada —más el de cierre si la cartera cierra
+contra el amarre— o las deflexiones de una abierta con control. Implementación
 (<code>tolerances.ts</code>):</p>
 <pre><code>export function angularTolerance(order, n) {
   return ANGULAR_TOLERANCE_K[order] * Math.sqrt(n);
 }</code></pre>
+<p><strong>El orden alcanzado se detecta (Fase 35).</strong> No se declara: es
+el más alto que cumple <em>a la vez</em> la tolerancia angular y la precisión
+relativa mínima (<code>detectPrecisionOrder</code>). En la cartera TT4, el
+error angular de 12″ con <em>n</em> = 7 cabe en segundo orden
+(5″·√7 = 13.2″), pero la precisión 1:7 045 no llega a 1:20 000; en tercer orden
+cumple las dos (39.7″ y 1:5 000): <strong>tercer orden</strong>. Si no alcanza
+ni el ordinario, no tiene orden; una abierta sin control no tiene cierre que
+juzgar.</p>
 
 <h2 id="tipos">3. Tres tipos de poligonal</h2>
 
 <h3>3.1. Cerrada — <code>computeClosed</code></h3>
 <p>El recorrido empieza y termina en el mismo punto formando un polígono. La
 suma de los ángulos internos debe valer <code>(n − 2) · 180°</code>; cualquier
-diferencia es el error angular, que se distribuye equitativo entre las
-<em>n</em> estaciones antes de propagar los azimuts.</p>
+diferencia es el error angular, que se distribuye equitativo entre los ángulos
+de la condición antes de propagar los azimuts.</p>
+<p><strong>El tipo de ángulo se detecta (Fase 35).</strong> Con ángulos
+exteriores la suma teórica es <code>(n + 2) · 180°</code>, y con fila de cierre
+contra el amarre las dos suman además 360°·k. Interiores y exteriores difieren
+en 720°, mucho más que cualquier error de campo, así que la suma observada dice
+sin ambigüedad cuál se midió (<code>detectAngleType</code>): el tipo cuya suma
+teórica queda más cerca.</p>
 
 <p>Pasos:</p>
 <ol>
@@ -146,8 +164,15 @@ diferencia es el error angular, que se distribuye equitativo entre las
   <li>Error de cierre lineal: <code>√((Σ ΔN)² + (Σ ΔE)²)</code>. Perímetro y precisión relativa <code>P / error</code> (se expresa como 1:X).</li>
   <li>Se aplica el método de corrección elegido (sección 4) para distribuir el error lineal.</li>
 </ol>
-<p>Una poligonal cerrada cumple si pasa ambas tolerancias (angular y lineal); de
-lo contrario solo se puede cerrar como "rechazada".</p>
+<p>El orden alcanzado es el más alto cuyas dos tolerancias, angular y lineal,
+cumple (§ 2.3). Desde la Fase 35 la poligonal no se cierra: queda calculada, y
+su informe alerta si no alcanza ningún orden.</p>
+<p><strong>El ángulo de orientación.</strong> Con amarre, el primer ángulo se
+mide desde la referencia. Si la cartera cierra contra el amarre (TT4), entra en
+la condición y los métodos proporcionales lo corrigen como uno más: en la TT4,
+−12″/7 = −1.71″ en cada uno de los 7 ángulos. Si cierra contra el primer lado
+(Sede Vivero), no entra: fija el datum. Mínimos cuadrados lo fija como datum
+siempre (§ 4.4).</p>
 
 <h3>3.2. Abierta con control — <code>computeOpenControlled</code></h3>
 <p>Empieza en un punto conocido y termina en otro punto conocido distinto. Las
@@ -173,12 +198,15 @@ verificación de cierre".</p>
 <p>El cálculo es trivial: propagar azimuts con la convención horizontal,
 proyectar y encadenar coordenadas. No hay corrección.</p>
 
-<h2 id="metodos">4. Tres métodos de corrección</h2>
+<h2 id="metodos">4. Métodos de corrección</h2>
 <p>Los métodos aplican cuando hay un error de cierre lineal que distribuir
-(cerrada y abierta con control). Cada uno reparte ese error de manera
-distinta.</p>
+(cerrada y abierta con control). Brújula, Tránsito y Crandall corrigen primero
+los ángulos —el reparto equitativo de la sección 3— y después reparten el
+error lineal, cada uno a su manera; mínimos cuadrados lo hace todo a la vez. El
+orden alcanzado no depende del método: se juzga con el error de la cartera tal
+como se midió.</p>
 
-<h3>4.1. Bowditch (brújula)</h3>
+<h3>4.1. Brújula (Bowditch)</h3>
 <p>Reparte el error proporcionalmente a la <strong>longitud</strong> de cada
 lado. Es el método más usado en la práctica profesional cuando ángulos y
 distancias se midieron con precisión parecida.</p>
@@ -186,6 +214,8 @@ distancias se midieron con precisión parecida.</p>
 Corr_ΔN<sub>i</sub> = − Error_N · ( d<sub>i</sub> / perímetro )<br />
 Corr_ΔE<sub>i</sub> = − Error_E · ( d<sub>i</sub> / perímetro )
 </div>
+<p>Su <strong>factor</strong> es <code>k = −Error / P</code> por eje: en la
+TT4, −0.0000727 en N y +0.000122 en E (P = 115.712 m).</p>
 <pre><code>if (method === "bowditch") {
   for (let i = 0; i &lt; n; i++) {
     const ratio = perimeter &gt; 0 ? distances[i] / perimeter : 0;
@@ -203,6 +233,11 @@ ejemplo).</p>
 Corr_ΔN<sub>i</sub> = − Error_N · ( |ΔN<sub>i</sub>| / Σ|ΔN| )<br />
 Corr_ΔE<sub>i</sub> = − Error_E · ( |ΔE<sub>i</sub>| / Σ|ΔE| )
 </div>
+<p>Su factor es la <strong>corrección unitaria</strong> de cada eje,
+<code>k<sub>N</sub> = −Error_N / Σ|ΔN|</code> y
+<code>k<sub>E</sub> = −Error_E / Σ|ΔE|</code>: en la TT4, Σ|ΔN| = 83.850 m y
+Σ|ΔE| = 52.085 m. Lo que la hoja de Excel llama «corrección unitaria» en su
+pestaña de Brújula es este factor del Tránsito.</p>
 
 <h3>4.3. Crandall (mínimos cuadrados ponderados sobre distancias)</h3>
 <p>Mantiene los ángulos como inalterables y ajusta solo las distancias para que
@@ -219,7 +254,22 @@ Sujeto a:&nbsp;&nbsp;&nbsp; Σ δd<sub>i</sub> · cos(Az<sub>i</sub>) = − Erro
 </div>
 <p>Una vez resuelto, la proyección corregida del lado <em>i</em> es
 <code>ΔN_corr<sub>i</sub> = (d<sub>i</sub> + δd<sub>i</sub>) · cos(Az<sub>i</sub>)</code> y
-análogo para ΔE.</p>
+análogo para ΔE. Sus factores son λ₁ y λ₂: en la TT4,
+λ₁ = −1.125 × 10⁻⁴ y λ₂ = +3.392 × 10⁻⁴.</p>
+
+<h3>4.4. Mínimos cuadrados (Fase 14)</h3>
+<p>Ajusta ángulos y distancias a la vez por ecuaciones de condición, cada
+observación según su peso: <code>v = −Q·Aᵀ·(A·Q·Aᵀ)⁻¹·w</code>, con
+<code>Q = diag(σ²)</code>, iterando porque las condiciones no son lineales en
+los ángulos. La cerrada tiene tres condiciones —la suma angular, ΣΔN = 0 y
+ΣΔE = 0—; la abierta con control, las dos de llegada más la angular si hay
+azimut de llegada. La calidad del ajuste la dice σ₀ = √(vᵀPv / r), leída con
+la prueba χ² al 95 % de su redundancia r.</p>
+<p><strong>El datum.</strong> El ángulo de orientación no se ajusta: un error
+suyo rota la poligonal entera sin afectar al cierre, así que las condiciones no
+lo determinan. Por eso el azimut V10 → D1 de la TT4 sale 181°51′02.5″ con
+Brújula —que reparte −1.71″ también a la orientación— y 181°51′04.2″ con
+mínimos cuadrados. Las dos cosas son correctas.</p>
 
 <h2 id="ejemplo">5. Ejemplo trabajado — cuadrado con un lado largo</h2>
 <p>Es uno de los fixtures de los tests automáticos. Con números concretos se ve

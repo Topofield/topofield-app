@@ -65,7 +65,8 @@ export type PolygonalProcess = Omit<
   angle_type: AngleType;
   correction_method: CorrectionMethod | null;
   status: ProcessStatus;
-  precision_order: PrecisionOrder;
+  /** Orden alcanzado, detectado al calcular (Fase 35); `null` si ninguno. */
+  precision_order: PrecisionOrder | null;
 };
 
 export type AngleReading = Tables<"polygonal_angle_readings">;
@@ -91,7 +92,7 @@ export const POLYGONAL_TYPE_LABELS: Record<PolygonalType, string> = {
 };
 
 export const CORRECTION_METHOD_LABELS: Record<CorrectionMethod, string> = {
-  bowditch: "Bowditch (brújula)",
+  bowditch: "Brújula (Bowditch)",
   transit: "Tránsito",
   crandall: "Crandall",
   least_squares: "Mínimos cuadrados",
@@ -124,21 +125,6 @@ export const POLYGONAL_TYPE_OPTIONS = POLYGONAL_TYPES.map((value) => ({
   value,
   label: POLYGONAL_TYPE_LABELS[value],
 }));
-
-export const CORRECTION_METHOD_OPTIONS = CORRECTION_METHODS.map((value) => ({
-  value,
-  label: CORRECTION_METHOD_LABELS[value],
-}));
-
-/**
- * Opciones del selector de una poligonal cerrada. Interior y exterior son los
- * dos casos reales según el sentido en que se recorra el polígono, y el
- * formulario NO preselecciona: adivinar la convención es el fallo que la Fase 7
- * corrige (decisión 8 del PRD de fase).
- */
-export const CLOSED_ANGLE_TYPE_OPTIONS = (["interior", "exterior"] as const).map(
-  (value) => ({ value, label: ANGLE_TYPE_LABELS[value] }),
-);
 
 // --- Contratos del cálculo (src/lib/calculations/polygonal.ts) ---
 
@@ -263,6 +249,12 @@ export interface PolygonalResult {
   angularError: number | null; // segundos de arco
   angularTolerance: number | null; // segundos de arco
   anglesMeetTolerance: boolean | null;
+  /**
+   * Ángulos que entran en la condición angular (Fase 35): los de la cerrada
+   * que participan, o las deflexiones de una abierta con cierre angular.
+   * `null` si no hay condición. Con él se detecta el orden alcanzado.
+   */
+  angularConditionCount: number | null;
   // Cierre lineal
   errorNorth: number | null;
   errorEast: number | null;

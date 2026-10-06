@@ -21,10 +21,13 @@ import {
   getVisits,
 } from "@/lib/supabase/queries";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
-import { computePolygonal } from "@/lib/calculations/polygonal";
+import { computePolygonalDetected } from "@/lib/calculations/polygonal";
+import { correctionBreakdown, type CorrectionBreakdown } from "@/lib/calculations/correction-breakdown";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
-import { polygonalInputOf } from "@/components/polygonal/polygonal-draft";
-import type { PolygonalInput, PolygonalResult } from "@/types/polygonal";
+import { captureRows, type CaptureRow } from "@/components/polygonal/capture-rows";
+import { draftOf, inputOf } from "@/components/polygonal/polygonal-save";
+import type { AngleInputFormat, AngleType, PolygonalInput, PolygonalResult } from "@/types/polygonal";
+import type { PrecisionOrder } from "@/types/project";
 import type { PointInput, VisitInput } from "@/types/settlement";
 import type { IncludedProcess } from "@/types/report";
 
@@ -34,15 +37,27 @@ export interface PolygonalSectionData {
   process: NonNullable<Awaited<ReturnType<typeof getPolygonalProcess>>>;
   stations: Awaited<ReturnType<typeof getPolygonalStations>>;
   /**
-   * Lo que consume el dibujo (Fase 13). La entrada sale de `polygonalInputOf`,
-   * el mismo camino que usa el editor, así que el dibujo del informe es por
-   * construcción el del editor.
+   * El cálculo y el dibujo (Fase 13). La entrada sale de `draftOf` e
+   * `inputOf`, el mismo camino que la pantalla por pasos, con el orden y el
+   * tipo de ángulo detectados (Fase 35): el informe es por construcción lo
+   * que muestran Datos y Ajuste.
    */
   plot: {
     input: PolygonalInput;
     result: PolygonalResult;
     reference: { code: string; north: number; east: number } | null;
   };
+  /** Las mediciones «desde → hacia» (Fase 35). */
+  rows: CaptureRow[];
+  /** Cómo corrigió el método; `null` en la abierta sin control o sin datos. */
+  breakdown: CorrectionBreakdown | null;
+  /** El orden alcanzado, detectado; `null` sin verificación o sin alcanzarlo. */
+  order: PrecisionOrder | null;
+  angleType: AngleType;
+  /** El código de la referencia del 0 atrás, con o sin coordenadas. */
+  referenceLabel: string | null;
+  /** El formato de los ángulos del proceso, el de su selector. */
+  angleFormat: AngleInputFormat;
 }
 
 export interface LevelingSectionData {
@@ -89,16 +104,33 @@ export async function loadReportSections(
           return { kind: "missing", entry, data: null };
         }
         const stations = await getPolygonalStations(supabase, process.id);
-        const input = polygonalInputOf(process, stations);
+        const base = inputOf(draftOf(process, stations), null);
+        const { result, order, angleType } = computePolygonalDetected(base);
+        const input: PolygonalInput = { ...base, order: order ?? "ordinario", angleType };
         const amarre = referencePoints.find((p) => p.id === process.reference_point_id);
         const reference =
           amarre && amarre.north !== null && amarre.east !== null
             ? { code: amarre.code, north: Number(amarre.north), east: Number(amarre.east) }
             : null;
+        const referenceLabel = amarre?.code ?? process.reference_point_code ?? null;
         return {
           kind: "polygonal",
           entry,
-          data: { process, stations, plot: { input, result: computePolygonal(input), reference } },
+          data: {
+            process,
+            stations,
+            plot: { input, result, reference },
+            rows: captureRows(input, {
+              start: process.start_point_code,
+              reference: referenceLabel,
+              end: process.end_point_code,
+            }),
+            breakdown: correctionBreakdown(input, result),
+            order,
+            angleType,
+            referenceLabel,
+            angleFormat: process.angle_input_format,
+          },
         };
       }
       if (entry.type === "leveling") {
@@ -140,7 +172,9 @@ export function closureOf(section: ReportSection): {
   closedBy: string | null;
 } {
   switch (section.kind) {
+    // La poligonal no se cierra (Fase 35).
     case "polygonal":
+      return { closedAt: null, closedBy: null };
     case "leveling":
       return {
         closedAt: section.data.process.closed_at,

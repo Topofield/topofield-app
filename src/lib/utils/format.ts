@@ -51,15 +51,6 @@ export function formatEquipmentLine(
   return serial ? `${combo} · s/n ${serial}` : combo;
 }
 
-/** «2.0″» (ISO 17123-3), o "—" si la estación total no tiene precisión angular registrada. */
-export function formatAngularPrecision(
-  seconds: number | string | null | undefined,
-): string {
-  if (seconds === null || seconds === undefined || seconds === "") return "—";
-  const v = Number(seconds);
-  return Number.isFinite(v) ? `${v}″` : "—";
-}
-
 /**
  * «3 mm + 2 ppm», los dos términos de la ISO 17123-4. "—" si falta cualquiera
  * de los dos: una precisión de distancia a medias no es un dato usable.
@@ -93,6 +84,29 @@ export function formatDate(iso: string): string {
     day: "numeric",
     timeZone: "America/Bogota",
   });
+}
+
+/**
+ * Fecha y hora de un guardado, «6/10/2026, 10:42», en hora de Bogotá y 24 h
+ * (Fase 35). Se arma con las partes numéricas: el texto de `toLocaleString`
+ * («a. m.» o «a.m.») cambia entre el ICU del servidor y el del navegador, y un
+ * componente que se renderiza en los dos daría un error de hidratación.
+ */
+export function formatSavedAt(iso: string): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.day}/${parts.month}/${parts.year}, ${parts.hour}:${parts.minute}`;
 }
 
 /**

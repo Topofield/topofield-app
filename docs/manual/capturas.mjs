@@ -42,17 +42,14 @@ function sql(query) {
 mkdirSync(OUT, { recursive: true });
 
 const proyecto = sql("select id from public.projects where name='Lote catastral' limit 1;");
-const calculado = sql("select id from public.polygonal_processes where name like 'Cuadrado con error%';");
 // Filtradas por proyecto: la aplicación crea el «Proyecto de ejemplo» la
-// primera vez que el usuario del seed inicia sesión, con su propio proceso
-// cerrado, y sin filtro la consulta devolvía dos ids y la URL salía rota.
+// primera vez que el usuario del seed inicia sesión, con sus propias
+// poligonales, y sin filtro la consulta devolvía dos ids y la URL salía rota.
 // Sin proyecto (base sin sembrar) no se consulta: `project_id=''` haría fallar
 // psql antes de que la guarda de abajo explique que falta el seed.
-const cerrado = proyecto
-  ? sql(`select id from public.polygonal_processes where status='closed' and name like 'Cuadrado oficial%' and project_id='${proyecto}';`)
-  : "";
-const rechazado = proyecto
-  ? sql(`select id from public.polygonal_processes where status='rejected' and project_id='${proyecto}';`)
+// Fase 35: la cartera TT4 compensada por Brújula es la poligonal del manual.
+const tt4 = proyecto
+  ? sql(`select id from public.polygonal_processes where name like 'Poligonal V10%bowditch' and project_id='${proyecto}';`)
   : "";
 const nivelacion = sql("select id from public.leveling_processes where name like 'Circuito BM-1%';");
 const proyectoMonitoreo = sql("select id from public.projects where name='Edificio en monitoreo' limit 1;");
@@ -69,9 +66,7 @@ const visitaLibreta = lugarLibreta
 
 if (
   !proyecto ||
-  !calculado ||
-  !cerrado ||
-  !rechazado ||
+  !tt4 ||
   !nivelacion ||
   !proyectoMonitoreo ||
   !lugarMonitoreo ||
@@ -149,53 +144,84 @@ await capturar("04-hub-proyecto", { fullPage: true });
 await page.goto(`${BASE}/projects/${proyecto}?tab=config`, { waitUntil: "networkidle" });
 await capturar("05-configuracion-proyecto", { fullPage: true });
 
-// Poligonales
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/new`, { waitUntil: "networkidle" });
-await capturar("06-nueva-poligonal");
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUntil: "networkidle" });
-await capturar("07-editor-no-cumple", { fullPage: true });
+// Poligonales (Fase 35): el alta en un popup y la pantalla por pasos.
+await page.goto(`${BASE}/projects/${proyecto}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "+ Nuevo Proceso" }).click();
+await page.getByRole("dialog").getByRole("button", { name: "Poligonal", exact: true }).click();
+const alta = page.getByRole("dialog", { name: "Nueva poligonal" });
+await alta.getByLabel("Título").fill("Poligonal V10 — cartera TT4");
+await alta.getByLabel("Ubicación").fill("Sede Vivero, Bogotá");
+await alta.getByLabel("Responsable", { exact: true }).fill("Andrea Rojas");
+await alta.getByLabel("Cargo del responsable").fill("Topógrafa");
+await page.waitForTimeout(400);
+await alta.screenshot({ path: join(OUT, "06-nueva-poligonal.png") });
+console.log("✓", "06-nueva-poligonal");
+await page.keyboard.press("Escape");
 
-const veredicto = page.locator('[aria-label="Veredicto de cierre"]');
-if (await veredicto.count()) {
-  await veredicto.screenshot({ path: join(OUT, "08-veredicto.png") });
-  console.log("✓ 08-veredicto");
-}
+// Paso 1 · Datos: amarre, mediciones «desde → hacia», cierre angular y dibujo.
+const pasos = `${BASE}/projects/${proyecto}/polygonal/${tt4}`;
+await page.goto(`${pasos}?tab=datos`, { waitUntil: "networkidle" });
+await capturar("07-datos-poligonal", { fullPage: true });
 
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${cerrado}`, { waitUntil: "networkidle" });
-await capturar("09-proceso-cerrado", { fullPage: true });
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${rechazado}`, { waitUntil: "networkidle" });
-await capturar("10-proceso-rechazado", { fullPage: true });
+// Paso 2 · Ajuste: el método, el orden alcanzado con su «Por qué», la tabla al
+// estilo de la hoja y el dibujo ajustado.
+await page.goto(`${pasos}?tab=ajuste`, { waitUntil: "networkidle" });
+await page.getByText("Por qué tercer orden").click();
+await page.waitForTimeout(400);
+await page
+  .getByRole("group", { name: "Método de ajuste" })
+  .locator("xpath=ancestor::section[1]")
+  .screenshot({ path: join(OUT, "08-orden-alcanzado.png") });
+console.log("✓", "08-orden-alcanzado");
+await page.getByText("Por qué tercer orden").click();
+await capturar("09-ajuste-poligonal", { fullPage: true });
 
-// Fase 13 — dibujo de la poligonal, con la cartera real TT4: su error de 1.6 cm
-// se ve exagerado ×100.
-const tt4 = sql(
-  `select id from public.polygonal_processes where name like 'Poligonal V10%bowditch' and project_id='${proyecto}';`,
-);
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${tt4}`, { waitUntil: "networkidle" });
+// El dibujo ajustado de la cartera TT4: su error de 1.6 cm, exagerado ×100.
 await page.locator("figure").first().screenshot({ path: join(OUT, "20-dibujo-poligonal.png") });
 console.log("✓", "20-dibujo-poligonal");
 
+// Paso 3 · Informe: la sección «Corrección por método», recortada de su título
+// al de la poligonal ajustada.
+await page.goto(`${pasos}?tab=informe`, { waitUntil: "networkidle" });
+await page.waitForTimeout(900);
+const desde = await page.getByRole("heading", { name: /^3\. Corrección por método/ }).boundingBox();
+const hasta = await page.getByRole("heading", { name: "4. Poligonal ajustada" }).boundingBox();
+const hoja = await page.locator(".report").first().boundingBox();
+await page.screenshot({
+  path: join(OUT, "10-correccion-informe.png"),
+  fullPage: true,
+  clip: {
+    x: hoja.x,
+    y: desde.y - 12,
+    width: hoja.width,
+    height: Math.ceil(hasta.y - desde.y),
+  },
+});
+console.log("✓", "10-correccion-informe");
+await capturar("30-informe-del-proceso", { fullPage: true });
+
 // Fase 14 — la cartera Vivero con mínimos cuadrados y los pesos de la hoja:
-// la tarjeta de Resultados con las correcciones y σ₀.
+// la corrección por método, con las correcciones y σ₀.
 const vivero = sql(
   `select id from public.polygonal_processes where name like '%Vivero%least_squares' and project_id='${proyecto}';`,
 );
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${vivero}`, { waitUntil: "networkidle" });
+await page.goto(`${BASE}/projects/${proyecto}/polygonal/${vivero}?tab=ajuste`, { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
 await page
-  .getByRole("heading", { name: "Resultados", exact: true })
-  .locator("xpath=ancestor::*[contains(@class,'rounded')][1]")
+  .getByRole("heading", { name: "Corrección por método Mínimos cuadrados" })
+  .locator("xpath=ancestor::section[1]")
   .screenshot({ path: join(OUT, "21-minimos-cuadrados.png") });
 console.log("✓", "21-minimos-cuadrados");
 
 // Fase 15 — georreferenciar la cartera Vivero sembrada en sistema local, con
-// D1 y D3. Se captura el diálogo con la vista previa, sin confirmar: el seed
-// queda como estaba.
+// D1 y D3, desde el paso de Ajuste. Se captura el diálogo con la vista previa,
+// sin confirmar: el seed queda como estaba.
 const viveroLocal = sql(
   `select id from public.polygonal_processes where name like '%Vivero%sistema local' and project_id='${proyecto}';`,
 );
 // Más alto que el resto: el diálogo desplaza, y así cabe la vista previa.
 await page.setViewportSize({ width: 1280, height: 1400 });
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${viveroLocal}`, { waitUntil: "networkidle" });
+await page.goto(`${BASE}/projects/${proyecto}/polygonal/${viveroLocal}?tab=ajuste`, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Georreferenciar" }).click();
 const dialogo = page.getByRole("dialog");
 const puntos = dialogo.locator("fieldset");
@@ -327,13 +353,6 @@ await page.goto(`${BASE}/projects/${proyecto}/reports/${informe}/print`, {
 });
 await capturar("19-informe-imprimible", { fullPage: true });
 
-// La pestaña Informe de un proceso (Fase 22): el informe de la poligonal
-// cerrada, sin salir de su pantalla.
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${cerrado}?tab=informe`, {
-  waitUntil: "networkidle",
-});
-await capturar("30-informe-del-proceso", { fullPage: true });
-
 // El catálogo de equipos (Fase 25): los del seed y la demo, dos con el aviso
 // de calibración de más de un año.
 await page.goto(`${BASE}/equipos`, { waitUntil: "networkidle" });
@@ -341,8 +360,8 @@ await capturar("31-equipos", { fullPage: true });
 
 // Campo
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${BASE}/projects/${proyecto}/polygonal/${calculado}`, { waitUntil: "networkidle" });
-await capturar("17-editor-movil", { fullPage: true });
+await page.goto(`${BASE}/projects/${proyecto}/polygonal/${tt4}?tab=datos`, { waitUntil: "networkidle" });
+await capturar("17-datos-movil", { fullPage: true });
 
 // Tema oscuro (Fase 20): el panel de Torre Alameda en el teléfono, con el tema
 // forzado por la cookie del selector, como si el usuario lo hubiera elegido.

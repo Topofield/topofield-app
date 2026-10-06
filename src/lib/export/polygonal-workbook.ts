@@ -15,9 +15,11 @@ import {
   writeSection,
 } from "./workbook";
 import {
+  ANGLE_TYPE_LABELS,
   CORRECTION_METHOD_LABELS,
   POLYGONAL_TYPE_LABELS,
   PROCESS_STATUS_LABELS,
+  type AngleType,
   type CorrectionMethod,
   type LeastSquaresAdjustment,
   type PolygonalType,
@@ -72,12 +74,16 @@ export interface PolygonalProcessRow {
   relative_precision: string | null;
   meets_tolerance: boolean | null;
   has_closing_row?: boolean | null;
-  closed_at: string | null;
-  closed_by: string | null;
   notes: string | null;
+  /** Datos del alta (Fase 35). */
+  location?: string | null;
+  responsible_name?: string | null;
+  responsible_role?: string | null;
+  /** El tipo de ángulo guardado; el detectado llega aparte. */
+  angle_type?: AngleType | null;
   created_at: string | null;
   /** Orden de precisión y equipo de estación total, propios del proceso (§ Fase 8). */
-  precision_order: PrecisionOrder;
+  precision_order: PrecisionOrder | null;
   equipment_brand: string | null;
   equipment_model: string | null;
   equipment_serial: string | null;
@@ -103,6 +109,12 @@ export interface PolygonalProcessRow {
 
 /** El ajuste por mínimos cuadrados, solo si hay uno hecho. */
 type Adjusted = Extract<LeastSquaresAdjustment, { status: "adjusted" }>;
+
+/** El orden alcanzado y el tipo de ángulo, detectados como en la pantalla (Fase 35). */
+export interface DetectedPolygonal {
+  order: PrecisionOrder | null;
+  angleType: AngleType;
+}
 
 /**
  * `DECIMAL` de Postgres llega como cadena vía PostgREST. Excel debe recibir un
@@ -268,12 +280,20 @@ function sheetCalculations(
   ]);
 }
 
+/** El orden alcanzado, en palabras: sin detección, el guardado. */
+function orderLabel(process: PolygonalProcessRow, detected: DetectedPolygonal | null): string {
+  if (process.type === "open_uncontrolled" || process.relative_precision == null) return "Sin verificación";
+  const order = detected ? detected.order : process.precision_order;
+  return order ? PRECISION_ORDER_LABELS[order] : "No alcanza ningún orden";
+}
+
 function sheetSummary(
   wb: ExcelJS.Workbook,
   process: PolygonalProcessRow,
   stations: StationRow[],
   project: ProjectMetadata | null,
   adjustment: Adjusted | null,
+  detected: DetectedPolygonal | null,
 ): void {
   const s = wb.addWorksheet("Resumen");
   s.columns = [{ width: 30 }, { width: 34 }];
@@ -288,9 +308,14 @@ function sheetSummary(
   }
 
   writeSection(s, row0, "Proceso");
+  const angleType = detected?.angleType ?? process.angle_type ?? null;
   let row = writePairs(s, row0 + 1, [
     ["Nombre", process.name],
+    ["Ubicación", process.location ?? null],
+    ["Responsable", process.responsible_name ?? null],
+    ["Cargo", process.responsible_role ?? null],
     ["Tipo", POLYGONAL_TYPE_LABELS[process.type]],
+    ["Tipo de ángulo (detectado)", angleType ? ANGLE_TYPE_LABELS[angleType] : null],
     ["Estado", PROCESS_STATUS_LABELS[process.status]],
     [
       "Método de corrección",
@@ -314,13 +339,15 @@ function sheetSummary(
   writeSection(s, row, "Equipo: estación total");
   // Los dos términos de la precisión de distancia van juntos o no van: un
   // par a medias se lee "—" en el informe impreso (`formatDistancePrecision`)
-  // y no puede leerse como un número suelto aquí.
+  // y no puede leerse como un número suelto aquí. Desde la Fase 35 el alta solo
+  // pide la identidad del equipo: la calibración y las precisiones salen si un
+  // proceso anterior las tiene.
   const [distMm, distPpm] = distancePrecisionPair(
     process.distance_precision_mm,
     process.distance_precision_ppm,
   );
+  const angular = num(process.angular_precision_seconds);
   row = writePairs(s, row + 1, [
-    ["Orden de precisión", PRECISION_ORDER_LABELS[process.precision_order]],
     [
       "Equipo",
       equipmentLine(
@@ -329,10 +356,16 @@ function sheetSummary(
         process.equipment_serial,
       ),
     ],
-    ["Fecha de calibración", process.equipment_calibration_date],
-    ["Precisión angular (\")", num(process.angular_precision_seconds)],
-    ["Precisión de distancia — término constante (mm)", distMm],
-    ["Precisión de distancia — término proporcional (ppm)", distPpm],
+    ...(process.equipment_calibration_date
+      ? ([["Fecha de calibración", process.equipment_calibration_date]] as [string, string][])
+      : []),
+    ...(angular !== null ? ([["Precisión angular (\")", angular]] as [string, number][]) : []),
+    ...(distMm !== null && distPpm !== null
+      ? ([
+          ["Precisión de distancia — término constante (mm)", distMm],
+          ["Precisión de distancia — término proporcional (ppm)", distPpm],
+        ] as [string, number][])
+      : []),
   ]);
 
   row += 1;
@@ -344,14 +377,7 @@ function sheetSummary(
     // Se usa el formateador único del proyecto para que el libro no introduzca
     // una representación distinta de la que muestran el listado y el editor.
     ["Precisión relativa", formatPrecision(process.relative_precision)],
-    [
-      "¿Cumple tolerancia?",
-      process.meets_tolerance === null
-        ? "Sin evaluar"
-        : process.meets_tolerance
-          ? "Sí"
-          : "No",
-    ],
+    ["Orden alcanzado", orderLabel(process, detected)],
   ]);
 
   if (process.correction_method === "least_squares") {
@@ -391,10 +417,9 @@ function sheetSummary(
 
   row += 1;
   writeSection(s, row, "Trazabilidad");
+  // La poligonal no se cierra (Fase 35): sin fecha ni responsable de cierre.
   writePairs(s, row + 1, [
     ["Creado", process.created_at],
-    ["Cerrado", process.closed_at],
-    ["Cerrado por", process.closed_by],
     ["Notas", process.notes],
   ]);
 }
@@ -403,13 +428,16 @@ function sheetSummary(
  * Libro completo de un proceso poligonal: tres hojas de la § 4.8.
  *
  * `adjustment` es el del motor, recalculado sobre las mismas estaciones en
- * orden (Fase 14): las correcciones y σ₀ no se guardan en la base.
+ * orden (Fase 14): las correcciones y σ₀ no se guardan en la base. `detected`,
+ * el orden y el tipo de ángulo detectados como en la pantalla (Fase 35); sin
+ * él, los guardados.
  */
 export function buildPolygonalWorkbook(
   process: PolygonalProcessRow,
   stations: StationRow[],
   project: ProjectMetadata | null = null,
   adjustment: LeastSquaresAdjustment | null = null,
+  detected: DetectedPolygonal | null = null,
 ): ExcelJS.Workbook {
   const wb = newWorkbook();
   const ordered = [...stations].sort(
@@ -422,6 +450,6 @@ export function buildPolygonalWorkbook(
       : null;
   sheetRawData(wb, process, ordered);
   sheetCalculations(wb, process, ordered, adjusted);
-  sheetSummary(wb, process, ordered, project, adjusted);
+  sheetSummary(wb, process, ordered, project, adjusted, detected);
   return wb;
 }

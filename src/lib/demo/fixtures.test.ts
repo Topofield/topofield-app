@@ -73,13 +73,17 @@ describe("poligonales de la demo — carteras reales", () => {
     expect(new Set(PROCESOS_DEMO.map((p) => p.name)).size).toBe(3);
   });
 
-  it("la TT4 cumple —12″ de error angular, 1:7045— y nace cerrada", () => {
+  // Fase 35: la poligonal no se cierra. La TT4 se guarda calculada, con el
+  // orden y el tipo de ángulo detectados, y alimenta el informe.
+  it("la TT4 cumple —12″ de error angular, 1:7045— en tercer orden detectado", () => {
     const tt4 = porNombre("TT4");
     const { resultado, campos } = resultadosDe(tt4);
     expect(resultado.angularError).toBeCloseTo(12, 3);
     expect(campos.relative_precision).toBe("1:7045");
     expect(campos.meets_tolerance).toBe(true);
-    expect(tt4.status).toBe("closed");
+    expect(campos.precision_order).toBe("tercer_orden");
+    expect(campos.angle_type).toBe("interior");
+    expect(tt4.informe).toBe(true);
     expect(tt4.hasClosingRow).toBe(true);
   });
 
@@ -87,6 +91,7 @@ describe("poligonales de la demo — carteras reales", () => {
     const { resultado, campos } = resultadosDe(porNombre("Sede Vivero"));
     expect(resultado.adjustment?.status).toBe("adjusted");
     expect(campos.meets_tolerance).toBe(true);
+    expect(campos.precision_order).toBe("segundo_orden");
     expect(resultado.stations.every((s) => s.north != null && s.east != null)).toBe(true);
   });
 
@@ -234,8 +239,8 @@ describe("asentamientos de la demo — Torre Alameda", () => {
 });
 
 describe("material de los informes de la demo", () => {
-  it("una poligonal y una nivelación nacen cerradas, y Torre Alameda se cierra", () => {
-    expect(PROCESOS_DEMO.filter((p) => p.status === "closed").map((p) => p.name)).toEqual([
+  it("la TT4 alimenta el informe de poligonal, una nivelación nace cerrada y Torre Alameda se cierra", () => {
+    expect(PROCESOS_DEMO.filter((p) => p.informe).map((p) => p.name)).toEqual([
       "Poligonal V10 — cartera TT4",
     ]);
     expect([NIVELACION_VERJON, nivelacionTramo2()].filter((n) => n.status === "closed")).toHaveLength(1);

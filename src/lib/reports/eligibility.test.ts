@@ -12,36 +12,52 @@ function poligonal(
     kind: "polygonal",
     id: "pol-1",
     name: "Cuadrado oficial",
-    status: "closed",
+    status: "calculated",
     ...over,
   };
 }
 
+function nivelacion(over: Partial<EligibleCandidate> = {}): EligibleCandidate {
+  return { kind: "leveling", id: "niv-1", name: "Línea BM", status: "closed", ...over };
+}
+
 describe("isEligible", () => {
-  it("acepta una poligonal cerrada", () => {
+  // Fase 35: la poligonal no se cierra. Entra calculada, cumpla o no un
+  // orden: su informe lo alerta.
+  it("acepta una poligonal calculada", () => {
     expect(isEligible(poligonal())).toBe(true);
   });
 
+  it("una poligonal en borrador o a medias no entra", () => {
+    for (const status of ["draft", "in_progress"]) {
+      expect(isEligible(poligonal({ status }))).toBe(false);
+    }
+  });
+
   it("acepta una nivelación cerrada", () => {
-    expect(isEligible(poligonal({ kind: "leveling" }))).toBe(true);
+    expect(isEligible(nivelacion())).toBe(true);
+  });
+
+  it("una nivelación calculada sigue sin entrar: se cierra antes", () => {
+    expect(isEligible(nivelacion({ status: "calculated" }))).toBe(false);
   });
 
   it("acepta un lugar cerrado", () => {
-    expect(isEligible(poligonal({ kind: "site" }))).toBe(true);
+    expect(isEligible({ kind: "site", id: "s1", name: "Torre", status: "closed" })).toBe(true);
   });
 
   // El § 4.6 lo dice explícitamente: un proceso rechazado «queda como
   // referencia pero no se puede incluir en informes». Es una regla escrita
   // hace fases que se ejerce por primera vez aquí.
   it("RECHAZA un proceso rechazado, aunque esté cerrado en la práctica", () => {
-    expect(isEligible(poligonal({ status: "rejected" }))).toBe(false);
+    expect(isEligible(nivelacion({ status: "rejected" }))).toBe(false);
   });
 
   // Un proceso abierto seguiría cambiando: el informe dejaría de ser
   // reproducible, que es lo que sostiene no guardar una copia de los datos.
   it("rechaza cualquier estado que no sea cerrado", () => {
     for (const status of ["draft", "in_progress", "calculated"] as const) {
-      expect(isEligible(poligonal({ status }))).toBe(false);
+      expect(isEligible(nivelacion({ status }))).toBe(false);
     }
   });
 
@@ -58,17 +74,17 @@ describe("isEligible", () => {
 describe("selectableProcesses", () => {
   it("devuelve solo los elegibles, conservando el orden recibido", () => {
     const out = selectableProcesses([
-      poligonal({ id: "a", status: "closed" }),
-      poligonal({ id: "b", status: "rejected" }),
+      poligonal({ id: "a" }),
+      nivelacion({ id: "b", status: "rejected" }),
       poligonal({ id: "c", status: "draft" }),
-      poligonal({ id: "d", kind: "site", status: "closed" }),
+      { kind: "site", id: "d", name: "Torre", status: "closed" },
     ]);
     expect(out.map((p) => p.id)).toEqual(["a", "d"]);
   });
 
   it("devuelve una lista vacía si nada es elegible", () => {
     expect(
-      selectableProcesses([poligonal({ status: "calculated" })]),
+      selectableProcesses([nivelacion({ status: "calculated" })]),
     ).toEqual([]);
   });
 

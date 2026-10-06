@@ -1,12 +1,14 @@
 // Inserta un proceso poligonal del proyecto de ejemplo.
 //
 // Se ejecuta con el cliente del propio usuario, sujeto a RLS. Los resultados
-// que se persisten los calcula el motor real (`computePolygonal`), nunca se
-// escriben a mano — misma estrategia que `scripts/seed.mjs`.
+// que se persisten los calcula el motor real (`computePolygonalDetected`),
+// nunca se escriben a mano — misma estrategia que `scripts/seed.mjs`. Desde la
+// Fase 35 la poligonal no se cierra: nace calculada, con el orden y el tipo de
+// ángulo detectados, como la guarda la aplicación.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
-import { computePolygonal } from "@/lib/calculations/polygonal";
+import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import type { Database } from "@/types/database";
 import type { ProcesoDemo } from "./fixtures";
 
@@ -23,7 +25,7 @@ type Client = SupabaseClient<Database>;
  * Excel —que leen lo persistido— mostraban guiones.
  */
 export function resultadosDe(proceso: ProcesoDemo) {
-  const r = computePolygonal({
+  const { result: r, order, angleType } = computePolygonalDetected({
     type: proceso.type,
     startNorth: proceso.startNorth,
     startEast: proceso.startEast,
@@ -31,12 +33,9 @@ export function resultadosDe(proceso: ProcesoDemo) {
     endNorth: proceso.endNorth ?? null,
     endEast: proceso.endEast ?? null,
     endAzimuth: null,
-    // El orden lo declara el proceso (Fase 8), no ya el proyecto.
-    order: proceso.precisionOrder,
     // Las poligonales sin cierre no reparten error, pero el motor exige un
     // método: Bowditch es el que usa la aplicación por defecto.
     method: proceso.correctionMethod ?? "bowditch",
-    angleType: proceso.angleType,
     // Como en la aplicación: hay orientación cuando el proceso está amarrado.
     hasOrientation: proceso.referencePointCode != null,
     hasClosingRow: proceso.hasClosingRow ?? false,
@@ -61,26 +60,28 @@ export function resultadosDe(proceso: ProcesoDemo) {
       perimeter: r.perimeter,
       relative_precision:
         rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
-      meets_tolerance: r.meetsTolerance,
+      // La misma regla que `savePolygonalProcessAction`: cumple si alcanza
+      // algún orden; sin verificación, no se sabe.
+      meets_tolerance: proceso.type === "open_uncontrolled" || rel == null ? null : order !== null,
+      precision_order: order,
+      angle_type: angleType,
     },
   };
 }
 
 /**
- * Inserta una poligonal, sus estaciones y sus lecturas, y la cierra si el
- * fixture lo pide. `referencias` da el `id` de cada punto del catálogo por su
- * código, para enlazar el amarre. Devuelve el `id` del proceso creado, que el
- * orquestador usa para armar el informe de poligonal.
+ * Inserta una poligonal, sus estaciones y sus lecturas. `referencias` da el
+ * `id` de cada punto del catálogo por su código, para enlazar el amarre.
+ * Devuelve el `id` del proceso creado, que el orquestador usa para armar el
+ * informe de poligonal.
  */
 export async function insertarPoligonal(
   supabase: Client,
   projectId: string,
   siteId: string,
-  userId: string,
   proceso: ProcesoDemo,
   referencias: ReadonlyMap<string, string>,
 ): Promise<string> {
-  const cerrado = proceso.status === "closed";
   const calculo = resultadosDe(proceso);
 
   const { data: creado, error } = await supabase
@@ -90,18 +91,11 @@ export async function insertarPoligonal(
       site_id: siteId,
       name: proceso.name,
       type: proceso.type,
-      angle_type: proceso.angleType,
-      // Orden y equipo viven en el proceso desde la Fase 8: una estación total
-      // declara su precisión angular y su precisión de distancia en dos
-      // términos (ISO 17123-3 y -4), no el proyecto por todos.
-      precision_order: proceso.precisionOrder,
+      // El equipo vive en el proceso desde la Fase 8; desde la 35, solo su
+      // identidad.
       equipment_brand: proceso.equipmentBrand ?? null,
       equipment_model: proceso.equipmentModel ?? null,
       equipment_serial: proceso.equipmentSerial ?? null,
-      equipment_calibration_date: proceso.equipmentCalibrationDate ?? null,
-      angular_precision_seconds: proceso.angularPrecisionSeconds ?? null,
-      distance_precision_mm: proceso.distancePrecisionMm ?? null,
-      distance_precision_ppm: proceso.distancePrecisionPpm ?? null,
       start_point_code: proceso.startPointCode,
       start_north: proceso.startNorth,
       start_east: proceso.startEast,
@@ -125,10 +119,8 @@ export async function insertarPoligonal(
       // Las carteras traen una lectura por ángulo: es lo que hay en el papel.
       // El mínimo de 3 es para captura nueva.
       angle_readings_min: 1,
-      // Nace abierto aunque el fixture lo quiera cerrado: los triggers de
-      // inmutabilidad rechazan escribir estaciones bajo un proceso ya cerrado.
-      // El cierre se aplica al final, igual que hace la aplicación.
-      status: cerrado ? "calculated" : proceso.status,
+      status: "calculated",
+      // Errores, precisión, orden y tipo de ángulo detectados.
       ...calculo.campos,
       notes: proceso.notes,
     })
@@ -195,18 +187,6 @@ export async function insertarPoligonal(
       .from("polygonal_angle_readings")
       .insert(lecturas);
     if (errLect) throw errLect;
-  }
-
-  if (cerrado) {
-    const { error: errCierre } = await supabase
-      .from("polygonal_processes")
-      .update({
-        status: "closed",
-        closed_at: new Date().toISOString(),
-        closed_by: userId,
-      })
-      .eq("id", creado.id);
-    if (errCierre) throw errCierre;
   }
 
   return creado.id;

@@ -10,8 +10,13 @@ interface ClosureRecordProps {
   footer: ReactNode;
 }
 
-/** Registro de cierre: quién cerró cada proceso y cuándo (§ 4.7). */
+/**
+ * Registro de cierre: quién cerró cada proceso y cuándo (§ 4.7). La poligonal
+ * no se cierra (Fase 35) y no tiene fila; sin nada que se cierre, queda el pie.
+ */
 export function ClosureRecord({ sections, names, footer }: ClosureRecordProps) {
+  const closable = sections.filter((s) => s.kind !== "polygonal");
+  if (closable.length === 0) return <p className="report-footer">{footer}</p>;
   return (
     <section className="report-section">
       <h2>Registro de cierre</h2>
@@ -24,7 +29,7 @@ export function ClosureRecord({ sections, names, footer }: ClosureRecordProps) {
           </tr>
         </thead>
         <tbody>
-          {sections.map((s) => {
+          {closable.map((s) => {
             const { closedAt, closedBy } = closureOf(s);
             return (
               <tr key={`${s.entry.type}:${s.entry.id}`}>

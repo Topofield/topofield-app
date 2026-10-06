@@ -45,7 +45,7 @@ export async function createReportAction(
     return { ok: false, error: "El informe necesita un título." };
   }
   if (payload.selected.length === 0) {
-    return { ok: false, error: "Elige al menos un proceso cerrado." };
+    return { ok: false, error: "Elige al menos un proceso." };
   }
 
   const supabase = await createClient();
@@ -58,7 +58,7 @@ export async function createReportAction(
   const project = await getProjectById(supabase, payload.projectId);
   if (!project) return { ok: false, error: "Proyecto no encontrado." };
 
-  // Se parte de lo que la base dice que está cerrado, no de lo que llegó.
+  // Se parte de lo que la base dice que se puede incluir, no de lo que llegó.
   const disponibles = await getClosedWorkForReports(supabase, project.id);
   const porClave = new Map(
     disponibles.filter(isEligible).map((c) => [`${c.kind}:${c.id}`, c]),
@@ -71,7 +71,7 @@ export async function createReportAction(
       return {
         ok: false,
         error:
-          "Alguno de los procesos elegidos ya no está cerrado o no pertenece al proyecto.",
+          "Alguno de los procesos elegidos ya no se puede incluir (no está cerrado, o la poligonal no está calculada) o no pertenece al proyecto.",
       };
     }
     included.push({

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { levelingKindLabel, levelingTypeLabel, type LevelingProcess } from "@/types/leveling";
 import type { PolygonalProcess } from "@/types/polygonal";
-import { levelingRow, polygonalRow } from "./hub-rows";
+import { levelingRow, POLYGONAL_CHIPS, polygonalRow, PROCESS_CHIPS } from "./hub-rows";
 
 // Fase 27 (PU12 y PU13): el tipo de un proceso, como frase y sin «sin control»
 // en una abierta con vuelta.
@@ -31,12 +31,33 @@ describe("las filas del hub", () => {
       id: "x",
       name: "TT4",
       type: "closed",
-      status: "closed",
+      status: "calculated",
       relative_precision: "1:7045",
       meets_tolerance: true,
       updated_at: "2026-10-01T00:00:00Z",
     } as unknown as PolygonalProcess);
     expect(row.kindLabel).toBe("Poligonal cerrada");
+  });
+
+  // Fase 35: la poligonal no se cierra. Siempre admite renombrar y eliminar,
+  // y su estado nunca es «Cerrado fuera de tolerancia».
+  it("una poligonal que no cumple sigue siendo «Calculado», con todas sus acciones", () => {
+    const row = polygonalRow("p", {
+      id: "x",
+      name: "Marginal",
+      type: "closed",
+      status: "calculated",
+      relative_precision: "1:1001",
+      meets_tolerance: false,
+      updated_at: "2026-10-01T00:00:00Z",
+    } as unknown as PolygonalProcess);
+    expect(row.statusLabel).toBe("Calculado");
+    expect(row.closed).toBe(false);
+  });
+
+  it("los chips de las poligonales no tienen cerrados ni rechazados", () => {
+    expect(POLYGONAL_CHIPS).toEqual(["todos", "borradores", "calculados"]);
+    expect(PROCESS_CHIPS).toContain("cerrados");
   });
 
   it("y la fila de nivelación usa la misma etiqueta", () => {

@@ -14,7 +14,7 @@ trazabilidad, los informes y la exportación a Excel.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-09-30 · Fase 23 (Integridad).
+**Última actualización:** 2026-10-06 · Fase 35 (La poligonal como la mide el topógrafo).
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -45,9 +45,10 @@ Tres ideas ordenan toda la aplicación:
 
 **Proyecto.** El contenedor de un trabajo topográfico. Guarda el cliente, la
 ubicación, el datum y la proyección. El equipo usado y el **orden de
-precisión** no viven aquí: cada proceso —poligonal, nivelación, visita de
-asentamiento— declara los suyos, porque pueden cambiar de un levantamiento a
-otro dentro de un mismo proyecto.
+precisión** no viven aquí: van en cada proceso —poligonal, nivelación, visita
+de asentamiento—, porque pueden cambiar de un levantamiento a otro dentro de un
+mismo proyecto. El orden de una poligonal no se declara: se detecta al
+calcularla.
 
 **Proceso.** Un levantamiento concreto dentro de un proyecto: una poligonal, una
 nivelación, un control de asentamientos. Cada proceso pasa por estados:
@@ -56,21 +57,21 @@ nivelación, un control de asentamientos. Cada proceso pasa por estados:
 |---|---|
 | **Borrador** | Creado, sin datos suficientes |
 | **En progreso** | Con datos de campo, aún sin cálculo completo |
-| **Calculado** | Cálculo resuelto; se puede revisar y cerrar |
-| **Cerrado** | Terminado y conforme. **Inmutable**, salvo su posición |
-| **Rechazado** | Terminado pero fuera de tolerancia. **Inmutable**, salvo su posición |
+| **Calculado** | Cálculo resuelto; se puede revisar y, salvo una poligonal, cerrar |
+| **Cerrado** | Terminado y conforme. **Inmutable** mientras siga cerrado |
+| **Rechazado** | Terminado pero fuera de tolerancia. **Inmutable** mientras siga cerrado |
 
-**Cierre.** El acto de dar por terminado un proceso. Queda registrado con fecha,
-hora y autor, y **a partir de ese momento las mediciones y el veredicto no se
-pueden modificar**. Es lo que da trazabilidad al trabajo.
+**Cierre.** El acto de dar por terminada una nivelación, una visita o un lugar
+de asentamientos. Queda registrado con fecha, hora y autor, y **a partir de ese
+momento las mediciones y el veredicto no se pueden modificar**. Es lo que da
+trazabilidad al trabajo. **La poligonal no se cierra**: queda calculada, se
+corrige cuando haga falta, y su informe dice qué orden de precisión alcanzó
+(§ 5).
 
 > **Sobre la inmutabilidad**
 > Un proceso cerrado no se puede editar ni eliminar, ni desde la interfaz ni por
 > ninguna otra vía. La restricción está aplicada en la propia base de datos, no
-> solo en la pantalla. Si necesita corregir un levantamiento cerrado, cree uno
-> nuevo. La única excepción es la **posición** de una poligonal: se puede
-> georreferenciar aunque esté cerrada (§ 5.5), porque girarla y trasladarla no
-> cambia nada de lo que el cierre certificó.
+> solo en la pantalla. Para corregirlo, se reabre (§ 8).
 
 ---
 
@@ -88,7 +89,7 @@ La primera vez que entre encontrará un **proyecto de ejemplo** hecho con
 **carteras de campo reales**, ya calculadas, para que pueda ver cómo funciona la
 aplicación sin capturar nada:
 
-- Tres poligonales: la **V10**, amarrada a TT4 y ya cerrada; la de la **Sede
+- Tres poligonales: la **V10**, amarrada a TT4, en tercer orden; la de la **Sede
   Vivero**, ajustada por mínimos cuadrados, y la misma en un sistema local,
   lista para **georreferenciar** con los vértices D1 y D3 del catálogo.
 - Dos nivelaciones: la de **El Verjón**, con ida y vuelta por los mismos puntos
@@ -96,7 +97,7 @@ aplicación sin capturar nada:
   leído del archivo de un nivel digital Leica.
 - **Torre Alameda**, un control de asentamientos simulado con catorce visitas
   y su libreta de nivelación en cada una.
-- Un informe de cierre por módulo.
+- Un informe consolidado por módulo.
 
 Puede modificarlo o archivarlo cuando quiera.
 
@@ -127,10 +128,10 @@ Es la pantalla de inicio tras entrar.
 Arriba, tres indicadores del estado general:
 
 - **Proyectos activos** — cuántos proyectos tiene en curso.
-- **Procesos calculados** — levantamientos resueltos, listos para revisar y cerrar.
-- **Fuera de tolerancia** — procesos calculados que no alcanzan el orden de
-  precisión que ellos mismos declararon, y lugares con algún punto en alerta o
-  alarma en una visita abierta. Requieren revisión antes del cierre.
+- **Procesos calculados** — levantamientos resueltos, listos para revisar.
+- **Fuera de tolerancia** — procesos calculados que no cumplen su tolerancia
+  —una poligonal, si no alcanza ningún orden—, y lugares con algún punto en
+  alerta o alarma en una visita abierta. Requieren revisión.
 
 Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
 Cada tarjeta indica cuántos procesos tiene el proyecto y cuántos están en
@@ -157,11 +158,11 @@ cliente, ubicación y, si quiere, las coordenadas geográficas en grados
 decimales— y el **sistema de referencia**: datum y proyección. El proyecto se
 crea al pulsar **Crear proyecto**.
 
-> **El equipo y el orden de precisión no se piden aquí.** Se declaran en cada
-> proceso: cada poligonal, cada nivelación y cada visita de asentamiento tiene
-> su propia configuración de orden y equipo, con los campos que corresponden a
-> su tipo de instrumento. Un mismo proyecto puede así tener trabajos de
-> distinto orden, medidos con instrumentos distintos y en fechas distintas.
+> **El equipo y el orden de precisión no se piden aquí.** Van en cada
+> proceso: cada nivelación y cada visita de asentamiento declara su orden y su
+> equipo, y cada poligonal su equipo —su orden se detecta al calcularla—. Un
+> mismo proyecto puede así tener trabajos de distinto orden, medidos con
+> instrumentos distintos y en fechas distintas.
 > Vea [§ 5.2](#52-crear-una-poligonal), [§ 6.4](#64-crear-una-nivelación) y
 > [§ 7.3](#73-registrar-una-visita).
 
@@ -176,8 +177,8 @@ tres pestañas:
 **Procesos** — el listado de levantamientos del proyecto. Se detalla en
 [§ 4.3](#43-el-listado-de-procesos).
 
-**Informes** — los informes **consolidados**, que reúnen varios procesos
-cerrados en un solo documento. Se detalla en [§ 10](#10-informes). Cada
+**Informes** — los informes **consolidados**, que reúnen poligonales
+calculadas y procesos cerrados en un solo documento. Se detalla en [§ 10](#10-informes). Cada
 proceso tiene además su propio informe, en su pantalla
 ([§ 4.4](#44-la-pantalla-de-un-proceso)).
 
@@ -208,7 +209,8 @@ acentos: «via» encuentra «Vía terciaria».
 
 **Filtrar por estado.** Los chips muestran cuántos hay en cada grupo, así que
 ve la distribución del proyecto sin desplegar nada. Pulse uno para ver solo
-ese grupo. En control de asentamientos los estados son **Activos** y
+ese grupo. En poligonales los estados son **Borradores** y **Calculados**: la
+poligonal no se cierra. En control de asentamientos, **Activos** y
 **Cerrados**.
 
 **Filtrar por tipo.** El selector acota a un tipo de poligonal, de nivelación
@@ -226,9 +228,9 @@ todo de un clic.
 | Columna | Qué muestra |
 |---|---|
 | Nombre | Nombre y tipo (en asentamientos, el tipo de estructura y cuántas visitas tiene) |
-| Estado | Borrador, Calculado, Cerrado o Rechazado; Activo o Cerrado en un lugar |
+| Estado | Borrador, Calculado, Cerrado o Rechazado; Borrador o Calculado en una poligonal; Activo o Cerrado en un lugar |
 | Resultado | La **precisión** relativa de una poligonal, el **cierre** de una nivelación (o su discrepancia, si es abierta con vuelta) o la **alerta** de un lugar |
-| Cumple | ✓ si alcanza su orden de precisión, ✕ si no, — si no aplica. No aparece en asentamientos |
+| Cumple | ✓ si cumple su tolerancia —una poligonal, si alcanza algún orden—, ✕ si no, — si no aplica. No aparece en asentamientos |
 | Última actividad | Cuándo se modificó por última vez |
 
 La columna **Cumple** es la que evita abrir cada proceso para saber si el
@@ -249,8 +251,9 @@ actividad reciente, así que lo que está trabajando queda arriba.
   un informe consolidado —porque se reabrió después de emitirlo—, la
   confirmación lo avisa: el informe quedará sin esa sección.
 
-> **Lo cerrado solo se puede duplicar.** Un proceso cerrado o rechazado, o un
-> lugar cerrado, no admite renombrarse ni eliminarse. Si necesita rehacer un
+> **Lo cerrado solo se puede duplicar.** Una nivelación cerrada o rechazada, o
+> un lugar cerrado, no admite renombrarse ni eliminarse. Una poligonal siempre
+> admite las tres acciones: no se cierra. Si necesita rehacer un
 > levantamiento cerrado, duplíquelo: obtendrá una copia editable y el original
 > queda intacto como constancia. Para corregir el mismo proceso, reábralo desde
 > su pantalla (§ 8).
@@ -260,8 +263,8 @@ mismas acciones.
 
 ### 4.4 La pantalla de un proceso
 
-Poligonales, nivelaciones y controles de asentamientos se abren en la misma
-pantalla.
+Nivelaciones y controles de asentamientos se abren en la misma pantalla. La
+poligonal tiene la suya, por pasos ([§ 5.3](#53-la-pantalla-por-pasos)).
 
 **La cabecera.** El nombre, el estado y el tipo del proceso, y dos acciones:
 **Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. Si el
@@ -272,20 +275,24 @@ devuelve al listado del que vino.
 cálculo, gráfico y análisis, que se recalculan mientras escribe. **Informe**
 muestra el informe de ese proceso, listo para **Imprimir o guardar como PDF**
 ([§ 10](#10-informes)). El control de asentamientos tiene tres: **Panel**,
-**Puntos y lugar** e **Informe** ([§ 7](#7-control-de-asentamientos)).
+**Puntos y lugar** e **Informe** ([§ 7](#7-control-de-asentamientos)), y la
+poligonal sus tres pasos: **Datos**, **Ajuste** e **Informe**.
 
 ![Informe de un proceso, en su pestaña](../../public/manual/30-informe-del-proceso.png)
 
 Mientras el proceso no esté cerrado, su informe lleva la marca **«Borrador —
 el informe se emite al cerrar el proceso»**, también en el PDF: sirve para
 revisar antes de cerrar. Si se cerró como rechazado, lleva en cambio la marca
-**«Rechazado»**: queda como constancia y no entra en informes consolidados.
-Debajo, fuera de la impresión, aparecen los informes consolidados que ya lo
-incluyen y, si está cerrado conforme, un botón para generar uno nuevo con él.
+**«Rechazado»**: queda como constancia y no entra en informes consolidados. El
+de una poligonal no lleva marca: no se cierra. Debajo, fuera de la impresión,
+aparecen los informes consolidados que ya lo incluyen y, si puede entrar en
+uno —cerrado conforme, o una poligonal calculada—, un botón para generar uno
+nuevo con él.
 
 **La barra de acciones.** Mientras el proceso se puede editar, **Guardar** y
 **Cerrar proceso** van en una barra fija al pie de la pantalla, siempre a la
 vista. A su izquierda dice si hay **cambios sin guardar** o qué impide guardar.
+La poligonal no la tiene: cada popup guarda al confirmar.
 
 > **Salir sin guardar pregunta.** Si tiene cambios sin guardar y pulsa una
 > miga, otra pestaña o cualquier enlace de la aplicación, un diálogo pregunta
@@ -294,9 +301,13 @@ vista. A su izquierda dice si hay **cambios sin guardar** o qué impide guardar.
 
 ---
 
----
-
 ## 5. Poligonales
+
+La poligonal se trabaja como la mide el topógrafo: un alta corta y tres pasos
+en una sola pantalla —**1 · Datos**, **2 · Ajuste** y **3 · Informe**—. **No
+hay botón Guardar**: cada popup guarda al confirmar. Y **la poligonal no se
+cierra**: queda calculada y se corrige cuando haga falta; su informe dice qué
+orden de precisión alcanzó.
 
 ### 5.1 Tipos
 
@@ -317,21 +328,158 @@ explícitamente en vez de mostrar una precisión inexistente.
 
 ![Nueva poligonal](../../public/manual/06-nueva-poligonal.png)
 
-Desde el proyecto, **+ Nuevo Proceso → Poligonal**. Indique el nombre, el tipo,
-el punto de partida (código, Norte, Este y azimut inicial), el **orden de
-precisión** y los datos de la **estación total** con que va a medir: marca,
-modelo, número de serie, fecha de calibración, precisión angular (en segundos,
-ISO 17123-3) y precisión de distancia como término constante en mm más
-término proporcional en ppm (ISO 17123-4).
+Desde el proyecto, **+ Nuevo Proceso → Poligonal** abre un popup:
 
-Si el tipo es *abierta con control*, deberá indicar además el punto de llegada.
+- **Título**, el único obligatorio.
+- **Ubicación**, **Responsable** y **Cargo del responsable**: salen en el
+  informe y en el Excel.
+- **Tipo de poligonal**, con una línea que explica cómo se verifica cada uno.
+- **Equipo**, plegado y opcional: marca, modelo y número de serie de la
+  estación total, o **Tomar del catálogo** (§ 12).
 
-Arriba del formulario elige si tecleará los ángulos en **DMS** o en **grados
-decimales** (ver [§ 5.3](#53-el-editor)).
+**Crear y empezar** lleva al paso de Datos. Lo que no se pide: el **orden de
+precisión** y el **tipo de ángulo** se detectan al calcular (§ 5.4 y § 5.5).
 
-> **El orden de precisión es la decisión más importante del proceso.** Define
-> las tolerancias que se le exigirán al cierre. Al elegirlo, el formulario le
-> muestra la tolerancia angular y la precisión relativa mínima que implica:
+Estos datos se cambian después con **Editar datos**, en la cabecera. Cambiar
+el tipo cuando ya hay mediciones las recalcula con el tipo nuevo, y el popup lo
+avisa.
+
+### 5.3 La pantalla por pasos
+
+La **cabecera** lleva el tipo, el estado y el orden alcanzado; el título, la
+ubicación, el responsable, el equipo y cuándo se guardó por última vez; y las
+acciones **Editar datos**, **Exportar a Excel** (§ 11) y, bajo **⋯**,
+**Duplicar** y **Eliminar**.
+
+Debajo van los tres pasos y, a la derecha, **Ángulos en**: **DMS (° ′ ″)** o
+**Grados decimales**. El formato rige la tabla, el ajuste, el informe y los
+popups, y se recuerda por proceso.
+
+- Cambiar de formato **no altera ningún valor**: la aplicación guarda los
+  ángulos siempre en DMS y el decimal es solo otra forma de verlos, con seis
+  decimales.
+- Los ángulos se guardan a la **décima de segundo**. Si teclea un decimal con
+  más precisión, bajo el campo aparece cómo se guardará —«Se guarda como
+  124°29′42″»—.
+
+### 5.4 Paso 1 · Datos
+
+![Paso de Datos de la cartera TT4](../../public/manual/07-datos-poligonal.png)
+
+Dos columnas: a la izquierda, el amarre, las mediciones y el cierre angular; a
+la derecha, el dibujo, que se queda fijo mientras baja la página.
+
+**Los puntos de amarre.** Una poligonal nueva empieza por ellos: **Ingresar
+puntos de amarre** abre un popup con
+
+- la **estación de partida**: nombre, Norte y Este, o **Tomar del catálogo**;
+- la **referencia, 0° atrás**, de tres maneras: **Punto con coordenadas** —el
+  azimut de partida se calcula solo y el popup lo muestra—, **Solo el azimut**
+  —si no tiene sus coordenadas: el nombre y el azimut de la partida a la
+  referencia— o **Sin 0 atrás**, con el azimut del primer lado;
+- en la abierta con control, la **llegada**: el punto conocido, con su Norte y
+  su Este, y el azimut de llegada si lo tiene. Con él se comprueba también el
+  cierre angular.
+
+Los puntos con coordenadas se guardan en el catálogo del proyecto. Si el
+nombre ya existe con otras coordenadas, el popup lo dice: tómelo del catálogo
+o use otro nombre, porque ese punto puede estar en uso en otra poligonal. Sin
+0 atrás, la partida no va al catálogo: puede ser local.
+
+Con mediciones, el amarre se edita pero **no se pone ni se quita el 0 atrás**:
+cambiaría lo que significa el primer ángulo —de orientación a vértice, o al
+revés—. El popup pide deshacer las mediciones antes.
+
+Si levanta en un sistema local, **Medir sin amarre, en coordenadas locales**
+arranca en P1 (1000, 1000) con azimut 0°. Cuando tenga las coordenadas
+reales, edite el amarre o georreferencie (§ 5.6).
+
+**Las mediciones.** La tabla se lee como la cartera: cada fila va **desde →
+hacia** —«V10 → D1»—, con el ángulo medido en el punto de partida, la
+distancia y el **azimut sin ajustar**, encadenado con los ángulos tal como se
+midieron. La primera fila es el **0 atrás**; el lado que vuelve a la partida
+lleva la marca **cierre**, y la fila del cierre angular, **cierre angular**.
+
+**+ Agregar punto** abre el popup de medición:
+
+- arriba, dónde está: «Estás en D1 · atrás en V10»;
+- el **punto siguiente**;
+- las **lecturas del ángulo**: una o varias, con **+ Lectura**. Con dos o
+  más, el popup muestra el promedio y la dispersión entre ellas; el promedio es
+  el ángulo que entra en el cálculo. La dispersión es un dato: la aplicación
+  no la juzga;
+- en la abierta con control, el **sentido** de la deflexión: derecha o
+  izquierda;
+- la **distancia horizontal** hasta el punto siguiente.
+
+**Agregar y seguir en D2** guarda y deja el popup listo para la medición
+siguiente; **Terminar** guarda y lo cierra. Sin 0 atrás, la primera medición
+no lleva ángulo.
+
+Desde la segunda medición de una cerrada aparece la casilla **Cierre: este
+lado vuelve a V10**, que fija como siguiente la estación de partida. Al
+agregar el cierre, el popup sigue con el **cierre angular**:
+
+- amarrada, en la estación de partida: hacia la referencia —la cartera cierra
+  contra el amarre, como la TT4— o, si desmarca la casilla, hacia el primer
+  lado —el ángulo del vértice de arranque, como la cartera de la Sede Vivero—;
+- sin amarre, el ángulo en P1, entre el último punto y P2: se mide al final,
+  porque al empezar no había punto atrás.
+
+En la abierta con control la casilla es **Llegada: este lado llega a …**, y
+con azimut de llegada el cierre angular es la deflexión en el punto de
+llegada. Mientras falte el cierre angular, **Medir el cierre angular** ocupa el
+lugar de **+ Agregar punto**.
+
+El lápiz de cada fila abre el mismo popup para **editarla** —el ángulo, la
+distancia o el nombre del punto siguiente— o **eliminarla**. Eliminar una
+medición intermedia quita esa estación: el punto siguiente pasa a medirse desde
+el anterior, y el popup lo avisa. **Deshacer la última medición** retrocede
+de a una: primero el cierre angular, después el cierre y luego cada lado.
+
+Los errores se detectan al confirmar y se quedan en el popup, sin perder lo
+tecleado: un ángulo sin lecturas, minutos o segundos fuera de 0-59, segundos
+con más de una cifra decimal, una distancia de cero, mayor a 1000 m o con más
+de cuatro decimales, un punto sin nombre o repetido.
+
+**El cierre angular**, debajo de la tabla, resume la cerrada: vértices,
+**tipo de ángulo** con la marca *detectado*, ángulos en la condición, suma
+observada y teórica, error angular y la corrección que le toca a cada ángulo.
+En la abierta con control, el error contra el azimut de llegada.
+
+> **El tipo de ángulo se detecta.** Interiores y exteriores solo cambian la
+> suma teórica —(n − 2)·180° frente a (n + 2)·180°— y difieren en 720°: la
+> suma observada dice sin ambigüedad cuál midió.
+
+**El dibujo** muestra lo medido, sin ajustar, y crece con cada medición. En una
+cerrada, el último lado no llega exactamente a la partida: ese hueco es el
+error de cierre, a escala real. En el teléfono, un selector **Tabla | Dibujo**
+alterna entre las dos columnas (§ 9).
+
+### 5.5 Paso 2 · Ajuste
+
+![Paso de Ajuste de la cartera TT4](../../public/manual/09-ajuste-poligonal.png)
+
+**El método.** Arriba, el selector. Cambiarlo recalcula y guarda al instante.
+
+| Método | Cómo reparte el error |
+|---|---|
+| **Brújula (Bowditch)** | Proporcional a la longitud de cada lado. El más usado |
+| **Tránsito** | Proporcional a las proyecciones. Útil si las distancias son menos fiables que los ángulos |
+| **Crandall** | Mínimos cuadrados sobre las distancias, conservando los ángulos ajustados |
+| **Mínimos cuadrados** | Ajusta a la vez ángulos y distancias según el peso que usted les da. Solo en cerrada y abierta con control |
+
+Una abierta sin control no tiene nada que ajustar: el paso muestra sus
+coordenadas encadenadas, sin selector.
+
+**El orden alcanzado.** Cuatro cifras: error angular, error de cierre lineal,
+precisión relativa y **orden alcanzado**, el más alto que cumple a la vez la
+tolerancia angular y la precisión relativa mínima de su orden.
+
+![Orden alcanzado, con su «Por qué»](../../public/manual/08-orden-alcanzado.png)
+
+**Por qué** despliega cada orden con su tolerancia y su precisión mínima, y si
+la poligonal las cumple:
 
 | Orden | Tolerancia angular | Precisión relativa mínima | Uso típico |
 |---|---|---|---|
@@ -340,100 +488,31 @@ decimales** (ver [§ 5.3](#53-el-editor)).
 | Tercer orden | 15″·√n | 1:5.000 | Levantamiento topográfico común |
 | Ordinario | 30″·√n | 1:3.000 | Levantamiento rural o reconocimiento |
 
-Donde *n* es el número de ángulos medidos.
+Donde *n* es el número de ángulos que entran en la condición: los vértices de
+una cerrada —más el de cierre si cierra contra el amarre— o las deflexiones de
+una abierta con control. En la cartera TT4, el error de 12″ cabe en segundo
+orden (13.2″), pero 1:7.045 solo alcanza el tercero (1:5.000): **tercer
+orden**. Si no alcanza ni el ordinario, la cifra dice **No alcanza ningún
+orden** y el informe lo alerta.
 
-> **El cierre juzga el trabajo, no el equipo.** La marca, el modelo y la
-> precisión del equipo se registran para el informe; la aplicación no opina
-> si el equipo alcanza el orden. Lo que dice si la medición cumple es el
-> veredicto de cierre.
+> **El orden no se declara: se detecta.** Es el mismo con cualquier método,
+> porque se juzga con el error de la cartera tal como se midió, antes de
+> corregir.
 
-### 5.3 El editor
+**La poligonal ajustada.** La tabla al estilo de la hoja de cálculo: cada lado
+«desde → hacia» con el ángulo corregido, el azimut, la distancia, las
+proyecciones, las proyecciones corregidas y las coordenadas del punto al que
+llega. La fila **Σ** suma las proyecciones: en las crudas, el error de cierre;
+en las corregidas, cero. En el teléfono, la tabla se desplaza de lado.
 
-![Editor de poligonal](../../public/manual/07-editor-no-cumple.png)
+**Corrección por método …** resume cómo corrigió el método elegido: el reparto
+del error angular —en la TT4, −1.71″ en cada uno de los 7 ángulos, incluido el
+de orientación— y sus cifras propias:
 
-La pestaña **Proceso** ([§ 4.4](#44-la-pantalla-de-un-proceso)) se lee de
-arriba abajo:
-
-**El veredicto.** Lo primero y más visible: si el levantamiento cumple o no el
-orden de precisión exigido.
-
-![Veredicto de cierre](../../public/manual/08-veredicto.png)
-
-Muestra la precisión alcanzada junto a la requerida, el error de cierre y el
-perímetro. El color lo resume, y el texto lo dice: verde cumple, rojo no
-cumple.
-
-**Ángulos en DMS o en grados decimales.** Bajo el veredicto, el conmutador
-**Ángulos en** elige cómo teclea los ángulos: en tres casillas (grados, minutos,
-segundos) o en un solo campo de grados decimales. Afecta a las lecturas de las
-estaciones, a los azimuts de partida y de llegada y al diálogo de reasignación.
-
-- Cambiar de formato **no altera ningún valor**: la aplicación guarda los
-  ángulos siempre en DMS y el decimal es solo otra forma de verlos, con seis
-  decimales.
-- Los ángulos se guardan a la **décima de segundo**. Si teclea un decimal con
-  más precisión, bajo el campo aparece cómo se guardará —«Se guarda como
-  124°29′42″»—.
-- El formato se recuerda por proceso: al volver a abrirlo, aparece como lo
-  dejó. En un proceso cerrado el conmutador solo cambia la vista.
-- Resultados, informe y Excel muestran siempre DMS.
-
-**Configuración.** Plegada cuando el proceso ya está calculado. Ábrala para
-cambiar el nombre, el tipo, el punto de partida, el orden de precisión o los
-datos de la estación total — los mismos campos del alta, editables mientras el
-proceso siga abierto.
-
-Ahí elige también el **tipo de ángulo** y el **punto de amarre**. TopoField no
-preselecciona el tipo de ángulo a propósito: si recorre el polígono en un
-sentido sus lecturas caen como interiores y en el otro como exteriores, y elegir
-por usted produciría un levantamiento espejado sin ningún aviso.
-
-El punto de amarre sale del catálogo de puntos del proyecto —solo aparecen los
-que tienen coordenadas—, y con él **el azimut se calcula solo** desde las
-coordenadas del arranque y las de la referencia. Si su cartera cierra visando de
-vuelta al amarre, marque la casilla correspondiente: la última fila será ese
-ángulo de cierre y no llevará distancia.
-
-Una poligonal **abierta** también puede amarrarse. Su primera fila lleva
-entonces el **ángulo de orientación**, medido a la derecha desde el amarre
-hasta la siguiente estación, y la tabla lo rotula así: el primer lado sale del
-azimut al amarre más ese ángulo.
-
-**Estaciones.** La tabla de captura. Por cada estación registra el código, el
-ángulo y la distancia horizontal. A la derecha, la aplicación calcula en vivo el
-azimut, ΔN y ΔE.
-
-El ángulo se captura con **varias lecturas**. La celda muestra el promedio, la
-dispersión entre lecturas y cuántas lleva de las exigidas —por ejemplo
-`211°15'7″ · ±3.0″ · 3/3`—; al pulsarla se despliegan las lecturas individuales
-y un botón para añadir más. El proceso exige un mínimo configurable, 3 por
-defecto, y el promedio es el que alimenta el cálculo.
-
-La dispersión es un dato, sin aviso: la aplicación no la juzga. Si las
-lecturas de un ángulo difieren mucho, conviene revisarlas antes de cerrar.
-
-Los errores de captura se marcan al momento: una distancia de cero o mayor a
-1000 m, minutos o segundos fuera del rango 0-59 —en cada lectura, no solo en
-el promedio—, segundos con más de una cifra decimal o distancias con más de
-cuatro: la aplicación guarda los segundos a la décima y las distancias a la
-diezmilésima. Un ángulo de 0° o 360° genera
-una advertencia, no un bloqueo: es válido, pero suele indicar un error de
-tecleo.
-
-**Resultados.** El detalle completo: verificación angular (suma medida contra
-suma teórica, error y tolerancia), cierre lineal (error, perímetro, precisión
-relativa) y la tabla de coordenadas corregidas.
-
-Aquí elige el **método de corrección**:
-
-| Método | Cómo reparte el error |
-|---|---|
-| **Bowditch** (brújula) | Proporcional a la longitud de cada lado. El más usado |
-| **Tránsito** | Proporcional a las proyecciones. Útil si las distancias son menos fiables que los ángulos |
-| **Crandall** | Mínimos cuadrados sobre las distancias, conservando los ángulos ajustados |
-| **Mínimos cuadrados** | Ajusta a la vez ángulos y distancias según el peso que usted les da. Solo en cerrada y abierta con control |
-
-Cambiar el método recalcula las coordenadas al instante.
+- Brújula: las diferencias ΔN y ΔE, el perímetro y el factor −e/P de cada eje;
+- Tránsito: la suma de proyecciones absolutas y la corrección unitaria de cada
+  eje;
+- Crandall: los multiplicadores λ₁ y λ₂ del ajuste de las distancias.
 
 **Mínimos cuadrados.** Los otros tres métodos reparten el error con una regla
 fija; este busca las correcciones más pequeñas —pesadas por la precisión de
@@ -447,19 +526,19 @@ campos:
 
 Todas las observaciones pesan igual. Los campos **salen vacíos**: la
 aplicación no supone pesos por usted. La hoja de la universidad usa, por
-ejemplo, 2″, 0.011 m y 2 mediciones. Mientras falte alguno verá «Faltan los
-pesos del ajuste», sin coordenadas, y no podrá guardar.
+ejemplo, 2″, 0.011 m y 2 mediciones. Se guardan al salir del campo, cuando
+están los tres; mientras tanto el ajuste dice que faltan. Si cambia de método,
+los pesos se conservan para cuando vuelva.
 
-![Resultados de la cartera Vivero con mínimos cuadrados](../../public/manual/21-minimos-cuadrados.png)
+![Corrección por mínimos cuadrados de la cartera Vivero](../../public/manual/21-minimos-cuadrados.png)
 
-Con los pesos completos, **Resultados** suma una tabla con la **corrección de
-cada ángulo**, en segundos, y de **cada distancia**, en milímetros, junto a la
-distancia ajustada. El ángulo de orientación no se ajusta: es el dato de
-partida. Debajo aparece **σ₀**, que compara lo medido con los pesos que
-supuso. Con pesos correctos ronda 1, pero con tan pocas condiciones fluctúa
-mucho; por eso se juzga con la **prueba χ² al 95 %** de su número de
-condiciones, r (3, o 2 sin azimut de llegada), que la pantalla muestra con su
-intervalo:
+Con los pesos completos aparece la **corrección de cada ángulo**, en segundos,
+y de **cada distancia**, en milímetros, junto a la distancia ajustada. El
+ángulo de orientación no se ajusta: es el **datum**, porque un error suyo rota
+la poligonal entera sin afectar al cierre. Debajo aparece **σ₀**, que compara
+lo medido con los pesos que supuso. Con pesos correctos ronda 1, pero con tan
+pocas condiciones fluctúa mucho; por eso se juzga con la **prueba χ² al 95 %**
+de su número de condiciones, r (3, o 2 sin azimut de llegada):
 
 - **Dentro del intervalo** (de 0.268 a 1.765 con r = 3; de 0.159 a 1.921 con
   r = 2): los pesos describen bien sus observaciones.
@@ -469,15 +548,11 @@ intervalo:
 
 Si los pesos están pero no hay ajuste posible, un aviso dice por qué: con un
 solo lado, por ejemplo, las condiciones de llegada dependen de una sola
-distancia y no hay nada que ajustar.
+distancia y no hay nada que ajustar. σ₀ es información, no un criterio: el
+orden alcanzado no depende del método.
 
-σ₀ es información, no un criterio. El **veredicto de cierre es el mismo** con
-cualquier método: se juzga con el error de la cartera tal como se midió, antes
-de corregir.
-
-**Dibujo de la poligonal.** La poligonal a escala sobre una grilla de
-coordenadas, con flecha de norte, barra de escala y el amarre si lo tiene. Se
-actualiza en vivo mientras captura.
+**El dibujo ajustado.** La poligonal a escala sobre una grilla de
+coordenadas, con flecha de norte, barra de escala y el amarre si lo tiene.
 
 ![Dibujo de la poligonal V10, cartera TT4](../../public/manual/20-dibujo-poligonal.png)
 
@@ -497,37 +572,16 @@ actualiza en vivo mientras captura.
 Con **Acercar**, **Alejar** y **Restablecer**, y con las **flechas** o
 arrastrando el dibujo, puede acercarse a un vértice; todos los controles
 funcionan con el teclado. Si el amarre está lejos, queda fuera del encuadre y
-solo se ve su línea de orientación: la leyenda lo indica. La rueda del ratón no hace zoom, para no interferir con
-el desplazamiento de la página. El factor de exageración no cambia al
-acercarse.
+solo se ve su línea de orientación: la leyenda lo indica. La rueda del ratón
+no hace zoom, para no interferir con el desplazamiento de la página. El factor
+de exageración no cambia al acercarse.
 
-### 5.4 Reasignar coordenadas
-
-El botón **Asignar coordenadas reales**, junto al dibujo, permite recalcular toda la poligonal
-desde un punto de partida distinto, conservando las mediciones. Es útil cuando
-levantó en un sistema local —1000, 1000— y después obtuvo las coordenadas
-oficiales.
-
-Si el proceso está amarrado, el diálogo pide también las coordenadas reales del
-punto de amarre y **recalcula el azimut** a partir de las dos: no hay que
-teclearlo.
-
-Lo que no cambia al reasignar: el error angular, el error de cierre y la
-precisión relativa. Girar y trasladar la poligonal no altera nada de lo que el
-cierre certifica; solo se mueven las coordenadas.
-
-Este diálogo es para un proceso **sin cerrar** y parte del punto de arranque.
-Si lo que tiene son las coordenadas reales de **dos estaciones** —medidas con
-GPS, por ejemplo—, o el proceso ya está cerrado, use **Georreferenciar**. Cada
-uno de los dos diálogos lo recuerda.
-
-### 5.5 Georreferenciar
+### 5.6 Georreferenciar
 
 Un levantamiento suele arrancar en un sistema local —(1000, 2000) y un azimut
-supuesto— y recibir coordenadas reales después, a veces con el proceso ya
-cerrado. El botón **Georreferenciar**, junto al dibujo, lo lleva al sistema
-real con **dos de sus estaciones** de coordenadas conocidas. Está
-disponible en cualquier estado, también cerrado o rechazado.
+supuesto— y recibir coordenadas reales después. El botón **Georreferenciar**,
+junto al dibujo del paso de Ajuste, lo lleva al sistema real con **dos de sus
+estaciones** de coordenadas conocidas.
 
 ![Georreferenciar la cartera Vivero en sistema local con D1 y D3](../../public/manual/22-georreferenciar.png)
 
@@ -538,27 +592,50 @@ disponible en cualquier estado, también cerrado o rechazado.
    poligonal.
 3. Revise la vista previa: **rotación**, **traslación**, **factor de escala**,
    **residuos** en A y B, y las coordenadas actuales frente a las reales.
-4. Confirme. En un proceso cerrado el botón dice **Reescribir coordenadas**.
+4. Confirme.
 
 La poligonal se **gira y se traslada**, sin escala: las distancias y los
-ángulos medidos no cambian, y el **veredicto de cierre tampoco**. Se recalcula
+ángulos medidos no cambian, y el **orden alcanzado tampoco**. Se recalcula
 con el nuevo arranque, así que coordenadas, azimuts y proyecciones quedan en el
 sistema real. Sobre el dibujo queda anotada la última georreferenciación:
 fecha, puntos, rotación y factor de escala. Puede georreferenciar otra vez para
 corregir una coordenada mal tecleada.
 
+Si lo que tiene son las coordenadas reales del **punto de partida y de la
+referencia**, no hace falta georreferenciar: edite el amarre (§ 5.4) y la
+poligonal se recalcula desde ellos.
+
 El diálogo avisa, sin impedirlo, en tres casos:
 
-- **El factor de escala se aparta de 1** más de lo que admite el orden de
-  precisión: la distancia real entre A y B no concuerda con la medida. Revise
+- **El factor de escala se aparta de 1** más de lo que admite el orden
+  alcanzado: la distancia real entre A y B no concuerda con la medida. Revise
   las coordenadas. Si están en una proyección con factor de escala distinto de
   1 (p. ej. CTM12), la diferencia puede ser de la proyección y no un error.
 - **El método es Tránsito.** Tránsito reparte el error según la orientación,
   así que sus coordenadas cambian unos milímetros más allá del giro. El
-  veredicto no cambia.
+  orden alcanzado no cambia.
 - **El amarre es del catálogo.** Sus coordenadas siguen en el sistema
   anterior, así que pasa a amarre manual con el mismo código, y el dibujo deja
   de mostrarlo.
+
+### 5.7 Paso 3 · Informe
+
+El informe de la poligonal, listo para **Imprimir o guardar como PDF** (§ 10).
+Es la misma sección que lleva en un informe consolidado:
+
+1. **Resultado**: las cuatro cifras y por qué alcanza su orden. Si no alcanza
+   ninguno, una alerta lo dice: «No alcanza la precisión de ningún orden».
+2. **Datos de campo**: el amarre, las mediciones «desde → hacia» y el cierre
+   angular, con su tolerancia.
+3. **Corrección por método …**: cómo corrigió el método elegido, paso a paso,
+   con sus fórmulas en notación matemática y las cifras de esta poligonal.
+4. **Poligonal ajustada**, con la fila Σ.
+5. **Coordenadas** y el dibujo.
+
+![La corrección por método Brújula, en el informe](../../public/manual/10-correccion-informe.png)
+
+No lleva marca de borrador: la poligonal no se cierra, y el informe muestra lo
+que tenga al abrirlo. Los ángulos salen en el formato elegido.
 
 ---
 
@@ -639,7 +716,7 @@ Si el tipo es *de enlace*, deberá indicar además el BM de llegada. Marque
 
 ![Editor de nivelación](../../public/manual/12-editor-nivelacion.png)
 
-**El veredicto.** Arriba, como en la poligonal: el error de cierre frente a su
+**El veredicto.** Arriba: el error de cierre frente a su
 tolerancia en una nivelación cerrada o de enlace, o la discrepancia entre ida
 y vuelta en una abierta con vuelta. Una abierta sin vuelta no cierra contra
 nada y lo dice.
@@ -837,8 +914,7 @@ Guardar**; al crear, el proceso nace con sus lecturas.
 
 ### 6.8 Cierre
 
-Igual que en poligonales, cerrar una nivelación la deja en solo lectura hasta
-que se reabra (§ 8). Un trabajo que no alcanza la tolerancia —en una cerrada o de enlace
+Cerrar una nivelación la deja en solo lectura hasta que se reabra (§ 8). Un trabajo que no alcanza la tolerancia —en una cerrada o de enlace
 con vuelta, la de cualquiera de los dos recorridos; en una abierta con vuelta,
 la de su discrepancia— solo puede cerrarse como **rechazado**; no hay forma
 de cerrarlo como conforme si no cumple.
@@ -1272,36 +1348,28 @@ se exige en las visitas desde esa fecha y no en las anteriores.
 
 ## 8. Cerrar un proceso
 
-Cerrar deja el proceso en solo lectura. Antes de permitirlo, la aplicación
-comprueba el trabajo y decide entre tres desenlaces:
+Se cierran las **nivelaciones** (§ 6.8) y, en control de asentamientos, las
+**visitas** y el **lugar** (§ 7.6). **La poligonal no se cierra**: queda
+calculada y se corrige cuando haga falta; su informe dice qué orden alcanzó y
+alerta si no alcanza ninguno (§ 5.7).
+
+Cerrar deja el trabajo en solo lectura. Antes de permitirlo, la aplicación
+comprueba la nivelación y decide entre tres desenlaces:
 
 | Situación | Qué ocurre |
 |---|---|
-| Cumple las tolerancias | Se cierra como **Cerrado** |
-| El error angular supera la tolerancia | **No se puede cerrar.** Corrija las mediciones |
-| Cumple en ángulos pero la precisión relativa no alcanza | Solo se puede cerrar como **Rechazado** |
-| Hay errores de captura pendientes | **No se puede cerrar.** Corrija las celdas marcadas |
+| Cumple la tolerancia | Se cierra como **Cerrado** |
+| No alcanza la tolerancia | Solo se puede cerrar como **Rechazado** |
+| La comprobación aritmética no cuadra, o hay errores de captura | **No se puede cerrar.** Corrija la libreta |
 
-La distinción importa: un error angular indica un fallo en la medición de
-ángulos, que invalida el levantamiento. Una precisión relativa insuficiente
-significa que el trabajo se hizo, pero no alcanza la calidad exigida — se
-documenta como rechazado y queda constancia.
+Un trabajo rechazado se hizo, pero no alcanza la calidad exigida: queda
+documentado como tal y no entra en informes consolidados.
 
-El diálogo de cierre resume el tipo, el perímetro, el error de cierre, la
-precisión y la fecha. Debe marcar la confirmación explícitamente.
-
-**Proceso cerrado:**
-
-![Proceso cerrado](../../public/manual/09-proceso-cerrado.png)
-
-**Proceso rechazado:**
-
-![Proceso rechazado](../../public/manual/10-proceso-rechazado.png)
-
-En ambos casos el editor se abre en solo lectura: los campos están
-deshabilitados y no hay barra de acciones. Siguen disponibles
-**Georreferenciar** (§ 5.5) y **Reabrir** (abajo). Su pestaña **Informe** ya no lleva la marca de
-borrador: es el informe del proceso cerrado.
+El diálogo de cierre resume el resultado y la fecha. Debe marcar la
+confirmación explícitamente. Cerrado, el proceso se abre en solo lectura: los
+campos están deshabilitados y no hay barra de acciones. Su pestaña
+**Informe** ya no lleva la marca de borrador: es el informe del proceso
+cerrado.
 
 **Reabrir.** Un proceso cerrado o rechazado se reabre con **Reabrir**, en la
 cabecera. Vuelve a *Calculado*: se edita, se guarda y se cierra otra vez con
@@ -1316,12 +1384,13 @@ consolidado, el diálogo lo avisa: el informe mostrará los datos nuevos
 
 La aplicación está pensada para usarse también desde el teléfono, en sitio.
 
-![Editor en móvil](../../public/manual/17-editor-movil.png)
+![Datos de una poligonal en el teléfono](../../public/manual/17-datos-movil.png)
 
-En pantallas pequeñas, la tabla de estaciones se convierte en **tarjetas**: una
-por estación, con sus campos apilados y el azimut, ΔN y ΔE visibles sin
-desplazamiento lateral. Los campos de grados, minutos y segundos son lo bastante
-amplios para usarse con guantes.
+En el teléfono, el paso de Datos de una poligonal apila sus columnas y un
+selector **Tabla | Dibujo** alterna entre las mediciones y el dibujo. La tabla
+lleva el azimut bajo cada punto, sin desplazamiento lateral, y cada medición
+se captura en su popup, que ocupa el ancho de la pantalla. Los campos de
+grados, minutos y segundos son lo bastante amplios para usarse con guantes.
 
 La navegación se reduce a un retorno al nivel anterior, en lugar de la ruta
 completa.
@@ -1346,31 +1415,32 @@ Hay dos clases de informe:
 
 - **El informe de un proceso** está en su pestaña **Informe**
   ([§ 4.4](#44-la-pantalla-de-un-proceso)): no hay que generarlo. Mientras el
-  proceso no esté cerrado sale como borrador.
+  proceso no esté cerrado sale como borrador; el de una poligonal, que no se
+  cierra, sin marca.
 - **Un informe consolidado** reúne varios trabajos ya terminados de un
   proyecto en un solo documento imprimible, con título, orden y observaciones
   propios. Se genera en la pestaña **Informes** del proyecto.
 
 Los dos llevan el registro de quién cerró cada cosa y cuándo, con el nombre
-de la persona.
+de la persona. Las poligonales no tienen fila en él: no se cierran.
 
 ### 10.1 Qué puede incluirse
 
-**Solo procesos cerrados**, en un informe consolidado. Es la regla principal y
-tiene una razón práctica:
-el informe no guarda una copia de las mediciones: las vuelve a leer cada vez
-que se abre. Solo guarda su título, sus observaciones, la lista de procesos y
-la portada del día en que se emitió (§ 10.3). Como un proceso cerrado no
-puede cambiar sus mediciones ni su veredicto mientras siga cerrado, el informe
-dice lo mismo hoy y dentro de un año. Hay dos excepciones:
+**Poligonales calculadas y procesos cerrados**, en un informe consolidado. El
+informe no guarda una copia de las mediciones: las vuelve a leer cada vez que
+se abre. Solo guarda su título, sus observaciones, la lista de procesos y la
+portada del día en que se emitió (§ 10.3).
 
-- La **posición**: si georreferencia una poligonal después de emitir el
-  informe, el informe muestra las coordenadas nuevas, con una nota de cuándo y
-  con qué puntos se georreferenció.
-- **Reabrir** (§ 8): si reabre un proceso que el informe incluye, el informe
-  muestra sus datos actuales y, mientras siga abierto, «—» en su registro de
-  cierre, y el pie dice que se reabrió después de emitirlo. Un PDF ya
-  descargado no cambia.
+- Una nivelación o un lugar **cerrados** no pueden cambiar sus mediciones ni
+  su veredicto mientras sigan cerrados, así que su sección dice lo mismo hoy y
+  dentro de un año. Si se reabre (§ 8), el informe muestra sus datos actuales
+  y, mientras siga abierto, «—» en su registro de cierre, y el pie dice que se
+  reabrió después de emitirlo.
+- Una **poligonal** no se cierra: entra calculada, cumpla o no un orden, y su
+  sección muestra lo que tenga al abrir el informe. Si no alcanza ningún
+  orden, la sección lo alerta.
+
+Un PDF ya descargado no cambia.
 
 De ahí se siguen dos consecuencias:
 
@@ -1380,14 +1450,15 @@ De ahí se siguen dos consecuencias:
   una visita suelta. Un lugar todavía activo admite visitas nuevas, así que su
   informe cambiaría solo.
 
-Si el proyecto no tiene nada cerrado, la pantalla se lo dice en vez de ofrecer
-un formulario que no llevaría a ninguna parte.
+Si el proyecto no tiene nada que incluir, la pantalla se lo dice en vez de
+ofrecer un formulario que no llevaría a ninguna parte.
 
 ### 10.2 Generar un informe consolidado
 
 En la pestaña **Informes** del proyecto, pulse **Generar Nuevo Informe**. Desde
-la pestaña **Informe** de un proceso cerrado, **Generar un informe consolidado
-con este proceso** abre el mismo formulario con ese proceso ya marcado.
+la pestaña **Informe** de un proceso cerrado o de una poligonal calculada,
+**Generar un informe consolidado con este proceso** abre el mismo formulario
+con ese proceso ya marcado.
 
 ![Nuevo informe](../../public/manual/18-nuevo-informe.png)
 
@@ -1396,7 +1467,7 @@ Se pide:
 | Campo | Para qué |
 |---|---|
 | Título | Encabeza la portada del documento |
-| Procesos a incluir | Marque los que quiera; solo aparecen los cerrados |
+| Procesos a incluir | Marque los que quiera; aparecen las poligonales calculadas y los procesos cerrados |
 | Orden de las secciones | Con las flechas ↑ ↓ ordena cómo saldrán |
 | Observaciones | Texto libre que se imprime al final |
 
@@ -1414,10 +1485,10 @@ emitido no se edita: para corregirlo, elimínelo y genérelo de nuevo.
 El documento lleva portada con los datos del proyecto **al emitirlo** —si
 después cambian el nombre o el cliente del proyecto, la portada no—, índice,
 una sección
-por proceso con sus resultados **y su equipo** —en las poligonales, con su
-dibujo—, el resumen consolidado de
-precisiones —con una columna de equipo—, sus observaciones y el registro de
-cierre. El equipo ya no es un dato del proyecto: cada sección imprime el que
+por proceso con sus resultados **y su equipo** —en las poligonales, con la
+corrección por método y su dibujo (§ 5.7)—, el resumen consolidado de
+precisiones —con una columna de equipo y, en las poligonales, el orden
+alcanzado—, sus observaciones y el registro de cierre. El equipo ya no es un dato del proyecto: cada sección imprime el que
 declaró su propio proceso (en asentamientos, el de la visita más reciente).
 
 > El PDF lo genera su navegador, no la aplicación. Los márgenes y los
@@ -1434,7 +1505,7 @@ Cada proceso tiene un botón **Exportar a Excel** en la cabecera de su pantalla
 |---|---|
 | Datos Crudos | Las lecturas de campo tal como se capturaron, sin modificar |
 | Cálculos | Lo que la aplicación derivó: cotas, coordenadas, correcciones |
-| Resumen | Equipo, método, precisión, tolerancia, estado y trazabilidad |
+| Resumen | Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados |
 
 Con **mínimos cuadrados**, «Cálculos» añade la corrección de cada ángulo y la
 distancia ajustada, y «Resumen» los pesos y σ₀. El informe imprimible también
@@ -1465,7 +1536,7 @@ serie, fecha de calibración y precisión: angular y de distancia en una
 estación total; tipo y desviación típica en un nivel. Cada sección tiene
 **Agregar**, y cada equipo **Editar** y **Eliminar**.
 
-En el formulario de equipo de cada poligonal, nivelación y visita:
+En el formulario de equipo de cada nivelación y visita:
 
 - **Tomar del catálogo** copia los datos del equipo elegido en los campos, que
   siguen editables.
@@ -1473,13 +1544,16 @@ En el formulario de equipo de cada poligonal, nivelación y visita:
   —misma marca, modelo y serie— ya está, el botón dice «Ya está en el
   catálogo».
 
+En una poligonal, el equipo es solo su identidad —marca, modelo y número de
+serie—, y **Tomar del catálogo** la copia.
+
 > **El catálogo es una plantilla.** Cada proceso guarda su propia copia del
 > equipo: corregir o eliminar un equipo del catálogo no cambia ningún
 > proceso, visita ni informe ya hecho.
 
 **Calibración de más de un año.** La lista y el formulario avisan cuando la
 fecha de calibración tiene más de 12 meses: a la fecha de la visita en
-asentamientos, a hoy en poligonal y nivelación. Es un aviso; el proceso se
+asentamientos, a hoy en nivelación. Es un aviso; el proceso se
 guarda igual.
 
 ---
@@ -1495,10 +1569,11 @@ configuración del teléfono o del computador.
 Sí: con **Reabrir**, en la cabecera del proceso (§ 8). Vuelve a ser editable
 y se cierra otra vez cuando esté listo.
 
-**¿Por qué mi poligonal no me deja cerrar?**
-Revise el veredicto en la parte superior del editor. Si el error angular supera
-la tolerancia, hay un problema en la medición de ángulos que debe corregir. Si
-solo falla la precisión relativa, podrá cerrarla como rechazada.
+**¿Cómo cierro una poligonal?**
+No se cierra: queda calculada y se corrige cuando haga falta. El paso de
+Ajuste y su informe dicen qué orden de precisión alcanzó (§ 5.5); si no
+alcanza ninguno, el informe lo alerta. Un informe consolidado la incluye
+calculada.
 
 **¿Por qué una poligonal muestra «Sin verificación de cierre»?**
 Es de tipo *abierta sin control*: no regresa al punto de partida ni llega a un
@@ -1510,26 +1585,28 @@ Que el cierre fue exacto: el error lineal es cero o despreciable. Ocurre con
 datos teóricos o levantamientos muy precisos.
 
 **¿Dónde declaro el equipo y el orden de precisión que usé?**
-En cada proceso, no en el proyecto: cada poligonal, cada nivelación y cada
-visita de asentamiento declara los suyos, en su propia configuración. Un mismo
-proyecto puede así tener una poligonal de tercer orden medida con una estación
-total y, meses después, una red de control de primer orden medida con otra —
-cada una con el instrumento con que realmente se trabajó. Si es el de siempre,
-tómelo del catálogo de equipos (§ 12).
+En cada proceso, no en el proyecto. Cada nivelación y cada visita de
+asentamiento declara su orden y su equipo en su propia configuración. Una
+poligonal declara su equipo en el alta, y su orden no se declara: se detecta
+al calcularla (§ 5.5). Si el equipo es el de siempre, tómelo del catálogo de
+equipos (§ 12).
 
-**Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?**
-Sí, al recalcularlo. Uno cerrado conserva su veredicto original, porque es
+**Cambié el orden de precisión de una nivelación abierta. ¿Se recalcula?**
+Sí, al recalcularla. Una cerrada conserva su veredicto original, porque es
 inmutable.
 
-**Levanté en un sistema local y cerré el proceso. ¿Puedo pasarlo a
-coordenadas reales?**
-Sí: **Georreferenciar** (§ 5.5), con dos estaciones de coordenadas conocidas.
-Funciona también sobre un proceso cerrado, y no cambia su veredicto.
+**Levanté una poligonal en un sistema local. ¿Puedo pasarla a coordenadas
+reales?**
+Sí: **Georreferenciar** (§ 5.6), con dos estaciones de coordenadas conocidas,
+o editando el amarre con las coordenadas reales de la partida y la referencia.
+El orden alcanzado no cambia.
 
 **¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?**
-La aplicación no lo juzga: registra el equipo para el informe, y lo que dice si
-el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no
-da para el orden, lo más probable es que el cierre no cumpla.
+En una nivelación o una visita, la aplicación no lo juzga: registra el equipo
+para el informe, y lo que dice si el trabajo cumple es el cierre contra la
+tolerancia del orden. Si el equipo no da para el orden, lo más probable es que
+el cierre no cumpla. Una poligonal no elige orden: alcanza el que su cierre
+permite.
 
 **Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición
 está bien?**
@@ -1573,7 +1650,8 @@ ocultarlo de la lista activa (§ 4.2).
 **Salí de un editor y perdí lo que había tecleado.**
 Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el
 navegador le preguntó antes. Los botones atrás y adelante del navegador no
-preguntan: guarde antes de usarlos (§ 4.4).
+preguntan: guarde antes de usarlos (§ 4.4). En una poligonal no hay qué perder:
+cada popup guarda al confirmar.
 
 **¿Otros usuarios pueden ver mis proyectos?**
 No. Cada usuario accede solo a los suyos; la restricción se aplica en la base de

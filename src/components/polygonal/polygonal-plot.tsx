@@ -44,6 +44,11 @@ interface PolygonalPlotProps {
    */
   width?: number;
   height?: number;
+  /**
+   * Lo medido, sin ajustar (paso de datos, Fase 35): la entrada es el recorrido
+   * de `fieldTraverse`, y la leyenda no habla de ajuste ni de compensación.
+   */
+  field?: boolean;
 }
 
 /**
@@ -76,6 +81,7 @@ export function PolygonalPlot({
   view = DEFAULT_VIEW,
   width: W = PLOT_WIDTH,
   height: H = PLOT_HEIGHT,
+  field = false,
 }: PolygonalPlotProps) {
   const traces = polygonalTraces(input, result);
   if (!traces) {
@@ -89,7 +95,7 @@ export function PolygonalPlot({
 
   // Sin control no hay compensación: aunque el factor salga, no hay nada
   // «sin compensar» distinto de lo ajustado.
-  const k = input.type === "open_uncontrolled" ? null : exaggerationFactor(traces);
+  const k = input.type === "open_uncontrolled" || field ? null : exaggerationFactor(traces);
   const exaggerated = k ? exaggeratedPoints(traces, k) : null;
   const adjusted: PlanePoint[] = traces.map((t) => t.adjusted);
 
@@ -139,11 +145,14 @@ export function PolygonalPlot({
   const barMeters = scaleBarMeters(frame.metersPerPixel, 120);
   const barPixels = barMeters / frame.metersPerPixel;
 
-  // En una cerrada, el último vértice repite el arranque: se rotula una vez.
-  const labelled = input.type === "closed" ? traces.slice(0, -1) : traces;
+  // En una cerrada, el último vértice repite el arranque: se rotula una vez. En
+  // lo medido, la vuelta a la partida cae junto a ella, con el error de cierre.
+  const returns = field && traces.length > 1 && traces.at(-1)?.code === traces[0]?.code;
+  const labelled = input.type === "closed" || returns ? traces.slice(0, -1) : traces;
 
-  const summary =
-    `Dibujo de la poligonal ${TYPE_LABELS[input.type]} con ${labelled.length} vértices` +
+  const summary = field
+    ? `Dibujo de lo medido, sin ajustar, con ${labelled.length} vértices.`
+    : `Dibujo de la poligonal ${TYPE_LABELS[input.type]} con ${labelled.length} vértices` +
     (result.linearError !== null
       ? `, error de cierre ${result.linearError.toFixed(3)} m`
       : "") +
@@ -310,9 +319,9 @@ export function PolygonalPlot({
           <svg width={24} height={8} aria-hidden>
             <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-ink)" strokeWidth={2} />
           </svg>
-          Ajustada
+          {field ? "Como se midió, sin ajustar" : "Ajustada"}
         </span>
-        {exaggerated && k ? (
+        {field ? null : exaggerated && k ? (
           <span className="inline-flex items-center gap-2">
             <svg width={24} height={8} aria-hidden>
               <line x1={0} x2={24} y1={4} y2={4} stroke="var(--color-warning)" strokeWidth={1.5} strokeDasharray="6 4" />

@@ -339,8 +339,6 @@ export type Database = {
           angle_type: string
           angular_error_seconds: number | null
           angular_precision_seconds: number | null
-          closed_at: string | null
-          closed_by: string | null
           correction_method: string | null
           created_at: string
           distance_precision_mm: number | null
@@ -366,6 +364,7 @@ export type Database = {
           has_closing_row: boolean
           id: string
           linear_error: number | null
+          location: string | null
           ls_distance_measurements: number | null
           ls_sigma_angle_seconds: number | null
           ls_sigma_distance_m: number | null
@@ -373,11 +372,13 @@ export type Database = {
           name: string
           notes: string | null
           perimeter: number | null
-          precision_order: string
+          precision_order: string | null
           project_id: string
           reference_point_code: string | null
           reference_point_id: string | null
           relative_precision: string | null
+          responsible_name: string | null
+          responsible_role: string | null
           site_id: string
           start_azimuth_deg: number | null
           start_azimuth_min: number | null
@@ -395,8 +396,6 @@ export type Database = {
           angle_type?: string
           angular_error_seconds?: number | null
           angular_precision_seconds?: number | null
-          closed_at?: string | null
-          closed_by?: string | null
           correction_method?: string | null
           created_at?: string
           distance_precision_mm?: number | null
@@ -422,6 +421,7 @@ export type Database = {
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null
+          location?: string | null
           ls_distance_measurements?: number | null
           ls_sigma_angle_seconds?: number | null
           ls_sigma_distance_m?: number | null
@@ -429,11 +429,13 @@ export type Database = {
           name: string
           notes?: string | null
           perimeter?: number | null
-          precision_order?: string
+          precision_order?: string | null
           project_id: string
           reference_point_code?: string | null
           reference_point_id?: string | null
           relative_precision?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
           site_id: string
           start_azimuth_deg?: number | null
           start_azimuth_min?: number | null
@@ -451,8 +453,6 @@ export type Database = {
           angle_type?: string
           angular_error_seconds?: number | null
           angular_precision_seconds?: number | null
-          closed_at?: string | null
-          closed_by?: string | null
           correction_method?: string | null
           created_at?: string
           distance_precision_mm?: number | null
@@ -478,6 +478,7 @@ export type Database = {
           has_closing_row?: boolean
           id?: string
           linear_error?: number | null
+          location?: string | null
           ls_distance_measurements?: number | null
           ls_sigma_angle_seconds?: number | null
           ls_sigma_distance_m?: number | null
@@ -485,11 +486,13 @@ export type Database = {
           name?: string
           notes?: string | null
           perimeter?: number | null
-          precision_order?: string
+          precision_order?: string | null
           project_id?: string
           reference_point_code?: string | null
           reference_point_id?: string | null
           relative_precision?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
           site_id?: string
           start_azimuth_deg?: number | null
           start_azimuth_min?: number | null

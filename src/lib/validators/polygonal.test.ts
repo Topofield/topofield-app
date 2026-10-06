@@ -7,19 +7,17 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  canPersistAngleFormat,
-  evaluatePolygonalClosure,
   expectStationCapture,
   validateGeoreferencePoints,
   validateLeastSquaresWeights,
   hasCaptureErrors,
   readingDmsError,
+  polygonalHeaderProblem,
   referenceStartAzimuth,
+  stationCaptureIssues,
   validatePolygonalStation,
-  validateReadings,
   type CaptureIssues,
 } from "./polygonal";
-import type { PolygonalResult, StationResult } from "@/types/polygonal";
 
 // --- Ayudantes ---------------------------------------------------------------
 
@@ -37,42 +35,6 @@ function capture(over: Partial<Parameters<typeof validatePolygonalStation>[0]> =
 
 const EXPECT_BOTH = { angle: true, distance: true };
 
-/** Resultado de cálculo; por defecto sin datos, cada caso puebla lo que prueba. */
-function resultWith(over: Partial<PolygonalResult> = {}): PolygonalResult {
-  return {
-    angleSum: null,
-    theoreticalSum: null,
-    angularError: null,
-    angularTolerance: null,
-    anglesMeetTolerance: null,
-    errorNorth: null,
-    errorEast: null,
-    linearError: null,
-    perimeter: 0,
-    relativePrecision: null,
-    meetsLinearTolerance: null,
-    meetsTolerance: null,
-    stations: [],
-    ...over,
-  };
-}
-
-/** Estación ya calculada, con coordenadas resueltas. */
-function computedStation(north: number | null): StationResult {
-  return {
-    pointCode: "E1",
-    correctedAngle: null,
-    readingDispersion: null,
-    azimuth: null,
-    deltaNorth: null,
-    deltaEast: null,
-    correctedDeltaNorth: null,
-    correctedDeltaEast: null,
-    north,
-    east: north,
-  };
-}
-
 // --- Capa 1: validación de captura (§ 5.1) -----------------------------------
 
 // `expectStationCapture` es la fuente de verdad COMPARTIDA entre el editor y
@@ -81,13 +43,26 @@ function computedStation(north: number | null): StationResult {
 // acuerdo sobre qué es captura parcial legítima y qué es un error, sin que
 // nada lo delatara. Estos tests la fijan.
 describe("expectStationCapture", () => {
-  it("exige ángulo y distancia en TODAS las estaciones de una cerrada", () => {
-    for (const i of [0, 1, 4]) {
+  it("en una cerrada, las intermedias llevan ángulo y distancia", () => {
+    for (const i of [1, 3]) {
       expect(expectStationCapture("closed", i, 5)).toEqual({
         angle: true,
         distance: true,
       });
     }
+  });
+
+  // Fase 35: la captura se guarda en cada popup. Sin amarre, el ángulo en P1
+  // se mide al cerrar, entre el último punto y P2.
+  it("en una cerrada, la primera lleva el ángulo de orientación con amarre; sin amarre, aún no", () => {
+    expect(expectStationCapture("closed", 0, 5, false, true)).toEqual({
+      angle: true,
+      distance: true,
+    });
+    expect(expectStationCapture("closed", 0, 5, false, false)).toEqual({
+      angle: false,
+      distance: true,
+    });
   });
 
   it("en una abierta, la primera estación no lleva ángulo pero sí distancia", () => {
@@ -129,10 +104,10 @@ describe("expectStationCapture", () => {
     });
   });
 
-  it("una cerrada de una sola estación sigue exigiendo ambas", () => {
-    expect(expectStationCapture("closed", 0, 1)).toEqual({
-      angle: true,
-      distance: true,
+  it("una cerrada de una sola estación no exige nada: es el punto pendiente", () => {
+    expect(expectStationCapture("closed", 0, 1, false, true)).toEqual({
+      angle: false,
+      distance: false,
     });
   });
 });
@@ -284,220 +259,6 @@ describe("hasCaptureErrors", () => {
 
 // --- Capa 2: validación de cierre (§ 5.2) ------------------------------------
 
-describe("evaluatePolygonalClosure — errores de captura", () => {
-  it("bloquea el cierre de cualquier tipo si hay errores de captura", () => {
-    for (const type of ["closed", "open_controlled", "open_uncontrolled"] as const) {
-      const r = evaluatePolygonalClosure(type, resultWith(), true);
-      expect(r.blocked).toBe(true);
-      expect(r.canClose).toBe(false);
-      expect(r.mustReject).toBe(false);
-      expect(r.messages[0]).toContain("errores de captura");
-    }
-  });
-});
-
-describe("evaluatePolygonalClosure — poligonal cerrada", () => {
-  it("permite el cierre cuando cumple ambas tolerancias", () => {
-    const r = evaluatePolygonalClosure(
-      "closed",
-      resultWith({ anglesMeetTolerance: true, meetsLinearTolerance: true }),
-      false,
-    );
-    expect(r).toEqual({
-      canClose: true,
-      mustReject: false,
-      blocked: false,
-      messages: [],
-    });
-  });
-
-  it("bloquea el cierre si el error angular supera la tolerancia (§ 5.2)", () => {
-    const r = evaluatePolygonalClosure(
-      "closed",
-      resultWith({ anglesMeetTolerance: false, meetsLinearTolerance: true }),
-      false,
-    );
-    expect(r.blocked).toBe(true);
-    expect(r.canClose).toBe(false);
-    expect(r.messages[0]).toContain("error angular");
-  });
-
-  it("prioriza el fallo angular cuando ambas tolerancias fallan", () => {
-    const r = evaluatePolygonalClosure(
-      "closed",
-      resultWith({ anglesMeetTolerance: false, meetsLinearTolerance: false }),
-      false,
-    );
-    // El error angular bloquea del todo; no degrada a "rechazable".
-    expect(r.blocked).toBe(true);
-    expect(r.mustReject).toBe(false);
-  });
-
-  it("solo admite cierre como rechazado si la precisión relativa no alcanza (§ 5.2)", () => {
-    const r = evaluatePolygonalClosure(
-      "closed",
-      resultWith({ anglesMeetTolerance: true, meetsLinearTolerance: false }),
-      false,
-    );
-    expect(r.canClose).toBe(true);
-    expect(r.mustReject).toBe(true);
-    expect(r.blocked).toBe(false);
-    expect(r.messages[0]).toContain("precisión relativa");
-  });
-
-  it("bloquea el cierre mientras falte el cálculo angular", () => {
-    const r = evaluatePolygonalClosure(
-      "closed",
-      resultWith({ anglesMeetTolerance: null, meetsLinearTolerance: true }),
-      false,
-    );
-    expect(r.blocked).toBe(true);
-    expect(r.messages[0]).toContain("Completa los datos");
-  });
-
-  it("bloquea el cierre mientras falte el cálculo lineal", () => {
-    const r = evaluatePolygonalClosure(
-      "closed",
-      resultWith({ anglesMeetTolerance: true, meetsLinearTolerance: null }),
-      false,
-    );
-    expect(r.blocked).toBe(true);
-    expect(r.messages[0]).toContain("Completa los datos");
-  });
-});
-
-describe("evaluatePolygonalClosure — abierta con control", () => {
-  it("permite el cierre cuando el cierre contra el punto conocido cumple", () => {
-    const r = evaluatePolygonalClosure(
-      "open_controlled",
-      resultWith({ meetsLinearTolerance: true }),
-      false,
-    );
-    expect(r).toEqual({
-      canClose: true,
-      mustReject: false,
-      blocked: false,
-      messages: [],
-    });
-  });
-
-  it("solo admite cierre como rechazado si no alcanza la tolerancia", () => {
-    const r = evaluatePolygonalClosure(
-      "open_controlled",
-      resultWith({ meetsLinearTolerance: false }),
-      false,
-    );
-    expect(r.canClose).toBe(true);
-    expect(r.mustReject).toBe(true);
-    expect(r.messages[0]).toContain("punto conocido");
-  });
-
-  it("bloquea el cierre mientras falte el punto de llegada", () => {
-    const r = evaluatePolygonalClosure(
-      "open_controlled",
-      resultWith({ meetsLinearTolerance: null }),
-      false,
-    );
-    expect(r.blocked).toBe(true);
-    expect(r.messages[0]).toContain("punto de llegada");
-  });
-
-  it("el error angular fuera de tolerancia obliga a rechazar, como en el servidor (Fase 26, C-3)", () => {
-    // El servidor guarda meets_tolerance = ángulos && lineal; el diálogo debe
-    // decir lo mismo y no ofrecer «Confirmar cierre».
-    const r = evaluatePolygonalClosure(
-      "open_controlled",
-      resultWith({ anglesMeetTolerance: false, meetsLinearTolerance: true }),
-      false,
-    );
-    expect(r.canClose).toBe(true);
-    expect(r.blocked).toBe(false);
-    expect(r.mustReject).toBe(true);
-    expect(r.messages[0]).toContain("azimut de llegada");
-  });
-
-  it("sin azimut de llegada no hay verificación angular y decide el lineal", () => {
-    const r = evaluatePolygonalClosure(
-      "open_controlled",
-      resultWith({ anglesMeetTolerance: null, meetsLinearTolerance: true }),
-      false,
-    );
-    expect(r.mustReject).toBe(false);
-    expect(r.messages).toEqual([]);
-  });
-});
-
-describe("evaluatePolygonalClosure — abierta sin control", () => {
-  it("permite el cierre cuando todas las estaciones tienen coordenadas", () => {
-    const r = evaluatePolygonalClosure(
-      "open_uncontrolled",
-      resultWith({ stations: [computedStation(100), computedStation(200)] }),
-      false,
-    );
-    expect(r).toEqual({
-      canClose: true,
-      mustReject: false,
-      blocked: false,
-      messages: [],
-    });
-  });
-
-  it("bloquea el cierre si alguna estación quedó sin calcular", () => {
-    const r = evaluatePolygonalClosure(
-      "open_uncontrolled",
-      resultWith({ stations: [computedStation(100), computedStation(null)] }),
-      false,
-    );
-    expect(r.blocked).toBe(true);
-    expect(r.messages[0]).toContain("todas las estaciones");
-  });
-
-  it("bloquea el cierre si no hay estaciones", () => {
-    const r = evaluatePolygonalClosure("open_uncontrolled", resultWith(), false);
-    expect(r.blocked).toBe(true);
-  });
-
-  it("nunca exige rechazo: no tiene cierre que verificar", () => {
-    // Sin punto de llegada no hay tolerancia lineal que evaluar, así que este
-    // tipo jamás debe degradar a "solo rechazable".
-    const r = evaluatePolygonalClosure(
-      "open_uncontrolled",
-      resultWith({
-        meetsLinearTolerance: false,
-        stations: [computedStation(100)],
-      }),
-      false,
-    );
-    expect(r.mustReject).toBe(false);
-    expect(r.canClose).toBe(true);
-  });
-});
-
-describe("validateReadings", () => {
-  it("exige el mínimo de lecturas configurado", () => {
-    const r = validateReadings([{ order: 1, angle: 90 }], 3);
-    expect(r.error).toBe("Faltan lecturas: se exigen 3 y hay 1.");
-  });
-
-  it("acepta cuando se alcanza el mínimo", () => {
-    const readings = [90, 90.0001, 90.0002].map((angle, i) => ({
-      order: i + 1,
-      angle,
-    }));
-    expect(validateReadings(readings, 3)).toEqual({});
-  });
-
-  // La Fase 31 quitó el aviso de dispersión (D-5): ni 36" entre lecturas
-  // avisan. La dispersión se sigue mostrando como dato.
-  it("no juzga la dispersión entre lecturas", () => {
-    const readings = [90, 90.005, 90.01].map((angle, i) => ({
-      order: i + 1,
-      angle,
-    }));
-    expect(validateReadings(readings, 3)).toEqual({});
-  });
-});
-
 describe("expectStationCapture — fila de cierre", () => {
   it("la fila de cierre pide ángulo y no distancia", () => {
     expect(expectStationCapture("closed", 6, 7, true)).toEqual({
@@ -506,24 +267,14 @@ describe("expectStationCapture — fila de cierre", () => {
     });
   });
 
-  it("sin fila de cierre, la última sigue pidiendo distancia", () => {
+  // Fase 35: sin fila de cierre, la última es el punto pendiente, el ángulo
+  // del vértice de arranque (Vivero, que no abre lado) o el lado que vuelve a
+  // P1 sin amarre. Ninguno es obligatorio en una captura a medias.
+  it("sin fila de cierre, la última no exige nada", () => {
     expect(expectStationCapture("closed", 5, 6, false)).toEqual({
-      angle: true,
-      distance: true,
+      angle: false,
+      distance: false,
     });
-  });
-});
-
-describe("canPersistAngleFormat (Fase 13, P1)", () => {
-  it("guarda el formato en un proceso abierto", () => {
-    for (const status of ["draft", "in_progress", "calculated"]) {
-      expect(canPersistAngleFormat(status)).toBe(true);
-    }
-  });
-
-  it("no lo guarda en uno cerrado o rechazado: ahí solo cambia la vista", () => {
-    expect(canPersistAngleFormat("closed")).toBe(false);
-    expect(canPersistAngleFormat("rejected")).toBe(false);
   });
 });
 
@@ -755,5 +506,75 @@ describe("referenceStartAzimuth — el azimut desde el punto de amarre (Fase 27,
     expect(referenceStartAzimuth(start, null)).toEqual({
       error: "El punto de amarre no está en el catálogo del proyecto.",
     });
+  });
+});
+
+// Fase 35: la carga del guardado manda las lecturas y no el ángulo de la
+// estación, que es su promedio y lo calcula el servidor. La validación tiene
+// que mirar ese promedio: si no, la primera medición de una cerrada amarrada
+// salía con «El ángulo es obligatorio».
+describe("stationCaptureIssues (Fase 35)", () => {
+  const station = (over: Partial<Parameters<typeof stationCaptureIssues>[1][number]> = {}) => ({
+    pointCode: "V10",
+    angleDeg: null,
+    angleMin: null,
+    angleSec: null,
+    readings: [{ deg: 211, min: 15, sec: 7 }],
+    horizontalDistance: 20.744,
+    ...over,
+  });
+
+  it("el ángulo de una estación con lecturas es su promedio", () => {
+    const issues = stationCaptureIssues(
+      "closed",
+      [station(), station({ pointCode: "D1", readings: [], horizontalDistance: null })],
+      false,
+      true,
+    );
+    expect(hasCaptureErrors(issues)).toBe(false);
+  });
+
+  it("sin lecturas ni ángulo, la estación de partida amarrada lo sigue exigiendo", () => {
+    const issues = stationCaptureIssues(
+      "closed",
+      [station({ readings: [] }), station({ pointCode: "D1", readings: [], horizontalDistance: null })],
+      false,
+      true,
+    );
+    expect(issues[0]!.errors.angle).toBe("El ángulo es obligatorio.");
+  });
+
+  it("una lectura fuera de rango sigue siendo un error", () => {
+    const issues = stationCaptureIssues("closed", [station({ readings: [{ deg: 90, min: 61, sec: 0 }] })], false, true);
+    expect(hasCaptureErrors(issues)).toBe(true);
+  });
+});
+
+// Revisión final: la clave de Supabase es pública y la acción se puede llamar
+// con una carga hecha a mano. Lo que los popups impiden, el servidor también.
+describe("polygonalHeaderProblem (Fase 35)", () => {
+  const ok = { name: "TT4", startPointCode: "V10", startNorth: 1000, startEast: 2000, stationCount: 7 };
+
+  it("una cabecera completa pasa, y un alta aún sin amarre también", () => {
+    expect(polygonalHeaderProblem(ok)).toBeNull();
+    expect(polygonalHeaderProblem({ ...ok, startPointCode: "", startNorth: 0, startEast: 0, stationCount: 0 })).toBeNull();
+  });
+
+  it("sin título no se guarda", () => {
+    expect(polygonalHeaderProblem({ ...ok, name: "  " })).toBe("El título es obligatorio.");
+  });
+
+  it("mediciones sin estación de partida no se guardan", () => {
+    expect(polygonalHeaderProblem({ ...ok, startPointCode: " " })).toBe(
+      "Falta la estación de partida: ingrese el amarre.",
+    );
+  });
+
+  it("un Norte o un Este que no es un número no se guarda", () => {
+    for (const startNorth of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(polygonalHeaderProblem({ ...ok, startNorth })).toBe(
+        "La estación de partida necesita un Norte y un Este válidos.",
+      );
+    }
   });
 });

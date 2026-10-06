@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ReportStateMark } from "@/components/process/report-state-mark";
-import { issuedFooterNote, processReportState } from "./state";
+import { issuedFooterNote, processReportState, reopenedAfterIssue } from "./state";
 
 // Fase 24: el informe de un proceso rechazado llevaba la marca de borrador,
 // aunque el proceso ya estaba cerrado.
@@ -42,6 +42,12 @@ describe("issuedFooterNote (Fase 34)", () => {
     expect(issuedFooterNote([])).toBe(", con procesos cerrados.");
   });
 
+  // Fase 35: la poligonal no se cierra. Un informe solo con poligonales no
+  // tiene procesos cerrados que nombrar.
+  it("sin procesos que se cierren, el pie no habla de cierre", () => {
+    expect(issuedFooterNote([], 0)).toBe(".");
+  });
+
   it("nombra el proceso que se reabrió después de emitirlo", () => {
     expect(issuedFooterNote(["Poligonal V10"])).toBe(
       ". «Poligonal V10» se reabrió después de emitirlo: sus datos pueden cambiar.",
@@ -52,5 +58,18 @@ describe("issuedFooterNote (Fase 34)", () => {
     expect(issuedFooterNote(["A", "B"])).toBe(
       ". «A», «B» se reabrieron después de emitirlo: sus datos pueden cambiar.",
     );
+  });
+});
+
+describe("reopenedAfterIssue (Fase 35)", () => {
+  it("una poligonal no cuenta como reabierta: no se cierra", () => {
+    expect(
+      reopenedAfterIssue([
+        { kind: "polygonal", name: "Poligonal V10", closedAt: null },
+        { kind: "leveling", name: "Línea BM", closedAt: null },
+        { kind: "site", name: "Torre", closedAt: "2026-10-01T00:00:00Z" },
+        { kind: "missing", name: "Borrado", closedAt: null },
+      ]),
+    ).toEqual(["Línea BM"]);
   });
 });

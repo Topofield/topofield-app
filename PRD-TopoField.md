@@ -754,6 +754,15 @@ El cierre es el mecanismo de trazabilidad. Aplica a los 3 tipos de proceso.
 > columna. Un informe consolidado que incluye lo reabierto lo muestra con sus
 > datos actuales. Ver `docs/prds/33-reabrir-procesos.md`.
 
+> **Enmienda (Fase 35, 2026-10-06).** **La poligonal no se cierra.** Queda
+> calculada y admite cambios siempre; su orden de precisión no se declara: se
+> detecta (el más alto que cumple a la vez la tolerancia angular y la precisión
+> relativa), y su informe alerta si no alcanza ninguno. La base perdió sus
+> triggers de cierre, `closed_at`, `closed_by` y los estados `closed` y
+> `rejected`. Un informe consolidado la incluye calculada. El cierre de este
+> apartado queda para la nivelación, las visitas y los lugares de
+> asentamientos. Ver `docs/prds/34-ux-poligonal.md`.
+
 **Proceso rechazado:**
 - Si el proceso no cumple tolerancia, el usuario puede cerrarlo como "Rechazado"
 - Se registra igualmente con timestamp y responsable

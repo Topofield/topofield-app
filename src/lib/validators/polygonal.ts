@@ -1,16 +1,15 @@
 // Validación del proceso poligonal — funciones puras (PRD § 5.1 capa de
-// captura, § 5.2 capa de cierre). Sin React, sin Supabase.
+// captura). Sin React, sin Supabase. La capa de cierre (§ 5.2) se fue con el
+// cierre de la poligonal (Fase 35): el orden se detecta (`tolerances.ts`).
 
 import {
+  averageReadings,
   azimuthFromCoordinates,
   decimalToDms,
+  dmsToDecimal,
   type Dms,
 } from "@/lib/calculations/angles";
-import type {
-  PolygonalResult,
-  PolygonalType,
-  ReadingInput,
-} from "@/types/polygonal";
+import type { PolygonalType } from "@/types/polygonal";
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
@@ -54,10 +53,13 @@ export function expectStationCapture(
 ): { angle: boolean; distance: boolean } {
   if (type === "closed") {
     // La fila de cierre es de control: lleva el ángulo contra el amarre y no
-    // abre ningún lado, así que no pide distancia.
-    if (hasClosingRow && index === total - 1) {
-      return { angle: true, distance: false };
-    }
+    // abre ningún lado, así que no pide distancia. Sin ella, la última es el
+    // punto pendiente, el ángulo del vértice de arranque (Vivero) o el lado
+    // que vuelve a P1: la captura se guarda en cada popup (Fase 35), y nada de
+    // eso es obligatorio a medias.
+    if (index === total - 1) return { angle: hasClosingRow, distance: false };
+    // Sin amarre, el ángulo en P1 se mide al cerrar, entre el último punto y P2.
+    if (index === 0 && !hasOrientation) return { angle: false, distance: true };
     return { angle: true, distance: true };
   }
   // En una abierta amarrada, la primera fila lleva el ángulo de orientación
@@ -176,143 +178,71 @@ function hasMoreDecimals(value: number, digits: number): boolean {
   return Math.abs(scaled - Math.round(scaled)) > 1e-6;
 }
 
+/** Una estación tal como llega al guardado (`StationDraft` de la acción). */
+export interface StationCaptureDraft {
+  pointCode: string;
+  angleDeg: number | null;
+  angleMin: number | null;
+  angleSec: number | null;
+  readings: readonly { deg: number; min: number; sec: number }[];
+  horizontalDistance: number | null;
+}
+
+/**
+ * Los issues de captura de cada estación de un guardado. El ángulo de una
+ * estación con lecturas es su promedio, el mismo que el servidor guarda: la
+ * carga de la pantalla por pasos solo manda las lecturas (Fase 35). Sin
+ * lecturas, vale el ángulo que venga.
+ */
+export function stationCaptureIssues(
+  type: PolygonalType,
+  stations: readonly StationCaptureDraft[],
+  hasClosingRow: boolean,
+  hasOrientation: boolean,
+): CaptureIssues[] {
+  return stations.map((st, i) => {
+    const avg = averageReadings(st.readings.map((r) => dmsToDecimal(r.deg, r.min, r.sec)));
+    const dms = avg !== null && Number.isFinite(avg) ? decimalToDms(avg) : null;
+    return validatePolygonalStation(
+      {
+        pointCode: st.pointCode,
+        angleDeg: dms?.deg ?? st.angleDeg,
+        angleMin: dms?.min ?? st.angleMin,
+        angleSec: dms?.sec ?? st.angleSec,
+        distance: st.horizontalDistance,
+        readings: st.readings,
+      },
+      expectStationCapture(type, i, stations.length, hasClosingRow, hasOrientation),
+    );
+  });
+}
+
+/**
+ * Por qué la cabecera de un guardado no se puede guardar, o `null` (Fase 35).
+ * Los popups ya lo impiden; el servidor lo repite porque la acción se puede
+ * llamar con una carga hecha a mano. Un alta sin amarre ni mediciones —la
+ * partida vacía en 0, 0— es legítima.
+ */
+export function polygonalHeaderProblem(header: {
+  name: string;
+  startPointCode: string;
+  startNorth: number;
+  startEast: number;
+  stationCount: number;
+}): string | null {
+  if (header.name.trim() === "") return "El título es obligatorio.";
+  if (header.stationCount > 0 && header.startPointCode.trim() === "") {
+    return "Falta la estación de partida: ingrese el amarre.";
+  }
+  if (!Number.isFinite(header.startNorth) || !Number.isFinite(header.startEast)) {
+    return "La estación de partida necesita un Norte y un Este válidos.";
+  }
+  return null;
+}
+
 /** ¿Tiene la lista de issues algún error bloqueante? */
 export function hasCaptureErrors(issues: CaptureIssues[]): boolean {
   return issues.some((i) => Object.keys(i.errors).length > 0);
-}
-
-// --- Capa 2: validación de cierre (§ 5.2) -------------------------------------
-
-export interface ClosureEvaluation {
-  /** Se puede cerrar el proceso (como `closed` o como `rejected`). */
-  canClose: boolean;
-  /** El proceso solo puede cerrarse como `rejected` (no cumple tolerancia). */
-  mustReject: boolean;
-  /** El proceso no puede cerrarse de ninguna forma. */
-  blocked: boolean;
-  /** Mensajes para el banner de cierre. */
-  messages: string[];
-}
-
-/**
- * Evalúa si un proceso poligonal puede cerrarse, a partir de su resultado de
- * cálculo y de si hay errores de captura pendientes.
- */
-export function evaluatePolygonalClosure(
-  type: PolygonalType,
-  result: PolygonalResult,
-  captureHasErrors: boolean,
-): ClosureEvaluation {
-  if (captureHasErrors) {
-    return {
-      canClose: false,
-      mustReject: false,
-      blocked: true,
-      messages: ["Hay celdas con errores de captura; corrígelas antes de cerrar."],
-    };
-  }
-
-  if (type === "open_uncontrolled") {
-    const computed = result.stations.length > 0 &&
-      result.stations.every((s) => s.north != null);
-    return computed
-      ? { canClose: true, mustReject: false, blocked: false, messages: [] }
-      : {
-          canClose: false,
-          mustReject: false,
-          blocked: true,
-          messages: ["Completa los datos de todas las estaciones."],
-        };
-  }
-
-  if (type === "closed") {
-    if (result.anglesMeetTolerance == null || result.meetsLinearTolerance == null) {
-      return {
-        canClose: false,
-        mustReject: false,
-        blocked: true,
-        messages: ["Completa los datos de la poligonal antes de cerrar."],
-      };
-    }
-    if (!result.anglesMeetTolerance) {
-      return {
-        canClose: false,
-        mustReject: false,
-        blocked: true,
-        messages: [
-          "El error angular supera la tolerancia del orden de precisión; no se puede cerrar.",
-        ],
-      };
-    }
-    if (!result.meetsLinearTolerance) {
-      return {
-        canClose: true,
-        mustReject: true,
-        blocked: false,
-        messages: [
-          "La precisión relativa no alcanza la tolerancia; solo puede cerrarse como rechazado.",
-        ],
-      };
-    }
-    return { canClose: true, mustReject: false, blocked: false, messages: [] };
-  }
-
-  // open_controlled
-  if (result.meetsLinearTolerance == null) {
-    return {
-      canClose: false,
-      mustReject: false,
-      blocked: true,
-      messages: ["Completa los datos y el punto de llegada antes de cerrar."],
-    };
-  }
-  // El error angular, si hay azimut de llegada, también decide: es lo que el
-  // servidor guarda en `meets_tolerance`. Antes el diálogo ofrecía «Confirmar
-  // cierre» y el servidor lo guardaba rechazado (Fase 26, C-3).
-  const messages: string[] = [];
-  if (result.anglesMeetTolerance === false) {
-    messages.push(
-      "El error angular contra el azimut de llegada supera la tolerancia; solo puede cerrarse como rechazado.",
-    );
-  }
-  if (!result.meetsLinearTolerance) {
-    messages.push(
-      "El cierre contra el punto conocido no alcanza la tolerancia; solo puede cerrarse como rechazado.",
-    );
-  }
-  return {
-    canClose: true,
-    mustReject: messages.length > 0,
-    blocked: false,
-    messages,
-  };
-}
-
-/**
- * Valida las lecturas de un ángulo: que estén las que exige el proceso.
- *
- * Hasta la Fase 31 avisaba además si su dispersión superaba el doble de la
- * precisión del equipo; ese aviso se quitó por decisión del usuario (D-5): el
- * criterio saltaba en buena parte de los datos correctos. La dispersión se
- * sigue mostrando como dato junto al promedio.
- */
-export function validateReadings(
-  readings: ReadingInput[],
-  min: number,
-): { error?: string } {
-  if (readings.length < min) {
-    return { error: `Faltan lecturas: se exigen ${min} y hay ${readings.length}.` };
-  }
-  return {};
-}
-
-/**
- * ¿Se puede guardar el formato de captura de ángulos en un proceso con este
- * estado? (Fase 13, P1.) En uno cerrado o rechazado no: es inmutable, y ahí el
- * conmutador solo cambia la vista.
- */
-export function canPersistAngleFormat(status: string): boolean {
-  return status !== "closed" && status !== "rejected";
 }
 
 /** ¿Tiene `value` como mucho `decimals` decimales? Con holgura de coma flotante. */

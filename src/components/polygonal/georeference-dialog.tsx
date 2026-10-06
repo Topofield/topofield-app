@@ -10,6 +10,7 @@ import type { PolygonalProcess, PolygonalStationWithReadings } from "@/types/pol
 import type { ReferencePoint } from "@/types/project";
 import { formatRotation, planGeoreference, type ControlPoint } from "./georeference-plan";
 import { polygonalInputOf } from "./polygonal-draft";
+import { callAction } from "@/lib/errors/action-call";
 
 interface GeoreferenceDialogProps {
   process: PolygonalProcess;
@@ -64,7 +65,6 @@ export function GeoreferenceDialog({
   const [b, setB] = useState<PointDraft>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const closed = process.status === "closed" || process.status === "rejected";
 
   // Vértices con coordenadas, sin repetir: con orientación el arranque
   // aparece al principio y al final, y es el mismo punto.
@@ -92,10 +92,8 @@ export function GeoreferenceDialog({
   function confirm() {
     setError(null);
     startTransition(async () => {
-      const r = await georeferencePolygonalProcessAction(
-        process.id,
-        toControlPoint(a),
-        toControlPoint(b),
+      const r = await callAction(() =>
+        georeferencePolygonalProcessAction(process.id, toControlPoint(a), toControlPoint(b)),
       );
       if (r.ok) setOpen(false);
       else setError(r.error ?? "No se pudo georreferenciar.");
@@ -175,11 +173,7 @@ export function GeoreferenceDialog({
               Cancelar
             </Button>
             <Button onClick={confirm} disabled={!plan || isPending}>
-              {isPending
-                ? "Georreferenciando…"
-                : closed
-                  ? "Reescribir coordenadas"
-                  : "Georreferenciar"}
+              {isPending ? "Georreferenciando…" : "Georreferenciar"}
             </Button>
           </>
         }
@@ -190,11 +184,10 @@ export function GeoreferenceDialog({
             sistema real: se gira y se traslada, sin cambiar ángulos ni
             distancias. Use las dos estaciones más alejadas entre sí.
           </p>
-          {/* Los dos diálogos siguen aparte; cada uno dice cuándo conviene el
-              otro (Fase 27, PU16). */}
+          {/* El amarre sustituyó a «Asignar coordenadas reales» (Fase 35). */}
           <p className="text-sm text-ink-2">
-            Si solo conoce las coordenadas del arranque y el azimut, y el
-            proceso sigue abierto, use <strong>Asignar coordenadas reales</strong>.
+            Si conoce las coordenadas reales de la partida y de la referencia,
+            no hace falta georreferenciar: edite el amarre en el paso de Datos.
           </p>
           {pointFields("Punto A", a, setA)}
           {pointFields("Punto B", b, setB)}
@@ -248,11 +241,6 @@ export function GeoreferenceDialog({
                   El amarre {process.reference_point_code} es del catálogo, que no
                   cambia: pasa a amarre manual, con el mismo código.
                 </Alert>
-              )}
-              {closed && (
-                <p className="text-sm text-ink-2">
-                  El proceso está cerrado: solo cambian coordenadas y azimuts.
-                </p>
               )}
 
               <div className="overflow-x-auto">

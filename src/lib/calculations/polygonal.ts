@@ -19,8 +19,10 @@ import {
   sinDeg,
 } from "./angles";
 import { adjustByConditions, SingularSystemError } from "./least-squares";
-import { angularTolerance, minRelativePrecision } from "./tolerances";
+import { angularTolerance, detectPrecisionOrder, minRelativePrecision } from "./tolerances";
+import type { PrecisionOrder } from "@/types/project";
 import type {
+  AngleType,
   CorrectionMethod,
   LeastSquaresAdjustment,
   LeastSquaresFailure,
@@ -226,6 +228,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
       angularError: null,
       angularTolerance: null,
       anglesMeetTolerance: null,
+      angularConditionCount: null,
       errorNorth: null,
       errorEast: null,
       linearError: null,
@@ -348,6 +351,7 @@ function computeClosed(input: PolygonalInput): PolygonalResult {
     angularError,
     angularTolerance: tolerance,
     anglesMeetTolerance,
+    angularConditionCount: participating.length,
     errorNorth: base.errorN,
     errorEast: base.errorE,
     linearError,
@@ -397,6 +401,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
       angularError: null,
       angularTolerance: null,
       anglesMeetTolerance: null,
+      angularConditionCount: null,
       errorNorth: null,
       errorEast: null,
       linearError: null,
@@ -513,6 +518,7 @@ function computeOpenControlled(input: PolygonalInput): PolygonalResult {
     angularError,
     angularTolerance: angularToleranceValue,
     anglesMeetTolerance,
+    angularConditionCount: doAngularClosure ? n - 1 : null,
     errorNorth: errorN,
     errorEast: errorE,
     linearError,
@@ -550,6 +556,7 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
       angularError: null,
       angularTolerance: null,
       anglesMeetTolerance: null,
+      angularConditionCount: null,
       errorNorth: null,
       errorEast: null,
       linearError: null,
@@ -596,6 +603,7 @@ function computeOpenUncontrolled(input: PolygonalInput): PolygonalResult {
     angularError: null,
     angularTolerance: null,
     anglesMeetTolerance: null,
+    angularConditionCount: null,
     errorNorth: null,
     errorEast: null,
     linearError: null,
@@ -620,6 +628,81 @@ export function computePolygonal(input: PolygonalInput): PolygonalResult {
     case "open_uncontrolled":
       return computeOpenUncontrolled(input);
   }
+}
+
+// ----------------------------------------------------------------------------
+// Orden y tipo de ángulo detectados, azimuts observados (Fase 35)
+// ----------------------------------------------------------------------------
+
+/**
+ * Tipo de ángulo de una cerrada por su suma (Fase 35, decisión 4): interior y
+ * exterior solo cambian la suma teórica —(n − 2)·180° frente a (n + 2)·180°,
+ * más 360° con la fila de cierre contra el amarre—, y difieren en 720°, así
+ * que la suma observada dice sin ambigüedad cuál es. Con ángulos incompletos,
+ * o en una abierta, interior.
+ */
+export function detectAngleType(
+  input: Omit<PolygonalInput, "order" | "angleType">,
+): "interior" | "exterior" {
+  if (input.type !== "closed") return "interior";
+  const n = input.stations.length;
+  const vertices = input.hasOrientation ? n - 1 : n;
+  const first = input.hasOrientation && !input.hasClosingRow ? 1 : 0;
+  const angles = input.stations.slice(first).map((s) => s.angle);
+  if (vertices < 3 || !angles.every(isNum)) return "interior";
+  const sum = angles.reduce((a, b) => a + b, 0);
+  const extras = input.hasOrientation && input.hasClosingRow ? [0, 360] : [0];
+  const distanceTo = (base: number) =>
+    Math.min(...extras.map((k) => Math.abs(sum - (base + k))));
+  return distanceTo((vertices + 2) * 180) < distanceTo((vertices - 2) * 180)
+    ? "exterior"
+    : "interior";
+}
+
+/**
+ * Azimut de cada estación con los ángulos tal como se midieron, sin la
+ * corrección angular (Fase 35): es el que muestra la captura, como la hoja de
+ * campo. `null` desde la primera estación a la que le falte el ángulo.
+ */
+export function observedAzimuths(input: PolygonalInput): (number | null)[] {
+  const first = firstSideAzimuth(input);
+  if (!isNum(first)) return input.stations.map(() => null);
+  const out: (number | null)[] = [first];
+  let az: number | null = first;
+  for (let i = 1; i < input.stations.length; i++) {
+    const st = input.stations[i]!;
+    if (az === null || !isNum(st.angle)) {
+      az = null;
+      out.push(null);
+      continue;
+    }
+    az =
+      input.type === "open_controlled"
+        ? normalizeAzimuth(az + (st.deflectionDirection === "left" ? -1 : 1) * st.angle)
+        : normalizeAzimuth(az + 180 + st.angle);
+    out.push(az);
+  }
+  return out;
+}
+
+/**
+ * Calcula con el orden y el tipo de ángulo detectados (Fase 35). Primero con el
+ * ordinario, para tener los errores; si alcanza un orden más alto, otra vez con
+ * ese orden, para que la tolerancia y el veredicto del resultado sean los
+ * suyos. Las coordenadas no dependen del orden.
+ */
+export function computePolygonalDetected(
+  input: Omit<PolygonalInput, "order" | "angleType">,
+): { result: PolygonalResult; order: PrecisionOrder | null; angleType: AngleType } {
+  const angleType: AngleType =
+    input.type === "open_controlled" ? "deflection" : detectAngleType(input);
+  const first = computePolygonal({ ...input, angleType, order: "ordinario" });
+  const order = detectPrecisionOrder(first, input.type);
+  const result =
+    order === null || order === "ordinario"
+      ? first
+      : computePolygonal({ ...input, angleType, order });
+  return { result, order, angleType };
 }
 
 // ----------------------------------------------------------------------------

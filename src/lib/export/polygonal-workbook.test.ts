@@ -46,9 +46,11 @@ function process(over: Partial<PolygonalProcessRow> = {}): PolygonalProcessRow {
     perimeter: "400.000",
     relative_precision: "1:1001",
     meets_tolerance: false,
-    closed_at: null,
-    closed_by: null,
     notes: null,
+    location: null,
+    responsible_name: null,
+    responsible_role: null,
+    angle_type: "interior",
     created_at: "2026-08-26T00:00:00Z",
     precision_order: "tercer_orden",
     equipment_brand: null,
@@ -166,17 +168,42 @@ describe("buildPolygonalWorkbook", () => {
     expect(valores).toContain("1:1.001");
   });
 
-  it("distingue «sin evaluar» de «no cumple» en la tolerancia", () => {
-    const sinEvaluar = buildPolygonalWorkbook(
-      process({ meets_tolerance: null }),
+  // Fase 35: el orden se detecta. El libro dice el alcanzado, o que no
+  // alcanza ninguno, o que no hay cierre que juzgar.
+  it("el orden alcanzado: detectado, «No alcanza ningún orden» o «Sin verificación»", () => {
+    const valor = (wb: ReturnType<typeof buildPolygonalWorkbook>) => {
+      const res = wb.getWorksheet("Resumen")!;
+      const fila = res.getColumn(1).values.findIndex((v) => v === "Orden alcanzado");
+      expect(fila).toBeGreaterThan(0);
+      return res.getCell(fila, 2).value;
+    };
+    expect(valor(buildPolygonalWorkbook(process(), [station()], null, null, { order: "tercer_orden", angleType: "interior" }))).toBe("Tercer orden");
+    expect(valor(buildPolygonalWorkbook(process(), [station()], null, null, { order: null, angleType: "interior" }))).toBe("No alcanza ningún orden");
+    expect(
+      valor(buildPolygonalWorkbook(process({ type: "open_uncontrolled", relative_precision: null }), [station()], null, null, { order: null, angleType: "interior" })),
+    ).toBe("Sin verificación");
+  });
+
+  it("el resumen lleva los datos del alta, el tipo de ángulo detectado y el método, sin cierre", () => {
+    const wb = buildPolygonalWorkbook(
+      process({ location: "Sede Vivero", responsible_name: "Andrea Rojas", responsible_role: "Topógrafa" }),
       [station()],
+      null,
+      null,
+      { order: "tercer_orden", angleType: "exterior" },
     );
-    const valores = sinEvaluar
-      .getWorksheet("Resumen")!
-      .getColumn(2)
-      .values.filter((v): v is string => typeof v === "string");
-    expect(valores).toContain("Sin evaluar");
-    expect(valores).not.toContain("No");
+    const res = wb.getWorksheet("Resumen")!;
+    const etiquetas = res.getColumn(1).values;
+    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
+    expect(res.getCell(fila("Ubicación"), 2).value).toBe("Sede Vivero");
+    expect(res.getCell(fila("Responsable"), 2).value).toBe("Andrea Rojas");
+    expect(res.getCell(fila("Cargo"), 2).value).toBe("Topógrafa");
+    expect(res.getCell(fila("Tipo de ángulo (detectado)"), 2).value).toBe("Exteriores");
+    expect(res.getCell(fila("Método de corrección"), 2).value).toBe("Brújula (Bowditch)");
+    expect(fila("Cerrado")).toBe(-1);
+    expect(fila("Cerrado por")).toBe(-1);
+    expect(fila("Fecha de calibración")).toBe(-1);
+    expect(fila('Precisión angular (")')).toBe(-1);
   });
 
   it("exporta un proceso sin estaciones sin romperse", () => {
@@ -217,9 +244,6 @@ describe("buildPolygonalWorkbook", () => {
   it("el resumen lleva el equipo y el orden del proceso, no los del proyecto", () => {
     const wb = buildPolygonalWorkbook(
       process({
-        status: "closed",
-        closed_at: "2026-08-26T00:00:00Z",
-        closed_by: "user-1",
         precision_order: "primer_orden",
         equipment_brand: "Sokkia",
         equipment_model: "CX-52",
@@ -243,9 +267,8 @@ describe("buildPolygonalWorkbook", () => {
     const fila = (label: string) => etiquetas.findIndex((v) => v === label);
 
     expect(res.getCell(fila("Equipo"), 2).value).toBe("Sokkia CX-52 · s/n SK-9");
-    expect(res.getCell(fila("Orden de precisión"), 2).value).toBe(
-      "Primer orden",
-    );
+    // Sin detección, el orden guardado.
+    expect(res.getCell(fila("Orden alcanzado"), 2).value).toBe("Primer orden");
     expect(res.getCell(fila('Precisión angular (")'), 2).value).toBe(2);
     expect(
       res.getCell(fila("Precisión de distancia — término constante (mm)"), 2)
@@ -278,7 +301,7 @@ describe("buildPolygonalWorkbook", () => {
   // precisión de distancia con un solo término no es un dato usable. El libro
   // escribía los dos términos como filas independientes, así que el mismo
   // proceso se leía "—" en el informe y como un número suelto en el Excel.
-  it("deja vacíos los dos términos de distancia si solo se capturó uno", () => {
+  it("omite los dos términos de distancia si solo se capturó uno", () => {
     const wb = buildPolygonalWorkbook(
       process({ distance_precision_mm: 3, distance_precision_ppm: null }),
       [station()],
@@ -287,12 +310,9 @@ describe("buildPolygonalWorkbook", () => {
     const etiquetas = res.getColumn(1).values;
     const fila = (label: string) => etiquetas.findIndex((v) => v === label);
 
-    const filaMm = fila("Precisión de distancia — término constante (mm)");
-    const filaPpm = fila("Precisión de distancia — término proporcional (ppm)");
-    expect(filaMm).toBeGreaterThan(0);
-    expect(filaPpm).toBeGreaterThan(0);
-    expect(res.getCell(filaMm, 2).value).toBeNull();
-    expect(res.getCell(filaPpm, 2).value).toBeNull();
+    // Fase 35: un par a medias cuenta como vacío, y lo vacío no se escribe.
+    expect(fila("Precisión de distancia — término constante (mm)")).toBe(-1);
+    expect(fila("Precisión de distancia — término proporcional (ppm)")).toBe(-1);
   });
 
   // Sin proyecto el libro sigue siendo válido: la sección simplemente no sale.

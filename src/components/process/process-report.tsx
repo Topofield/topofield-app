@@ -32,6 +32,11 @@ interface ProcessReportProps {
    * el diálogo de reabrir (Fase 34): así se consultan una sola vez.
    */
   reports: Report[];
+  /**
+   * ¿Puede entrar en un consolidado? Por omisión, si está cerrado. La
+   * poligonal no se cierra (Fase 35): entra calculada, y la página lo dice.
+   */
+  includable?: boolean;
 }
 
 /**
@@ -39,8 +44,9 @@ interface ProcessReportProps {
  * con las mismas secciones que el consolidado (`components/reports/sections`).
  *
  * No crea fila en `reports`: es función de los datos del proceso (decisión 2
- * del PRD). Sin cerrar, lleva la marca de borrador, también en el PDF. Debajo,
- * fuera de la impresión, los informes consolidados que lo incluyen.
+ * del PRD). Sin cerrar, lleva la marca de borrador, también en el PDF; la
+ * poligonal, que no se cierra (Fase 35), no. Debajo, fuera de la impresión, los
+ * informes consolidados que lo incluyen.
  */
 export async function ProcessReport({
   project,
@@ -48,10 +54,14 @@ export async function ProcessReport({
   state,
   notes,
   reports,
+  includable = state === "closed",
 }: ProcessReportProps) {
+  // La poligonal no se cierra (Fase 35): sin marca de borrador ni registro de
+  // cierre, con la fecha del informe.
+  const polygonal = process.type === "polygonal";
   // Cerrado conforme o rechazado: no cambia mientras siga cerrado, y tiene fecha
   // y registro de cierre.
-  const closed = state !== "draft";
+  const closed = !polygonal && state !== "draft";
   const supabase = await createClient();
   const entry: IncludedProcess = { ...process, order: 0 };
   const sections = await loadReportSections(supabase, project.id, [entry]);
@@ -66,12 +76,12 @@ export async function ProcessReport({
 
   return (
     <div className="report">
-      <ReportStateMark state={state} />
+      {!polygonal && <ReportStateMark state={state} />}
 
       <ReportCover
         title={process.name}
         cover={coverOf(project)}
-        dateLabel={closed ? "Fecha de cierre" : "Fecha"}
+        dateLabel={polygonal ? "Fecha del informe" : closed ? "Fecha de cierre" : "Fecha"}
         date={closed ? closedAt : now}
       />
 
@@ -86,7 +96,9 @@ export async function ProcessReport({
         </section>
       )}
 
-      {closed ? (
+      {polygonal ? (
+        <p className="report-footer">Informe generado desde TopoField el {formatDate(now)}.</p>
+      ) : closed ? (
         <ClosureRecord
           sections={sections}
           names={names}
@@ -121,7 +133,7 @@ export async function ProcessReport({
         ) : (
           <p className="text-sm text-ink-2">Este proceso no está en ningún informe consolidado.</p>
         )}
-        {state === "closed" ? (
+        {includable ? (
           <Link
             href={`/projects/${project.id}/reports/new?incluir=${process.type}:${process.id}`}
             className={`mt-4 ${buttonClasses({ variant: "secondary", size: "sm" })}`}
@@ -130,9 +142,11 @@ export async function ProcessReport({
           </Link>
         ) : (
           <p className="mt-2 text-sm text-ink-2">
-            {state === "rejected"
-              ? "Un informe consolidado no incluye procesos rechazados."
-              : "Un informe consolidado solo incluye procesos cerrados."}
+            {polygonal
+              ? "Un informe consolidado incluye la poligonal cuando está calculada."
+              : state === "rejected"
+                ? "Un informe consolidado no incluye procesos rechazados."
+                : "Un informe consolidado solo incluye procesos cerrados."}
           </p>
         )}
       </section>

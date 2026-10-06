@@ -78,9 +78,10 @@ export default function ManualPage() {
           <strong>Proyecto.</strong> El contenedor de un trabajo topográfico.
           Guarda el cliente, la ubicación, el datum y la proyección. El
           equipo usado y el <strong>orden de precisión</strong> no viven
-          aquí: cada proceso —poligonal, nivelación, visita de
-          asentamiento— declara los suyos, porque pueden cambiar de un
-          levantamiento a otro dentro de un mismo proyecto.
+          aquí: van en cada proceso —poligonal, nivelación, visita de
+          asentamiento—, porque pueden cambiar de un levantamiento a otro
+          dentro de un mismo proyecto. El orden de una poligonal no se
+          declara: se detecta al calcularla.
         </p>
 
         <p>
@@ -99,23 +100,24 @@ export default function ManualPage() {
         </Tabla>
 
         <p>
-          <strong>Cierre.</strong> El acto de dar por terminado un proceso.
-          Queda registrado con fecha, hora y autor, y{" "}
+          <strong>Cierre.</strong> El acto de dar por terminada una
+          nivelación, una visita o un lugar de asentamientos. Queda registrado
+          con fecha, hora y autor, y{" "}
           <strong>
             a partir de ese momento las mediciones y el veredicto no se pueden
             modificar
           </strong>
-          . Es lo que da trazabilidad al trabajo.
+          . Es lo que da trazabilidad al trabajo.{" "}
+          <strong>La poligonal no se cierra</strong>: queda calculada, se
+          corrige cuando haga falta, y su informe dice qué orden de precisión
+          alcanzó (§ 5).
         </p>
 
         <Nota titulo="Sobre la inmutabilidad">
           Un proceso cerrado no se puede editar ni eliminar, ni desde la
           interfaz ni por ninguna otra vía. La restricción está aplicada en la
-          propia base de datos, no solo en la pantalla. Si necesita corregir un
-          levantamiento cerrado, cree uno nuevo. La única excepción es la{" "}
-          <strong>posición</strong> de una poligonal: se puede georreferenciar
-          aunque esté cerrada (§ 5.5), porque girarla y trasladarla no cambia
-          nada de lo que el cierre certificó.
+          propia base de datos, no solo en la pantalla. Para corregirlo, se
+          reabre (§ 8).
         </Nota>
       </Seccion>
 
@@ -140,8 +142,8 @@ export default function ManualPage() {
         </p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            Tres poligonales: la <strong>V10</strong>, amarrada a TT4 y ya
-            cerrada; la de la <strong>Sede Vivero</strong>, ajustada por
+            Tres poligonales: la <strong>V10</strong>, amarrada a TT4, en
+            tercer orden; la de la <strong>Sede Vivero</strong>, ajustada por
             mínimos cuadrados, y la misma en un sistema local, lista para{" "}
             <strong>georreferenciar</strong> con los vértices D1 y D3 del
             catálogo.
@@ -157,7 +159,7 @@ export default function ManualPage() {
             simulado con catorce visitas y su libreta de nivelación en cada
             una.
           </li>
-          <li>Un informe de cierre por módulo.</li>
+          <li>Un informe consolidado por módulo.</li>
         </ul>
         <p>Puede modificarlo o archivarlo cuando quiera.</p>
         <p>Cada usuario ve únicamente sus propios proyectos.</p>
@@ -197,13 +199,13 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Procesos calculados</strong> — levantamientos resueltos,
-            listos para revisar y cerrar.
+            listos para revisar.
           </li>
           <li>
             <strong>Fuera de tolerancia</strong> — procesos calculados que no
-            alcanzan el orden de precisión que ellos mismos declararon, y
-            lugares con algún punto en alerta o alarma en una visita abierta.
-            Requieren revisión antes del cierre.
+            cumplen su tolerancia —una poligonal, si no alcanza ningún orden—,
+            y lugares con algún punto en alerta o alarma en una visita
+            abierta. Requieren revisión.
           </li>
         </ul>
 
@@ -243,11 +245,11 @@ export default function ManualPage() {
         </p>
 
         <Nota titulo="El equipo y el orden de precisión no se piden aquí">
-          Se declaran en cada proceso: cada poligonal, cada nivelación y cada
-          visita de asentamiento tiene su propia configuración de orden y
-          equipo, con los campos que corresponden a su tipo de instrumento.
-          Un mismo proyecto puede así tener trabajos de distinto orden,
-          medidos con instrumentos distintos y en fechas distintas. Vea{" "}
+          Van en cada proceso: cada nivelación y cada visita de asentamiento
+          declara su orden y su equipo, y cada poligonal su equipo —su orden
+          se detecta al calcularla—. Un mismo proyecto puede así tener
+          trabajos de distinto orden, medidos con instrumentos distintos y en
+          fechas distintas. Vea{" "}
           <a href="#poligonales" className="underline">
             § 5
           </a>
@@ -281,8 +283,8 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Informes</strong> — los informes{" "}
-            <strong>consolidados</strong>, que reúnen varios procesos cerrados
-            en un solo documento. Se detalla en «10. Informes». Cada proceso
+            <strong>consolidados</strong>, que reúnen poligonales calculadas y
+            procesos cerrados en un solo documento. Se detalla en «10. Informes». Cada proceso
             tiene además su propio informe, en su pantalla (4.4).
           </li>
           <li>
@@ -331,9 +333,10 @@ export default function ManualPage() {
         <p>
           <strong>Filtrar por estado.</strong> Los chips muestran cuántos hay
           en cada grupo, así que ve la distribución del proyecto sin desplegar
-          nada. Pulse uno para ver solo ese grupo. En control de asentamientos
-          los estados son <strong>Activos</strong> y{" "}
-          <strong>Cerrados</strong>.
+          nada. Pulse uno para ver solo ese grupo. En poligonales los estados
+          son <strong>Borradores</strong> y <strong>Calculados</strong>: la
+          poligonal no se cierra. En control de asentamientos,{" "}
+          <strong>Activos</strong> y <strong>Cerrados</strong>.
         </p>
 
         <p>
@@ -398,8 +401,9 @@ export default function ManualPage() {
         </ul>
 
         <Nota titulo="Lo cerrado solo se puede duplicar">
-          Un proceso cerrado o rechazado, o un lugar cerrado, no admite
-          renombrarse ni eliminarse. Si necesita rehacer un levantamiento
+          Una nivelación cerrada o rechazada, o un lugar cerrado, no admite
+          renombrarse ni eliminarse. Una poligonal siempre admite las tres
+          acciones: no se cierra. Si necesita rehacer un levantamiento
           cerrado, duplíquelo: obtendrá una copia editable y el original queda
           intacto como constancia. Para corregir el mismo proceso, reábralo
           desde su pantalla (§ 8).
@@ -415,8 +419,12 @@ export default function ManualPage() {
         </h3>
 
         <p>
-          Poligonales, nivelaciones y controles de asentamientos se abren en la
-          misma pantalla.
+          Nivelaciones y controles de asentamientos se abren en la misma
+          pantalla. La poligonal tiene la suya, por pasos (
+          <a href="#pantalla-por-pasos" className="underline">
+            § 5.3
+          </a>
+          ).
         </p>
 
         <p>
@@ -434,7 +442,9 @@ export default function ManualPage() {
           informe de ese proceso, listo para{" "}
           <strong>Imprimir o guardar como PDF</strong> (§ 10). El control de
           asentamientos tiene tres: <strong>Panel</strong>,{" "}
-          <strong>Puntos y lugar</strong> e <strong>Informe</strong> (§ 7).
+          <strong>Puntos y lugar</strong> e <strong>Informe</strong> (§ 7), y
+          la poligonal sus tres pasos: <strong>Datos</strong>,{" "}
+          <strong>Ajuste</strong> e <strong>Informe</strong>.
         </p>
 
         <Captura {...CAPTURAS.informeDelProceso} />
@@ -445,9 +455,11 @@ export default function ManualPage() {
           también en el PDF: sirve para revisar antes de cerrar. Si se cerró
           como rechazado, lleva en cambio la marca{" "}
           <strong>«Rechazado»</strong>: queda como constancia y no entra en
-          informes consolidados. Debajo, fuera de la impresión, aparecen los
-          informes consolidados que ya lo incluyen y, si está cerrado
-          conforme, un botón para generar uno nuevo con él.
+          informes consolidados. El de una poligonal no lleva marca: no se
+          cierra. Debajo, fuera de la impresión, aparecen los informes
+          consolidados que ya lo incluyen y, si puede entrar en uno —cerrado
+          conforme, o una poligonal calculada—, un botón para generar uno
+          nuevo con él.
         </p>
 
         <p>
@@ -455,7 +467,8 @@ export default function ManualPage() {
           editar, <strong>Guardar</strong> y <strong>Cerrar proceso</strong> van
           en una barra fija al pie de la pantalla, siempre a la vista. A su
           izquierda dice si hay <strong>cambios sin guardar</strong> o qué
-          impide guardar.
+          impide guardar. La poligonal no la tiene: cada popup guarda al
+          confirmar.
         </p>
 
         <Nota titulo="Salir sin guardar pregunta">
@@ -470,6 +483,16 @@ export default function ManualPage() {
 
       {/* ── 5. Poligonales ─────────────────────────────────────────────── */}
       <Seccion id="poligonales" titulo="5. Poligonales">
+        <p>
+          La poligonal se trabaja como la mide el topógrafo: un alta corta y
+          tres pasos en una sola pantalla —<strong>1 · Datos</strong>,{" "}
+          <strong>2 · Ajuste</strong> y <strong>3 · Informe</strong>—.{" "}
+          <strong>No hay botón Guardar</strong>: cada popup guarda al
+          confirmar. Y <strong>la poligonal no se cierra</strong>: queda
+          calculada y se corrige cuando haga falta; su informe dice qué orden
+          de precisión alcanzó.
+        </p>
+
         <h3 className="text-lg font-semibold">5.1 Tipos</h3>
 
         <p>
@@ -498,32 +521,287 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.nuevaPoligonal} />
 
         <p>
-          Desde el proyecto, <strong>+ Nuevo Proceso → Poligonal</strong>.
-          Indique el nombre, el tipo, el punto de partida (código, Norte, Este
-          y azimut inicial), el <strong>orden de precisión</strong> y los
-          datos de la <strong>estación total</strong> con que va a medir:
-          marca, modelo, número de serie, fecha de calibración, precisión
-          angular (en segundos, ISO 17123-3) y precisión de distancia como
-          término constante en mm más término proporcional en ppm (ISO
-          17123-4).
+          Desde el proyecto, <strong>+ Nuevo Proceso → Poligonal</strong> abre
+          un popup:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Título</strong>, el único obligatorio.
+          </li>
+          <li>
+            <strong>Ubicación</strong>, <strong>Responsable</strong> y{" "}
+            <strong>Cargo del responsable</strong>: salen en el informe y en el
+            Excel.
+          </li>
+          <li>
+            <strong>Tipo de poligonal</strong>, con una línea que explica cómo
+            se verifica cada uno.
+          </li>
+          <li>
+            <strong>Equipo</strong>, plegado y opcional: marca, modelo y número
+            de serie de la estación total, o{" "}
+            <strong>Tomar del catálogo</strong> (§ 12).
+          </li>
+        </ul>
+
+        <p>
+          <strong>Crear y empezar</strong> lleva al paso de Datos. Lo que no se
+          pide: el <strong>orden de precisión</strong> y el{" "}
+          <strong>tipo de ángulo</strong> se detectan al calcular (§ 5.4 y
+          § 5.5).
         </p>
 
         <p>
-          Si el tipo es <em>abierta con control</em>, deberá indicar además el
-          punto de llegada.
+          Estos datos se cambian después con <strong>Editar datos</strong>, en
+          la cabecera. Cambiar el tipo cuando ya hay mediciones las recalcula
+          con el tipo nuevo, y el popup lo avisa.
+        </p>
+
+        <h3
+          id="pantalla-por-pasos"
+          className="mt-4 scroll-mt-6 text-lg font-semibold"
+        >
+          5.3 La pantalla por pasos
+        </h3>
+
+        <p>
+          La <strong>cabecera</strong> lleva el tipo, el estado y el orden
+          alcanzado; el título, la ubicación, el responsable, el equipo y
+          cuándo se guardó por última vez; y las acciones{" "}
+          <strong>Editar datos</strong>, <strong>Exportar a Excel</strong>{" "}
+          (§ 11) y, bajo <strong>⋯</strong>, <strong>Duplicar</strong> y{" "}
+          <strong>Eliminar</strong>.
         </p>
 
         <p>
-          Arriba del formulario elige si tecleará los ángulos en{" "}
-          <strong>DMS</strong> o en <strong>grados decimales</strong> (ver
-          § 5.3).
+          Debajo van los tres pasos y, a la derecha,{" "}
+          <strong>Ángulos en</strong>: <strong>DMS (° ′ ″)</strong> o{" "}
+          <strong>Grados decimales</strong>. El formato rige la tabla, el
+          ajuste, el informe y los popups, y se recuerda por proceso.
         </p>
 
-        <Nota titulo="El orden de precisión es la decisión más importante del proceso">
-          Define las tolerancias que se le exigirán al cierre. Al elegirlo, el
-          formulario le muestra la tolerancia angular y la precisión relativa
-          mínima que implica:
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            Cambiar de formato <strong>no altera ningún valor</strong>: la
+            aplicación guarda los ángulos siempre en DMS y el decimal es solo
+            otra forma de verlos, con seis decimales.
+          </li>
+          <li>
+            Los ángulos se guardan a la <strong>décima de segundo</strong>. Si
+            teclea un decimal con más precisión, bajo el campo aparece cómo se
+            guardará —«Se guarda como 124°29′42″»—.
+          </li>
+        </ul>
+
+        <h3 id="paso-datos" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          5.4 Paso 1 · Datos
+        </h3>
+
+        <Captura {...CAPTURAS.datosPoligonal} />
+
+        <p>
+          Dos columnas: a la izquierda, el amarre, las mediciones y el cierre
+          angular; a la derecha, el dibujo, que se queda fijo mientras baja la
+          página.
+        </p>
+
+        <p>
+          <strong>Los puntos de amarre.</strong> Una poligonal nueva empieza
+          por ellos: <strong>Ingresar puntos de amarre</strong> abre un popup
+          con
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            la <strong>estación de partida</strong>: nombre, Norte y Este, o{" "}
+            <strong>Tomar del catálogo</strong>;
+          </li>
+          <li>
+            la <strong>referencia, 0° atrás</strong>, de tres maneras:{" "}
+            <strong>Punto con coordenadas</strong> —el azimut de partida se
+            calcula solo y el popup lo muestra—,{" "}
+            <strong>Solo el azimut</strong> —si no tiene sus coordenadas: el
+            nombre y el azimut de la partida a la referencia— o{" "}
+            <strong>Sin 0 atrás</strong>, con el azimut del primer lado;
+          </li>
+          <li>
+            en la abierta con control, la <strong>llegada</strong>: el punto
+            conocido, con su Norte y su Este, y el azimut de llegada si lo
+            tiene. Con él se comprueba también el cierre angular.
+          </li>
+        </ul>
+
+        <p>
+          Los puntos con coordenadas se guardan en el catálogo del proyecto. Si
+          el nombre ya existe con otras coordenadas, el popup lo dice: tómelo
+          del catálogo o use otro nombre, porque ese punto puede estar en uso
+          en otra poligonal. Sin 0 atrás, la partida no va al catálogo: puede
+          ser local.
+        </p>
+
+        <p>
+          Con mediciones, el amarre se edita pero{" "}
+          <strong>no se pone ni se quita el 0 atrás</strong>: cambiaría lo que
+          significa el primer ángulo —de orientación a vértice, o al revés—. El
+          popup pide deshacer las mediciones antes.
+        </p>
+
+        <p>
+          Si levanta en un sistema local,{" "}
+          <strong>Medir sin amarre, en coordenadas locales</strong> arranca en
+          P1 (1000, 1000) con azimut 0°. Cuando tenga las coordenadas reales,
+          edite el amarre o georreferencie (§ 5.6).
+        </p>
+
+        <p>
+          <strong>Las mediciones.</strong> La tabla se lee como la cartera:
+          cada fila va <strong>desde → hacia</strong> —«V10 → D1»—, con el
+          ángulo medido en el punto de partida, la distancia y el{" "}
+          <strong>azimut sin ajustar</strong>, encadenado con los ángulos tal
+          como se midieron. La primera fila es el <strong>0 atrás</strong>; el
+          lado que vuelve a la partida lleva la marca <strong>cierre</strong>,
+          y la fila del cierre angular, <strong>cierre angular</strong>.
+        </p>
+
+        <p>
+          <strong>+ Agregar punto</strong> abre el popup de medición:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>arriba, dónde está: «Estás en D1 · atrás en V10»;</li>
+          <li>
+            el <strong>punto siguiente</strong>;
+          </li>
+          <li>
+            las <strong>lecturas del ángulo</strong>: una o varias, con{" "}
+            <strong>+ Lectura</strong>. Con dos o más, el popup muestra el
+            promedio y la dispersión entre ellas; el promedio es el ángulo que
+            entra en el cálculo. La dispersión es un dato: la aplicación no la
+            juzga;
+          </li>
+          <li>
+            en la abierta con control, el <strong>sentido</strong> de la
+            deflexión: derecha o izquierda;
+          </li>
+          <li>
+            la <strong>distancia horizontal</strong> hasta el punto siguiente.
+          </li>
+        </ul>
+
+        <p>
+          <strong>Agregar y seguir en D2</strong> guarda y deja el popup listo
+          para la medición siguiente; <strong>Terminar</strong> guarda y lo
+          cierra. Sin 0 atrás, la primera medición no lleva ángulo.
+        </p>
+
+        <p>
+          Desde la segunda medición de una cerrada aparece la casilla{" "}
+          <strong>Cierre: este lado vuelve a V10</strong>, que fija como
+          siguiente la estación de partida. Al agregar el cierre, el popup
+          sigue con el <strong>cierre angular</strong>:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            amarrada, en la estación de partida: hacia la referencia —la
+            cartera cierra contra el amarre, como la TT4— o, si desmarca la
+            casilla, hacia el primer lado —el ángulo del vértice de arranque,
+            como la cartera de la Sede Vivero—;
+          </li>
+          <li>
+            sin amarre, el ángulo en P1, entre el último punto y P2: se mide al
+            final, porque al empezar no había punto atrás.
+          </li>
+        </ul>
+
+        <p>
+          En la abierta con control la casilla es{" "}
+          <strong>Llegada: este lado llega a …</strong>, y con azimut de
+          llegada el cierre angular es la deflexión en el punto de llegada.
+          Mientras falte el cierre angular,{" "}
+          <strong>Medir el cierre angular</strong> ocupa el lugar de{" "}
+          <strong>+ Agregar punto</strong>.
+        </p>
+
+        <p>
+          El lápiz de cada fila abre el mismo popup para{" "}
+          <strong>editarla</strong> —el ángulo, la distancia o el nombre del
+          punto siguiente— o <strong>eliminarla</strong>. Eliminar una medición
+          intermedia quita esa estación: el punto siguiente pasa a medirse
+          desde el anterior, y el popup lo avisa.{" "}
+          <strong>Deshacer la última medición</strong> retrocede de a una:
+          primero el cierre angular, después el cierre y luego cada lado.
+        </p>
+
+        <p>
+          Los errores se detectan al confirmar y se quedan en el popup, sin
+          perder lo tecleado: un ángulo sin lecturas, minutos o segundos fuera
+          de 0-59, segundos con más de una cifra decimal, una distancia de
+          cero, mayor a 1000 m o con más de cuatro decimales, un punto sin
+          nombre o repetido.
+        </p>
+
+        <p>
+          <strong>El cierre angular</strong>, debajo de la tabla, resume la
+          cerrada: vértices, <strong>tipo de ángulo</strong> con la marca{" "}
+          <em>detectado</em>, ángulos en la condición, suma observada y
+          teórica, error angular y la corrección que le toca a cada ángulo. En
+          la abierta con control, el error contra el azimut de llegada.
+        </p>
+
+        <Nota titulo="El tipo de ángulo se detecta">
+          Interiores y exteriores solo cambian la suma teórica —(n − 2)·180°
+          frente a (n + 2)·180°— y difieren en 720°: la suma observada dice
+          sin ambigüedad cuál midió.
         </Nota>
+
+        <p>
+          <strong>El dibujo</strong> muestra lo medido, sin ajustar, y crece
+          con cada medición. En una cerrada, el último lado no llega
+          exactamente a la partida: ese hueco es el error de cierre, a escala
+          real. En el teléfono, un selector <strong>Tabla | Dibujo</strong>{" "}
+          alterna entre las dos columnas (§ 9).
+        </p>
+
+        <h3 id="paso-ajuste" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          5.5 Paso 2 · Ajuste
+        </h3>
+
+        <Captura {...CAPTURAS.ajustePoligonal} />
+
+        <p>
+          <strong>El método.</strong> Arriba, el selector. Cambiarlo recalcula
+          y guarda al instante.
+        </p>
+
+        <Tabla
+          caption="Métodos de corrección"
+          columnas={["Método", "Cómo reparte el error"]}
+        >
+          {METODOS_CORRECCION.map((m) => (
+            <Fila key={m.metodo} celdas={[m.metodo, m.reparte]} />
+          ))}
+        </Tabla>
+
+        <p>
+          Una abierta sin control no tiene nada que ajustar: el paso muestra
+          sus coordenadas encadenadas, sin selector.
+        </p>
+
+        <p>
+          <strong>El orden alcanzado.</strong> Cuatro cifras: error angular,
+          error de cierre lineal, precisión relativa y{" "}
+          <strong>orden alcanzado</strong>, el más alto que cumple a la vez la
+          tolerancia angular y la precisión relativa mínima de su orden.
+        </p>
+
+        <Captura {...CAPTURAS.ordenAlcanzado} />
+
+        <p>
+          <strong>Por qué</strong> despliega cada orden con su tolerancia y su
+          precisión mínima, y si la poligonal las cumple:
+        </p>
 
         <Tabla
           caption="Órdenes de precisión y sus tolerancias"
@@ -542,148 +820,51 @@ export default function ManualPage() {
           ))}
         </Tabla>
 
-        <p className="text-sm text-ink-2">
-          Donde <em>n</em> es el número de ángulos medidos.
+        <p>
+          Donde <em>n</em> es el número de ángulos que entran en la condición:
+          los vértices de una cerrada —más el de cierre si cierra contra el
+          amarre— o las deflexiones de una abierta con control. En la cartera
+          TT4, el error de 12″ cabe en segundo orden (13.2″), pero 1:7.045
+          solo alcanza el tercero (1:5.000): <strong>tercer orden</strong>. Si
+          no alcanza ni el ordinario, la cifra dice{" "}
+          <strong>No alcanza ningún orden</strong> y el informe lo alerta.
         </p>
 
-        <Nota titulo="El cierre juzga el trabajo, no el equipo">
-          La marca, el modelo y la precisión del equipo se registran para el
-          informe; la aplicación no opina si el equipo alcanza el orden. Lo
-          que dice si la medición cumple es el veredicto de cierre.
+        <Nota titulo="El orden no se declara: se detecta">
+          Es el mismo con cualquier método, porque se juzga con el error de la
+          cartera tal como se midió, antes de corregir.
         </Nota>
 
-        <h3 className="mt-4 text-lg font-semibold">5.3 El editor</h3>
-
-        <Captura {...CAPTURAS.editor} />
-
-        <p>La pestaña <strong>Proceso</strong> (4.4) se lee de arriba abajo:</p>
-
         <p>
-          <strong>El veredicto.</strong> Lo primero y más visible: si el
-          levantamiento cumple o no el orden de precisión exigido.
-        </p>
-
-        <Captura {...CAPTURAS.veredicto} />
-
-        <p>
-          Muestra la precisión alcanzada junto a la requerida, el error de
-          cierre y el perímetro. El color lo resume, y el texto lo dice: verde
-          cumple, rojo no cumple.
+          <strong>La poligonal ajustada.</strong> La tabla al estilo de la hoja
+          de cálculo: cada lado «desde → hacia» con el ángulo corregido, el
+          azimut, la distancia, las proyecciones, las proyecciones corregidas y
+          las coordenadas del punto al que llega. La fila <strong>Σ</strong>{" "}
+          suma las proyecciones: en las crudas, el error de cierre; en las
+          corregidas, cero. En el teléfono, la tabla se desplaza de lado.
         </p>
 
         <p>
-          <strong>Ángulos en DMS o en grados decimales.</strong> Bajo el
-          veredicto, el conmutador <strong>Ángulos en</strong> elige cómo
-          teclea los ángulos: en tres casillas (grados, minutos, segundos) o
-          en un solo campo de grados decimales. Afecta a las lecturas de las
-          estaciones, a los azimuts de partida y de llegada y al diálogo de
-          reasignación.
+          <strong>Corrección por método …</strong> resume cómo corrigió el
+          método elegido: el reparto del error angular —en la TT4, −1.71″ en
+          cada uno de los 7 ángulos, incluido el de orientación— y sus cifras
+          propias:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            Cambiar de formato <strong>no altera ningún valor</strong>: la
-            aplicación guarda los ángulos siempre en DMS y el decimal es solo
-            otra forma de verlos, con seis decimales.
+            Brújula: las diferencias ΔN y ΔE, el perímetro y el factor −e/P de
+            cada eje;
           </li>
           <li>
-            Los ángulos se guardan a la <strong>décima de segundo</strong>. Si
-            teclea un decimal con más precisión, bajo el campo aparece cómo se
-            guardará —«Se guarda como 124°29′42″»—.
+            Tránsito: la suma de proyecciones absolutas y la corrección
+            unitaria de cada eje;
           </li>
           <li>
-            El formato se recuerda por proceso: al volver a abrirlo, aparece
-            como lo dejó. En un proceso cerrado el conmutador solo cambia la
-            vista.
+            Crandall: los multiplicadores λ₁ y λ₂ del ajuste de las
+            distancias.
           </li>
-          <li>Resultados, informe y Excel muestran siempre DMS.</li>
         </ul>
-
-        <p>
-          <strong>Configuración.</strong> Plegada cuando el proceso ya está
-          calculado. Ábrala para cambiar el nombre, el tipo, el punto de
-          partida, el orden de precisión o los datos de la estación total —
-          los mismos campos del alta, editables mientras el proceso siga
-          abierto.
-        </p>
-
-        <p>
-          Ahí elige también el <strong>tipo de ángulo</strong> y el{" "}
-          <strong>punto de amarre</strong>. TopoField no preselecciona el tipo
-          de ángulo a propósito: si recorre el polígono en un sentido sus
-          lecturas caen como interiores y en el otro como exteriores, y elegir
-          por usted produciría un levantamiento espejado sin ningún aviso.
-        </p>
-
-        <p>
-          El punto de amarre sale del catálogo de puntos del proyecto —solo
-          aparecen los que tienen coordenadas—, y con él{" "}
-          <strong>el azimut se calcula solo</strong> desde las coordenadas del
-          arranque y las de la referencia. Si su cartera cierra visando de
-          vuelta al amarre, marque la casilla correspondiente: la última fila
-          será ese ángulo de cierre y no llevará distancia.
-        </p>
-
-        <p>
-          Una poligonal <strong>abierta</strong> también puede amarrarse. Su
-          primera fila lleva entonces el{" "}
-          <strong>ángulo de orientación</strong>, medido a la derecha desde el
-          amarre hasta la siguiente estación, y la tabla lo rotula así: el
-          primer lado sale del azimut al amarre más ese ángulo.
-        </p>
-
-        <p>
-          <strong>Estaciones.</strong> La tabla de captura. Por cada estación
-          registra el código, el ángulo y la distancia horizontal. A la derecha,
-          la aplicación calcula en vivo el azimut, ΔN y ΔE.
-        </p>
-
-        <p>
-          El ángulo se captura con <strong>varias lecturas</strong>. La celda
-          muestra el promedio, la dispersión entre lecturas y cuántas lleva de
-          las exigidas —por ejemplo <code>211°15&#39;7″ · ±3.0″ · 3/3</code>—; al
-          pulsarla se despliegan las lecturas individuales y un botón para
-          añadir más. El proceso exige un mínimo configurable, 3 por defecto, y
-          el promedio es el que alimenta el cálculo.
-        </p>
-
-        <p>
-          La dispersión es un dato, sin aviso: la aplicación no la juzga. Si
-          las lecturas de un ángulo difieren mucho, conviene revisarlas antes
-          de cerrar.
-        </p>
-
-        <p>
-          Los errores de captura se marcan al momento: una distancia de cero o
-          mayor a 1000 m, minutos o segundos fuera del rango 0-59 —en cada
-          lectura, no solo en el promedio—, segundos con más de una cifra
-          decimal o distancias con más de cuatro: la aplicación guarda los
-          segundos a la décima y las distancias a la diezmilésima. Un ángulo
-          de 0° o 360° genera una advertencia, no un bloqueo: es válido, pero
-          suele indicar un error de tecleo.
-        </p>
-
-        <p>
-          <strong>Resultados.</strong> El detalle completo: verificación angular
-          (suma medida contra suma teórica, error y tolerancia), cierre lineal
-          (error, perímetro, precisión relativa) y la tabla de coordenadas
-          corregidas.
-        </p>
-
-        <p>
-          Aquí elige el <strong>método de corrección</strong>:
-        </p>
-
-        <Tabla
-          caption="Métodos de corrección"
-          columnas={["Método", "Cómo reparte el error"]}
-        >
-          {METODOS_CORRECCION.map((m) => (
-            <Fila key={m.metodo} celdas={[m.metodo, m.reparte]} />
-          ))}
-        </Tabla>
-
-        <p>Cambiar el método recalcula las coordenadas al instante.</p>
 
         <p>
           <strong>Mínimos cuadrados.</strong> Los otros tres métodos reparten el
@@ -712,23 +893,24 @@ export default function ManualPage() {
           Todas las observaciones pesan igual. Los campos{" "}
           <strong>salen vacíos</strong>: la aplicación no supone pesos por
           usted. La hoja de la universidad usa, por ejemplo, 2″, 0.011 m y 2
-          mediciones. Mientras falte alguno verá «Faltan los pesos del ajuste»,
-          sin coordenadas, y no podrá guardar.
+          mediciones. Se guardan al salir del campo, cuando están los tres;
+          mientras tanto el ajuste dice que faltan. Si cambia de método, los
+          pesos se conservan para cuando vuelva.
         </p>
 
         <Captura {...CAPTURAS.minimosCuadrados} />
 
         <p>
-          Con los pesos completos, <strong>Resultados</strong> suma una tabla
-          con la <strong>corrección de cada ángulo</strong>, en segundos, y de{" "}
+          Con los pesos completos aparece la{" "}
+          <strong>corrección de cada ángulo</strong>, en segundos, y de{" "}
           <strong>cada distancia</strong>, en milímetros, junto a la distancia
-          ajustada. El ángulo de orientación no se ajusta: es el dato de
-          partida. Debajo aparece <strong>σ₀</strong>, que compara lo medido
-          con los pesos que supuso. Con pesos correctos ronda 1, pero con tan
-          pocas condiciones fluctúa mucho; por eso se juzga con la{" "}
-          <strong>prueba χ² al 95 %</strong> de su número de condiciones, r
-          (3, o 2 sin azimut de llegada), que la pantalla muestra con su
-          intervalo:
+          ajustada. El ángulo de orientación no se ajusta: es el{" "}
+          <strong>datum</strong>, porque un error suyo rota la poligonal entera
+          sin afectar al cierre. Debajo aparece <strong>σ₀</strong>, que
+          compara lo medido con los pesos que supuso. Con pesos correctos ronda
+          1, pero con tan pocas condiciones fluctúa mucho; por eso se juzga con
+          la <strong>prueba χ² al 95 %</strong> de su número de condiciones, r
+          (3, o 2 sin azimut de llegada):
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
@@ -750,20 +932,14 @@ export default function ManualPage() {
         <p>
           Si los pesos están pero no hay ajuste posible, un aviso dice por qué:
           con un solo lado, por ejemplo, las condiciones de llegada dependen de
-          una sola distancia y no hay nada que ajustar.
+          una sola distancia y no hay nada que ajustar. σ₀ es información, no
+          un criterio: el orden alcanzado no depende del método.
         </p>
 
         <p>
-          σ₀ es información, no un criterio. El{" "}
-          <strong>veredicto de cierre es el mismo</strong> con cualquier
-          método: se juzga con el error de la cartera tal como se midió, antes
-          de corregir.
-        </p>
-
-        <p>
-          <strong>Dibujo de la poligonal.</strong> La poligonal a escala sobre
-          una grilla de coordenadas, con flecha de norte, barra de escala y el
-          amarre si lo tiene. Se actualiza en vivo mientras captura.
+          <strong>El dibujo ajustado.</strong> La poligonal a escala sobre una
+          grilla de coordenadas, con flecha de norte, barra de escala y el
+          amarre si lo tiene.
         </p>
 
         <Captura {...CAPTURAS.dibujoPoligonal} />
@@ -802,44 +978,19 @@ export default function ManualPage() {
           exageración no cambia al acercarse.
         </p>
 
-        <h3 className="mt-4 text-lg font-semibold">5.4 Reasignar coordenadas</h3>
-
-        <p>
-          El botón <strong>Asignar coordenadas reales</strong>, junto al
-          dibujo, permite recalcular toda la poligonal desde un punto de partida distinto,
-          conservando las mediciones. Es útil cuando levantó en un sistema local
-          —1000, 1000— y después obtuvo las coordenadas oficiales.
-        </p>
-
-        <p>
-          Si el proceso está amarrado, el diálogo pide también las coordenadas
-          reales del punto de amarre y <strong>recalcula el azimut</strong> a
-          partir de las dos: no hay que teclearlo.
-        </p>
-
-        <p>
-          Lo que no cambia al reasignar: el error angular, el error de cierre y
-          la precisión relativa. Girar y trasladar la poligonal no altera nada
-          de lo que el cierre certifica; solo se mueven las coordenadas.
-        </p>
-
-        <p>
-          Este diálogo es para un proceso <strong>sin cerrar</strong> y parte
-          del punto de arranque. Si lo que tiene son las coordenadas reales de{" "}
-          <strong>dos estaciones</strong> —medidas con GPS, por ejemplo—, o el
-          proceso ya está cerrado, use <strong>Georreferenciar</strong>. Cada
-          uno de los dos diálogos lo recuerda.
-        </p>
-
-        <h3 className="mt-4 text-lg font-semibold">5.5 Georreferenciar</h3>
+        <h3
+          id="georreferenciar"
+          className="mt-4 scroll-mt-6 text-lg font-semibold"
+        >
+          5.6 Georreferenciar
+        </h3>
 
         <p>
           Un levantamiento suele arrancar en un sistema local —(1000, 2000) y
-          un azimut supuesto— y recibir coordenadas reales después, a veces con
-          el proceso ya cerrado. El botón <strong>Georreferenciar</strong>,
-          junto al dibujo, lo lleva al sistema real
-          con <strong>dos de sus estaciones</strong> de coordenadas conocidas.
-          Está disponible en cualquier estado, también cerrado o rechazado.
+          un azimut supuesto— y recibir coordenadas reales después. El botón{" "}
+          <strong>Georreferenciar</strong>, junto al dibujo del paso de
+          Ajuste, lo lleva al sistema real con{" "}
+          <strong>dos de sus estaciones</strong> de coordenadas conocidas.
         </p>
 
         <Captura {...CAPTURAS.georreferenciar} />
@@ -860,20 +1011,24 @@ export default function ManualPage() {
             <strong>residuos</strong> en A y B, y las coordenadas actuales
             frente a las reales.
           </li>
-          <li>
-            Confirme. En un proceso cerrado el botón dice{" "}
-            <strong>Reescribir coordenadas</strong>.
-          </li>
+          <li>Confirme.</li>
         </ol>
 
         <p>
           La poligonal se <strong>gira y se traslada</strong>, sin escala: las
           distancias y los ángulos medidos no cambian, y el{" "}
-          <strong>veredicto de cierre tampoco</strong>. Se recalcula con el
-          nuevo arranque, así que coordenadas, azimuts y proyecciones quedan en
-          el sistema real. Sobre el dibujo queda anotada la última
+          <strong>orden alcanzado tampoco</strong>. Se recalcula con el nuevo
+          arranque, así que coordenadas, azimuts y proyecciones quedan en el
+          sistema real. Sobre el dibujo queda anotada la última
           georreferenciación: fecha, puntos, rotación y factor de escala. Puede
           georreferenciar otra vez para corregir una coordenada mal tecleada.
+        </p>
+
+        <p>
+          Si lo que tiene son las coordenadas reales del{" "}
+          <strong>punto de partida y de la referencia</strong>, no hace falta
+          georreferenciar: edite el amarre (§ 5.4) y la poligonal se recalcula
+          desde ellos.
         </p>
 
         <p>El diálogo avisa, sin impedirlo, en tres casos:</p>
@@ -881,7 +1036,7 @@ export default function ManualPage() {
         <ul className="ml-5 list-disc space-y-1">
           <li>
             <strong>El factor de escala se aparta de 1</strong> más de lo que
-            admite el orden de precisión: la distancia real entre A y B no
+            admite el orden alcanzado: la distancia real entre A y B no
             concuerda con la medida. Revise las coordenadas. Si están en una
             proyección con factor de escala distinto de 1 (p. ej. CTM12), la
             diferencia puede ser de la proyección y no un error.
@@ -889,7 +1044,7 @@ export default function ManualPage() {
           <li>
             <strong>El método es Tránsito.</strong> Tránsito reparte el error
             según la orientación, así que sus coordenadas cambian unos
-            milímetros más allá del giro. El veredicto no cambia.
+            milímetros más allá del giro. El orden alcanzado no cambia.
           </li>
           <li>
             <strong>El amarre es del catálogo.</strong> Sus coordenadas siguen
@@ -897,6 +1052,47 @@ export default function ManualPage() {
             código, y el dibujo deja de mostrarlo.
           </li>
         </ul>
+
+        <h3 id="paso-informe" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          5.7 Paso 3 · Informe
+        </h3>
+
+        <p>
+          El informe de la poligonal, listo para{" "}
+          <strong>Imprimir o guardar como PDF</strong> (§ 10). Es la misma
+          sección que lleva en un informe consolidado:
+        </p>
+
+        <ol className="ml-5 list-decimal space-y-1">
+          <li>
+            <strong>Resultado</strong>: las cuatro cifras y por qué alcanza su
+            orden. Si no alcanza ninguno, una alerta lo dice: «No alcanza la
+            precisión de ningún orden».
+          </li>
+          <li>
+            <strong>Datos de campo</strong>: el amarre, las mediciones «desde →
+            hacia» y el cierre angular, con su tolerancia.
+          </li>
+          <li>
+            <strong>Corrección por método …</strong>: cómo corrigió el método
+            elegido, paso a paso, con sus fórmulas en notación matemática y las
+            cifras de esta poligonal.
+          </li>
+          <li>
+            <strong>Poligonal ajustada</strong>, con la fila Σ.
+          </li>
+          <li>
+            <strong>Coordenadas</strong> y el dibujo.
+          </li>
+        </ol>
+
+        <Captura {...CAPTURAS.correccionInforme} />
+
+        <p>
+          No lleva marca de borrador: la poligonal no se cierra, y el informe
+          muestra lo que tenga al abrirlo. Los ángulos salen en el formato
+          elegido.
+        </p>
 
         <VolverArriba />
       </Seccion>
@@ -1020,7 +1216,7 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.editorNivelacion} />
 
         <p>
-          <strong>El veredicto.</strong> Arriba, como en la poligonal: el error
+          <strong>El veredicto.</strong> Arriba: el error
           de cierre frente a su tolerancia en una nivelación cerrada o de
           enlace, o la discrepancia entre ida y vuelta en una abierta con
           vuelta. Una abierta sin vuelta no cierra contra nada y lo dice.
@@ -1328,8 +1524,8 @@ export default function ManualPage() {
         </h3>
 
         <p>
-          Igual que en poligonales, cerrar una nivelación la deja en solo
-          lectura hasta que se reabra (§ 8). Un trabajo que no alcanza la
+          Cerrar una nivelación la deja en solo lectura hasta que se reabra
+          (§ 8). Un trabajo que no alcanza la
           tolerancia —en una cerrada o de enlace con vuelta, la de cualquiera
           de los dos recorridos; en una abierta con vuelta, la de su
           discrepancia— solo puede cerrarse como{" "}
@@ -2045,12 +2241,21 @@ export default function ManualPage() {
       {/* ── 8. Cerrar un proceso ───────────────────────────────────────── */}
       <Seccion id="cierre" titulo="8. Cerrar un proceso">
         <p>
-          Cerrar deja el proceso en solo lectura. Antes de permitirlo, la
-          aplicación comprueba el trabajo y decide el desenlace:
+          Se cierran las <strong>nivelaciones</strong> (§ 6.8) y, en control
+          de asentamientos, las <strong>visitas</strong> y el{" "}
+          <strong>lugar</strong> (§ 7.6).{" "}
+          <strong>La poligonal no se cierra</strong>: queda calculada y se
+          corrige cuando haga falta; su informe dice qué orden alcanzó y alerta
+          si no alcanza ninguno (§ 5.7).
+        </p>
+
+        <p>
+          Cerrar deja el trabajo en solo lectura. Antes de permitirlo, la
+          aplicación comprueba la nivelación y decide entre tres desenlaces:
         </p>
 
         <Tabla
-          caption="Desenlaces posibles al intentar cerrar"
+          caption="Desenlaces posibles al intentar cerrar una nivelación"
           columnas={["Situación", "Qué ocurre"]}
         >
           {DESENLACES_CIERRE.map((d) => (
@@ -2059,34 +2264,16 @@ export default function ManualPage() {
         </Tabla>
 
         <p>
-          La distinción importa: un error angular indica un fallo en la medición
-          de ángulos, que invalida el levantamiento. Una precisión relativa
-          insuficiente significa que el trabajo se hizo, pero no alcanza la
-          calidad exigida — se documenta como rechazado y queda constancia.
+          Un trabajo rechazado se hizo, pero no alcanza la calidad exigida:
+          queda documentado como tal y no entra en informes consolidados.
         </p>
 
         <p>
-          El diálogo de cierre resume el tipo, el perímetro, el error de cierre,
-          la precisión y la fecha. Debe marcar la confirmación explícitamente.
-        </p>
-
-        <p>
-          <strong>Proceso cerrado:</strong>
-        </p>
-        <Captura {...CAPTURAS.procesoCerrado} />
-
-        <p>
-          <strong>Proceso rechazado:</strong>
-        </p>
-        <Captura {...CAPTURAS.procesoRechazado} />
-
-        <p>
-          En ambos casos el editor se abre en solo lectura: los campos están
-          deshabilitados y no hay barra de acciones. Siguen disponibles{" "}
-          <strong>Georreferenciar</strong> (§ 5.5) y <strong>Reabrir</strong>
-          (abajo). Su pestaña{" "}
-          <strong>Informe</strong> ya no lleva la marca de borrador: es el
-          informe del proceso cerrado.
+          El diálogo de cierre resume el resultado y la fecha. Debe marcar la
+          confirmación explícitamente. Cerrado, el proceso se abre en solo
+          lectura: los campos están deshabilitados y no hay barra de acciones.
+          Su pestaña <strong>Informe</strong> ya no lleva la marca de borrador:
+          es el informe del proceso cerrado.
         </p>
 
         <p>
@@ -2100,21 +2287,22 @@ export default function ManualPage() {
         </p>
       </Seccion>
 
-      {/* ── 8. Trabajo en campo ────────────────────────────────────────── */}
+      {/* ── 9. Trabajo en campo ────────────────────────────────────────── */}
       <Seccion id="campo" titulo="9. Trabajo en campo">
         <p>
           La aplicación está pensada para usarse también desde el teléfono, en
           sitio.
         </p>
 
-        <Captura {...CAPTURAS.editorMovil} />
+        <Captura {...CAPTURAS.datosMovil} />
 
         <p>
-          En pantallas pequeñas, la tabla de estaciones se convierte en{" "}
-          <strong>tarjetas</strong>: una por estación, con sus campos apilados y
-          el azimut, ΔN y ΔE visibles sin desplazamiento lateral. Los campos de
-          grados, minutos y segundos son lo bastante amplios para usarse con
-          guantes.
+          En el teléfono, el paso de Datos de una poligonal apila sus columnas
+          y un selector <strong>Tabla | Dibujo</strong> alterna entre las
+          mediciones y el dibujo. La tabla lleva el azimut bajo cada punto, sin
+          desplazamiento lateral, y cada medición se captura en su popup, que
+          ocupa el ancho de la pantalla. Los campos de grados, minutos y
+          segundos son lo bastante amplios para usarse con guantes.
         </p>
 
         <p>
@@ -2149,7 +2337,8 @@ export default function ManualPage() {
           <li>
             <strong>El informe de un proceso</strong> está en su pestaña{" "}
             <strong>Informe</strong> (4.4): no hay que generarlo. Mientras el
-            proceso no esté cerrado sale como borrador.
+            proceso no esté cerrado sale como borrador; el de una poligonal,
+            que no se cierra, sin marca.
           </li>
           <li>
             <strong>Un informe consolidado</strong> reúne varios trabajos ya
@@ -2160,34 +2349,37 @@ export default function ManualPage() {
         </ul>
         <p>
           Los dos llevan el registro de quién cerró cada cosa y cuándo, con el
-          nombre de la persona.
+          nombre de la persona. Las poligonales no tienen fila en él: no se
+          cierran.
         </p>
 
         <h3 className="text-lg font-semibold text-ink">
           Qué puede incluirse
         </h3>
         <p>
-          <strong>Solo procesos cerrados</strong>, en un informe consolidado. Es
-          la regla principal y tiene una razón práctica: el informe no guarda
-          una copia de las mediciones: las vuelve a leer cada vez que se abre.
-          Solo guarda su título, sus observaciones, la lista de procesos y la
-          portada del día en que se emitió. Como un proceso cerrado no puede
-          cambiar sus mediciones ni su veredicto mientras siga cerrado, el
-          informe dice lo mismo hoy y dentro de un año. Hay dos excepciones:
+          <strong>Poligonales calculadas y procesos cerrados</strong>, en un
+          informe consolidado. El informe no guarda una copia de las
+          mediciones: las vuelve a leer cada vez que se abre. Solo guarda su
+          título, sus observaciones, la lista de procesos y la portada del día
+          en que se emitió.
         </p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            La <strong>posición</strong>: si georreferencia una poligonal
-            después de emitir el informe, el informe muestra las coordenadas
-            nuevas, con una nota de cuándo y con qué puntos se georreferenció.
+            Una nivelación o un lugar <strong>cerrados</strong> no pueden
+            cambiar sus mediciones ni su veredicto mientras sigan cerrados, así
+            que su sección dice lo mismo hoy y dentro de un año. Si se reabre
+            (§ 8), el informe muestra sus datos actuales y, mientras siga
+            abierto, «—» en su registro de cierre, y el pie dice que se reabrió
+            después de emitirlo.
           </li>
           <li>
-            <strong>Reabrir</strong> (§ 8): si reabre un proceso que el informe
-            incluye, el informe muestra sus datos actuales y, mientras siga
-            abierto, «—» en su registro de cierre, y el pie dice que se
-            reabrió después de emitirlo. Un PDF ya descargado no cambia.
+            Una <strong>poligonal</strong> no se cierra: entra calculada,
+            cumpla o no un orden, y su sección muestra lo que tenga al abrir el
+            informe. Si no alcanza ningún orden, la sección lo alerta.
           </li>
         </ul>
+        <p>Un PDF ya descargado no cambia.</p>
+        <p>De ahí se siguen dos consecuencias:</p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
             Un proceso <strong>rechazado no se puede incluir</strong>. Queda
@@ -2201,8 +2393,8 @@ export default function ManualPage() {
           </li>
         </ul>
         <p>
-          Si el proyecto no tiene nada cerrado, la pantalla se lo dice en vez de
-          ofrecer un formulario que no llevaría a ninguna parte.
+          Si el proyecto no tiene nada que incluir, la pantalla se lo dice en
+          vez de ofrecer un formulario que no llevaría a ninguna parte.
         </p>
 
         <h3 className="text-lg font-semibold text-ink">
@@ -2211,7 +2403,8 @@ export default function ManualPage() {
         <p>
           En la pestaña <strong>Informes</strong> del proyecto, pulse{" "}
           <strong>Generar Nuevo Informe</strong>. Desde la pestaña{" "}
-          <strong>Informe</strong> de un proceso cerrado,{" "}
+          <strong>Informe</strong> de un proceso cerrado o de una poligonal
+          calculada,{" "}
           <strong>Generar un informe consolidado con este proceso</strong> abre
           el mismo formulario con ese proceso ya marcado.
         </p>
@@ -2247,10 +2440,12 @@ export default function ManualPage() {
         <p>
           El documento lleva portada con los datos del proyecto{" "}
           <strong>al emitirlo</strong> —si después cambian el nombre o el
-          cliente del proyecto, la portada no—, índice, una sección por proceso con sus resultados <strong>y su equipo</strong>{" "}
-          —en las poligonales, con su dibujo—,
-          el resumen consolidado de precisiones —con una columna de equipo—,
-          sus observaciones y el registro de cierre. El equipo ya no es un
+          cliente del proyecto, la portada no—, índice, una sección por proceso
+          con sus resultados <strong>y su equipo</strong> —en las poligonales,
+          con la corrección por método y su dibujo (§ 5.7)—, el resumen
+          consolidado de precisiones —con una columna de equipo y, en las
+          poligonales, el orden alcanzado—, sus observaciones y el registro de
+          cierre. El equipo ya no es un
           dato del proyecto: cada sección imprime el que declaró su propio
           proceso (en asentamientos, el de la visita más reciente).
         </p>
@@ -2317,7 +2512,7 @@ export default function ManualPage() {
           <strong>Eliminar</strong>.
         </p>
 
-        <p>En el formulario de equipo de cada poligonal, nivelación y visita:</p>
+        <p>En el formulario de equipo de cada nivelación y visita:</p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
             <strong>Tomar del catálogo</strong> copia los datos del equipo
@@ -2330,6 +2525,11 @@ export default function ManualPage() {
           </li>
         </ul>
 
+        <p>
+          En una poligonal, el equipo es solo su identidad —marca, modelo y
+          número de serie—, y <strong>Tomar del catálogo</strong> la copia.
+        </p>
+
         <Nota titulo="El catálogo es una plantilla">
           Cada proceso guarda su propia copia del equipo: corregir o eliminar
           un equipo del catálogo no cambia ningún proceso, visita ni informe
@@ -2339,7 +2539,7 @@ export default function ManualPage() {
         <p>
           <strong>Calibración de más de un año.</strong> La lista y el
           formulario avisan cuando la fecha de calibración tiene más de 12
-          meses: a la fecha de la visita en asentamientos, a hoy en poligonal y
+          meses: a la fecha de la visita en asentamientos, a hoy en
           nivelación. Es un aviso; el proceso se guarda igual.
         </p>
       </Seccion>
@@ -2437,7 +2637,7 @@ function Captura({
         alt={alt}
         width={width}
         height={height}
-        // Solo la primera se carga de inmediato; las otras veintiocho suman 8,4 MB.
+        // Solo la primera se carga de inmediato; las otras treinta suman 9,9 MB.
         loading={prioridad ? "eager" : "lazy"}
         decoding="async"
         className={cn(
