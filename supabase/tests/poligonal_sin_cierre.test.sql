@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(17);
+select plan(20);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a351', 'sincierre@topofield.test');
@@ -46,22 +46,23 @@ select isnt_empty(
   $$ select 1 from pg_trigger where tgname = 'leveling_processes_reject_update_on_closed' $$,
   'la nivelación conserva el suyo');
 
--- --- Una poligonal que llega cerrada se edita --------------------------------
--- Antes de la migración era inmutable; ahora el estado se cambia sin trigger.
-update public.polygonal_processes set status = 'closed', start_north = 1001
- where id = '00000000-0000-4000-8000-00000000d351';
+-- --- Paso 2: sin registro de cierre ----------------------------------------
+select hasnt_column('public', 'polygonal_processes', 'closed_at', 'la poligonal no tiene fecha de cierre');
+select hasnt_column('public', 'polygonal_processes', 'closed_by', 'ni responsable de cierre');
+select throws_ok(
+  $$ update polygonal_processes set status = 'closed' where id = '00000000-0000-4000-8000-00000000d351' $$,
+  '23514', null, 'una poligonal ya no puede quedar cerrada');
+select throws_ok(
+  $$ update polygonal_processes set status = 'rejected' where id = '00000000-0000-4000-8000-00000000d351' $$,
+  '23514', null, 'ni rechazada');
+
+-- --- Se edita siempre ---------------------------------------------------------
 select lives_ok(
-  $$ update polygonal_processes set name = 'Otra' where id = '00000000-0000-4000-8000-00000000d351' $$,
-  'una poligonal marcada cerrada se renombra');
+  $$ update polygonal_processes set name = 'Otra', start_north = 1001 where id = '00000000-0000-4000-8000-00000000d351' $$,
+  'una poligonal calculada se edita');
 select lives_ok(
   $$ delete from polygonal_stations where process_id = '00000000-0000-4000-8000-00000000d351' $$,
   'y sus estaciones se borran');
--- La sentencia de la migración que reabre las cerradas.
-update public.polygonal_processes set status = 'calculated' where status in ('closed', 'rejected');
-select is(
-  (select status || ':' || start_north::text from polygonal_processes
-    where id = '00000000-0000-4000-8000-00000000d351'),
-  'calculated:1001.0000', 'reabierta por la migración, conserva su posición');
 select is(
   (select status from leveling_processes where id = '00000000-0000-4000-8000-00000000e351'),
   'closed', 'la nivelación cerrada sigue cerrada');

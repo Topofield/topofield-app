@@ -339,8 +339,6 @@ export type Database = {
           angle_type: string
           angular_error_seconds: number | null
           angular_precision_seconds: number | null
-          closed_at: string | null
-          closed_by: string | null
           correction_method: string | null
           created_at: string
           distance_precision_mm: number | null
@@ -398,8 +396,6 @@ export type Database = {
           angle_type?: string
           angular_error_seconds?: number | null
           angular_precision_seconds?: number | null
-          closed_at?: string | null
-          closed_by?: string | null
           correction_method?: string | null
           created_at?: string
           distance_precision_mm?: number | null
@@ -457,8 +453,6 @@ export type Database = {
           angle_type?: string
           angular_error_seconds?: number | null
           angular_precision_seconds?: number | null
-          closed_at?: string | null
-          closed_by?: string | null
           correction_method?: string | null
           created_at?: string
           distance_precision_mm?: number | null
