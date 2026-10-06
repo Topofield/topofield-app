@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProjectById, getReport } from "@/lib/supabase/queries";
 import { closureOf, loadReportSections } from "@/lib/reports/sections";
 import { responsibleNames } from "@/lib/reports/responsible";
+import { issuedFooterNote } from "@/lib/reports/state";
 import { precisionSummaryRows } from "@/lib/reports/summary";
 import { formatDate } from "@/lib/utils/format";
 import { CANDIDATE_KIND_LABELS } from "@/types/report";
@@ -52,6 +53,11 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
     supabase,
     sections.map((s) => closureOf(s).closedBy),
   );
+  // Lo que se reabrió después de emitir el informe (Fase 34): el pie lo dice,
+  // porque el informe muestra sus datos actuales.
+  const reopened = sections
+    .filter((s) => s.kind !== "missing" && closureOf(s).closedAt == null)
+    .map((s) => s.entry.name);
 
   return (
     <div className="report">
@@ -110,7 +116,8 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         footer={
           <>
             Informe emitido desde TopoField el{" "}
-            {report.generated_at ? formatDate(report.generated_at) : "—"}, con procesos cerrados.
+            {report.generated_at ? formatDate(report.generated_at) : "—"}
+            {issuedFooterNote(reopened)}
           </>
         }
       />

@@ -2,10 +2,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ReportStateMark } from "@/components/process/report-state-mark";
-import { processReportState } from "./state";
+import { issuedFooterNote, processReportState } from "./state";
 
 // Fase 24: el informe de un proceso rechazado llevaba la marca de borrador,
-// aunque el proceso ya estaba cerrado para siempre.
+// aunque el proceso ya estaba cerrado.
 
 describe("processReportState", () => {
   it("cerrado, rechazado y todo lo demás como borrador", () => {
@@ -34,5 +34,23 @@ describe("ReportStateMark", () => {
 
   it("cerrado conforme, sin marca", () => {
     expect(html("closed")).toBe("");
+  });
+});
+
+describe("issuedFooterNote (Fase 34)", () => {
+  it("con todo cerrado, el pie lo dice", () => {
+    expect(issuedFooterNote([])).toBe(", con procesos cerrados.");
+  });
+
+  it("nombra el proceso que se reabrió después de emitirlo", () => {
+    expect(issuedFooterNote(["Poligonal V10"])).toBe(
+      ". «Poligonal V10» se reabrió después de emitirlo: sus datos pueden cambiar.",
+    );
+  });
+
+  it("y varios", () => {
+    expect(issuedFooterNote(["A", "B"])).toBe(
+      ". «A», «B» se reabrieron después de emitirlo: sus datos pueden cambiar.",
+    );
   });
 });
