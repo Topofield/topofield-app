@@ -25,6 +25,7 @@ import {
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
 import { ProcessListToolbar } from "@/components/projects/process-list-toolbar";
 import { ProcessTable, type ProcessRow } from "@/components/projects/process-table";
+import { reportsIncluding } from "@/lib/reports/including";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
@@ -128,10 +129,13 @@ export default async function ProjectHubPage({
 
   // Solo se carga la lista del módulo visible.
   const enProcesos = activeTab === "processes";
-  const [processes, levelingProcesses, sites] = await Promise.all([
+  // Los informes, en Informes y en Procesos: borrar algo reabierto que está en
+  // un informe lo avisa (Fase 34).
+  const [processes, levelingProcesses, sites, reports] = await Promise.all([
     enProcesos ? getPolygonalProcesses(supabase, project.id) : Promise.resolve([]),
     enProcesos ? getLevelingProcesses(supabase, project.id) : Promise.resolve([]),
     enProcesos ? getSites(supabase, project.id) : Promise.resolve([]),
+    enProcesos || activeTab === "reports" ? getReports(supabase, project.id) : Promise.resolve([]),
   ]);
   const [referencePoints, closedWork] =
     activeTab === "config"
@@ -140,7 +144,6 @@ export default async function ProjectHubPage({
           getClosedWorkCount(supabase, project.id),
         ])
       : [[], 0];
-  const reports = activeTab === "reports" ? await getReports(supabase, project.id) : [];
 
   const tiposDelModulo = {
     poligonales: POLYGONAL_TYPE_OPTIONS,
@@ -186,6 +189,10 @@ export default async function ProjectHubPage({
     counts = countByStatus(items);
     rows = filterProcesses(items, filters, siteMetric).map((s) => siteRow(project.id, s));
   }
+  rows = rows.map((r) => ({
+    ...r,
+    reportTitles: reportsIncluding(reports, r.kind, r.id).map((x) => x.title),
+  }));
 
   return (
     <div className="flex flex-col gap-6">

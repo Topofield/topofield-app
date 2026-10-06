@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Report } from "@/types/report";
-import { reportsIncluding } from "./including";
+import { deletionReportsNotice, reportsIncluding } from "./including";
 
 const informe = (id: string, incluidos: [Report["included_processes"][number]["type"], string][]) =>
   ({
@@ -28,5 +28,23 @@ describe("reportsIncluding (Fase 22)", () => {
 
   it("un id de otro tipo no cuenta", () => {
     expect(reportsIncluding(informes, "site", "x")).toEqual([]);
+  });
+});
+
+describe("deletionReportsNotice (Fase 34)", () => {
+  it("sin informes no hay aviso", () => {
+    expect(deletionReportsNotice([])).toBeNull();
+  });
+
+  it("nombra el informe que pierde la sección", () => {
+    expect(deletionReportsNotice(["Entrega 1"])).toBe(
+      "Está en el informe consolidado «Entrega 1», que quedará sin esta sección.",
+    );
+  });
+
+  it("cuenta y nombra varios", () => {
+    expect(deletionReportsNotice(["A", "B"])).toBe(
+      "Está en 2 informes consolidados: «A», «B». Quedarán sin esta sección.",
+    );
   });
 });
