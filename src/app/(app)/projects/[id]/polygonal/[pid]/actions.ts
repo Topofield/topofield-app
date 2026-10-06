@@ -8,9 +8,9 @@ import {
   decimalToDms,
   dmsToDecimal,
 } from "@/lib/calculations/angles";
-import { computePolygonal } from "@/lib/calculations/polygonal";
+import { computePolygonalDetected } from "@/lib/calculations/polygonal";
+import { resolveCatalogPoint } from "@/lib/polygonal-amarre";
 import {
-  canPersistAngleFormat,
   expectStationCapture,
   validateLeastSquaresWeights,
   hasCaptureErrors,
@@ -79,22 +79,40 @@ export interface SavePolygonalPayload {
   endAzimuthMin: number | null;
   endAzimuthSec: number | null;
   correctionMethod: CorrectionMethod;
-  angleType: AngleType;
   referencePointId: string | null;
   referencePointCode: string | null;
-  angleReadingsMin: number;
   hasClosingRow: boolean;
   notes: string | null;
   stations: StationDraft[];
-  /** Orden de precisión y equipo (estación total, ISO 17123-3 y -4). */
-  precisionOrder: PrecisionOrder;
+  /**
+   * Datos del alta (Fase 35). Opcionales: una clave que no viaja conserva el
+   * valor guardado, porque la función de base parte de la fila actual.
+   */
+  location?: string | null;
+  responsibleName?: string | null;
+  responsibleRole?: string | null;
+  /** Equipo: solo su identidad (Fase 35, decisión 2). */
   equipmentBrand: string | null;
   equipmentModel: string | null;
   equipmentSerial: string | null;
-  equipmentCalibrationDate: string | null;
-  angularPrecisionSeconds: number | null;
-  distancePrecisionMm: number | null;
-  distancePrecisionPpm: number | null;
+  /**
+   * @deprecated Fase 35: el orden y el tipo de ángulo se detectan, y las
+   * lecturas mínimas y las precisiones del equipo ya no se piden. El editor
+   * viejo los manda hasta que se retire; se ignoran.
+   */
+  angleType?: AngleType;
+  /** @deprecated ver `angleType`. */
+  angleReadingsMin?: number;
+  /** @deprecated ver `angleType`. */
+  precisionOrder?: PrecisionOrder;
+  /** @deprecated ver `angleType`. */
+  equipmentCalibrationDate?: string | null;
+  /** @deprecated ver `angleType`. */
+  angularPrecisionSeconds?: number | null;
+  /** @deprecated ver `angleType`. */
+  distancePrecisionMm?: number | null;
+  /** @deprecated ver `angleType`. */
+  distancePrecisionPpm?: number | null;
   /** Pesos del ajuste por mínimos cuadrados (Fase 14); solo con ese método. */
   lsSigmaAngleSeconds: number | null;
   lsSigmaDistanceM: number | null;
@@ -145,7 +163,7 @@ function averageAngle(st: StationDraft): number {
   );
 }
 
-function buildInput(payload: SavePolygonalPayload): PolygonalInput {
+function buildInput(payload: SavePolygonalPayload): Omit<PolygonalInput, "order" | "angleType"> {
   return {
     type: payload.type,
     startNorth: payload.startNorth,
@@ -165,9 +183,7 @@ function buildInput(payload: SavePolygonalPayload): PolygonalInput {
             payload.endAzimuthSec ?? 0,
           )
         : null,
-    order: payload.precisionOrder,
     method: payload.correctionMethod,
-    angleType: payload.angleType,
     hasOrientation: hasOrientationOf(payload),
     hasClosingRow: payload.hasClosingRow,
     leastSquares:
@@ -231,8 +247,9 @@ async function resolveStartAzimuth(
 
 /**
  * Guarda la configuración, las estaciones y los resultados de un proceso. El
- * servidor recalcula con computePolygonal para que los resultados persistidos
- * sean autoritativos. Rechaza procesos cerrados (inmutabilidad, § 4.6).
+ * servidor recalcula con `computePolygonalDetected` para que los resultados
+ * persistidos sean autoritativos, y guarda el orden y el tipo de ángulo
+ * detectados (Fase 35). La poligonal no se cierra: siempre admite cambios.
  */
 export async function savePolygonalProcessAction(
   payload: SavePolygonalPayload,
@@ -245,9 +262,6 @@ export async function savePolygonalProcessAction(
     .eq("id", payload.processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado; no admite cambios." };
-  }
 
   // --- Revalidación en el servidor -----------------------------------------
   // La clave publicable de Supabase es pública por diseño: una llamada
@@ -296,7 +310,7 @@ export async function savePolygonalProcessAction(
   });
   if (weightsError) return { ok: false, error: weightsError };
 
-  const result = computePolygonal(buildInput(payload));
+  const { result, order, angleType } = computePolygonalDetected(buildInput(payload));
 
   const relPrec = result.relativePrecision;
   const relativePrecision =
@@ -367,10 +381,13 @@ export async function savePolygonalProcessAction(
     p_header: {
       name: payload.name,
       type: payload.type,
-      angle_type: payload.angleType,
+      angle_type: angleType,
       reference_point_id: payload.referencePointId,
       reference_point_code: payload.referencePointCode,
-      angle_readings_min: payload.angleReadingsMin,
+      has_closing_row: payload.hasClosingRow,
+      ...(payload.location !== undefined && { location: payload.location }),
+      ...(payload.responsibleName !== undefined && { responsible_name: payload.responsibleName }),
+      ...(payload.responsibleRole !== undefined && { responsible_role: payload.responsibleRole }),
       start_point_code: payload.startPointCode,
       start_north: payload.startNorth,
       start_east: payload.startEast,
@@ -387,19 +404,19 @@ export async function savePolygonalProcessAction(
       ls_sigma_angle_seconds: payload.lsSigmaAngleSeconds,
       ls_sigma_distance_m: payload.lsSigmaDistanceM,
       ls_distance_measurements: payload.lsDistanceMeasurements,
-      precision_order: payload.precisionOrder,
+      precision_order: order,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
       equipment_serial: payload.equipmentSerial,
-      equipment_calibration_date: payload.equipmentCalibrationDate,
-      angular_precision_seconds: payload.angularPrecisionSeconds,
-      distance_precision_mm: payload.distancePrecisionMm,
-      distance_precision_ppm: payload.distancePrecisionPpm,
       angular_error_seconds: result.angularError,
       linear_error: result.linearError,
       perimeter: result.perimeter,
       relative_precision: relativePrecision,
-      meets_tolerance: result.meetsTolerance,
+      // Alcanza al menos el ordinario; sin verificación o sin datos, no se sabe.
+      meets_tolerance:
+        payload.type === "open_uncontrolled" || result.relativePrecision == null
+          ? null
+          : order !== null,
       notes: payload.notes,
       status,
     },
@@ -487,6 +504,10 @@ export async function duplicatePolygonalProcessAction(
     name: `${original.name} (copia)`,
     type: original.type,
     angle_type: original.angle_type,
+    has_closing_row: original.has_closing_row,
+    location: original.location,
+    responsible_name: original.responsible_name,
+    responsible_role: original.responsible_role,
     start_point_code: original.start_point_code,
     start_north: original.start_north,
     start_east: original.start_east,
@@ -524,7 +545,7 @@ export async function duplicatePolygonalProcessAction(
   return { ok: true };
 }
 
-/** Renombra un proceso. Rechaza los cerrados: son inmutables. */
+/** Renombra un proceso. La poligonal no se cierra (Fase 35). */
 export async function renamePolygonalProcessAction(
   processId: string,
   name: string,
@@ -539,9 +560,6 @@ export async function renamePolygonalProcessAction(
     .eq("id", processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado y no puede modificarse." };
-  }
 
   const { error } = await supabase
     .from("polygonal_processes")
@@ -553,7 +571,7 @@ export async function renamePolygonalProcessAction(
   return { ok: true };
 }
 
-/** Elimina un proceso. Rechaza los cerrados: son inmutables. */
+/** Elimina un proceso. La poligonal no se cierra (Fase 35). */
 export async function deletePolygonalProcessAction(
   processId: string,
 ): Promise<ActionResult> {
@@ -564,9 +582,6 @@ export async function deletePolygonalProcessAction(
     .eq("id", processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado y no puede eliminarse." };
-  }
 
   const { error } = await supabase
     .from("polygonal_processes")
@@ -580,10 +595,9 @@ export async function deletePolygonalProcessAction(
 
 /**
  * Guarda en qué formato se teclean los ángulos del proceso (Fase 13, P1). Se
- * llama al conmutar, sin esperar al botón Guardar: así la preferencia no se
- * pierde si el usuario cambia de formato y sale. En un proceso cerrado o
- * rechazado no se guarda (`canPersistAngleFormat`): ahí el conmutador solo
- * cambia la vista.
+ * llama al conmutar, sin esperar a ningún guardado: así la preferencia no se
+ * pierde si el usuario cambia de formato y sale. Rige la tabla, el ajuste, el
+ * informe y los popups (Fase 35).
  */
 export async function setAngleInputFormatAction(
   processId: string,
@@ -600,9 +614,6 @@ export async function setAngleInputFormatAction(
     .eq("id", processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (!canPersistAngleFormat(process.status)) {
-    return { ok: false, error: "El proceso está cerrado; el formato no se guarda." };
-  }
 
   const { error } = await supabase
     .from("polygonal_processes")
@@ -614,12 +625,9 @@ export async function setAngleInputFormatAction(
 
 /**
  * Georreferencia un proceso con dos de sus estaciones (Fase 15): transforma la
- * entrada, recalcula y reescribe solo las columnas de posición. Vale en
- * cualquier estado, también cerrado: la base admite ahí esas columnas y nada
- * más, así que el veredicto no puede cambiar (PRD, decisión 3).
- *
- * Un proceso no cerrado con cambios sin guardar lo bloquea el editor: aquí se
- * trabaja con lo guardado.
+ * entrada, recalcula y reescribe solo las columnas de posición. Desde la Fase 35
+ * la poligonal no se cierra, así que vale siempre; trabaja con lo guardado, y
+ * cada popup guarda al confirmar.
  */
 export async function georeferencePolygonalProcessAction(
   processId: string,
@@ -659,4 +667,65 @@ export async function georeferencePolygonalProcessAction(
   revalidatePath(`/projects/${process.project_id}/polygonal/${process.id}`);
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
+}
+
+/**
+ * Lleva un punto del amarre al catálogo del proyecto (Fase 35, decisión 9):
+ * reutiliza el que ya existe con las mismas coordenadas, completa uno sin
+ * coordenadas o crea uno nuevo. Un código existente con otras coordenadas es un
+ * error: no se reescribe un punto que pueden estar usando otros procesos.
+ */
+export async function ensureCatalogPointAction(
+  projectId: string,
+  point: { code: string; north: number; east: number },
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const code = point.code.trim();
+  if (!code) return { ok: false, error: "El punto necesita un nombre." };
+  if (!Number.isFinite(point.north) || !Number.isFinite(point.east)) {
+    return { ok: false, error: `${code}: el Norte y el Este son obligatorios.` };
+  }
+
+  const supabase = await createClient();
+  const { data: catalog, error: readError } = await supabase
+    .from("reference_points")
+    .select("id, code, north, east")
+    .eq("project_id", projectId);
+  if (readError) return { ok: false, error: logDbError(readError, "No se pudo leer el catálogo.") };
+
+  const resolution = resolveCatalogPoint(
+    (catalog ?? []).map((p) => ({
+      id: p.id,
+      code: p.code,
+      north: p.north == null ? null : Number(p.north),
+      east: p.east == null ? null : Number(p.east),
+    })),
+    { code, north: point.north, east: point.east },
+  );
+  switch (resolution.kind) {
+    case "conflict":
+      return { ok: false, error: resolution.message };
+    case "reuse":
+      return { ok: true, id: resolution.id };
+    case "complete": {
+      const { error } = await supabase
+        .from("reference_points")
+        .update({ north: point.north, east: point.east })
+        .eq("id", resolution.id);
+      if (error) return { ok: false, error: logDbError(error, "No se pudo guardar el punto.") };
+      revalidatePath(`/projects/${projectId}`);
+      return { ok: true, id: resolution.id };
+    }
+    case "create": {
+      const { data, error } = await supabase
+        .from("reference_points")
+        .insert({ project_id: projectId, code, type: "control", north: point.north, east: point.east })
+        .select("id")
+        .single();
+      if (error || !data) {
+        return { ok: false, error: logDbError(error ?? { message: "sin fila" }, "No se pudo guardar el punto.") };
+      }
+      revalidatePath(`/projects/${projectId}`);
+      return { ok: true, id: data.id };
+    }
+  }
 }

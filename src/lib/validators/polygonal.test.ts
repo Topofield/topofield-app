@@ -7,7 +7,6 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  canPersistAngleFormat,
   evaluatePolygonalClosure,
   expectStationCapture,
   validateGeoreferencePoints,
@@ -512,19 +511,6 @@ describe("expectStationCapture — fila de cierre", () => {
       angle: true,
       distance: true,
     });
-  });
-});
-
-describe("canPersistAngleFormat (Fase 13, P1)", () => {
-  it("guarda el formato en un proceso abierto", () => {
-    for (const status of ["draft", "in_progress", "calculated"]) {
-      expect(canPersistAngleFormat(status)).toBe(true);
-    }
-  });
-
-  it("no lo guarda en uno cerrado o rechazado: ahí solo cambia la vista", () => {
-    expect(canPersistAngleFormat("closed")).toBe(false);
-    expect(canPersistAngleFormat("rejected")).toBe(false);
   });
 });
 
