@@ -35,6 +35,8 @@ export const PROCESS_CHIPS: StatusFilter[] = [
   "rechazados",
 ];
 export const SITE_CHIPS: StatusFilter[] = ["todos", "activos", "cerrados"];
+/** La poligonal no se cierra (Fase 35): ni cerrados ni rechazados. */
+export const POLYGONAL_CHIPS: StatusFilter[] = ["todos", "borradores", "calculados"];
 
 export const POLYGONAL_TYPE_OPTIONS = POLYGONAL_TYPES.map((t) => ({
   value: t,
@@ -53,7 +55,7 @@ function closedOutOfTolerance(p: { status: string; meets_tolerance: boolean | nu
   return p.status === "closed" && p.meets_tolerance === false;
 }
 
-function processStatus(p: PolygonalProcess | LevelingProcess) {
+function processStatus(p: LevelingProcess) {
   return closedOutOfTolerance(p)
     ? { statusLabel: "Cerrado fuera de tolerancia", statusTone: "warning" as const }
     : { statusLabel: PROCESS_STATUS_LABELS[p.status], statusTone: PROCESS_STATUS_TONE[p.status] };
@@ -68,7 +70,9 @@ export function polygonalRow(projectId: string, p: PolygonalProcess): ProcessRow
     // El tipo como frase, como la cabecera del proceso (Fase 27, PU13): junto
     // al badge «Cerrado», un «· Cerrada» suelto se leía como el estado.
     kindLabel: `Poligonal ${POLYGONAL_TYPE_LABELS[p.type].toLowerCase()}`,
-    ...processStatus(p),
+    // La poligonal no se cierra (Fase 35): su estado es el del cálculo.
+    statusLabel: PROCESS_STATUS_LABELS[p.status],
+    statusTone: PROCESS_STATUS_TONE[p.status],
     result: p.relative_precision
       ? formatPrecision(p.relative_precision)
       : p.type === "open_uncontrolled"
@@ -76,7 +80,7 @@ export function polygonalRow(projectId: string, p: PolygonalProcess): ProcessRow
         : "—",
     meets: p.meets_tolerance,
     updatedAt: p.updated_at,
-    closed: p.status === "closed" || p.status === "rejected",
+    closed: false,
   };
 }
 

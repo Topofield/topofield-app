@@ -15,11 +15,7 @@
 
 import { azimuthFromCoordinates, decimalToDms } from "@/lib/calculations/angles";
 import { readLevelingFile, toLibreta } from "@/lib/import/leveling";
-import type {
-  AngleType,
-  CorrectionMethod,
-  PolygonalType,
-} from "@/types/polygonal";
+import type { CorrectionMethod, PolygonalType } from "@/types/polygonal";
 import type { LevelingType, PointType } from "@/types/leveling";
 import type { PrecisionOrder } from "@/types/project";
 import {
@@ -129,7 +125,6 @@ export interface EstacionDemo {
 export interface ProcesoDemo {
   name: string;
   type: PolygonalType;
-  angleType: AngleType;
   startPointCode: string;
   startNorth: number;
   startEast: number;
@@ -153,33 +148,25 @@ export interface ProcesoDemo {
     sigmaDistanceM: number;
     distanceMeasurements: number;
   };
-  /** `closed` obliga al cierre diferido: ver `insertar-poligonal.ts`. */
-  status: "calculated" | "closed";
+  /**
+   * La poligonal del informe de la demo. Desde la Fase 35 ninguna se cierra:
+   * todas se guardan calculadas, con el orden y el tipo de ángulo detectados.
+   */
+  informe?: boolean;
   stations: EstacionDemo[];
   notes: string;
-  // Orden de precisión y equipo (Fase 8): los declara cada proceso.
-  precisionOrder: PrecisionOrder;
+  // El equipo, solo su identidad (Fase 35, decisión 2).
   equipmentBrand: string;
   equipmentModel: string;
   equipmentSerial: string;
-  equipmentCalibrationDate: string;
-  angularPrecisionSeconds: number;
-  distancePrecisionMm: number;
-  distancePrecisionPpm: number;
 }
 
 // Las carteras no declaran su estación total. Se usa la misma que el seed para
-// ellas: una Leica FlexLine TS06plus, coherente con tercer orden (5″ ≤ K=15″);
-// 5″ es una de sus clases de catálogo y 1.5 mm + 2 ppm su EDM con prisma.
+// ellas: una Leica FlexLine TS06plus.
 const EQUIPO_POLIGONAL = {
-  precisionOrder: "tercer_orden",
   equipmentBrand: "Leica",
   equipmentModel: "TS06 Plus",
   equipmentSerial: "DEMO-0001",
-  equipmentCalibrationDate: "2026-02-10",
-  angularPrecisionSeconds: 5,
-  distancePrecisionMm: 1.5,
-  distancePrecisionPpm: 2,
 } as const;
 
 function dmsTuple(decimal: number): [number, number, number] {
@@ -188,10 +175,9 @@ function dmsTuple(decimal: number): [number, number, number] {
 }
 
 /** Una cartera real como proceso: amarre y azimut desde sus coordenadas. */
-function desdeCartera(cartera: Cartera): Omit<ProcesoDemo, "name" | "status" | "notes"> {
+function desdeCartera(cartera: Cartera): Omit<ProcesoDemo, "name" | "notes"> {
   return {
     type: "closed",
-    angleType: cartera.angleType,
     startPointCode: cartera.startPointCode,
     startNorth: cartera.startNorth,
     startEast: cartera.startEast,
@@ -217,14 +203,14 @@ function desdeCartera(cartera: Cartera): Omit<ProcesoDemo, "name" | "status" | "
 }
 
 /**
- * Tres procesos con las dos carteras de poligonal. La TT4 nace cerrada: cumple
- * (12″ de error angular, 1:7045) y alimenta el informe de poligonal.
+ * Tres procesos con las dos carteras de poligonal. La TT4 cumple —12″ de error
+ * angular, 1:7045: tercer orden— y alimenta el informe de poligonal.
  */
 export const PROCESOS_DEMO: ProcesoDemo[] = [
   {
     ...desdeCartera(CARTERA_TT4),
     name: "Poligonal V10 — cartera TT4",
-    status: "closed",
+    informe: true,
     notes:
       "Cartera de campo real: seis vértices amarrados a TT4, con la fila de cierre de vuelta al amarre. Compensada por Bowditch.",
   },
@@ -234,7 +220,6 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     correctionMethod: "least_squares",
     // Los pesos de la hoja de la universidad: 2″, 0.011 m, 2 mediciones.
     leastSquares: { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 },
-    status: "calculated",
     notes:
       "Cartera de campo real de la Universidad Distrital, Sede Vivero (2021-11-04). Cierra contra el primer lado. Ajustada por mínimos cuadrados con los pesos de la hoja.",
   },
@@ -249,7 +234,6 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     startEast: 2000,
     startAz: [0, 0, 0],
     referenceFromCatalog: false,
-    status: "calculated",
     notes:
       "La cartera Vivero en sistema local, para georreferenciar con los vértices D1 y D3 del catálogo (Georreferenciar, junto al dibujo).",
   },
@@ -426,10 +410,13 @@ export const EQUIPOS_DEMO = [
     brand: EQUIPO_POLIGONAL.equipmentBrand,
     model: EQUIPO_POLIGONAL.equipmentModel,
     serial: EQUIPO_POLIGONAL.equipmentSerial,
-    calibration_date: EQUIPO_POLIGONAL.equipmentCalibrationDate,
-    angular_precision_seconds: EQUIPO_POLIGONAL.angularPrecisionSeconds,
-    distance_precision_mm: EQUIPO_POLIGONAL.distancePrecisionMm,
-    distance_precision_ppm: EQUIPO_POLIGONAL.distancePrecisionPpm,
+    // El catálogo guarda la ficha completa; la poligonal copia solo la
+    // identidad (Fase 35). 5″ es una de sus clases de catálogo y 1.5 mm + 2 ppm
+    // su EDM con prisma.
+    calibration_date: "2026-02-10",
+    angular_precision_seconds: 5,
+    distance_precision_mm: 1.5,
+    distance_precision_ppm: 2,
     level_type: null,
     km_precision_mm: null,
   },

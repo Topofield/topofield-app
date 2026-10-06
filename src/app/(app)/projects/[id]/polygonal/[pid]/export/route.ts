@@ -6,10 +6,9 @@ import {
   getProjectById,
 } from "@/lib/supabase/queries";
 import { buildPolygonalWorkbook } from "@/lib/export/polygonal-workbook";
-import { computePolygonal } from "@/lib/calculations/polygonal";
-import { polygonalInputOf } from "@/components/polygonal/polygonal-draft";
+import { computePolygonalDetected } from "@/lib/calculations/polygonal";
+import { draftOf, inputOf } from "@/components/polygonal/polygonal-save";
 import { safeFilename } from "@/lib/export/workbook";
-import { responsibleNames } from "@/lib/reports/responsible";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -48,20 +47,11 @@ export async function GET(
   const stations = await getPolygonalStations(supabase, process.id);
 
   // Las correcciones y σ₀ del ajuste por mínimos cuadrados no se guardan: se
-  // recalculan con la misma entrada que el editor y el informe (Fase 14).
-  const adjustment =
-    process.correction_method === "least_squares"
-      ? (computePolygonal(polygonalInputOf(process, stations)).adjustment ?? null)
-      : null;
-  // «Cerrado por» con el nombre del responsable, no su id (Fase 22).
-  const names = await responsibleNames(supabase, [process.closed_by]);
-  const closedBy = process.closed_by ? (names.get(process.closed_by) ?? null) : null;
-  const workbook = buildPolygonalWorkbook(
-    { ...process, closed_by: closedBy },
-    stations,
-    project,
-    adjustment,
-  );
+  // recalculan con la misma entrada que la pantalla y el informe (Fase 14). El
+  // orden y el tipo de ángulo, detectados como allí (Fase 35).
+  const { result, order, angleType } = computePolygonalDetected(inputOf(draftOf(process, stations), null));
+  const adjustment = process.correction_method === "least_squares" ? (result.adjustment ?? null) : null;
+  const workbook = buildPolygonalWorkbook(process, stations, project, adjustment, { order, angleType });
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

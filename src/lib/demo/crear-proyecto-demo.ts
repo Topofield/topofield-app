@@ -147,19 +147,12 @@ export async function crearProyectoDemo(
   if (errLote) throw errLote;
 
   // --- Poligonales. En serie: el orden del listado es el de creación. Se
-  // captura la que nace cerrada, que es la que alimenta su informe. ----------
-  let poligonalCerrada: { id: string; name: string } | null = null;
+  // captura la que alimenta su informe (Fase 35: ninguna se cierra). ---------
+  let poligonalInforme: { id: string; name: string } | null = null;
   for (const proceso of PROCESOS_DEMO) {
-    const id = await insertarPoligonal(
-      supabase,
-      proyecto.id,
-      lote.id,
-      userId,
-      proceso,
-      idReferencia,
-    );
-    if (proceso.status === "closed") {
-      poligonalCerrada = { id, name: proceso.name };
+    const id = await insertarPoligonal(supabase, proyecto.id, lote.id, proceso, idReferencia);
+    if (proceso.informe) {
+      poligonalInforme = { id, name: proceso.name };
     }
   }
 
@@ -192,7 +185,7 @@ export async function crearProyectoDemo(
     observations: string | null;
     included: IncludedProcess[];
   }[] = [
-    ...(poligonalCerrada
+    ...(poligonalInforme
       ? [
           {
             title: "Informe de cierre — Poligonal",
@@ -201,8 +194,8 @@ export async function crearProyectoDemo(
             included: [
               {
                 type: "polygonal" as const,
-                id: poligonalCerrada.id,
-                name: poligonalCerrada.name,
+                id: poligonalInforme.id,
+                name: poligonalInforme.name,
                 order: 0,
               },
             ],

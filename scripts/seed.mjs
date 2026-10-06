@@ -9,8 +9,9 @@
 //  - Cada proyecto con al menos un lugar (`sites`), obligatorio desde la
 //    Fase 5 para los procesos de poligonal y nivelación.
 //  - 14 procesos poligonales (13 en "Lote catastral", 1 en "Red geodésica")
-//    que cubren los 3 tipos, los 4 métodos y los estados calculated, closed y
-//    rejected.
+//    que cubren los 3 tipos y los 4 métodos. Todos calculados: desde la Fase 35
+//    la poligonal no se cierra, y guarda el orden y el tipo de ángulo
+//    detectados.
 //  - 2 procesos de nivelación: uno calculado (editable, para la captura del
 //    editor del manual) y uno cerrado (alimenta el informe de nivelación).
 //  - 3 lugares de monitoreo en "Edificio en monitoreo": "Edificio Torre
@@ -43,7 +44,7 @@
 // dejaría de verificarlos.
 
 import { createClient } from "@supabase/supabase-js";
-import { computePolygonal } from "../src/lib/calculations/polygonal.ts";
+import { computePolygonalDetected } from "../src/lib/calculations/polygonal.ts";
 import { azimuthFromCoordinates } from "../src/lib/calculations/angles.ts";
 import {
   CARTERAS,
@@ -270,10 +271,11 @@ async function createSite(projectId, fields) {
 
 /**
  * Calcula los resultados de un fixture con el mismo motor que usa la app
- * (`computePolygonal`), para que el seed nunca quede desincronizado con lo
- * que produciría `saveProcess` en un guardado real.
+ * (`computePolygonalDetected`), para que el seed nunca quede desincronizado
+ * con lo que produciría `savePolygonalProcessAction` en un guardado real: el
+ * orden y el tipo de ángulo se detectan (Fase 35).
  */
-function resultFieldsFor(spec, order) {
+function resultFieldsFor(spec) {
   const input = {
     type: spec.type,
     startNorth: spec.startNorth,
@@ -282,9 +284,7 @@ function resultFieldsFor(spec, order) {
     endNorth: spec.endNorth ?? null,
     endEast: spec.endEast ?? null,
     endAzimuth: spec.endAz ? dmsToDecimal(...spec.endAz) : null,
-    order,
     method: spec.correctionMethod,
-    angleType: spec.angle_type,
     hasOrientation: spec.hasOrientation ?? false,
     hasClosingRow: spec.hasClosingRow ?? false,
     leastSquares: spec.leastSquares ?? null,
@@ -296,7 +296,7 @@ function resultFieldsFor(spec, order) {
       readings: st.angle ? [{ order: 1, angle: dmsToDecimal(...st.angle) }] : [],
     })),
   };
-  const r = computePolygonal(input);
+  const { result: r, order, angleType } = computePolygonalDetected(input);
   const rel = r.relativePrecision;
   return {
     resultado: r,
@@ -306,23 +306,19 @@ function resultFieldsFor(spec, order) {
       perimeter: r.perimeter,
       relative_precision:
         rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
-      meets_tolerance: r.meetsTolerance,
+      // La regla de la aplicación: cumple si alcanza algún orden.
+      meets_tolerance: spec.type === "open_uncontrolled" || rel == null ? null : order !== null,
+      precision_order: order,
+      angle_type: angleType,
     },
   };
 }
 
-/** ¿El status representa un proceso ya cerrado (y por tanto inmutable)? */
-function isClosedStatus(status) {
-  return status === "closed" || status === "rejected";
-}
-
-async function insertPolygonal(projectId, siteId, spec, userId) {
+async function insertPolygonal(projectId, siteId, spec) {
   const equipo = equipmentOf(spec);
   const startAz = spec.startAz ?? [0, 0, 0];
   const endAz = spec.endAz ?? [null, null, null];
-  // El orden que evalúa el motor es el mismo que declara el equipo del
-  // proceso: una sola fuente, sin riesgo de que calen valores distintos.
-  const resultado = resultFieldsFor(spec, equipo.precision_order);
+  const resultado = resultFieldsFor(spec);
   const { data: proc, error } = await admin
     .from("polygonal_processes")
     .insert({
@@ -357,11 +353,9 @@ async function insertPolygonal(projectId, siteId, spec, userId) {
       // es lo que hay en el papel. El mínimo de 3 es para captura nueva.
       angle_readings_min: spec.angleReadingsMin ?? 1,
       has_closing_row: spec.hasClosingRow ?? false,
-      // El proceso nace abierto aunque el fixture lo quiera cerrado: los
-      // triggers de inmutabilidad rechazan escribir estaciones bajo un proceso
-      // ya cerrado. El cierre se aplica al final, como hace la aplicación.
-      status: isClosedStatus(spec.status) ? "calculated" : spec.status,
+      status: spec.status,
       ...equipo,
+      // Después del equipo: el orden detectado manda sobre el declarado.
       ...resultado.campos,
       notes: spec.notes ?? null,
     })
@@ -430,19 +424,6 @@ async function insertPolygonal(projectId, siteId, spec, userId) {
         .insert(readingRows);
       if (rdErr) throw rdErr;
     }
-  }
-
-  // Cierre al final, una vez cargadas las estaciones.
-  if (isClosedStatus(spec.status)) {
-    const { error: closeErr } = await admin
-      .from("polygonal_processes")
-      .update({
-        status: spec.status,
-        closed_at: new Date().toISOString(),
-        closed_by: userId,
-      })
-      .eq("id", proc.id);
-    if (closeErr) throw closeErr;
   }
 
   return proc.id;
@@ -826,7 +807,7 @@ const PROCESSES = [
       "Caso 3 del marco teórico (ajustado a la convención de TopoField: distancia en la fila de la estación de SALIDA). Sin verificación de cierre.",
   },
   {
-    name: "Cuadrado oficial (cerrado)",
+    name: "Cuadrado oficial",
     type: "closed",
     angle_type: "interior",
     startPointCode: "A",
@@ -834,7 +815,8 @@ const PROCESSES = [
     startEast: 1000,
     startAz: [0, 0, 0],
     correctionMethod: "bowditch",
-    status: "closed",
+    status: "calculated",
+    informe: true,
     stations: [
       { code: "A", angle: [90, 0, 0], distance: 100 },
       { code: "B", angle: [90, 0, 0], distance: 100 },
@@ -842,10 +824,10 @@ const PROCESSES = [
       { code: "D", angle: [90, 0, 0], distance: 100 },
     ],
     notes:
-      "Cuadrado que cierra exacto, cerrado oficialmente: el editor debe abrirlo en modo solo lectura.",
+      "Cuadrado que cierra exacto: primer orden. Alimenta el informe de poligonal del lote.",
   },
   {
-    name: "Cuadrado marginal (rechazado)",
+    name: "Cuadrado marginal (no cumple)",
     type: "closed",
     angle_type: "interior",
     startPointCode: "A",
@@ -853,7 +835,7 @@ const PROCESSES = [
     startEast: 0,
     startAz: [0, 0, 0],
     correctionMethod: "transit",
-    status: "rejected",
+    status: "calculated",
     stations: [
       { code: "A", angle: [90, 0, 0], distance: 100.4 },
       { code: "B", angle: [90, 0, 0], distance: 100 },
@@ -861,7 +843,7 @@ const PROCESSES = [
       { code: "D", angle: [90, 0, 0], distance: 100 },
     ],
     notes:
-      "Cuadrado con error 0.4 m cerrado como RECHAZADO porque la precisión 1:1001 no alcanza el tercer orden (1:5000).",
+      "Cuadrado con error 0.4 m: la precisión 1:1001 no alcanza ningún orden (el ordinario pide 1:3.000). Su informe lo alerta.",
   },
 ];
 
@@ -1480,16 +1462,15 @@ async function main() {
   // estación de 5″ que le corresponde. El equipo se esparce sobre el spec, no
   // se pasa aparte: los siete comparten instrumento, así que se aplica de una
   // vez, y un spec podría sobrescribirlo declarando el suyo (`...spec` va
-  // después). Se captura cuál quedó cerrada: alimenta su informe.
-  let poligonalCerrada = null;
+  // después). Se captura la que alimenta el informe de poligonal.
+  let poligonalInforme = null;
   for (const spec of PROCESSES) {
     const id = await insertPolygonal(
       catastral,
       catastralSite,
       { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
-      userId,
     );
-    if (spec.status === "closed") poligonalCerrada = { id, name: spec.name };
+    if (spec.informe) poligonalInforme = { id, name: spec.name };
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 
@@ -1517,10 +1498,10 @@ async function main() {
       leastSquares: { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 },
     },
     // Fase 15: la misma cartera medida en un sistema local —arranque en
-    // (1000, 2000), azimut supuesto 0° hacia el amarre— y cerrada. Es el caso
-    // que se georreferencia con D1 y D3 (docs/prds/14-georreferenciacion.md).
+    // (1000, 2000), azimut supuesto 0° hacia el amarre—. Es el caso que se
+    // georreferencia con D1 y D3 (docs/prds/14-georreferenciacion.md).
     {
-      ...carteraToSpec(CARTERA_VIVERO, null, "bowditch", "closed"),
+      ...carteraToSpec(CARTERA_VIVERO, null, "bowditch", "calculated"),
       name: "Poligonal Famarena — Sede Vivero — sistema local",
       startNorth: 1000,
       startEast: 2000,
@@ -1534,7 +1515,6 @@ async function main() {
       catastral,
       catastralSite,
       { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
-      userId,
     );
     console.log(`  ✓ Cartera real: ${spec.name}`);
   }
@@ -1557,7 +1537,7 @@ async function main() {
   // proceso lleva SU equipo declarado en su propio literal: un array paralelo
   // emparejado por índice era exactamente lo frágil que había que quitar.
   for (const spec of GEODESICA_PROCESSES) {
-    await insertPolygonal(geodesica, geodesicaSite, spec, userId);
+    await insertPolygonal(geodesica, geodesicaSite, spec);
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 
@@ -1612,15 +1592,14 @@ async function main() {
   console.log(`  ✓ Lugar "Edificio Norte" (cerrado) — ${norteId}`);
 
   // --- Informes por proceso (§ 4.7): uno de poligonal y uno de nivelación en
-  // el lote, y uno de asentamientos en el proyecto de monitoreo. Cada informe
-  // solo puede incluir trabajos cerrados. ------------------------------------
-  if (poligonalCerrada) {
+  // el lote, y uno de asentamientos en el proyecto de monitoreo. Un informe
+  // incluye poligonales calculadas y lo demás cerrado. -----------------------
+  if (poligonalInforme) {
     await insertReport(catastral, userId, {
       title: "Informe de cierre — Poligonal",
-      observations:
-        "Levantamiento poligonal conforme a las tolerancias de tercer orden.",
+      observations: "Levantamiento poligonal con cierre exacto: primer orden.",
       included: [
-        { type: "polygonal", id: poligonalCerrada.id, name: poligonalCerrada.name, order: 0 },
+        { type: "polygonal", id: poligonalInforme.id, name: poligonalInforme.name, order: 0 },
       ],
     });
     console.log('  ✓ Informe de poligonal en "Lote catastral"');
