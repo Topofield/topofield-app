@@ -14,8 +14,8 @@ import { AngleInput } from "./angle-input";
 import { amarreChangeProblem } from "./capture-edits";
 import { dmsFromFields, fieldsOf, formatAngle } from "./angle-format";
 import { azimuthToReference, type AmarreEdit, type Dms3, type PolygonalDraft } from "./polygonal-save";
-
 import { callAction } from "@/lib/errors/action-call";
+
 /** Cómo se pone el 0 atrás. */
 type ReferenceMode = "point" | "azimuth" | "none";
 
@@ -158,6 +158,8 @@ export function AmarreDialog({ projectId, draft, referencePoints, angleFormat, o
         return setError("La referencia no puede estar en el mismo sitio que la estación de partida.");
       }
       refPoint = p;
+      // También el código: si el punto se borra del catálogo, sigue orientada.
+      refCode = p.code;
       startAzimuth = azimuthToReference({ startNorth: startPoint.north, startEast: startPoint.east }, p);
     } else {
       const az = readAzimuth(azimuth, mode === "azimuth" ? "Azimut a la referencia" : "Azimut del primer lado");

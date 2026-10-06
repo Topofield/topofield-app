@@ -130,6 +130,16 @@ describe("polygonal-save", () => {
     expect(detectedOrderOf(abierta, stations)).toEqual({ order: null, verifiable: false });
   });
 
+  // Revisión final: borrar el punto del catálogo pone `reference_point_id` en
+  // null (FK `on delete set null`); con el código guardado, la poligonal sigue
+  // orientada y rotulada, con el azimut que ya tenía.
+  it("la referencia del catálogo viaja también con su código", () => {
+    const conCodigo = { ...process, reference_point_code: "TT4" } as PolygonalProcess;
+    const p = payloadOf("p", draftOf(conCodigo, stations));
+    expect(p.referencePointId).toBe("ref-tt4");
+    expect(p.referencePointCode).toBe("TT4");
+  });
+
   it("una abierta sin control no guarda mínimos cuadrados: no tiene nada que ajustar", () => {
     const abierta = { ...process, type: "open_uncontrolled", correction_method: "least_squares" } as PolygonalProcess;
     expect(payloadOf("p", draftOf(abierta, stations)).correctionMethod).toBe("bowditch");

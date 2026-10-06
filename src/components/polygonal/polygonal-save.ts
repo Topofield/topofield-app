@@ -43,7 +43,11 @@ export interface AmarreEdit {
   startEast: number;
   /** Punto del catálogo al que se pone 0° atrás. */
   referencePointId: string | null;
-  /** Referencia sin coordenadas: solo el código, con el azimut tecleado. */
+  /**
+   * El código de la referencia: sin coordenadas, con el azimut tecleado; con
+   * `referencePointId`, el del punto del catálogo, para que la poligonal siga
+   * orientada si ese punto se borra (la FK pasa a `null`).
+   */
   referenceCode: string | null;
   /** Azimut de la estación de partida a la referencia, o el de partida sin amarre. */
   startAzimuth: Dms3 | null;
@@ -176,7 +180,7 @@ export function payloadOf(processId: string, draft: PolygonalDraft): SavePolygon
     endAzimuthMin: controlled ? (a.endAzimuth?.min ?? null) : null,
     endAzimuthSec: controlled ? (a.endAzimuth?.sec ?? null) : null,
     referencePointId: a.referencePointId,
-    referencePointCode: a.referencePointId === null ? a.referenceCode : null,
+    referencePointCode: a.referenceCode,
     hasClosingRow: d.type === "closed" && hasOrientation(a) && a.hasClosingRow,
     // La abierta sin control no se ajusta, y el servidor rechaza mínimos
     // cuadrados en ella: pasa a serlo desde «Editar datos» sin selector a mano.
