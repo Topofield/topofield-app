@@ -13,6 +13,7 @@ import { resolveCatalogPoint } from "@/lib/polygonal-amarre";
 import {
   validateLeastSquaresWeights,
   hasCaptureErrors,
+  polygonalHeaderProblem,
   referenceStartAzimuth,
   stationCaptureIssues,
 } from "@/lib/validators/polygonal";
@@ -243,6 +244,15 @@ export async function savePolygonalProcessAction(
   // `stationCaptureIssues` aplica `expectStationCapture` para no bloquear la
   // captura parcial legítima: cada popup guarda, y el punto pendiente o la
   // estación de partida sin amarre no llevan aún ángulo (§ 5.1, Fase 35).
+  const headerProblem = polygonalHeaderProblem({
+    name: payload.name,
+    startPointCode: payload.startPointCode,
+    startNorth: payload.startNorth,
+    startEast: payload.startEast,
+    stationCount: payload.stations.length,
+  });
+  if (headerProblem) return { ok: false, error: headerProblem };
+
   // El ángulo de cada estación es el promedio de sus lecturas, como se guarda.
   const issues = stationCaptureIssues(
     payload.type,

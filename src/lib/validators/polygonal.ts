@@ -217,6 +217,29 @@ export function stationCaptureIssues(
   });
 }
 
+/**
+ * Por qué la cabecera de un guardado no se puede guardar, o `null` (Fase 35).
+ * Los popups ya lo impiden; el servidor lo repite porque la acción se puede
+ * llamar con una carga hecha a mano. Un alta sin amarre ni mediciones —la
+ * partida vacía en 0, 0— es legítima.
+ */
+export function polygonalHeaderProblem(header: {
+  name: string;
+  startPointCode: string;
+  startNorth: number;
+  startEast: number;
+  stationCount: number;
+}): string | null {
+  if (header.name.trim() === "") return "El título es obligatorio.";
+  if (header.stationCount > 0 && header.startPointCode.trim() === "") {
+    return "Falta la estación de partida: ingrese el amarre.";
+  }
+  if (!Number.isFinite(header.startNorth) || !Number.isFinite(header.startEast)) {
+    return "La estación de partida necesita un Norte y un Este válidos.";
+  }
+  return null;
+}
+
 /** ¿Tiene la lista de issues algún error bloqueante? */
 export function hasCaptureErrors(issues: CaptureIssues[]): boolean {
   return issues.some((i) => Object.keys(i.errors).length > 0);

@@ -12,6 +12,7 @@ import {
   validateLeastSquaresWeights,
   hasCaptureErrors,
   readingDmsError,
+  polygonalHeaderProblem,
   referenceStartAzimuth,
   stationCaptureIssues,
   validatePolygonalStation,
@@ -546,5 +547,34 @@ describe("stationCaptureIssues (Fase 35)", () => {
   it("una lectura fuera de rango sigue siendo un error", () => {
     const issues = stationCaptureIssues("closed", [station({ readings: [{ deg: 90, min: 61, sec: 0 }] })], false, true);
     expect(hasCaptureErrors(issues)).toBe(true);
+  });
+});
+
+// Revisión final: la clave de Supabase es pública y la acción se puede llamar
+// con una carga hecha a mano. Lo que los popups impiden, el servidor también.
+describe("polygonalHeaderProblem (Fase 35)", () => {
+  const ok = { name: "TT4", startPointCode: "V10", startNorth: 1000, startEast: 2000, stationCount: 7 };
+
+  it("una cabecera completa pasa, y un alta aún sin amarre también", () => {
+    expect(polygonalHeaderProblem(ok)).toBeNull();
+    expect(polygonalHeaderProblem({ ...ok, startPointCode: "", startNorth: 0, startEast: 0, stationCount: 0 })).toBeNull();
+  });
+
+  it("sin título no se guarda", () => {
+    expect(polygonalHeaderProblem({ ...ok, name: "  " })).toBe("El título es obligatorio.");
+  });
+
+  it("mediciones sin estación de partida no se guardan", () => {
+    expect(polygonalHeaderProblem({ ...ok, startPointCode: " " })).toBe(
+      "Falta la estación de partida: ingrese el amarre.",
+    );
+  });
+
+  it("un Norte o un Este que no es un número no se guarda", () => {
+    for (const startNorth of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(polygonalHeaderProblem({ ...ok, startNorth })).toBe(
+        "La estación de partida necesita un Norte y un Este válidos.",
+      );
+    }
   });
 });
