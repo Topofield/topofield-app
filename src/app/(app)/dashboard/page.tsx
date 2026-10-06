@@ -71,12 +71,12 @@ export default async function DashboardPage({
         <KpiCard
           label="Procesos calculados"
           value={kpis.calculatedProcesses}
-          hint="Listos para revisar y cerrar."
+          hint="Listos para revisar."
         />
         <KpiCard
           label="Fuera de tolerancia"
           value={kpis.outOfTolerance}
-          hint="Requieren revisión antes del cierre."
+          hint="Requieren revisión."
         />
       </div>
 
