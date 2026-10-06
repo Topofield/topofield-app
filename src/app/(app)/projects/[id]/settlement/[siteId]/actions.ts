@@ -635,6 +635,7 @@ export async function reopenVisitAction(siteId: string, visitId: string): Promis
     .eq("id", visitId);
   if (error) return { ok: false, error: logDbError(error, "No se pudo reabrir la visita.") };
 
+  revalidatePath(`/projects/${site.project_id}/settlement/${siteId}/visits/${visitId}`);
   revalidatePath(`/projects/${site.project_id}/settlement/${siteId}`);
   revalidatePath(`/projects/${site.project_id}`);
   return { ok: true };
