@@ -126,21 +126,6 @@ export const POLYGONAL_TYPE_OPTIONS = POLYGONAL_TYPES.map((value) => ({
   label: POLYGONAL_TYPE_LABELS[value],
 }));
 
-export const CORRECTION_METHOD_OPTIONS = CORRECTION_METHODS.map((value) => ({
-  value,
-  label: CORRECTION_METHOD_LABELS[value],
-}));
-
-/**
- * Opciones del selector de una poligonal cerrada. Interior y exterior son los
- * dos casos reales según el sentido en que se recorra el polígono, y el
- * formulario NO preselecciona: adivinar la convención es el fallo que la Fase 7
- * corrige (decisión 8 del PRD de fase).
- */
-export const CLOSED_ANGLE_TYPE_OPTIONS = (["interior", "exterior"] as const).map(
-  (value) => ({ value, label: ANGLE_TYPE_LABELS[value] }),
-);
-
 // --- Contratos del cálculo (src/lib/calculations/polygonal.ts) ---
 
 /** Una lectura individual del ángulo, tal como la consume el cálculo. */

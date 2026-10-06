@@ -51,15 +51,6 @@ export function formatEquipmentLine(
   return serial ? `${combo} · s/n ${serial}` : combo;
 }
 
-/** «2.0″» (ISO 17123-3), o "—" si la estación total no tiene precisión angular registrada. */
-export function formatAngularPrecision(
-  seconds: number | string | null | undefined,
-): string {
-  if (seconds === null || seconds === undefined || seconds === "") return "—";
-  const v = Number(seconds);
-  return Number.isFinite(v) ? `${v}″` : "—";
-}
-
 /**
  * «3 mm + 2 ppm», los dos términos de la ISO 17123-4. "—" si falta cualquiera
  * de los dos: una precisión de distancia a medias no es un dato usable.

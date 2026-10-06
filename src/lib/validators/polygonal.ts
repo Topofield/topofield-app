@@ -1,5 +1,6 @@
 // Validación del proceso poligonal — funciones puras (PRD § 5.1 capa de
-// captura, § 5.2 capa de cierre). Sin React, sin Supabase.
+// captura). Sin React, sin Supabase. La capa de cierre (§ 5.2) se fue con el
+// cierre de la poligonal (Fase 35): el orden se detecta (`tolerances.ts`).
 
 import {
   averageReadings,
@@ -8,11 +9,7 @@ import {
   dmsToDecimal,
   type Dms,
 } from "@/lib/calculations/angles";
-import type {
-  PolygonalResult,
-  PolygonalType,
-  ReadingInput,
-} from "@/types/polygonal";
+import type { PolygonalType } from "@/types/polygonal";
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
@@ -223,131 +220,6 @@ export function stationCaptureIssues(
 /** ¿Tiene la lista de issues algún error bloqueante? */
 export function hasCaptureErrors(issues: CaptureIssues[]): boolean {
   return issues.some((i) => Object.keys(i.errors).length > 0);
-}
-
-// --- Capa 2: validación de cierre (§ 5.2) -------------------------------------
-
-export interface ClosureEvaluation {
-  /** Se puede cerrar el proceso (como `closed` o como `rejected`). */
-  canClose: boolean;
-  /** El proceso solo puede cerrarse como `rejected` (no cumple tolerancia). */
-  mustReject: boolean;
-  /** El proceso no puede cerrarse de ninguna forma. */
-  blocked: boolean;
-  /** Mensajes para el banner de cierre. */
-  messages: string[];
-}
-
-/**
- * Evalúa si un proceso poligonal puede cerrarse, a partir de su resultado de
- * cálculo y de si hay errores de captura pendientes.
- */
-export function evaluatePolygonalClosure(
-  type: PolygonalType,
-  result: PolygonalResult,
-  captureHasErrors: boolean,
-): ClosureEvaluation {
-  if (captureHasErrors) {
-    return {
-      canClose: false,
-      mustReject: false,
-      blocked: true,
-      messages: ["Hay celdas con errores de captura; corrígelas antes de cerrar."],
-    };
-  }
-
-  if (type === "open_uncontrolled") {
-    const computed = result.stations.length > 0 &&
-      result.stations.every((s) => s.north != null);
-    return computed
-      ? { canClose: true, mustReject: false, blocked: false, messages: [] }
-      : {
-          canClose: false,
-          mustReject: false,
-          blocked: true,
-          messages: ["Completa los datos de todas las estaciones."],
-        };
-  }
-
-  if (type === "closed") {
-    if (result.anglesMeetTolerance == null || result.meetsLinearTolerance == null) {
-      return {
-        canClose: false,
-        mustReject: false,
-        blocked: true,
-        messages: ["Completa los datos de la poligonal antes de cerrar."],
-      };
-    }
-    if (!result.anglesMeetTolerance) {
-      return {
-        canClose: false,
-        mustReject: false,
-        blocked: true,
-        messages: [
-          "El error angular supera la tolerancia del orden de precisión; no se puede cerrar.",
-        ],
-      };
-    }
-    if (!result.meetsLinearTolerance) {
-      return {
-        canClose: true,
-        mustReject: true,
-        blocked: false,
-        messages: [
-          "La precisión relativa no alcanza la tolerancia; solo puede cerrarse como rechazado.",
-        ],
-      };
-    }
-    return { canClose: true, mustReject: false, blocked: false, messages: [] };
-  }
-
-  // open_controlled
-  if (result.meetsLinearTolerance == null) {
-    return {
-      canClose: false,
-      mustReject: false,
-      blocked: true,
-      messages: ["Completa los datos y el punto de llegada antes de cerrar."],
-    };
-  }
-  // El error angular, si hay azimut de llegada, también decide: es lo que el
-  // servidor guarda en `meets_tolerance`. Antes el diálogo ofrecía «Confirmar
-  // cierre» y el servidor lo guardaba rechazado (Fase 26, C-3).
-  const messages: string[] = [];
-  if (result.anglesMeetTolerance === false) {
-    messages.push(
-      "El error angular contra el azimut de llegada supera la tolerancia; solo puede cerrarse como rechazado.",
-    );
-  }
-  if (!result.meetsLinearTolerance) {
-    messages.push(
-      "El cierre contra el punto conocido no alcanza la tolerancia; solo puede cerrarse como rechazado.",
-    );
-  }
-  return {
-    canClose: true,
-    mustReject: messages.length > 0,
-    blocked: false,
-    messages,
-  };
-}
-
-/**
- * Valida las lecturas de un ángulo: que estén las que exige el proceso.
- *
- * Hasta la Fase 31 avisaba además si su dispersión superaba el doble de la
- * precisión del equipo; ese aviso se quitó por decisión del usuario (D-5): el
- * criterio saltaba en buena parte de los datos correctos. La dispersión se
- * sigue mostrando como dato junto al promedio.
- */
-export function validateReadings(
-  readings: ReadingInput[],
-  min: number,
-): { error?: string } {
-  if (readings.length < min) {
-    return { error: `Faltan lecturas: se exigen ${min} y hay ${readings.length}.` };
-  }
-  return {};
 }
 
 /** ¿Tiene `value` como mucho `decimals` decimales? Con holgura de coma flotante. */
