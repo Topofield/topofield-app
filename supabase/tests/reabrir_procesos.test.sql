@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(25);
+select plan(27);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a341', 'reabrir@topofield.test');
@@ -58,6 +58,15 @@ update public.settlement_visits
 update public.sites
    set status = 'closed', closed_at = now(), closed_by = '00000000-0000-4000-8000-00000000a341'
  where id = '00000000-0000-4000-8000-00000000c342';
+
+-- Quién ejecuta el helper: los triggers corren con el rol de la sesión, así
+-- que `authenticated` lo necesita; `anon` no (convención de los guardados).
+select ok(
+  not has_function_privilege('anon', 'public.is_reopening(jsonb, jsonb)', 'execute'),
+  'anon no ejecuta is_reopening');
+select ok(
+  has_function_privilege('authenticated', 'public.is_reopening(jsonb, jsonb)', 'execute'),
+  'authenticated sí ejecuta is_reopening: los triggers la usan');
 
 set local role authenticated;
 select set_config('request.jwt.claims',

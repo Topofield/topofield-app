@@ -245,12 +245,15 @@ actividad reciente, así que lo que está trabajando queda arriba.
   umbrales y su catálogo de puntos pero sin visitas.
 - **Renombrar** — cambia el nombre sin abrirlo.
 - **Eliminar** — lo borra con lo que contiene, con confirmación previa. Un
-  lugar con alguna visita cerrada no se puede eliminar.
+  lugar con alguna visita cerrada no se puede eliminar. Si lo que borra está en
+  un informe consolidado —porque se reabrió después de emitirlo—, la
+  confirmación lo avisa: el informe quedará sin esa sección.
 
 > **Lo cerrado solo se puede duplicar.** Un proceso cerrado o rechazado, o un
 > lugar cerrado, no admite renombrarse ni eliminarse. Si necesita rehacer un
 > levantamiento cerrado, duplíquelo: obtendrá una copia editable y el original
-> queda intacto como constancia.
+> queda intacto como constancia. Para corregir el mismo proceso, reábralo desde
+> su pantalla (§ 8).
 
 En el teléfono, la tabla se convierte en tarjetas, una por fila, con las
 mismas acciones.
@@ -1366,7 +1369,8 @@ dice lo mismo hoy y dentro de un año. Hay dos excepciones:
   con qué puntos se georreferenció.
 - **Reabrir** (§ 8): si reabre un proceso que el informe incluye, el informe
   muestra sus datos actuales y, mientras siga abierto, «—» en su registro de
-  cierre. Un PDF ya descargado no cambia.
+  cierre, y el pie dice que se reabrió después de emitirlo. Un PDF ya
+  descargado no cambia.
 
 De ahí se siguen dos consecuencias:
 

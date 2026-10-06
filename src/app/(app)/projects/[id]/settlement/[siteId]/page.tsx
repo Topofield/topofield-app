@@ -59,10 +59,15 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
     notFound();
   }
 
-  const [sitePoints, visits, referencePoints] = await Promise.all([
+  // Los informes, para reabrir el lugar (Fase 34) y para la pestaña Informe.
+  const state = processReportState(site.status);
+  const [sitePoints, visits, referencePoints, reports] = await Promise.all([
     getSitePoints(supabase, site.id),
     getVisits(supabase, site.id),
     getReferencePoints(supabase, project.id),
+    state !== "draft" || activeTab === "informe"
+      ? getReports(supabase, project.id)
+      : Promise.resolve([]),
   ]);
 
   const hoy = new Date().toISOString().slice(0, 10);
@@ -70,11 +75,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
   const base = visits[0]?.date;
   const basePath = `/projects/${project.id}/settlement/${site.id}`;
 
-  // Reabrir el lugar (Fase 34), con los informes que lo incluyen.
-  const reportTitles =
-    site.status === "closed"
-      ? reportsIncluding(await getReports(supabase, project.id), "site", site.id).map((r) => r.title)
-      : [];
+  const reportTitles = reportsIncluding(reports, "site", site.id).map((r) => r.title);
 
   return (
     <ProcessShell
@@ -135,7 +136,8 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         <ProcessReport
           project={project}
           process={{ type: "site", id: site.id, name: site.name }}
-          state={processReportState(site.status)}
+          state={state}
+          reports={reports}
           notes={site.notes}
         />
       )}

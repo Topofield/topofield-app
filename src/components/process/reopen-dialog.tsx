@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Alert, Button, Modal } from "@/components/design-system";
 import { REOPEN_COPY, reportsNotice, type ReopenTarget } from "@/lib/reopen";
@@ -29,7 +28,6 @@ export function ReopenDialog({
   notice = null,
   blocked = null,
 }: ReopenDialogProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -40,14 +38,9 @@ export function ReopenDialog({
     setError(null);
     startTransition(async () => {
       const response = await action();
-      if (response.ok) {
-        setOpen(false);
-        // revalidatePath ya rehace la pantalla del proceso; la vista de una
-        // visita es una ruta anidada que no revalida.
-        router.refresh();
-      } else {
-        setError(response.error ?? "No se pudo reabrir.");
-      }
+      // En éxito, revalidatePath de cada acción rehace la pantalla, ya abierta.
+      if (response.ok) setOpen(false);
+      else setError(response.error ?? "No se pudo reabrir.");
     });
   }
 

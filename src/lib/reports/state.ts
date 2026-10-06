@@ -14,3 +14,16 @@ export function processReportState(status: string): ProcessReportState {
   if (status === "rejected") return "rejected";
   return "draft";
 }
+
+/**
+ * El final del pie de un informe consolidado (Fase 34): «con procesos
+ * cerrados» si todo lo que incluye sigue cerrado; si no, qué se reabrió
+ * después de emitirlo, porque el informe muestra sus datos actuales.
+ */
+export function issuedFooterNote(reopened: string[]): string {
+  if (reopened.length === 0) return ", con procesos cerrados.";
+  const list = reopened.map((n) => `«${n}»`).join(", ");
+  return reopened.length === 1
+    ? `. ${list} se reabrió después de emitirlo: sus datos pueden cambiar.`
+    : `. ${list} se reabrieron después de emitirlo: sus datos pueden cambiar.`;
+}

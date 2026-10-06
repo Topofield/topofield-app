@@ -56,11 +56,13 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
 
   const basePath = `/projects/${id}/leveling/${pid}`;
 
-  // Reabrir (Fase 34): solo lo cerrado, con los informes que lo incluyen.
-  const closed = process.status === "closed" || process.status === "rejected";
-  const reportTitles = closed
-    ? reportsIncluding(await getReports(supabase, id), "leveling", process.id).map((r) => r.title)
-    : [];
+  // Reabrir (Fase 34): solo lo cerrado, con los informes que lo incluyen. Los
+  // informes se piden una vez: también los usa la pestaña Informe.
+  const state = processReportState(process.status);
+  const closed = state !== "draft";
+  const reports =
+    closed || activeTab === "informe" ? await getReports(supabase, id) : [];
+  const reportTitles = reportsIncluding(reports, "leveling", process.id).map((r) => r.title);
 
   return (
     <ProcessShell
@@ -97,7 +99,8 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
         <ProcessReport
           project={project}
           process={{ type: "leveling", id: process.id, name: process.name }}
-          state={processReportState(process.status)}
+          state={state}
+          reports={reports}
           notes={process.notes}
         />
       )}

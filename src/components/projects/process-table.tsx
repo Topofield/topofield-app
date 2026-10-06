@@ -28,6 +28,12 @@ export interface ProcessRow {
   updatedAt: string;
   /** Cerrado o rechazado: solo se puede duplicar. */
   closed: boolean;
+  /**
+   * Informes consolidados que lo incluyen (Fase 34): un proceso reabierto se
+   * puede eliminar, y el diálogo avisa de que esos informes perderán la
+   * sección.
+   */
+  reportTitles?: string[];
 }
 
 /** Destino de una columna ordenable, conservando filtros y módulo. */
@@ -178,7 +184,13 @@ export function ProcessTable({
                   {formatRelativeDate(r.updatedAt)}
                 </td>
                 <td className="px-4 py-3">
-                  <ProcessRowActions kind={r.kind} id={r.id} name={r.name} closed={r.closed} />
+                  <ProcessRowActions
+                    kind={r.kind}
+                    id={r.id}
+                    name={r.name}
+                    closed={r.closed}
+                    reportTitles={r.reportTitles}
+                  />
                 </td>
               </tr>
             ))}
@@ -209,7 +221,13 @@ export function ProcessTable({
               </span>
             </div>
             <div className="mt-2 border-t border-rule pt-2">
-              <ProcessRowActions kind={r.kind} id={r.id} name={r.name} closed={r.closed} />
+              <ProcessRowActions
+                kind={r.kind}
+                id={r.id}
+                name={r.name}
+                closed={r.closed}
+                reportTitles={r.reportTitles}
+              />
             </div>
           </li>
         ))}

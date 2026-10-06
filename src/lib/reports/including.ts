@@ -14,3 +14,17 @@ export function reportsIncluding(
     r.included_processes.some((p) => p.type === type && p.id === id),
   );
 }
+
+/**
+ * El aviso al eliminar un proceso o un lugar que está en informes
+ * consolidados, o null si no está en ninguno (Fase 34). Solo lo abierto se
+ * elimina, así que solo pasa con algo reabierto después de emitir el informe:
+ * el informe se reconstruye en vivo y quedará sin esa sección.
+ */
+export function deletionReportsNotice(titles: string[]): string | null {
+  if (titles.length === 0) return null;
+  const list = titles.map((t) => `«${t}»`).join(", ");
+  return titles.length === 1
+    ? `Está en el informe consolidado ${list}, que quedará sin esta sección.`
+    : `Está en ${titles.length} informes consolidados: ${list}. Quedarán sin esta sección.`;
+}

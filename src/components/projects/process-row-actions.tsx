@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Alert, Button, Input, Modal } from "@/components/design-system";
+import { deletionReportsNotice } from "@/lib/reports/including";
 import {
   deletePolygonalProcessAction,
   duplicatePolygonalProcessAction,
@@ -63,6 +64,8 @@ interface ProcessRowActionsProps {
   name: string;
   /** Cerrado o rechazado: solo se puede duplicar. */
   closed: boolean;
+  /** Informes consolidados que lo incluyen: el borrado los avisa (Fase 34). */
+  reportTitles?: string[];
 }
 
 /**
@@ -71,8 +74,15 @@ interface ProcessRowActionsProps {
  * ocultos, no deshabilitados — una acción visible pero inerte invita a
  * intentarla.
  */
-export function ProcessRowActions({ kind, id, name, closed }: ProcessRowActionsProps) {
+export function ProcessRowActions({
+  kind,
+  id,
+  name,
+  closed,
+  reportTitles = [],
+}: ProcessRowActionsProps) {
   const k = KINDS[kind];
+  const reportsNotice = deletionReportsNotice(reportTitles);
   const [renombrando, setRenombrando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [nombre, setNombre] = useState(name);
@@ -204,6 +214,11 @@ export function ProcessRowActions({ kind, id, name, closed }: ProcessRowActionsP
         <p className="text-sm text-ink-2">
           Se eliminará «{name}» {k.deletes}. Esta acción no se puede deshacer.
         </p>
+        {reportsNotice && (
+          <Alert variant="warning" className="mt-2 py-2">
+            {reportsNotice}
+          </Alert>
+        )}
         {error && (
           <Alert variant="error" className="mt-2 py-2">
             {error}
