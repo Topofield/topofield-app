@@ -18,11 +18,12 @@ import {
   type PolygonalProcess,
   type PolygonalStationWithReadings,
 } from "@/types/polygonal";
+import { PrintButton } from "@/components/reports/print-button";
 import { PolygonalDetailsDialog, type PolygonalDetails } from "./polygonal-details-dialog";
 import { detectedOrderOf } from "./polygonal-draft";
 import { draftOf, payloadOf } from "./polygonal-save";
-
 import { callAction } from "@/lib/errors/action-call";
+
 interface PolygonalHeaderProps {
   projectId: string;
   projectName: string;
@@ -31,6 +32,8 @@ interface PolygonalHeaderProps {
   exportHref: string;
   /** Informes consolidados que incluyen la poligonal: borrarla los deja sin su sección. */
   reportTitles: string[];
+  /** En el paso de Informe, la primera acción es imprimirlo, como en `ProcessShell`. */
+  printable?: boolean;
 }
 
 const blank = (v: string | null) => (v && v.trim() !== "" ? v : null);
@@ -48,6 +51,7 @@ export function PolygonalHeader({
   stations,
   exportHref,
   reportTitles,
+  printable = false,
 }: PolygonalHeaderProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -129,6 +133,7 @@ export function PolygonalHeader({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {printable && <PrintButton size="sm" />}
           <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
             Editar datos
           </Button>

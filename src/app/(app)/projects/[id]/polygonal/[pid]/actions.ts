@@ -562,8 +562,8 @@ export async function georeferencePolygonalProcessAction(
   const { plan } = planned;
 
   // Cabecera y estaciones en una sola transacción (Fase 23). Las estaciones se
-  // actualizan por su id: en un cerrado no se pueden borrar y reinsertar, como
-  // hace el guardado, porque el trigger solo admite UPDATE de posición.
+  // actualizan por su id, solo en sus columnas de posición: así se diseñó
+  // cuando la poligonal se cerraba (Fase 15), y sigue sirviendo.
   const { error } = await supabase.rpc("georeference_polygonal", {
     p_process_id: process.id,
     p_header: {

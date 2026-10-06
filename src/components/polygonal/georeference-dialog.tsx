@@ -65,7 +65,6 @@ export function GeoreferenceDialog({
   const [b, setB] = useState<PointDraft>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const closed = process.status === "closed" || process.status === "rejected";
 
   // Vértices con coordenadas, sin repetir: con orientación el arranque
   // aparece al principio y al final, y es el mismo punto.
@@ -174,11 +173,7 @@ export function GeoreferenceDialog({
               Cancelar
             </Button>
             <Button onClick={confirm} disabled={!plan || isPending}>
-              {isPending
-                ? "Georreferenciando…"
-                : closed
-                  ? "Reescribir coordenadas"
-                  : "Georreferenciar"}
+              {isPending ? "Georreferenciando…" : "Georreferenciar"}
             </Button>
           </>
         }
@@ -246,11 +241,6 @@ export function GeoreferenceDialog({
                   El amarre {process.reference_point_code} es del catálogo, que no
                   cambia: pasa a amarre manual, con el mismo código.
                 </Alert>
-              )}
-              {closed && (
-                <p className="text-sm text-ink-2">
-                  El proceso está cerrado: solo cambian coordenadas y azimuts.
-                </p>
               )}
 
               <div className="overflow-x-auto">

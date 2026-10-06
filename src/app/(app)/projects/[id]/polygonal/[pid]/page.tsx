@@ -58,6 +58,7 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
         stations={stations}
         exportHref={`${basePath}/export`}
         reportTitles={reportTitles}
+        printable={step === "informe"}
       />
       <PolygonalSteps
         basePath={basePath}
