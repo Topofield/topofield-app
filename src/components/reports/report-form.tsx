@@ -16,7 +16,7 @@ import { CANDIDATE_KIND_LABELS } from "@/types/report";
 
 interface ReportFormProps {
   projectId: string;
-  /** Trabajos cerrados del proyecto; ya filtrados por elegibilidad. */
+  /** Trabajos del proyecto que un informe puede incluir, ya filtrados por elegibilidad. */
   candidates: EligibleCandidate[];
   /** Claves `tipo:id` que llegan marcadas (desde la pestaña Informe de un proceso). */
   initialSelected?: string[];
@@ -27,7 +27,8 @@ function claveDe(c: { kind: string; id: string }): string {
 }
 
 /**
- * Alta de un informe (§ 4.7): elegir procesos cerrados, ordenarlos, poner
+ * Alta de un informe (§ 4.7): elegir los procesos (poligonales calculadas y lo
+ * demás cerrado, Fase 35), ordenarlos, poner
  * título y observaciones.
  *
  * El orden se maneja con botones «subir/bajar» y no con arrastrar y soltar,
@@ -78,7 +79,7 @@ export function ReportForm({ projectId, candidates, initialSelected = [] }: Repo
       return;
     }
     if (selected.length === 0) {
-      setError("Elige al menos un proceso cerrado.");
+      setError("Elige al menos un proceso.");
       return;
     }
 
@@ -100,14 +101,14 @@ export function ReportForm({ projectId, candidates, initialSelected = [] }: Repo
     });
   }
 
-  // Un proyecto sin nada cerrado no puede informar. Se dice explícitamente en
+  // Un proyecto sin nada que incluir no puede informar. Se dice explícitamente en
   // vez de mostrar un formulario vacío que no llevaría a ninguna parte.
   if (candidates.length === 0) {
     return (
       <Card>
         <EmptyState
-          title="Todavía no hay procesos cerrados"
-          description="Un informe consolidado solo incluye procesos cerrados. Cierra una poligonal, una nivelación o un control de asentamientos para generarlo."
+          title="Todavía no hay procesos para informar"
+          description="Un informe consolidado incluye poligonales calculadas y nivelaciones y controles de asentamientos cerrados. Calcula una poligonal, o cierra una nivelación o un control de asentamientos, para generarlo."
         />
       </Card>
     );
@@ -128,7 +129,7 @@ export function ReportForm({ projectId, candidates, initialSelected = [] }: Repo
 
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium text-ink">
-            Procesos cerrados a incluir
+            Procesos a incluir
           </legend>
           <div className="flex flex-col gap-1">
             {candidates.map((c) => {

@@ -636,14 +636,14 @@ export async function getSiteSummariesByProject(
 // --- Informes (§ 4.7) --------------------------------------------------------
 
 /**
- * Los trabajos **cerrados** de un proyecto, en el formato que consume el
- * selector de informes.
+ * Los trabajos que un informe puede incluir, en el formato que consume el
+ * selector: las poligonales **calculadas** (Fase 35: no se cierran) y las
+ * nivelaciones y los lugares **cerrados**.
  *
  * Trae los tres tipos con el mismo `select` mínimo para poder ordenarlos y
- * mostrarlos juntos. El filtro por estado se aplica aquí (`eq("status",
- * "closed")`) además de en `isEligible`: la consulta evita traer filas que se
- * van a descartar, y la función pura sigue siendo la que decide la regla —y la
- * que tiene los tests.
+ * mostrarlos juntos. El filtro por estado se aplica aquí además de en
+ * `isEligible`: la consulta evita traer filas que se van a descartar, y la
+ * función pura sigue siendo la que decide la regla —y la que tiene los tests.
  */
 export async function getClosedWorkForReports(
   supabase: Client,
@@ -654,10 +654,10 @@ export async function getClosedWorkForReports(
   const [polygonals, levelings, sites] = await Promise.all([
     supabase
       .from("polygonal_processes")
-      .select("id, name, status, closed_at")
+      .select("id, name, status")
       .eq("project_id", projectId)
-      .eq("status", "closed")
-      .order("closed_at", { ascending: true }),
+      .eq("status", "calculated")
+      .order("updated_at", { ascending: true }),
     supabase
       .from("leveling_processes")
       .select("id, name, status, closed_at")

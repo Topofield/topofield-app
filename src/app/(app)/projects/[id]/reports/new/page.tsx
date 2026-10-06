@@ -40,7 +40,7 @@ export default async function NewReportPage({ params, searchParams }: NewReportP
           { label: "Nuevo informe" },
         ]}
         title="Nuevo informe"
-        subtitle="Reúne procesos cerrados del proyecto en un solo documento."
+        subtitle="Reúne poligonales calculadas y procesos cerrados del proyecto en un solo documento."
       />
       <ReportForm
         projectId={project.id}

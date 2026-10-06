@@ -422,6 +422,96 @@
     font-size: 0.8125rem;
     color: var(--color-ink-2);
   }
+
+  /* Fase 35: el informe de la poligonal. Pasos dentro de una subsección. */
+  .report-section h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.375rem;
+  }
+
+  /* Párrafo explicativo, p. ej. cómo corrigió el método. */
+  .report-text {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Las cuatro cifras del resultado. */
+  .report-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+  }
+
+  @media screen and (max-width: 640px) {
+    .report-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .report-kpi {
+    border: 1px solid var(--color-rule);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .report-kpi dt {
+    font-size: 0.75rem;
+    color: var(--color-ink-2);
+  }
+
+  .report-kpi dd {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .report-kpi-ok {
+    border: 2px solid var(--color-success);
+    background: var(--color-success-bg);
+  }
+
+  .report-kpi-ok dt,
+  .report-kpi-ok dd {
+    color: var(--color-success);
+  }
+
+  /* La poligonal no alcanza ningún orden: se alerta, también en el PDF. */
+  .report-alert {
+    border: 2px solid var(--color-warning);
+    border-radius: 0.5rem;
+    color: var(--color-warning);
+    font-weight: 600;
+    margin: 0.5rem 0 0.75rem;
+    padding: 0.625rem 0.875rem;
+  }
+
+  /* Fórmulas en MathML (decisión 16): el navegador las compone. */
+  .report-formula {
+    background: var(--color-sel);
+    border-radius: 0.375rem;
+    margin: 0.5rem 0 0.75rem;
+    overflow-x: auto;
+    padding: 0.375rem 0.875rem 0.5rem;
+  }
+
+  .report-formula math {
+    font-size: 1.15rem;
+    margin: 0.375rem 0;
+  }
+
+  .report-formula-caption {
+    font-size: 0.8125rem;
+    color: var(--color-ink-2);
+    text-align: center;
+    margin: 0;
+  }
+
+  .report-table .report-sum td {
+    font-weight: 600;
+  }
 }
 
 @media print {

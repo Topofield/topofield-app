@@ -72,6 +72,7 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
           state={processReportState(process.status)}
           notes={process.notes}
           reports={reports}
+          includable={process.status === "calculated"}
         />
       ) : step === "ajuste" ? (
         <AjusteTab

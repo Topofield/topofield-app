@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProjectById, getReport } from "@/lib/supabase/queries";
 import { closureOf, loadReportSections } from "@/lib/reports/sections";
 import { responsibleNames } from "@/lib/reports/responsible";
-import { issuedFooterNote } from "@/lib/reports/state";
+import { issuedFooterNote, reopenedAfterIssue } from "@/lib/reports/state";
 import { precisionSummaryRows } from "@/lib/reports/summary";
 import { formatDate } from "@/lib/utils/format";
 import { CANDIDATE_KIND_LABELS } from "@/types/report";
@@ -55,9 +55,11 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
   );
   // Lo que se reabrió después de emitir el informe (Fase 34): el pie lo dice,
   // porque el informe muestra sus datos actuales.
-  const reopened = sections
-    .filter((s) => s.kind !== "missing" && closureOf(s).closedAt == null)
-    .map((s) => s.entry.name);
+  const reopened = reopenedAfterIssue(
+    sections.map((s) => ({ kind: s.kind, name: s.entry.name, closedAt: closureOf(s).closedAt })),
+  );
+  // Lo que se cierra: la poligonal no (Fase 35).
+  const closable = sections.filter((s) => s.kind === "leveling" || s.kind === "site").length;
 
   return (
     <div className="report">
@@ -117,7 +119,7 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
           <>
             Informe emitido desde TopoField el{" "}
             {report.generated_at ? formatDate(report.generated_at) : "—"}
-            {issuedFooterNote(reopened)}
+            {issuedFooterNote(reopened, closable)}
           </>
         }
       />

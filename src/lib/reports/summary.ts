@@ -2,6 +2,7 @@
 // impresión para compartirse con el informe de cada proceso). Función pura.
 
 import { formatEquipmentLine, formatPrecision } from "@/lib/utils/format";
+import { PRECISION_ORDER_LABELS } from "@/types/project";
 import { ALERT_LEVEL_LABELS } from "@/types/settlement";
 import { CANDIDATE_KIND_LABELS } from "@/types/report";
 import { fixed } from "./values";
@@ -23,8 +24,14 @@ export function precisionSummaryRows(sections: ReportSection[]): PrecisionSummar
     let cumple: boolean | null = null;
 
     if (s.kind === "polygonal") {
-      precision = formatPrecision(s.data.process.relative_precision);
-      cumple = s.data.process.meets_tolerance;
+      // El orden alcanzado, detectado como en el paso de Ajuste (Fase 35).
+      const { result, input } = s.data.plot;
+      const verifiable = input.type !== "open_uncontrolled" && result.relativePrecision != null;
+      const order = s.data.order;
+      precision = verifiable
+        ? `${formatPrecision(result.relativePrecision)} · ${order ? PRECISION_ORDER_LABELS[order] : "ningún orden"}`
+        : "Sin verificación";
+      cumple = verifiable ? order !== null : null;
       equipo = formatEquipmentLine(
         s.data.process.equipment_brand,
         s.data.process.equipment_model,

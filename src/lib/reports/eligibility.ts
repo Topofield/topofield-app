@@ -14,8 +14,8 @@ export interface EligibleCandidate {
   id: string;
   name: string;
   /**
-   * `status` de la fila: `closed` / `rejected` / ... en poligonal y nivelación,
-   * `active` / `closed` en un lugar.
+   * `status` de la fila: `calculated` / ... en poligonal, `closed` /
+   * `rejected` / ... en nivelación, `active` / `closed` en un lugar.
    */
   status: string;
 }
@@ -23,7 +23,9 @@ export interface EligibleCandidate {
 /**
  * ¿Puede este trabajo entrar en un informe?
  *
- * Solo si está **cerrado**, y por dos razones distintas que coinciden:
+ * Una poligonal, si está **calculada**: desde la Fase 35 no se cierra, y su
+ * informe muestra lo que tenga. Lo demás, solo si está **cerrado**, y por dos
+ * razones distintas que coinciden:
  *
  * - Un proceso cerrado es inmutable por trigger de base mientras siga
  *   cerrado, así que regenerar el informe da el mismo resultado hasta que
@@ -37,6 +39,9 @@ export interface EligibleCandidate {
  * informe cambiaría al reabrirlo.
  */
 export function isEligible(candidate: EligibleCandidate): boolean {
+  // La poligonal no se cierra (Fase 35): entra calculada, cumpla o no un
+  // orden, y su informe lo alerta.
+  if (candidate.kind === "polygonal") return candidate.status === "calculated";
   return candidate.status === "closed";
 }
 
