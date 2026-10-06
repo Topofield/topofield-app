@@ -4,6 +4,7 @@
 // Tolerancias de poligonal (Fase 3) y nivelación (Fase 4).
 
 import type { PrecisionOrder } from "@/types/project";
+import type { PolygonalResult, PolygonalType } from "@/types/polygonal";
 
 /** Coeficiente K de la tolerancia angular K·√n, en segundos de arco. */
 export const ANGULAR_TOLERANCE_K: Record<PrecisionOrder, number> = {
@@ -33,6 +34,42 @@ export function angularTolerance(order: PrecisionOrder, n: number): number {
 /** Precisión relativa mínima exigida para el orden dado (el X de 1:X). */
 export function minRelativePrecision(order: PrecisionOrder): number {
   return MIN_RELATIVE_PRECISION[order];
+}
+
+/** Los órdenes de la poligonal, del más exigente al menos. */
+const ORDERS_HIGH_TO_LOW: PrecisionOrder[] = [
+  "primer_orden",
+  "segundo_orden",
+  "tercer_orden",
+  "ordinario",
+];
+
+/**
+ * El orden más alto que la poligonal cumple a la vez en la tolerancia angular
+ * (K·√n) y en la precisión relativa mínima (Fase 35, decisión 3): el orden se
+ * detecta, no se declara. `null` si no tiene verificación de cierre, si faltan
+ * datos o si no alcanza ni el ordinario.
+ *
+ * Una abierta con control sin azimut de llegada no tiene condición angular: se
+ * juzga solo por la lineal. El `1e-9` deja dentro la frontera exacta, que en
+ * coma flotante puede pasarse por un ulp (Fase 32).
+ */
+export function detectPrecisionOrder(
+  result: Pick<PolygonalResult, "angularError" | "angularConditionCount" | "relativePrecision">,
+  type: PolygonalType,
+): PrecisionOrder | null {
+  if (type === "open_uncontrolled") return null;
+  const precision = result.relativePrecision;
+  if (precision == null) return null;
+  for (const order of ORDERS_HIGH_TO_LOW) {
+    const angularOk =
+      result.angularError == null || result.angularConditionCount == null
+        ? true
+        : Math.abs(result.angularError) <=
+          angularTolerance(order, result.angularConditionCount) + 1e-9;
+    if (angularOk && precision >= minRelativePrecision(order)) return order;
+  }
+  return null;
 }
 
 /**

@@ -9,6 +9,7 @@ function resultWith(over: Partial<PolygonalResult>): PolygonalResult {
     angularError: null,
     angularTolerance: null,
     anglesMeetTolerance: null,
+    angularConditionCount: null,
     errorNorth: null,
     errorEast: null,
     linearError: null,

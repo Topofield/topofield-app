@@ -91,7 +91,7 @@ export const POLYGONAL_TYPE_LABELS: Record<PolygonalType, string> = {
 };
 
 export const CORRECTION_METHOD_LABELS: Record<CorrectionMethod, string> = {
-  bowditch: "Bowditch (brújula)",
+  bowditch: "Brújula (Bowditch)",
   transit: "Tránsito",
   crandall: "Crandall",
   least_squares: "Mínimos cuadrados",
@@ -263,6 +263,12 @@ export interface PolygonalResult {
   angularError: number | null; // segundos de arco
   angularTolerance: number | null; // segundos de arco
   anglesMeetTolerance: boolean | null;
+  /**
+   * Ángulos que entran en la condición angular (Fase 35): los de la cerrada
+   * que participan, o las deflexiones de una abierta con cierre angular.
+   * `null` si no hay condición. Con él se detecta el orden alcanzado.
+   */
+  angularConditionCount: number | null;
   // Cierre lineal
   errorNorth: number | null;
   errorEast: number | null;
