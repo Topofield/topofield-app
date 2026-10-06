@@ -20,17 +20,22 @@ import { withUnit } from "@/components/settlement/site-kpis";
 import { PointHistoryChart } from "@/components/settlement/charts/point-history-chart";
 import { CloseVisitDialog } from "@/components/settlement/close-visit-dialog";
 import { DeleteVisitButton } from "@/components/settlement/delete-visit-button";
+import { ReopenDialog } from "@/components/process/reopen-dialog";
 import {
   nextAccumulatedThreshold,
   type VisitSummary,
 } from "@/lib/calculations/settlement-summary";
 import { cn } from "@/lib/utils/cn";
+import { LATER_VISITS_NOTICE } from "@/lib/reopen";
 import {
   formatBookClosure,
   formatDateOnly,
   formatSignedMm,
 } from "@/lib/utils/format";
-import { closeVisitAction } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
+import {
+  closeVisitAction,
+  reopenVisitAction,
+} from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
 import {
   ALERT_LEVEL_LABELS,
   VISIT_STATUS_LABELS,
@@ -99,6 +104,12 @@ interface VisitViewProps {
   nextHref: string | null;
   /** Null si la visita o el lugar están cerrados. */
   editHref: string | null;
+  /**
+   * Reabrir (Fase 34), si la visita está cerrada; null si no. `blocked` dice
+   * por qué no se puede —el lugar cerrado—, y `laterVisits` si hay visitas
+   * posteriores que se calculan contra esta.
+   */
+  reopen: { blocked: string | null; laterVisits: boolean } | null;
   /** Es la última visita del lugar: solo esa se puede eliminar (Fase 22). */
   isLast: boolean;
   /** El panel del lugar, adonde se vuelve tras eliminar la visita. */
@@ -198,6 +209,14 @@ export function VisitView(props: VisitViewProps) {
               <Button variant="secondary" size="sm" onClick={() => setBookOpen(true)}>
                 Ver registro de nivelación
               </Button>
+            )}
+            {props.reopen && (
+              <ReopenDialog
+                target="visit"
+                action={() => reopenVisitAction(props.siteId, props.visitId)}
+                blocked={props.reopen.blocked}
+                notice={props.reopen.laterVisits ? LATER_VISITS_NOTICE : null}
+              />
             )}
             {props.editHref && (
               <>

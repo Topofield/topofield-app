@@ -261,8 +261,9 @@ Poligonales, nivelaciones y controles de asentamientos se abren en la misma
 pantalla.
 
 **La cabecera.** El nombre, el estado y el tipo del proceso, y dos acciones:
-**Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. La ruta
-de la barra devuelve al listado del que vino.
+**Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. Si el
+proceso está cerrado, una tercera: **Reabrir** (§ 8). La ruta de la barra
+devuelve al listado del que vino.
 
 **Las pestañas.** **Proceso** reúne todo el trabajo: configuración, captura,
 cálculo, gráfico y análisis, que se recalculan mientras escribe. **Informe**
@@ -831,10 +832,10 @@ el tipo de proceso: **cerrada** si el recorrido vuelve a su BM, **abierta con
 vuelta** si es ida y vuelta. En el editor **no se guarda nada hasta que pulse
 Guardar**; al crear, el proceso nace con sus lecturas.
 
-### 6.8 Cierre irreversible
+### 6.8 Cierre
 
-Igual que en poligonales, cerrar una nivelación es **irreversible**
-(§ 8). Un trabajo que no alcanza la tolerancia —en una cerrada o de enlace
+Igual que en poligonales, cerrar una nivelación la deja en solo lectura hasta
+que se reabra (§ 8). Un trabajo que no alcanza la tolerancia —en una cerrada o de enlace
 con vuelta, la de cualquiera de los dos recorridos; en una abierta con vuelta,
 la de su discrepancia— solo puede cerrarse como **rechazado**; no hay forma
 de cerrarlo como conforme si no cumple.
@@ -1197,7 +1198,7 @@ cota del punto. Se cierra con **Cerrar** o con Esc.
 ### 7.6 Cerrar una visita o el lugar
 
 Cerrar una **visita** la deja en solo lectura: es el registro de campo de una
-fecha concreta, y una vez cerrada no admite más cambios. Se exige lectura de
+fecha concreta, y mientras está cerrada no admite cambios. Se exige lectura de
 todos los puntos **vigentes** en su fecha; los de baja no.
 
 En una visita con libreta, el diálogo de cierre muestra además el cierre de la
@@ -1222,6 +1223,14 @@ cuando el seguimiento del sitio haya concluido, no visita por visita. El botón
 lugar, y solo si no está cerrada: el botón **Eliminar** aparece en su vista.
 Una visita intermedia no se borra, porque dejaría un hueco en la numeración y
 cambiaría el asentamiento parcial y la velocidad de la siguiente.
+
+**Reabrir.** Una visita cerrada se reabre con **Reabrir**, en su vista, y
+vuelve a editarse. Si el lugar está cerrado, primero se reabre el lugar: su
+botón **Reabrir** está en la cabecera, donde estaba **Nueva visita**. Reabrir
+el lugar no reabre sus visitas: las cerradas siguen cerradas. Si la visita
+tiene visitas posteriores, el diálogo lo recuerda: el parcial, la velocidad y
+la alerta de la siguiente se calculan contra sus lecturas, y cambian si
+cambian ellas.
 
 ### 7.7 Dar de baja y de alta un punto
 
@@ -1260,8 +1269,8 @@ se exige en las visitas desde esa fecha y no en las anteriores.
 
 ## 8. Cerrar un proceso
 
-Cerrar es **irreversible**. Antes de permitirlo, la aplicación comprueba el
-trabajo y decide entre tres desenlaces:
+Cerrar deja el proceso en solo lectura. Antes de permitirlo, la aplicación
+comprueba el trabajo y decide entre tres desenlaces:
 
 | Situación | Qué ocurre |
 |---|---|
@@ -1287,9 +1296,16 @@ precisión y la fecha. Debe marcar la confirmación explícitamente.
 ![Proceso rechazado](../../public/manual/10-proceso-rechazado.png)
 
 En ambos casos el editor se abre en solo lectura: los campos están
-deshabilitados y no hay barra de acciones. Lo único que sigue disponible es
-**Georreferenciar** (§ 5.5). Su pestaña **Informe** ya no lleva la marca de
+deshabilitados y no hay barra de acciones. Siguen disponibles
+**Georreferenciar** (§ 5.5) y **Reabrir** (abajo). Su pestaña **Informe** ya no lleva la marca de
 borrador: es el informe del proceso cerrado.
+
+**Reabrir.** Un proceso cerrado o rechazado se reabre con **Reabrir**, en la
+cabecera. Vuelve a *Calculado*: se edita, se guarda y se cierra otra vez con
+el diálogo de siempre. Se borra su registro de cierre —fecha y responsable—,
+y el nuevo cierre escribe el suyo. Si el proceso está en un informe
+consolidado, el diálogo lo avisa: el informe mostrará los datos nuevos
+(§ 10.1).
 
 ---
 
@@ -1341,11 +1357,16 @@ de la persona.
 tiene una razón práctica:
 el informe no guarda una copia de las mediciones: las vuelve a leer cada vez
 que se abre. Solo guarda su título, sus observaciones, la lista de procesos y
-la portada del día en que se emitió (§ 10.3). Como un proceso cerrado ya no puede cambiar sus mediciones ni
-su veredicto, el informe dice lo mismo hoy y dentro de un año. La excepción es
-la **posición**: si georreferencia una poligonal después de emitir el informe,
-el informe muestra las coordenadas nuevas, con una nota de cuándo y con qué
-puntos se georreferenció.
+la portada del día en que se emitió (§ 10.3). Como un proceso cerrado no
+puede cambiar sus mediciones ni su veredicto mientras siga cerrado, el informe
+dice lo mismo hoy y dentro de un año. Hay dos excepciones:
+
+- La **posición**: si georreferencia una poligonal después de emitir el
+  informe, el informe muestra las coordenadas nuevas, con una nota de cuándo y
+  con qué puntos se georreferenció.
+- **Reabrir** (§ 8): si reabre un proceso que el informe incluye, el informe
+  muestra sus datos actuales y, mientras siga abierto, «—» en su registro de
+  cierre. Un PDF ya descargado no cambia.
 
 De ahí se siguen dos consecuencias:
 
@@ -1467,8 +1488,8 @@ En el menú de cuenta —el círculo con su inicial, arriba a la derecha—:
 configuración del teléfono o del computador.
 
 **Cerré un proceso por error. ¿Puedo reabrirlo?**
-No. El cierre es definitivo por diseño: es lo que da valor probatorio al
-registro. Cree un proceso nuevo con los datos corregidos.
+Sí: con **Reabrir**, en la cabecera del proceso (§ 8). Vuelve a ser editable
+y se cierra otra vez cuando esté listo.
 
 **¿Por qué mi poligonal no me deja cerrar?**
 Revise el veredicto en la parte superior del editor. Si el error angular supera

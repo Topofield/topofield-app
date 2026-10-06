@@ -43,6 +43,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 31 | Avisos del cálculo | [`prds/30-avisos-del-calculo.md`](./prds/30-avisos-del-calculo.md) | cerrada |
 | 32 | Rigor estadístico | [`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md) | cerrada |
 | 33 | Header compacto | [`prds/32-header-compacto.md`](./prds/32-header-compacto.md) | cerrada |
+| 34 | Reabrir procesos | [`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -556,6 +557,46 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 34 — Reabrir procesos (2026-10-03)
+
+Petición del usuario: «necesito poder reabrir procesos para modificar», «simple
+y fácil». Un botón **Reabrir** en poligonal, nivelación, visita y lugar. La
+base admite una sola transición nueva, la de salida de cerrado sin cambiar nada
+más (`is_reopening`). Los informes consolidados muestran lo actual y el diálogo
+avisa en cuáles está. Se trabajó en un worktree aparte, con la Fase 33 abierta
+en la carpeta principal: por eso es la 34, y la cartera real de asentamientos
+pasa a ser la 35.
+
+Migración que solo reemplaza dos funciones y añade una: `db push` antes del
+merge. 1033 tests y 99 pruebas de base. Las divergencias están en el propio
+PRD.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una prueba de rechazo que pasa a la primera hay que verla fallar.** Los
+  tres casos que pidió la revisión pasaron a la primera, porque el trigger ya
+  era correcto. Para saber que detectan un trigger laxo se reemplazó
+  `is_reopening` por un `select true` dentro de una transacción que se deshace:
+  el DDL de Postgres es transaccional, así que la base compartida no se enteró.
+  Los tres fallaron con el laxo y pasaron con el real.
+- **Verificar en una base compartida exige dejarla como estaba, y probarlo.**
+  La verificación reabrió y volvió a cerrar datos del seed que usan las
+  capturas de la otra sesión. Un hash de las filas, sin ids ni `updated_at`,
+  antes y después, probó que «Guardar» no cambió nada. El registro de cierre
+  original se devolvió con la misma transición que la fase añadía: reabrir y
+  cerrar con los valores de antes.
+- **La verificación mueve las capturas que no son suyas.** Tocar `updated_at`
+  reordenó el hub (la 04) y el seed del día cambió fechas (la 19). Comparar
+  píxel a píxel contra `HEAD`, y el recuadro de la diferencia, separó lo que
+  movió la fase (el botón en la 09, la 10, la 22 y la 30) de lo que movió la
+  verificación.
+- **Un concepto que se retira se busca por su nombre y sus sinónimos.**
+  «Irreversible» y «no se puede deshacer» estaban en dos diálogos, dos
+  comentarios, el manual por partida doble, el PRD, `CLAUDE.md` y la cabecera
+  de un test que el plan no listaba. Y quedó una frase que ninguno de los dos
+  `grep` atrapaba («Lo único que sigue disponible es Georreferenciar»), que
+  encontró la revisión.
 
 ### Cierre Fase 33 — Header compacto (2026-10-03)
 

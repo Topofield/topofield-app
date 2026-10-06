@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { StructureType } from "@/types/site";
 import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
 import { logDbError } from "@/lib/errors/user-message";
+import { reopenBlocker, reopenPatch } from "@/lib/reopen";
 
 export interface ActionResult {
   ok: boolean;
@@ -201,6 +202,36 @@ export async function closeSiteAction(
   if (error) return { ok: false, error: logDbError(error, "No se pudo cerrar el lugar.") };
 
   revalidatePath(`/projects/${site.project_id}`);
+  return { ok: true };
+}
+
+/**
+ * Reabre un lugar cerrado (Fase 34): vuelve a `active`, sin registro de
+ * cierre. Admite visitas nuevas y sus visitas abiertas vuelven a editarse; las
+ * cerradas siguen cerradas y se reabren una a una.
+ */
+export async function reopenSiteAction(siteId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Sesión no válida." };
+
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, project_id, kind")
+    .eq("id", siteId)
+    .maybeSingle();
+  // Un lugar de agrupación (Fase 22) no se cierra, así que tampoco se reabre.
+  if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
+  const blocker = reopenBlocker("site", site.status);
+  if (blocker) return { ok: false, error: blocker };
+
+  const { error } = await supabase.from("sites").update(reopenPatch("site")).eq("id", siteId);
+  if (error) return { ok: false, error: logDbError(error, "No se pudo reabrir el lugar.") };
+
+  revalidatePath(`/projects/${site.project_id}`);
+  revalidatePath(`/projects/${site.project_id}/settlement/${siteId}`);
   return { ok: true };
 }
 

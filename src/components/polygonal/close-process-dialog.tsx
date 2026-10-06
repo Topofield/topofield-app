@@ -152,7 +152,7 @@ export function CloseProcessDialog({
                 Confirmo que los datos son correctos.
               </label>
               <p className="text-xs text-ink-2">
-                Al cerrar, el proceso queda de solo lectura.
+                Al cerrar, el proceso queda de solo lectura hasta que lo reabras.
               </p>
             </>
           )}

@@ -1146,6 +1146,10 @@ export type Database = {
         Args: { p_header: Json; p_process_id: string; p_stations: Json }
         Returns: undefined
       }
+      is_reopening: {
+        Args: { new_row: Json; old_row: Json }
+        Returns: boolean
+      }
       owns_reading_station: {
         Args: { target_station: string }
         Returns: boolean

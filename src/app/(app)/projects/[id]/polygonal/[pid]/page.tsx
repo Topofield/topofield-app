@@ -3,7 +3,9 @@ import { Badge } from "@/components/design-system";
 import { PolygonalEditor } from "@/components/polygonal/polygonal-editor";
 import { ProcessReport } from "@/components/process/process-report";
 import { processReportState } from "@/lib/reports/state";
+import { reportsIncluding } from "@/lib/reports/including";
 import { ProcessShell } from "@/components/process/process-shell";
+import { ReopenDialog } from "@/components/process/reopen-dialog";
 import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -11,9 +13,11 @@ import {
   getPolygonalStations,
   getProjectById,
   getReferencePoints,
+  getReports,
 } from "@/lib/supabase/queries";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
 import { POLYGONAL_TYPE_LABELS, PROCESS_STATUS_LABELS } from "@/types/polygonal";
+import { reopenPolygonalProcessAction } from "./actions";
 
 interface PolygonalPageProps {
   params: Promise<{ id: string; pid: string }>;
@@ -51,6 +55,12 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
 
   const basePath = `/projects/${id}/polygonal/${pid}`;
 
+  // Reabrir (Fase 34): solo lo cerrado, con los informes que lo incluyen.
+  const closed = process.status === "closed" || process.status === "rejected";
+  const reportTitles = closed
+    ? reportsIncluding(await getReports(supabase, id), "polygonal", process.id).map((r) => r.title)
+    : [];
+
   return (
     <ProcessShell
       breadcrumbs={[
@@ -70,6 +80,15 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
       activeTab={activeTab}
       reportTab="informe"
       exportHref={`${basePath}/export`}
+      actions={
+        closed && (
+          <ReopenDialog
+            target="process"
+            action={reopenPolygonalProcessAction.bind(null, process.id)}
+            reportTitles={reportTitles}
+          />
+        )
+      }
     >
       {activeTab === "proceso" ? (
         <PolygonalEditor

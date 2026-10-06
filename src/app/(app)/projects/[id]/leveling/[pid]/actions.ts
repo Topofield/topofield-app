@@ -10,6 +10,7 @@ import {
 } from "@/lib/calculations/leveling";
 import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
 import { deriveLevelingCloseStatus } from "./close-status";
+import { reopenBlocker, reopenPatch } from "@/lib/reopen";
 import type {
   LevelingInput,
   LevelingType,
@@ -305,6 +306,38 @@ export async function closeLevelingProcessAction(
   if (error) return { ok: false, error: "No se pudo cerrar el proceso." };
 
   revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);
+  revalidatePath(`/projects/${process.project_id}`);
+  return { ok: true };
+}
+
+/**
+ * Reabre una nivelación cerrada o rechazada (Fase 34): vuelve a `calculated`,
+ * sin registro de cierre, y se edita como cualquier abierta. La base admite
+ * solo esa transición.
+ */
+export async function reopenLevelingProcessAction(processId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Sesión no válida." };
+
+  const { data: process } = await supabase
+    .from("leveling_processes")
+    .select("id, status, project_id")
+    .eq("id", processId)
+    .maybeSingle();
+  if (!process) return { ok: false, error: "Proceso no encontrado." };
+  const blocker = reopenBlocker("process", process.status);
+  if (blocker) return { ok: false, error: blocker };
+
+  const { error } = await supabase
+    .from("leveling_processes")
+    .update(reopenPatch("process"))
+    .eq("id", processId);
+  if (error) return { ok: false, error: "No se pudo reabrir el proceso." };
+
+  revalidatePath(`/projects/${process.project_id}/leveling/${processId}`);
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
 }

@@ -419,8 +419,9 @@ export default function ManualPage() {
         <p>
           <strong>La cabecera.</strong> El nombre, el estado y el tipo del
           proceso, y dos acciones: <strong>Exportar a Excel</strong> (§ 11) y{" "}
-          <strong>Ver informe</strong>. La ruta de la barra devuelve al listado
-          del que vino.
+          <strong>Ver informe</strong>. Si el proceso está cerrado, una
+          tercera: <strong>Reabrir</strong> (§ 8). La ruta de la barra devuelve
+          al listado del que vino.
         </p>
 
         <p>
@@ -1320,12 +1321,12 @@ export default function ManualPage() {
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">
-          6.8 Cierre irreversible
+          6.8 Cierre
         </h3>
 
         <p>
-          Igual que en poligonales, cerrar una nivelación es{" "}
-          <strong>irreversible</strong>. Un trabajo que no alcanza la
+          Igual que en poligonales, cerrar una nivelación la deja en solo
+          lectura hasta que se reabra (§ 8). Un trabajo que no alcanza la
           tolerancia —en una cerrada o de enlace con vuelta, la de cualquiera
           de los dos recorridos; en una abierta con vuelta, la de su
           discrepancia— solo puede cerrarse como{" "}
@@ -1920,8 +1921,8 @@ export default function ManualPage() {
 
         <p>
           Cerrar una <strong>visita</strong> la deja en solo lectura: es el
-          registro de campo de una fecha concreta, y una vez cerrada no
-          admite más cambios. Se exige lectura de todos los puntos{" "}
+          registro de campo de una fecha concreta, y mientras está cerrada
+          no admite cambios. Se exige lectura de todos los puntos{" "}
           <strong>vigentes</strong> en su fecha; los de baja no.
         </p>
 
@@ -1961,6 +1962,18 @@ export default function ManualPage() {
           el botón <strong>Eliminar</strong> aparece en su vista. Una visita
           intermedia no se borra, porque dejaría un hueco en la numeración y
           cambiaría el asentamiento parcial y la velocidad de la siguiente.
+        </p>
+
+        <p>
+          <strong>Reabrir.</strong> Una visita cerrada se reabre con{" "}
+          <strong>Reabrir</strong>, en su vista, y vuelve a editarse. Si el
+          lugar está cerrado, primero se reabre el lugar: su botón{" "}
+          <strong>Reabrir</strong> está en la cabecera, donde estaba{" "}
+          <strong>Nueva visita</strong>. Reabrir el lugar no reabre sus
+          visitas: las cerradas siguen cerradas. Si la visita tiene visitas
+          posteriores, el diálogo lo recuerda: el parcial, la velocidad y la
+          alerta de la siguiente se calculan contra sus lecturas, y cambian si
+          cambian ellas.
         </p>
 
         <h3 id="baja-alta" className="mt-4 scroll-mt-6 text-lg font-semibold">
@@ -2029,7 +2042,7 @@ export default function ManualPage() {
       {/* ── 8. Cerrar un proceso ───────────────────────────────────────── */}
       <Seccion id="cierre" titulo="8. Cerrar un proceso">
         <p>
-          Cerrar es <strong>irreversible</strong>. Antes de permitirlo, la
+          Cerrar deja el proceso en solo lectura. Antes de permitirlo, la
           aplicación comprueba el trabajo y decide el desenlace:
         </p>
 
@@ -2066,10 +2079,21 @@ export default function ManualPage() {
 
         <p>
           En ambos casos el editor se abre en solo lectura: los campos están
-          deshabilitados y no hay barra de acciones. Lo único que sigue
-          disponible es <strong>Georreferenciar</strong> (§ 5.5). Su pestaña{" "}
+          deshabilitados y no hay barra de acciones. Siguen disponibles{" "}
+          <strong>Georreferenciar</strong> (§ 5.5) y <strong>Reabrir</strong>
+          (abajo). Su pestaña{" "}
           <strong>Informe</strong> ya no lleva la marca de borrador: es el
           informe del proceso cerrado.
+        </p>
+
+        <p>
+          <strong>Reabrir.</strong> Un proceso cerrado o rechazado se reabre
+          con <strong>Reabrir</strong>, en la cabecera. Vuelve a{" "}
+          <em>Calculado</em>: se edita, se guarda y se cierra otra vez con el
+          diálogo de siempre. Se borra su registro de cierre —fecha y
+          responsable—, y el nuevo cierre escribe el suyo. Si el proceso está
+          en un informe consolidado, el diálogo lo avisa: el informe mostrará
+          los datos nuevos (§ 10).
         </p>
       </Seccion>
 
@@ -2144,13 +2168,23 @@ export default function ManualPage() {
           la regla principal y tiene una razón práctica: el informe no guarda
           una copia de las mediciones: las vuelve a leer cada vez que se abre.
           Solo guarda su título, sus observaciones, la lista de procesos y la
-          portada del día en que se emitió. Como un proceso cerrado ya
-          no puede cambiar sus mediciones ni su veredicto, el informe dice lo
-          mismo hoy y dentro de un año. La excepción es la{" "}
-          <strong>posición</strong>: si georreferencia una poligonal después de
-          emitir el informe, el informe muestra las coordenadas nuevas, con una
-          nota de cuándo y con qué puntos se georreferenció.
+          portada del día en que se emitió. Como un proceso cerrado no puede
+          cambiar sus mediciones ni su veredicto mientras siga cerrado, el
+          informe dice lo mismo hoy y dentro de un año. Hay dos excepciones:
         </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            La <strong>posición</strong>: si georreferencia una poligonal
+            después de emitir el informe, el informe muestra las coordenadas
+            nuevas, con una nota de cuándo y con qué puntos se georreferenció.
+          </li>
+          <li>
+            <strong>Reabrir</strong> (§ 8): si reabre un proceso que el informe
+            incluye, el informe muestra sus datos actuales y, mientras siga
+            abierto, «—» en su registro de cierre. Un PDF ya descargado no
+            cambia.
+          </li>
+        </ul>
         <ul className="ml-5 list-disc space-y-1">
           <li>
             Un proceso <strong>rechazado no se puede incluir</strong>. Queda

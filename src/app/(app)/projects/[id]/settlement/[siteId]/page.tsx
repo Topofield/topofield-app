@@ -2,23 +2,27 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/design-system";
 import { ProcessReport } from "@/components/process/process-report";
 import { processReportState } from "@/lib/reports/state";
+import { reportsIncluding } from "@/lib/reports/including";
 import { ProcessShell } from "@/components/process/process-shell";
+import { ReopenDialog } from "@/components/process/reopen-dialog";
 import { NewVisitDialog } from "@/components/settlement/new-visit-dialog";
 import { isPointActiveOn, pointInputOf } from "@/lib/calculations/settlement";
 import { SITE_STATUS_TONE } from "@/lib/process-status";
 import { createClient } from "@/lib/supabase/server";
 import {
+  getPointIdsWithClosedReadings,
   getProjectById,
   getReferencePoints,
-  getPointIdsWithClosedReadings,
+  getReports,
   getSettlementReadingsBySite,
-  getSiteBooks,
   getSite,
+  getSiteBooks,
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
 import { formatDateOnly } from "@/lib/utils/format";
 import { SITE_STATUS_LABELS, STRUCTURE_TYPE_LABELS } from "@/types/site";
+import { reopenSiteAction } from "@/app/(app)/projects/[id]/sites/actions";
 import { PanelTab } from "./panel-tab";
 import { PlaceTab } from "./place-tab";
 
@@ -66,6 +70,12 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
   const base = visits[0]?.date;
   const basePath = `/projects/${project.id}/settlement/${site.id}`;
 
+  // Reabrir el lugar (Fase 34), con los informes que lo incluyen.
+  const reportTitles =
+    site.status === "closed"
+      ? reportsIncluding(await getReports(supabase, project.id), "site", site.id).map((r) => r.title)
+      : [];
+
   return (
     <ProcessShell
       breadcrumbs={[
@@ -86,12 +96,18 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
       reportTab="informe"
       exportHref={`${basePath}/export`}
       actions={
-        site.status !== "closed" && (
+        site.status !== "closed" ? (
           <NewVisitDialog
             projectId={project.id}
             siteId={site.id}
             referencePoints={referencePoints}
             previous={visits.at(-1) ?? null}
+          />
+        ) : (
+          <ReopenDialog
+            target="site"
+            action={reopenSiteAction.bind(null, site.id)}
+            reportTitles={reportTitles}
           />
         )
       }

@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-03 · Fase 33 cerrada · 1032 tests y 74
+**Última actualización:** 2026-10-05 · Fase 34 cerrada · 1044 tests y 99
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -87,6 +87,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 31 | Avisos del cálculo | cerrada |
 | 32 | Rigor estadístico | cerrada |
 | 33 | Header compacto | cerrada |
+| 34 | Reabrir procesos | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`).
@@ -320,6 +321,11 @@ el mismo veredicto. Está verificado comparando el hash del contenido en dos
 lecturas. **Excepción desde la Fase 15:** si una poligonal incluida se
 georreferencia después de emitir el informe, el informe muestra las
 coordenadas nuevas, con una nota de fecha y puntos (decisión del usuario).
+**Desde la Fase 34 lo cerrado se puede reabrir:** mientras un proceso incluido
+sigue abierto, el informe muestra sus datos actuales y «—» en su registro de
+cierre; al volver a cerrarlo, los del nuevo cierre. El diálogo de reabrir avisa
+en qué informes está (decisión del usuario). La garantía es, entonces, «el
+mismo resultado mientras lo incluido siga cerrado».
 
 La regla vive en `lib/reports/eligibility.ts` como función pura con tests, y se
 aplica **dos veces**: al pintar el selector y otra vez dentro de
@@ -624,14 +630,15 @@ se descartó (`docs/prds/07-precision-equipo-por-proceso.md`, decisión #2): una
 tabla `equipment` referenciada por id reabre el agujero de trazabilidad que
 motivó la fase, porque editar la fila cambiaría el equipo de los informes de
 procesos ya cerrados. Con los campos sueltos en el proceso, el congelado sale
-gratis de la inmutabilidad que ya existe (§ 5).
+gratis de la inmutabilidad que ya existe (§ 5), mientras el proceso siga
+cerrado.
 
 **Consecuencia para `reports`.** Antes de esta fase, la página de impresión
 leía `project.precision_order`/`project.equipment_*` **en vivo**; editar el
 equipo del proyecto reescribía todos los informes ya emitidos, incluidos los
 de procesos cerrados. Ahora lee del proceso incluido en el informe, que es
-inmutable una vez cerrado (§ 5) — el congelado del informe es una consecuencia
-de dónde vive el dato, no un mecanismo aparte.
+inmutable mientras está cerrado (§ 5) — el congelado del informe es una
+consecuencia de dónde vive el dato, no un mecanismo aparte.
 
 ---
 
@@ -676,6 +683,21 @@ proceso cerrado tenía éxito.
 
 Los triggers permiten la transición *hacia* cerrado —el cierre mismo es un
 `UPDATE`— y bloquean todo cambio posterior.
+
+**Reabrir (Fase 34).** También admiten la transición *de salida*: un `UPDATE`
+que devuelve el estado a uno abierto (`calculated`, o `active` en un lugar) y
+deja `closed_at` y `closed_by` en null, **sin cambiar ninguna otra columna**.
+Lo reconoce `is_reopening(old_row jsonb, new_row jsonb)`
+(`20261003000000_reabrir_procesos.sql`), que comparten la genérica
+`reject_update_on_closed_process()` —nivelación, lugares y visitas— y la de
+poligonal, antes de su lista blanca de posición. Reabrir y modificar en el
+mismo `UPDATE` se rechaza con `23001`: primero se reabre y después se edita.
+Los triggers de los hijos (estaciones, lecturas, libreta), el de las visitas
+de un lugar cerrado y el de la C0 no cambiaron: miran el estado **actual** del
+padre, así que se liberan solos al reabrirlo. Una visita de un lugar cerrado no
+se reabre hasta reabrir el lugar, porque su trigger rechaza escribirla. Lo
+prueba `reabrir_procesos.test.sql` (§ 9). Las cuatro acciones
+(`reopen…Action`) aplican las reglas puras de `src/lib/reopen.ts`.
 
 **Excepción de posición (Fase 15).** La cabecera de poligonal tiene su propia
 función, `reject_update_on_closed_polygonal_process()` —la genérica la
@@ -1969,7 +1991,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1032 tests en 68 archivos, Vitest, entorno `node` **sin jsdom**. Además, 74
+1044 tests en 69 archivos, Vitest, entorno `node` **sin jsdom**. Además, 99
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2013,6 +2035,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/reports/cover.test.ts` | 2 | La portada del informe sale de `cover`, no del proyecto (Fase 23) |
 | `lib/reports/state.test.ts` | 4 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24) |
 | `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
+| `lib/reopen.test.ts` | 12 | Reabrir: el estado al que vuelve cada uno, sin registro de cierre; lo cerrado o rechazado se reabre y lo abierto no; una visita de un lugar cerrado espera al lugar; el aviso de los informes, con uno y con varios (Fase 34) |
 | `components/polygonal/stations-table.test.ts` | 6 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24); la fila de orientación de una abierta amarrada y la coma decimal en las lecturas (Fase 26) |
 | `components/projects/new-project-form.test.ts` | 2 | El alta de proyecto: un solo botón, de envío, y los datos básicos con el sistema de referencia (Fase 27) |
 | `components/projects/hub-rows.test.ts` | 5 | El tipo de un proceso: «Abierta con ida y vuelta», y como frase en las filas del hub (Fase 27) |
@@ -2056,6 +2079,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 | `estabilidad_bms.test.sql` | 6 | `save_visit` guarda la cota de catálogo de un BM de control; una visita cerrada no la deja cambiar y la conserva aunque se corrija el catálogo (Fase 30) |
+| `reabrir_procesos.test.sql` | 25 | Reabrir una poligonal cerrada, una nivelación rechazada, un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado en las cuatro; un rechazado no pasa a cerrado sin reabrirse; lo cerrado sigue sin editarse ni borrarse, con la georreferenciación intacta; tras reabrir, estaciones, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34) |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -2497,7 +2521,8 @@ distinguiendo.
 **La E/S de los Server Actions sigue sin tests, salvo los cuatro guardados.**
 Es la deuda de fondo que la Fase 6 acotó pero no eliminó. La parte que
 **decide** qué escribir ya está cubierta por funciones puras
-(`settlement-persistence.ts`, `reports/eligibility.ts`, `close-status.ts`). La
+(`settlement-persistence.ts`, `reports/eligibility.ts`, `close-status.ts` y,
+desde la Fase 34, `reopen.ts`). La
 que **escribe** en los cuatro guardados de varias tablas pasó en la Fase 23 a
 funciones de Postgres con pruebas pgTAP contra la base local (§ 3 y § 9); esa
 misma vía sirve para probar triggers y RLS. Lo demás —`resyncSiteReadings`, el
@@ -2893,7 +2918,9 @@ redirigía como si hubiera borrado; ahora `deleteProjectAction` lo comprueba
 (`getClosedWorkCount`) y la configuración propone archivar. La demo, que nace
 con trabajo cerrado, tampoco se puede eliminar: su descripción dice
 «archivarlo». Permitir borrar un proyecto entero con lo cerrado dentro sería
-una excepción a la inmutabilidad que tendría que decidir el usuario.
+una excepción a la inmutabilidad que tendría que decidir el usuario. Desde la
+Fase 34 hay un camino manual: reabrir lo cerrado, uno por uno, y entonces
+borrar el proyecto.
 
 **El informe de un proceso no queda registrado (Fase 22, decisión).** La
 pestaña Informe lo arma en cada visita y no crea fila en `reports`: el
@@ -2901,6 +2928,16 @@ registro de «qué se emitió» sigue siendo el informe consolidado. Imprimir el
 de un proceso cerrado da un documento sin constancia en la base de haberse
 emitido. Es coherente con que el informe no guarda datos (§ 3); si hiciera
 falta la constancia, bastaría con registrar la impresión.
+
+**Reabrir no deja rastro (Fase 34, decisión).** Reabrir borra `closed_at` y
+`closed_by`, y el nuevo cierre escribe los suyos: no queda constancia de que
+hubo un cierre anterior, ni de quién reabrió ni por qué. Un informe consolidado
+emitido muestra lo que haya al abrirlo, y una visita cerrada se calcula en vivo
+contra la anterior aunque esta se haya reabierto y corregido: el cierre en
+orden de la Fase 26 (C-15) no tiene espejo al reabrir. El usuario pidió «simple
+y fácil»; el diálogo avisa de los informes y de las visitas posteriores. Si
+hiciera falta la trazabilidad, el camino sería una tabla de cierres (quién,
+cuándo, qué estado) en vez de las dos columnas.
 
 ## 12. Manual de usuario en la app
 
@@ -2999,8 +3036,8 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-02):** la nube tiene aplicadas las **treinta y una**
-migraciones, hasta `20261001040000_estabilidad_bms` (Fase 30). Todas se
+**Estado actual (2026-10-05):** la nube tiene aplicadas las **treinta y dos**
+migraciones, hasta `20261003000000_reabrir_procesos` (Fase 34). Todas se
 empujaron antes del merge de su PR, salvo la de la Fase 29, que borra y fue
 después (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el

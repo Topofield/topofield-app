@@ -70,6 +70,11 @@ un header compacto: «Navegación», al final. HC1 es la **Fase 33**
 ([`prds/32-header-compacto.md`](./prds/32-header-compacto.md)), **cerrada** el
 2026-10-03; HC2 queda sin fase.
 
+Ese mismo día pidió poder **reabrir** lo cerrado: «Reabrir procesos», al
+final. Es la **Fase 34**
+([`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md)), **cerrada**
+el 2026-10-03, trabajada en un worktree aparte mientras la 33 seguía abierta.
+
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
 registro.
@@ -648,3 +653,17 @@ ni por el dashboard. Se deja fuera de la Fase 33 para ver primero cómo
 funciona la barra. La revisión de la Fase 33 dejó un detalle para esta misma
 iteración: entre 640 y unos 860 px la ruta se trunca por igual, y el nombre de
 la página actual es lo que menos se lee.
+
+## Reabrir procesos (Fase 34)
+
+> **Resuelta en la Fase 34** ([`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md)),
+> abierta y cerrada el 2026-10-03 en un worktree aparte mientras la 33 seguía
+> en curso. La cartera real de asentamientos, que iba a ser la 34, pasa a la
+> 35. Se conserva el texto de la petición como registro.
+
+El 2026-10-03 el usuario pidió: «necesito poder reabrir procesos para
+modificar». Y después: «solo hazlo simple y fácil poder editar aun cerrada, o
+cambiar el estado de cerrada a abierta en cualquier momento».
+
+Hoy cerrar es irreversible y la base lo garantiza por trigger. La petición
+abarca los cuatro cierres: poligonal, nivelación, visita y lugar.
