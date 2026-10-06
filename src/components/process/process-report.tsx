@@ -11,10 +11,9 @@ import { responsibleNames } from "@/lib/reports/responsible";
 import { closureOf, loadReportSections } from "@/lib/reports/sections";
 import { precisionSummaryRows } from "@/lib/reports/summary";
 import { createClient } from "@/lib/supabase/server";
-import { getReports } from "@/lib/supabase/queries";
 import { formatDate } from "@/lib/utils/format";
 import type { Project } from "@/types/project";
-import type { IncludedProcess } from "@/types/report";
+import type { IncludedProcess, Report } from "@/types/report";
 import { ReportStateMark } from "./report-state-mark";
 
 interface ProcessReportProps {
@@ -28,6 +27,11 @@ interface ProcessReportProps {
   state: ProcessReportState;
   /** Notas del proceso, como observaciones. */
   notes?: string | null;
+  /**
+   * Los informes del proyecto. Los pide la página, que también los usa para
+   * el diálogo de reabrir (Fase 34): así se consultan una sola vez.
+   */
+  reports: Report[];
 }
 
 /**
@@ -38,16 +42,19 @@ interface ProcessReportProps {
  * del PRD). Sin cerrar, lleva la marca de borrador, también en el PDF. Debajo,
  * fuera de la impresión, los informes consolidados que lo incluyen.
  */
-export async function ProcessReport({ project, process, state, notes }: ProcessReportProps) {
+export async function ProcessReport({
+  project,
+  process,
+  state,
+  notes,
+  reports,
+}: ProcessReportProps) {
   // Cerrado conforme o rechazado: no cambia mientras siga cerrado, y tiene fecha
   // y registro de cierre.
   const closed = state !== "draft";
   const supabase = await createClient();
   const entry: IncludedProcess = { ...process, order: 0 };
-  const [sections, reports] = await Promise.all([
-    loadReportSections(supabase, project.id, [entry]),
-    getReports(supabase, project.id),
-  ]);
+  const sections = await loadReportSections(supabase, project.id, [entry]);
   const names = await responsibleNames(
     supabase,
     sections.map((s) => closureOf(s).closedBy),

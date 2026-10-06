@@ -55,11 +55,13 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
 
   const basePath = `/projects/${id}/polygonal/${pid}`;
 
-  // Reabrir (Fase 34): solo lo cerrado, con los informes que lo incluyen.
-  const closed = process.status === "closed" || process.status === "rejected";
-  const reportTitles = closed
-    ? reportsIncluding(await getReports(supabase, id), "polygonal", process.id).map((r) => r.title)
-    : [];
+  // Reabrir (Fase 34): solo lo cerrado, con los informes que lo incluyen. Los
+  // informes se piden una vez: también los usa la pestaña Informe.
+  const state = processReportState(process.status);
+  const closed = state !== "draft";
+  const reports =
+    closed || activeTab === "informe" ? await getReports(supabase, id) : [];
+  const reportTitles = reportsIncluding(reports, "polygonal", process.id).map((r) => r.title);
 
   return (
     <ProcessShell
@@ -95,7 +97,9 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
           // Georreferenciar (Fase 15) reescribe el arranque en la base; el
           // editor guarda la configuración en estado propio, así que se
           // remonta para no volver a guardar después las coordenadas locales.
-          key={process.georef_at ?? "local"}
+          // También al cerrar o reabrir (Fase 34): lo que se tocó en solo
+          // lectura, como el formato de ángulo, no pasa al proceso abierto.
+          key={`${process.georef_at ?? "local"}:${state}`}
           process={process}
           stations={stations}
           referencePoints={referencePoints}
@@ -104,7 +108,8 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
         <ProcessReport
           project={project}
           process={{ type: "polygonal", id: process.id, name: process.name }}
-          state={processReportState(process.status)}
+          state={state}
+          reports={reports}
           notes={process.notes}
         />
       )}
