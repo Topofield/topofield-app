@@ -3168,10 +3168,11 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-05):** la nube tiene aplicadas las **treinta y tres**
-migraciones, hasta `20261005000000_reabrir_sin_anon` (Fase 34). Todas se
-empujaron antes del merge de su PR, salvo la de la Fase 29, que borra y fue
-después (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
+**Estado actual (2026-10-06):** la nube tiene aplicadas **treinta y cuatro**
+de las treinta y cinco migraciones, hasta `20261005010000_ux_poligonal` (Fase
+35, paso 1). Falta `20261006000000_poligonal_sin_cierre`, el paso 2, que borra
+`closed_at` y `closed_by` y va después del merge (ver abajo). Todas las demás se
+empujaron antes del merge de su PR, salvo la de la Fase 29, que también borra. Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
 índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
 filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
@@ -3187,6 +3188,11 @@ La de la Fase 30 añade `settlement_book_readings.catalog_elevation` y recrea
 `save_visit`; se aplicó antes del merge del PR #19. Verificado: la columna es
 `numeric(10,4)`, `save_visit` la escribe, sigue siendo `SECURITY INVOKER` y
 solo `authenticated` tiene `EXECUTE` (además de `postgres` y `service_role`).
+
+El paso 1 de la Fase 35 se empujó antes del merge desde una copia del
+repositorio sin el paso 2, porque `db push` aplica **todas** las migraciones
+pendientes. Pasó a `calculated` la única poligonal cerrada que había, y quedaron
+tres calculadas y una en curso.
 
 La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
 Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo
