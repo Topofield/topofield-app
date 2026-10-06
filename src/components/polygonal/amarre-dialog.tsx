@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils/cn";
 import type { ReferencePoint } from "@/types/project";
 import type { AngleInputFormat } from "@/types/polygonal";
 import { AngleInput } from "./angle-input";
+import { amarreChangeProblem } from "./capture-edits";
 import { dmsFromFields, fieldsOf, formatAngle } from "./angle-format";
 import { azimuthToReference, type AmarreEdit, type Dms3, type PolygonalDraft } from "./polygonal-save";
 
@@ -142,6 +143,8 @@ export function AmarreDialog({ projectId, draft, referencePoints, angleFormat, o
 
   function submit() {
     setError(null);
+    const problem = amarreChangeProblem(draft, mode !== "none");
+    if (problem) return setError(problem);
     const startPoint = readPoint(start, "Estación de partida");
     if (typeof startPoint === "string") return setError(startPoint);
 

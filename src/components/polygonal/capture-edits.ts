@@ -144,6 +144,20 @@ function hasClosingAngle(d: PolygonalDraft): boolean {
   return spot !== null && d.stations[spot.index]!.readings.length > 0;
 }
 
+/**
+ * Por qué no se puede pasar a `nextOriented` (con o sin 0 atrás), o `null`.
+ * Con mediciones, cambiarlo cambia lo que significa el ángulo de la partida
+ * —de orientación a vértice, o al revés— y el motor calcularía otra poligonal
+ * sin avisar. Cambiar el punto o el azimut de la referencia sí se puede.
+ */
+export function amarreChangeProblem(d: PolygonalDraft, nextOriented: boolean): string | null {
+  const measured = d.stations.some((s) => s.readings.length > 0 || s.distance !== null);
+  if (!measured || oriented(d) === nextOriented) return null;
+  return nextOriented
+    ? "Estas mediciones se tomaron sin 0 atrás: con él, el primer ángulo pasaría a ser de orientación. Deshaga las mediciones antes de poner la referencia."
+    : "Estas mediciones se tomaron con 0 atrás: sin él, el ángulo de orientación pasaría a ser un vértice. Deshaga las mediciones antes de quitar la referencia.";
+}
+
 /** Mide desde el punto actual y agrega el siguiente. */
 export function addMeasurement(d: PolygonalDraft, m: MeasurementEdit): PolygonalDraft {
   const stations =

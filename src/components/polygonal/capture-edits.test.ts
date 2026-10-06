@@ -6,6 +6,7 @@ import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import {
   addClosingAngle,
   addMeasurement,
+  amarreChangeProblem,
   canClose,
   closingAngleSpot,
   currentStation,
@@ -274,5 +275,23 @@ describe("capture-edits", () => {
     }), { next: "C", readings: r(12, 0, 0), distance: 10, deflectionDirection: "left", closes: false });
     expect(d.stations[1]!.deflectionDirection).toBe("left");
     expect(d.stations[0]!.readings).toEqual([]);
+  });
+
+  // Revisión final: con mediciones, poner o quitar el 0 atrás cambia lo que
+  // significa el ángulo de la partida —de orientación a vértice—, y el motor
+  // calcularía otra poligonal sin avisar.
+  it("con mediciones, el 0 atrás no se pone ni se quita; sin ellas, sí", () => {
+    const d = capturedTT4();
+    expect(amarreChangeProblem(d, false)).toMatch(/Deshaga las mediciones/);
+    expect(amarreChangeProblem(d, true)).toBeNull();
+    const local = addMeasurement(empty("closed", false), {
+      next: "P2",
+      readings: [],
+      distance: 10,
+      deflectionDirection: null,
+      closes: false,
+    });
+    expect(amarreChangeProblem(local, true)).toMatch(/Deshaga las mediciones/);
+    expect(amarreChangeProblem(empty(), false)).toBeNull();
   });
 });
