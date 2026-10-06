@@ -114,10 +114,18 @@ extrae y con qué nombre:
    distancias de cada armada.
 7. **Ningún otro módulo depende de que una nivelación esté cerrada.** Las
    cotas adoptadas (`reports/adopted.ts`) solo exigen que cumpla.
+8. **El equilibrado de visuales también depende del orden**
+   (`SIGHT_BALANCE_LIMIT_M`: 2, 5, 10 y 10 m). En El Verjón, 12 de las 20
+   armadas pasan de los 5 m de segundo orden y la ida suma 53.3 m más atrás
+   que adelante: el terreno sube 26.6 m en 384 m. Hoy es un aviso. Si contara
+   para el orden alcanzado, El Verjón bajaría a ordinario.
 
 ### Lienzo «Nivelación — rediseño de la UX»
 
-Con El Verjón: ida, contranivelación y tres hilos.
+Con El Verjón: ida, contranivelación y tres hilos. Publicado el 2026-10-06
+(<https://claude.ai/artifact/3XzPm9EFC8dXwwWGEAEvNs>), con los números del
+motor de la app. Los dos gráficos de la libreta quedaron así: el croquis del
+recorrido (A) y el perfil con las miras y las visuales de cada armada (B).
 
 | Superficie | Variante A | Variante B |
 |---|---|---|
@@ -134,6 +142,8 @@ Con El Verjón: ida, contranivelación y tres hilos.
 - Croquis del recorrido, perfil o los dos.
 - Quitar el tipo de nivel y llevar los hilos a cada visual.
 - La regla de compensación con el orden detectado (hallazgo 2).
+- Si el equilibrado sigue siendo un aviso o baja el orden alcanzado
+  (hallazgo 8).
 - La importación del `.L` y del CSV: dónde vive en la pantalla por pasos.
 
 ### Lo que se quita con el cierre
