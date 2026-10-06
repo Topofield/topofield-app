@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, LevelFieldset, Select, TotalStationFieldset } from "@/components/design-system";
+import { Button, Input, LevelFieldset, Select, TotalStationFieldset } from "@/components/design-system";
 import { createEquipmentAction } from "@/app/(app)/equipos/actions";
 import {
   equipmentInputFromLevel,
@@ -151,6 +151,55 @@ export function TotalStationEquipment({
         />
       }
     />
+  );
+}
+
+/** Marca, modelo y n.º de serie de una estación total. */
+export interface TotalStationIdentityFields {
+  brand: string;
+  model: string;
+  serial: string;
+}
+
+/**
+ * Solo la identidad de la estación total, con «Tomar del catálogo» (Fase 35,
+ * decisión 2): es lo que pide el alta de la poligonal. Las precisiones y la
+ * calibración no entran en ningún cálculo, así que la poligonal ya no las pide.
+ */
+export function TotalStationIdentity({
+  value,
+  onChange,
+}: {
+  value: TotalStationIdentityFields;
+  onChange: (value: TotalStationIdentityFields) => void;
+}) {
+  const { items } = useItems("total_station");
+  return (
+    <div className="flex flex-col gap-3">
+      <CatalogSelect
+        items={items}
+        onPick={(item) =>
+          onChange({ brand: item.brand ?? "", model: item.model ?? "", serial: item.serial ?? "" })
+        }
+      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Input
+          label="Marca"
+          value={value.brand}
+          onChange={(e) => onChange({ ...value, brand: e.target.value })}
+        />
+        <Input
+          label="Modelo"
+          value={value.model}
+          onChange={(e) => onChange({ ...value, model: e.target.value })}
+        />
+        <Input
+          label="N.º de serie"
+          value={value.serial}
+          onChange={(e) => onChange({ ...value, serial: e.target.value })}
+        />
+      </div>
+    </div>
   );
 }
 
