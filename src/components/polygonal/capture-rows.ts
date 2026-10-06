@@ -11,9 +11,10 @@ import type { DeflectionDirection, PolygonalInput } from "@/types/polygonal";
 
 /**
  * Qué es la fila en la cartera. `pending` es el último punto, al que todavía no
- * se le ha medido nada: desde él sigue la captura.
+ * se le ha medido nada: desde él sigue la captura. `arrival`, el punto de
+ * llegada de una abierta con control, sin su deflexión de llegada.
  */
-export type CaptureRole = "backsight" | "side" | "closing" | "closing_angle" | "pending";
+export type CaptureRole = "backsight" | "side" | "closing" | "closing_angle" | "pending" | "arrival";
 
 export interface CaptureRow {
   /** Índice de la estación en `stations`; `null` en la fila del 0 atrás. */
@@ -40,11 +41,12 @@ const finite = (v: number | null | undefined): number | null =>
  * contra la referencia si la cartera cierra contra el amarre, o el ángulo del
  * vértice de arranque hacia el primer lado (esquema de la Vivero). El último
  * punto, mientras no se haya medido nada desde él, es el pendiente. En una
- * abierta con control, una deflexión en el último punto es su cierre angular.
+ * abierta con control, una deflexión en el último punto es su cierre angular;
+ * sin ella, el punto de llegada (`amarre.end`) es la llegada.
  */
 export function captureRows(
   input: PolygonalInput,
-  amarre: { start: string; reference: string | null },
+  amarre: { start: string; reference: string | null; end?: string | null },
 ): CaptureRow[] {
   const { stations } = input;
   const n = stations.length;
@@ -78,6 +80,8 @@ export function captureRows(
         to = stations[0]?.pointCode ?? "";
       } else if (input.type === "open_controlled" && finite(st.angle) !== null && i > 0) {
         role = "closing_angle";
+      } else if (input.type === "open_controlled" && i > 0 && amarre.end && st.pointCode === amarre.end) {
+        role = "arrival";
       } else {
         role = "pending";
       }

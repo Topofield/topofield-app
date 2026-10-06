@@ -112,7 +112,11 @@ export function PolygonalReportSection({ data }: { data: PolygonalSectionData })
   const verifiable = !uncontrolled && result.relativePrecision != null;
   const calculated = result.stations.filter((s) => s.north != null).length >= 2;
   const reason = orderReason(data);
-  const adjusted = adjustedRows(input, result, { start: process.start_point_code, reference: referenceLabel });
+  const adjusted = adjustedRows(input, result, {
+    start: process.start_point_code,
+    reference: referenceLabel,
+    end: process.end_point_code,
+  });
   const n = input.stations.length;
   const start = process.start_point_code;
   const points = result.stations.filter(
@@ -234,7 +238,7 @@ export function PolygonalReportSection({ data }: { data: PolygonalSectionData })
         </thead>
         <tbody>
           {rows
-            .filter((r) => r.role !== "pending")
+            .filter((r) => r.role !== "pending" && r.role !== "arrival")
             .map((r) => (
               <tr key={`${r.stationIndex ?? "ref"}-${r.role}`}>
                 <td>{sideLabel(r)}</td>

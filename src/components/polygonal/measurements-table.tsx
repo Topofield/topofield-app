@@ -9,6 +9,7 @@ const ROLE_BADGE: Partial<Record<CaptureRole, string>> = {
   backsight: "0 atrás",
   closing: "cierre",
   closing_angle: "cierre angular",
+  arrival: "llegada",
 };
 
 /**
@@ -54,6 +55,8 @@ export function MeasurementsTable({
           const number = i + 1;
           const badge = ROLE_BADGE[row.role];
           const pending = row.role === "pending";
+          // Desde el pendiente o la llegada no se ha medido nada: no hay qué editar.
+          const blank = pending || row.role === "arrival";
           return (
             <tr key={`${row.stationIndex ?? "ref"}-${row.role}`} className="border-b border-rule last:border-b-0">
               <td className="hidden py-2 pr-2 text-ink-2 sm:table-cell">{number}</td>
@@ -73,7 +76,7 @@ export function MeasurementsTable({
                 )}
               </td>
               <td className="py-2 pr-2 text-right tabular-nums">
-                {pending ? "—" : formatAngle(row.angle, angleFormat)}
+                {blank ? "—" : formatAngle(row.angle, angleFormat)}
                 {row.deflectionDirection && row.angle !== null && (
                   <span className="block text-xs text-ink-2">{DEFLECTION_DIRECTION_LABELS[row.deflectionDirection]}</span>
                 )}
@@ -83,7 +86,7 @@ export function MeasurementsTable({
                 {formatAngle(row.azimuth, angleFormat)}
               </td>
               <td className="py-1 text-right">
-                {!pending && (
+                {!blank && (
                   <button
                     type="button"
                     aria-label={`Editar medición ${number}`}

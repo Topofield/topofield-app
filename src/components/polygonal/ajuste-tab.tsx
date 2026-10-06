@@ -206,7 +206,7 @@ export function AjusteTab({ process, stations, referencePoints, angleFormat, bas
       ? "Para georreferenciar hacen falta coordenadas calculadas."
       : null;
   const summary = georeferenceSummary(process);
-  const amarre = { start: draft.amarre.startCode, reference: referenceLabel };
+  const amarre = { start: draft.amarre.startCode, reference: referenceLabel, end: draft.amarre.endCode };
 
   return (
     <div className="flex flex-col gap-5">

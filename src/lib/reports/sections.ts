@@ -120,7 +120,11 @@ export async function loadReportSections(
             process,
             stations,
             plot: { input, result, reference },
-            rows: captureRows(input, { start: process.start_point_code, reference: referenceLabel }),
+            rows: captureRows(input, {
+              start: process.start_point_code,
+              reference: referenceLabel,
+              end: process.end_point_code,
+            }),
             breakdown: correctionBreakdown(input, result),
             order,
             angleType,

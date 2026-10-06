@@ -40,12 +40,12 @@ const num = (v: number | null | undefined): number | null => (v != null && Numbe
 export function adjustedRows(
   input: PolygonalInput,
   result: PolygonalResult,
-  amarre: { start: string; reference: string | null },
+  amarre: { start: string; reference: string | null; end?: string | null },
 ): { rows: AdjustedRow[]; sum: AdjustedSum } {
   const rows: AdjustedRow[] = [];
   const sum: AdjustedSum = { distance: 0, deltaN: 0, deltaE: 0, correctedN: 0, correctedE: 0 };
   for (const row of captureRows(input, amarre)) {
-    if (row.stationIndex === null || row.role === "pending") continue;
+    if (row.stationIndex === null || row.role === "pending" || row.role === "arrival") continue;
     const r = result.stations[row.stationIndex];
     const side = row.role !== "closing_angle";
     const correctedN = side ? num(r?.correctedDeltaNorth) : null;
@@ -91,7 +91,7 @@ export function AdjustedTable({
 }: {
   input: PolygonalInput;
   result: PolygonalResult;
-  amarre: { start: string; reference: string | null };
+  amarre: { start: string; reference: string | null; end?: string | null };
   angleFormat: AngleInputFormat;
   /** Sin compensación (abierta sin control) no hay columnas corregidas. */
   corrected: boolean;

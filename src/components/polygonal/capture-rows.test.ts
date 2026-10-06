@@ -103,6 +103,26 @@ describe("captureRows", () => {
     expect(rows[0]!.angle).toBeNull();
   });
 
+  it("abierta con control: el punto de llegada sin deflexión es la llegada, no un pendiente", () => {
+    const input: PolygonalInput = {
+      ...inputOf(CARTERA_TT4),
+      type: "open_controlled",
+      hasOrientation: false,
+      hasClosingRow: false,
+      endNorth: 0,
+      endEast: 0,
+      angleType: "deflection",
+      stations: [
+        { pointCode: "A", angle: Number.NaN, deflectionDirection: null, distance: 10, readings: [] },
+        { pointCode: "B", angle: 12, deflectionDirection: "left", distance: 10, readings: [] },
+        { pointCode: "C", angle: Number.NaN, deflectionDirection: null, distance: null, readings: [] },
+      ],
+    };
+    expect(captureRows(input, { start: "A", reference: null, end: "C" }).at(-1)!.role).toBe("arrival");
+    // Sin llegar al punto de llegada, sigue pendiente.
+    expect(captureRows(input, { start: "A", reference: null, end: "Z" }).at(-1)!.role).toBe("pending");
+  });
+
   it("una cerrada a medio capturar: el último punto es el pendiente, no un cierre", () => {
     const input = inputOf(CARTERA_TT4);
     input.stations = input.stations.slice(0, 4).map((s, i) =>

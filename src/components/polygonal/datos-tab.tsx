@@ -50,7 +50,11 @@ export function DatosTab({ projectId, process, stations, referencePoints, angleF
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const rows = captureRows(input, { start: draft.amarre.startCode, reference: referenceLabel });
+  const rows = captureRows(input, {
+    start: draft.amarre.startCode,
+    reference: referenceLabel,
+    end: draft.amarre.endCode,
+  });
   const hasAmarre = draft.amarre.startCode.trim() !== "";
   const closed = isClosed(draft);
   const closingAngle = needsClosingAngle(draft);
