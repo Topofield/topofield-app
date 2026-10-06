@@ -43,7 +43,7 @@ export const CAPTURAS = {
   },
   hubProyecto: {
     src: "/manual/04-hub-proyecto.png",
-    alt: "Hub del proyecto: cabecera con el botón + Nuevo Proceso, las pestañas y el listado de poligonales con sus filtros y acciones.",
+    alt: "Hub del proyecto: cabecera con el botón + Nuevo Proceso, las pestañas y el listado de poligonales, todas calculadas, con sus filtros —Todos, Borradores y Calculados— y sus acciones.",
     width: 2560,
     height: 2822,
   },
@@ -55,34 +55,33 @@ export const CAPTURAS = {
   },
   nuevaPoligonal: {
     src: "/manual/06-nueva-poligonal.png",
-    alt: "Formulario de nueva poligonal, con el tipo y el punto de partida.",
-    width: 2560,
-    height: 1600,
+    alt: "Popup Nueva poligonal: título, ubicación, responsable y su cargo, el tipo de poligonal con Cerrada elegida y la línea que explica cómo se verifica, el equipo plegado y opcional, la nota «El orden de precisión se detecta al ajustar» y el botón Crear y empezar.",
+    width: 896,
+    height: 1252,
   },
-  editor: {
-    src: "/manual/07-editor-no-cumple.png",
-    alt: "Editor de poligonal completo: veredicto, configuración, tabla de estaciones y resultados.",
-    pie: "El editor de una poligonal que no alcanza la precisión exigida.",
+  datosPoligonal: {
+    src: "/manual/07-datos-poligonal.png",
+    alt: "Paso 1 · Datos de la poligonal V10, cartera TT4: la cabecera con Poligonal cerrada, Calculado y Tercer orden; los puntos de amarre —V10 con su Norte y su Este, y TT4 como 0° atrás con su azimut—; las mediciones «desde → hacia» con las marcas 0 atrás, cierre y cierre angular; el cierre angular, con los ángulos interiores detectados y un error de +12.0″, y a la derecha el dibujo sin ajustar.",
     width: 2560,
-    height: 4874,
+    height: 2736,
   },
-  veredicto: {
-    src: "/manual/08-veredicto.png",
-    alt: "Banda del veredicto de cierre, con la precisión alcanzada frente a la requerida.",
+  ordenAlcanzado: {
+    src: "/manual/08-orden-alcanzado.png",
+    alt: "Método de ajuste Brújula (Bowditch); las cuatro cifras —error angular +12.0″, error de cierre lineal 0.016 m, precisión relativa 1:7.045 y orden alcanzado Tercer orden— y «Por qué tercer orden» desplegado: cada orden con su tolerancia angular y su precisión mínima, y si la poligonal cumple cada una.",
     width: 1984,
-    height: 260,
+    height: 838,
   },
-  procesoCerrado: {
-    src: "/manual/09-proceso-cerrado.png",
-    alt: "Editor de un proceso cerrado, en solo lectura y sin botones de guardado.",
+  ajustePoligonal: {
+    src: "/manual/09-ajuste-poligonal.png",
+    alt: "Paso 2 · Ajuste de la cartera TT4: el selector de método con Brújula (Bowditch), las cuatro cifras con el orden alcanzado, la poligonal ajustada con la fila Σ, la corrección por método Brújula y, a la derecha, el dibujo ajustado con el botón Georreferenciar.",
     width: 2560,
-    height: 4748,
+    height: 2352,
   },
-  procesoRechazado: {
-    src: "/manual/10-proceso-rechazado.png",
-    alt: "Editor de un proceso rechazado, también en solo lectura.",
-    width: 2560,
-    height: 4748,
+  correccionInforme: {
+    src: "/manual/10-correccion-informe.png",
+    alt: "Sección «3. Corrección por método Brújula (Bowditch)» del informe de la cartera TT4: el paso 1 reparte el error angular de 12.0″ entre los 7 ángulos, −1.71″ cada uno; el paso 2 reparte el error de cierre lineal en proporción a la longitud de cada lado, con sus fórmulas y la tabla de correcciones ΔN y ΔE por lado.",
+    width: 1664,
+    height: 1552,
   },
   nuevaNivelacion: {
     src: "/manual/11-nueva-nivelacion.png",
@@ -154,20 +153,20 @@ export const CAPTURAS = {
   dibujoPoligonal: {
     src: "/manual/20-dibujo-poligonal.png",
     alt: "Dibujo de la poligonal V10 de la cartera TT4: la ajustada en trazo continuo y la sin compensar exagerada ×100 en trazo discontinuo, con el hueco de cierre junto al vértice V10.",
-    width: 1884,
-    height: 1306,
+    width: 630,
+    height: 728,
   },
   georreferenciar: {
     src: "/manual/22-georreferenciar.png",
     alt: "Diálogo Georreferenciar sobre la cartera Vivero en sistema local: D1 y D3 con sus coordenadas reales, rotación 35° 00′ 07.8″, factor de escala 1.000000 y la tabla de coordenadas actuales frente a reales.",
     width: 1344,
-    height: 2100,
+    height: 2036,
   },
   minimosCuadrados: {
     src: "/manual/21-minimos-cuadrados.png",
-    alt: "Resultados de la cartera Vivero con mínimos cuadrados: los tres pesos, la tabla de correcciones por ángulo y distancia, y σ₀ = 0.698 con su lectura.",
-    width: 1984,
-    height: 2324,
+    alt: "Corrección por método Mínimos cuadrados de la cartera Vivero: la corrección de cada ángulo, en segundos, y de cada distancia, en milímetros, con la distancia ajustada —el ángulo de orientación en Famarena_5 no se corrige—, y σ₀ = 0.698 con su lectura.",
+    width: 1216,
+    height: 998,
   },
   editorVisita: {
     src: "/manual/16-editor-visita.png",
@@ -177,15 +176,15 @@ export const CAPTURAS = {
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
-    alt: "Formulario de alta de informe con el título, la lista de procesos cerrados a incluir y el orden de las secciones.",
+    alt: "Formulario Nuevo informe: el título, los procesos a incluir —las poligonales calculadas del proyecto y una nivelación cerrada— y las observaciones generales.",
     width: 2560,
-    height: 1600,
+    height: 2068,
   },
   informeImprimible: {
     src: "/manual/19-informe-imprimible.png",
-    alt: "Informe maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados, resumen consolidado y registro de cierre.",
+    alt: "Informe consolidado de una nivelación, maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados y su equipo, resumen consolidado de precisiones, observaciones y registro de cierre.",
     width: 2560,
-    height: 3728,
+    height: 3734,
   },
   temaOscuro: {
     src: "/manual/29-tema-oscuro.png",
@@ -195,12 +194,12 @@ export const CAPTURAS = {
     height: 1688,
     angosta: true,
   },
-  editorMovil: {
-    src: "/manual/17-editor-movil.png",
-    alt: "El editor en un teléfono: la tabla de estaciones se convierte en tarjetas apiladas.",
-    pie: "En pantalla pequeña cada estación es una tarjeta, sin desplazamiento lateral.",
+  datosMovil: {
+    src: "/manual/17-datos-movil.png",
+    alt: "El paso de Datos de la cartera TT4 en un teléfono: la cabecera, los puntos de amarre, el selector Tabla | Dibujo con Tabla elegida, las mediciones con el azimut bajo cada punto y el cierre angular.",
+    pie: "En el teléfono, el azimut va bajo cada punto: la tabla no se desplaza de lado.",
     width: 780,
-    height: 6686,
+    height: 3554,
     angosta: true,
   },
   equipos: {
@@ -211,9 +210,9 @@ export const CAPTURAS = {
   },
   informeDelProceso: {
     src: "/manual/30-informe-del-proceso.png",
-    alt: "Pestaña Informe de una poligonal cerrada: portada, datos y resultados, dibujo, resumen de precisión y registro de cierre.",
+    alt: "Paso 3 · Informe de la poligonal V10, cartera TT4: portada; resultado con el orden alcanzado, datos de campo, corrección por método Brújula (Bowditch), poligonal ajustada y coordenadas con el dibujo; resumen de precisión y observaciones, y debajo el botón para generar un informe consolidado con ella.",
     width: 2560,
-    height: 4732,
+    height: 8776,
   },
 } as const satisfies Record<string, Captura>;
 
@@ -251,16 +250,20 @@ export const ESTADOS_PROCESO = [
   },
   {
     estado: "Calculado",
-    significado: "Cálculo resuelto; se puede revisar y cerrar",
+    significado: "Cálculo resuelto; se puede revisar y, salvo una poligonal, cerrar",
   },
-  { estado: "Cerrado", significado: "Terminado y conforme. Inmutable, salvo su posición" },
+  {
+    estado: "Cerrado",
+    significado: "Terminado y conforme. Inmutable mientras siga cerrado",
+  },
   {
     estado: "Rechazado",
-    significado: "Terminado pero fuera de tolerancia. Inmutable, salvo su posición",
+    significado: "Terminado pero fuera de tolerancia. Inmutable mientras siga cerrado",
   },
 ];
 
-// --- § 5.2 Órdenes de precisión (se declaran por proceso desde la Fase 8) ---
+// --- § 5.5 Órdenes de precisión: el «Por qué» del orden alcanzado (la
+// poligonal no lo declara: se detecta al calcularla, desde la Fase 35) ---
 
 export const ORDENES_PRECISION = [
   {
@@ -298,7 +301,8 @@ export const COLUMNAS_LISTADO = [
   },
   {
     columna: "Estado",
-    muestra: "Borrador, Calculado, Cerrado o Rechazado; Activo o Cerrado en un lugar",
+    muestra:
+      "Borrador, Calculado, Cerrado o Rechazado; Borrador o Calculado en una poligonal; Activo o Cerrado en un lugar",
   },
   {
     columna: "Resultado",
@@ -308,7 +312,7 @@ export const COLUMNAS_LISTADO = [
   {
     columna: "Cumple",
     muestra:
-      "✓ si alcanza su orden de precisión, ✕ si no, — si no aplica. No aparece en asentamientos",
+      "✓ si cumple su tolerancia —una poligonal, si alcanza algún orden—, ✕ si no, — si no aplica. No aparece en asentamientos",
   },
   { columna: "Última actividad", muestra: "Cuándo se modificó por última vez" },
 ];
@@ -333,11 +337,11 @@ export const TIPOS_POLIGONAL = [
   },
 ];
 
-// --- § 5.3 Métodos de corrección ---
+// --- § 5.5 Métodos de corrección ---
 
 export const METODOS_CORRECCION = [
   {
-    metodo: "Bowditch (brújula)",
+    metodo: "Brújula (Bowditch)",
     reparte: "Proporcional a la longitud de cada lado. El más usado",
   },
   {
@@ -500,21 +504,18 @@ export const NIVELES_SEMAFORO = [
   },
 ];
 
-// --- § 6 Desenlaces del cierre ---
+// --- § 8 Desenlaces del cierre de una nivelación ---
 
 export const DESENLACES_CIERRE = [
-  { situacion: "Cumple las tolerancias", ocurre: "Se cierra como Cerrado" },
+  { situacion: "Cumple la tolerancia", ocurre: "Se cierra como Cerrado" },
   {
-    situacion: "El error angular supera la tolerancia",
-    ocurre: "No se puede cerrar. Corrija las mediciones",
-  },
-  {
-    situacion: "Cumple en ángulos pero la precisión relativa no alcanza",
+    situacion: "No alcanza la tolerancia",
     ocurre: "Solo se puede cerrar como Rechazado",
   },
   {
-    situacion: "Hay errores de captura pendientes",
-    ocurre: "No se puede cerrar. Corrija las celdas marcadas",
+    situacion:
+      "La comprobación aritmética no cuadra, o hay errores de captura",
+    ocurre: "No se puede cerrar. Corrija la libreta",
   },
 ];
 
@@ -525,7 +526,8 @@ export const CAMPOS_INFORME = [
   { campo: "Título", para: "Encabeza la portada del documento" },
   {
     campo: "Procesos a incluir",
-    para: "Marque los que quiera; solo aparecen los cerrados",
+    para:
+      "Marque los que quiera; aparecen las poligonales calculadas y los procesos cerrados",
   },
   {
     campo: "Orden de las secciones",
@@ -546,11 +548,12 @@ export const HOJAS_EXCEL = [
   },
   {
     hoja: "Resumen",
-    contiene: "Equipo, método, precisión, tolerancia, estado y trazabilidad",
+    contiene:
+      "Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados",
   },
 ];
 
-// --- § 9 Preguntas frecuentes ---
+// --- § 13 Preguntas frecuentes ---
 
 export interface Pregunta {
   pregunta: string;
@@ -569,9 +572,9 @@ export const PREGUNTAS: Pregunta[] = [
       "Sí: con Reabrir, en la cabecera del proceso (§ 8). Vuelve a ser editable y se cierra otra vez cuando esté listo.",
   },
   {
-    pregunta: "¿Por qué mi poligonal no me deja cerrar?",
+    pregunta: "¿Cómo cierro una poligonal?",
     respuesta:
-      "Revise el veredicto en la parte superior del editor. Si el error angular supera la tolerancia, hay un problema en la medición de ángulos que debe corregir. Si solo falla la precisión relativa, podrá cerrarla como rechazada.",
+      "No se cierra: queda calculada y se corrige cuando haga falta. El paso de Ajuste y su informe dicen qué orden de precisión alcanzó (§ 5.5); si no alcanza ninguno, el informe lo alerta. Un informe consolidado la incluye calculada.",
   },
   {
     pregunta: "¿Por qué una poligonal muestra «Sin verificación de cierre»?",
@@ -586,23 +589,24 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Dónde declaro el equipo y el orden de precisión que usé?",
     respuesta:
-      "En cada proceso, no en el proyecto: cada poligonal, cada nivelación y cada visita de asentamiento declara los suyos, en su propia configuración. Un mismo proyecto puede así tener una poligonal de tercer orden medida con una estación total y, meses después, una red de control de primer orden medida con otra — cada una con el instrumento con que realmente se trabajó. Si es el de siempre, tómelo del catálogo de equipos.",
-  },
-  {
-    pregunta: "Cambié el orden de precisión de un proceso abierto. ¿Se recalcula?",
-    respuesta:
-      "Sí, al recalcularlo. Uno cerrado conserva su veredicto original, porque es inmutable.",
+      "En cada proceso, no en el proyecto. Cada nivelación y cada visita de asentamiento declara su orden y su equipo en su propia configuración. Una poligonal declara su equipo en el alta, y su orden no se declara: se detecta al calcularla (§ 5.5). Si el equipo es el de siempre, tómelo del catálogo de equipos (§ 12).",
   },
   {
     pregunta:
-      "Levanté en un sistema local y cerré el proceso. ¿Puedo pasarlo a coordenadas reales?",
+      "Cambié el orden de precisión de una nivelación abierta. ¿Se recalcula?",
     respuesta:
-      "Sí: Georreferenciar (§ 5.5), con dos estaciones de coordenadas conocidas. Funciona también sobre un proceso cerrado, y no cambia su veredicto.",
+      "Sí, al recalcularla. Una cerrada conserva su veredicto original, porque es inmutable.",
+  },
+  {
+    pregunta:
+      "Levanté una poligonal en un sistema local. ¿Puedo pasarla a coordenadas reales?",
+    respuesta:
+      "Sí: Georreferenciar (§ 5.6), con dos estaciones de coordenadas conocidas, o editando el amarre con las coordenadas reales de la partida y la referencia. El orden alcanzado no cambia.",
   },
   {
     pregunta: "¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?",
     respuesta:
-      "La aplicación no lo juzga: registra el equipo para el informe, y lo que dice si el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no da para el orden, lo más probable es que el cierre no cumpla.",
+      "En una nivelación o una visita, la aplicación no lo juzga: registra el equipo para el informe, y lo que dice si el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no da para el orden, lo más probable es que el cierre no cumpla. Una poligonal no elige orden: alcanza el que su cierre permite.",
   },
   {
     pregunta:
@@ -641,12 +645,12 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Puedo eliminar un proyecto?",
     respuesta:
-      "Si no tiene nada cerrado, sí, desde Configuración. Si tiene algún proceso, lugar o visita cerrados, no: esos registros no se borran. Archívelo para ocultarlo de la lista activa.",
+      "Si no tiene nada cerrado, sí, desde Configuración. Si tiene algún proceso, lugar o visita cerrados, no: esos registros no se borran. Archívelo para ocultarlo de la lista activa (§ 4.2).",
   },
   {
     pregunta: "Salí de un editor y perdí lo que había tecleado.",
     respuesta:
-      "Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el navegador le preguntó antes. Los botones atrás y adelante del navegador no preguntan: guarde antes de usarlos.",
+      "Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el navegador le preguntó antes. Los botones atrás y adelante del navegador no preguntan: guarde antes de usarlos (§ 4.4). En una poligonal no hay qué perder: cada popup guarda al confirmar.",
   },
   {
     pregunta: "¿Otros usuarios pueden ver mis proyectos?",
