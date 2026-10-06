@@ -14,6 +14,7 @@ import {
   hasCaptureErrors,
   readingDmsError,
   referenceStartAzimuth,
+  stationCaptureIssues,
   validatePolygonalStation,
   validateReadings,
   type CaptureIssues,
@@ -81,13 +82,26 @@ function computedStation(north: number | null): StationResult {
 // acuerdo sobre qué es captura parcial legítima y qué es un error, sin que
 // nada lo delatara. Estos tests la fijan.
 describe("expectStationCapture", () => {
-  it("exige ángulo y distancia en TODAS las estaciones de una cerrada", () => {
-    for (const i of [0, 1, 4]) {
+  it("en una cerrada, las intermedias llevan ángulo y distancia", () => {
+    for (const i of [1, 3]) {
       expect(expectStationCapture("closed", i, 5)).toEqual({
         angle: true,
         distance: true,
       });
     }
+  });
+
+  // Fase 35: la captura se guarda en cada popup. Sin amarre, el ángulo en P1
+  // se mide al cerrar, entre el último punto y P2.
+  it("en una cerrada, la primera lleva el ángulo de orientación con amarre; sin amarre, aún no", () => {
+    expect(expectStationCapture("closed", 0, 5, false, true)).toEqual({
+      angle: true,
+      distance: true,
+    });
+    expect(expectStationCapture("closed", 0, 5, false, false)).toEqual({
+      angle: false,
+      distance: true,
+    });
   });
 
   it("en una abierta, la primera estación no lleva ángulo pero sí distancia", () => {
@@ -129,10 +143,10 @@ describe("expectStationCapture", () => {
     });
   });
 
-  it("una cerrada de una sola estación sigue exigiendo ambas", () => {
-    expect(expectStationCapture("closed", 0, 1)).toEqual({
-      angle: true,
-      distance: true,
+  it("una cerrada de una sola estación no exige nada: es el punto pendiente", () => {
+    expect(expectStationCapture("closed", 0, 1, false, true)).toEqual({
+      angle: false,
+      distance: false,
     });
   });
 });
@@ -506,10 +520,13 @@ describe("expectStationCapture — fila de cierre", () => {
     });
   });
 
-  it("sin fila de cierre, la última sigue pidiendo distancia", () => {
+  // Fase 35: sin fila de cierre, la última es el punto pendiente, el ángulo
+  // del vértice de arranque (Vivero, que no abre lado) o el lado que vuelve a
+  // P1 sin amarre. Ninguno es obligatorio en una captura a medias.
+  it("sin fila de cierre, la última no exige nada", () => {
     expect(expectStationCapture("closed", 5, 6, false)).toEqual({
-      angle: true,
-      distance: true,
+      angle: false,
+      distance: false,
     });
   });
 });
@@ -742,5 +759,46 @@ describe("referenceStartAzimuth — el azimut desde el punto de amarre (Fase 27,
     expect(referenceStartAzimuth(start, null)).toEqual({
       error: "El punto de amarre no está en el catálogo del proyecto.",
     });
+  });
+});
+
+// Fase 35: la carga del guardado manda las lecturas y no el ángulo de la
+// estación, que es su promedio y lo calcula el servidor. La validación tiene
+// que mirar ese promedio: si no, la primera medición de una cerrada amarrada
+// salía con «El ángulo es obligatorio».
+describe("stationCaptureIssues (Fase 35)", () => {
+  const station = (over: Partial<Parameters<typeof stationCaptureIssues>[1][number]> = {}) => ({
+    pointCode: "V10",
+    angleDeg: null,
+    angleMin: null,
+    angleSec: null,
+    readings: [{ deg: 211, min: 15, sec: 7 }],
+    horizontalDistance: 20.744,
+    ...over,
+  });
+
+  it("el ángulo de una estación con lecturas es su promedio", () => {
+    const issues = stationCaptureIssues(
+      "closed",
+      [station(), station({ pointCode: "D1", readings: [], horizontalDistance: null })],
+      false,
+      true,
+    );
+    expect(hasCaptureErrors(issues)).toBe(false);
+  });
+
+  it("sin lecturas ni ángulo, la estación de partida amarrada lo sigue exigiendo", () => {
+    const issues = stationCaptureIssues(
+      "closed",
+      [station({ readings: [] }), station({ pointCode: "D1", readings: [], horizontalDistance: null })],
+      false,
+      true,
+    );
+    expect(issues[0]!.errors.angle).toBe("El ángulo es obligatorio.");
+  });
+
+  it("una lectura fuera de rango sigue siendo un error", () => {
+    const issues = stationCaptureIssues("closed", [station({ readings: [{ deg: 90, min: 61, sec: 0 }] })], false, true);
+    expect(hasCaptureErrors(issues)).toBe(true);
   });
 });

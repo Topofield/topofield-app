@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatSavedAt,
   formatBookClosure,
   formatCoordinate,
   formatDateShort,
@@ -236,5 +237,12 @@ describe("los empates se redondean como en Excel (Fase 26, C-18)", () => {
       const expected = (Math.floor(tenths / 10) + (tenths % 10 >= 5 ? 1 : 0)) / 1000;
       expect(formatCoordinate(value)).toBe(expected.toFixed(3));
     }
+  });
+});
+
+describe("formatSavedAt (Fase 35)", () => {
+  it("fecha y hora de Bogotá, en 24 h", () => {
+    expect(formatSavedAt("2026-10-06T15:42:00Z")).toBe("6/10/2026, 10:42");
+    expect(formatSavedAt("2026-10-07T03:05:00+00:00")).toBe("6/10/2026, 22:05");
   });
 });

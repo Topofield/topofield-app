@@ -66,11 +66,30 @@ const stations = c.stations.map((s, i) => ({
 const reference = { north: c.referenceNorth, east: c.referenceEast };
 
 describe("polygonal-save", () => {
-  it("el borrador calcula las mismas coordenadas que el camino de siempre", () => {
-    const viejo = computePolygonal(polygonalInputOf(process, stations));
+  it("el borrador da las coordenadas de la hoja BRUJULA", () => {
     const { result } = computePolygonalDetected(inputOf(draftOf(process, stations), reference));
-    expect(result.stations.map((s) => s.north)).toEqual(viejo.stations.map((s) => s.north));
-    expect(result.stations.map((s) => s.east)).toEqual(viejo.stations.map((s) => s.east));
+    const esperadas: [number, number][] = [
+      [100135.666, 101440.525],
+      [100114.931312, 101439.857597],
+      [100108.052182, 101449.20719],
+      [100106.923797, 101461.994139],
+      [100143.699707, 101465.900541],
+      [100148.849172, 101448.533376],
+    ];
+    esperadas.forEach(([n, e], i) => {
+      expect(result.stations[i]!.north!).toBeCloseTo(n, 4);
+      expect(result.stations[i]!.east!).toBeCloseTo(e, 4);
+    });
+  });
+
+  it("polygonalInputOf usa el orden y el tipo de ángulo detectados, no los guardados", () => {
+    const viejo = { ...process, angle_type: "exterior", precision_order: null } as PolygonalProcess;
+    const input = polygonalInputOf(viejo, stations);
+    expect(input.order).toBe("tercer_orden");
+    expect(input.angleType).toBe("interior");
+    const a = computePolygonal(input);
+    const { result: b } = computePolygonalDetected(inputOf(draftOf(process, stations), reference));
+    expect(a.stations.map((s) => s.north)).toEqual(b.stations.map((s) => s.north));
   });
 
   it("la carga lleva el amarre, el cierre angular, las lecturas y los datos del alta", () => {

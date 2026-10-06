@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PolygonalEditor } from "@/components/polygonal/polygonal-editor";
+import { DatosTab } from "@/components/polygonal/datos-tab";
 import { PolygonalHeader } from "@/components/polygonal/polygonal-header";
 import { PolygonalSteps, type PolygonalStep } from "@/components/polygonal/polygonal-steps";
 import { ProcessReport } from "@/components/process/process-report";
@@ -73,14 +73,12 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
           reports={reports}
         />
       ) : (
-        <PolygonalEditor
-          // Georreferenciar (Fase 15) reescribe el arranque en la base; el
-          // editor guarda la configuración en estado propio, así que se
-          // remonta para no volver a guardar después las coordenadas locales.
-          key={`${process.georef_at ?? "local"}:${process.updated_at}`}
+        <DatosTab
+          projectId={id}
           process={process}
           stations={stations}
           referencePoints={referencePoints}
+          angleFormat={process.angle_input_format}
         />
       )}
     </div>

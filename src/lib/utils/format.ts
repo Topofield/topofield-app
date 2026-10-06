@@ -96,6 +96,29 @@ export function formatDate(iso: string): string {
 }
 
 /**
+ * Fecha y hora de un guardado, «6/10/2026, 10:42», en hora de Bogotá y 24 h
+ * (Fase 35). Se arma con las partes numéricas: el texto de `toLocaleString`
+ * («a. m.» o «a.m.») cambia entre el ICU del servidor y el del navegador, y un
+ * componente que se renderiza en los dos daría un error de hidratación.
+ */
+export function formatSavedAt(iso: string): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.day}/${parts.month}/${parts.year}, ${parts.hour}:${parts.minute}`;
+}
+
+/**
  * Formatea una fecha sin hora ("YYYY-MM-DD", columnas DATE) como
  * "21 de mayo de 2026". No aplica zona horaria para no desplazar el día.
  */

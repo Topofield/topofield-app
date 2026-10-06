@@ -2,8 +2,10 @@
 // captura, § 5.2 capa de cierre). Sin React, sin Supabase.
 
 import {
+  averageReadings,
   azimuthFromCoordinates,
   decimalToDms,
+  dmsToDecimal,
   type Dms,
 } from "@/lib/calculations/angles";
 import type {
@@ -54,10 +56,13 @@ export function expectStationCapture(
 ): { angle: boolean; distance: boolean } {
   if (type === "closed") {
     // La fila de cierre es de control: lleva el ángulo contra el amarre y no
-    // abre ningún lado, así que no pide distancia.
-    if (hasClosingRow && index === total - 1) {
-      return { angle: true, distance: false };
-    }
+    // abre ningún lado, así que no pide distancia. Sin ella, la última es el
+    // punto pendiente, el ángulo del vértice de arranque (Vivero) o el lado
+    // que vuelve a P1: la captura se guarda en cada popup (Fase 35), y nada de
+    // eso es obligatorio a medias.
+    if (index === total - 1) return { angle: hasClosingRow, distance: false };
+    // Sin amarre, el ángulo en P1 se mide al cerrar, entre el último punto y P2.
+    if (index === 0 && !hasOrientation) return { angle: false, distance: true };
     return { angle: true, distance: true };
   }
   // En una abierta amarrada, la primera fila lleva el ángulo de orientación
@@ -174,6 +179,45 @@ const SECONDS_DECIMALS_MESSAGE = "Los segundos admiten una sola cifra decimal.";
 function hasMoreDecimals(value: number, digits: number): boolean {
   const scaled = value * 10 ** digits;
   return Math.abs(scaled - Math.round(scaled)) > 1e-6;
+}
+
+/** Una estación tal como llega al guardado (`StationDraft` de la acción). */
+export interface StationCaptureDraft {
+  pointCode: string;
+  angleDeg: number | null;
+  angleMin: number | null;
+  angleSec: number | null;
+  readings: readonly { deg: number; min: number; sec: number }[];
+  horizontalDistance: number | null;
+}
+
+/**
+ * Los issues de captura de cada estación de un guardado. El ángulo de una
+ * estación con lecturas es su promedio, el mismo que el servidor guarda: la
+ * carga de la pantalla por pasos solo manda las lecturas (Fase 35). Sin
+ * lecturas, vale el ángulo que venga.
+ */
+export function stationCaptureIssues(
+  type: PolygonalType,
+  stations: readonly StationCaptureDraft[],
+  hasClosingRow: boolean,
+  hasOrientation: boolean,
+): CaptureIssues[] {
+  return stations.map((st, i) => {
+    const avg = averageReadings(st.readings.map((r) => dmsToDecimal(r.deg, r.min, r.sec)));
+    const dms = avg !== null && Number.isFinite(avg) ? decimalToDms(avg) : null;
+    return validatePolygonalStation(
+      {
+        pointCode: st.pointCode,
+        angleDeg: dms?.deg ?? st.angleDeg,
+        angleMin: dms?.min ?? st.angleMin,
+        angleSec: dms?.sec ?? st.angleSec,
+        distance: st.horizontalDistance,
+        readings: st.readings,
+      },
+      expectStationCapture(type, i, stations.length, hasClosingRow, hasOrientation),
+    );
+  });
 }
 
 /** ¿Tiene la lista de issues algún error bloqueante? */

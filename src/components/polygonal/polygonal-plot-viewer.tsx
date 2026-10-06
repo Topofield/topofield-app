@@ -28,6 +28,8 @@ interface PolygonalPlotViewerProps {
   input: PolygonalInput;
   result: PolygonalResult;
   reference?: { code: string; north: number; east: number } | null;
+  /** Lo medido, sin ajustar: ver `PolygonalPlot`. */
+  field?: boolean;
 }
 
 /**
@@ -35,7 +37,7 @@ interface PolygonalPlotViewerProps {
  * (Fase 13). Sin zoom con la rueda: capturaría el desplazamiento de la página
  * del editor, que es larga. El factor de exageración no cambia al acercarse.
  */
-export function PolygonalPlotViewer({ input, result, reference }: PolygonalPlotViewerProps) {
+export function PolygonalPlotViewer({ input, result, reference, field }: PolygonalPlotViewerProps) {
   const [view, setView] = useState<PlotView>(DEFAULT_VIEW);
   const drag = useRef<{ x: number; y: number; view: PlotView; scale: number } | null>(null);
   // El dibujo se hace con el ancho REAL del contenedor, para que una unidad
@@ -136,6 +138,7 @@ export function PolygonalPlotViewer({ input, result, reference }: PolygonalPlotV
           view={view}
           width={width}
           height={heightFor(width)}
+          field={field}
         />
       </div>
     </div>

@@ -5,11 +5,15 @@
 // la distancia al siguiente, así que la fila «V10 → D1» es la estación V10 con
 // el código de la siguiente. El «0 atrás» es el amarre, no una estación.
 
+import { normalizeAzimuth } from "@/lib/calculations/angles";
 import { observedAzimuths } from "@/lib/calculations/polygonal";
 import type { DeflectionDirection, PolygonalInput } from "@/types/polygonal";
 
-/** Qué es la fila en la cartera. */
-export type CaptureRole = "backsight" | "side" | "closing" | "closing_angle";
+/**
+ * Qué es la fila en la cartera. `pending` es el último punto, al que todavía no
+ * se le ha medido nada: desde él sigue la captura.
+ */
+export type CaptureRole = "backsight" | "side" | "closing" | "closing_angle" | "pending";
 
 export interface CaptureRow {
   /** Índice de la estación en `stations`; `null` en la fila del 0 atrás. */
@@ -31,11 +35,12 @@ const finite = (v: number | null | undefined): number | null =>
 
 /**
  * Las filas de la cartera. Con referencia, la primera es el 0 atrás. En una
- * cerrada, el lado que vuelve a la estación de partida es el cierre, y la
- * última fila de una amarrada es el cierre angular: contra la referencia si la
- * cartera cierra contra el amarre, o el ángulo del vértice de arranque hacia el
- * primer lado (esquema de la Vivero). En una abierta, el último punto no tiene
- * destino.
+ * cerrada, el lado que vuelve a la estación de partida es el cierre; si está
+ * amarrada, la cartera termina con el cierre angular en la estación de partida:
+ * contra la referencia si la cartera cierra contra el amarre, o el ángulo del
+ * vértice de arranque hacia el primer lado (esquema de la Vivero). El último
+ * punto, mientras no se haya medido nada desde él, es el pendiente. En una
+ * abierta con control, una deflexión en el último punto es su cierre angular.
  */
 export function captureRows(
   input: PolygonalInput,
@@ -64,12 +69,17 @@ export function captureRows(
     const last = i === n - 1;
     let to = stations[i + 1]?.pointCode ?? "";
     let role: CaptureRole = "side";
-    if (last && input.type === "closed") {
-      if (oriented) {
+    if (last) {
+      const returned = n > 1 && st.pointCode === amarre.start;
+      if (input.type === "closed" && oriented && returned) {
         role = "closing_angle";
         to = input.hasClosingRow ? (amarre.reference ?? "") : (stations[1]?.pointCode ?? "");
-      } else {
+      } else if (input.type === "closed" && !oriented && finite(st.distance) !== null) {
         to = stations[0]?.pointCode ?? "";
+      } else if (input.type === "open_controlled" && finite(st.angle) !== null && i > 0) {
+        role = "closing_angle";
+      } else {
+        role = "pending";
       }
     }
     if (input.type === "closed" && role === "side" && to === amarre.start && to !== "") {
@@ -88,4 +98,45 @@ export function captureRows(
   });
 
   return rows;
+}
+
+/**
+ * Lo medido, sin ajustar, para dibujarlo mientras se captura: el recorrido como
+ * una abierta sin control, con los azimuts de los ángulos medidos. Una abierta
+ * con control pasa sus deflexiones a ángulos a la derecha (Az + 180 + ángulo
+ * gira lo mismo que Az ± deflexión). Una cerrada sin amarre que ya cerró suma
+ * la vuelta al primer punto; la fila del cierre angular no abre lado.
+ */
+export function fieldTraverse(input: PolygonalInput): PolygonalInput {
+  const deflections = input.type === "open_controlled";
+  const stations = input.stations.map((st, i) =>
+    deflections && i > 0 && finite(st.angle) !== null
+      ? {
+          ...st,
+          angle: normalizeAzimuth((st.deflectionDirection === "left" ? -1 : 1) * st.angle + 180),
+          deflectionDirection: null,
+        }
+      : st,
+  );
+  const last = stations.at(-1);
+  if (input.type === "closed" && !input.hasOrientation && stations.length > 1 && finite(last?.distance) !== null) {
+    stations.push({
+      pointCode: stations[0]!.pointCode,
+      angle: Number.NaN,
+      deflectionDirection: null,
+      distance: null,
+      readings: [],
+    });
+  }
+  return {
+    ...input,
+    type: "open_uncontrolled",
+    hasClosingRow: false,
+    method: "bowditch",
+    leastSquares: null,
+    endNorth: null,
+    endEast: null,
+    endAzimuth: null,
+    stations,
+  };
 }

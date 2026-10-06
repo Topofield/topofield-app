@@ -10,7 +10,7 @@ import {
 } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 import { deletionReportsNotice } from "@/lib/reports/including";
-import { formatEquipmentLine } from "@/lib/utils/format";
+import { formatEquipmentLine, formatSavedAt } from "@/lib/utils/format";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
 import {
   POLYGONAL_TYPE_LABELS,
@@ -123,6 +123,8 @@ export function PolygonalHeader({
             {process.location && <span>{process.location}</span>}
             {responsible && <span>{responsible}</span>}
             {equipment !== "—" && <span>{equipment}</span>}
+            {/* Cada popup guarda al confirmar: no hay botón Guardar (Fase 35). */}
+            <span>Guardado {formatSavedAt(process.updated_at)}</span>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

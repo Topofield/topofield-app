@@ -4,18 +4,14 @@ import { logDbError } from "@/lib/errors/user-message";
 import { reopenBlocker, reopenPatch } from "@/lib/reopen";
 
 const TABLE = {
-  polygonal: "polygonal_processes",
   leveling: "leveling_processes",
 } as const;
 
 /**
- * Reabre una poligonal o una nivelación cerrada o rechazada (Fase 34): vuelve
- * a `calculated`, sin registro de cierre, y se edita como cualquier abierta.
- * La base admite solo esa transición (`is_reopening`).
- *
- * Lo comparten `reopenPolygonalProcessAction` y `reopenLevelingProcessAction`,
- * que solo difieren en la tabla y en la ruta que revalidan. El `project_id` sale
- * de la fila, no del cliente.
+ * Reabre una nivelación cerrada o rechazada (Fase 34): vuelve a `calculated`,
+ * sin registro de cierre, y se edita como cualquier abierta. La base admite
+ * solo esa transición (`is_reopening`). La poligonal ya no se cierra (Fase 35).
+ * El `project_id` sale de la fila, no del cliente.
  */
 export async function reopenProcess(
   kind: keyof typeof TABLE,

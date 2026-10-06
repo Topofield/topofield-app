@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { CARTERA_TT4, CARTERA_VIVERO, type Cartera } from "@/lib/demo/carteras";
 import { azimuthFromCoordinates } from "@/lib/calculations/angles";
-import { captureRows } from "./capture-rows";
+import { computePolygonal, polygonalTraces } from "@/lib/calculations/polygonal";
+import { captureRows, fieldTraverse } from "./capture-rows";
 import type { PolygonalInput } from "@/types/polygonal";
 
 function inputOf(c: Cartera): PolygonalInput {
@@ -97,12 +98,106 @@ describe("captureRows", () => {
     };
     const rows = captureRows(input, { start: "A", reference: null });
     expect(rows.map((r) => `${r.from}→${r.to}`)).toEqual(["A→B", "B→C", "C→"]);
+    expect(rows[2]!.role).toBe("pending");
     expect(rows[1]!.deflectionDirection).toBe("left");
     expect(rows[0]!.angle).toBeNull();
+  });
+
+  it("una cerrada a medio capturar: el último punto es el pendiente, no un cierre", () => {
+    const input = inputOf(CARTERA_TT4);
+    input.stations = input.stations.slice(0, 4).map((s, i) =>
+      i === 3 ? { ...s, angle: Number.NaN, distance: null } : s,
+    );
+    const rows = captureRows(input, { start: "V10", reference: "TT4" });
+    expect(rows.at(-1)!.role).toBe("pending");
+    expect(rows.at(-1)!.from).toBe("D3");
+    expect(rows.at(-1)!.to).toBe("");
+  });
+
+  it("una cerrada local, sin amarre: el último lado vuelve al primer punto", () => {
+    const base = { ...inputOf(CARTERA_TT4), hasOrientation: false, hasClosingRow: false };
+    const pts = ["P1", "P2", "P3", "P4"].map((pointCode) => ({
+      pointCode,
+      angle: 90,
+      deflectionDirection: null,
+      distance: 10,
+      readings: [],
+    }));
+    const done = captureRows({ ...base, stations: pts }, { start: "P1", reference: null });
+    expect(done.map((r) => `${r.from}→${r.to}:${r.role}`)).toEqual([
+      "P1→P2:side",
+      "P2→P3:side",
+      "P3→P4:side",
+      "P4→P1:closing",
+    ]);
+    const open = captureRows(
+      { ...base, stations: pts.map((p, i) => (i === 3 ? { ...p, distance: null, angle: Number.NaN } : p)) },
+      { start: "P1", reference: null },
+    );
+    expect(open.at(-1)!.role).toBe("pending");
   });
 
   it("sin estaciones, solo el 0 atrás", () => {
     const rows = captureRows({ ...inputOf(CARTERA_TT4), stations: [] }, { start: "V10", reference: "TT4" });
     expect(rows.map((r) => r.role)).toEqual(["backsight"]);
+  });
+});
+
+describe("fieldTraverse", () => {
+  const draw = (input: PolygonalInput) => {
+    const field = fieldTraverse(input);
+    const result = computePolygonal(field);
+    return polygonalTraces(field, result);
+  };
+
+  it("la TT4 sin ajustar: siete puntos, y el último cae junto a V10 con el error de cierre", () => {
+    const points = draw(inputOf(CARTERA_TT4))!;
+    expect(points.map((p) => p.code)).toEqual(["V10", "D1", "D2", "D3", "D4", "D5", "V10"]);
+    const last = points.at(-1)!.adjusted;
+    const gap = Math.hypot(last.north - CARTERA_TT4.startNorth, last.east - CARTERA_TT4.startEast);
+    expect(gap).toBeGreaterThan(0);
+    expect(gap).toBeLessThan(0.05);
+  });
+
+  it("a medio capturar se dibuja lo medido, hasta el punto pendiente", () => {
+    const input = inputOf(CARTERA_TT4);
+    input.stations = input.stations.slice(0, 4).map((s, i) => (i === 3 ? { ...s, angle: Number.NaN, distance: null } : s));
+    expect(draw(input)!.map((p) => p.code)).toEqual(["V10", "D1", "D2", "D3"]);
+  });
+
+  it("una cerrada local cerrada vuelve al primer punto", () => {
+    const base = { ...inputOf(CARTERA_TT4), hasOrientation: false, hasClosingRow: false, startAzimuth: 0 };
+    const pts = ["P1", "P2", "P3", "P4"].map((pointCode) => ({
+      pointCode,
+      angle: 90,
+      deflectionDirection: null,
+      distance: 10,
+      readings: [],
+    }));
+    const points = draw({ ...base, stations: pts })!;
+    expect(points.map((p) => p.code)).toEqual(["P1", "P2", "P3", "P4", "P1"]);
+    expect(points.at(-1)!.adjusted.north).toBeCloseTo(base.startNorth, 6);
+    expect(points.at(-1)!.adjusted.east).toBeCloseTo(base.startEast, 6);
+  });
+
+  it("abierta con control: la deflexión a la izquierda gira a la izquierda", () => {
+    const input: PolygonalInput = {
+      ...inputOf(CARTERA_TT4),
+      type: "open_controlled",
+      hasOrientation: false,
+      hasClosingRow: false,
+      startAzimuth: 0,
+      endNorth: 0,
+      endEast: 0,
+      angleType: "deflection",
+      stations: [
+        { pointCode: "A", angle: Number.NaN, deflectionDirection: null, distance: 10, readings: [] },
+        { pointCode: "B", angle: 90, deflectionDirection: "left", distance: 10, readings: [] },
+        { pointCode: "C", angle: Number.NaN, deflectionDirection: null, distance: null, readings: [] },
+      ],
+    };
+    const c = draw(input)!.at(-1)!.adjusted;
+    expect(c.north - input.startNorth).toBeCloseTo(10, 6);
+    expect(c.east - input.startEast).toBeCloseTo(-10, 6);
   });
 });

@@ -11,14 +11,11 @@ import {
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import { resolveCatalogPoint } from "@/lib/polygonal-amarre";
 import {
-  expectStationCapture,
   validateLeastSquaresWeights,
   hasCaptureErrors,
   referenceStartAzimuth,
-  validatePolygonalStation,
+  stationCaptureIssues,
 } from "@/lib/validators/polygonal";
-import { derivePolygonalCloseStatus } from "./close-status";
-import { reopenProcess } from "@/lib/supabase/reopen-process";
 import {
   planGeoreference,
   type ControlPoint,
@@ -27,13 +24,11 @@ import { getPolygonalProcess, getPolygonalStations } from "@/lib/supabase/querie
 import {
   ANGLE_INPUT_FORMATS,
   type AngleInputFormat,
-  type AngleType,
   type CorrectionMethod,
   type DeflectionDirection,
   type PolygonalInput,
   type PolygonalType,
 } from "@/types/polygonal";
-import type { PrecisionOrder } from "@/types/project";
 
 export interface ActionResult {
   ok: boolean;
@@ -95,33 +90,10 @@ export interface SavePolygonalPayload {
   equipmentBrand: string | null;
   equipmentModel: string | null;
   equipmentSerial: string | null;
-  /**
-   * @deprecated Fase 35: el orden y el tipo de ángulo se detectan, y las
-   * lecturas mínimas y las precisiones del equipo ya no se piden. El editor
-   * viejo los manda hasta que se retire; se ignoran.
-   */
-  angleType?: AngleType;
-  /** @deprecated ver `angleType`. */
-  angleReadingsMin?: number;
-  /** @deprecated ver `angleType`. */
-  precisionOrder?: PrecisionOrder;
-  /** @deprecated ver `angleType`. */
-  equipmentCalibrationDate?: string | null;
-  /** @deprecated ver `angleType`. */
-  angularPrecisionSeconds?: number | null;
-  /** @deprecated ver `angleType`. */
-  distancePrecisionMm?: number | null;
-  /** @deprecated ver `angleType`. */
-  distancePrecisionPpm?: number | null;
   /** Pesos del ajuste por mínimos cuadrados (Fase 14); solo con ese método. */
   lsSigmaAngleSeconds: number | null;
   lsSigmaDistanceM: number | null;
   lsDistanceMeasurements: number | null;
-}
-
-export interface ClosePolygonalPayload {
-  processId: string;
-  asRejected: boolean;
 }
 
 /**
@@ -268,31 +240,15 @@ export async function savePolygonalProcessAction(
   // directa a esta acción podría guardar una libreta que la interfaz habría
   // bloqueado. Antes solo se recalculaban los resultados, de modo que los
   // números eran del servidor pero los datos de campo no se comprobaban.
-  // Se usa `expectStationCapture` (la misma regla que el editor) para no
-  // bloquear captura parcial legítima: una estación inicial sin ángulo, o
-  // una final sin ángulo ni distancia, no es un error (§ 5.1).
-  const issues = payload.stations.map((st, i) =>
-    validatePolygonalStation(
-      {
-        pointCode: st.pointCode,
-        angleDeg: st.angleDeg,
-        angleMin: st.angleMin,
-        angleSec: st.angleSec,
-        distance: st.horizontalDistance,
-        // Cada lectura, que es lo que se guarda (Fase 24).
-        readings: st.readings,
-      },
-      // La misma llamada que el editor, con la fila de cierre y el amarre: sin
-      // ellos, la fila de cierre de una cerrada amarrada —que no lleva
-      // distancia— se rechazaba al guardar (Fase 26, C-19).
-      expectStationCapture(
-        payload.type,
-        i,
-        payload.stations.length,
-        payload.hasClosingRow,
-        hasOrientationOf(payload),
-      ),
-    ),
+  // `stationCaptureIssues` aplica `expectStationCapture` para no bloquear la
+  // captura parcial legítima: cada popup guarda, y el punto pendiente o la
+  // estación de partida sin amarre no llevan aún ángulo (§ 5.1, Fase 35).
+  // El ángulo de cada estación es el promedio de sus lecturas, como se guarda.
+  const issues = stationCaptureIssues(
+    payload.type,
+    payload.stations,
+    payload.hasClosingRow,
+    hasOrientationOf(payload),
   );
   if (hasCaptureErrors(issues)) {
     return {
@@ -431,59 +387,6 @@ export async function savePolygonalProcessAction(
   );
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
-}
-
-/**
- * Cierra un proceso (como `closed` o `rejected`) registrando la trazabilidad.
- *
- * El `status` final lo decide el servidor (`derivePolygonalCloseStatus`), no
- * el `asRejected` que manda el cliente: ver el comentario de esa función
- * para el porqué. El diálogo de cierre (`close-process-dialog.tsx`) sigue
- * evaluando `evaluatePolygonalClosure` para la experiencia normal — esto es
- * defensa en profundidad detrás de la UI, no un reemplazo.
- */
-export async function closePolygonalProcessAction(
-  payload: ClosePolygonalPayload,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Sesión no válida." };
-
-  const { data: process } = await supabase
-    .from("polygonal_processes")
-    .select("id, status, project_id, type, meets_tolerance")
-    .eq("id", payload.processId)
-    .maybeSingle();
-  if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso ya está cerrado." };
-  }
-
-  const derived = derivePolygonalCloseStatus(process, payload.asRejected);
-  if (!derived.ok) return { ok: false, error: derived.error };
-
-  const { error } = await supabase
-    .from("polygonal_processes")
-    .update({
-      status: derived.status,
-      closed_at: new Date().toISOString(),
-      closed_by: user.id,
-    })
-    .eq("id", payload.processId);
-  if (error) return { ok: false, error: "No se pudo cerrar el proceso." };
-
-  revalidatePath(
-    `/projects/${process.project_id}/polygonal/${payload.processId}`,
-  );
-  revalidatePath(`/projects/${process.project_id}`);
-  return { ok: true };
-}
-
-/** Reabre una poligonal cerrada o rechazada (Fase 34): ver `reopenProcess`. */
-export async function reopenPolygonalProcessAction(processId: string): Promise<ActionResult> {
-  return reopenProcess("polygonal", processId);
 }
 
 /** Duplica un proceso: misma configuración, sin estaciones, en borrador. */
