@@ -3040,8 +3040,8 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-05):** la nube tiene aplicadas las **treinta y dos**
-migraciones, hasta `20261003000000_reabrir_procesos` (Fase 34). Todas se
+**Estado actual (2026-10-05):** la nube tiene aplicadas las **treinta y tres**
+migraciones, hasta `20261005000000_reabrir_sin_anon` (Fase 34). Todas se
 empujaron antes del merge de su PR, salvo la de la Fase 29, que borra y fue
 después (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
