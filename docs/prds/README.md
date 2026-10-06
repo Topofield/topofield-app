@@ -38,6 +38,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 30 | Estabilidad de los BMs | `29-estabilidad-bms.md` | cerrada |
 | 31 | Avisos del cálculo | `30-avisos-del-calculo.md` | cerrada |
 | 32 | Rigor estadístico | `31-rigor-estadistico.md` | cerrada |
+| 33 | Header compacto | `32-header-compacto.md` | cerrada |
 | 34 | Reabrir procesos | `33-reabrir-procesos.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).

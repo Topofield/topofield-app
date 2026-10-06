@@ -102,11 +102,19 @@ Puede modificarlo o archivarlo cuando quiera.
 
 Cada usuario ve únicamente sus propios proyectos.
 
-**Tema claro u oscuro.** El icono de la cabecera, junto a **Manual** —también
-arriba a la derecha en la pantalla de inicio de sesión—, elige el tema:
-**Sistema** sigue la configuración del teléfono o del computador, y **Claro** u
-**Oscuro** lo fijan. La elección se recuerda en ese navegador. El informe
-impreso sale siempre en claro.
+**La barra de arriba.** Queda fija mientras baja por cualquier pantalla. A la
+izquierda, el logo vuelve al dashboard, y a su lado va la **ruta** de la
+pantalla —«Dashboard › Proyecto de ejemplo › Poligonal Famarena…»—: cada nombre
+lleva a ese nivel. En el teléfono, la ruta se reduce al nivel anterior, con
+«‹». A la derecha, **Equipos** (§ 12) y **Manual**, y un círculo con la inicial
+de su correo: el **menú de cuenta**, con el correo, el tema y **Cerrar
+sesión**.
+
+**Tema claro u oscuro.** En el menú de cuenta —y con el icono de arriba a la
+derecha en la pantalla de inicio de sesión— se elige el tema: **Sistema** sigue
+la configuración del teléfono o del computador, y **Claro** u **Oscuro** lo
+fijan. La elección se recuerda en ese navegador. El informe impreso sale
+siempre en claro.
 
 ---
 
@@ -253,8 +261,9 @@ Poligonales, nivelaciones y controles de asentamientos se abren en la misma
 pantalla.
 
 **La cabecera.** El nombre, el estado y el tipo del proceso, y dos acciones:
-**Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. Las
-migas de arriba devuelven al listado del que vino.
+**Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. Si el
+proceso está cerrado, una tercera: **Reabrir** (§ 8). La ruta de la barra
+devuelve al listado del que vino.
 
 **Las pestañas.** **Proceso** reúne todo el trabajo: configuración, captura,
 cálculo, gráfico y análisis, que se recalculan mientras escribe. **Informe**
@@ -1322,9 +1331,9 @@ número»**— y la aplicación no guarda hasta corregirlo, para que un dato mal
 escrito no se pierda como si la celda estuviera vacía.
 
 **A pleno sol**, el tema claro se lee mejor; de noche o bajo techo, el oscuro
-cansa menos. Se cambia con el icono de la cabecera (§ 2).
+cansa menos. Se cambia en el menú de cuenta (§ 2).
 
-![Panel en tema oscuro, en un teléfono](../../public/manual/29-tema-oscuro.png)
+![Panel en tema oscuro, en un teléfono, con el menú de cuenta abierto](../../public/manual/29-tema-oscuro.png)
 
 ---
 
@@ -1392,7 +1401,7 @@ Se pide:
 Al generar, la aplicación abre el documento maquetado —también al pulsar un
 informe de la lista de la pestaña **Informes**—, y allí **Imprimir o guardar
 como PDF** abre el diálogo del navegador: elija «Guardar como PDF» como
-destino. Las migas vuelven al proyecto, y **Eliminar informe** lo borra: los
+destino. La ruta de la barra vuelve al proyecto, y **Eliminar informe** lo borra: los
 procesos que incluye no cambian, y puede volver a generarlo. Un informe
 emitido no se edita: para corregirlo, elimínelo y genérelo de nuevo.
 
@@ -1446,7 +1455,7 @@ falta.
 
 ![Catálogo de equipos](../../public/manual/31-equipos.png)
 
-**Equipos**, en la cabecera, guarda sus estaciones totales y sus niveles para
+**Equipos**, en la barra de arriba, guarda sus estaciones totales y sus niveles para
 no teclearlos en cada proceso. Cada equipo lleva marca, modelo, número de
 serie, fecha de calibración y precisión: angular y de distancia en una
 estación total; tipo y desviación típica en un nivel. Cada sección tiene
@@ -1474,8 +1483,9 @@ guarda igual.
 ## 13. Preguntas frecuentes
 
 **La aplicación se ve oscura (o clara). ¿Cómo la cambio?**
-Con el icono de la cabecera: **Sistema**, **Claro** u **Oscuro** (§ 2). Con
-**Sistema**, sigue la configuración del teléfono o del computador.
+En el menú de cuenta —el círculo con su inicial, arriba a la derecha—:
+**Sistema**, **Claro** u **Oscuro** (§ 2). Con **Sistema**, sigue la
+configuración del teléfono o del computador.
 
 **Cerré un proceso por error. ¿Puedo reabrirlo?**
 Sí: con **Reabrir**, en la cabecera del proceso (§ 8). Vuelve a ser editable

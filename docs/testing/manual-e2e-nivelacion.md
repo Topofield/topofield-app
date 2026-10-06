@@ -65,7 +65,7 @@ Circuito BM-2); las de carteras reales, en **Proyecto de ejemplo** (El Verjón
 - Abrir **Circuito BM-1 (cerrado, tercer orden)**.
 - ✓ Cabecera: nombre, badge **Calculado**, «Nivelación cerrada · Tercer
   orden» y los botones **Exportar a Excel** y **Ver informe**; debajo, las
-  pestañas **Proceso · Informe**. Las migas vuelven al listado de
+  pestañas **Proceso · Informe**. La ruta de la barra vuelve al listado de
   nivelaciones.
 - ✓ Arriba, el veredicto: «Cumple tercer orden», **−8.0 mm**, «tolerancia
   ±11.4 mm», «Error de cierre sobre 0.900 km».

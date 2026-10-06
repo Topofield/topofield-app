@@ -18,7 +18,9 @@ interface PageHeaderProps {
 /**
  * Cabecera de página (Fase 22): migas, título con su badge, subtítulo y
  * acciones, cerrada por la raya de tinta del prototipo. Cada pantalla la
- * armaba a mano, con tamaños y pesos distintos.
+ * armaba a mano, con tamaños y pesos distintos. Desde la Fase 33 las migas se
+ * pintan aquí pero se ven en la barra fija (ver `Breadcrumbs`): fuera del
+ * flujo, no ocupan fila y el título queda arriba.
  *
  * La línea del título es un `<header>`: al imprimir se oculta con el resto de
  * la navegación (`globals.css` oculta todo `header` y `nav`).

@@ -31,7 +31,7 @@ export default async function NewPolygonalPage({
           { label: "Nueva poligonal" },
         ]}
       />
-      <h1 className="mt-2 text-2xl font-bold">
+      <h1 className="text-2xl font-bold">
         Nuevo proceso poligonal
       </h1>
       <p className="mt-1 text-sm text-ink-2">

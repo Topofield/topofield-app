@@ -8,7 +8,7 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-10-02)
+## Estado (2026-10-03)
 
 El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
 navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
@@ -64,6 +64,16 @@ distorsión angular. Es A3, en «Control de asentamientos», y la **Fase 29**
 ([`prds/28-puntos-sin-posicion.md`](./prds/28-puntos-sin-posicion.md)),
 **cerrada** el 2026-10-01, después de la 28 (decisión del usuario). Retiró la
 distorsión de CR2 (D-9).
+
+El 2026-10-03 el usuario pidió una navegación más moderna, tipo app web, con
+un header compacto: «Navegación», al final. HC1 es la **Fase 33**
+([`prds/32-header-compacto.md`](./prds/32-header-compacto.md)), **cerrada** el
+2026-10-03; HC2 queda sin fase.
+
+Ese mismo día pidió poder **reabrir** lo cerrado: «Reabrir procesos», al
+final. Es la **Fase 34**
+([`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md)), **cerrada**
+el 2026-10-03, trabajada en un worktree aparte mientras la 33 seguía abierta.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -615,6 +625,34 @@ La segunda mitad, la distorsión angular en el semáforo (D-9), se retiró el
 - Dispersión de lecturas con el cuantil del rango de m lecturas.
 - Promedio encadenado de asentamientos.
 - «Acelerando» solo por encima del ruido de la velocidad.
+
+## Navegación
+
+Pedida el 2026-10-03: «ayúdame a iterar sobre la navegación y el header. Una
+UX más moderna tipo app web, con fácil navegación y header compacto». El
+usuario delegó el diseño: «rediseña el header como recomiendes».
+
+### HC1 · Header compacto con la ruta
+
+> **Resuelta en la Fase 33** ([`prds/32-header-compacto.md`](./prds/32-header-compacto.md)),
+> cerrada el 2026-10-03: una barra fija de 48 px con la ruta dentro, Equipos y
+> Manual con icono y un menú de cuenta. Se conserva el texto de la petición
+> como registro.
+
+El header ocupa 61 px y se va con el scroll. Debajo, cada página apila migas,
+título y pestañas: el título empieza a 129 px en escritorio y a 133 en el
+móvil, y para navegar hay que subir hasta las migas. La propuesta es una barra
+fija de 48 px con la ruta dentro, Equipos y Manual con icono, y un menú de
+cuenta con el correo, el tema y «Cerrar sesión».
+
+### HC2 · Saltar entre proyectos y procesos desde la ruta
+
+Sin fase. Es la continuación natural de HC1: un selector en cada miga de la
+barra —el proyecto, el proceso o el lugar— para ir a otro sin pasar por el hub
+ni por el dashboard. Se deja fuera de la Fase 33 para ver primero cómo
+funciona la barra. La revisión de la Fase 33 dejó un detalle para esta misma
+iteración: entre 640 y unos 860 px la ruta se trunca por igual, y el nombre de
+la página actual es lo que menos se lee.
 
 ## Reabrir procesos (Fase 34)
 

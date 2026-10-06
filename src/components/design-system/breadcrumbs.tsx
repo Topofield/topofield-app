@@ -37,6 +37,13 @@ export function resolveBreadcrumbs(
  * Ruta de navegación entre los tres niveles de la aplicación
  * (dashboard → proyecto → proceso). En móvil se reduce al retorno al nivel
  * anterior, que es el control que hace falta en pantalla pequeña.
+ *
+ * Va dentro de la barra fija (Fase 33). La pinta cada página en el servidor,
+ * porque solo ella conoce los nombres del proyecto y del proceso, y el CSS la
+ * coloca sobre la barra: `fixed`, arriba, en el hueco que marcan
+ * `--ruta-inicio` y `--ruta-fin` (`globals.css`). Así no hay JavaScript, ni
+ * parpadeo al cargar, ni salto del contenido. Una raya corta la separa del
+ * logo.
  */
 export function Breadcrumbs({
   items,
@@ -49,12 +56,19 @@ export function Breadcrumbs({
   if (trail.length === 0) return null;
 
   return (
-    <nav aria-label="Ruta de navegación" className={cn("min-w-0", className)}>
+    <nav
+      aria-label="Ruta de navegación"
+      className={cn(
+        "fixed top-0 right-(--ruta-fin) left-(--ruta-inicio) z-45 flex h-(--barra-alto) min-w-0 items-center",
+        "before:mr-3 before:h-5 before:w-px before:shrink-0 before:bg-rule",
+        className,
+      )}
+    >
       {/* Móvil: solo el retorno al nivel anterior. */}
       {parent?.href && (
         <Link
           href={parent.href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-ink underline-offset-2 hover:underline sm:hidden"
+          className="inline-flex min-w-0 max-w-full items-center gap-1 text-sm font-medium text-ink underline-offset-2 hover:underline sm:hidden"
         >
           <span aria-hidden>‹</span>
           <span className="truncate">{parent.label}</span>

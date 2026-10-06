@@ -1,5 +1,7 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { resolveBreadcrumbs } from "./breadcrumbs";
+import { Breadcrumbs, resolveBreadcrumbs } from "./breadcrumbs";
 
 describe("resolveBreadcrumbs", () => {
   it("marca el último elemento como actual y sin enlace", () => {
@@ -49,5 +51,42 @@ describe("resolveBreadcrumbs", () => {
     expect(r.trail).toHaveLength(0);
     expect(r.trail[0]?.label).toBeUndefined();
     expect(r.parent).toBeNull();
+  });
+});
+
+describe("Breadcrumbs en la barra (Fase 33)", () => {
+  // La página pinta su ruta en el servidor, con sus nombres, y el CSS la
+  // coloca dentro de la barra fija: sin JavaScript, sin parpadeo y sin salto.
+  // Sin esta colocación, las migas vuelven a ocupar una fila de la página.
+  it("se coloca fija, arriba, en el hueco entre el logo y los iconos", () => {
+    const html = renderToStaticMarkup(
+      createElement(Breadcrumbs, {
+        items: [
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Lote catastral", href: "/projects/1" },
+          { label: "Cuadrado" },
+        ],
+      }),
+    );
+    const nav = html.match(/<nav[^>]*class="([^"]*)"/)?.[1] ?? "";
+    for (const c of ["fixed", "top-0", "h-(--barra-alto)", "left-(--ruta-inicio)", "right-(--ruta-fin)"]) {
+      expect(nav.split(" ")).toContain(c);
+    }
+  });
+
+  it("en el teléfono, el «‹ nivel anterior» se puede encoger y se trunca", () => {
+    // Sin min-w-0, un ítem flex no baja de su contenido: un nombre de más de
+    // unos 30 caracteres salía del hueco y tapaba Equipos, Manual y la cuenta.
+    const html = renderToStaticMarkup(
+      createElement(Breadcrumbs, {
+        items: [
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Conjunto Residencial Los Pinos — etapa 2", href: "/projects/1" },
+          { label: "Cuadrado" },
+        ],
+      }),
+    );
+    const back = html.match(/<a[^>]*class="([^"]*sm:hidden[^"]*)"/)?.[1] ?? "";
+    expect(back.split(" ")).toContain("min-w-0");
   });
 });

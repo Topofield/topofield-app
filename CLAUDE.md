@@ -34,7 +34,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/components/{polygonal,leveling,settlement}/` → editores y paneles de cada módulo
 - `src/components/process/` → la pantalla común de un proceso (`ProcessShell`) y su informe
 - `src/components/reports/` → alta del informe y sus secciones, compartidas con la pestaña Informe
-- `src/components/projects/`, `navigation/` → dashboard, hub y guarda de cambios sin guardar
+- `src/components/projects/`, `navigation/` → dashboard, hub, la barra superior fija con su menú de cuenta (Fase 33) y la guarda de cambios sin guardar
 - `src/components/equipment/` → página del catálogo de equipos, selector «Tomar del catálogo» y su contexto, que carga el layout de `(app)`
 - `src/lib/calculations/` → algoritmos topográficos puros (sin dependencias de React)
 - `src/lib/calculations/polygonal.ts` → Bowditch, Tránsito, Crandall, Mínimos cuadrados (con `least-squares.ts`)
@@ -71,7 +71,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Consultar `PRD-TopoField.md` por sección según la tarea: `§3` modelo de datos y SQL · `§4.6` cierre y bloqueo · `§5` reglas de validación (`§5.4` tolerancias por orden) · `§6` algoritmos de cálculo · `§9` orden de implementación.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 34, todas cerradas salvo la 33 (en curso).
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 34, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.
