@@ -10,6 +10,7 @@ import type { PolygonalProcess, PolygonalStationWithReadings } from "@/types/pol
 import type { ReferencePoint } from "@/types/project";
 import { formatRotation, planGeoreference, type ControlPoint } from "./georeference-plan";
 import { polygonalInputOf } from "./polygonal-draft";
+import { callAction } from "@/lib/errors/action-call";
 
 interface GeoreferenceDialogProps {
   process: PolygonalProcess;
@@ -92,10 +93,8 @@ export function GeoreferenceDialog({
   function confirm() {
     setError(null);
     startTransition(async () => {
-      const r = await georeferencePolygonalProcessAction(
-        process.id,
-        toControlPoint(a),
-        toControlPoint(b),
+      const r = await callAction(() =>
+        georeferencePolygonalProcessAction(process.id, toControlPoint(a), toControlPoint(b)),
       );
       if (r.ok) setOpen(false);
       else setError(r.error ?? "No se pudo georreferenciar.");

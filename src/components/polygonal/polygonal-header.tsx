@@ -22,6 +22,7 @@ import { PolygonalDetailsDialog, type PolygonalDetails } from "./polygonal-detai
 import { detectedOrderOf } from "./polygonal-draft";
 import { draftOf, payloadOf } from "./polygonal-save";
 
+import { callAction } from "@/lib/errors/action-call";
 interface PolygonalHeaderProps {
   projectId: string;
   projectName: string;
@@ -77,13 +78,13 @@ export function PolygonalHeader({
       equipmentModel: blank(details.equipmentModel),
       equipmentSerial: blank(details.equipmentSerial),
     };
-    return savePolygonalProcessAction(payloadOf(process.id, draft));
+    return callAction(() => savePolygonalProcessAction(payloadOf(process.id, draft)));
   }
 
   function duplicate() {
     setError(null);
     startTransition(async () => {
-      const r = await duplicatePolygonalProcessAction(process.id);
+      const r = await callAction(() => duplicatePolygonalProcessAction(process.id));
       if (r.ok) router.push(hubHref);
       else setError(r.error ?? "No se pudo duplicar la poligonal.");
     });
@@ -92,7 +93,7 @@ export function PolygonalHeader({
   function remove() {
     setError(null);
     startTransition(async () => {
-      const r = await deletePolygonalProcessAction(process.id);
+      const r = await callAction(() => deletePolygonalProcessAction(process.id));
       if (r.ok) router.push(hubHref);
       else setError(r.error ?? "No se pudo eliminar la poligonal.");
     });

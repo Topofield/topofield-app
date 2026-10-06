@@ -7,6 +7,7 @@ import { setAngleInputFormatAction } from "@/app/(app)/projects/[id]/polygonal/[
 import { cn } from "@/lib/utils/cn";
 import type { AngleInputFormat } from "@/types/polygonal";
 import { AngleFormatToggle } from "./angle-input";
+import { callAction } from "@/lib/errors/action-call";
 
 export const POLYGONAL_STEPS = [
   { id: "datos", label: "Datos" },
@@ -39,7 +40,7 @@ export function PolygonalSteps({ basePath, active, processId, angleFormat }: Pol
     setFormat(next);
     setError(null);
     queue.current = queue.current.then(() =>
-      setAngleInputFormatAction(processId, next).then((r) => {
+      callAction(() => setAngleInputFormatAction(processId, next)).then((r) => {
         if (r.ok) router.refresh();
         else setError(r.error ?? "No se pudo guardar el formato.");
       }),

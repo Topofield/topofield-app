@@ -14,6 +14,7 @@ import { AngleInput } from "./angle-input";
 import { dmsFromFields, fieldsOf, formatAngle } from "./angle-format";
 import { azimuthToReference, type AmarreEdit, type Dms3, type PolygonalDraft } from "./polygonal-save";
 
+import { callAction } from "@/lib/errors/action-call";
 /** Cómo se pone el 0 atrás. */
 type ReferenceMode = "point" | "azimuth" | "none";
 
@@ -181,17 +182,17 @@ export function AmarreDialog({ projectId, draft, referencePoints, angleFormat, o
     startTransition(async () => {
       // Sin 0 atrás la partida puede ser local: solo el amarre va al catálogo.
       if (mode !== "none") {
-        const saved = await ensureCatalogPointAction(projectId, startPoint);
+        const saved = await callAction(() => ensureCatalogPointAction(projectId, startPoint));
         if (!saved.ok) return setError(saved.error);
       }
       let referencePointId: string | null = null;
       if (refPoint) {
-        const saved = await ensureCatalogPointAction(projectId, refPoint);
+        const saved = await callAction(() => ensureCatalogPointAction(projectId, refPoint!));
         if (!saved.ok) return setError(saved.error);
         referencePointId = saved.id;
       }
       if (endPoint) {
-        const saved = await ensureCatalogPointAction(projectId, endPoint);
+        const saved = await callAction(() => ensureCatalogPointAction(projectId, endPoint!));
         if (!saved.ok) return setError(saved.error);
       }
       const amarre: AmarreEdit = {

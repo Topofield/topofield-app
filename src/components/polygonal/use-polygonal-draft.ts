@@ -6,6 +6,7 @@ import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import type { ReferencePoint } from "@/types/project";
 import type { PolygonalInput, PolygonalProcess, PolygonalStationWithReadings } from "@/types/polygonal";
 import { draftOf, inputOf, payloadOf, type PolygonalDraft } from "./polygonal-save";
+import { callAction } from "@/lib/errors/action-call";
 
 /**
  * El borrador de una poligonal en los pasos Datos y Ajuste (Fase 35), y su
@@ -24,7 +25,8 @@ export function usePolygonalDraft(process: PolygonalProcess, stations: Polygonal
   const draft = useMemo(() => saved ?? draftOf(process, stations), [saved, process, stations]);
   const save = useCallback(
     async (next: PolygonalDraft) => {
-      const response = await savePolygonalProcessAction(payloadOf(process.id, next));
+      // Un fallo de red vuelve como error al popup, sin perder lo tecleado.
+      const response = await callAction(() => savePolygonalProcessAction(payloadOf(process.id, next)));
       if (response.ok) setSaved(next);
       return response;
     },

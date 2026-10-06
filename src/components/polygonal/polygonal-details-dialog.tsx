@@ -6,6 +6,7 @@ import { TotalStationIdentity } from "@/components/equipment/equipment-picker";
 import { createPolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/create-actions";
 import { cn } from "@/lib/utils/cn";
 import { POLYGONAL_TYPES, POLYGONAL_TYPE_LABELS, type PolygonalType } from "@/types/polygonal";
+import { callAction } from "@/lib/errors/action-call";
 
 /** Lo que el alta pide (Fase 35, decisión 1). */
 export interface PolygonalDetails {
@@ -71,7 +72,7 @@ export function PolygonalDetailsDialog(props: DialogProps) {
     }
     startTransition(async () => {
       if (props.mode === "create") {
-        const response = await createPolygonalProcessAction({
+        const response = await callAction(() => createPolygonalProcessAction({
           projectId: props.projectId,
           name: details.name,
           location: details.location,
@@ -81,7 +82,7 @@ export function PolygonalDetailsDialog(props: DialogProps) {
           equipmentBrand: details.equipmentBrand,
           equipmentModel: details.equipmentModel,
           equipmentSerial: details.equipmentSerial,
-        });
+        }));
         // En éxito la acción redirige; solo vuelve con un error.
         if (response?.error) setError(response.error);
         return;
