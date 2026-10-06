@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-05 · Fase 34 cerrada · 1044 tests y 99
+**Última actualización:** 2026-10-05 · Fase 34 cerrada · 1050 tests y 101
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -697,7 +697,11 @@ de un lugar cerrado y el de la C0 no cambiaron: miran el estado **actual** del
 padre, así que se liberan solos al reabrirlo. Una visita de un lugar cerrado no
 se reabre hasta reabrir el lugar, porque su trigger rechaza escribirla. Lo
 prueba `reabrir_procesos.test.sql` (§ 9). Las cuatro acciones
-(`reopen…Action`) aplican las reglas puras de `src/lib/reopen.ts`.
+(`reopen…Action`) aplican las reglas puras de `src/lib/reopen.ts`; las de
+poligonal y nivelación comparten `src/lib/supabase/reopen-process.ts`.
+`is_reopening` no la ejecuta `anon` (`20261005000000_reabrir_sin_anon.sql`),
+como las funciones de guardado: `authenticated` la conserva porque los
+triggers corren con el rol de la sesión.
 
 **Excepción de posición (Fase 15).** La cabecera de poligonal tiene su propia
 función, `reject_update_on_closed_polygonal_process()` —la genérica la
@@ -1991,7 +1995,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1044 tests en 69 archivos, Vitest, entorno `node` **sin jsdom**. Además, 99
+1050 tests en 69 archivos, Vitest, entorno `node` **sin jsdom**. Además, 101
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2030,10 +2034,10 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `components/leveling/leveling-verdict.test.ts` | 7 | Veredicto de la nivelación: el tramo 2 por su cierre (−0.4 mm sobre 1.397 km), El Verjón por su discrepancia (5.0 mm), fuera de tolerancia, abierta sin vuelta e incompleta (Fase 22); la vuelta de una cerrada decide si no cumple (Fase 26) |
 | `components/leveling/profile-data.test.ts` | 2 | Perfil de la nivelación con las carteras reales: el tramo 2 de 0 a 1397 m, de C10 a C10; la vuelta de El Verjón del final de la ida al origen (Fase 22) |
 | `lib/reports/responsible.test.ts` | 3 | Nombre del responsable del cierre: nombre completo, nombre y apellido, correo; nunca el id (Fase 22) |
-| `lib/reports/including.test.ts` | 2 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22) |
+| `lib/reports/including.test.ts` | 5 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22); el aviso al borrar algo que está en informes, con uno y con varios (Fase 34) |
 | `lib/reports/leveling-report.test.ts` | 7 | La sección de nivelación con vuelta: la abierta sin filas de cierre, con su discrepancia y «fuera de tolerancia»; la cerrada con los dos; el resumen de precisiones de cada una (Fase 23); la tabla de cotas adoptadas, y sin ella si no se compensó (Fase 28) |
 | `lib/reports/cover.test.ts` | 2 | La portada del informe sale de `cover`, no del proyecto (Fase 23) |
-| `lib/reports/state.test.ts` | 4 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24) |
+| `lib/reports/state.test.ts` | 7 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24); el pie del consolidado, con todo cerrado y con uno o varios reabiertos (Fase 34) |
 | `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
 | `lib/reopen.test.ts` | 12 | Reabrir: el estado al que vuelve cada uno, sin registro de cierre; lo cerrado o rechazado se reabre y lo abierto no; una visita de un lugar cerrado espera al lugar; el aviso de los informes, con uno y con varios (Fase 34) |
 | `components/polygonal/stations-table.test.ts` | 6 | La fila de escritorio: nombre accesible con el número de estación en código, sentido y distancia, y el código sin cortar (Fase 24); la fila de orientación de una abierta amarrada y la coma decimal en las lecturas (Fase 26) |
@@ -2079,7 +2083,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
 | `informe_congelado.test.sql` | 6 | Un `UPDATE` de `reports` lo rechaza el trigger y, para la sesión, no toca filas; renombrar el proyecto no cambia la portada; sin portada no se emite; el borrado funciona |
 | `estabilidad_bms.test.sql` | 6 | `save_visit` guarda la cota de catálogo de un BM de control; una visita cerrada no la deja cambiar y la conserva aunque se corrija el catálogo (Fase 30) |
-| `reabrir_procesos.test.sql` | 25 | Reabrir una poligonal cerrada, una nivelación rechazada, un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado en las cuatro; un rechazado no pasa a cerrado sin reabrirse; lo cerrado sigue sin editarse ni borrarse, con la georreferenciación intacta; tras reabrir, estaciones, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34) |
+| `reabrir_procesos.test.sql` | 27 | `is_reopening` la ejecuta `authenticated` y no `anon`; reabrir una poligonal cerrada, una nivelación rechazada, un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado en las cuatro; un rechazado no pasa a cerrado sin reabrirse; lo cerrado sigue sin editarse ni borrarse, con la georreferenciación intacta; tras reabrir, estaciones, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34) |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin

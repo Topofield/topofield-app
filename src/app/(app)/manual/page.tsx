@@ -391,7 +391,9 @@ export default function ManualPage() {
           <li>
             <strong>Eliminar</strong> — lo borra con lo que contiene, con
             confirmación previa. Un lugar con alguna visita cerrada no se puede
-            eliminar.
+            eliminar. Si lo que borra está en un informe consolidado —porque se
+            reabrió después de emitirlo—, la confirmación lo avisa: el informe
+            quedará sin esa sección.
           </li>
         </ul>
 
@@ -399,7 +401,8 @@ export default function ManualPage() {
           Un proceso cerrado o rechazado, o un lugar cerrado, no admite
           renombrarse ni eliminarse. Si necesita rehacer un levantamiento
           cerrado, duplíquelo: obtendrá una copia editable y el original queda
-          intacto como constancia.
+          intacto como constancia. Para corregir el mismo proceso, reábralo
+          desde su pantalla (§ 8).
         </Nota>
 
         <p>
@@ -2181,8 +2184,8 @@ export default function ManualPage() {
           <li>
             <strong>Reabrir</strong> (§ 8): si reabre un proceso que el informe
             incluye, el informe muestra sus datos actuales y, mientras siga
-            abierto, «—» en su registro de cierre. Un PDF ya descargado no
-            cambia.
+            abierto, «—» en su registro de cierre, y el pie dice que se
+            reabrió después de emitirlo. Un PDF ya descargado no cambia.
           </li>
         </ul>
         <ul className="ml-5 list-disc space-y-1">

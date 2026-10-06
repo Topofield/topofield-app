@@ -30,9 +30,27 @@ documentación.
 >   cierre, y un rechazado que pasa a cerrado sin reabrirse—, que se vieron
 >   fallar con un `is_reopening` laxo antes de pasar con el real. También
 >   encontró una frase del manual que se contradecía con el botón nuevo y una
->   errata de la doc técnica. Quedan sin hacer: pasar el error de las dos
->   acciones de proceso por `logDbError`, avisar de los informes al borrar un
->   proceso reabierto y revocar `execute` de `is_reopening` a `anon`.
+>   errata de la doc técnica. Lo que quedó sin hacer se corrigió después del
+>   merge (abajo).
+> - **Correcciones tras el merge** (2026-10-05, a petición del usuario: los
+>   diez hallazgos de una segunda revisión, rama `fase-34-correcciones`):
+>   - el pie del informe consolidado dice qué se reabrió después de emitirlo,
+>     en vez de «con procesos cerrados»;
+>   - borrar desde el hub avisa de los informes que perderán la sección;
+>   - `is_reopening` deja de estar expuesta a `anon`
+>     (`20261005000000_reabrir_sin_anon.sql`, con su `db push`);
+>   - reabrir poligonal y nivelación comparten
+>     `src/lib/supabase/reopen-process.ts`, que pasa el error por
+>     `logDbError`;
+>   - reabrir una visita revalida su vista, y el diálogo ya no llama a
+>     `router.refresh()`;
+>   - el editor de poligonal se remonta al cerrar o reabrir: lo tocado en
+>     solo lectura, como el formato de ángulo, no pasa al proceso abierto;
+>   - los informes se piden una vez por página —la pestaña Informe los
+>     recibe—, en paralelo en la del lugar, y el «cerrado» de las páginas
+>     sale de `processReportState`.
+>   - El manual también dice que lo cerrado se puede reabrir en la nota del
+>     hub, que la revisión no había visto.
 > - **Capturas:** cambian la 09, la 10, la 22 y la 30, por el botón en la
 >   cabecera. La 30 trae además las fechas del seed actual.
 > - **Verificación en pantalla** en local, a 1280 px y a 390 px: 32
