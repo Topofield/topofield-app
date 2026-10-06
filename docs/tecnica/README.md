@@ -3168,11 +3168,11 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-06):** la nube tiene aplicadas **treinta y cuatro**
-de las treinta y cinco migraciones, hasta `20261005010000_ux_poligonal` (Fase
-35, paso 1). Falta `20261006000000_poligonal_sin_cierre`, el paso 2, que borra
-`closed_at` y `closed_by` y va después del merge (ver abajo). Todas las demás se
-empujaron antes del merge de su PR, salvo la de la Fase 29, que también borra. Las dos de la Fase 26 —el CHECK de distancias por
+**Estado actual (2026-10-06):** la nube tiene aplicadas las **treinta y cinco**
+migraciones, hasta `20261006000000_poligonal_sin_cierre` (Fase 35, paso 2).
+Todas se empujaron antes del merge de su PR, salvo las dos que borran
+columnas, que fueron después: la de la Fase 29 y el paso 2 de la Fase 35 (ver
+abajo). Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
 índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
 filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
@@ -3192,7 +3192,30 @@ solo `authenticated` tiene `EXECUTE` (además de `postgres` y `service_role`).
 El paso 1 de la Fase 35 se empujó antes del merge desde una copia del
 repositorio sin el paso 2, porque `db push` aplica **todas** las migraciones
 pendientes. Pasó a `calculated` la única poligonal cerrada que había, y quedaron
-tres calculadas y una en curso.
+tres calculadas y una en curso. El paso 2 se aplicó después del merge del PR
+#26, con el despliegue de Vercel ya en producción. Verificado después:
+`closed_at` y `closed_by` no existen, el CHECK de `status` admite solo `draft`,
+`in_progress` y `calculated`, y en la tabla queda solo el trigger de
+`updated_at`.
+
+Con las dos aplicadas, las poligonales de producción se leyeron en solo lectura
+y se calcularon con el motor de la app (`polygonalInputOf`), contra las hojas
+de `docs/carteras/`:
+
+| Poligonal y método | Contra | Diferencia máxima |
+|---|---|---|
+| TT4, Brújula | hoja `BRUJULA` | 0.005 mm; ángulos, suma y error de cierre exactos |
+| TT4, Tránsito y Crandall | hojas corregidas (`poligonales-corregido.xlsx`) | 0.005 mm |
+| TT4, Tránsito y Crandall | hojas originales | 14.1 mm y 2.6 mm, sus defectos conocidos (§ 6) |
+| Vivero, mínimos cuadrados | cálculo independiente del PRD 13 | 0.001″, 0.005 mm en las distancias y 0.045 mm en las coordenadas, que el PRD da a 0.1 mm |
+| Vivero, mínimos cuadrados | hoja original | 2.2 mm: la hoja no cumple sus condiciones |
+
+Los 0.005 mm de la TT4 son el azimut de partida, que la app guarda a la décima
+de segundo (330°35′57.2″ frente a 57.23″ en la hoja). Lo guardado en
+producción coincide con lo recalculado: error, precisión y coordenadas con
+menos de 0.05 mm. El orden detectado es tercero en la TT4 y segundo en la
+Vivero, que guarda el tercero que se declaró antes de la fase; las pantallas
+muestran el detectado.
 
 La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
 Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo
