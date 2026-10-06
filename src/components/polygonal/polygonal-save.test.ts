@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CARTERA_TT4 } from "@/lib/demo/carteras";
 import { azimuthFromCoordinates, decimalToDms } from "@/lib/calculations/angles";
 import { computePolygonal, computePolygonalDetected } from "@/lib/calculations/polygonal";
-import { polygonalInputOf } from "./polygonal-draft";
+import { detectedOrderOf, polygonalInputOf } from "./polygonal-draft";
 import { draftOf, inputOf, payloadOf } from "./polygonal-save";
 import type { PolygonalProcess, PolygonalStationWithReadings } from "@/types/polygonal";
 
@@ -103,13 +103,36 @@ describe("polygonal-save", () => {
     expect(p.stations).toHaveLength(7);
     expect(p.stations[0]!.readings).toEqual([{ deg: 211, min: 15, sec: 7 }]);
     expect(p.stations[6]!.horizontalDistance).toBeNull();
-    // Sin mínimos cuadrados, los pesos no viajan.
     expect(p.lsSigmaAngleSeconds).toBeNull();
+  });
+
+  it("los pesos de mínimos cuadrados viajan con cualquier método: volver a él no los pide de nuevo", () => {
+    const conPesos = {
+      ...process,
+      ls_sigma_angle_seconds: 2,
+      ls_sigma_distance_m: 0.011,
+      ls_distance_measurements: 2,
+    } as PolygonalProcess;
+    const p = payloadOf("p", draftOf(conPesos, stations));
+    expect(p.correctionMethod).toBe("bowditch");
+    expect([p.lsSigmaAngleSeconds, p.lsSigmaDistanceM, p.lsDistanceMeasurements]).toEqual([2, 0.011, 2]);
   });
 
   it("una estación sin lecturas guardadas toma su ángulo como única lectura", () => {
     const sin = stations.map((s) => ({ ...s, polygonal_angle_readings: [] }));
     expect(draftOf(process, sin).stations[1]!.readings).toEqual([{ deg: 124, min: 29, sec: 42 }]);
+  });
+
+  it("detectedOrderOf: el orden de lo guardado se detecta, no se lee de la columna vieja", () => {
+    const viejo = { ...process, precision_order: "primer_orden" } as PolygonalProcess;
+    expect(detectedOrderOf(viejo, stations)).toEqual({ order: "tercer_orden", verifiable: true });
+    const abierta = { ...process, type: "open_uncontrolled" } as PolygonalProcess;
+    expect(detectedOrderOf(abierta, stations)).toEqual({ order: null, verifiable: false });
+  });
+
+  it("una abierta sin control no guarda mínimos cuadrados: no tiene nada que ajustar", () => {
+    const abierta = { ...process, type: "open_uncontrolled", correction_method: "least_squares" } as PolygonalProcess;
+    expect(payloadOf("p", draftOf(abierta, stations)).correctionMethod).toBe("bowditch");
   });
 
   it("en una abierta la casilla de cierre angular no viaja", () => {

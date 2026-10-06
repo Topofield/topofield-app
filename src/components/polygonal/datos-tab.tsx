@@ -2,16 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Alert, Button, Card } from "@/components/design-system";
-import { savePolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
-import { computePolygonal, computePolygonalDetected } from "@/lib/calculations/polygonal";
+import { computePolygonal } from "@/lib/calculations/polygonal";
 import { cn } from "@/lib/utils/cn";
 import type { ReferencePoint } from "@/types/project";
-import type {
-  AngleInputFormat,
-  PolygonalInput,
-  PolygonalProcess,
-  PolygonalStationWithReadings,
-} from "@/types/polygonal";
+import type { AngleInputFormat, PolygonalProcess, PolygonalStationWithReadings } from "@/types/polygonal";
 import { AmarreCard } from "./amarre-card";
 import { AmarreDialog } from "./amarre-dialog";
 import { AngularClosureSummary } from "./angular-closure-summary";
@@ -20,7 +14,8 @@ import { isClosed, needsClosingAngle, removeLastMeasurement } from "./capture-ed
 import { MeasurementDialog, type MeasurementMode } from "./measurement-dialog";
 import { MeasurementsTable } from "./measurements-table";
 import { PolygonalPlotViewer } from "./polygonal-plot-viewer";
-import { draftOf, inputOf, payloadOf, type PolygonalDraft } from "./polygonal-save";
+import type { PolygonalDraft } from "./polygonal-save";
+import { usePolygonalComputation, usePolygonalDraft } from "./use-polygonal-draft";
 
 type Dialog = { kind: "amarre" } | { kind: "measurement"; mode: MeasurementMode; opened: number };
 
@@ -39,55 +34,26 @@ interface DatosTabProps {
  * hay botón Guardar.
  */
 export function DatosTab({ projectId, process, stations, referencePoints, angleFormat }: DatosTabProps) {
-  // Lo último que se guardó desde aquí, hasta que el servidor devuelva la
-  // página revalidada: así una medición encadenada parte de la anterior aunque
-  // la página tarde en refrescarse. Cuando llega, manda el servidor.
-  const [saved, setSaved] = useState<PolygonalDraft | null>(null);
-  const [seen, setSeen] = useState(process.updated_at);
-  if (seen !== process.updated_at) {
-    setSeen(process.updated_at);
-    setSaved(null);
-  }
-  const draft = useMemo(() => saved ?? draftOf(process, stations), [saved, process, stations]);
+  const { draft, save } = usePolygonalDraft(process, stations);
+  const { input, result, angleType, referenceLabel, referenceCoords } = usePolygonalComputation(
+    draft,
+    referencePoints,
+  );
+  // Lo medido, sin ajustar, para el dibujo.
+  const field = useMemo(() => {
+    const fieldInput = fieldTraverse(input);
+    return { input: fieldInput, result: computePolygonal(fieldInput) };
+  }, [input]);
 
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [view, setView] = useState<"tabla" | "dibujo">("tabla");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const reference = referencePoints.find((p) => p.id === draft.amarre.referencePointId) ?? null;
-  const referenceLabel = reference?.code ?? draft.amarre.referenceCode ?? null;
-  const referenceCoords = useMemo(
-    () =>
-      reference && reference.north !== null && reference.east !== null
-        ? { code: reference.code, north: Number(reference.north), east: Number(reference.east) }
-        : null,
-    [reference],
-  );
-
-  const { input, result, angleType, field } = useMemo(() => {
-    const base = inputOf(draft, referenceCoords);
-    const detected = computePolygonalDetected(base);
-    const full: PolygonalInput = { ...base, order: detected.order ?? "ordinario", angleType: detected.angleType };
-    const fieldInput = fieldTraverse(full);
-    return {
-      input: full,
-      result: detected.result,
-      angleType: detected.angleType,
-      field: { input: fieldInput, result: computePolygonal(fieldInput) },
-    };
-  }, [draft, referenceCoords]);
-
   const rows = captureRows(input, { start: draft.amarre.startCode, reference: referenceLabel });
   const hasAmarre = draft.amarre.startCode.trim() !== "";
   const closed = isClosed(draft);
   const closingAngle = needsClosingAngle(draft);
-
-  async function save(next: PolygonalDraft) {
-    const response = await savePolygonalProcessAction(payloadOf(process.id, next));
-    if (response.ok) setSaved(next);
-    return response;
-  }
 
   function quickSave(next: PolygonalDraft) {
     setError(null);

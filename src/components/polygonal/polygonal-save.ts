@@ -178,10 +178,14 @@ export function payloadOf(processId: string, draft: PolygonalDraft): SavePolygon
     referencePointId: a.referencePointId,
     referencePointCode: a.referencePointId === null ? a.referenceCode : null,
     hasClosingRow: d.type === "closed" && hasOrientation(a) && a.hasClosingRow,
-    correctionMethod: draft.method,
-    lsSigmaAngleSeconds: draft.method === "least_squares" ? draft.lsSigmaAngleSeconds : null,
-    lsSigmaDistanceM: draft.method === "least_squares" ? draft.lsSigmaDistanceM : null,
-    lsDistanceMeasurements: draft.method === "least_squares" ? draft.lsDistanceMeasurements : null,
+    // La abierta sin control no se ajusta, y el servidor rechaza mínimos
+    // cuadrados en ella: pasa a serlo desde «Editar datos» sin selector a mano.
+    correctionMethod: d.type === "open_uncontrolled" && draft.method === "least_squares" ? "bowditch" : draft.method,
+    // Con cualquier método: así volver a mínimos cuadrados no los pide de
+    // nuevo. Solo llegan aquí pesos válidos (los de la base o los del popup).
+    lsSigmaAngleSeconds: draft.lsSigmaAngleSeconds,
+    lsSigmaDistanceM: draft.lsSigmaDistanceM,
+    lsDistanceMeasurements: draft.lsDistanceMeasurements,
     notes: draft.notes,
     stations: draft.stations.map((st) => ({
       pointCode: st.pointCode,

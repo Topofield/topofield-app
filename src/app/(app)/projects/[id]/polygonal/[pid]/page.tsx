@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AjusteTab } from "@/components/polygonal/ajuste-tab";
 import { DatosTab } from "@/components/polygonal/datos-tab";
 import { PolygonalHeader } from "@/components/polygonal/polygonal-header";
 import { PolygonalSteps, type PolygonalStep } from "@/components/polygonal/polygonal-steps";
@@ -71,6 +72,14 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
           state={processReportState(process.status)}
           notes={process.notes}
           reports={reports}
+        />
+      ) : step === "ajuste" ? (
+        <AjusteTab
+          process={process}
+          stations={stations}
+          referencePoints={referencePoints}
+          angleFormat={process.angle_input_format}
+          basePath={basePath}
         />
       ) : (
         <DatosTab

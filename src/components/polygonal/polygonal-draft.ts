@@ -7,6 +7,7 @@
 
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import { parseNumber } from "@/lib/utils/parse";
+import type { PrecisionOrder } from "@/types/project";
 import type {
   LeastSquaresWeights,
   PolygonalInput,
@@ -47,4 +48,18 @@ export function polygonalInputOf(
   const base = inputOf(draftOf(process, stations), null);
   const { order, angleType } = computePolygonalDetected(base);
   return { ...base, order: order ?? "ordinario", angleType };
+}
+
+/**
+ * El orden alcanzado por lo guardado, detectado como en la pantalla por pasos.
+ * Una poligonal anterior a la Fase 35 guarda en `precision_order` el que
+ * declaró el usuario hasta su primer guardado, y la cabecera no debe decir otro
+ * orden que el paso de Ajuste. `verifiable`: hay un cierre que juzgar.
+ */
+export function detectedOrderOf(
+  process: PolygonalProcess,
+  stations: PolygonalStationWithReadings[],
+): { order: PrecisionOrder | null; verifiable: boolean } {
+  const { result, order } = computePolygonalDetected(inputOf(draftOf(process, stations), null));
+  return { order, verifiable: process.type !== "open_uncontrolled" && result.relativePrecision != null };
 }

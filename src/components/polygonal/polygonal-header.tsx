@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Alert, Badge, Breadcrumbs, Button, buttonClasses, Modal } from "@/components/design-system";
 import {
   deletePolygonalProcessAction,
@@ -19,6 +19,7 @@ import {
   type PolygonalStationWithReadings,
 } from "@/types/polygonal";
 import { PolygonalDetailsDialog, type PolygonalDetails } from "./polygonal-details-dialog";
+import { detectedOrderOf } from "./polygonal-draft";
 import { draftOf, payloadOf } from "./polygonal-save";
 
 interface PolygonalHeaderProps {
@@ -54,8 +55,7 @@ export function PolygonalHeader({
   const [isPending, startTransition] = useTransition();
   const hubHref = `/projects/${projectId}?tab=processes&modulo=poligonales`;
 
-  const order = process.precision_order;
-  const verifiable = process.type !== "open_uncontrolled" && process.status === "calculated";
+  const { order, verifiable } = useMemo(() => detectedOrderOf(process, stations), [process, stations]);
   const equipment = formatEquipmentLine(
     process.equipment_brand,
     process.equipment_model,
