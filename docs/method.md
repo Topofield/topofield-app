@@ -44,7 +44,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 32 | Rigor estadístico | [`prds/31-rigor-estadistico.md`](./prds/31-rigor-estadistico.md) | cerrada |
 | 33 | Header compacto | [`prds/32-header-compacto.md`](./prds/32-header-compacto.md) | cerrada |
 | 34 | Reabrir procesos | [`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md) | cerrada |
-| 35 | La poligonal como la mide el topógrafo | [`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md) | en curso |
+| 35 | La poligonal como la mide el topógrafo | [`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 

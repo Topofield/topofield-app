@@ -1,7 +1,8 @@
 # PRD-de-fase 35 — La poligonal como la mide el topógrafo
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-05
+**Fecha de cierre:** 2026-10-06
 
 **Rama:** `fase-35-ux-poligonal`
 **Petición:** del usuario, 2026-10-05: «empecemos con la refactorización de la
@@ -19,6 +20,64 @@ Datos A, medición B, Ajuste e informe con su corrección por método.
 **Módulo:** poligonal —alta, pantalla del proceso, ajuste, informe, Excel—,
 la base, la demo, el seed y la documentación. Nivelación y asentamientos no
 cambian.
+
+> **Divergencias de la implementación:**
+>
+> - **El cierre angular cubre tres esquemas, no uno** (§ E). Además del de la
+>   cerrada amarrada —contra la referencia o hacia el primer lado—, la cerrada
+>   sin amarre mide al final el ángulo en P1 (la primera medición sin 0 atrás
+>   no lleva ángulo), y la abierta con control tiene la casilla «Llegada» y,
+>   con azimut de llegada, pide la deflexión en el punto de llegada. Sin esto,
+>   esas poligonales no se podían capturar por popups (criterio i).
+> - **La captura parcial se guarda.** Cada popup guarda, así que
+>   `expectStationCapture` ya no exige nada a la última estación de una
+>   cerrada sin fila de cierre, ni ángulo a P1 sin amarre; el servidor valida
+>   el promedio de las lecturas (`stationCaptureIssues`), porque la carga solo
+>   manda lecturas.
+> - **Todo lo que calcula detecta**: la cabecera (`detectedOrderOf`), el
+>   informe, el Excel, la demo y el seed usan `computePolygonalDetected`, no
+>   las columnas guardadas; una poligonal anterior a la fase se ve como en
+>   Ajuste. El «Cumple» del hub sigue leyendo `meets_tolerance` hasta su
+>   próximo guardado (deuda técnica).
+> - **El dibujo de Datos es lo medido sin ajustar** (`fieldTraverse` y
+>   `PolygonalPlot` en modo `field`): mientras se captura, el ajuste no tiene
+>   coordenadas.
+> - **Los pesos de mínimos cuadrados viajan con cualquier método**, para no
+>   perderlos al volver a él, y se guardan al salir del campo cuando están los
+>   tres. Una abierta sin control que traía mínimos cuadrados guarda Brújula.
+> - **El punto de llegada** de una abierta con control es una fila propia
+>   («llegada»), no un pendiente.
+> - **«Sin 0 atrás»** no lleva la partida al catálogo: puede ser local.
+> - **«Guardado»** en la cabecera, con fecha y hora de Bogotá armadas a mano
+>   (`formatSavedAt`), para no tener error de hidratación.
+> - **MathML**: una letra griega sola va con `mathvariant="normal"`; Chrome la
+>   pasaba a la cursiva matemática y la fuente no la tenía.
+> - **El pie del consolidado** recibe cuántos procesos se cierran: solo con
+>   poligonales termina en «.».
+> - **Se retiró el código sin uso** del cierre de la poligonal
+>   (`evaluatePolygonalClosure`, `validateReadings`, `formatAngularPrecision` y
+>   las opciones de los selectores del editor viejo).
+> - **El seed renombra** «Cuadrado oficial (cerrado)» → «Cuadrado oficial» y
+>   «Cuadrado marginal (rechazado)» → «Cuadrado marginal (no cumple)». No se
+>   ejecutó: exige `db reset` y la base local es compartida; su lógica es la de
+>   la demo, que tiene pruebas.
+> - **Las capturas 07, 08, 09, 10 y 17 se renombran** con su contenido nuevo
+>   (`07-datos-poligonal`, `08-orden-alcanzado`, `09-ajuste-poligonal`,
+>   `10-correccion-informe`, `17-datos-movil`).
+> - **Los valores esperados de Crandall** en la prueba del desglose son los del
+>   motor sin redondear (λ₁ = −1.125·10⁻⁴), no los de las maquetas, que
+>   partían de e_N y e_E redondeados.
+> - **La revisión de toda la rama** no encontró nada crítico. Se corrigieron,
+>   cada una con su prueba vista fallar: un fallo de red al guardar se quedaba
+>   fuera del popup y la página perdía lo tecleado (`callAction`); con
+>   mediciones, el amarre dejaba poner o quitar el 0 atrás y la poligonal
+>   cambiaba de significado (`amarreChangeProblem`); al borrar del catálogo el
+>   punto de la referencia, la poligonal dejaba de estar orientada (ahora guarda
+>   también su código); el guardado no validaba la cabecera de una carga hecha
+>   a mano (`polygonalHeaderProblem`); y el paso de Informe había perdido
+>   «Imprimir o guardar como PDF». Se quitó además el texto de «Asignar
+>   coordenadas reales» del diálogo de Georreferenciar y los textos del
+>   dashboard que hablaban de cerrar.
 
 ## Propósito
 

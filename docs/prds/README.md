@@ -40,7 +40,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 32 | Rigor estadístico | `31-rigor-estadistico.md` | cerrada |
 | 33 | Header compacto | `32-header-compacto.md` | cerrada |
 | 34 | Reabrir procesos | `33-reabrir-procesos.md` | cerrada |
-| 35 | La poligonal como la mide el topógrafo | `34-ux-poligonal.md` | en curso |
+| 35 | La poligonal como la mide el topógrafo | `34-ux-poligonal.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

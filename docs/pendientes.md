@@ -77,8 +77,9 @@ el 2026-10-03, trabajada en un worktree aparte mientras la 33 seguía abierta.
 
 El 2026-10-05 pidió empezar a refactorizar la UX por la poligonal, y dejar de
 cerrarla: «UX de la poligonal», al final. Es la **Fase 35**
-([`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md)), **en curso**. La
-cartera real de asentamientos, que iba a ser la 35, pasa a la 36.
+([`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md)), **cerrada** el
+2026-10-06. La cartera real de asentamientos, que iba a ser la 35, pasa a la
+36.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
@@ -675,8 +676,9 @@ abarca los cuatro cierres: poligonal, nivelación, visita y lugar.
 
 ## UX de la poligonal (Fase 35)
 
-> **En curso en la Fase 35** ([`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md)),
-> abierta el 2026-10-06 con maquetas aprobadas.
+> **Resuelta en la Fase 35** ([`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md)),
+> abierta el 2026-10-05 con maquetas aprobadas y cerrada el 2026-10-06. Se
+> conserva el texto de la petición como registro.
 
 El 2026-10-05 el usuario pidió: «empecemos con la refactorización de la UX, y
 simplificar lo que no es muy necesario, empezando por las poligonales». Un
