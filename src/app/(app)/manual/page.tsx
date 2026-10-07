@@ -1245,8 +1245,9 @@ export default function ManualPage() {
 
         <p>
           Estos datos se cambian después con <strong>Editar datos</strong>, en
-          la cabecera. Cambiar el tipo o un BM recalcula la libreta, y el popup
-          lo avisa.
+          la cabecera. Cambiar el tipo o un BM recalcula la libreta, y quitar
+          la vuelta borra su libreta: el popup avisa de los dos, y en el
+          segundo dice cuántas armadas se borran.
         </p>
 
         <h3
@@ -1520,7 +1521,11 @@ export default function ManualPage() {
           Una <strong>abierta sin vuelta</strong> no se compensa: el paso dice{" "}
           <strong>Sin compensación</strong> y muestra la comprobación
           aritmética. Una libreta a medias dice qué recorrido falta terminar y
-          qué casilla marcar.
+          qué casilla marcar. Una libreta que <strong>no encadena</strong> —un
+          punto de cambio al que le falta la V+ o la V−, o una comprobación
+          aritmética que no cuadra— tampoco se compensa: la libreta y este paso
+          dicen qué fila revisar, porque sus cotas salen de una altura de
+          instrumento equivocada.
         </p>
 
         <h3
@@ -2654,7 +2659,10 @@ export default function ManualPage() {
         <p>
           En una nivelación, el libro lleva una cuarta hoja,{" "}
           <strong>«Cotas ajustadas»</strong>: una cota por punto, con cuántas
-          lecturas la forman y de dónde sale (§ 6.7).
+          lecturas la forman y de dónde sale (§ 6.7). El libro da lo que daría
+          guardar la nivelación ahora: el orden detectado y las cotas
+          compensadas, también en una guardada antes de que el orden se
+          detectara.
         </p>
 
         <p>

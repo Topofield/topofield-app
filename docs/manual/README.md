@@ -724,7 +724,8 @@ precisión**, que se detecta al compensar (§ 6.7), y el tipo de nivel, que no
 entra en ningún cálculo.
 
 Estos datos se cambian después con **Editar datos**, en la cabecera. Cambiar
-el tipo o un BM recalcula la libreta, y el popup lo avisa.
+el tipo o un BM recalcula la libreta, y quitar la vuelta borra su libreta: el
+popup avisa de los dos, y en el segundo dice cuántas armadas se borran.
 
 ### 6.5 La pantalla por pasos
 
@@ -885,7 +886,10 @@ ajustada.
 
 Una **abierta sin vuelta** no se compensa: el paso dice **Sin compensación**
 y muestra la comprobación aritmética. Una libreta a medias dice qué recorrido
-falta terminar y qué casilla marcar.
+falta terminar y qué casilla marcar. Una libreta que **no encadena** —un punto
+de cambio al que le falta la V+ o la V−, o una comprobación aritmética que no
+cuadra— tampoco se compensa: la libreta y este paso dicen qué fila revisar,
+porque sus cotas salen de una altura de instrumento equivocada.
 
 ### 6.8 Ida y vuelta
 
@@ -1579,7 +1583,9 @@ Si la poligonal se georreferenció, «Resumen» lleva además la sección
 «Georreferenciación», con la última.
 
 En una nivelación, el libro lleva una cuarta hoja, **«Cotas ajustadas»**: una
-cota por punto, con cuántas lecturas la forman y de dónde sale (§ 6.7).
+cota por punto, con cuántas lecturas la forman y de dónde sale (§ 6.7). El
+libro da lo que daría guardar la nivelación ahora: el orden detectado y las
+cotas compensadas, también en una guardada antes de que el orden se detectara.
 
 En control de asentamientos, «Datos Crudos» añade un bloque **«Visitas»**
 con el modo de captura, el BM de amarre, el cierre y la tolerancia de cada

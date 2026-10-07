@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-07 · Fase 36 cerrada · 1118 tests y 123
+**Última actualización:** 2026-10-07 · Fase 36 cerrada · 1131 tests y 123
 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -402,7 +402,11 @@ quedan vacías en lugar de a cero: en topografía un `0.000` de coordenada es un
 posición, no una ausencia.
 
 Los libros se construyen en `lib/export/`, separados del Route Handler para
-poder testearlos sin levantar el servidor. Dos detalles que se rompen fácil:
+poder testearlos sin levantar el servidor. El de la nivelación no lee los
+resultados guardados (Fase 36, revisión final): la ruta los recalcula con
+`levelingRecordOf`, lo mismo que guarda la acción, a la escala de cada
+columna; así una nivelación guardada antes de que el orden se detectara no
+sale con su orden declarado. Dos detalles que se rompen fácil:
 
 - Los `DECIMAL` de Postgres llegan como **cadena** vía PostgREST. Hay que
   convertirlos a número antes de escribirlos, o Excel guarda texto y la celda
@@ -1471,6 +1475,12 @@ cumplía** (marco teórico § 8.1). Desde entonces:
   orden, y lo devuelve en `pending`. La acción guarda `in_progress` con el
   cierre en blanco y valida con `validateRunCapture(…, { allowUnfinished:
   true })`; la visita conserva la exigencia de terminar en el BM.
+- **La libreta que no encadena** (revisión final): si Σ V+ − Σ V− no da el
+  desnivel —un punto de cambio sin una de sus lecturas, una V+ colgada—, las
+  cotas salen de una altura de instrumento equivocada. `computeLevelingDetected`
+  la marca `broken`: sin orden y sin compensar, y se guarda en curso. Antes el
+  cierre la bloqueaba (Fases 24 y 26). `libretaBlocker` dice la fila y el
+  recorrido en la libreta, la compensación y el informe.
 
 **La captura por armada** (`components/leveling/armadas.ts`) pasa de un popup
 a las filas por punto sin cambiar `leveling_readings`: una armada es la V+ de
@@ -2202,7 +2212,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1118 tests en 84 archivos, Vitest, entorno `node` **sin jsdom**. Además, 123
+1131 tests en 84 archivos, Vitest, entorno `node` **sin jsdom**. Además, 123
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2247,12 +2257,12 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/calculations/settlement-summary.test.ts` | 15 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas; siguiente umbral de acumulado (Fase 18); el promedio encadenado con altas, bajas, visitas sin lecturas y sin puntos comunes (Fase 31) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y **reproduce la serie a 0.1 mm** con varias semillas; fuera de tolerancia sin compensar; determinista (Fase 18) |
 | `components/leveling/readings-table.test.ts` | 3 | La tabla de captura compartida: sin las props de la libreta de la visita, nivelación se renderiza igual (Fase 18); una fila sin V+ ni V− no hereda la cota del punto anterior (Fase 22) |
-| `lib/calculations/leveling-detect.test.ts` | 12 | **El orden detectado y la compensación sin limitantes** (Fase 36): El Verjón en segundo orden con las cotas ajustadas del lienzo, el tramo 2 en −0.4 mm y primer orden, fuera del ordinario sin orden pero compensada, la abierta sin vuelta sin orden; la regla de la visita no cambia; la libreta a medias (`pendingRun`): sin armadas, una cerrada que no vuelve al BM, la ida y la vuelta de una abierta sin terminar, la abierta sin vuelta y una vuelta vieja que llega al BM como punto de cambio; «never» no compensa |
-| `components/leveling/armadas.test.ts` | 9 | La captura por armada (Fase 36): las 10 armadas de la ida de El Verjón, la armada 2 con sus lecturas, capturar armada por armada reproduce la hoja, editar una del medio solo cambia sus filas, una armada a medias al final, una intermedia colgada después del último punto, quitar la última; la armada siguiente y el fin del recorrido |
-| `components/leveling/armada-form.test.ts` | 6 | El popup de armada (Fase 36): del formulario a la armada y de vuelta, los hilos con la distancia y la comprobación del medio, los campos obligatorios y los números, la casilla de fin según el tipo y el recorrido, y los errores de la libreta en la vista que los tiene |
-| `components/leveling/leveling-save.test.ts` | 8 | El borrador y la carga del guardado (Fase 36): la libreta de El Verjón en orden, la carga sin el orden, la entrada del motor, la importación, el BM que renombra los extremos de la libreta, dónde empieza la vuelta y el recorrido vacío |
-| `components/leveling/leveling-details.test.ts` | 7 | El alta y el popup del BM (Fase 36): el título, la cota con coma, el BM de llegada en la de enlace, la abierta sin él |
-| `components/leveling/libreta-rows.test.ts` | 8 | La tabla de la hoja (Fase 36): lecturas, AI y cota sin compensar de El Verjón con sus rótulos, el lápiz de cada fila, la vuelta, la libreta vacía; la lista por armada del teléfono; la comprobación aritmética; las lecturas a 3 o 4 decimales por libreta |
+| `lib/calculations/leveling-detect.test.ts` | 14 | **El orden detectado y la compensación sin limitantes** (Fase 36): El Verjón en segundo orden con las cotas ajustadas del lienzo, el tramo 2 en −0.4 mm y primer orden, fuera del ordinario sin orden pero compensada, la abierta sin vuelta sin orden; la regla de la visita no cambia; la libreta a medias (`pendingRun`): sin armadas, una cerrada que no vuelve al BM, la ida y la vuelta de una abierta sin terminar, la abierta sin vuelta y una vuelta vieja que llega al BM como punto de cambio; «never» no compensa; una libreta que no encadena —un punto de cambio sin V+— queda sin orden y sin compensar, y una a medias que cuadra no (revisión final) |
+| `components/leveling/armadas.test.ts` | 10 | La captura por armada (Fase 36): las 10 armadas de la ida de El Verjón, la armada 2 con sus lecturas, capturar armada por armada reproduce la hoja, editar una del medio solo cambia sus filas, una armada a medias al final, una intermedia colgada después del último punto, quitar la última; la armada siguiente y el fin del recorrido; agregar una armada tras una intermedia colgada abre desde el último punto y la intermedia conserva su cota (revisión final) |
+| `components/leveling/armada-form.test.ts` | 7 | El popup de armada (Fase 36): del formulario a la armada y de vuelta, los hilos con la distancia y la comprobación del medio, los campos obligatorios y los números, la casilla de fin según el tipo y el recorrido, y los errores de la libreta en la vista que los tiene; una armada que no queda en la libreta es un error (revisión final) |
+| `components/leveling/leveling-save.test.ts` | 12 | El borrador y la carga del guardado (Fase 36): la libreta de El Verjón en orden, la carga sin el orden, la entrada del motor, la importación, el BM que renombra los extremos de la libreta, dónde empieza la vuelta y el recorrido vacío; lo que se guarda y se exporta (`levelingRecordOf`): la cabecera con el orden detectado, la libreta a medias en curso, la escala de cada columna, y el Excel de una nivelación guardada antes de la fase con el orden detectado y las cotas compensadas (revisión final) |
+| `components/leveling/leveling-details.test.ts` | 9 | El alta y el popup del BM (Fase 36): el título, la cota con coma, el BM de llegada en la de enlace, la abierta sin él; los avisos de Editar datos: quitar la vuelta borra su libreta, cambiar el tipo o un BM la recalcula (revisión final) |
+| `components/leveling/libreta-rows.test.ts` | 10 | La tabla de la hoja (Fase 36): lecturas, AI y cota sin compensar de El Verjón con sus rótulos, el lápiz de cada fila, la vuelta, la libreta vacía; la lista por armada del teléfono; la comprobación aritmética; las lecturas a 3 o 4 decimales por libreta; `libretaBlocker` con la fila y el recorrido del punto de cambio incompleto (revisión final) |
 | `components/leveling/comparison-data.test.ts` | 7 | La compensación (Fase 36): el gráfico de El Verjón —la ida a +1.0 mm en C 1, la vuelta a −6.0 y las dos a −2.5 en D4— y sus cifras de los extremos; el tramo 2 a −0.4; la abierta sin vuelta sin gráfico; la tabla con cada punto y su homólogo, las correcciones y la cota ajustada; las lecturas de cada punto |
 | `components/leveling/order-verdict.test.ts` | 3 | El «Por qué» del orden de la nivelación (Fase 36): El Verjón contra K·√D·√2, el tramo 2 contra K·√D, la abierta sin vuelta sin nada que juzgar |
 | `lib/errors/user-message.test.ts` | 4 | **Errores de la base para el usuario**: cada código conocido traducido sin dejar pasar el texto de Postgres; el check de un trigger propio, en español, pasa; el de una columna, no; código desconocido, el mensaje de la acción (Fase 22) |
@@ -2261,7 +2271,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `components/leveling/profile-data.test.ts` | 5 | El perfil de la libreta con las carteras reales (Fase 36): cada armada con su mira atrás, el nivel a la altura del instrumento y la mira adelante, y la intermedia en su armada; la contraparte en el sentido de la ida, escalada a su largo; la vuelta con su propio eje; el tramo 2 sin contraparte; sin armadas, sin perfil |
 | `lib/reports/responsible.test.ts` | 3 | Nombre del responsable del cierre: nombre completo, nombre y apellido, correo; nunca el id (Fase 22) |
 | `lib/reports/including.test.ts` | 5 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22); el aviso al borrar algo que está en informes, con uno y con varios (Fase 34) |
-| `lib/reports/leveling-report.test.ts` | 9 | El informe sencillo de la nivelación, por tipo (Fase 36): el resumen con el orden detectado —Δ en la abierta con vuelta, el cierre en la cerrada, «Sin verificación» y «Libreta a medias»—; la sección de la abierta con vuelta, la cerrada con las dos lecturas de cada punto, la de enlace con su corrección, la abierta sin vuelta sin datos ajustados y la alerta fuera de todo orden |
+| `lib/reports/leveling-report.test.ts` | 10 | El informe sencillo de la nivelación, por tipo (Fase 36): el resumen con el orden detectado —Δ en la abierta con vuelta, el cierre en la cerrada, «Sin verificación» y «Libreta a medias»—; la sección de la abierta con vuelta, la cerrada con las dos lecturas de cada punto, la de enlace con su corrección, la abierta sin vuelta sin datos ajustados y la alerta fuera de todo orden; una libreta que no encadena: «Libreta con errores» y la alerta (revisión final) |
 | `lib/reports/cover.test.ts` | 2 | La portada del informe sale de `cover`, no del proyecto (Fase 23) |
 | `lib/reports/state.test.ts` | 9 | El informe de un proceso en sus tres estados: borrador, cerrado sin marca y rechazado con la suya (Fase 24); el pie del consolidado, con todo cerrado y con uno o varios reabiertos (Fase 34); sin nada que se cierre, y ni la poligonal ni la nivelación cuentan como reabiertas (Fases 35 y 36) |
 | `lib/process-counts.test.ts` | 4 | El conteo de la tarjeta del proyecto por estado: singulares, grupos en cero, el grupo de cada `status` (Fase 24) |
@@ -2408,14 +2418,38 @@ lea (fuera de alcance en el PRD de la fase).
 Hasta su primer guardado, `precision_order` y `meets_tolerance` guardan lo que
 el usuario declaró y el veredicto de antes, y una nivelación fuera de
 tolerancia guarda sus filas **sin compensar** (riesgos 1 y 2 del PRD). La
-cabecera, Libreta, Compensación y el informe calculan en vivo; el «Cumple» del
-hub y del dashboard y el Excel —«Orden alcanzado», «Cálculos» y «Cotas
-ajustadas»— leen lo guardado. En local, el tramo 2 de la demo dice «Tercer
-orden» en el Excel y «Primer orden» en la cabecera. Se corrige sola al guardar
-la nivelación (cualquier popup); si hiciera falta de una vez, un script que
-re-guarde cada nivelación con `computeLevelingDetected`, o que la ruta de
-exportación recalcule con un constructor puro compartido con la acción de
-guardado.
+cabecera, Libreta, Compensación, el informe y el Excel (`levelingRecordOf`)
+calculan en vivo; el «Cumple» del hub y del dashboard lee lo guardado, y puede
+marcar ✕ una nivelación que alcanza un orden. Se corrige sola al guardar la
+nivelación (cualquier popup); si hiciera falta de una vez, un script que
+re-guarde cada nivelación con `levelingRecordOf` tras el paso 1.
+
+**Cabos menores de la revisión de la Fase 36.** Quedaron anotados sin
+corregir, ninguno en el camino de la captura por armada:
+
+- `levelingInputOf` no pasa `distances_reconstructed`: un proceso de la Fase 9
+  nunca re-guardado se ve con la regla del acumulado desde el origen.
+- Editar una armada del medio cambia a `pc` un BM interior declarado en un CSV
+  o en el editor viejo.
+- La llegada de una cerrada se reconoce por el tipo `bm`, no por el código del
+  BM de partida: si se cambia una abierta a cerrada, su último BM cuenta como
+  llegada y todo el desnivel se reparte como error, con el aviso de que no
+  alcanza ningún orden.
+- El informe de una cerrada o de enlace sin distancias dice «Sin vuelta ni BM
+  de llegada…»; en el Excel, «Tolerancia del orden alcanzado» muestra la del
+  ordinario si no alcanza ninguno.
+- Duplicar copia el `precision_order` en la copia sin lecturas.
+- `draftWithBm` compara códigos con `===`, no con `samePointCode`.
+- `lib/reports/leveling-data.ts` importa de `components/leveling/leveling-save`:
+  el borrador y la entrada del motor podrían vivir en `lib/`.
+- Faltan pruebas de frontera de `detectLevelingOrder` por tipo y de una
+  cerrada con vuelta que exija los dos recorridos; la de pgTAP del paso 1
+  (reabrir lo cerrado) era una sentencia copiada y con el paso 2 ya no se
+  puede simular.
+- Una fila huérfana de una libreta vieja que no encadena no tiene lápiz: se
+  repara quitando armadas o reimportando.
+- La captura 30 del manual es anterior al botón de imprimir de la cabecera de
+  la poligonal (Fase 35).
 
 **El estado de la nivelación conserva `closed` y `rejected` en el tipo.**
 `LevelingProcess.status` reutiliza `ProcessStatus`, el de la poligonal y los
