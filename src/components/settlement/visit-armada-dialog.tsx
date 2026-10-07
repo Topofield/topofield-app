@@ -111,7 +111,14 @@ export function VisitArmadaDialog({
     rowsRef.current = rows;
   });
   const queue = useRef<Promise<unknown>>(Promise.resolve());
-  const lastSent = useRef<string | null>(JSON.stringify(rows));
+  // Lo «ya guardado» es la libreta armada con el formulario sin tocar: así
+  // abrir y cerrar una armada, o una nueva sin teclear nada, no guarda.
+  const [initialKey] = useState(() => {
+    const read = readVisitArmadaForm(form, benchmarks);
+    const composed = "armada" in read ? composeArmada(rows, k, read.armada) : null;
+    return JSON.stringify(composed && "rows" in composed ? composed.rows : rows);
+  });
+  const lastSent = useRef<string | null>(initialKey);
   const lastOk = useRef(true);
   const inFlight = useRef(0);
   const desdeLocked = !isNew || touched;
