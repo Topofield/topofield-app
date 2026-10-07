@@ -88,7 +88,6 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
         />
       ) : (
         <DatosTab
-          projectId={id}
           process={process}
           stations={stations}
           referencePoints={referencePoints}

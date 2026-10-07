@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { Alert, Button, EMPTY_DMS, Input, Modal, NumberInput, Select, type DmsValue } from "@/components/design-system";
-import { ensureCatalogPointAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import { azimuthFromCoordinates } from "@/lib/calculations/angles";
 import {
   catalogMoves,
   catalogPointOf,
+  repeatedPointMessage,
   repeatedPointName,
   resolveCatalogPoint,
+  type AmarrePoints,
   type CatalogUser,
   type NamedPoint,
 } from "@/lib/polygonal-amarre";
@@ -22,7 +23,6 @@ import { AngleInput } from "./angle-input";
 import { amarreChangeProblem } from "./capture-edits";
 import { dmsFromFields, fieldsOf, formatAngle } from "./angle-format";
 import { azimuthToReference, type AmarreEdit, type Dms3, type PolygonalDraft } from "./polygonal-save";
-import { callAction } from "@/lib/errors/action-call";
 
 /** Cómo se pone el 0 atrás. */
 type ReferenceMode = "point" | "azimuth" | "none";
@@ -42,13 +42,13 @@ interface PointFields {
 const text = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? "" : String(v));
 
 interface AmarreDialogProps {
-  projectId: string;
   draft: PolygonalDraft;
   referencePoints: ReferencePoint[];
   /** Las otras poligonales del proyecto: el aviso dice cuáles usan un punto que se corrige. */
   others: CatalogUser[];
   angleFormat: AngleInputFormat;
-  onSave: (next: PolygonalDraft) => Promise<{ ok: boolean; error?: string }>;
+  /** Guarda el borrador y, en la misma transacción, los puntos que van al catálogo. */
+  onSave: (next: PolygonalDraft, catalogPoints: AmarrePoints) => Promise<{ ok: boolean; error?: string }>;
   onClose: () => void;
 }
 
@@ -121,7 +121,6 @@ const edited = (now: PointFields, before: PointFields) =>
  * estaba con otras, se corrige allí, con aviso previo.
  */
 export function AmarreDialog({
-  projectId,
   draft,
   referencePoints,
   others,
@@ -171,9 +170,9 @@ export function AmarreDialog({
 
   // ¿Va el punto al catálogo? Sí, salvo que movería uno sin que el usuario lo
   // haya tocado. La referencia va siempre: el popup la abre con la del catálogo.
-  const catalogPoints = referencePoints.map(catalogPointOf);
+  const projectCatalog = referencePoints.map(catalogPointOf);
   const goesToCatalog = (p: NamedPoint, now: PointFields, before: PointFields) =>
-    edited(now, before) || resolveCatalogPoint(catalogPoints, p).kind !== "move";
+    edited(now, before) || resolveCatalogPoint(projectCatalog, p).kind !== "move";
 
   // Los puntos del catálogo que cambian de coordenadas si se guarda así.
   const t = readPoint(end, "");
@@ -182,7 +181,7 @@ export function AmarreDialog({
     mode === "point" && typeof r !== "string" ? r : null,
     controlled && typeof t !== "string" && goesToCatalog(t, end, opened.end) ? t : null,
   ].filter((p): p is NamedPoint => p !== null);
-  const moves = catalogMoves(catalogPoints, toCatalog, others);
+  const moves = catalogMoves(projectCatalog, toCatalog, others);
 
   function submit() {
     setError(null);
@@ -230,29 +229,24 @@ export function AmarreDialog({
     const repeated = repeatedPointName(
       [mode !== "none" ? startPoint : null, refPoint, endPoint].filter((p): p is NamedPoint => p !== null),
     );
-    if (repeated) {
-      return setError(`${repeated} está dos veces con coordenadas distintas: cada punto necesita su propio nombre.`);
-    }
+    if (repeated) return setError(repeatedPointMessage(repeated));
 
-    const startToCatalog = mode !== "none" && goesToCatalog(startPoint, start, opened.start);
-    const endToCatalog = endPoint !== null && goesToCatalog(endPoint, end, opened.end);
+    // Los puntos que van al catálogo viajan con el guardado y se escriben con el
+    // proceso, en la misma transacción. Sin 0 atrás la partida puede ser local:
+    // no va.
+    const catalogPoints: AmarrePoints = {
+      start: mode !== "none" && goesToCatalog(startPoint, start, opened.start) ? startPoint : null,
+      reference: refPoint,
+      end: endPoint && goesToCatalog(endPoint, end, opened.end) ? endPoint : null,
+    };
+    // El id de la referencia: el del punto que ya está, o uno nuevo que el
+    // servidor usa al crearlo. Así el borrador lo tiene desde ya, y un guardado
+    // encadenado antes de que llegue la página no suelta la referencia.
+    const referencePointId = refPoint
+      ? (projectCatalog.find((p) => p.code.trim() === refPoint.code)?.id ?? crypto.randomUUID())
+      : null;
 
     startTransition(async () => {
-      // Sin 0 atrás la partida puede ser local: solo el amarre va al catálogo.
-      if (startToCatalog) {
-        const saved = await callAction(() => ensureCatalogPointAction(projectId, startPoint));
-        if (!saved.ok) return setError(saved.error);
-      }
-      let referencePointId: string | null = null;
-      if (refPoint) {
-        const saved = await callAction(() => ensureCatalogPointAction(projectId, refPoint!));
-        if (!saved.ok) return setError(saved.error);
-        referencePointId = saved.id;
-      }
-      if (endPoint && endToCatalog) {
-        const saved = await callAction(() => ensureCatalogPointAction(projectId, endPoint!));
-        if (!saved.ok) return setError(saved.error);
-      }
       const amarre: AmarreEdit = {
         startCode: startPoint.code,
         startNorth: startPoint.north,
@@ -272,7 +266,7 @@ export function AmarreDialog({
           ? { ...st, pointCode: startPoint.code }
           : st,
       );
-      const response = await onSave({ ...draft, amarre, stations });
+      const response = await onSave({ ...draft, amarre, stations }, catalogPoints);
       if (response.ok) onClose();
       else setError(response.error ?? "No se pudo guardar el amarre.");
     });
