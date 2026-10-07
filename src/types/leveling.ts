@@ -117,8 +117,9 @@ export interface LevelingInput {
    * cerrar, cumpla o no; es la regla de la nivelación, que avisa si no
    * alcanza ningún orden. «within_tolerance» (por omisión): solo si cumple el
    * orden declarado, como pide el marco teórico § 8.1; es la de la visita.
+   * «never»: no compensa; es la de una libreta a medias (`pendingRun`).
    */
-  compensation?: "always" | "within_tolerance";
+  compensation?: "always" | "within_tolerance" | "never";
 }
 
 export interface ComputedReading extends ReadingInput {

@@ -113,3 +113,54 @@ describe("computeLeveling — la regla de la visita no cambia", () => {
     expect(result.forward.readings[1]!.elevationCorrected).toBeCloseTo(99.8, 9);
   });
 });
+
+describe("la libreta a medias (Fase 36, captura por armada)", () => {
+  it("El Verjón y el tramo 2 completos no quedan pendientes", () => {
+    expect(computeLevelingDetected(verjon).pending).toBeNull();
+    expect(computeLevelingDetected(fueraDeOrden).pending).toBeNull();
+  });
+
+  it("sin armadas, la libreta queda pendiente, también en una abierta sin vuelta", () => {
+    const onlyBm = [r("D1", "bm", null, null, null, null)];
+    expect(computeLevelingDetected({ ...verjon, forward: onlyBm, return: null }).pending).toBe("forward");
+    expect(computeLevelingDetected({ ...fueraDeOrden, forward: onlyBm }).pending).toBe("forward");
+  });
+
+  it("una cerrada que aún no vuelve al BM queda pendiente: sin orden y sin compensar", () => {
+    const partial = { ...fueraDeOrden, forward: fueraDeOrden.forward.slice(0, 2) };
+    const { result, order, verifiable, pending } = computeLevelingDetected(partial);
+    expect(pending).toBe("forward");
+    expect(order).toBeNull();
+    expect(verifiable).toBe(false);
+    expect(result.compensated).toBe(false);
+    expect(result.forward.readings[1]!.elevationCorrected).toBeCloseTo(99.8, 9);
+  });
+
+  it("la abierta con vuelta: la ida sin terminar, y después la vuelta, quedan pendientes", () => {
+    const idaAMedias = verjon.forward.slice(0, 5);
+    expect(computeLevelingDetected({ ...verjon, forward: idaAMedias, return: [] }).pending).toBe("forward");
+    expect(computeLevelingDetected({ ...verjon, return: [] }).pending).toBe("return");
+    const { pending, order, result } = computeLevelingDetected({ ...verjon, return: verjon.return!.slice(0, 6) });
+    expect(pending).toBe("return");
+    expect(order).toBeNull();
+    expect(result.compensated).toBe(false);
+  });
+
+  it("la abierta sin vuelta no queda pendiente aunque no termine en un BM", () => {
+    expect(computeLevelingDetected({ ...verjon, forward: verjon.forward.slice(0, 5), return: null }).pending).toBeNull();
+  });
+
+  it("una vuelta vieja que llega al BM de partida como punto de cambio no queda pendiente", () => {
+    const back = verjon.return!.map((x, i, all) => (i === all.length - 1 ? { ...x, pointType: "pc" as const } : x));
+    expect(computeLevelingDetected({ ...verjon, return: back }).pending).toBeNull();
+  });
+});
+
+describe("computeLeveling — «never» no compensa", () => {
+  it("ni dentro de tolerancia", () => {
+    const t = computeLeveling({ ...verjon, order: "ordinario", compensation: "never" });
+    expect(t.compensated).toBe(false);
+    expect(t.forward.readings.every((x) => x.correctionApplied === 0)).toBe(true);
+    expect(t.return!.readings.every((x) => x.correctionApplied === 0)).toBe(true);
+  });
+});

@@ -12,6 +12,7 @@ import type {
   LevelingResult,
   LevelingType,
   ReadingInput,
+  RunType,
   RunResult,
 } from "@/types/leveling";
 
@@ -357,6 +358,7 @@ function knownClosingElevation(input: LevelingInput): number | null {
 export function computeLeveling(input: LevelingInput): LevelingResult {
   const reconstructed = input.distancesReconstructed ?? false;
   const always = input.compensation === "always";
+  const never = input.compensation === "never";
   let forwardCompensated = false;
   let returnCompensated = false;
   const forward = computeRun(input.forward, input.startElevation, { reconstructed });
@@ -391,7 +393,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       // Solo se compensa un trabajo que cumple la tolerancia (marco teórico
       // § 8.1), salvo con «always»: la nivelación compensa siempre y avisa
       // (Fase 36, decisión 5).
-      if (meetsTolerance || always) {
+      if (!never && (meetsTolerance || always)) {
         readings = applyProportionalCorrection(
           forward.readings,
           closureErrorMm,
@@ -484,7 +486,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       // promedio de ida y vuelta ponderado por sus distancias.
       circuitClosureMm = (forward.heightDifference + back.heightDifference) * 1000;
       const circuitKm = totalDistanceKm + returnDistanceKm;
-      if ((meetsDiscrepancy === true || always) && valid(circuitKm)) {
+      if (!never && (meetsDiscrepancy === true || always) && valid(circuitKm)) {
         readings = applyCircuitCorrection(forward.readings, circuitClosureMm, 0, circuitKm);
         backReadings = applyCircuitCorrection(
           back.readings,
@@ -496,6 +498,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
         returnCompensated = true;
       }
     } else if (
+      !never &&
       returnErrorMm != null &&
       (returnMeets === true || (always && returnToleranceMm != null))
     ) {
@@ -622,20 +625,63 @@ export function detectLevelingOrder(
 }
 
 /**
+ * El recorrido que la captura por armada aún no termina (Fase 36), o `null`:
+ *
+ * - una libreta sin ninguna armada;
+ * - la ida de una cerrada o de enlace que no llega a su BM (la última fila no
+ *   es `bm`);
+ * - la ida de una abierta con vuelta que no marcó su fin y cuya vuelta no
+ *   empezó;
+ * - una vuelta que no llega al BM de partida: ni su última fila es `bm` ni
+ *   lleva su código (una libreta vieja pudo anotarla como punto de cambio).
+ *
+ * Una abierta sin vuelta termina donde termine. Con un recorrido pendiente no
+ * hay cierre que juzgar: compensar contra un punto de cambio repartiría el
+ * desnivel entero.
+ */
+export function pendingRun(
+  input: Pick<LevelingInput, "type" | "forward" | "return">,
+): RunType | null {
+  const hasArmada = (rows: readonly ReadingInput[]) =>
+    rows.some((r, i) => i > 0 && r.pointType !== "intermediate" && r.foresight != null);
+  const endsInBm = (rows: readonly ReadingInput[]) => rows.at(-1)?.pointType === "bm";
+  const { forward, return: back } = input;
+  if (!hasArmada(forward)) return "forward";
+  if (input.type !== "open" && !endsInBm(forward)) return "forward";
+  if (input.type === "open" && back != null && back.length === 0 && !endsInBm(forward)) return "forward";
+  if (back != null) {
+    const start = forward[0]!.pointCode;
+    const last = back.at(-1);
+    const arrives = last != null && (last.pointType === "bm" || samePointCode(last.pointCode, start));
+    if (!hasArmada(back) || !arrives) return "return";
+  }
+  return null;
+}
+
+/**
  * Calcula con el orden detectado (Fase 36). Compensa siempre; las cifras de
  * tolerancia del resultado son las del orden alcanzado, o las del ordinario si
- * no alcanza ninguno, para que la pantalla diga por cuánto se pasa.
+ * no alcanza ninguno, para que la pantalla diga por cuánto se pasa. Con un
+ * recorrido pendiente (`pendingRun`) no compensa ni detecta orden.
  */
-export function computeLevelingDetected(
-  input: Omit<LevelingInput, "order" | "compensation">,
-): { result: LevelingResult; order: PrecisionOrder | null; verifiable: boolean } {
+export function computeLevelingDetected(input: Omit<LevelingInput, "order" | "compensation">): {
+  result: LevelingResult;
+  order: PrecisionOrder | null;
+  verifiable: boolean;
+  pending: RunType | null;
+} {
+  const pending = pendingRun(input);
+  if (pending) {
+    const result = computeLeveling({ ...input, order: "ordinario", compensation: "never" });
+    return { result, order: null, verifiable: false, pending };
+  }
   const probe = computeLeveling({ ...input, order: "ordinario", compensation: "always" });
   const { order, verifiable } = detectLevelingOrder(probe, input.type);
   const result =
     order && order !== "ordinario"
       ? computeLeveling({ ...input, order, compensation: "always" })
       : probe;
-  return { result, order, verifiable };
+  return { result, order, verifiable, pending: null };
 }
 
 /**

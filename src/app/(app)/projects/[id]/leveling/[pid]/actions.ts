@@ -118,10 +118,9 @@ export async function saveLevelingProcessAction(
   // directa a esta acción podría guardar una libreta que la interfaz habría
   // bloqueado. Antes solo se recalculaban los resultados, de modo que los
   // números eran del servidor pero los datos de campo no se comprobaban.
-  const forwardIssues = validateRunCapture(
-    input.forward,
-    input.type,
-  );
+  // La libreta puede ir a medias: se captura por armada y se guarda tras
+  // cada una (Fase 36).
+  const forwardIssues = validateRunCapture(input.forward, input.type, { allowUnfinished: true });
   if (hasReadingErrors(forwardIssues)) {
     return {
       ok: false,
@@ -129,10 +128,7 @@ export async function saveLevelingProcessAction(
     };
   }
   if (input.return) {
-    const returnIssues = validateRunCapture(
-      input.return,
-      input.type,
-    );
+    const returnIssues = validateRunCapture(input.return, input.type, { allowUnfinished: true });
     if (hasReadingErrors(returnIssues)) {
       return {
         ok: false,
@@ -141,8 +137,10 @@ export async function saveLevelingProcessAction(
     }
   }
 
-  // El orden se detecta y se compensa siempre (Fase 36, decisiones 4 y 5).
-  const { result, order, verifiable } = computeLevelingDetected(input);
+  // El orden se detecta y se compensa siempre (Fase 36, decisiones 4 y 5),
+  // salvo con la libreta a medias: entonces no hay cierre que guardar.
+  const { result, order, verifiable, pending } = computeLevelingDetected(input);
+  const closure = pending ? null : result;
 
   // El total se deriva en el servidor, igual que el resto de resultados. Que
   // el cliente lo mandara no lo haría autoritativo: la clave publicable de
@@ -150,12 +148,7 @@ export async function saveLevelingProcessAction(
   // cualquier número. De ese número depende la tolerancia K·√D.
   const totalDistanceKm = totalDistanceFromReadings(input.forward);
 
-  const computed = result.forward.readings.length > 0;
-  const status = computed
-    ? "calculated"
-    : payload.forward.length > 0
-      ? "in_progress"
-      : "draft";
+  const status = !pending ? "calculated" : payload.forward.length > 1 ? "in_progress" : "draft";
 
   function runRows(
     runType: "forward" | "return",
@@ -225,19 +218,19 @@ export async function saveLevelingProcessAction(
       location: payload.location,
       responsible_name: payload.responsibleName,
       responsible_role: payload.responsibleRole,
-      closure_error_mm: result.closureErrorMm,
-      tolerance_mm: result.toleranceMm,
+      closure_error_mm: closure?.closureErrorMm ?? null,
+      tolerance_mm: closure?.toleranceMm ?? null,
       // El veredicto guardado (Fase 36): alcanza algún orden. Sin con qué
       // juzgar —una abierta sin vuelta—, ninguno.
       meets_tolerance: verifiable ? order !== null : null,
-      forward_error_mm: result.forward.errorMm,
-      return_error_mm: result.return?.errorMm ?? null,
-      discrepancy_mm: result.discrepancyMm,
+      forward_error_mm: closure?.forward.errorMm ?? null,
+      return_error_mm: closure?.return?.errorMm ?? null,
+      discrepancy_mm: closure?.discrepancyMm ?? null,
       discrepancy_tolerance_mm:
-        result.discrepancyToleranceMm == null
+        closure?.discrepancyToleranceMm == null
           ? null
-          : Number(result.discrepancyToleranceMm.toFixed(1)),
-      meets_discrepancy: result.meetsDiscrepancy,
+          : Number(closure.discrepancyToleranceMm.toFixed(1)),
+      meets_discrepancy: closure?.meetsDiscrepancy ?? null,
       notes: payload.notes,
       status,
     },

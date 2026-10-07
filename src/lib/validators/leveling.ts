@@ -229,13 +229,18 @@ export function turningPointBlocker(
  * formada: la decisión #7 del PRD da por hecho que la última fila de un
  * recorrido que cierra es su BM. Se bloquea aquí para que nunca se guarde.
  * En `open` NO se exige: un recorrido sin control puede terminar donde sea.
+ *
+ * `allowUnfinished` (Fase 36): la nivelación se captura por armada y guarda
+ * tras cada una, así que su libreta puede ir a medias; se guarda en curso y
+ * sin compensar (`pendingRun`). La visita conserva la regla.
  */
 export function validateRunCapture(
   readings: ReadingInput[],
   levelingType: LevelingType,
+  { allowUnfinished = false }: { allowUnfinished?: boolean } = {},
 ): ReadingCaptureIssues[] {
   const lastIndex = readings.length - 1;
-  const mustEndInBm = levelingType !== "open";
+  const mustEndInBm = levelingType !== "open" && !allowUnfinished;
   return readings.map((reading, index) => {
     const issues = validateReadingCapture(reading);
     let errors = issues.errors;

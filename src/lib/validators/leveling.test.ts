@@ -335,6 +335,15 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
     const issues = validateRunCapture(readings, "closed");
     expect(issues.at(1)?.errors.pointType).toBeUndefined();
   });
+
+  it("con allowUnfinished (la nivelación, Fase 36), una cerrada a medias no es un error", () => {
+    const readings = [
+      reading({ pointCode: "BM-1", pointType: "bm", foresight: null, backsight: 1.5 }),
+      reading({ pointCode: "PC-1", pointType: "pc", foresight: 0.8, backsight: null }),
+    ];
+    expect(validateRunCapture(readings, "closed").at(1)?.errors.pointType).toBeDefined();
+    expect(validateRunCapture(readings, "closed", { allowUnfinished: true }).at(1)?.errors.pointType).toBeUndefined();
+  });
 });
 
 describe("hasReadingErrors", () => {
