@@ -241,6 +241,16 @@ describe("validateBook (Fase 37)", () => {
     expect(v.rowIssues.every((i) => Object.keys(i.errors).length === 0)).toBe(true);
   });
 
+  it("la distancia es opcional: sin ella el tramo solo queda sin orden", () => {
+    const rows = [at("BM-1", "bm", 1.45, null, true), at("CP-1", "pc", 1.3, 1.2), at("BM-1", "bm", null, 1.5)];
+    expect(validateBook(rows, BMS).rowIssues.every((i) => Object.keys(i.errors).length === 0)).toBe(true);
+  });
+
+  it("una distancia tecleada sigue sin poder ser cero", () => {
+    const rows = [{ ...at("BM-1", "bm", 1.45, null, true), backDistanceM: 0 }];
+    expect(validateBook(rows, BMS).rowIssues[0]!.errors.backDistanceM).toBe("La distancia debe ser mayor que cero.");
+  });
+
   it("un valor que no es número es error", () => {
     expect(validateBook([at("BM-1", "bm", Number.NaN, null, true)], BMS).errors).toContain(
       "La libreta tiene un valor que no es un número.",

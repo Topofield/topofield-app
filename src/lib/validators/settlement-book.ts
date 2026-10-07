@@ -6,7 +6,7 @@
 // circuito arranca y cierra en el BM de amarre, cuya cota es obligatoria. Ver
 // docs/prds/17-libreta-panel-asentamientos.md, «Validación».
 
-import { samePointCode } from "@/lib/calculations/leveling";
+import { resolveVisualDistances, samePointCode } from "@/lib/calculations/leveling";
 import { formatSignedMm } from "@/lib/utils/format";
 import {
   validateReadingCapture,
@@ -105,7 +105,16 @@ export function validateBook(
       errors.push(`La armada ${armada} sale de ${row.pointCode.trim()}, que no está en los BM del lugar.`);
     }
   });
-  const rowIssues = rows.map((row) => validateReadingCapture(row));
+  // En la visita la distancia es opcional (Fase 37, alcance D): sin ella el
+  // tramo no acumula y queda sin orden, pero la cota de cada punto no cambia.
+  // Una distancia tecleada sigue sin poder ser cero.
+  const rowIssues = rows.map((row) => {
+    const issues = validateReadingCapture(row);
+    const { back, fore } = resolveVisualDistances(row);
+    if (back == null) delete issues.errors.backDistanceM;
+    if (fore == null) delete issues.errors.foreDistanceM;
+    return issues;
+  });
   return { rowIssues, errors };
 }
 
