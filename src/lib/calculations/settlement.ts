@@ -15,7 +15,6 @@ import {
   TREND_DEVIATION_RATE_FACTOR,
   trendDeviationMargin,
 } from "./tolerances";
-import type { PrecisionOrder } from "@/types/project";
 import type {
   AlertLevel,
   ComputedReading,
@@ -25,7 +24,6 @@ import type {
   Thresholds,
   Trend,
   TrendDeviation,
-  VisitCircuit,
   VisitInput,
   VisitResult,
 } from "@/types/settlement";
@@ -62,30 +60,6 @@ export function pointInputOf(
     activeFrom: row.active_from,
     retiredOn: row.retired_on,
   };
-}
-
-/**
- * El circuito de cada visita, tal como llegan de la base, para el margen de
- * ruido de la tendencia (Fase 32, D-7): su orden y la longitud de su libreta.
- * Como en `pointInputOf`, el `Number()` es porque PostgREST entrega la columna
- * `DECIMAL` como cadena.
- */
-export function visitCircuitsOf(
-  visits: readonly {
-    id: string;
-    precision_order: PrecisionOrder;
-    total_distance_km: number | string | null;
-  }[],
-): Map<string, VisitCircuit> {
-  return new Map(
-    visits.map((v) => [
-      v.id,
-      {
-        order: v.precision_order,
-        km: v.total_distance_km === null ? null : Number(v.total_distance_km),
-      },
-    ]),
-  );
 }
 
 /**
@@ -329,14 +303,10 @@ export function classifyReadings(
  *
  * Las tres cotas son las tres últimas lecturas **del punto**: si se saltó una
  * visita, esa no entra. Un punto solo aparece si tiene tres lecturas con sus
- * dos velocidades y se conoce el circuito de las tres visitas: sin eso no se
- * afirma nada. Las visitas llegan en orden cronológico, como las da
+ * dos velocidades: sin eso no se afirma nada. Las visitas llegan en orden cronológico, como las da
  * `computeHistory`.
  */
-export function computeTrends(
-  visits: VisitResult[],
-  circuitByVisit: ReadonlyMap<string, VisitCircuit>,
-): Record<string, Trend> {
+export function computeTrends(visits: VisitResult[]): Record<string, Trend> {
   const readings = new Map<string, { velocity: number | null; date: string; visitId: string }[]>();
 
   for (const visit of visits) {
@@ -354,19 +324,11 @@ export function computeTrends(
     const middle = list.at(-2)!;
     const last = list.at(-1)!;
     if (middle.velocity === null || last.velocity === null) continue;
-    const circuits = [first, middle, last].map((r) => circuitByVisit.get(r.visitId));
-    if (circuits.some((c) => !c)) continue;
     const firstMonths = monthsBetween(first.date, middle.date);
     const lastMonths = monthsBetween(middle.date, last.date);
     if (firstMonths <= 0 || lastMonths <= 0) continue;
     const increase = Math.abs(last.velocity) - Math.abs(middle.velocity);
-    const margin = accelerationMargin(
-      circuits[0]!,
-      circuits[1]!,
-      circuits[2]!,
-      firstMonths,
-      lastMonths,
-    );
+    const margin = accelerationMargin(firstMonths, lastMonths);
     trends[pointId] = increase > margin ? "accelerating" : "converging";
   }
   return trends;
@@ -382,22 +344,17 @@ export function computeTrends(
  *   contraria  si  d · parcial < −m
  *   excesiva   si  d · parcial >  2 · |V_prev| · Δt + m
  *
- * con `m` el margen de ruido de las dos visitas (`trendDeviationMargin`), que
- * sale del orden y del circuito de cada una (Fase 32). La banda
+ * con `m` el margen de ruido de las dos visitas (`trendDeviationMargin`), fijo
+ * desde la Fase 37. La banda
  * admite que la consolidación frene hasta cero —moverse menos de lo previsto
  * nunca avisa—: extrapolar la velocidad anterior, el criterio obvio, marcaba
  * lecturas correctas en el caso típico del módulo (PRD de la fase, hallazgo 1).
  *
  * Solo evalúa desde la tercera lectura del punto (hace falta una velocidad
- * previa) y nunca con un intervalo de 0 días. Sin el circuito de alguna de
- * las dos visitas en `circuitByVisit` no se evalúa: sin margen no hay regla.
- *
- * Es una función aparte, y no un campo de `computeSettlements`, porque
- * necesita el circuito de cada visita, que `VisitInput` no lleva.
+ * previa) y nunca con un intervalo de 0 días.
  */
 export function detectTrendDeviations(
   visits: VisitResult[],
-  circuitByVisit: ReadonlyMap<string, VisitCircuit>,
 ): Map<string, Map<string, TrendDeviation>> {
   const ordered = [...visits].sort((a, b) => a.date.localeCompare(b.date));
   const previous = new Map<
@@ -407,7 +364,6 @@ export function detectTrendDeviations(
   const out = new Map<string, Map<string, TrendDeviation>>();
 
   for (const visit of ordered) {
-    const circuit = circuitByVisit.get(visit.visitId);
     for (const reading of visit.readings) {
       const prev = previous.get(reading.pointId);
       previous.set(reading.pointId, {
@@ -417,14 +373,13 @@ export function detectTrendDeviations(
         visitId: visit.visitId,
       });
 
-      const prevCircuit = prev && circuitByVisit.get(prev.visitId);
-      if (!circuit || !prev || !prevCircuit || prev.velocity === null) continue;
+      if (!prev || prev.velocity === null) continue;
       const months = monthsBetween(prev.date, visit.date);
       if (months <= 0) continue;
 
       const partialMm = (reading.elevation - prev.elevation) * 1000;
       const direction = prev.velocity > 0 ? 1 : -1;
-      const marginMm = trendDeviationMargin(prevCircuit, circuit);
+      const marginMm = trendDeviationMargin();
       const expectedMm = Math.abs(prev.velocity) * months;
       const along = direction * partialMm;
 

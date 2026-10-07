@@ -117,14 +117,14 @@ function build() {
 }
 
 describe("buildSettlementWorkbook", () => {
-  it("cuenta los puntos que aceleran con el margen del circuito de cada visita (Fase 32)", () => {
-    // P-01 pasa de −1.96 a −7.61 mm/mes: 5.65 más. Sin libreta el margen de
-    // tres cotas es 10.76 mm/mes y no acelera; con circuitos de 0.112 km, 5.09,
-    // y sí. La longitud llega como cadena, como la entrega PostgREST.
+  it("cuenta los puntos que aceleran con el margen fijo, sin mirar la libreta (Fase 37)", () => {
+    // P-01 pasa de −1.96 a −15.22 mm/mes: 13.3 más, sobre el margen de tres
+    // cotas, 10.76 mm/mes con intervalos de 31 y 28 días. La longitud de la
+    // libreta, que hasta la Fase 37 cambiaba el margen, ya no cuenta.
     const inputs: VisitInput[] = [
       { id: "v0", visitNumber: 0, date: "2026-01-01", readings: [{ pointId: "p1", elevation: 100 }] },
       { id: "v1", visitNumber: 1, date: "2026-02-01", readings: [{ pointId: "p1", elevation: 99.998 }] },
-      { id: "v2", visitNumber: 2, date: "2026-03-01", readings: [{ pointId: "p1", elevation: 99.991 }] },
+      { id: "v2", visitNumber: 2, date: "2026-03-01", readings: [{ pointId: "p1", elevation: 99.984 }] },
     ];
     const history = computeHistory(POINTS, inputs, THRESHOLDS);
     const crecientes = (km: string | null) => {
@@ -135,7 +135,7 @@ describe("buildSettlementWorkbook", () => {
       const fila = res.getColumn(1).values.findIndex((v) => v === "Puntos con tendencia creciente");
       return res.getCell(fila, 2).value;
     };
-    expect(crecientes(null)).toBe(0);
+    expect(crecientes(null)).toBe(1);
     expect(crecientes("0.112")).toBe(1);
   });
 

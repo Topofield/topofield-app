@@ -5,7 +5,6 @@ import {
   detectTrendDeviations,
   isPointActiveOn,
   pointInputOf,
-  visitCircuitsOf,
 } from "@/lib/calculations/settlement";
 import {
   benchmarkChecksOfBook,
@@ -54,10 +53,7 @@ export default async function VisitPage({ params }: VisitPageProps) {
   const previous = index > 0 ? siteSummary.visits[index - 1]! : null;
 
   const deviations =
-    detectTrendDeviations(
-      history.visits,
-      visitCircuitsOf(allVisits),
-    ).get(visit.id) ?? new Map();
+    detectTrendDeviations(history.visits).get(visit.id) ?? new Map();
 
   const sorted = [...points].sort((a, b) =>
     a.code.localeCompare(b.code, "es", { numeric: true }),

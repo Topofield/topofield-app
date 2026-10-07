@@ -232,11 +232,8 @@ describe("asentamientos de la demo — Torre Alameda", () => {
       })),
       thresholdsFor("edificio"),
     );
-    const circuitos = new Map(
-      books.map((b, i) => [`v${i}`, { order: f.precisionOrder, km: b.km }]),
-    );
-    expect(detectTrendDeviations(history.visits, circuitos).size).toBe(0);
-    expect(Object.values(computeTrends(history.visits, circuitos))).not.toContain("accelerating");
+    expect(detectTrendDeviations(history.visits).size).toBe(0);
+    expect(Object.values(computeTrends(history.visits))).not.toContain("accelerating");
   });
 });
 

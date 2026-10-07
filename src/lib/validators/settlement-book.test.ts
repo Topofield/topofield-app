@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { benchmarkCheckMessage, bookIssueMessage, validateVisitBook } from "./settlement-book";
+import { benchmarkCheckMessage, bookIssueMessage, validateBook, validateVisitBook } from "./settlement-book";
 import { validateVisitClose } from "./settlement";
 import type { PointType, ReadingInput as BookRow } from "@/types/leveling";
 import type { PointInput, VisitInput } from "@/types/settlement";
@@ -211,5 +211,39 @@ describe("validateVisitClose — libreta (Fase 18)", () => {
 
   it("sin libreta no cambia nada", () => {
     expect(validateVisitClose(visit, [P1], "2025-01-01", []).errors).toEqual({});
+  });
+});
+
+describe("validateBook (Fase 37)", () => {
+  const BMS = [{ code: "BM-1", elevation: 100 }];
+  /** Una fila con su marca de inicio de tramo. */
+  const at = (
+    pointCode: string,
+    pointType: PointType,
+    backsight: number | null,
+    foresight: number | null,
+    startsSection = false,
+  ) => ({ ...row(pointCode, pointType, backsight, foresight), startsSection });
+
+  it("una libreta vacía no exige nada", () => {
+    expect(validateBook([], BMS)).toEqual({ rowIssues: [], errors: [] });
+  });
+
+  it("cada tramo arranca en un BM del lugar", () => {
+    const rows = [at("BM-1", "bm", 1.2, null, true), at("P-1", "intermediate", null, 1), at("X-9", "bm", 1.1, null, true)];
+    expect(validateBook(rows, BMS).errors).toEqual(["La armada 2 sale de X-9, que no está en los BM del lugar."]);
+  });
+
+  it("las lecturas por leer no son error", () => {
+    const rows = [at("BM-1", "bm", null, null, true), at("P-1", "intermediate", null, null), at("BM-1", "bm", null, null)];
+    const v = validateBook(rows, BMS);
+    expect(v.errors).toEqual([]);
+    expect(v.rowIssues.every((i) => Object.keys(i.errors).length === 0)).toBe(true);
+  });
+
+  it("un valor que no es número es error", () => {
+    expect(validateBook([at("BM-1", "bm", Number.NaN, null, true)], BMS).errors).toContain(
+      "La libreta tiene un valor que no es un número.",
+    );
   });
 });

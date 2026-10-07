@@ -9,11 +9,13 @@
 import { samePointCode } from "@/lib/calculations/leveling";
 import { formatSignedMm } from "@/lib/utils/format";
 import {
+  validateReadingCapture,
   validateRunCapture,
   type ReadingCaptureIssues,
 } from "./leveling";
+import type { BookRowInput as VisitBookRowInput } from "@/lib/calculations/settlement-book";
 import type { ReadingInput as BookRowInput } from "@/types/leveling";
-import type { BenchmarkCheck, BookIssue } from "@/types/settlement";
+import type { BenchmarkCheck, BenchmarkInput, BookIssue } from "@/types/settlement";
 
 export interface VisitBookIssues {
   /** Issues por celda, en el orden de las filas (los de nivelación más los del amarre). */
@@ -77,6 +79,33 @@ export function validateVisitBook(
     }
   }
 
+  return { rowIssues, errors };
+}
+
+/**
+ * Valida la libreta de una visita (Fase 37): cada tramo arranca en un BM del
+ * lugar y cada fila pasa las reglas de captura de la nivelación. Lo que falta
+ * por leer no es error: la visita se guarda en medición.
+ */
+export function validateBook(
+  rows: readonly VisitBookRowInput[],
+  benchmarks: readonly BenchmarkInput[],
+): VisitBookIssues {
+  if (rows.length === 0) return { rowIssues: [], errors: [] };
+  const errors: string[] = [];
+  const numeric = ["backsight", "foresight", "backUpperM", "backLowerM", "foreUpperM", "foreLowerM", "backDistanceM", "foreDistanceM"] as const;
+  if (rows.some((r) => numeric.some((k) => r[k] != null && !Number.isFinite(r[k])))) {
+    errors.push("La libreta tiene un valor que no es un número.");
+  }
+  let armada = 0;
+  rows.forEach((row, i) => {
+    const starts = i === 0 || row.startsSection;
+    if (starts || (row.pointType === "pc" && i !== rows.length - 1)) armada++;
+    if (starts && !benchmarks.some((b) => samePointCode(b.code, row.pointCode))) {
+      errors.push(`La armada ${armada} sale de ${row.pointCode.trim()}, que no está en los BM del lugar.`);
+    }
+  });
+  const rowIssues = rows.map((row) => validateReadingCapture(row));
   return { rowIssues, errors };
 }
 

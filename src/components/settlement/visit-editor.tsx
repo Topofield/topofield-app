@@ -47,7 +47,7 @@ import {
   deriveControlElevations,
   type TemplateRow,
 } from "@/lib/calculations/settlement-book";
-import { samePointCode, totalDistanceFromReadings } from "@/lib/calculations/leveling";
+import { samePointCode } from "@/lib/calculations/leveling";
 import { formatDateOnly, formatTrendDeviation } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import { benchmarkCheckMessage, validateVisitBook } from "@/lib/validators/settlement-book";
@@ -66,7 +66,6 @@ import {
   type SettlementPoint,
   type SettlementVisit,
   type Thresholds,
-  type VisitCircuit,
   type VisitInput,
 } from "@/types/settlement";
 import type {
@@ -96,7 +95,6 @@ interface VisitEditorProps {
    * (Fase 32); los de esta visita son el orden de la cabecera y la longitud de
    * la libreta que se está capturando.
    */
-  otherVisitCircuits: Record<string, VisitCircuit>;
   thresholds: Thresholds;
   /** Solo lectura si el lugar o la visita están cerrados. */
   disabled: boolean;
@@ -188,7 +186,6 @@ export function VisitEditor({
   referencePoints,
   points,
   otherVisits,
-  otherVisitCircuits,
   thresholds,
   disabled,
   siteClosed,
@@ -332,16 +329,12 @@ export function VisitEditor({
     }
   }
 
-  // Lecturas fuera de tendencia (Fase 12), en vivo. El circuito de esta visita
-  // es el de la libreta que se captura; sin libreta, null (Fase 32).
-  const trendDeviations = useMemo(() => {
-    const circuits = new Map<string, VisitCircuit>(Object.entries(otherVisitCircuits));
-    circuits.set(visit.id, {
-      order: header.precisionOrder,
-      km: isBook && bookInputs.length > 0 ? totalDistanceFromReadings(bookInputs) : null,
-    });
-    return detectTrendDeviations(history.visits, circuits).get(visit.id) ?? new Map();
-  }, [history, otherVisitCircuits, visit.id, header.precisionOrder, isBook, bookInputs]);
+  // Lecturas fuera de tendencia (Fase 12), en vivo, con el margen fijo de la
+  // Fase 37. Este editor se retira en la Tarea 12 de la Fase 37.
+  const trendDeviations = useMemo(
+    () => detectTrendDeviations(history.visits).get(visit.id) ?? new Map(),
+    [history, visit.id],
+  );
   const trendWarnings: Record<string, string> = {};
   for (const [pointId, deviation] of trendDeviations) {
     trendWarnings[pointId] = formatTrendDeviation(deviation);

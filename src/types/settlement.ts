@@ -159,16 +159,6 @@ export interface TrendDeviation {
   marginMm: number;
 }
 
-/**
- * El circuito de nivelación de una visita, para el margen de ruido de la
- * tendencia (Fase 32, D-7): el orden que declaró y la longitud de su libreta,
- * en km. `km` es null si la visita se capturó sin libreta.
- */
-export interface VisitCircuit {
-  order: PrecisionOrder;
-  km: number | null;
-}
-
 /** Tendencia de la velocidad entre las dos últimas visitas de un punto. */
 export type Trend = "converging" | "accelerating";
 

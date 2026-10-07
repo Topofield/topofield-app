@@ -13,7 +13,6 @@ import {
   getVisit,
   getVisits,
 } from "@/lib/supabase/queries";
-import { visitCircuitsOf } from "@/lib/calculations/settlement";
 import { bookRowOf } from "@/lib/calculations/settlement-book";
 import type { VisitInput } from "@/types/settlement";
 
@@ -61,9 +60,6 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
     })),
   }));
   const otherVisits = visitInputs.filter((v) => v.id !== visit.id);
-  const otherVisitCircuits = Object.fromEntries(
-    visitCircuitsOf(allVisits.filter((v) => v.id !== visit.id)),
-  );
 
   // La libreta de la visita anterior en modo libreta, para la plantilla.
   const previousWithBook = allVisits
@@ -84,7 +80,6 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
     allVisits,
     visitInputs,
     otherVisits,
-    otherVisitCircuits,
     initialElevations,
     book: booksByVisit[visit.id] ?? [],
     initialBook: (booksByVisit[visit.id] ?? []).map(bookRowOf),

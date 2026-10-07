@@ -409,7 +409,8 @@ export function computeBook(rows: readonly BookRowInput[], benchmarks: readonly 
       endElevation: kind === "link" ? endBm!.elevation : null,
       order: "tercer_orden",
       compensation: "never",
-      forward: slice.map(({ startsSection: _startsSection, ...row }) => row),
+      // `startsSection` viaja en la fila y el motor de nivelación lo ignora.
+      forward: [...slice],
       return: null,
     });
     const km = totalDistanceFromReadings(slice);
@@ -588,4 +589,41 @@ export function auxiliaryPoints(
     seen.add(key);
     return [{ rowIndex: i, code: row.pointCode.trim() }];
   });
+}
+
+/**
+ * Los BM del lugar leídos de paso (Fase 30, ahora contra `site_benchmarks`):
+ * cada fila con cota cuyo código es un BM del lugar, que no es punto de
+ * control, ni el arranque de su tramo, ni su BM de cierre —ese es el cierre—.
+ * Tolerancia de tercer orden sobre la distancia hasta la fila (decisión 16).
+ */
+export function bookBenchmarkChecks(
+  book: VisitBook,
+  rows: readonly BookRowInput[],
+  benchmarks: readonly BenchmarkInput[],
+  points: Pick<PointInput, "code">[],
+): BenchmarkCheck[] {
+  const checks: BenchmarkCheck[] = [];
+  for (const tramo of book.tramos) {
+    for (let i = tramo.start + 1; i <= tramo.end; i++) {
+      if (i === tramo.end && tramo.kind !== "open") continue;
+      const row = rows[i]!;
+      const computed = book.readings[i]!;
+      if (row.foresight == null || !Number.isFinite(computed.elevationCalculated)) continue;
+      if (points.some((p) => samePointCode(p.code, row.pointCode))) continue;
+      const bm = benchmarks.find((b) => samePointCode(b.code, row.pointCode));
+      if (!bm) continue;
+      const measuredElevation = round4(computed.elevationCalculated);
+      const raw = Math.round((measuredElevation - bm.elevation) * 1e4) / 10;
+      const differenceMm = Object.is(raw, -0) ? 0 : raw;
+      const km = computed.distanceAccumulatedKm;
+      const toleranceMm = km != null && Number.isFinite(km) && km > 0 ? levelingTolerance("tercer_orden", km) : null;
+      checks.push({
+        rowIndex: i, code: row.pointCode.trim(), catalogElevation: bm.elevation, measuredElevation,
+        differenceMm, toleranceMm,
+        meetsTolerance: toleranceMm != null ? withinTolerance(differenceMm, toleranceMm) : null,
+      });
+    }
+  }
+  return checks;
 }
