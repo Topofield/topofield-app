@@ -136,3 +136,14 @@ export function removeLastArmada(rows: readonly ReadingDraft[]): ReadingDraft[] 
   const opener = { ...rows[last.opener]!, backsight: null, backDistanceM: null, backUpperM: null, backLowerM: null };
   return [...rows.slice(0, last.opener), opener];
 }
+
+/** La armada que abre «+ Agregar armada»: la siguiente, o la que quedó a medias. */
+export function nextArmadaIndex(rows: readonly ReadingDraft[]): number {
+  const spans = armadaSpans(rows);
+  return spans.at(-1)?.closer === null ? spans.length - 1 : spans.length;
+}
+
+/** ¿Llegó el recorrido a su fin? Su última fila, después de la de partida, es un BM. */
+export function runEnded(rows: readonly ReadingDraft[]): boolean {
+  return rows.length > 1 && rows.at(-1)!.pointType === "bm";
+}

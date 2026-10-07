@@ -48,6 +48,7 @@ export function LevelingSteps({ basePath, active, process, readings }: LevelingS
       trailing={
         <>
           <ImportDialog
+            label="Importar .L o CSV"
             currentType={process.type}
             currentStartCode={process.start_bm_code}
             currentStartElevation={Number(process.start_bm_elevation)}

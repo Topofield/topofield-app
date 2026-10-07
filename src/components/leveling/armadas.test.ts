@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON } from "@/lib/demo/carteras";
 import type { ReadingDraft } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
-import { armadaAt, armadaSpans, emptyRow, removeLastArmada, startRun, writeArmada } from "./armadas";
+import {
+  armadaAt,
+  armadaSpans,
+  emptyRow,
+  nextArmadaIndex,
+  removeLastArmada,
+  runEnded,
+  startRun,
+  writeArmada,
+} from "./armadas";
 
 const toDraft = (x: (typeof CARTERA_VERJON.ida)[number]): ReadingDraft => ({
   ...emptyRow(x.code, x.type),
@@ -63,5 +72,18 @@ describe("armadas", () => {
     expect(less).toHaveLength(ida.length - 1);
     expect(less.at(-1)!.pointCode).toBe("C 8");
     expect(less.at(-1)!.backsight).toBeNull();
+  });
+
+  it("la armada siguiente: después de la última, o la que quedó a medias", () => {
+    expect(nextArmadaIndex(startRun("D1", "bm"))).toBe(0);
+    expect(nextArmadaIndex(ida)).toBe(10);
+    const half = removeLastArmada(ida).map((row, i, all) => (i === all.length - 1 ? { ...row, backsight: 2.349 } : row));
+    expect(nextArmadaIndex(half)).toBe(9);
+  });
+
+  it("el recorrido terminó cuando su última fila es un BM", () => {
+    expect(runEnded(ida)).toBe(true);
+    expect(runEnded(removeLastArmada(ida))).toBe(false);
+    expect(runEnded(startRun("D1", "bm"))).toBe(false);
   });
 });

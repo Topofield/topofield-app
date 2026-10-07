@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { LevelingEditor } from "@/components/leveling/leveling-editor";
 import { LevelingHeader } from "@/components/leveling/leveling-header";
+import { LibretaTab } from "@/components/leveling/libreta-tab";
 import { LevelingSteps, type LevelingStep } from "@/components/leveling/leveling-steps";
 import { ProcessReport } from "@/components/process/process-report";
 import { reportsIncluding } from "@/lib/reports/including";
@@ -10,7 +10,6 @@ import {
   getLevelingProcess,
   getLevelingReadings,
   getProjectById,
-  getReferencePoints,
   getReports,
 } from "@/lib/supabase/queries";
 
@@ -37,10 +36,9 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
   const process = await getLevelingProcess(supabase, pid);
   if (!process || process.project_id !== id) notFound();
 
-  const [readings, project, points, reports] = await Promise.all([
+  const [readings, project, reports] = await Promise.all([
     getLevelingReadings(supabase, pid),
     getProjectById(supabase, id),
-    getReferencePoints(supabase, id),
     getReports(supabase, id),
   ]);
   if (!project) notFound();
@@ -68,10 +66,13 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
           notes={process.notes}
           reports={reports}
         />
+      ) : step === "libreta" ? (
+        <LibretaTab process={process} readings={readings} />
       ) : (
-        // Hasta las Tareas 9 y 10 de la Fase 36, la libreta y la compensación
-        // muestran el editor de antes.
-        <LevelingEditor process={process} readings={readings} points={points} />
+        // Hasta la Tarea 10 de la Fase 36, que trae el paso de compensación.
+        <p className="rounded-lg border border-rule bg-card px-6 py-10 text-center text-sm text-ink-2">
+          La compensación se muestra aquí en la próxima versión.
+        </p>
       )}
     </div>
   );

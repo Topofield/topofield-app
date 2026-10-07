@@ -10,7 +10,9 @@ import type {
   LevelingReading,
   LevelingType,
   ReadingInput,
+  RunType,
 } from "@/types/leveling";
+import { startRun } from "./armadas";
 
 export interface LevelingDetails {
   name: string;
@@ -135,6 +137,37 @@ export function levelingInputOf(draft: LevelingDraft): Omit<LevelingInput, "orde
     forward: draft.forward.map(inputOfRow),
     return: d.hasReturnRun ? draft.return.map(inputOfRow) : null,
   };
+}
+
+/**
+ * El borrador con otro BM de partida (y de llegada). Las filas de los extremos
+ * de cada recorrido que llevaban el código anterior lo cambian por el nuevo:
+ * el comienzo de la ida y la llegada de la vuelta son el BM de partida, y en
+ * la de enlace el fin de la ida y el comienzo de la vuelta, el de llegada.
+ */
+export function draftWithBm(draft: LevelingDraft, bm: LevelingBm): LevelingDraft {
+  const renamed = (code: string) =>
+    code === draft.bm.startCode ? bm.startCode : draft.bm.endCode != null && code === draft.bm.endCode ? (bm.endCode ?? code) : code;
+  const ends = (rows: ReadingDraft[]) =>
+    rows.map((row, i) => (i === 0 || i === rows.length - 1 ? { ...row, pointCode: renamed(row.pointCode) } : row));
+  return { ...draft, bm, forward: ends(draft.forward), return: ends(draft.return) };
+}
+
+/**
+ * Dónde empieza la vuelta: en el BM de partida (cerrada), en el de llegada
+ * (enlace) o donde terminó la ida (abierta).
+ */
+export function returnStartCode(draft: LevelingDraft): string {
+  if (draft.details.type === "closed") return draft.bm.startCode;
+  if (draft.details.type === "link") return draft.bm.endCode ?? "";
+  return draft.forward.at(-1)?.pointCode ?? draft.bm.startCode;
+}
+
+/** Las filas de un recorrido; uno vacío, solo con su punto de partida. */
+export function runRowsOf(draft: LevelingDraft, run: RunType): ReadingDraft[] {
+  const rows = draft[run];
+  if (rows.length > 0) return rows;
+  return startRun(run === "forward" ? draft.bm.startCode : returnStartCode(draft), "bm");
 }
 
 /** Lo que trae una importación del `.L` o del CSV (ver `LevelingImport`). */

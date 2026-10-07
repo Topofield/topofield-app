@@ -17,7 +17,7 @@ import { PROCESS_STATUS_LABELS } from "@/types/polygonal";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
 import { LevelingDetailsDialog } from "./leveling-details-dialog";
 import type { LevelingDetails, LevelingDetailsForm } from "./leveling-details";
-import { levelingDraftOf, levelingInputOf, levelingPayloadOf } from "./leveling-save";
+import { draftWithBm, levelingDraftOf, levelingInputOf, levelingPayloadOf } from "./leveling-save";
 
 interface LevelingHeaderProps {
   projectId: string;
@@ -77,7 +77,6 @@ export function LevelingHeader({
 
   async function saveDetails(d: LevelingDetails) {
     const draft = levelingDraftOf(process, readings);
-    const oldStart = draft.bm.startCode;
     draft.details = {
       ...draft.details,
       name: d.name.trim(),
@@ -90,17 +89,14 @@ export function LevelingHeader({
       equipmentModel: blank(d.equipmentModel),
       equipmentSerial: blank(d.equipmentSerial),
     };
-    draft.bm = {
+    // Los extremos de la libreta que llevaban el código del BM cambian con él.
+    const next = draftWithBm(draft, {
       startCode: d.startBmCode.trim(),
       startElevation: d.startBmElevation,
       endCode: d.type === "link" ? d.endBmCode.trim() : null,
       endElevation: d.type === "link" ? d.endBmElevation : null,
-    };
-    // La primera fila de la libreta es el BM de partida: si cambia su código,
-    // cambia con él.
-    const first = draft.forward[0];
-    if (first && first.pointCode === oldStart) draft.forward[0] = { ...first, pointCode: draft.bm.startCode };
-    return callAction(() => saveLevelingProcessAction(levelingPayloadOf(process.id, draft)));
+    });
+    return callAction(() => saveLevelingProcessAction(levelingPayloadOf(process.id, next)));
   }
 
   return (

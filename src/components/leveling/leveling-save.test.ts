@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
 import type { LevelingProcess, LevelingReading } from "@/types/leveling";
 import { computeLevelingDetected } from "@/lib/calculations/leveling";
-import { draftWithImport, levelingDraftOf, levelingInputOf, levelingPayloadOf } from "./leveling-save";
+import {
+  draftWithBm,
+  draftWithImport,
+  levelingDraftOf,
+  levelingInputOf,
+  levelingPayloadOf,
+  returnStartCode,
+  runRowsOf,
+} from "./leveling-save";
 
 const process = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -95,5 +103,45 @@ describe("leveling-save", () => {
     expect(next.forward).toHaveLength(1);
     expect(next.forward[0]).toMatchObject({ pointCode: "C10", backsight: 1.649, backUpperM: null });
     expect(next.return).toEqual([]);
+  });
+
+  it("cambiar el código del BM renombra los extremos de la libreta que lo llevan", () => {
+    const draft = levelingDraftOf(process, stored);
+    const next = draftWithBm(draft, { startCode: "BM-1", startElevation: 3290, endCode: null, endElevation: null });
+    expect(next.bm.startElevation).toBe(3290);
+    expect(next.forward[0]!.pointCode).toBe("BM-1");
+    // La vuelta de El Verjón llega a D1: su última fila también cambia.
+    expect(next.return.at(-1)!.pointCode).toBe("BM-1");
+    // D4, el fin de la ida y el comienzo de la vuelta, no es el BM: no cambia.
+    expect(next.forward.at(-1)!.pointCode).toBe("D4");
+    expect(next.return[0]!.pointCode).toBe("D4");
+    expect(next.forward.slice(1)).toEqual(draft.forward.slice(1));
+  });
+
+  it("en la de enlace, el de llegada renombra el fin de la ida y el comienzo de la vuelta", () => {
+    const draft = { ...levelingDraftOf(process, stored), bm: { startCode: "D1", startElevation: 3288.5, endCode: "D4", endElevation: 3315.0855 } };
+    draft.details = { ...draft.details, type: "link" };
+    const next = draftWithBm(draft, { ...draft.bm, endCode: "BM-2" });
+    expect(next.forward.at(-1)!.pointCode).toBe("BM-2");
+    expect(next.return[0]!.pointCode).toBe("BM-2");
+    expect(next.forward[0]!.pointCode).toBe("D1");
+  });
+
+  it("la vuelta parte del BM de partida (cerrada), del de llegada (enlace) o del fin de la ida (abierta)", () => {
+    const draft = levelingDraftOf(process, stored);
+    expect(returnStartCode(draft)).toBe("D4");
+    expect(returnStartCode({ ...draft, details: { ...draft.details, type: "closed" } })).toBe("D1");
+    expect(
+      returnStartCode({ ...draft, details: { ...draft.details, type: "link" }, bm: { ...draft.bm, endCode: "BM-2" } }),
+    ).toBe("BM-2");
+  });
+
+  it("un recorrido vacío empieza en su punto de partida", () => {
+    const draft = { ...levelingDraftOf(process, stored), return: [] };
+    expect(runRowsOf(draft, "return")).toEqual([expect.objectContaining({ pointCode: "D4", pointType: "bm", backsight: null })]);
+    expect(runRowsOf({ ...draft, forward: [] }, "forward")).toEqual([
+      expect.objectContaining({ pointCode: "D1", pointType: "bm" }),
+    ]);
+    expect(runRowsOf(draft, "forward")).toBe(draft.forward);
   });
 });
