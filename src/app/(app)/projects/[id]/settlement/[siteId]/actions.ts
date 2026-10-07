@@ -331,7 +331,11 @@ export async function saveVisitAction(
   });
   if (error) return { ok: false, error: logDbError(error, "No se pudo guardar la visita.") };
 
-  revalidatePath(`/projects/${context.site.project_id}/settlement/${payload.siteId}`);
+  // La página de la visita también: su cabecera —armadas, verificación, «En
+  // medición»— vuelve en la misma respuesta de cada lectura guardada.
+  const sitePath = `/projects/${context.site.project_id}/settlement/${payload.siteId}`;
+  revalidatePath(sitePath);
+  revalidatePath(`${sitePath}/visits/${payload.visitId}`);
   return { ok: true };
 }
 

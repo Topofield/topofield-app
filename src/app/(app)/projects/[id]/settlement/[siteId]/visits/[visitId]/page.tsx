@@ -1,8 +1,13 @@
 import { EmptyState } from "@/components/design-system";
 import { ProcessSteps } from "@/components/process/process-steps";
 import { visitArmadaSpans } from "@/components/settlement/visit-armadas";
+import type { VisitData } from "@/components/settlement/visit-dialog-form";
 import { VisitHeader } from "@/components/settlement/visit-header";
+import { VisitImportButton } from "@/components/settlement/visit-import-dialog";
+import { VisitLibretaTab } from "@/components/settlement/visit-libreta-tab";
+import { pointInputOf } from "@/lib/calculations/settlement";
 import { bookRowInputOf, bookVerification, computeBook } from "@/lib/calculations/settlement-book";
+import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { formatDateOnly, formatEquipmentLine } from "@/lib/utils/format";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
 import { loadVisitData } from "./visit-data";
@@ -27,7 +32,7 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
   const { tab } = await searchParams;
   const active = tab === "resultados" ? "resultados" : "libreta";
   const data = await loadVisitData(id, siteId, visitId);
-  const { project, site, visit, allVisits, book, benchmarks } = data;
+  const { project, site, visit, points, allVisits, visitInputs, book, benchmarks } = data;
 
   const siteHref = `/projects/${project.id}/settlement/${site.id}`;
   const basePath = `${siteHref}/visits/${visit.id}`;
@@ -44,6 +49,16 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
           return v.verified && v.order ? PRECISION_ORDER_LABELS[v.order] : "Sin verificación";
         })();
   const equipment = formatEquipmentLine(visit.equipment_brand, visit.equipment_model);
+  const visitData: VisitData = {
+    date: visit.date,
+    operator: visit.operator,
+    notes: visit.notes,
+    equipmentBrand: visit.equipment_brand,
+    equipmentModel: visit.equipment_model,
+    equipmentSerial: visit.equipment_serial,
+  };
+  const pointInputs = points.map(pointInputOf);
+  const benchmarkInputs = benchmarks.map((b) => ({ code: b.code, elevation: b.elevation }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,10 +88,38 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
         }}
         book={book}
       />
-      <ProcessSteps steps={STEPS} active={active} basePath={basePath} />
+      <ProcessSteps
+        steps={STEPS}
+        active={active}
+        basePath={basePath}
+        trailing={
+          benchmarks.length > 0 ? (
+            <VisitImportButton
+              projectId={project.id}
+              siteId={site.id}
+              visitId={visit.id}
+              visit={visitData}
+              benchmarkCodes={benchmarks.map((b) => b.code)}
+              pointCodes={points.map((p) => p.code)}
+              hasReadings={book.some((r) => r.backsight != null || r.foresight != null)}
+            />
+          ) : undefined
+        }
+      />
       {active === "libreta" ? (
-        // Tarea 12: la libreta por armadas.
-        <EmptyState title="Libreta" description="La libreta por armadas de la visita." />
+        <VisitLibretaTab
+          projectId={project.id}
+          siteId={site.id}
+          visitId={visit.id}
+          visitNumber={visit.visit_number}
+          visit={visitData}
+          updatedAt={visit.updated_at}
+          book={book}
+          benchmarks={benchmarkInputs}
+          points={pointInputs}
+          others={visitInputs.filter((v) => v.id !== visit.id)}
+          thresholds={thresholdsOf(site)}
+        />
       ) : (
         // Tarea 13: los resultados.
         <EmptyState title="Resultados" description="Los resultados de la visita." />

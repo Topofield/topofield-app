@@ -33,15 +33,20 @@ interface ArmadaDialogProps {
   onClose: () => void;
 }
 
-/** Una visual: lectura y distancia, y los hilos superior e inferior, opcionales. */
-function VisualFields({
+/**
+ * Una visual: lectura y distancia, y los hilos superior e inferior, opcionales.
+ * La visita de asentamientos (Fase 37) la reutiliza con la distancia opcional.
+ */
+export function VisualFields({
   id,
   value,
   onChange,
+  optionalDistance = false,
 }: {
   id: string;
   value: VisualForm;
   onChange: (v: VisualForm) => void;
+  optionalDistance?: boolean;
 }) {
   const [showWires, setShowWires] = useState(value.upper !== "" || value.lower !== "");
   const wires = wiresOf(value);
@@ -61,7 +66,7 @@ function VisualFields({
         ) : (
           <NumberInput
             id={`${id}-distancia`}
-            label="Distancia (m)"
+            label={optionalDistance ? "Distancia (m) · opcional" : "Distancia (m)"}
             value={value.distance}
             onChange={(e) => set({ distance: e.target.value })}
           />

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  appendVisitArmada, dropBookRow, finishVisitArmada, pendingChangePoint, visitArmadaAt,
-  visitArmadaSpans, writeVisitArmada, type VisitArmada,
+  appendVisitArmada, bookFromLibreta, dropBookRow, finishVisitArmada, pendingChangePoint, removeLastVisitArmada,
+  visitArmadaAt, visitArmadaSpans, writeVisitArmada, type VisitArmada,
 } from "./visit-armadas";
 import type { BookRowPayload } from "@/types/settlement";
 import type { PointType } from "@/types/leveling";
@@ -91,5 +91,32 @@ describe("las armadas de una visita", () => {
   it("el punto repetido solo se quita si es una vista a un punto", () => {
     expect(dropBookRow(alameda12, 1)).toEqual({ rows: alameda12.filter((_, i) => i !== 1) });
     expect(dropBookRow(alameda12, 2)).toEqual({ error: "Esa lectura es parte de la cadena de armadas: no se puede quitar aquí." });
+  });
+});
+
+describe("removeLastVisitArmada", () => {
+  it("la que sale de un BM del lugar se va entera", () => {
+    const rows = [...alameda12, r("BM-2", "bm", 1.1, null, true), r("TA-09", "intermediate", null, 1.3)];
+    expect(removeLastVisitArmada(rows)).toEqual(alameda12);
+  });
+
+  it("la que sale de un punto de cambio deja el punto como V− de la anterior", () => {
+    const rows = removeLastVisitArmada(alameda12);
+    expect(rows).toEqual([alameda12[0], alameda12[1], { ...alameda12[2], backsight: null }]);
+  });
+
+  it("sin armadas, nada cambia", () => {
+    expect(removeLastVisitArmada([])).toEqual([]);
+  });
+});
+
+describe("bookFromLibreta (importar .L o CSV)", () => {
+  it("es un tramo desde el BM de su primera fila", () => {
+    const rows = bookFromLibreta([
+      { pointCode: "PISCINA/BM", pointType: "pc", backsight: 1.45, foresight: null, backDistanceM: null, foreDistanceM: null },
+      { pointCode: "B4", pointType: "intermediate", backsight: null, foresight: 4.058, backDistanceM: null, foreDistanceM: null },
+    ]);
+    expect(rows[0]).toMatchObject({ pointCode: "PISCINA/BM", pointType: "bm", startsSection: true, backsight: 1.45 });
+    expect(rows[1]).toMatchObject({ pointCode: "B4", pointType: "intermediate", startsSection: false, foresight: 4.058 });
   });
 });

@@ -16,13 +16,14 @@ export interface DraftSaveResult {
  * servidor (`updatedAt` cambia con cada guardado).
  *
  * `base` es el borrador armado con lo que mandó el servidor, ya memorizado por
- * quien llama; `persist`, la acción de guardado, estable entre pintadas.
+ * quien llama; `persist`, la acción de guardado, estable entre pintadas. La
+ * respuesta llega entera a quien guarda (la visita trae `duplicate`).
  */
-export function useProcessDraft<D>(
+export function useProcessDraft<D, R extends DraftSaveResult = DraftSaveResult>(
   updatedAt: string,
   base: D,
-  persist: (next: D) => Promise<DraftSaveResult>,
-): { draft: D; save: (next: D) => Promise<DraftSaveResult> } {
+  persist: (next: D) => Promise<R>,
+): { draft: D; save: (next: D) => Promise<R | { ok: false; error: string }> } {
   const [saved, setSaved] = useState<D | null>(null);
   const [seen, setSeen] = useState(updatedAt);
   if (seen !== updatedAt) {

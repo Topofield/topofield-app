@@ -3,6 +3,7 @@
 // V− cierra la anterior. Lo que añade la visita: una armada puede salir de un
 // BM del lugar (abre un tramo, `startsSection`) y su V− es opcional.
 import { samePointCode } from "@/lib/calculations/leveling";
+import type { LibretaRow } from "@/lib/import/leveling";
 import type { BookRowPayload } from "@/types/settlement";
 
 export interface VisitVisual {
@@ -144,4 +145,34 @@ export function dropBookRow(rows: readonly BookRowPayload[], index: number): { r
     return { error: "Esa lectura es parte de la cadena de armadas: no se puede quitar aquí." };
   }
   return { rows: rows.filter((_, i) => i !== index) };
+}
+
+/**
+ * Quita la última armada. La que sale de un BM del lugar se va entera; la que
+ * sale de un punto de cambio deja el punto, sin su V+, como la V− de la
+ * anterior.
+ */
+export function removeLastVisitArmada(rows: readonly BookRowPayload[]): BookRowPayload[] {
+  const span = visitArmadaSpans(rows).at(-1);
+  if (!span) return [...rows];
+  if (starts(rows, span.opener)) return rows.slice(0, span.opener);
+  return [...rows.slice(0, span.opener), withBack(rows[span.opener]!, { reading: null, distanceM: null, upperM: null, lowerM: null })];
+}
+
+/**
+ * La libreta de un `.L` o un CSV importado (Fase 37, decisión 5): un tramo
+ * desde el BM de su primera fila. Se guardan las lecturas; las cotas las
+ * calcula la visita.
+ */
+export function bookFromLibreta(rows: readonly LibretaRow[]): BookRowPayload[] {
+  return rows.map((row, i) => ({
+    ...blank,
+    pointCode: row.pointCode.trim(),
+    pointType: i === 0 ? "bm" : row.pointType,
+    startsSection: i === 0,
+    backsight: row.backsight,
+    foresight: row.foresight,
+    backDistanceM: row.backDistanceM,
+    foreDistanceM: row.foreDistanceM,
+  }));
 }

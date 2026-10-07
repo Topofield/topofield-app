@@ -1,94 +1,73 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type ChangeEvent } from "react";
-import { Alert, Button, Modal, Select } from "@/components/design-system";
+import { Alert, Button, Modal } from "@/components/design-system";
 import { RunPreview, TemplateLink } from "@/components/leveling/import-dialog";
+import { saveVisitAction } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
 import { samePointCode } from "@/lib/calculations/leveling";
-import {
-  FORMAT_LABELS,
-  decodeFileBytes,
-  readLevelingFile,
-  toLibreta,
-  type LibretaRow,
-  type ReadResult,
-} from "@/lib/import/leveling";
+import { callAction } from "@/lib/errors/action-call";
+import { FORMAT_LABELS, decodeFileBytes, readLevelingFile, toLibreta, type ReadResult } from "@/lib/import/leveling";
 import type { PointType } from "@/types/leveling";
+import type { VisitData } from "./visit-dialog-form";
+import { bookFromLibreta } from "./visit-armadas";
 
-/** Lo que la importación entrega al editor de la visita. */
-export interface VisitImport {
-  rows: LibretaRow[];
-  /** El amarre que queda en la visita: el de la visita, o el del archivo. */
-  amarre: { code: string; elevation: number | null };
-}
-
-interface VisitImportDialogProps {
-  /** Códigos del catálogo del lugar, para marcar los puntos de control. */
+interface VisitImportButtonProps {
+  projectId: string;
+  siteId: string;
+  visitId: string;
+  /** La cabecera de la visita, que viaja con el guardado. */
+  visit: VisitData;
+  benchmarkCodes: string[];
+  /** Los puntos de control del lugar, para marcarlos en la vista previa. */
   pointCodes: string[];
-  /** El amarre actual de la visita (vacío si aún no tiene). */
-  amarre: { code: string; elevation: number | null };
-  /** La visita ya tiene libreta: se reemplaza, y se avisa. */
-  hasRows: boolean;
-  onAccept: (result: VisitImport) => void;
-  disabled?: boolean;
-  /** Abierto al montar: la visita se creó eligiendo «importar un archivo». */
-  defaultOpen?: boolean;
+  /** La visita ya tiene lecturas: se reemplazan, y se avisa. */
+  hasReadings: boolean;
 }
 
 /**
- * Importa la libreta de la visita desde el archivo de un nivel digital o la
- * plantilla CSV (Fase 18, decisión 18). Reutiliza los lectores y la
- * previsualización de la Fase 16, con dos diferencias: la libreta de la
- * visita es siempre UN recorrido —el circuito cerrado sobre el amarre, sin
- * ida y vuelta— y no hay tipo de proceso que proponer. Nada se guarda aquí.
+ * «Importar .L o CSV» en la barra de pasos de la visita (Fase 37, decisiones 5
+ * y 6). Lee el `.L` de un nivel digital Leica o la plantilla CSV de la
+ * nivelación como un tramo desde el BM de su primera fila, que debe estar en
+ * los BM del lugar. Se guardan las lecturas: la cota la da la medida, no el
+ * archivo.
  */
-export function VisitImportDialog({
+export function VisitImportButton({
+  projectId,
+  siteId,
+  visitId,
+  visit,
+  benchmarkCodes,
   pointCodes,
-  amarre,
-  hasRows,
-  onAccept,
-  disabled,
-  defaultOpen = false,
-}: VisitImportDialogProps) {
-  const [open, setOpen] = useState(defaultOpen && !disabled);
+  hasReadings,
+}: VisitImportButtonProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [read, setRead] = useState<ReadResult | null>(null);
-  const [useFileElevation, setUseFileElevation] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, PointType>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const file = read?.ok ? read.file : null;
-
   const rows = useMemo(() => {
     if (!file) return null;
-    return toLibreta(file, { kind: "single" }).forward.map((r, i) => ({
-      ...r,
-      pointType: overrides[i] ?? r.pointType,
-    }));
+    return toLibreta(file, { kind: "single" }).forward.map((r, i) => ({ ...r, pointType: overrides[i] ?? r.pointType }));
   }, [file, overrides]);
 
-  // El amarre sale de la primera fila del archivo: es donde arrancó el
-  // circuito que se midió.
-  const fileCode = rows?.[0]?.pointCode ?? file?.startPoint?.code ?? "";
-  const fileElevation = file?.startPoint?.elevation ?? null;
-  const visitCode = amarre.code.trim();
-  const sameCode = visitCode !== "" && samePointCode(fileCode, visitCode);
-  const elevationsDiffer =
-    sameCode &&
-    fileElevation != null &&
-    amarre.elevation != null &&
-    fileElevation !== amarre.elevation;
-  const closesOnStart =
-    rows != null &&
-    rows.length >= 2 &&
-    samePointCode(rows[0]!.pointCode, rows.at(-1)!.pointCode);
-
-  const notes = rows?.map((r, i) => {
-    if (i === 0 || i === rows.length - 1) {
-      return samePointCode(r.pointCode, fileCode) ? "BM de amarre" : null;
-    }
-    return pointCodes.some((c) => samePointCode(c, r.pointCode))
-      ? "Punto de control"
-      : null;
-  });
+  const startCode = rows?.[0]?.pointCode.trim() ?? "";
+  const startIsBenchmark = benchmarkCodes.some((c) => samePointCode(c, startCode));
+  const notes = rows?.map((r, i) =>
+    i === 0
+      ? startIsBenchmark
+        ? "BM del lugar"
+        : null
+      : pointCodes.some((c) => samePointCode(c, r.pointCode))
+        ? "Punto de control"
+        : benchmarkCodes.some((c) => samePointCode(c, r.pointCode))
+          ? "BM del lugar"
+          : null,
+  );
 
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -96,25 +75,23 @@ export function VisitImportDialog({
     setFileName(f.name);
     setRead(readLevelingFile(decodeFileBytes(await f.arrayBuffer())));
     setOverrides({});
-    setUseFileElevation(true);
+    setError(null);
   }
 
-  function accept() {
+  async function accept() {
     if (!rows) return;
-    // El amarre va entero, código y cota. Con el mismo código se conserva la
-    // cota de la visita salvo que el usuario elija la del archivo; con otro
-    // código manda el archivo, porque su primera fila es el amarre medido.
-    const result: VisitImport["amarre"] = sameCode
-      ? {
-          code: visitCode,
-          elevation:
-            fileElevation != null && (useFileElevation || amarre.elevation == null)
-              ? fileElevation
-              : amarre.elevation,
-        }
-      : { code: fileCode, elevation: fileElevation };
-    onAccept({ rows, amarre: result });
+    setBusy(true);
+    setError(null);
+    const r = await callAction(() =>
+      saveVisitAction(projectId, { siteId, visitId, ...visit, book: bookFromLibreta(rows) }),
+    );
+    setBusy(false);
+    if (!r.ok) {
+      setError(r.error ?? "No se pudo guardar la libreta importada.");
+      return;
+    }
     setOpen(false);
+    router.refresh();
   }
 
   return (
@@ -123,14 +100,14 @@ export function VisitImportDialog({
         type="button"
         variant="secondary"
         size="sm"
-        disabled={disabled}
         onClick={() => {
           setRead(null);
           setFileName(null);
+          setError(null);
           setOpen(true);
         }}
       >
-        Importar desde archivo
+        Importar .L o CSV
       </Button>
       <Modal
         open={open}
@@ -142,18 +119,17 @@ export function VisitImportDialog({
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={accept} disabled={!rows}>
-              Usar estas lecturas
+            <Button onClick={() => void accept()} disabled={!rows || !startIsBenchmark || busy}>
+              {busy ? "Guardando…" : "Usar estas lecturas"}
             </Button>
           </>
         }
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-ink-2">
-            Se leen el archivo <strong>.L de un nivel digital Leica</strong> y
-            la <strong>plantilla CSV</strong> de TopoField, como el circuito
-            cerrado sobre el BM de amarre. Nada se guarda hasta que pulse
-            Guardar.
+            Se leen el archivo <strong>.L de un nivel digital Leica</strong> y la <strong>plantilla CSV</strong> de
+            TopoField, como un tramo desde el BM de su primera fila. Se guardan las lecturas; la cota de cada punto sale
+            de la medida.
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <label className="text-sm font-medium text-ink">
@@ -170,10 +146,10 @@ export function VisitImportDialog({
           {read && !read.ok && (
             <Alert variant="error">
               {fileName ? `${fileName}: ` : ""}
-              {read.error} Si su instrumento no es uno de esos, pase las
-              lecturas a la plantilla CSV.
+              {read.error} Si su instrumento no es uno de esos, pase las lecturas a la plantilla CSV.
             </Alert>
           )}
+          {error && <Alert variant="error">{error}</Alert>}
 
           {file && rows && (
             <div className="flex flex-col gap-4">
@@ -184,62 +160,25 @@ export function VisitImportDialog({
                 <dd className="font-mono tabular-nums">
                   {file.setups.length} · {file.rawSights}
                 </dd>
-                <dt className="text-ink-2">BM de amarre</dt>
-                <dd>
-                  {fileCode || "—"}
-                  {fileElevation != null && (
-                    <span className="font-mono tabular-nums"> = {fileElevation.toFixed(4)}</span>
-                  )}
-                </dd>
+                <dt className="text-ink-2">Sale de</dt>
+                <dd>{startCode || "—"}</dd>
               </dl>
-
-              {visitCode !== "" && !sameCode && (
-                <Alert variant="warning">
-                  El archivo arranca en {fileCode || "un punto sin código"} y la
-                  visita tenía como amarre {visitCode}. Al aceptar, el amarre
-                  de la visita pasa a ser {fileCode}
-                  {fileElevation == null
-                    ? "; elija después su cota en el catálogo del proyecto."
-                    : "."}
+              {!startIsBenchmark && (
+                <Alert variant="error">
+                  El archivo arranca en {startCode || "un punto sin código"}, que no está en los BM del lugar: agrégalo en
+                  la pestaña BMs antes de importar.
                 </Alert>
               )}
-              {visitCode === "" && fileElevation == null && (
-                <Alert variant="info">
-                  El archivo no trae la cota de {fileCode}. Elíjala después en
-                  el BM de amarre de la visita.
-                </Alert>
-              )}
-              {elevationsDiffer && (
-                <Select
-                  label="Cota del BM de amarre"
-                  options={[
-                    { value: "file", label: `La del archivo: ${fileElevation!.toFixed(4)}` },
-                    { value: "visit", label: `La de la visita: ${amarre.elevation!.toFixed(4)}` },
-                  ]}
-                  value={useFileElevation ? "file" : "visit"}
-                  onChange={(e) => setUseFileElevation(e.target.value === "file")}
-                />
-              )}
-              {!closesOnStart && (
-                <Alert variant="warning">
-                  El recorrido del archivo no termina en su punto de partida:
-                  sin volver al amarre no se calcula el cierre.
-                </Alert>
-              )}
-              {hasRows && (
-                <Alert variant="warning">
-                  La visita ya tiene libreta: se reemplazará por la del archivo.
-                </Alert>
+              {hasReadings && (
+                <Alert variant="warning">La visita ya tiene lecturas: su libreta se reemplazará por la del archivo.</Alert>
               )}
               {file.warnings.map((w) => (
                 <Alert key={w} variant="warning">
                   {w}
                 </Alert>
               ))}
-
               <p className="text-sm text-ink-2">
-                Revise el tipo de cada punto antes de aceptar. Los puntos de
-                control suelen ser radiaciones (intermedios).
+                Revisa el tipo de cada punto antes de aceptar: los puntos de control suelen ser vistas intermedias.
               </p>
               <RunPreview
                 title="Libreta"
