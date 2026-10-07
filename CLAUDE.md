@@ -26,7 +26,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/app/(app)/equipos/` → el catálogo de equipos de la cuenta (ruta `/equipos`)
 - `src/app/(app)/projects/[id]/` → hub del proyecto, tabs de procesos/informes/config
 - `src/app/(app)/projects/[id]/polygonal/[pid]/` → poligonal: pasos Datos · Ajuste · Informe, y `export/` (Excel); el alta es un popup del hub
-- `src/app/(app)/projects/[id]/leveling/[pid]/` → nivelación: pestañas Proceso · Informe, y `export/`
+- `src/app/(app)/projects/[id]/leveling/[pid]/` → nivelación: pasos Libreta · Compensación · Informe, y `export/` (Excel); el alta es un popup del hub
 - `src/app/(app)/projects/[id]/settlement/[siteId]/` → lugar de asentamientos: pestañas Panel · Puntos y lugar · Informe; `visits/[visitId]/` y su `editar/`
 - `src/app/(app)/projects/[id]/sites/` → alta del lugar (`[siteId]` redirige a la pestaña Puntos y lugar)
 - `src/app/(app)/projects/[id]/reports/` → informes consolidados: `new/` y `[reportId]/print/`
@@ -61,8 +61,9 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - IMPORTANT: el registro exige el código de `SIGNUP_INVITE_CODE` y confirmación de correo. La variable NO lleva prefijo `NEXT_PUBLIC_` y solo se lee en el Server Action; si falta, el registro se bloquea (nunca se abre).
 - No usar shadcn/ui ni ninguna librería de componentes. El sistema de diseño está en `src/components/design-system/` y se construye sobre Tailwind puro.
 - Las coordenadas van a 3 decimales (0.000), las cotas a 4 decimales (0.0000), los ángulos en DMS.
-- Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado. Una excepción, y los triggers admiten solo esa: **reabrir** —nivelación, visita o lugar— devuelve el estado a abierto y borra `closed_at`/`closed_by` sin tocar nada más (Fase 34).
+- Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado. Una excepción, y los triggers admiten solo esa: **reabrir** —visita o lugar— devuelve el estado a abierto y borra `closed_at`/`closed_by` sin tocar nada más (Fase 34).
 - **La poligonal no se cierra** (Fase 35): no tiene triggers de cierre, ni `closed_at`/`closed_by`, ni los estados `closed`/`rejected`; su orden de precisión y su tipo de ángulo se detectan al calcular (`computePolygonalDetected`), no se declaran. Un informe consolidado la incluye calculada.
+- **La nivelación tampoco** (Fase 36): su orden se detecta al compensar (`computeLevelingDetected`) y **se compensa siempre** que haya contra qué cerrar, con aviso si no alcanza ningún orden; la visita de asentamientos conserva «solo dentro de tolerancia». Se captura por armada en popups sobre el modelo por punto de `leveling_readings`; la libreta a medias se guarda `in_progress`, sin compensar (`pendingRun`). En la nivelación se dice «cota ajustada», no «adoptada».
 - Lo que alimenta un resultado cerrado también queda fijo: la C0 de un punto con lecturas en una visita cerrada no cambia (trigger en `settlement_points`), y un informe emitido no admite UPDATE: guarda su portada en `reports.cover` y solo se elimina y se regenera.
 - Los guardados que escriben varias tablas van por una función de Postgres (`supabase.rpc`: `save_polygonal_process`, `save_leveling_process`, `save_visit`, `georeference_polygonal`) para que sean atómicos. Son `SECURITY INVOKER`, con columnas explícitas, y solo escriben: el cálculo sigue en TypeScript, en la Server Action.
 - El catálogo de equipos (`equipment`) es una **plantilla**: elegir un equipo copia sus datos en las columnas `equipment_*` y de precisión del proceso o de la visita. Ningún proceso lo referencia, así que editar o borrar un equipo nunca cambia lo ya medido ni informado.

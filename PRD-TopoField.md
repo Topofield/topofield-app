@@ -763,6 +763,18 @@ El cierre es el mecanismo de trazabilidad. Aplica a los 3 tipos de proceso.
 > apartado queda para la nivelación, las visitas y los lugares de
 > asentamientos. Ver `docs/prds/34-ux-poligonal.md`.
 
+> **Enmienda (Fase 36, 2026-10-07).** **La nivelación tampoco se cierra.**
+> Queda calculada y admite cambios siempre; su orden de precisión se detecta
+> (el más alto cuya tolerancia K·√D cumple: el cierre de cada recorrido en la
+> cerrada y la de enlace, la discrepancia en la abierta con vuelta), y se
+> **compensa siempre** que haya contra qué cerrar, con un aviso si no alcanza
+> ningún orden. La visita de asentamientos conserva la regla de compensar solo
+> dentro de tolerancia. La base perdió los triggers de cierre de la
+> nivelación, `closed_at`, `closed_by` y los estados `closed` y `rejected`; un
+> informe consolidado la incluye calculada. El cierre de este apartado queda
+> para las visitas y los lugares de asentamientos. Ver
+> `docs/prds/35-ux-nivelacion.md`.
+
 **Proceso rechazado:**
 - Si el proceso no cumple tolerancia, el usuario puede cerrarlo como "Rechazado"
 - Se registra igualmente con timestamp y responsable

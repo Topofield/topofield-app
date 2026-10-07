@@ -46,7 +46,7 @@
 <body>
 
 <h1>Fundamentos matemáticos del módulo de nivelación</h1>
-<p class="muted">TopoField · al cierre de la Fase 28 (ida y vuelta en la compensación) · 2026-10-01</p>
+<p class="muted">TopoField · al cierre de la Fase 36 (la nivelación como la mide el topógrafo) · 2026-10-07</p>
 
 <p>Este documento reúne las fórmulas con que TopoField calcula una nivelación
 geométrica, tal como están implementadas, para poder citarlas y verificarlas.
@@ -77,9 +77,9 @@ TypeScript: reciben los datos de campo y devuelven los resultados, sin tocar la
 base de datos ni la interfaz.</p>
 <table>
 <tr><th>Archivo</th><th>Qué hace</th></tr>
-<tr><td><code>leveling.ts</code></td><td>El motor: altura de instrumento, cotas, comprobación aritmética, distancias, cierre, compensación, ida y vuelta, cotas adoptadas y puntos homólogos. La función principal es <code>computeLeveling(input)</code>.</td></tr>
-<tr><td><code>tolerances.ts</code></td><td>Las constantes por orden de precisión: K de la tolerancia, límites del equilibrado de visuales (por armada y por sección) y tolerancia del hilo medio.</td></tr>
-<tr><td><code>src/lib/validators/leveling.ts</code></td><td>Las reglas de captura (qué se puede guardar, y los avisos de equilibrado) y de cierre (qué se puede cerrar y si solo como rechazado).</td></tr>
+<tr><td><code>leveling.ts</code></td><td>El motor: altura de instrumento, cotas, comprobación aritmética, distancias, cierre, compensación, ida y vuelta, cotas ajustadas y puntos homólogos. La función principal es <code>computeLeveling(input)</code>; la nivelación la llama con <code>computeLevelingDetected</code>, que detecta el orden alcanzado (<code>detectLevelingOrder</code>, Fase 36).</td></tr>
+<tr><td><code>tolerances.ts</code></td><td>Las constantes por orden de precisión: K de la tolerancia y tolerancia del hilo medio.</td></tr>
+<tr><td><code>src/lib/validators/leveling.ts</code></td><td>Las reglas de captura: qué se puede guardar.</td></tr>
 <tr><td><code>src/lib/import/leveling/</code></td><td>La lectura de libretas de nivel digital (formato <code>.L</code> de Leica y plantilla CSV).</td></tr>
 </table>
 
@@ -149,11 +149,26 @@ según la cota del BM.</p>
 <p class="note">Para comparar: la FGCS (1984) usa 3, 4, 6, 8 y 12 mm·√D para
 sus órdenes y clases. Las clases del marco teórico están corridas una respecto
 a ella (6 mm·√D es segundo orden clase I en la FGCS).</p>
+<h3>5.1. El orden alcanzado (Fase 36)</h3>
+<p>La nivelación no declara su orden: se detecta. Es el más alto cuya
+tolerancia cumple el trabajo, probando de primer orden hacia ordinario:</p>
+<div class="formula">Orden alcanzado = el primero de (primer, segundo, tercer, ordinario) con |E| ≤ K · √D</div>
+<p>En una cerrada o de enlace con vuelta tienen que cumplir los dos
+recorridos, cada uno con su distancia; en una abierta con vuelta se juzga la
+discrepancia contra K · √D · √2 (§ 7.1). Una abierta sin vuelta no tiene con
+qué juzgarse y no tiene orden. Si no cumple ni el ordinario, no alcanza
+ninguno. En El Verjón la discrepancia de 5.0 mm cabe en segundo orden (5.26 mm)
+y no en primero (2.63 mm); el tramo 2 cierra en −0.4 mm frente a los 3.5 mm de
+primer orden.</p>
 
 <h2 id="compensacion">6. La compensación proporcional a la distancia</h2>
-<p>Solo se compensa un trabajo que cumple la tolerancia; si no cumple, se
-repite (marco teórico § 8.1). La corrección de cada punto es proporcional a su
-distancia acumulada:</p>
+<p>La nivelación <strong>compensa siempre</strong> que haya contra qué cerrar
+—la cerrada, la de enlace y la abierta con vuelta—, alcance o no un orden, y
+avisa si no alcanza ninguno: en la práctica, un trabajo fuera de tolerancia se
+repite (marco teórico § 8.1). Hasta la Fase 36 solo se compensaba un trabajo
+que cumplía el orden declarado; la visita de asentamientos conserva esa regla.
+Mientras la libreta no llega a su BM no hay cierre, y no se compensa. La
+corrección de cada punto es proporcional a su distancia acumulada:</p>
 <div class="formula">C<sub>i</sub> = −E · d<sub>i</sub> / D&nbsp;&nbsp;&nbsp;&nbsp;Cota compensada<sub>i</sub> = Cota calculada<sub>i</sub> + C<sub>i</sub></div>
 <ul>
   <li>El BM de partida tiene d = 0, así que no se corrige: <strong>su cota no cambia nunca</strong>.</li>
@@ -214,15 +229,15 @@ B<sub>compensada</sub> = A + Δh<sub>ida</sub> − (Δh<sub>ida</sub> + Δh<sub>
 cuadrados cuando la varianza de un desnivel crece con su distancia. Compensar
 el circuito y promediar ida y vuelta dan lo mismo en el punto de vuelta.</p>
 
-<h3>7.5. La cota adoptada de un punto leído dos veces</h3>
+<h3>7.5. La cota ajustada de un punto leído dos veces</h3>
 <p>Si la vuelta pasa por los mismos puntos de la ida, cada uno queda con dos
 cotas compensadas, una por pasada, que no coinciden. La aplicación da
-<strong>una sola cota por punto</strong>, la <em>cota adoptada</em>
-(<code>adoptedElevations</code>):</p>
+<strong>una sola cota por punto</strong>, la <em>cota ajustada</em>
+(<code>adoptedElevations</code>; hasta la Fase 36 se llamaba «cota adoptada»):</p>
 <div class="formula">
-Cota adoptada = Cota conocida&nbsp;&nbsp;&nbsp;&nbsp;si es el BM de partida (o el de llegada en una de enlace)<br>
-Cota adoptada = ( Cota compensada<sub>ida</sub> + Cota compensada<sub>vuelta</sub> ) / 2&nbsp;&nbsp;&nbsp;&nbsp;si se leyó dos veces<br>
-Cota adoptada = Cota compensada&nbsp;&nbsp;&nbsp;&nbsp;si se leyó una vez
+Cota ajustada = Cota conocida&nbsp;&nbsp;&nbsp;&nbsp;si es el BM de partida (o el de llegada en una de enlace)<br>
+Cota ajustada = ( Cota compensada<sub>ida</sub> + Cota compensada<sub>vuelta</sub> ) / 2&nbsp;&nbsp;&nbsp;&nbsp;si se leyó dos veces<br>
+Cota ajustada = Cota compensada&nbsp;&nbsp;&nbsp;&nbsp;si se leyó una vez
 </div>
 <p><strong>Por qué el promedio y no la cota de la ida.</strong> Antes de
 compensar, la cota de la ida de un punto cercano al origen acumula menos
@@ -234,15 +249,15 @@ cotas compensadas valen lo mismo, y el promedio de dos medidas igual de buenas
 es la mejor estimación de las dos.</p>
 <p>Los puntos se reconocen por su código sin espacios ni mayúsculas («AUX 1» y
 «AUX1» son el mismo). La misma regla vale para un único recorrido que vuelve
-por sus propios puntos, como el tramo 2 de la demo. Si el trabajo no cumple, no
-se compensa y no hay cota adoptada.</p>
+por sus propios puntos, como el tramo 2 de la demo. Una abierta sin vuelta no se
+compensa y no tiene cota ajustada.</p>
 
 <h3>7.6. El BM de partida no cambia</h3>
 <p>El BM de partida aparece dos veces en el circuito: al salir, con d = 0, y al
 volver, con d = L, donde la compensación lo deja exactamente en su cota
 conocida. Aun así la regla es explícita: <strong>el BM de partida —y el de
 llegada en una de enlace— conserva su cota conocida en todas sus filas y en la
-cota adoptada</strong>. Es un dato, no una medición.</p>
+cota ajustada</strong>. Es un dato, no una medición.</p>
 
 <h3>7.7. Puntos homólogos</h3>
 <p>Cuando ida y vuelta comparten puntos, la aplicación compara la cota de cada
@@ -254,6 +269,10 @@ recorrido indica un error sistemático; uno que salta en un punto, un error en
 ese punto.</p>
 
 <h2 id="equilibrado">8. El equilibrado de visuales</h2>
+<p class="note"><strong>Retirado en la Fase 36.</strong> El equilibrado es una
+regla de campo, no parte del ajuste: la aplicación ya no avisa de él, ni en la
+nivelación ni en la visita, y quitarlo no cambió ninguna cota. La sección queda
+como fundamento de la regla.</p>
 <p>Igualar la distancia de la vista más y la de la vista menos de cada armada
 cancela el error de colimación del nivel (la visual no perfectamente
 horizontal), y reduce los de curvatura y refracción. Si la visual sale
@@ -262,8 +281,8 @@ C · (d<sub>V+</sub> − d<sub>V−</sub>), y el de una sección, la suma de los
 sus armadas (NGS 3, § 5.5.2):</p>
 <div class="formula">Error de colimación de la sección = C · Σ (d<sub>V+</sub> − d<sub>V−</sub>)</div>
 <p>Armadas dentro de su límite pueden sumar un desequilibrio grande si se
-desequilibran siempre hacia el mismo lado. Por eso la aplicación avisa, sin
-bloquear, de las dos cosas:</p>
+desequilibran siempre hacia el mismo lado. Por eso hasta la Fase 36 la
+aplicación avisaba, sin bloquear, de las dos cosas:</p>
 <div class="formula">| d<sub>V+</sub> − d<sub>V−</sub> | &gt; límite por armada&nbsp;&nbsp;&nbsp;(2 / 5 / 10 / 10 m)</div>
 <div class="formula">| Σ (d<sub>V+</sub> − d<sub>V−</sub>) | &gt; límite por sección&nbsp;&nbsp;&nbsp;(4 / 10 / 10 / 10 m)</div>
 <p>en primer, segundo y tercer orden y ordinario. Son los límites de la FGCS
@@ -281,7 +300,7 @@ m por armada, sin fuente, y no se controlaba el acumulado.</p>
 
 <h2 id="ejemplo1">9. Ejemplo 1: un circuito corto</h2>
 <p>Abierta de A (cota conocida 100.000 m) a B, con ida y vuelta por el mismo
-punto de cambio P. Tercer orden.</p>
+punto de cambio P.</p>
 <table>
 <tr><th>Recorrido</th><th>Punto</th><th class="num">V+</th><th class="num">d V+ (m)</th><th class="num">V−</th><th class="num">d V− (m)</th></tr>
 <tr><td>Ida</td><td>A</td><td class="num">1.500</td><td class="num">50</td><td></td><td></td></tr>
@@ -300,8 +319,8 @@ A = 101.537 − 1.536 = <strong>100.001</strong>. Δh<sub>vuelta</sub> = −1.00
 
 <p><strong>Paso 2 — veredicto.</strong> Discrepancia = |1.002 − 1.001| = 1.0 mm.
 D<sub>ida</sub> = 220 m y D<sub>vuelta</sub> = 200 m, así que
-D<sub>mín</sub> = 0.200 km y la tolerancia es 12 · √0.200 · √2 = 7.59 mm.
-<strong>Cumple.</strong></p>
+D<sub>mín</sub> = 0.200 km; la tolerancia de primer orden es 3 · √0.200 · √2 =
+1.90 mm. <strong>Alcanza primer orden.</strong></p>
 
 <p><strong>Paso 3 — compensación del circuito.</strong>
 E<sub>circuito</sub> = 100.001 − 100.000 = +1.0 mm, sobre L = 420 m:</p>
@@ -316,9 +335,9 @@ E<sub>circuito</sub> = 100.001 − 100.000 = +1.0 mm, sobre L = 420 m:</p>
 <p>Comprobación del § 7.4: (101.002 · 200 + 101.001 · 220) / 420 = 101.00148,
 la misma cota de B que da la compensación.</p>
 
-<p><strong>Paso 4 — cotas adoptadas.</strong></p>
+<p><strong>Paso 4 — cotas ajustadas.</strong></p>
 <table>
-<tr><th>Punto</th><th class="num">Cota adoptada (m)</th><th>Origen</th></tr>
+<tr><th>Punto</th><th class="num">Cota ajustada (m)</th><th>Origen</th></tr>
 <tr><td>A</td><td class="num">100.0000</td><td>BM de cota conocida</td></tr>
 <tr><td>P</td><td class="num">100.4480</td><td>Promedio de 100.44976 y 100.44621</td></tr>
 <tr><td>B</td><td class="num">101.0015</td><td>Promedio de 2 cotas compensadas, iguales: es el punto de vuelta</td></tr>
@@ -327,7 +346,7 @@ la misma cota de B que da la compensación.</p>
 <h2 id="ejemplo2">10. Ejemplo 2: El Verjón, con ida y vuelta</h2>
 <p>Cartera de campo real del proyecto: nivelación abierta de D1 (cota conocida
 3288.500 m) a D4, con ida y vuelta por los mismos puntos y nivel automático de
-tres hilos. Tercer orden.</p>
+tres hilos.</p>
 
 <h3>10.1. Datos y veredicto</h3>
 <table>
@@ -338,8 +357,9 @@ tres hilos. Tercer orden.</p>
 <tr><td>Distancia (m)</td><td class="num">384.3</td><td class="num">397.6</td></tr>
 </table>
 <p>Comprobación aritmética: 29.685 − 3.102 = 26.583 y 3.404 − 29.992 = −26.588.
-Discrepancia = |26.583 − 26.588| = 5.0 mm. Tolerancia = 12 · √0.3843 · √2 =
-10.52 mm. <strong>Cumple.</strong></p>
+Discrepancia = |26.583 − 26.588| = 5.0 mm. Con D = 0.3843 km, la tolerancia de
+primer orden es 3 · √0.3843 · √2 = 2.63 mm y la de segundo, 6 · √0.3843 · √2 =
+5.26 mm. <strong>Alcanza segundo orden.</strong></p>
 
 <h3>10.2. Compensación del circuito</h3>
 <p>E<sub>circuito</sub> = 26.583 − 26.588 = −5.0 mm (la vuelta llega a D1 en
@@ -363,9 +383,9 @@ Discrepancia = |26.583 − 26.588| = 5.0 mm. Tolerancia = 12 · √0.3843 · √
 3315.083 + 5.0 · 384.3 / 781.9 mm = 3315.0855, que es también el promedio de
 ida (3315.083) y vuelta (3315.088) ponderado por sus distancias.</p>
 
-<h3>10.3. Cotas adoptadas</h3>
+<h3>10.3. Cotas ajustadas</h3>
 <table>
-<tr><th>Punto</th><th class="num">Cota adoptada (m)</th><th>Origen</th></tr>
+<tr><th>Punto</th><th class="num">Cota ajustada (m)</th><th>Origen</th></tr>
 <tr><td>D1</td><td class="num">3288.5000</td><td>BM de cota conocida</td></tr>
 <tr><td>C 1</td><td class="num">3289.4400</td><td>Promedio de 2 cotas compensadas</td></tr>
 <tr><td>C 2</td><td class="num">3292.4915</td><td>Promedio de 2 cotas compensadas</td></tr>
@@ -402,6 +422,7 @@ ida (3315.083) y vuelta (3315.088) ponderado por sus distancias.</p>
 <tr><td>26</td><td>Cada recorrido de una cerrada o de enlace con vuelta, con su tolerancia; comprobación aritmética de los dos recorridos; distancias por visual positivas; acumulado en milímetros; margen en la comparación con la tolerancia.</td></tr>
 <tr><td>28</td><td>Ida y vuelta en la compensación: circuito por distancia en una abierta, cada recorrido con su cierre en una cerrada o de enlace, una cota adoptada por punto y el BM de partida fijo.</td></tr>
 <tr><td>32</td><td>Equilibrado con los límites de la FGCS: por armada y acumulado por sección.</td></tr>
+<tr><td>36</td><td>El orden se detecta: el más alto que cumple. La nivelación compensa siempre que haya contra qué cerrar, y avisa si no alcanza ninguno; la visita conserva la regla de compensar solo dentro de tolerancia. «Cota ajustada» en lugar de «adoptada». Fuera el equilibrado de visuales.</td></tr>
 </table>
 <p class="small muted">Verificación: los números de los ejemplos están en
 <code>src/lib/calculations/leveling.test.ts</code> y

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   computeRun,
   computeLeveling,
+  computeLevelingDetected,
   applyProportionalCorrection,
   stadiaDistance,
   distanceFromWires,
@@ -1183,11 +1184,11 @@ describe("adoptedElevations (Fase 28)", () => {
 // El ejemplo 1 de docs/math/nivelacion.html, resuelto a mano allí: si el
 // motor cambia, el documento para la monografía deja de ser cierto.
 describe("el ejemplo 1 de los fundamentos (docs/math/nivelacion.html)", () => {
-  const result = computeLeveling({
+  // El orden se detecta (Fase 36).
+  const { result, order } = computeLevelingDetected({
     type: "open",
     startElevation: 100,
     endElevation: null,
-    order: "tercer_orden",
     forward: [
       bare({ pointCode: "A", pointType: "bm", backsight: 1.5, backDistanceM: 50 }),
       bare({ pointCode: "P", foresight: 1.05, foreDistanceM: 50, backsight: 1.62, backDistanceM: 60 }),
@@ -1204,7 +1205,8 @@ describe("el ejemplo 1 de los fundamentos (docs/math/nivelacion.html)", () => {
     expect(result.forward.heightDifference).toBeCloseTo(1.002, 9);
     expect(result.return!.heightDifference).toBeCloseTo(-1.001, 9);
     expect(result.discrepancyMm).toBeCloseTo(1.0, 6);
-    expect(result.discrepancyToleranceMm).toBeCloseTo(7.59, 2);
+    expect(order).toBe("primer_orden");
+    expect(result.discrepancyToleranceMm).toBeCloseTo(1.9, 2);
     expect(result.meetsDiscrepancy).toBe(true);
   });
 
