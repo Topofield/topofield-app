@@ -12,10 +12,11 @@ interface ClosureRecordProps {
 
 /**
  * Registro de cierre: quién cerró cada proceso y cuándo (§ 4.7). La poligonal
- * no se cierra (Fase 35) y no tiene fila; sin nada que se cierre, queda el pie.
+ * y la nivelación no se cierran (Fases 35 y 36) y no tienen fila; sin nada que
+ * se cierre, queda el pie.
  */
 export function ClosureRecord({ sections, names, footer }: ClosureRecordProps) {
-  const closable = sections.filter((s) => s.kind !== "polygonal");
+  const closable = sections.filter((s) => s.kind !== "polygonal" && s.kind !== "leveling");
   if (closable.length === 0) return <p className="report-footer">{footer}</p>;
   return (
     <section className="report-section">

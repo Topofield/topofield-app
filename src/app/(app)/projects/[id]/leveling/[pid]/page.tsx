@@ -64,6 +64,7 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
           project={project}
           process={{ type: "leveling", id: process.id, name: process.name }}
           state={processReportState(process.status)}
+          includable={process.status === "calculated"}
           notes={process.notes}
           reports={reports}
         />

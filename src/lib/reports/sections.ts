@@ -30,6 +30,7 @@ import type { AngleInputFormat, AngleType, PolygonalInput, PolygonalResult } fro
 import type { PrecisionOrder } from "@/types/project";
 import type { PointInput, VisitInput } from "@/types/settlement";
 import type { IncludedProcess } from "@/types/report";
+import { levelingSectionData, type LevelingSectionData } from "./leveling-data";
 
 type Client = SupabaseClient<Database>;
 
@@ -60,10 +61,7 @@ export interface PolygonalSectionData {
   angleFormat: AngleInputFormat;
 }
 
-export interface LevelingSectionData {
-  process: NonNullable<Awaited<ReturnType<typeof getLevelingProcess>>>;
-  readings: Awaited<ReturnType<typeof getLevelingReadings>>;
-}
+export type { LevelingSectionData } from "./leveling-data";
 
 export interface SiteSectionData {
   site: NonNullable<Awaited<ReturnType<typeof getSite>>>;
@@ -139,7 +137,7 @@ export async function loadReportSections(
           return { kind: "missing", entry, data: null };
         }
         const readings = await getLevelingReadings(supabase, process.id);
-        return { kind: "leveling", entry, data: { process, readings } };
+        return { kind: "leveling", entry, data: levelingSectionData(process, readings) };
       }
       const site = await getSite(supabase, entry.id);
       if (!site || site.project_id !== projectId) {
@@ -172,14 +170,10 @@ export function closureOf(section: ReportSection): {
   closedBy: string | null;
 } {
   switch (section.kind) {
-    // La poligonal no se cierra (Fase 35).
+    // La poligonal (Fase 35) y la nivelación (Fase 36) no se cierran.
     case "polygonal":
-      return { closedAt: null, closedBy: null };
     case "leveling":
-      return {
-        closedAt: section.data.process.closed_at,
-        closedBy: section.data.process.closed_by,
-      };
+      return { closedAt: null, closedBy: null };
     case "site":
       return { closedAt: section.data.site.closed_at, closedBy: section.data.site.closed_by };
     case "missing":

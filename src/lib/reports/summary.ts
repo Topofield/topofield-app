@@ -1,7 +1,7 @@
 // Filas del resumen consolidado de precisiones (Fase 22: salió de la página de
 // impresión para compartirse con el informe de cada proceso). Función pura.
 
-import { formatEquipmentLine, formatPrecision } from "@/lib/utils/format";
+import { formatEquipmentLine, formatPrecision, formatSignedMm } from "@/lib/utils/format";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
 import { ALERT_LEVEL_LABELS } from "@/types/settlement";
 import { CANDIDATE_KIND_LABELS } from "@/types/report";
@@ -38,13 +38,19 @@ export function precisionSummaryRows(sections: ReportSection[]): PrecisionSummar
         s.data.process.equipment_serial,
       );
     } else if (s.kind === "leveling") {
-      const p = s.data.process;
-      // En una abierta con vuelta el veredicto es la discrepancia (Fase 23).
-      precision =
-        p.type === "open" && p.has_return_run
-          ? `Δ ${fixed(p.discrepancy_mm, 1)} mm (tol. ${fixed(p.discrepancy_tolerance_mm, 1)})`
-          : `${fixed(p.closure_error_mm, 1)} mm (tol. ${fixed(p.tolerance_mm, 1)})`;
-      cumple = s.data.process.meets_tolerance;
+      // El orden alcanzado, detectado como en el paso de Compensación (Fase
+      // 36). En una abierta con vuelta se juzga la discrepancia (Fase 23).
+      const { input, result, order, verifiable, pending } = s.data;
+      const error =
+        input.type === "open"
+          ? `Δ ${fixed(result.discrepancyMm, 1)} mm`
+          : `${formatSignedMm(result.closureErrorMm)} mm`;
+      precision = pending
+        ? "Libreta a medias"
+        : verifiable
+          ? `${error} · ${order ? PRECISION_ORDER_LABELS[order] : "ningún orden"}`
+          : "Sin verificación";
+      cumple = pending || !verifiable ? null : order !== null;
       equipo = formatEquipmentLine(
         s.data.process.equipment_brand,
         s.data.process.equipment_model,

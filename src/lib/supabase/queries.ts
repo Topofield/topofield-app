@@ -637,8 +637,8 @@ export async function getSiteSummariesByProject(
 
 /**
  * Los trabajos que un informe puede incluir, en el formato que consume el
- * selector: las poligonales **calculadas** (Fase 35: no se cierran) y las
- * nivelaciones y los lugares **cerrados**.
+ * selector: las poligonales y las nivelaciones **calculadas** (Fases 35 y 36:
+ * no se cierran) y los lugares **cerrados**.
  *
  * Trae los tres tipos con el mismo `select` mínimo para poder ordenarlos y
  * mostrarlos juntos. El filtro por estado se aplica aquí además de en
@@ -660,10 +660,10 @@ export async function getClosedWorkForReports(
       .order("updated_at", { ascending: true }),
     supabase
       .from("leveling_processes")
-      .select("id, name, status, closed_at")
+      .select("id, name, status")
       .eq("project_id", projectId)
-      .eq("status", "closed")
-      .order("closed_at", { ascending: true }),
+      .eq("status", "calculated")
+      .order("updated_at", { ascending: true }),
     supabase
       .from("sites")
       .select("id, name, status, closed_at")

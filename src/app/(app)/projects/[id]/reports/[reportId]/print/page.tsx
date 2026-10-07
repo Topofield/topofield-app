@@ -58,8 +58,8 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
   const reopened = reopenedAfterIssue(
     sections.map((s) => ({ kind: s.kind, name: s.entry.name, closedAt: closureOf(s).closedAt })),
   );
-  // Lo que se cierra: la poligonal no (Fase 35).
-  const closable = sections.filter((s) => s.kind === "leveling" || s.kind === "site").length;
+  // Lo que se cierra: la poligonal y la nivelación no (Fases 35 y 36).
+  const closable = sections.filter((s) => s.kind === "site").length;
 
   return (
     <div className="report">

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeLevelingDetected } from "@/lib/calculations/leveling";
 import { NIVELACION_VERJON, nivelacionTramo2, type LecturaNivelacionDemo, type NivelacionDemo } from "@/lib/demo/fixtures";
 import type { LevelingInput, ReadingInput } from "@/types/leveling";
-import { comparisonData, compensationRows } from "./comparison-data";
+import { comparisonData, compensationRows, pointReadings } from "./comparison-data";
 
 const lectura = (r: LecturaNivelacionDemo): ReadingInput => ({
   pointCode: r.code,
@@ -97,5 +97,16 @@ describe("la tabla de la compensación", () => {
     expect(rows[0]!.known && rows.at(-1)!.known).toBe(true);
     expect(rows.at(-1)!.forward!.correctionMm).toBeCloseTo(0.4, 1);
     expect(rows.at(-1)!.adjusted).toBeCloseTo(tramo2.input.startElevation, 9);
+  });
+});
+
+describe("las lecturas de cada punto", () => {
+  it("el tramo 2: nueve puntos; los leídos al ir y al volver, con sus dos lecturas", () => {
+    const points = pointReadings(tramo2.result, tramo2.input);
+    expect(points.map((p) => p.code)).toEqual(["C10", "C11", "C12", "C13", "C14", "C15", "C16", "C17", "C18"]);
+    expect(points[0]).toMatchObject({ known: true, readings: [2541.7545, expect.closeTo(2541.7541, 4)] });
+    expect(points[7]!.readings).toEqual([expect.closeTo(2542.7313, 4), expect.closeTo(2542.7289, 4)]);
+    expect(points[7]!.adjusted).toBeCloseTo(2542.7303, 4);
+    expect(points[8]!.readings).toHaveLength(1);
   });
 });

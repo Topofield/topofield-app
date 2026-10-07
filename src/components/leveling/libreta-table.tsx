@@ -2,12 +2,11 @@
 
 import { Badge } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
-import { formatReading, type ArmadaSummary, type SheetRow } from "./libreta-rows";
+import { formatReading, readingDecimals, type ArmadaSummary, type SheetRow } from "./libreta-rows";
 
 const dash = <span className="text-ink-3">—</span>;
 const meters = (v: number | null) => (v == null ? dash : v.toFixed(1));
 const elevation = (v: number | null) => (v == null ? dash : v.toFixed(4));
-const reading = (v: number | null) => (v == null ? dash : formatReading(v));
 
 function Pencil({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -34,6 +33,8 @@ const GROUP = "border-l border-rule";
  * abre la armada que la fila cierra.
  */
 export function LibretaTable({ rows, onEdit }: { rows: SheetRow[]; onEdit: (armada: number) => void }) {
+  const decimals = readingDecimals(rows.flatMap((r) => [r.backsight, r.foresight, r.intermediate]));
+  const reading = (v: number | null) => (v == null ? dash : formatReading(v, decimals));
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -122,6 +123,9 @@ export function ArmadaList({
   onEdit: (armada: number) => void;
 }) {
   if (armadas.length === 0) return null;
+  const decimals = readingDecimals(
+    armadas.flatMap((a) => [a.backsight, a.foresight, ...a.intermediates.map((m) => m.reading)]),
+  );
   return (
     <ul className="divide-y divide-rule rounded-lg border border-rule bg-card">
       {armadas.map((a) => (
@@ -145,16 +149,16 @@ export function ArmadaList({
                 )}
               </span>
               <span className="block text-xs text-ink-2 tabular-nums">
-                V+ {formatReading(a.backsight)} · {a.backDistanceM?.toFixed(1) ?? "—"} m
+                V+ {formatReading(a.backsight, decimals)} · {a.backDistanceM?.toFixed(1) ?? "—"} m
                 {a.to != null && (
                   <>
-                    {"  ·  "}V− {formatReading(a.foresight)} · {a.foreDistanceM?.toFixed(1) ?? "—"} m
+                    {"  ·  "}V− {formatReading(a.foresight, decimals)} · {a.foreDistanceM?.toFixed(1) ?? "—"} m
                   </>
                 )}
               </span>
               {a.intermediates.map((m, i) => (
                 <span key={i} className="block text-xs text-ink-2 tabular-nums">
-                  VI {m.pointCode} {formatReading(m.reading)} → {m.elevation?.toFixed(4) ?? "—"}
+                  VI {m.pointCode} {formatReading(m.reading, decimals)} → {m.elevation?.toFixed(4) ?? "—"}
                 </span>
               ))}
             </span>

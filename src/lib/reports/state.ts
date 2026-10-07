@@ -17,24 +17,23 @@ export function processReportState(status: string): ProcessReportState {
 
 /**
  * Los procesos que se cierran y ya no lo están: se reabrieron después de
- * emitir el informe (Fase 34). La poligonal no se cierra (Fase 35) y no cuenta.
+ * emitir el informe (Fase 34). La poligonal (Fase 35) y la nivelación (Fase
+ * 36) no se cierran y no cuentan: solo los lugares.
  */
 export function reopenedAfterIssue(
   items: { kind: string; name: string; closedAt: string | null }[],
 ): string[] {
-  return items
-    .filter((i) => i.kind !== "missing" && i.kind !== "polygonal" && i.closedAt == null)
-    .map((i) => i.name);
+  return items.filter((i) => i.kind === "site" && i.closedAt == null).map((i) => i.name);
 }
 
 /**
  * El final del pie de un informe consolidado (Fase 34): «con procesos
  * cerrados» si todo lo que incluye sigue cerrado; si no, qué se reabrió
  * después de emitirlo, porque el informe muestra sus datos actuales.
- * `closable`: cuántos de sus procesos se cierran (las poligonales no).
+ * `closable`: cuántos de sus procesos se cierran (solo los lugares).
  */
 export function issuedFooterNote(reopened: string[], closable = 1): string {
-  // Un informe solo con poligonales no tiene procesos cerrados (Fase 35).
+  // Un informe sin lugares no tiene procesos cerrados (Fases 35 y 36).
   if (reopened.length === 0) return closable === 0 ? "." : ", con procesos cerrados.";
   const list = reopened.map((n) => `«${n}»`).join(", ");
   return reopened.length === 1

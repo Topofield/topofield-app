@@ -3,7 +3,7 @@ import { CARTERA_VERJON } from "@/lib/demo/carteras";
 import { computeLevelingDetected } from "@/lib/calculations/leveling";
 import type { ReadingDraft } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
 import { emptyRow } from "./armadas";
-import { arithmeticOf, armadaSummaries, formatReading, sheetRows } from "./libreta-rows";
+import { arithmeticOf, armadaSummaries, formatReading, readingDecimals, sheetRows } from "./libreta-rows";
 
 const toDraft = (x: (typeof CARTERA_VERJON.ida)[number]): ReadingDraft => ({
   ...emptyRow(x.code, x.type),
@@ -83,5 +83,12 @@ describe("formatReading", () => {
     expect(formatReading(0.5)).toBe("0.500");
     expect(formatReading(1.2345)).toBe("1.2345");
     expect(formatReading(null)).toBe("—");
+  });
+
+  it("una libreta del nivel digital va toda con cuatro, también la lectura que termina en cero", () => {
+    expect(readingDecimals([1.649, 1.7122, null])).toBe(4);
+    expect(readingDecimals([1.209, 0.5, null])).toBe(3);
+    expect(formatReading(1.649, 4)).toBe("1.6490");
+    expect(formatReading(1.209, 3)).toBe("1.209");
   });
 });

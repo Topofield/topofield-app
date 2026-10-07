@@ -188,3 +188,28 @@ export function compensationRows(result: LevelingResult, input: Known): Compensa
   });
   return rows;
 }
+
+export interface PointReadings {
+  code: string;
+  /** Las cotas medidas del punto, en el orden de la libreta: la ida y después la vuelta. */
+  readings: number[];
+  adjusted: number | null;
+  known: boolean;
+}
+
+/** Cada punto una vez, con sus lecturas: en una cerrada de ida y regreso, las dos. */
+export function pointReadings(result: LevelingResult, input: Known): PointReadings[] {
+  const of = adoptedLookup(adoptedElevationsOf(result, input));
+  const out: PointReadings[] = [];
+  for (const r of [...result.forward.readings, ...(result.return?.readings ?? [])]) {
+    if (!Number.isFinite(r.elevationCalculated)) continue;
+    const found = out.find((p) => samePointCode(p.code, r.pointCode));
+    if (found) {
+      found.readings.push(r.elevationCalculated);
+      continue;
+    }
+    const a = of(r.pointCode);
+    out.push({ code: r.pointCode, readings: [r.elevationCalculated], adjusted: a?.elevation ?? null, known: a?.known ?? false });
+  }
+  return out;
+}

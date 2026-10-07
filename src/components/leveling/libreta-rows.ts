@@ -139,9 +139,21 @@ export function arithmeticOf(run: RunResult): ArithmeticCheck {
   };
 }
 
-/** Una lectura de mira: tres decimales, o cuatro si vienen del nivel digital. */
-export function formatReading(value: number | null): string {
-  if (value == null) return "—";
+const hasTenthOfMm = (value: number) => {
   const mm = value * 1000;
-  return Math.abs(mm - Math.round(mm)) < 1e-6 ? value.toFixed(3) : value.toFixed(4);
+  return Math.abs(mm - Math.round(mm)) >= 1e-6;
+};
+
+/** Los decimales de las lecturas de una libreta: cuatro si alguna viene del nivel digital. */
+export function readingDecimals(values: readonly (number | null)[]): 3 | 4 {
+  return values.some((v) => v != null && hasTenthOfMm(v)) ? 4 : 3;
+}
+
+/**
+ * Una lectura de mira: tres decimales, o cuatro si vienen del nivel digital.
+ * Con `decimals` (de `readingDecimals`), toda la libreta va igual.
+ */
+export function formatReading(value: number | null, decimals?: 3 | 4): string {
+  if (value == null) return "—";
+  return value.toFixed(decimals ?? (hasTenthOfMm(value) ? 4 : 3));
 }

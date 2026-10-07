@@ -18,7 +18,7 @@ function poligonal(
 }
 
 function nivelacion(over: Partial<EligibleCandidate> = {}): EligibleCandidate {
-  return { kind: "leveling", id: "niv-1", name: "Línea BM", status: "closed", ...over };
+  return { kind: "leveling", id: "niv-1", name: "Línea BM", status: "calculated", ...over };
 }
 
 describe("isEligible", () => {
@@ -34,12 +34,15 @@ describe("isEligible", () => {
     }
   });
 
-  it("acepta una nivelación cerrada", () => {
+  // Fase 36: la nivelación tampoco se cierra. Entra calculada; a medias, no.
+  it("acepta una nivelación calculada", () => {
     expect(isEligible(nivelacion())).toBe(true);
   });
 
-  it("una nivelación calculada sigue sin entrar: se cierra antes", () => {
-    expect(isEligible(nivelacion({ status: "calculated" }))).toBe(false);
+  it("una nivelación en borrador o a medias no entra", () => {
+    for (const status of ["draft", "in_progress"]) {
+      expect(isEligible(nivelacion({ status }))).toBe(false);
+    }
   });
 
   it("acepta un lugar cerrado", () => {
@@ -55,9 +58,9 @@ describe("isEligible", () => {
 
   // Un proceso abierto seguiría cambiando: el informe dejaría de ser
   // reproducible, que es lo que sostiene no guardar una copia de los datos.
-  it("rechaza cualquier estado que no sea cerrado", () => {
-    for (const status of ["draft", "in_progress", "calculated"] as const) {
-      expect(isEligible(nivelacion({ status }))).toBe(false);
+  it("un lugar, en cualquier estado que no sea cerrado, no entra", () => {
+    for (const status of ["draft", "in_progress", "calculated", "active"] as const) {
+      expect(isEligible({ kind: "site", id: "s1", name: "Torre", status })).toBe(false);
     }
   });
 
@@ -84,7 +87,7 @@ describe("selectableProcesses", () => {
 
   it("devuelve una lista vacía si nada es elegible", () => {
     expect(
-      selectableProcesses([nivelacion({ status: "calculated" })]),
+      selectableProcesses([nivelacion({ status: "in_progress" })]),
     ).toEqual([]);
   });
 
