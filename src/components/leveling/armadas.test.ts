@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON } from "@/lib/demo/carteras";
+import { computeRun } from "@/lib/calculations/leveling";
 import type { ReadingDraft } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
 import {
   armadaAt,
@@ -85,5 +86,26 @@ describe("armadas", () => {
     expect(runEnded(ida)).toBe(true);
     expect(runEnded(removeLastArmada(ida))).toBe(false);
     expect(runEnded(startRun("D1", "bm"))).toBe(false);
+  });
+
+  it("agregar una armada después de una intermedia colgada la deja con su armada y abre desde el último punto", () => {
+    const withTail = [...ida, { ...emptyRow("R1", "intermediate"), foresight: 1.5 }];
+    const visual = (reading: number) => ({ reading, distanceM: 20, upperM: null, lowerM: null });
+    const next = writeArmada(withTail, nextArmadaIndex(withTail), {
+      back: visual(1.3),
+      forePoint: "P9",
+      foreType: "pc",
+      fore: visual(1.0),
+      intermediates: [],
+    });
+    expect(armadaSpans(next)).toHaveLength(11);
+    expect(next.at(-3)).toMatchObject({ pointCode: "R1", pointType: "intermediate", backsight: null });
+    expect(next.at(-2)).toMatchObject({ pointCode: "D4", backsight: 1.3 });
+    expect(next.at(-1)).toMatchObject({ pointCode: "P9", foresight: 1.0 });
+    // La radiación conserva su cota: cuelga del mismo nivel que antes.
+    const input = (rows: ReadingDraft[]) => rows.map((r) => ({ ...r, distanceAccumulatedKm: null }));
+    const cota = (rows: ReadingDraft[]) => computeRun(input(rows), 3288.5).readings.find((r) => r.pointCode === "R1")!.elevationCalculated;
+    expect(cota(next)).toBeCloseTo(cota(withTail), 9);
+    expect(computeRun(input(next), 3288.5).arithmeticCheckOk).toBe(true);
   });
 });

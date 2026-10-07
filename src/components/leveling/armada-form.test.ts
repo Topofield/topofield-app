@@ -97,4 +97,8 @@ describe("el formulario de la armada", () => {
     );
     expect(armadaProblem(ida, 1, "open")).toBeNull();
   });
+
+  it("una armada que no quedó en la libreta es un error, no un silencio", () => {
+    expect(armadaProblem(ida, 99, "open")).toBe("La armada no quedó en la libreta: revisa sus puntos.");
+  });
 });

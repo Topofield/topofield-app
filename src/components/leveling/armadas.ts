@@ -124,9 +124,17 @@ export function writeArmada(rows: readonly ReadingDraft[], k: number, a: Armada)
     ];
   }
   if (k !== spans.length) throw new Error(`La armada ${k + 1} no sigue a la última.`);
-  const last = rows.length - 1;
+  // La armada nueva abre en el último punto que no es intermedio. Las
+  // intermedias colgadas después de él se leyeron desde el nivel de la armada
+  // que lo cierra: pasan antes de él, dentro de esa armada, y conservan su cota.
+  let last = rows.length - 1;
+  while (last > 0 && rows[last]!.pointType === "intermediate") last--;
   if (last < 0) throw new Error("El recorrido no tiene punto de partida.");
-  return [...rows.slice(0, last), withBack(rows[last]!), ...mids, closer(null)];
+  const trailing = rows.slice(last + 1);
+  const closesArmada = spans.some((sp) => sp.closer === last);
+  const before = closesArmada ? [...rows.slice(0, last), ...trailing] : rows.slice(0, last);
+  const after = closesArmada ? [] : trailing;
+  return [...before, withBack(rows[last]!), ...after, ...mids, closer(null)];
 }
 
 /** Quita la última armada: su punto adelante y la V+ del punto que la abría. */

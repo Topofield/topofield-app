@@ -164,7 +164,7 @@ function firstError(issues: ReadingCaptureIssues | undefined, fields: IssueField
  */
 export function armadaProblem(rows: readonly ReadingDraft[], k: number, type: LevelingType): string | null {
   const span = armadaSpans(rows)[k];
-  if (!span) return null;
+  if (!span) return "La armada no quedó en la libreta: revisa sus puntos.";
   const issues = validateRunCapture(
     rows.map((d) => ({ ...d, distanceAccumulatedKm: null })),
     type,
