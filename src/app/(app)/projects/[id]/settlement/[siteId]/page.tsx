@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
 import { Tabs } from "@/components/design-system";
 import { ProcessReport } from "@/components/process/process-report";
-import { NewVisitDialog } from "@/components/settlement/new-visit-dialog";
+import { visitArmadaSpans } from "@/components/settlement/visit-armadas";
+import { NewVisitButton } from "@/components/settlement/visit-dialog";
+import { templateNote } from "@/components/settlement/visit-dialog-form";
 import { SiteHeader } from "@/components/settlement/site-header";
 import { isPointActiveOn, pointInputOf } from "@/lib/calculations/settlement";
+import { bookRowOf, bookTemplate } from "@/lib/calculations/settlement-book";
 import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
   getProjectById,
-  getReferencePoints,
   getReports,
   getSettlementReadingsBySite,
   getSite,
@@ -53,11 +55,11 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
   const site = await getSite(supabase, siteId);
   if (!site || site.project_id !== project.id || site.kind !== "settlement") notFound();
 
-  const [sitePoints, visits, benchmarks, referencePoints, reports] = await Promise.all([
+  const [sitePoints, visits, benchmarks, booksByVisit, reports] = await Promise.all([
     getSitePoints(supabase, site.id),
     getVisits(supabase, site.id),
     getSiteBenchmarks(supabase, site.id),
-    getReferencePoints(supabase, project.id),
+    getSiteBooks(supabase, site.id),
     getReports(supabase, project.id),
   ]);
 
@@ -70,6 +72,24 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
     `${benchmarks.length} BM` +
     (base ? ` · base el ${formatDateOnly(base)}` : "");
 
+  // La nota del popup describe la libreta que traerá la visita nueva: la
+  // misma plantilla que arma `createVisitAction`, con la fecha de hoy.
+  const previous = visits.at(-1) ?? null;
+  const previousBook = previous ? (booksByVisit[previous.id] ?? []).map((row) => bookRowOf(row)) : [];
+  const template = bookTemplate(
+    previousBook,
+    sitePoints.map(pointInputOf),
+    hoy,
+    benchmarks,
+  );
+  const note = templateNote({
+    previousNumber: previous && previousBook.length > 0 ? previous.visit_number : null,
+    armadas: visitArmadaSpans(template).length,
+    startCode: template[0]?.pointCode ?? null,
+    points: template.filter((row) => row.pointType === "intermediate").length,
+    firstBenchmark: benchmarks[0]?.code ?? null,
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <SiteHeader
@@ -79,15 +99,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         summary={summary}
         reportTitles={reportsIncluding(reports, "site", site.id).map((r) => r.title)}
         printable={activeTab === "informe"}
-        newVisit={
-          // Tarea 11: el popup de la nueva visita (Fase 37).
-          <NewVisitDialog
-            projectId={project.id}
-            siteId={site.id}
-            referencePoints={referencePoints}
-            previous={visits.at(-1) ?? null}
-          />
-        }
+        newVisit={<NewVisitButton projectId={project.id} siteId={site.id} note={note} />}
       />
       <div className="print:hidden">
         <Tabs items={TABS} activeId={activeTab} basePath={basePath} />
@@ -99,7 +111,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
           sitePoints={sitePoints}
           visits={visits}
           readingsBySite={await getSettlementReadingsBySite(supabase, site.id)}
-          booksByVisit={await getSiteBooks(supabase, site.id)}
+          booksByVisit={booksByVisit}
           benchmarks={benchmarks}
         />
       )}
@@ -110,7 +122,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
           projectId={project.id}
           siteId={site.id}
           benchmarks={benchmarks}
-          booksByVisit={await getSiteBooks(supabase, site.id)}
+          booksByVisit={booksByVisit}
         />
       )}
       {activeTab === "informe" && (
