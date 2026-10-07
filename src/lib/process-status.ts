@@ -22,6 +22,7 @@ export const PROCESS_STATUS_TONE: Record<ProcessStatus, StatusTone> = {
 
 export const VISIT_STATUS_TONE: Record<VisitStatus, StatusTone> = {
   draft: "neutral",
+  in_progress: "neutral",
   calculated: "primary",
   closed: "success",
 };

@@ -451,3 +451,141 @@ export function bookVerification(book: VisitBook): VisitVerification {
     distanceKm: lengths.length > 0 ? lengths.reduce((a, b) => a + b, 0) : null,
   };
 }
+
+/**
+ * Las cotas de los puntos de control de una visita (Fase 37): la de la fila
+ * con su lectura —VI o V−—, sin corregir. Las filas sin cota (por leer, o
+ * tras una cadena incompleta) no cuentan, ni como lectura ni como ausencia.
+ */
+export function bookElevations(
+  book: VisitBook,
+  rows: readonly BookRowInput[],
+  points: PointInput[],
+  visitDate: string,
+): { readings: DerivedElevation[]; issues: BookIssue[] } {
+  const measured = new Map<string, number[]>();
+  const pending = new Set<string>();
+  rows.forEach((row, index) => {
+    const match = points.find((p) => samePointCode(p.code, row.pointCode));
+    if (!match) return;
+    if (row.foresight != null && Number.isFinite(book.readings[index]?.elevationCalculated)) {
+      measured.set(match.id, [...(measured.get(match.id) ?? []), index]);
+    } else if (row.foresight == null) {
+      pending.add(match.id);
+    }
+  });
+
+  const readings: DerivedElevation[] = [];
+  const issues: BookIssue[] = [];
+  for (const p of [...points].sort(byCode)) {
+    const found = measured.get(p.id);
+    const active = isPointActiveOn(p, visitDate);
+    if (!found) {
+      if (active && !pending.has(p.id)) issues.push({ kind: "missing", level: "warning", pointId: p.id, code: p.code });
+      continue;
+    }
+    if (found.length > 1) {
+      issues.push({ kind: "duplicate", level: "error", pointId: p.id, code: p.code, rows: found });
+      continue;
+    }
+    const rowIndex = found[0]!;
+    if (!active) {
+      issues.push({ kind: "inactive", level: "warning", pointId: p.id, code: p.code, row: rowIndex });
+      continue;
+    }
+    readings.push({ pointId: p.id, elevation: round4(book.readings[rowIndex]!.elevationCalculated), rowIndex });
+  }
+  const position = (i: BookIssue) => (i.kind === "missing" ? Infinity : i.kind === "duplicate" ? i.rows[0]! : i.row);
+  issues.sort((a, b) => position(a) - position(b));
+  readings.sort((a, b) => a.rowIndex - b.rowIndex);
+  return { readings, issues };
+}
+
+const blankReadings = {
+  backsight: null, foresight: null, backUpperM: null, backLowerM: null,
+  foreUpperM: null, foreLowerM: null, backDistanceM: null, foreDistanceM: null,
+} as const;
+
+/**
+ * La libreta de una visita nueva (Fase 37, decisión 4): las armadas de la
+ * anterior —sus BM, sus puntos de cambio y sus puntos de control—, sin
+ * lecturas, sin los puntos dados de baja y con los dados de alta antes del BM
+ * de cierre. Sin anterior, una armada desde el primer BM del lugar.
+ */
+export function bookTemplate(
+  previous: readonly BookRowPayload[] | null,
+  points: PointInput[],
+  visitDate: string,
+  benchmarks: readonly BenchmarkInput[],
+): BookRowPayload[] {
+  const active = points.filter((p) => isPointActiveOn(p, visitDate)).sort(byCode);
+  const asIntermediate = (code: string): BookRowPayload => ({ pointCode: code, pointType: "intermediate", ...blankReadings });
+
+  if (!previous || previous.length === 0) {
+    const first = benchmarks[0];
+    if (!first) return [];
+    return [
+      { pointCode: first.code, pointType: "bm", startsSection: true, ...blankReadings },
+      ...active.map((p) => asIntermediate(p.code)),
+    ];
+  }
+
+  const controlOf = (code: string) => points.find((p) => samePointCode(p.code, code));
+  const kept: BookRowPayload[] = previous
+    .filter((row) => {
+      const p = row.pointType === "intermediate" ? controlOf(row.pointCode) : undefined;
+      return !p || isPointActiveOn(p, visitDate);
+    })
+    .map((row, i) => ({
+      pointCode: row.pointCode,
+      pointType: row.pointType,
+      startsSection: i === 0 || Boolean(row.startsSection),
+      ...blankReadings,
+    }));
+  const added = active
+    .filter((p) => !kept.some((row) => samePointCode(row.pointCode, p.code)))
+    .map((p) => asIntermediate(p.code));
+  const last = kept.at(-1)!;
+  return last.pointType !== "intermediate" && kept.length > 1
+    ? [...kept.slice(0, -1), ...added, last]
+    : [...kept, ...added];
+}
+
+/**
+ * Las filas que esperan una lectura (Fase 37, decisión 9): la V+ de un
+ * arranque, la VI de una intermedia y la V− de cualquier otra fila; un punto
+ * de cambio que no es el último, también su V+.
+ */
+export function bookPending(rows: readonly BookRowPayload[]): number[] {
+  const last = rows.length - 1;
+  return rows.flatMap((row, i) => {
+    if (i === 0 || row.startsSection) return row.backsight == null ? [i] : [];
+    if (row.pointType === "intermediate") return row.foresight == null ? [i] : [];
+    const missingFore = row.foresight == null;
+    const missingBack = row.pointType === "pc" && i !== last && row.backsight == null;
+    return missingFore || missingBack ? [i] : [];
+  });
+}
+
+export function visitStatusOf(rows: readonly BookRowPayload[]): "draft" | "in_progress" | "calculated" {
+  if (rows.length === 0) return "draft";
+  return bookPending(rows).length > 0 ? "in_progress" : "calculated";
+}
+
+/** Los puntos auxiliares de la libreta (Fase 37, decisión 11). */
+export function auxiliaryPoints(
+  rows: readonly BookRowPayload[],
+  points: Pick<PointInput, "code">[],
+  benchmarks: readonly BenchmarkInput[],
+): { rowIndex: number; code: string }[] {
+  const seen = new Set<string>();
+  return rows.flatMap((row, i) => {
+    if (i === 0 || row.startsSection || row.pointType === "intermediate" || row.foresight == null) return [];
+    if (points.some((p) => samePointCode(p.code, row.pointCode))) return [];
+    if (benchmarks.some((b) => samePointCode(b.code, row.pointCode))) return [];
+    const key = row.pointCode.trim().toUpperCase();
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ rowIndex: i, code: row.pointCode.trim() }];
+  });
+}

@@ -6,7 +6,7 @@ import type { Tables } from "./database";
 import type { ComputedReading as LevelingComputedReading, PointType } from "./leveling";
 import type { LevelType, PrecisionOrder } from "./project";
 
-export const VISIT_STATUSES = ["draft", "calculated", "closed"] as const;
+export const VISIT_STATUSES = ["draft", "in_progress", "calculated", "closed"] as const;
 export type VisitStatus = (typeof VISIT_STATUSES)[number];
 
 /**
@@ -299,6 +299,7 @@ export const CAPTURE_MODE_LABELS: Record<CaptureMode, string> = {
 
 export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
   draft: "Borrador",
+  in_progress: "En medición",
   calculated: "Calculada",
   closed: "Cerrada",
 };
