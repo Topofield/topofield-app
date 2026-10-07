@@ -720,3 +720,28 @@ de ruta, la receta de cada fase y el contenido de los dos lienzos están en
 [`superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md`](./superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md).
 Los lienzos se ajustan al verlos: «por ahora sí, al verlos visualmente
 ajustamos».
+
+En la revisión del lienzo de la Fase 37 (2026-10-07) el usuario precisó cómo
+mide una visita, y entra en esa fase:
+
+- «cuando se esté registrando la visita, se guarda cada lectura, por si se
+  interrumpe en el proceso, solo va a la visita y le da en retomar medición»;
+- «una visita tendrá múltiples libretas, cada vez que se arma […] solo en
+  algunos casos se forma un circuito de nivelación donde, al armarse, necesita
+  sacar un BM adicional, hacer V−, armarse allí y seguir la medición»; en la
+  interfaz, «+ Armada»;
+- un catálogo de BM por lugar, en su propia pestaña: «cuando se importe un
+  catálogo de BM, tanto del proyecto o en CSV, quedan allí solo para este
+  proceso, no es que queden sincronizados con la nivelación que se importó.
+  Además se pueden modificar los datos de estos BM fácilmente o agregar más»;
+- «no manejemos compensar nivelaciones aquí»: la visita no se compensa.
+
+## Semáforo por velocidad con margen de ruido (sin fase)
+
+Lo anticipó el análisis de la cartera real de asentamientos (2026-10-03) y lo
+confirmó el lienzo de la Fase 37: con los umbrales de edificio, las visitas 2
+a 5 de la cartera salen en **alarma por velocidad por puro ruido**. Un
+milímetro en siete días son 4.35 mm/mes —precaución— y tres, 13 mm/mes
+—alarma—, con una mira que resuelve el milímetro. El margen de ruido
+de la Fase 32 se aplica a los avisos de tendencia, no al semáforo. La hoja de
+ruta de las Fases 36 y 37 lo deja fuera de su alcance, como petición aparte.
