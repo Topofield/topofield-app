@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { computeHistory } from "@/lib/calculations/settlement";
-import { bookBenchmarkChecks, bookRowInputOf, computeBook } from "@/lib/calculations/settlement-book";
+import { bookBenchmarkChecks, bookElevations, bookRowInputOf, computeBook } from "@/lib/calculations/settlement-book";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
 import type { BookRowPayload, PointInput, VisitInput } from "@/types/settlement";
-import { armadaItems, pointMovements, resumeOf, tramoItems, visitSheetRows } from "./visit-libreta-rows";
+import { armadaItems, pointIssueAlerts, pointMovements, resumeOf, tramoItems, visitSheetRows } from "./visit-libreta-rows";
 
 const BMS = [
   { code: "BM-1", elevation: 100 },
@@ -201,5 +201,36 @@ describe("pointMovements (decisión 20)", () => {
   it("en la visita base no hay movimiento", () => {
     const [m] = pointMovements(history(99.995), "v0", [{ id: "p1", code: "B10" }]);
     expect(m).toMatchObject({ partialMm: null, days: null, warning: null });
+  });
+});
+
+describe("pointIssueAlerts (revisión final de la Fase 37)", () => {
+  const point = (id: string, code: string, retiredOn: string | null = null): PointInput => ({
+    id, code, initialElevation: null, activeFrom: null, retiredOn,
+  });
+
+  it("avisa los puntos vigentes sin lectura, juntos, y la lectura de un punto dado de baja", () => {
+    const points = [point("a", "TA-01"), point("b", "TA-05", "2024-01-01"), point("c", "TA-07"), point("d", "TA-08")];
+    const inputs = ALAMEDA.map(bookRowInputOf);
+    const { issues } = bookElevations(computeBook(inputs, BMS), inputs, points, "2024-06-01");
+    expect(pointIssueAlerts(issues)).toEqual([
+      "TA-05 no está vigente en la fecha de la visita: su lectura (fila 5) no se usa.",
+      "TA-07 y TA-08 no tienen lectura en la libreta: quedan sin cota en esta visita.",
+    ]);
+  });
+
+  it("un punto con su fila por leer no es un punto sin lectura", () => {
+    const rows = [...ALAMEDA.slice(0, -1), r("TA-07", "intermediate"), ALAMEDA.at(-1)!];
+    const inputs = rows.map(bookRowInputOf);
+    const points = [point("a", "TA-01"), point("b", "TA-05"), point("c", "TA-07")];
+    const { issues } = bookElevations(computeBook(inputs, BMS), inputs, points, "2024-06-01");
+    expect(pointIssueAlerts(issues)).toEqual([]);
+  });
+
+  it("un solo punto sin lectura va en singular", () => {
+    const inputs = ALAMEDA.map(bookRowInputOf);
+    const points = [point("a", "TA-01"), point("b", "TA-05"), point("c", "TA-07")];
+    const { issues } = bookElevations(computeBook(inputs, BMS), inputs, points, "2024-06-01");
+    expect(pointIssueAlerts(issues)).toEqual(["TA-07 no tiene lectura en la libreta: queda sin cota en esta visita."]);
   });
 });

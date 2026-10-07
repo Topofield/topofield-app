@@ -22,7 +22,7 @@ import { PointBarsChart } from "./charts/point-bars-chart";
 import { VisitArmadaDialog, type ArmadaStart } from "./visit-armada-dialog";
 import type { VisitData } from "./visit-dialog-form";
 import { pendingChangePoint, visitArmadaSpans } from "./visit-armadas";
-import { armadaItems, pointMovements, resumeOf, tramoItems, visitSheetRows } from "./visit-libreta-rows";
+import { armadaItems, pointIssueAlerts, pointMovements, resumeOf, tramoItems, visitSheetRows } from "./visit-libreta-rows";
 
 interface VisitLibretaTabProps {
   projectId: string;
@@ -72,7 +72,7 @@ export function VisitLibretaTab({
     const inputs = draft.map(bookRowInputOf);
     const computed = computeBook(inputs, benchmarks, visitId);
     const checks = bookBenchmarkChecks(computed, inputs, benchmarks, points, visitId);
-    const { readings } = bookElevations(computed, inputs, points, visit.date);
+    const { readings, issues } = bookElevations(computed, inputs, points, visit.date);
     const candidate: VisitInput = {
       id: visitId,
       visitNumber,
@@ -92,6 +92,7 @@ export function VisitLibretaTab({
         ),
       })),
       movements: pointMovements(history.visits, visitId, points),
+      pointAlerts: pointIssueAlerts(issues),
       resume: resumeOf(draft),
     };
   }, [draft, benchmarks, points, others, thresholds, visit.date, visitId, visitNumber]);
@@ -196,6 +197,12 @@ export function VisitLibretaTab({
             </>
           )}
         </section>
+        {!empty &&
+          view.pointAlerts.map((text) => (
+            <Alert key={text} variant="warning">
+              {text}
+            </Alert>
+          ))}
       </div>
 
       <div className="min-w-0">

@@ -7,8 +7,9 @@ import { samePointCode } from "@/lib/calculations/leveling";
 import { daysBetween, detectTrendDeviations } from "@/lib/calculations/settlement";
 import { bookPending } from "@/lib/calculations/settlement-book";
 import { formatSignedMm } from "@/lib/utils/format";
+import { bookIssueMessage } from "@/lib/validators/settlement-book";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
-import type { BenchmarkCheck, BookRowPayload, VisitBook, VisitResult } from "@/types/settlement";
+import type { BenchmarkCheck, BookIssue, BookRowPayload, VisitBook, VisitResult } from "@/types/settlement";
 import type { SheetRow } from "@/components/leveling/libreta-rows";
 import { visitArmadaSpans, type VisitArmadaSpan } from "./visit-armadas";
 
@@ -259,4 +260,23 @@ export function pointMovements(
 /** El código de un BM del lugar, si lo es. */
 export function benchmarkNamed<T extends { code: string }>(benchmarks: readonly T[], code: string): T | undefined {
   return benchmarks.find((b) => samePointCode(b.code, code));
+}
+
+/**
+ * Los avisos de los puntos de control en la libreta (revisión final de la
+ * Fase 37): cada lectura de un punto que no está vigente en la fecha, y los
+ * puntos vigentes sin fila en la libreta, juntos —tras importar un archivo
+ * pueden ser varios—. Una fila por leer no cuenta: la armada sigue abierta.
+ * Los repetidos los resuelve el guardado.
+ */
+export function pointIssueAlerts(issues: readonly BookIssue[]): string[] {
+  const alerts = issues.flatMap((i) => (i.kind === "inactive" ? [bookIssueMessage(i)] : []));
+  const missing = issues.flatMap((i) => (i.kind === "missing" ? [i.code] : []));
+  if (missing.length === 1) {
+    alerts.push(`${missing[0]} no tiene lectura en la libreta: queda sin cota en esta visita.`);
+  } else if (missing.length > 1) {
+    const codes = `${missing.slice(0, -1).join(", ")} y ${missing.at(-1)}`;
+    alerts.push(`${codes} no tienen lectura en la libreta: quedan sin cota en esta visita.`);
+  }
+  return alerts;
 }
