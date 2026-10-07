@@ -139,16 +139,30 @@ export async function recomputeSite(
   const { data: site } = await supabase.from("sites").select("*").eq("id", siteId).maybeSingle();
   if (!site) return { ok: false, error: "Lugar no encontrado." };
 
-  const [{ data: points }, { data: benchmarks }, { data: visits }] = await Promise.all([
+  // Un error de lectura no puede pasar por un lugar sin cambios: sin
+  // `site_benchmarks` (antes del paso 1 del despliegue) no habría BM y todo
+  // saldría «al día».
+  const fail = (error: { message: string; code?: string }) => ({
+    ok: false as const,
+    error: logDbError(error, "No se pudo leer el lugar para recalcularlo."),
+  });
+  const [pointsRes, benchmarksRes, visitsRes] = await Promise.all([
     supabase.from("settlement_points").select("*").eq("site_id", siteId),
     supabase.from("site_benchmarks").select("code, elevation").eq("site_id", siteId),
     supabase.from("settlement_visits").select("id, visit_number, date").eq("site_id", siteId).order("date"),
   ]);
+  for (const r of [pointsRes, benchmarksRes, visitsRes]) if (r.error) return fail(r.error);
+  const { data: points } = pointsRes;
+  const { data: benchmarks } = benchmarksRes;
+  const { data: visits } = visitsRes;
   const visitIds = (visits ?? []).map((v) => v.id);
-  const [{ data: bookRows }, { data: stored }] = await Promise.all([
+  const [bookRes, storedRes] = await Promise.all([
     supabase.from("settlement_book_readings").select("*").in("visit_id", visitIds).order("reading_order"),
     supabase.from("settlement_readings").select("visit_id, point_id, elevation").in("visit_id", visitIds),
   ]);
+  for (const r of [bookRes, storedRes]) if (r.error) return fail(r.error);
+  const { data: bookRows } = bookRes;
+  const { data: stored } = storedRes;
 
   const storedByVisit = new Map<string, { pointId: string; elevation: number }[]>();
   for (const r of stored ?? []) {
