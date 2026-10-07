@@ -639,27 +639,34 @@ export function pendingRun(
 /**
  * Calcula con el orden detectado (Fase 36). Compensa siempre; las cifras de
  * tolerancia del resultado son las del orden alcanzado, o las del ordinario si
- * no alcanza ninguno, para que la pantalla diga por cuánto se pasa. Con un
- * recorrido pendiente (`pendingRun`) no compensa ni detecta orden.
+ * no alcanza ninguno, para que la pantalla diga por cuánto se pasa.
+ *
+ * No compensa ni detecta orden con un recorrido pendiente (`pendingRun`) ni
+ * con una libreta que no encadena (`broken`): si Σ V+ − Σ V− no da el
+ * desnivel —un punto de cambio sin una de sus lecturas, por ejemplo—, las
+ * cotas salen de una altura de instrumento equivocada y no hay cierre que
+ * juzgar.
  */
 export function computeLevelingDetected(input: Omit<LevelingInput, "order" | "compensation">): {
   result: LevelingResult;
   order: PrecisionOrder | null;
   verifiable: boolean;
   pending: RunType | null;
+  broken: boolean;
 } {
   const pending = pendingRun(input);
-  if (pending) {
-    const result = computeLeveling({ ...input, order: "ordinario", compensation: "never" });
-    return { result, order: null, verifiable: false, pending };
+  const probe = computeLeveling({ ...input, order: "ordinario", compensation: pending ? "never" : "always" });
+  const broken = !probe.arithmeticCheckOk;
+  if (pending || broken) {
+    const result = pending ? probe : computeLeveling({ ...input, order: "ordinario", compensation: "never" });
+    return { result, order: null, verifiable: false, pending, broken };
   }
-  const probe = computeLeveling({ ...input, order: "ordinario", compensation: "always" });
   const { order, verifiable } = detectLevelingOrder(probe, input.type);
   const result =
     order && order !== "ordinario"
       ? computeLeveling({ ...input, order, compensation: "always" })
       : probe;
-  return { result, order, verifiable, pending: null };
+  return { result, order, verifiable, pending: null, broken: false };
 }
 
 /**

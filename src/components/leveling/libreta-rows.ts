@@ -2,7 +2,8 @@
 // tabla de la hoja, la lista por armada del teléfono y la comprobación
 // aritmética. Sin «use client»: lo usan la pantalla y las pruebas.
 import type { ReadingDraft } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
-import type { ComputedReading, LevelingType, RunResult, RunType } from "@/types/leveling";
+import { findIncompleteTurningPoint } from "@/lib/validators/leveling";
+import type { ComputedReading, LevelingResult, LevelingType, RunResult, RunType } from "@/types/leveling";
 import { armadaSpans } from "./armadas";
 
 export type SheetBadge = "BM" | "intermedia" | "fin de la ida";
@@ -156,4 +157,30 @@ export function readingDecimals(values: readonly (number | null)[]): 3 | 4 {
 export function formatReading(value: number | null, decimals?: 3 | 4): string {
   if (value == null) return "—";
   return value.toFixed(decimals ?? (hasTenthOfMm(value) ? 4 : 3));
+}
+
+/**
+ * Por qué la libreta no encadena, o `null` (revisión final de la Fase 36): un
+ * punto de cambio sin una de sus lecturas —con su fila y su recorrido— o una
+ * comprobación aritmética que no cuadra. Con ella no hay orden ni
+ * compensación (`computeLevelingDetected`).
+ */
+export function libretaBlocker(result: Pick<LevelingResult, "forward" | "return" | "arithmeticCheckOk">): string | null {
+  const runs: [string, RunResult][] = result.return
+    ? [
+        [" de la ida", result.forward],
+        [" de la vuelta", result.return],
+      ]
+    : [["", result.forward]];
+  for (const [where, run] of runs) {
+    const found = findIncompleteTurningPoint(run.readings);
+    if (found) {
+      return `El punto de cambio de la fila ${found.row}${where} no tiene ${found.missing}: la libreta no encadena y no se compensa.`;
+    }
+  }
+  if (!result.arithmeticCheckOk) {
+    const where = result.return ? (result.forward.arithmeticCheckOk ? " de la vuelta" : " de la ida") : "";
+    return `La comprobación aritmética${where} no cuadra: Σ V+ − Σ V− no da el desnivel. Revisa la libreta; mientras tanto no se compensa.`;
+  }
+  return null;
 }

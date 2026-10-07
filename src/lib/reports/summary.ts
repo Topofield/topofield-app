@@ -40,17 +40,19 @@ export function precisionSummaryRows(sections: ReportSection[]): PrecisionSummar
     } else if (s.kind === "leveling") {
       // El orden alcanzado, detectado como en el paso de Compensación (Fase
       // 36). En una abierta con vuelta se juzga la discrepancia (Fase 23).
-      const { input, result, order, verifiable, pending } = s.data;
+      const { input, result, order, verifiable, pending, broken } = s.data;
       const error =
         input.type === "open"
           ? `Δ ${fixed(result.discrepancyMm, 1)} mm`
           : `${formatSignedMm(result.closureErrorMm)} mm`;
-      precision = pending
-        ? "Libreta a medias"
-        : verifiable
+      precision = broken
+        ? "Libreta con errores"
+        : pending
+          ? "Libreta a medias"
+          : verifiable
           ? `${error} · ${order ? PRECISION_ORDER_LABELS[order] : "ningún orden"}`
           : "Sin verificación";
-      cumple = pending || !verifiable ? null : order !== null;
+      cumple = broken || pending || !verifiable ? null : order !== null;
       equipo = formatEquipmentLine(
         s.data.process.equipment_brand,
         s.data.process.equipment_model,

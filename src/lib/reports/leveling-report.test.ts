@@ -89,8 +89,21 @@ describe("el resumen de precisión de una nivelación (Fase 36)", () => {
     expect(row).toMatchObject({ precision: "Sin verificación", cumple: null });
   });
 
+  it("una libreta que no encadena lo dice, sin orden", () => {
+    const ida = nivelacionTramo2().forward;
+    const roto = datos(nivelacionTramo2(), { ida: ida.map((x, i) => (i === 3 ? { ...x, back: undefined, backDistanceM: undefined } : x)) });
+    expect(roto.broken).toBe(true);
+    const [row] = precisionSummaryRows([seccion(roto)]);
+    expect(row).toMatchObject({ precision: "Libreta con errores", cumple: null });
+    expect(html(roto)).toContain("La libreta no encadena.");
+  });
+
   it("una libreta a medias lo dice", () => {
-    const aMedias = datos(nivelacionTramo2(), { ida: nivelacionTramo2().forward.slice(0, 5) });
+    // Como la deja la captura por armada: el último punto, sin V+ colgada.
+    const ida = nivelacionTramo2()
+      .forward.slice(0, 5)
+      .map((x, i) => (i === 4 ? { ...x, back: undefined, backDistanceM: undefined } : x));
+    const aMedias = datos(nivelacionTramo2(), { ida });
     expect(aMedias.pending).toBe("forward");
     const [row] = precisionSummaryRows([seccion(aMedias)]);
     expect(row).toMatchObject({ precision: "Libreta a medias", cumple: null });

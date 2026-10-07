@@ -18,10 +18,12 @@ export interface LevelingSectionData {
   verifiable: boolean;
   /** El recorrido que la libreta aún no termina. */
   pending: RunType | null;
+  /** La libreta no encadena: no cuadra su comprobación aritmética. */
+  broken: boolean;
 }
 
 export function levelingSectionData(process: LevelingProcess, readings: LevelingReading[]): LevelingSectionData {
   const input = levelingInputOf(levelingDraftOf(process, readings));
-  const { result, order, verifiable, pending } = computeLevelingDetected(input);
-  return { process, readings, input, result, order, verifiable, pending };
+  const { result, order, verifiable, pending, broken } = computeLevelingDetected(input);
+  return { process, readings, input, result, order, verifiable, pending, broken };
 }

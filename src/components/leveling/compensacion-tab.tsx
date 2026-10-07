@@ -7,7 +7,7 @@ import { AdjustedTable } from "./adjusted-table";
 import { ArithmeticCheck } from "./arithmetic-check";
 import { ComparisonChart } from "./comparison-chart";
 import { comparisonData, compensationRows } from "./comparison-data";
-import { arithmeticOf } from "./libreta-rows";
+import { arithmeticOf, libretaBlocker } from "./libreta-rows";
 import { levelingDraftOf, levelingInputOf, type LevelingDraft } from "./leveling-save";
 import { OrderVerdict } from "./order-verdict";
 
@@ -66,8 +66,22 @@ const meters = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).
 export function CompensacionTab({ process, readings }: { process: LevelingProcess; readings: LevelingReading[] }) {
   const draft = levelingDraftOf(process, readings);
   const input = levelingInputOf(draft);
-  const { result, order, pending } = computeLevelingDetected(input);
+  const { result, order, pending, broken } = computeLevelingDetected(input);
   const libretaHref = `/projects/${process.project_id}/leveling/${process.id}?tab=libreta`;
+
+  if (broken) {
+    return (
+      <Card title="La libreta no encadena">
+        <p className="text-sm">{libretaBlocker(result)}</p>
+        <p className="mt-2 text-sm text-ink-2">
+          Sin una cadena de alturas de instrumento correcta no hay cierre que compensar.{" "}
+          <Link href={libretaHref} className="font-medium text-mira-ink underline underline-offset-2">
+            Ir a la libreta
+          </Link>
+        </p>
+      </Card>
+    );
+  }
 
   if (pending) {
     return (

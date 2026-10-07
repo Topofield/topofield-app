@@ -14,7 +14,7 @@ import { BmCard } from "./bm-card";
 import { BmDialog } from "./bm-dialog";
 import { ImportDialog, type LevelingImport } from "./import-dialog";
 import { LevelingProfile } from "./leveling-profile";
-import { arithmeticOf, armadaSummaries, sheetRows } from "./libreta-rows";
+import { arithmeticOf, armadaSummaries, libretaBlocker, sheetRows } from "./libreta-rows";
 import { ArmadaList, LibretaTable } from "./libreta-table";
 import {
   draftWithImport,
@@ -43,6 +43,7 @@ export function LibretaTab({ process, readings }: { process: LevelingProcess; re
   );
   const { draft, save } = useProcessDraft(process.updated_at, base, persist);
   const { result } = useMemo(() => computeLevelingDetected(levelingInputOf(draft)), [draft]);
+  const blocker = libretaBlocker(result);
 
   const hasReturn = draft.details.hasReturnRun;
   const [chosenRun, setRun] = useState<RunType>("forward");
@@ -96,6 +97,7 @@ export function LibretaTab({ process, readings }: { process: LevelingProcess; re
       <div className="flex min-w-0 flex-col gap-4">
         <BmCard draft={draft} onEdit={() => setDialog({ kind: "bm" })} />
         {error && <Alert variant="error">{error}</Alert>}
+        {blocker && <Alert variant="warning">{blocker}</Alert>}
 
         <div role="group" aria-label="Vista" className="grid grid-cols-2 overflow-hidden rounded-md border border-rule-strong lg:hidden">
           {(["tabla", "perfil"] as const).map((v) => (

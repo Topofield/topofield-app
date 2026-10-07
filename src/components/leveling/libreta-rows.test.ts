@@ -3,7 +3,7 @@ import { CARTERA_VERJON } from "@/lib/demo/carteras";
 import { computeLevelingDetected } from "@/lib/calculations/leveling";
 import type { ReadingDraft } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
 import { emptyRow } from "./armadas";
-import { arithmeticOf, armadaSummaries, formatReading, readingDecimals, sheetRows } from "./libreta-rows";
+import { arithmeticOf, armadaSummaries, formatReading, libretaBlocker, readingDecimals, sheetRows } from "./libreta-rows";
 
 const toDraft = (x: (typeof CARTERA_VERJON.ida)[number]): ReadingDraft => ({
   ...emptyRow(x.code, x.type),
@@ -90,5 +90,25 @@ describe("formatReading", () => {
     expect(readingDecimals([1.209, 0.5, null])).toBe(3);
     expect(formatReading(1.649, 4)).toBe("1.6490");
     expect(formatReading(1.209, 3)).toBe("1.209");
+  });
+});
+
+describe("libretaBlocker", () => {
+  it("nombra la fila del punto de cambio incompleto, con su recorrido", () => {
+    const roto = [...ida.slice(0, 2), { ...ida[2]!, backsight: null, backDistanceM: null }, ...ida.slice(3)];
+    const { result: r } = computeLevelingDetected({
+      type: "open",
+      startElevation: CARTERA_VERJON.startElevation,
+      endElevation: null,
+      forward: input(roto),
+      return: input(vuelta),
+    });
+    expect(libretaBlocker(r)).toBe(
+      "El punto de cambio de la fila 3 de la ida no tiene V+: la libreta no encadena y no se compensa.",
+    );
+  });
+
+  it("una libreta que cuadra no tiene bloqueo", () => {
+    expect(libretaBlocker(result)).toBeNull();
   });
 });

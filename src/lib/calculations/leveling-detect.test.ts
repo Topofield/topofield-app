@@ -164,3 +164,32 @@ describe("computeLeveling — «never» no compensa", () => {
     expect(t.return!.readings.every((x) => x.correctionApplied === 0)).toBe(true);
   });
 });
+
+describe("una libreta que no encadena (revisión final)", () => {
+  it("un punto de cambio sin V+ rompe la comprobación aritmética: sin orden y sin compensar", () => {
+    const roto = {
+      ...fueraDeOrden,
+      forward: [
+        r("BM", "bm", 1.0, null, 50, null),
+        r("P1", "pc", null, 1.2, null, 50),
+        r("P2", "pc", 1.1, 1.0, 50, 50),
+        r("BM", "bm", null, 0.9, null, 50),
+      ],
+    };
+    const { result, order, verifiable, pending, broken } = computeLevelingDetected(roto);
+    expect(broken).toBe(true);
+    expect(pending).toBeNull();
+    expect(order).toBeNull();
+    expect(verifiable).toBe(false);
+    expect(result.compensated).toBe(false);
+  });
+
+  it("El Verjón y una libreta a medias que cuadra no están rotas", () => {
+    expect(computeLevelingDetected(verjon).broken).toBe(false);
+    // Como la deja la captura por armada: la armada 1 completa, sin V+ colgada.
+    const aMedias = [r("BM", "bm", 1.0, null, 50, null), r("P1", "pc", null, 1.2, null, 50)];
+    const { broken, pending } = computeLevelingDetected({ ...fueraDeOrden, forward: aMedias });
+    expect(pending).toBe("forward");
+    expect(broken).toBe(false);
+  });
+});

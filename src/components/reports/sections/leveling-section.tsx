@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ComparisonChart } from "@/components/leveling/comparison-chart";
 import { comparisonData, compensationRows, pointReadings } from "@/components/leveling/comparison-data";
-import { formatReading, readingDecimals } from "@/components/leveling/libreta-rows";
+import { formatReading, libretaBlocker, readingDecimals } from "@/components/leveling/libreta-rows";
 import { levelingOrderChecks } from "@/components/leveling/order-verdict";
 import { formatEquipmentLine, formatSignedMm } from "@/lib/utils/format";
 import type { LevelingSectionData } from "@/lib/reports/sections";
@@ -44,7 +44,14 @@ function judgedNoun(type: LevelingType, withReturn: boolean): string {
  * arriba; la alerta si no alcanza ninguno; o por qué no hay verificación.
  */
 function Verdict({ data }: { data: LevelingSectionData }) {
-  const { input, result, order, verifiable, pending } = data;
+  const { input, result, order, verifiable, pending, broken } = data;
+  if (broken) {
+    return (
+      <p className="report-alert">
+        La libreta no encadena. {libretaBlocker(result)}
+      </p>
+    );
+  }
   if (pending) {
     return (
       <p className="report-text">
@@ -268,8 +275,8 @@ function headerPairs(data: LevelingSectionData): [string, ReactNode][] {
  * misma en la pestaña Informe y en el consolidado.
  */
 export function LevelingReportSection({ data }: { data: LevelingSectionData }) {
-  const { input, result, pending } = data;
-  const compensated = !pending && result.compensated;
+  const { input, result, pending, broken } = data;
+  const compensated = !pending && !broken && result.compensated;
   const chart = compensated ? comparisonData(result, input) : null;
   const repeats = pointReadings(result, input).some((p) => p.readings.length > 1);
   return (
