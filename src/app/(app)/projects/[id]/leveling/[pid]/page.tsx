@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CompensacionTab } from "@/components/leveling/compensacion-tab";
 import { LevelingHeader } from "@/components/leveling/leveling-header";
 import { LibretaTab } from "@/components/leveling/libreta-tab";
 import { LevelingSteps, type LevelingStep } from "@/components/leveling/leveling-steps";
@@ -66,13 +67,10 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
           notes={process.notes}
           reports={reports}
         />
-      ) : step === "libreta" ? (
-        <LibretaTab process={process} readings={readings} />
+      ) : step === "compensacion" ? (
+        <CompensacionTab process={process} readings={readings} />
       ) : (
-        // Hasta la Tarea 10 de la Fase 36, que trae el paso de compensación.
-        <p className="rounded-lg border border-rule bg-card px-6 py-10 text-center text-sm text-ink-2">
-          La compensación se muestra aquí en la próxima versión.
-        </p>
+        <LibretaTab process={process} readings={readings} />
       )}
     </div>
   );
