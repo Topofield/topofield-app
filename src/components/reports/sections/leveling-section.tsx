@@ -47,7 +47,7 @@ export function LevelingReportSection({ data }: { data: LevelingSectionData }) {
         <dt>Distancia total</dt>
         <dd>{fixed(process.total_distance_km, 3)} km</dd>
         <dt>Orden de precisión</dt>
-        <dd>{PRECISION_ORDER_LABELS[process.precision_order]}</dd>
+        <dd>{process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "—"}</dd>
         <dt>Equipo</dt>
         <dd>
           {formatEquipmentLine(

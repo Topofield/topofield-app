@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(18);
+select plan(13);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a341', 'reabrir@topofield.test');
@@ -21,14 +21,6 @@ insert into public.sites (id, project_id, name, structure_type, kind) values
   ('00000000-0000-4000-8000-00000000c342', '00000000-0000-4000-8000-00000000b341',
    'Edificio', 'edificio', 'settlement');
 
-insert into public.leveling_processes
-  (id, project_id, site_id, name, type, start_bm_code, start_bm_elevation)
-values
-  ('00000000-0000-4000-8000-00000000e341', '00000000-0000-4000-8000-00000000b341',
-   '00000000-0000-4000-8000-00000000c341', 'Nivelación', 'open', 'BM1', 2600);
-insert into public.leveling_readings (process_id, run_type, reading_order, point_code, point_type, backsight) values
-  ('00000000-0000-4000-8000-00000000e341', 'forward', 1, 'BM1', 'bm', 1.5);
-
 insert into public.settlement_points (id, site_id, code, location_description, initial_elevation) values
   ('00000000-0000-4000-8000-00000000f341', '00000000-0000-4000-8000-00000000c342', 'P1', 'Esquina', 100);
 insert into public.settlement_visits (id, site_id, visit_number, date) values
@@ -38,10 +30,8 @@ insert into public.settlement_readings (visit_id, point_id, elevation) values
 
 -- Todo cerrado como lo deja la app: estado, fecha y responsable. La visita
 -- antes que el lugar: con el lugar cerrado ya no se escribe. La poligonal no
--- se cierra desde la Fase 35 (poligonal_sin_cierre.test.sql).
-update public.leveling_processes
-   set status = 'rejected', closed_at = now(), closed_by = '00000000-0000-4000-8000-00000000a341'
- where id = '00000000-0000-4000-8000-00000000e341';
+-- se cierra desde la Fase 35 (poligonal_sin_cierre.test.sql), ni la nivelación
+-- desde la 36 (nivelacion_sin_cierre.test.sql).
 update public.settlement_visits
    set status = 'closed', closed_at = now(), closed_by = '00000000-0000-4000-8000-00000000a341'
  where id = '00000000-0000-4000-8000-0000000f3410';
@@ -61,26 +51,6 @@ select ok(
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-4000-8000-00000000a341","role":"authenticated"}', true);
-
--- --- Nivelación rechazada ---------------------------------------------------
-select throws_ok(
-  $$ delete from leveling_processes where id = '00000000-0000-4000-8000-00000000e341' $$,
-  '23001', null, 'nivelación rechazada: no se borra');
-select throws_ok(
-  $$ update leveling_processes set status = 'calculated', closed_at = null, closed_by = null,
-            start_bm_elevation = 2601 where id = '00000000-0000-4000-8000-00000000e341' $$,
-  '23001', null, 'nivelación: reabrir y cambiar otra columna a la vez se rechaza');
-select throws_ok(
-  $$ update leveling_processes set status = 'closed' where id = '00000000-0000-4000-8000-00000000e341' $$,
-  '23001', null, 'nivelación rechazada: no pasa a cerrada sin reabrirse');
-select lives_ok(
-  $$ update leveling_processes set status = 'calculated', closed_at = null, closed_by = null
-      where id = '00000000-0000-4000-8000-00000000e341' $$,
-  'nivelación rechazada: reabrir pasa');
-select lives_ok(
-  $$ insert into leveling_readings (process_id, reading_order, point_code, point_type, foresight)
-     values ('00000000-0000-4000-8000-00000000e341', 2, 'R-1', 'intermediate', 1.4) $$,
-  'nivelación reabierta: admite lecturas');
 
 -- --- Lugar y visita ---------------------------------------------------------
 select throws_ok(

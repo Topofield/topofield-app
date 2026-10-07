@@ -77,7 +77,7 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
           {PROCESS_STATUS_LABELS[process.status]}
         </Badge>
       }
-      subtitle={`${levelingKindLabel(process.type as LevelingType, process.has_return_run)} · ${PRECISION_ORDER_LABELS[process.precision_order]}`}
+      subtitle={`${levelingKindLabel(process.type as LevelingType, process.has_return_run)} · ${process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "—"}`}
       basePath={basePath}
       tabs={TABS}
       activeTab={activeTab}

@@ -61,7 +61,8 @@ function processToConfig(p: LevelingProcess): LevelingConfigState {
     startBm: bmValue(p.start_bm_code, p.start_bm_elevation),
     endBm: bmValue(p.end_bm_code, p.end_bm_elevation),
     hasReturnRun: p.has_return_run,
-    precisionOrder: p.precision_order,
+    // Hasta la Tarea 9, que retira este editor: sin orden guardado, el más laxo.
+    precisionOrder: p.precision_order ?? "ordinario",
     level: {
       equipmentBrand: p.equipment_brand ?? "",
       equipmentModel: p.equipment_model ?? "",

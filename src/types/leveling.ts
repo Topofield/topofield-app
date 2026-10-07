@@ -44,7 +44,8 @@ export type LevelingProcess = Omit<
   correction_method: LevelingCorrectionMethod;
   status: import("./polygonal").ProcessStatus;
   level_type: LevelType | null;
-  precision_order: PrecisionOrder;
+  /** Detectado al compensar desde la Fase 36; `null` sin verificación o sin orden alcanzado. */
+  precision_order: PrecisionOrder | null;
 };
 
 export type LevelingReading = Omit<

@@ -76,7 +76,7 @@ export interface LevelingProcessRow {
   notes: string | null;
   created_at: string | null;
   /** Orden de precisión y equipo de nivel, propios del proceso (§ Fase 8). */
-  precision_order: PrecisionOrder;
+  precision_order: PrecisionOrder | null;
   equipment_brand: string | null;
   equipment_model: string | null;
   equipment_serial: string | null;
@@ -270,7 +270,7 @@ function sheetSummary(
   row += 1;
   writeSection(s, row, "Equipo: nivel");
   row = writePairs(s, row + 1, [
-    ["Orden de precisión", PRECISION_ORDER_LABELS[process.precision_order]],
+    ["Orden de precisión", process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "—"],
     [
       "Equipo",
       equipmentLine(

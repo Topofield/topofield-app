@@ -106,12 +106,15 @@ export type Database = {
           id: string
           km_precision_mm: number | null
           level_type: string | null
+          location: string | null
           meets_discrepancy: boolean | null
           meets_tolerance: boolean | null
           name: string
           notes: string | null
-          precision_order: string
+          precision_order: string | null
           project_id: string
+          responsible_name: string | null
+          responsible_role: string | null
           return_error_mm: number | null
           site_id: string
           start_bm_code: string
@@ -142,12 +145,15 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          location?: string | null
           meets_discrepancy?: boolean | null
           meets_tolerance?: boolean | null
           name: string
           notes?: string | null
-          precision_order?: string
+          precision_order?: string | null
           project_id: string
+          responsible_name?: string | null
+          responsible_role?: string | null
           return_error_mm?: number | null
           site_id: string
           start_bm_code: string
@@ -178,12 +184,15 @@ export type Database = {
           id?: string
           km_precision_mm?: number | null
           level_type?: string | null
+          location?: string | null
           meets_discrepancy?: boolean | null
           meets_tolerance?: boolean | null
           name?: string
           notes?: string | null
-          precision_order?: string
+          precision_order?: string | null
           project_id?: string
+          responsible_name?: string | null
+          responsible_role?: string | null
           return_error_mm?: number | null
           site_id?: string
           start_bm_code?: string
