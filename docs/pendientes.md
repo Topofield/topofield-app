@@ -89,6 +89,11 @@ La cartera real de asentamientos entra en la 37. La **Fase 36** se abrió el
 mismo día ([`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md)) y se
 **cerró** el 2026-10-07.
 
+El 2026-10-07, al probar la poligonal rediseñada, el usuario reportó tres
+fallos, corregidos sin fase en la rama `fase-35-correcciones`, y pidió dejar
+anotado lo mismo para la nivelación: «Catálogos en la nivelación», al final,
+sin fase.
+
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
 registro.
@@ -720,3 +725,29 @@ de ruta, la receta de cada fase y el contenido de los dos lienzos están en
 [`superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md`](./superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md).
 Los lienzos se ajustan al verlos: «por ahora sí, al verlos visualmente
 ajustamos».
+
+## Catálogos en la nivelación (sin fase)
+
+El 2026-10-07, al probar la poligonal rediseñada, el usuario reportó que el
+equipo no se podía escribir («sale por defecto Leica. Quitar eso y llenar
+formulario escribiendo»): «Tomar del catálogo» era lo primero del bloque y
+solo ofrecía el equipo de la demo. También, que las coordenadas del amarre no
+se podían corregir para que recalculara todo, sin volver a meter ángulos y
+distancias. Los dos se corrigieron en la poligonal, en la rama
+`fase-35-correcciones`: el alta pide el equipo escribiendo, y el amarre
+corrige el punto del catálogo, con aviso de qué cambia.
+
+### NC1 · Los catálogos en el alta de la nivelación
+
+Al preguntarle si «Tomar del catálogo» del equipo se quitaba también en el
+alta de la nivelación, que usa el mismo bloque (`EquipmentIdentity`), pidió:
+«por ahora poligonal, pon en pendientes quitar los catálogos de puntos también
+para el módulo de nivelación». Justo después cambió de plan para los puntos:
+«podemos tener catálogo de puntos para no cambiar mucho nuestra
+implementación actual, pero necesito versatilidad para cambiarlos o crearlos
+en los formularios».
+
+Al abrir la fase, confirmar el alcance: quitar el selector del equipo del alta
+de la nivelación, como en la poligonal; y para los BMs del catálogo de puntos,
+probablemente lo mismo que en el amarre —crearlos y corregirlos desde el
+formulario— en vez de quitarlos.
