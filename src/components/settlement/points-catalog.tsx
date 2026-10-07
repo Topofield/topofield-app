@@ -222,8 +222,8 @@ export function PointsCatalog({ siteId, points, hasVisits }: PointsCatalogProps)
       const response = await deletePointAction(siteId, point.id);
       if (response.ok) return;
 
-      // El punto tiene lecturas en visitas abiertas: no se borró nada, hace
-      // falta que el usuario confirme explícitamente que quiere perderlas.
+      // El punto tiene lecturas: no se borró nada, hace falta que el usuario
+      // confirme explícitamente que quiere perderlas.
       if (response.requiereConfirmacion) {
         setPendingDelete({
           point,
@@ -515,9 +515,9 @@ export function PointsCatalog({ siteId, points, hasVisits }: PointsCatalogProps)
               {pendingDelete.lecturasAfectadas}{" "}
               {pendingDelete.lecturasAfectadas === 1
                 ? "lectura registrada"
-                : "lecturas registradas"}{" "}
-              en visitas abiertas. Si continúas, el punto y esas lecturas se
-              eliminarán de forma permanente.
+                : "lecturas registradas"}
+              . Si continúas, el punto y esas lecturas se eliminarán de forma
+              permanente.
             </Alert>
 
             <div className="flex justify-end gap-2">
