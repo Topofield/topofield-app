@@ -4,8 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-07 · Fase 36 cerrada · 1131 tests y 123
-pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-07 · Fase 36 cerrada, y correcciones de la
+Fase 35 · 1149 tests y 135 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -287,7 +287,7 @@ movida y la libreta vieja—.
 
 | Función | La llama | Hace, en orden |
 |---|---|---|
-| `save_polygonal_process` | `savePolygonalProcessAction` | cabecera; borra las estaciones e inserta las nuevas, cada una con sus lecturas de ángulo anidadas |
+| `save_polygonal_process` | `savePolygonalProcessAction` | los puntos del amarre en el catálogo (`p_catalog`: `insert` con el id que da la acción o `update` por id, solo en el proyecto del proceso; desde las correcciones de la Fase 35); cabecera; borra las estaciones e inserta las nuevas, cada una con sus lecturas de ángulo anidadas |
 | `save_leveling_process` | `saveLevelingProcessAction` | cabecera; reemplaza las lecturas de ida y vuelta |
 | `save_visit` | `saveVisitAction` | purga de las lecturas quitadas, cabecera, libreta (upsert y purga), lecturas y propagación a las visitas posteriores abiertas —el orden que imponen los triggers de vigencia— |
 | `georeference_polygonal` | `georeferencePolygonalProcessAction` | columnas de posición de la cabecera y de cada estación, por su id |
@@ -1064,8 +1064,10 @@ elegía el usuario, sin preselección; desde la 35 se detecta (arriba).
 
 Una cartera real se orienta sobre un punto de coordenadas conocidas, así que el
 azimut de amarre **se calcula** (`azimuthFromCoordinates`) en vez de teclearse,
-y se persiste resuelto: el CRUD de `reference_points` permite mover un punto ya
-usado, y el proceso debe conservar el azimut con el que se calculó.
+y se persiste resuelto: el CRUD de `reference_points` —y, desde las
+correcciones de la Fase 35, el popup del amarre— permite mover un punto ya
+usado, y el proceso debe conservar el azimut con el que se calculó (con un
+límite: § 11, «Un punto del catálogo que se mueve»).
 
 Hay dos esquemas de cierre, y `has_closing_row` los distingue:
 
@@ -1845,6 +1847,11 @@ con contenido oscuro pasando por debajo.
   con su propio contexto de apilamiento —la barra de acciones, `sticky z-20`,
   donde vive el diálogo «Cerrar proceso»— dejaba su `z-50` por debajo de la
   barra (`z-40`) y de la ruta (`z-45`).
+- **Todo `Modal` limita su alto** (`100dvh − 2rem`) y desplaza el cuerpo, con
+  la cabecera y el pie a la vista; `size` solo cambia el ancho. Hasta las
+  correcciones de la Fase 35 solo lo hacía el grande: el alta de la poligonal
+  con el equipo desplegado (778 px) se salía de una pantalla de 600 px por
+  arriba y por abajo, sin desplazar, y «Crear y empezar» quedaba fuera.
 - **Detalles:** `scroll-padding-top` evita que la barra tape las anclas, y al
   imprimir `globals.css` oculta todo `header` y `nav`. Con el teclado, el foco
   recorre la barra antes que la ruta, que en el documento va con la página.
@@ -1903,9 +1910,27 @@ página. Las piezas:
   lado, cierre, cierre angular, pendiente, llegada) y `fieldTraverse`, lo
   medido sin ajustar para el dibujo de Datos (`PolygonalPlot` en modo
   `field`).
-- `amarre-dialog.tsx` con `ensureCatalogPointAction` y `resolveCatalogPoint`
-  (`lib/polygonal-amarre.ts`): los puntos del amarre al catálogo, sin
-  reescribir uno que exista con otras coordenadas. Guarda el código de la
+- `amarre-dialog.tsx` con `resolveCatalogPoint` y `planCatalogWrites`
+  (`lib/polygonal-amarre.ts`): los puntos del amarre al catálogo, que viajan
+  con el guardado (`catalogPoints`) y se escriben con el proceso en
+  `save_polygonal_process`, en la misma transacción. La acción comprueba que
+  coinciden con el amarre de la carga (`catalogPointsProblem`), decide qué
+  fila se crea o se corrige y saca el azimut de las coordenadas nuevas de la
+  referencia. Una referencia nueva lleva desde el popup el id con que se crea
+  —si es un UUID libre; si no, la acción da otro—: un guardado encadenado
+  antes de que llegue la página no la suelta. Uno que ya
+  existe con otras coordenadas toma las tecleadas (`move`): así se corrige el
+  amarre sin rehacer la poligonal. Hasta las correcciones de la Fase 35 era un
+  conflicto, y el primer guardado del amarre ya mete sus puntos al catálogo:
+  corregir una coordenada no se podía. Solo se mueve un punto que el usuario
+  **editó** en el popup: la partida y la llegada se abren con la copia del
+  proceso, que puede diferir del catálogo si este se corrigió después o si la
+  poligonal se georreferenció, y guardar sin tocarlas no devuelve el catálogo
+  a lo viejo. Antes de guardar, `catalogMoves` dice en el popup qué puntos
+  cambian y qué otras poligonales los usan —de partida, de llegada o de
+  referencia; la página las carga solo en Datos (`getPolygonalAmarres`)—, y
+  dos puntos del amarre con el mismo nombre y otras coordenadas se rechazan
+  (`repeatedPointName`, con el mismo medio milímetro). Guarda el código de la
   referencia junto a su id: si el punto se borra del catálogo (la FK pasa a
   `null`), la poligonal sigue orientada. Con mediciones, no deja poner ni
   quitar el 0 atrás (`amarreChangeProblem`): cambiaría lo que significa el
@@ -2212,7 +2237,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1131 tests en 84 archivos, Vitest, entorno `node` **sin jsdom**. Además, 123
+1149 tests en 84 archivos, Vitest, entorno `node` **sin jsdom**. Además, 135
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2239,7 +2264,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `components/polygonal/angle-format.test.ts` | 7 | Ángulos en DMS o decimal, segundos con signo y la lectura de los campos DMS (Fase 35) |
 | `components/polygonal/order-verdict.test.ts` | 4 | El «Por qué» del orden alcanzado, orden por orden, con y sin condición angular (Fase 35) |
 | `components/polygonal/adjusted-table.test.ts` | 2 | La poligonal ajustada al estilo de la hoja: las coordenadas del punto de llegada y la fila Σ (Fase 35) |
-| `lib/polygonal-amarre.test.ts` | 6 | Los puntos del amarre al catálogo: reutilizar, completar, crear o el conflicto con otras coordenadas (Fase 35) |
+| `lib/polygonal-amarre.test.ts` | 22 | Los puntos del amarre al catálogo: reutilizar, completar, crear o mover el que tiene otras coordenadas; `catalogMoves`, los que cambian con sus coordenadas de antes y las otras poligonales que los usan; `repeatedPointName` con el medio milímetro, y `catalogPointOf`; `planCatalogWrites` —insertar, actualizar por id, un punto nuevo repetido una sola vez, el id propuesto para la referencia— y `catalogPointsProblem`: puntos sin nombre o con coordenadas no finitas, que no son los del amarre o que repiten nombre (Fase 35 y sus correcciones) |
 | `components/reports/sections/polygonal-correction.test.tsx` | 5 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35) |
 | `components/reports/math.test.tsx` | 2 | Una letra griega sola va recta en MathML (Fase 35) |
 | `lib/errors/action-call.test.ts` | 3 | Un rechazo de red de una acción vuelve como error, sin lanzar, y las señales de navegación de Next pasan (Fase 35) |
@@ -2281,7 +2306,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `lib/export/workbook-colors.test.ts` | 4 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24) |
 | `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
 | `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
-| `components/equipment/equipment-picker.test.ts` | 5 | El selector ofrece solo los equipos de su tipo, no duplica lo guardado, avisa de la calibración y no aparece en un cerrado (Fase 25) |
+| `components/equipment/equipment-picker.test.ts` | 7 | El selector ofrece solo los equipos de su tipo, no duplica lo guardado, avisa de la calibración y no aparece en un cerrado (Fase 25); el alta de la poligonal no ofrece el catálogo y la de la nivelación sí (correcciones de la Fase 35) |
 | `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` (fuera del manual) cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
 | `lib/utils/parse.test.ts` | 10 | **Coma o punto decimal**: signo, espacios, estados intermedios (`1,`, `,5`); vacío es `null` y lo inválido también, nunca `NaN`; separador de miles, exponentes y letras inválidos (Fase 20) |
 | `components/design-system/number-input.test.ts` | 8 | `NumberInput`: texto con teclado decimal, lo inválido se marca en vez del error del validador; el contador de celdas inválidas; `DmsInput` con segundos decimales (Fase 20) |
@@ -2318,6 +2343,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `estabilidad_bms.test.sql` | 6 | `save_visit` guarda la cota de catálogo de un BM de control; una visita cerrada no la deja cambiar y la conserva aunque se corrija el catálogo (Fase 30) |
 | `reabrir_procesos.test.sql` | 13 | `is_reopening` la ejecuta `authenticated` y no `anon`; reabrir un lugar y una visita; reabrir cambiando otra columna o sin borrar el registro de cierre, rechazado; lo cerrado sigue sin editarse ni borrarse; tras reabrir, lecturas y la C0 vuelven a escribirse; reabrir el lugar no reabre sus visitas, y una visita de un lugar cerrado no se reabre (Fase 34; la poligonal y la nivelación salieron en las Fases 35 y 36) |
 | `poligonal_sin_cierre.test.sql` | 20 | La poligonal sin cierre (Fase 35): las columnas del alta y `precision_order` nulo; sin triggers de cierre y la visita con el suyo (desde la Fase 36 la nivelación tampoco los tiene); sin `closed_at` ni `closed_by` y el CHECK que rechaza `closed` y `rejected`; se edita siempre; `save_polygonal_process` escribe `has_closing_row`, el tipo de ángulo, el orden nulo y los datos del alta |
+| `amarre_atomico.test.sql` | 12 | `save_polygonal_process` con `p_catalog` (correcciones de la Fase 35): corrige un punto y crea otro con el proceso, y la cabecera apunta al nuevo; si una estación falla, ni el catálogo ni la cabecera cambian; no corrige un punto de otro proyecto del mismo usuario; rechaza una escritura que no es `insert` ni `update`; la llamada de tres argumentos sigue guardando |
 | `nivelacion_sin_cierre.test.sql` | 17 | La nivelación sin cierre (Fase 36): las columnas del alta y `precision_order` nulo; sin triggers de cierre ni la función de sus lecturas, y la visita con el suyo; sin `closed_at` ni `closed_by` y el CHECK que rechaza `closed` y `rejected` (paso 2); se edita siempre; `save_leveling_process` escribe los datos del alta y un orden vacío |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
@@ -2404,6 +2430,24 @@ Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 ## 11. Deuda técnica conocida
 
 Registrada durante el desarrollo, ninguna bloqueante:
+
+**Un punto del catálogo que se mueve (correcciones de la Fase 35).** El popup
+del amarre corrige las coordenadas de un punto del catálogo, como ya hacía la
+pestaña Configuración. Una poligonal que lo tiene **de referencia** guarda el
+azimut resuelto, pero `resolveStartAzimuth` lo vuelve a leer del catálogo en
+cada guardado: toma el azimut nuevo la próxima vez que se guarde, desde
+cualquier popup, y hasta entonces el informe dibuja la referencia en su sitio
+nuevo con el azimut viejo. Las que lo tienen de partida o de llegada no
+cambian: guardan sus propias coordenadas. El popup del amarre nombra esas
+poligonales antes de guardar; la pestaña Configuración no avisa.
+
+**Cerrado en las correcciones de la Fase 35 — el amarre se guarda en una
+transacción** (`20261007010000_amarre_atomico.sql`): los puntos del amarre
+viajan con el guardado y los escribe `save_polygonal_process`. El texto
+original queda como registro. El popup movía los puntos en el catálogo
+(`ensureCatalogPointAction`, uno por llamada) **antes** de guardar el
+proceso, y no en la misma transacción: si el guardado fallaba después, el
+catálogo quedaba corregido y el proceso con el amarre de antes.
 
 **Columnas de la nivelación que ya no se leen (Fase 36).** `level_type`,
 `km_precision_mm`, `equipment_calibration_date`, `correction_method`,
@@ -3358,8 +3402,8 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-07):** la nube tiene aplicadas las **treinta y siete**
-migraciones, hasta `20261007000000_nivelacion_sin_cierre` (Fase 36, paso 2).
+**Estado actual (2026-10-07):** la nube tiene aplicadas las **treinta y ocho**
+migraciones, hasta `20261007010000_amarre_atomico` (correcciones de la Fase 35).
 Todas se empujaron antes del merge a `main`, salvo las tres que borran
 columnas, que fueron después: la de la Fase 29 y el paso 2 de las Fases 35 y
 36 (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
@@ -3387,6 +3431,18 @@ tres calculadas y una en curso. El paso 2 se aplicó después del merge del PR
 `closed_at` y `closed_by` no existen, el CHECK de `status` admite solo `draft`,
 `in_progress` y `calculated`, y en la tabla queda solo el trigger de
 `updated_at`.
+
+**Correcciones de la Fase 35 — el amarre atómico** (2026-10-07,
+`20261007010000_amarre_atomico`): `save_polygonal_process` gana `p_catalog`,
+con valor por defecto. Se borra la firma de tres argumentos y se crea la de
+cuatro, con sus permisos: el código anterior llama con tres y sigue
+funcionando, así que la migración va **antes** del merge, en un solo paso.
+El usuario la empujó antes del merge, con `db push` desde el worktree de la
+rama: producción tenía todo hasta `20261007000000` y solo se aplicó esta.
+Verificado después en solo lectura (`migration list` y un `db dump` del
+esquema): queda una sola `save_polygonal_process`, la de cuatro argumentos
+con `p_catalog` por defecto `'[]'`, `SECURITY INVOKER`, y `EXECUTE` solo para
+`authenticated` y `service_role`.
 
 **La Fase 36 repitió el esquema en dos pasos** (2026-10-07). El paso 1
 (`20261006010000_ux_nivelacion`: las columnas del alta, `precision_order`

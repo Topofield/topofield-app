@@ -1213,7 +1213,12 @@ export type Database = {
         Returns: undefined
       }
       save_polygonal_process: {
-        Args: { p_header: Json; p_process_id: string; p_stations: Json }
+        Args: {
+          p_catalog?: Json
+          p_header: Json
+          p_process_id: string
+          p_stations: Json
+        }
         Returns: undefined
       }
       save_visit: {

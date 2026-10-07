@@ -9,7 +9,12 @@ import {
   dmsToDecimal,
 } from "@/lib/calculations/angles";
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
-import { resolveCatalogPoint } from "@/lib/polygonal-amarre";
+import {
+  catalogPointOf,
+  catalogPointsProblem,
+  planCatalogWrites,
+  type AmarrePoints,
+} from "@/lib/polygonal-amarre";
 import {
   validateLeastSquaresWeights,
   hasCaptureErrors,
@@ -30,6 +35,8 @@ import {
   type PolygonalInput,
   type PolygonalType,
 } from "@/types/polygonal";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface ActionResult {
   ok: boolean;
@@ -95,6 +102,12 @@ export interface SavePolygonalPayload {
   lsSigmaAngleSeconds: number | null;
   lsSigmaDistanceM: number | null;
   lsDistanceMeasurements: number | null;
+  /**
+   * Los puntos del amarre que van al catálogo del proyecto, solo al guardar el
+   * popup del amarre: se escriben con el proceso, en la misma transacción
+   * (correcciones de la Fase 35). Con `reference`, la referencia es ese punto.
+   */
+  catalogPoints?: AmarrePoints;
 }
 
 /**
@@ -294,7 +307,37 @@ export async function savePolygonalProcessAction(
       ? "in_progress"
       : "draft";
 
-  const azimuth = await resolveStartAzimuth(supabase, payload, process.project_id);
+  // Los puntos del amarre van al catálogo con el proceso (correcciones de la
+  // Fase 35): aquí se decide qué fila se crea o se corrige, y la función de
+  // base las escribe en la misma transacción. Antes, una llamada por punto
+  // ANTES de guardar dejaba el catálogo corregido si el guardado fallaba.
+  let catalog: ReturnType<typeof planCatalogWrites> = { writes: [], referenceId: null };
+  if (payload.catalogPoints) {
+    const problem = catalogPointsProblem(payload, payload.catalogPoints);
+    if (problem) return { ok: false, error: problem };
+    const { data: points, error: readError } = await supabase
+      .from("reference_points")
+      .select("id, code, north, east")
+      .eq("project_id", process.project_id);
+    if (readError) return { ok: false, error: logDbError(readError, "No se pudo leer el catálogo.") };
+    // Una referencia nueva toma el id que el popup ya puso en el borrador, si es
+    // un UUID libre; si no, uno nuevo: un id que ya existe haría fallar el
+    // guardado entero sin decir por qué.
+    const proposed = payload.referencePointId;
+    const usable =
+      proposed !== null && UUID.test(proposed) && !(points ?? []).some((p) => p.id === proposed);
+    catalog = planCatalogWrites((points ?? []).map(catalogPointOf), payload.catalogPoints, (role) =>
+      role === "reference" && usable ? proposed : crypto.randomUUID(),
+    );
+  }
+
+  // Con la referencia en la carga, el azimut sale de sus coordenadas nuevas: el
+  // catálogo aún no las tiene.
+  const reference = payload.catalogPoints?.reference ?? null;
+  const referencePointId = reference ? catalog.referenceId : payload.referencePointId;
+  const azimuth = reference
+    ? referenceStartAzimuth({ north: payload.startNorth, east: payload.startEast }, reference)
+    : await resolveStartAzimuth(supabase, payload, process.project_id);
   if ("error" in azimuth) return { ok: false, error: azimuth.error };
 
   // Cabecera, estaciones y lecturas en una sola transacción (Fase 23): si
@@ -348,7 +391,7 @@ export async function savePolygonalProcessAction(
       name: payload.name,
       type: payload.type,
       angle_type: angleType,
-      reference_point_id: payload.referencePointId,
+      reference_point_id: referencePointId,
       reference_point_code: payload.referencePointCode,
       has_closing_row: payload.hasClosingRow,
       ...(payload.location !== undefined && { location: payload.location }),
@@ -387,6 +430,7 @@ export async function savePolygonalProcessAction(
       status,
     },
     p_stations: stations,
+    p_catalog: catalog.writes,
   });
   if (saveError) {
     return { ok: false, error: logDbError(saveError, "No se pudo guardar el proceso.") };
@@ -580,65 +624,4 @@ export async function georeferencePolygonalProcessAction(
   revalidatePath(`/projects/${process.project_id}/polygonal/${process.id}`);
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
-}
-
-/**
- * Lleva un punto del amarre al catálogo del proyecto (Fase 35, decisión 9):
- * reutiliza el que ya existe con las mismas coordenadas, completa uno sin
- * coordenadas o crea uno nuevo. Un código existente con otras coordenadas es un
- * error: no se reescribe un punto que pueden estar usando otros procesos.
- */
-export async function ensureCatalogPointAction(
-  projectId: string,
-  point: { code: string; north: number; east: number },
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  const code = point.code.trim();
-  if (!code) return { ok: false, error: "El punto necesita un nombre." };
-  if (!Number.isFinite(point.north) || !Number.isFinite(point.east)) {
-    return { ok: false, error: `${code}: el Norte y el Este son obligatorios.` };
-  }
-
-  const supabase = await createClient();
-  const { data: catalog, error: readError } = await supabase
-    .from("reference_points")
-    .select("id, code, north, east")
-    .eq("project_id", projectId);
-  if (readError) return { ok: false, error: logDbError(readError, "No se pudo leer el catálogo.") };
-
-  const resolution = resolveCatalogPoint(
-    (catalog ?? []).map((p) => ({
-      id: p.id,
-      code: p.code,
-      north: p.north == null ? null : Number(p.north),
-      east: p.east == null ? null : Number(p.east),
-    })),
-    { code, north: point.north, east: point.east },
-  );
-  switch (resolution.kind) {
-    case "conflict":
-      return { ok: false, error: resolution.message };
-    case "reuse":
-      return { ok: true, id: resolution.id };
-    case "complete": {
-      const { error } = await supabase
-        .from("reference_points")
-        .update({ north: point.north, east: point.east })
-        .eq("id", resolution.id);
-      if (error) return { ok: false, error: logDbError(error, "No se pudo guardar el punto.") };
-      revalidatePath(`/projects/${projectId}`);
-      return { ok: true, id: resolution.id };
-    }
-    case "create": {
-      const { data, error } = await supabase
-        .from("reference_points")
-        .insert({ project_id: projectId, code, type: "control", north: point.north, east: point.east })
-        .select("id")
-        .single();
-      if (error || !data) {
-        return { ok: false, error: logDbError(error ?? { message: "sin fila" }, "No se pudo guardar el punto.") };
-      }
-      revalidatePath(`/projects/${projectId}`);
-      return { ok: true, id: data.id };
-    }
-  }
 }

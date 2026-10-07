@@ -268,6 +268,20 @@ export async function getPolygonalProcesses(
   return (data ?? []) as PolygonalProcess[];
 }
 
+/**
+ * Los amarres de las poligonales de un proyecto: el aviso del popup del amarre
+ * dice cuáles usan un punto del catálogo que se corrige.
+ */
+export async function getPolygonalAmarres(supabase: Client, projectId: string) {
+  const { data, error } = await supabase
+    .from("polygonal_processes")
+    .select("id, name, start_point_code, end_point_code, reference_point_id")
+    .eq("project_id", projectId);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** Un proceso poligonal por id, o `null` si no existe o es de otro usuario. */
 export async function getPolygonalProcess(
   supabase: Client,

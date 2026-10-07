@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Alert, Button, Card } from "@/components/design-system";
 import { computePolygonal } from "@/lib/calculations/polygonal";
+import type { CatalogUser } from "@/lib/polygonal-amarre";
 import { cn } from "@/lib/utils/cn";
 import type { ReferencePoint } from "@/types/project";
 import type { AngleInputFormat, PolygonalProcess, PolygonalStationWithReadings } from "@/types/polygonal";
@@ -20,10 +21,11 @@ import { usePolygonalComputation, usePolygonalDraft } from "./use-polygonal-draf
 type Dialog = { kind: "amarre" } | { kind: "measurement"; mode: MeasurementMode; opened: number };
 
 interface DatosTabProps {
-  projectId: string;
   process: PolygonalProcess;
   stations: PolygonalStationWithReadings[];
   referencePoints: ReferencePoint[];
+  /** Las otras poligonales del proyecto, para el aviso del amarre. */
+  others: CatalogUser[];
   angleFormat: AngleInputFormat;
 }
 
@@ -33,7 +35,7 @@ interface DatosTabProps {
  * fijo a la derecha. Cada popup guarda al confirmar con la carga completa: no
  * hay botón Guardar.
  */
-export function DatosTab({ projectId, process, stations, referencePoints, angleFormat }: DatosTabProps) {
+export function DatosTab({ process, stations, referencePoints, others, angleFormat }: DatosTabProps) {
   const { draft, save } = usePolygonalDraft(process, stations);
   const { input, result, angleType, referenceLabel, referenceCoords } = usePolygonalComputation(
     draft,
@@ -184,9 +186,9 @@ export function DatosTab({ projectId, process, stations, referencePoints, angleF
 
       {dialog?.kind === "amarre" && (
         <AmarreDialog
-          projectId={projectId}
           draft={draft}
           referencePoints={referencePoints}
+          others={others}
           angleFormat={angleFormat}
           onSave={save}
           onClose={() => setDialog(null)}

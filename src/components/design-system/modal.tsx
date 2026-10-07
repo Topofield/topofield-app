@@ -21,7 +21,6 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, footer, size = "md", fullOnPhone = false }: ModalProps) {
-  const scrolls = size === "lg" || fullOnPhone;
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -51,21 +50,21 @@ export function Modal({ open, onClose, title, children, footer, size = "md", ful
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative w-full rounded-lg border border-rule bg-card shadow-lg",
-          // Solo el grande limita su alto y desplaza el cuerpo: los diálogos
-          // de formulario quedan como estaban, sin recortar nada.
+          // Todos limitan su alto: un formulario que crece —el equipo de la
+          // poligonal al desplegarse— se salía por arriba y por abajo de la
+          // pantalla, sin desplazar, y el pie con sus botones quedaba fuera.
+          // En el teléfono, el de la armada ocupa la pantalla (Fase 37).
+          "relative flex w-full flex-col border-rule bg-card shadow-lg",
           fullOnPhone
-            ? "flex h-dvh flex-col rounded-none border-0 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl sm:rounded-lg sm:border"
-            : size === "lg"
-              ? "flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col"
-              : "max-w-md",
+            ? "h-dvh rounded-none border-0 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl sm:rounded-lg sm:border"
+            : cn("max-h-[calc(100dvh-2rem)] rounded-lg border", size === "lg" ? "max-w-2xl" : "max-w-md"),
         )}
       >
         <header className="border-b border-rule px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
         </header>
-        {/* En el grande, el cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
-        <div className={cn("px-6 py-4", scrolls && "overflow-y-auto", fullOnPhone && "flex-1 px-4 sm:flex-initial sm:px-6")}>
+        {/* El cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
+        <div className={cn("overflow-y-auto px-6 py-4", fullOnPhone && "flex-1 px-4 sm:flex-initial sm:px-6")}>
           {children}
         </div>
         {footer && (

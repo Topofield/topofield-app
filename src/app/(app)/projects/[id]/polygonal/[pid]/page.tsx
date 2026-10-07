@@ -7,6 +7,7 @@ import { ProcessReport } from "@/components/process/process-report";
 import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
+  getPolygonalAmarres,
   getPolygonalProcess,
   getPolygonalStations,
   getProjectById,
@@ -37,11 +38,13 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
   const process = await getPolygonalProcess(supabase, pid);
   if (!process || process.project_id !== id) notFound();
 
-  const [stations, project, referencePoints, reports] = await Promise.all([
+  const [stations, project, referencePoints, reports, processes] = await Promise.all([
     getPolygonalStations(supabase, pid),
     getProjectById(supabase, id),
     getReferencePoints(supabase, id),
     getReports(supabase, id),
+    // Para el aviso del amarre: qué otras poligonales usan un punto que se corrige.
+    step === "datos" ? getPolygonalAmarres(supabase, id) : Promise.resolve([]),
   ]);
   if (!project) notFound();
 
@@ -83,10 +86,17 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
         />
       ) : (
         <DatosTab
-          projectId={id}
           process={process}
           stations={stations}
           referencePoints={referencePoints}
+          others={processes
+            .filter((p) => p.id !== process.id)
+            .map((p) => ({
+              name: p.name,
+              startCode: p.start_point_code,
+              endCode: p.end_point_code,
+              referencePointId: p.reference_point_id,
+            }))}
           angleFormat={process.angle_input_format}
         />
       )}

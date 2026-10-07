@@ -16,14 +16,16 @@ export interface DraftSaveResult {
  * servidor (`updatedAt` cambia con cada guardado).
  *
  * `base` es el borrador armado con lo que mandó el servidor, ya memorizado por
- * quien llama; `persist`, la acción de guardado, estable entre pintadas. La
- * respuesta llega entera a quien guarda (la visita trae `duplicate`).
+ * quien llama; `persist`, la acción de guardado, estable entre pintadas. `X`
+ * es lo que un guardado lleva además del borrador y no se queda en él: los
+ * puntos del amarre que van al catálogo en la poligonal. `R` es la respuesta,
+ * que llega entera a quien guarda (la visita trae `duplicate`).
  */
-export function useProcessDraft<D, R extends DraftSaveResult = DraftSaveResult>(
+export function useProcessDraft<D, X = never, R extends DraftSaveResult = DraftSaveResult>(
   updatedAt: string,
   base: D,
-  persist: (next: D) => Promise<R>,
-): { draft: D; save: (next: D) => Promise<R | { ok: false; error: string }> } {
+  persist: (next: D, extra?: X) => Promise<R>,
+): { draft: D; save: (next: D, extra?: X) => Promise<R | { ok: false; error: string }> } {
   const [saved, setSaved] = useState<D | null>(null);
   const [seen, setSeen] = useState(updatedAt);
   if (seen !== updatedAt) {
@@ -31,9 +33,9 @@ export function useProcessDraft<D, R extends DraftSaveResult = DraftSaveResult>(
     setSaved(null);
   }
   const save = useCallback(
-    async (next: D) => {
+    async (next: D, extra?: X) => {
       // Un fallo de red vuelve como error al popup, sin perder lo tecleado.
-      const response = await callAction(() => persist(next));
+      const response = await callAction(() => persist(next, extra));
       if (response.ok) setSaved(next);
       return response;
     },
