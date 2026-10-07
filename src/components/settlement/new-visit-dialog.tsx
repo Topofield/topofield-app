@@ -97,21 +97,14 @@ export function NewVisitDialog({
     }
     setError(null);
     startTransition(async () => {
+      // Tarea 11: este diálogo se reemplaza por el popup de la Fase 37.
       const response = await createVisitAction(projectId, siteId, {
         date,
         operator: operator.trim() || null,
-        captureMode: start === "direct" ? "direct" : "book",
-        referenceBm:
-          start === "direct" || amarre.code.trim() === ""
-            ? null
-            : { code: amarre.code.trim(), elevation },
-        precisionOrder: order,
+        notes: null,
         equipmentBrand: level.equipmentBrand.trim() || null,
         equipmentModel: level.equipmentModel.trim() || null,
         equipmentSerial: level.equipmentSerial.trim() || null,
-        equipmentCalibrationDate: level.equipmentCalibrationDate.trim() || null,
-        levelType: level.levelType === "" ? null : level.levelType,
-        kmPrecisionMm: parseNumber(level.kmPrecisionMm),
       });
       if (response.ok && response.visitId) {
         setOpen(false);

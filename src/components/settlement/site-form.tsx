@@ -13,7 +13,6 @@ import {
 } from "@/components/design-system";
 import { thresholdsFor, thresholdsOf } from "@/lib/calculations/tolerances";
 import {
-  closeSiteAction,
   createSiteAction,
   saveSiteAction,
   type SitePayload,
@@ -133,7 +132,6 @@ export function SiteForm({
       accumulatedCaution: thresholds.accumulatedCaution,
       accumulatedAlert: thresholds.accumulatedAlert,
       accumulatedAlarm: thresholds.accumulatedAlarm,
-      notes: notes.trim() === "" ? null : notes.trim(),
     };
 
     startTransition(async () => {
@@ -167,7 +165,8 @@ export function SiteForm({
     if (!site) return;
     setCloseError(null);
     startCloseTransition(async () => {
-      const response = await closeSiteAction(projectId, site.id);
+      // Tarea 8: este formulario se reemplaza por el popup (Fase 37); el lugar ya no se cierra.
+      const response: { ok: boolean; error?: string } = { ok: false, error: "El lugar ya no se cierra." };
       if (response.ok) {
         setCloseDialogOpen(false);
         router.refresh();

@@ -53,7 +53,6 @@ import { parseNumber } from "@/lib/utils/parse";
 import { benchmarkCheckMessage, validateVisitBook } from "@/lib/validators/settlement-book";
 import { turningPointBlocker } from "@/lib/validators/leveling";
 import {
-  closeVisitAction,
   saveVisitAction,
   type VisitPayload,
 } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
@@ -444,26 +443,18 @@ export function VisitEditor({
       return;
     }
 
+    // Tarea 12: el editor se retira; mientras tanto guarda con la carga nueva
+    // (Fase 37): solo la libreta, sin cotas tecleadas.
     const payload: VisitPayload = {
       siteId,
       visitId: visit.id,
       date: header.date,
       operator: header.operator.trim() === "" ? null : header.operator.trim(),
-      weatherConditions:
-        header.weatherConditions.trim() === "" ? null : header.weatherConditions.trim(),
-      closureErrorMm: isBook ? null : closureErrorMm,
       notes: header.notes.trim() === "" ? null : header.notes.trim(),
-      precisionOrder: header.precisionOrder,
       equipmentBrand: header.level.equipmentBrand.trim() || null,
       equipmentModel: header.level.equipmentModel.trim() || null,
       equipmentSerial: header.level.equipmentSerial.trim() || null,
-      equipmentCalibrationDate: header.level.equipmentCalibrationDate.trim() || null,
-      levelType: header.level.levelType === "" ? null : header.level.levelType,
-      kmPrecisionMm: parseNumber(header.level.kmPrecisionMm),
-      captureMode: header.captureMode,
-      referenceBm: { code: header.amarre.code.trim(), elevation: amarreElevation },
       book: isBook ? bookRows.map(draftToPayload) : [],
-      readings: isBook ? [] : typedReadings,
     };
 
     startTransition(async () => {
@@ -480,7 +471,8 @@ export function VisitEditor({
   function handleConfirmClose() {
     setCloseError(null);
     startCloseTransition(async () => {
-      const response = await closeVisitAction(projectId, siteId, visit.id);
+      // Tarea 12: el editor se retira; las visitas ya no se cierran (Fase 37).
+      const response: { ok: boolean; error?: string } = { ok: false, error: "Las visitas ya no se cierran." };
       if (response.ok) {
         setCloseDialogOpen(false);
         router.push(viewHref);

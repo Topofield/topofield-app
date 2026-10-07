@@ -33,8 +33,6 @@ import {
   formatSignedMm,
 } from "@/lib/utils/format";
 import {
-  closeVisitAction,
-  reopenVisitAction,
 } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
 import {
   ALERT_LEVEL_LABELS,
@@ -151,7 +149,8 @@ export function VisitView(props: VisitViewProps) {
   function confirmClose() {
     setCloseError(null);
     startClose(async () => {
-      const r = await closeVisitAction(props.projectId, props.siteId, props.visitId);
+      // Tarea 11: la vista de la visita se rehace sin cerrar (Fase 37).
+      const r: { ok: boolean; error?: string } = { ok: false, error: "Las visitas ya no se cierran." };
       if (r.ok) {
         setCloseOpen(false);
         router.refresh();
@@ -213,7 +212,8 @@ export function VisitView(props: VisitViewProps) {
             {props.reopen && (
               <ReopenDialog
                 target="visit"
-                action={() => reopenVisitAction(props.siteId, props.visitId)}
+                // Tarea 11: ya no se reabre (Fase 37).
+                action={async () => ({ ok: false, error: "Las visitas ya no se cierran." })}
                 blocked={props.reopen.blocked}
                 notice={props.reopen.laterVisits ? LATER_VISITS_NOTICE : null}
               />
