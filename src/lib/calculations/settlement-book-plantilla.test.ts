@@ -101,6 +101,20 @@ describe("lo pendiente y el estado de la visita", () => {
     expect(visitStatusOf([])).toBe("draft");
   });
 
+  // Revisión final de la Fase 37: un punto de cambio seguido de un tramo que
+  // sale de un BM no abre otra armada; no espera su V+.
+  it("un punto de cambio seguido de un tramo desde un BM no espera V+", () => {
+    const rows = [
+      r("BM-1", "bm", 1.5, null, true),
+      r("P1", "intermediate", null, 1.2),
+      r("P2", "pc", null, 1.3),
+      r("BM-2", "bm", 1.1, null, true),
+      r("P3", "intermediate", null, 1.4),
+    ];
+    expect(bookPending(rows)).toEqual([]);
+    expect(visitStatusOf(rows)).toBe("calculated");
+  });
+
   it("una armada que termina en sus puntos no espera V−", () => {
     const cartera = [r("PISCINA/BM", "bm", 1.45, null, true), r("A1", "intermediate", null, 4.062), r("B10", "intermediate", null, null)];
     expect(bookPending(cartera)).toEqual([2]);

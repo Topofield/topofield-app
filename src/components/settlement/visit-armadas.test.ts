@@ -94,6 +94,28 @@ describe("las armadas de una visita", () => {
   });
 });
 
+describe("un punto de cambio seguido de un tramo desde un BM (revisión final)", () => {
+  const rows = [
+    r("BM-1", "bm", 1.5, null, true),
+    r("P1", "intermediate", null, 1.2),
+    r("P2", "pc", null, 1.3),
+    r("BM-2", "bm", 1.1, null, true),
+    r("P3", "intermediate", null, 1.4),
+  ];
+
+  it("son dos armadas: la primera termina en P2 y no hay una que salga de P2", () => {
+    expect(visitArmadaSpans(rows)).toEqual([
+      { opener: 0, intermediates: [1], closer: 2 },
+      { opener: 3, intermediates: [4], closer: null },
+    ]);
+  });
+
+  it("la V− de la primera se puede quitar: ninguna armada sale de P2", () => {
+    const sinVmenos = writeVisitArmada(rows, 0, { ...visitArmadaAt(rows, 0), fore: null });
+    expect("rows" in sinVmenos && sinVmenos.rows.map((x) => x.pointCode)).toEqual(["BM-1", "P1", "BM-2", "P3"]);
+  });
+});
+
 describe("removeLastVisitArmada", () => {
   it("la que sale de un BM del lugar se va entera", () => {
     const rows = [...alameda12, r("BM-2", "bm", 1.1, null, true), r("TA-09", "intermediate", null, 1.3)];

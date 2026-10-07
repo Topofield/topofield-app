@@ -304,7 +304,7 @@ export function bookTemplate(
 /**
  * Las filas que esperan una lectura (Fase 37, decisión 9): la V+ de un
  * arranque, la VI de una intermedia y la V− de cualquier otra fila; un punto
- * de cambio que no es el último, también su V+.
+ * de cambio del que sale la armada siguiente, también su V+.
  */
 export function bookPending(rows: readonly BookRowPayload[]): number[] {
   const last = rows.length - 1;
@@ -312,7 +312,10 @@ export function bookPending(rows: readonly BookRowPayload[]): number[] {
     if (i === 0 || row.startsSection) return row.backsight == null ? [i] : [];
     if (row.pointType === "intermediate") return row.foresight == null ? [i] : [];
     const missingFore = row.foresight == null;
-    const missingBack = row.pointType === "pc" && i !== last && row.backsight == null;
+    // Un punto de cambio abre la armada siguiente salvo que esta salga de un
+    // BM del lugar (revisión final de la Fase 37).
+    const opensNext = i !== last && !rows[i + 1]!.startsSection;
+    const missingBack = row.pointType === "pc" && opensNext && row.backsight == null;
     return missingFore || missingBack ? [i] : [];
   });
 }

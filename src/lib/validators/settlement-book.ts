@@ -36,7 +36,8 @@ export function validateBook(
   let armada = 0;
   rows.forEach((row, i) => {
     const starts = i === 0 || row.startsSection;
-    if (starts || (row.pointType === "pc" && i !== rows.length - 1)) armada++;
+    const opensNext = i !== rows.length - 1 && !rows[i + 1]!.startsSection;
+    if (starts || (row.pointType === "pc" && opensNext)) armada++;
     if (starts && !benchmarks.some((b) => samePointCode(b.code, row.pointCode))) {
       errors.push(`La armada ${armada} sale de ${row.pointCode.trim()}, que no está en los BM del lugar.`);
     }

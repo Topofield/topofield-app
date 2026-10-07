@@ -52,7 +52,9 @@ export function visitArmadaSpans(rows: readonly BookRowPayload[]): VisitArmadaSp
       spans.push(open);
       open = null;
     }
-    if (start || (i < last && (row.pointType === "pc" || row.backsight != null))) {
+    // Una fila abre armada si arranca un tramo, o si la siguiente no lo
+    // arranca y es un punto de cambio o tiene V+.
+    if (start || (i < last && !starts(rows, i + 1) && (row.pointType === "pc" || row.backsight != null))) {
       open = { opener: i, intermediates: [], closer: null };
     }
   });
