@@ -3,7 +3,7 @@
 // src/lib/calculations/settlement.ts.
 
 import type { Tables } from "./database";
-import type { PointType } from "./leveling";
+import type { ComputedReading as LevelingComputedReading, PointType } from "./leveling";
 import type { LevelType, PrecisionOrder } from "./project";
 
 export const VISIT_STATUSES = ["draft", "calculated", "closed"] as const;
@@ -201,6 +201,68 @@ export interface BookRowPayload {
   foreLowerM: number | null;
   backDistanceM: number | null;
   foreDistanceM: number | null;
+  /**
+   * La fila abre un tramo: su V+ sale de un BM del lugar con cota conocida
+   * (Fase 37, decisión 8). La primera fila siempre lo abre; sin el campo,
+   * `false`.
+   */
+  startsSection?: boolean;
+}
+
+/** Un BM del lugar, tal como lo usa el motor: código y cota (Fase 37). */
+export interface BenchmarkInput {
+  code: string;
+  elevation: number;
+}
+
+/** Cómo termina un tramo: en su BM, en otro BM del lugar o en sus puntos. */
+export type TramoKind = "closed" | "link" | "open";
+
+/** Un tramo de la libreta de una visita, calculado sin compensar (Fase 37). */
+export interface TramoResult {
+  /** Índices de su primera y su última fila en la libreta. */
+  start: number;
+  end: number;
+  startCode: string;
+  /** El BM del lugar donde termina; null si es abierto. */
+  endCode: string | null;
+  kind: TramoKind;
+  /** null si arranca en un código que no es BM del lugar. */
+  startElevation: number | null;
+  /** Cierre (o llegada) en mm, a 0.1; null si es abierto. */
+  closureMm: number | null;
+  /** El orden que alcanza; null si es abierto, sin distancias o fuera de todos. */
+  order: PrecisionOrder | null;
+  /** K·√L del orden alcanzado, a 0.1; null sin orden. */
+  toleranceMm: number | null;
+  /** Longitud del tramo; null sin distancias. */
+  distanceKm: number | null;
+  /** Toda su cadena tiene lecturas: sin esto no hay cierre ni orden. */
+  complete: boolean;
+}
+
+/** La libreta de una visita, tramo a tramo y sin compensar (Fase 37). */
+export interface VisitBook {
+  tramos: TramoResult[];
+  /**
+   * Una por fila de la libreta, en su orden, calculadas sin compensar. Una
+   * fila sin su lectura, o detrás de una V+ o una V− que falta en la cadena
+   * de su tramo, tiene la cota en NaN: el motor de nivelación tomaría la
+   * lectura vacía por cero.
+   */
+  readings: LevelingComputedReading[];
+}
+
+/** La verificación de una visita: la de su tramo peor (Fase 37, decisión 15). */
+export interface VisitVerification {
+  /** Todos los tramos terminan en un BM del lugar y alcanzan un orden. */
+  verified: boolean;
+  /** El orden más bajo de los tramos; null si alguno no se verifica. */
+  order: PrecisionOrder | null;
+  /** El tramo peor: el primero sin verificar o el de orden más bajo. */
+  worst: TramoResult | null;
+  /** Suma de las longitudes; null si ningún tramo tiene distancias. */
+  distanceKm: number | null;
 }
 
 /**

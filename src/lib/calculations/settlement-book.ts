@@ -7,24 +7,37 @@
 // control —que dejan de teclearse— y la plantilla para capturar en campo. Ver
 // docs/prds/17-libreta-panel-asentamientos.md.
 
-import { computeLeveling, samePointCode, withinTolerance } from "./leveling";
+import {
+  computeLeveling,
+  detectLevelingOrder,
+  samePointCode,
+  totalDistanceFromReadings,
+  withinTolerance,
+} from "./leveling";
 import { isPointActiveOn } from "./settlement";
 import { levelingTolerance } from "./tolerances";
 import type {
   ComputedReading,
   LevelingResult,
   PointType,
-  ReadingInput as BookRowInput,
+  ReadingInput,
 } from "@/types/leveling";
-import type { PrecisionOrder } from "@/types/project";
+import { PRECISION_ORDERS, type PrecisionOrder } from "@/types/project";
 import type {
   BenchmarkCheck,
+  BenchmarkInput,
   BookIssue,
   BookRowPayload,
   DerivedElevation,
   PointInput,
   SettlementBookReading,
+  TramoResult,
+  VisitBook,
+  VisitVerification,
 } from "@/types/settlement";
+
+/** La fila de la libreta como entra al motor: la de la nivelación, más el inicio de tramo. */
+export type BookRowInput = ReadingInput & { startsSection?: boolean };
 
 /**
  * Una fila de libreta, tal como llega de la base, lista para el editor y el
@@ -44,7 +57,7 @@ export function bookRowOf(
     | "fore_lower_m"
     | "back_distance_m"
     | "fore_distance_m"
-  >,
+  > & { starts_section?: boolean | null },
 ): BookRowPayload {
   const n = (v: number | string | null) => (v === null ? null : Number(v));
   return {
@@ -58,6 +71,7 @@ export function bookRowOf(
     foreLowerM: n(row.fore_lower_m),
     backDistanceM: n(row.back_distance_m),
     foreDistanceM: n(row.fore_distance_m),
+    startsSection: Boolean(row.starts_section),
   };
 }
 
@@ -326,4 +340,114 @@ export function buildBookTemplate(
     ...added,
     { pointCode: last, pointType: "bm" },
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Fase 37: la libreta por tramos, sin compensar.
+// ---------------------------------------------------------------------------
+
+/** Dónde arranca cada tramo: la primera fila y las marcadas (Fase 37, decisión 8). */
+export function tramoStarts(rows: readonly { startsSection?: boolean }[]): number[] {
+  return rows.flatMap((row, i) => (i === 0 || row.startsSection ? [i] : []));
+}
+
+const round1 = (v: number) => {
+  const r = Math.round(v * 10) / 10;
+  return Object.is(r, -0) ? 0 : r;
+};
+
+function benchmarkOf(code: string, benchmarks: readonly BenchmarkInput[]): BenchmarkInput | undefined {
+  return benchmarks.find((b) => samePointCode(b.code, code));
+}
+
+/**
+ * La libreta de una visita, tramo a tramo y sin compensar (Fase 37, decisión
+ * 14). Un tramo arranca en un BM del lugar; termina en otro BM del lugar (de
+ * enlace), en el mismo (cerrado) o en sus puntos (abierto). Su cierre solo
+ * verifica: la cota de cada punto es la de su lectura.
+ */
+export function computeBook(rows: readonly BookRowInput[], benchmarks: readonly BenchmarkInput[]): VisitBook {
+  const starts = tramoStarts(rows);
+  const tramos: TramoResult[] = [];
+  const readings: ComputedReading[] = [];
+  starts.forEach((start, k) => {
+    const end = (starts[k + 1] ?? rows.length) - 1;
+    const slice = rows.slice(start, end + 1);
+    const first = slice[0]!;
+    const last = slice.at(-1)!;
+    const startBm = benchmarkOf(first.pointCode, benchmarks);
+    // Qué filas tienen cota: la cadena sigue mientras cada V+ y cada V− estén
+    // leídas; una intermedia sin lectura solo se pierde a sí misma.
+    const valid: boolean[] = [];
+    let chain = startBm != null;
+    slice.forEach((row, j) => {
+      if (j === 0) {
+        valid.push(chain);
+        chain = chain && row.backsight != null;
+      } else if (row.pointType === "intermediate") {
+        valid.push(chain && row.foresight != null);
+      } else {
+        chain = chain && row.foresight != null;
+        valid.push(chain);
+        chain = chain && row.backsight != null;
+      }
+    });
+    // La cadena está entera si la V+ del arranque y cada V− y V+ que siguen
+    // están leídas; las intermedias no cuentan.
+    const complete =
+      valid[0]! &&
+      (slice.length === 1 || first.backsight != null) &&
+      slice.every((row, j) => j === 0 || row.pointType === "intermediate" || valid[j]);
+    const endBm =
+      slice.length > 1 && last.pointType !== "intermediate" && valid.at(-1)
+        ? benchmarkOf(last.pointCode, benchmarks)
+        : undefined;
+    const kind = !endBm ? "open" : samePointCode(endBm.code, first.pointCode) ? "closed" : "link";
+    const result = computeLeveling({
+      type: kind,
+      startElevation: startBm?.elevation ?? Number.NaN,
+      endElevation: kind === "link" ? endBm!.elevation : null,
+      order: "tercer_orden",
+      compensation: "never",
+      forward: slice.map(({ startsSection: _startsSection, ...row }) => row),
+      return: null,
+    });
+    const km = totalDistanceFromReadings(slice);
+    const distanceKm = km > 0 ? km : null;
+    const order = kind === "open" || !startBm ? null : detectLevelingOrder(result, kind).order;
+    tramos.push({
+      start,
+      end,
+      startCode: first.pointCode.trim(),
+      endCode: endBm ? last.pointCode.trim() : null,
+      kind,
+      startElevation: startBm?.elevation ?? null,
+      closureMm: kind === "open" || result.closureErrorMm == null ? null : round1(result.closureErrorMm),
+      order,
+      toleranceMm: order && distanceKm != null ? round1(levelingTolerance(order, distanceKm)) : null,
+      distanceKm,
+      complete,
+    });
+    readings.push(
+      ...result.forward.readings.map((x, j) =>
+        valid[j] ? x : { ...x, elevationCalculated: Number.NaN, elevationCorrected: Number.NaN },
+      ),
+    );
+  });
+  return { tramos, readings };
+}
+
+/** El tramo peor resume la visita (Fase 37, decisión 15). */
+export function bookVerification(book: VisitBook): VisitVerification {
+  const rank = (o: PrecisionOrder) => PRECISION_ORDERS.indexOf(o);
+  const unverified = book.tramos.find((t) => t.order == null);
+  const worst =
+    unverified ?? [...book.tramos].sort((a, b) => rank(b.order!) - rank(a.order!))[0] ?? null;
+  const lengths = book.tramos.flatMap((t) => (t.distanceKm != null ? [t.distanceKm] : []));
+  return {
+    verified: book.tramos.length > 0 && !unverified,
+    order: unverified || !worst ? null : worst.order,
+    worst,
+    distanceKm: lengths.length > 0 ? lengths.reduce((a, b) => a + b, 0) : null,
+  };
 }
