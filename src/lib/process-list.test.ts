@@ -107,11 +107,6 @@ describe("filterProcesses — estado y tipo", () => {
     expect(r.map((p) => p.id)).toEqual(["c"]);
   });
 
-  it("«cerrados» no incluye los rechazados", () => {
-    const r = filterProcesses(lista, { ...SIN_FILTRO, estado: "cerrados" });
-    expect(r.map((p) => p.id)).toEqual(["x"]);
-  });
-
   it("filtra por tipo de poligonal", () => {
     const porTipo = [
       proc({ id: "1", type: "closed" }),
@@ -242,22 +237,7 @@ describe("countByStatus", () => {
       todos: 5,
       borradores: 2,
       calculados: 1,
-      cerrados: 1,
-      rechazados: 1,
-      activos: 0,
     });
-  });
-
-  it("cuenta los lugares activos y cerrados (Fase 22)", () => {
-    const lugares = [
-      proc({ status: "active" as never }),
-      proc({ status: "active" as never }),
-      proc({ status: "closed" }),
-    ];
-    const conteo = countByStatus(lugares);
-    expect(conteo.activos).toBe(2);
-    expect(conteo.cerrados).toBe(1);
-    expect(conteo.todos).toBe(3);
   });
 
   it("devuelve ceros con una lista vacía", () => {
@@ -265,9 +245,6 @@ describe("countByStatus", () => {
       todos: 0,
       borradores: 0,
       calculados: 0,
-      cerrados: 0,
-      rechazados: 0,
-      activos: 0,
     });
   });
 });

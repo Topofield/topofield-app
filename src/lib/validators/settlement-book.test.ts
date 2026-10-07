@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { benchmarkCheckMessage, bookIssueMessage, validateBook, validateVisitBook } from "./settlement-book";
-import { validateVisitClose } from "./settlement";
 import type { PointType, ReadingInput as BookRow } from "@/types/leveling";
-import type { PointInput, VisitInput } from "@/types/settlement";
 
 function row(
   pointCode: string,
@@ -169,48 +167,6 @@ describe("benchmarkCheckMessage (Fase 30)", () => {
     expect(
       benchmarkCheckMessage({ ...base, differenceMm: 2, toleranceMm: null, meetsTolerance: null }, "BM-1"),
     ).toBe("BM-2 frente a BM-1: +2.0 mm. Sin distancias por visual no se evalúa la tolerancia.");
-  });
-});
-
-describe("validateVisitClose — libreta (Fase 18)", () => {
-  const P1: PointInput = {
-    id: "p1",
-    code: "PC-01",
-    initialElevation: 100,
-    activeFrom: null,
-    retiredOn: null,
-  };
-  const visit: VisitInput = {
-    id: "v1",
-    visitNumber: 1,
-    date: "2025-02-01",
-    readings: [{ pointId: "p1", elevation: 99.99 }],
-  };
-
-  it("una comprobación aritmética fallida bloquea el cierre", () => {
-    const r = validateVisitClose(visit, [P1], "2025-01-01", [], { arithmeticCheckOk: false });
-    expect(r.errors.book).toBe(
-      "La comprobación aritmética de la libreta no cuadra: ΣV+ − ΣV− no coincide con el desnivel.",
-    );
-  });
-
-  it("un punto de cambio incompleto bloquea y dice qué fila (Fase 24)", () => {
-    const motivo =
-      "El punto de cambio de la fila 3 no tiene V−: sin ella la libreta no encadena y no se puede cerrar.";
-    const r = validateVisitClose(visit, [P1], "2025-01-01", [], {
-      arithmeticCheckOk: false,
-      turningPoint: motivo,
-    });
-    expect(r.errors.book).toBe(motivo);
-  });
-
-  it("fuera de tolerancia no bloquea: solo avisa (decisión 5)", () => {
-    const r = validateVisitClose(visit, [P1], "2025-01-01", [], { arithmeticCheckOk: true });
-    expect(r.errors).toEqual({});
-  });
-
-  it("sin libreta no cambia nada", () => {
-    expect(validateVisitClose(visit, [P1], "2025-01-01", []).errors).toEqual({});
   });
 });
 

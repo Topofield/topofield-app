@@ -6,7 +6,6 @@ const FALLBACK = "No se pudo guardar la visita.";
 describe("userMessage (Fase 22)", () => {
   it("traduce los códigos conocidos, sin dejar pasar el texto de Postgres", () => {
     const casos: [string, RegExp][] = [
-      ["23001", /cerrado/],
       ["23503", /dependen/],
       ["23505", /Ya existe/],
       ["42501", /permiso/],
@@ -33,6 +32,8 @@ describe("userMessage (Fase 22)", () => {
 
   it("código desconocido o ausente: el mensaje de la acción", () => {
     expect(userMessage({ code: "XX000", message: "internal error" }, FALLBACK)).toBe(FALLBACK);
+    // Fase 37: ya ningún trigger de cierre lanza el 23001.
+    expect(userMessage({ code: "23001", message: "restrict" }, FALLBACK)).toBe(FALLBACK);
     expect(userMessage({ message: "fetch failed" }, FALLBACK)).toBe(FALLBACK);
     expect(userMessage({}, FALLBACK)).toBe(FALLBACK);
   });

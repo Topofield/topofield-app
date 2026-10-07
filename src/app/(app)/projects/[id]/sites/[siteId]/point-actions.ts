@@ -141,7 +141,7 @@ export async function createPointAction(
         error: "El lugar ya tiene visitas: indica la fecha de alta del punto.",
       };
     }
-    const altaError = validateActiveFrom(payload.activeFrom, null);
+    const altaError = validateActiveFrom(payload.activeFrom);
     if (altaError) return { ok: false, error: altaError };
   }
 
@@ -210,7 +210,7 @@ export async function savePointAction(
         error: "La fecha de alta no se cambia una vez medido el punto.",
       };
     }
-    const altaError = validateActiveFrom(payload.activeFrom, null);
+    const altaError = validateActiveFrom(payload.activeFrom);
     if (altaError) return { ok: false, error: altaError };
     activeFrom = payload.activeFrom;
   }

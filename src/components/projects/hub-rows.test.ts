@@ -52,7 +52,6 @@ describe("las filas del hub", () => {
       updated_at: "2026-10-01T00:00:00Z",
     } as unknown as PolygonalProcess);
     expect(row.statusLabel).toBe("Calculado");
-    expect(row.closed).toBe(false);
   });
 
   it("los chips de las poligonales y las nivelaciones no tienen cerrados ni rechazados", () => {
@@ -73,7 +72,6 @@ describe("las filas del hub", () => {
       updated_at: "2026-10-01T00:00:00Z",
     } as unknown as LevelingProcess);
     expect(row.statusLabel).toBe("Calculado");
-    expect(row.closed).toBe(false);
     expect(row.result).toBe("+30.0 mm");
   });
 

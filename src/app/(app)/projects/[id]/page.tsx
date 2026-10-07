@@ -42,7 +42,6 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getLevelingProcesses,
   getPolygonalProcesses,
-  getClosedWorkCount,
   getProjectById,
   getReferencePoints,
   getReports,
@@ -138,13 +137,7 @@ export default async function ProjectHubPage({
     enProcesos ? getSites(supabase, project.id) : Promise.resolve([]),
     enProcesos || activeTab === "reports" ? getReports(supabase, project.id) : Promise.resolve([]),
   ]);
-  const [referencePoints, closedWork] =
-    activeTab === "config"
-      ? await Promise.all([
-          getReferencePoints(supabase, project.id),
-          getClosedWorkCount(supabase, project.id),
-        ])
-      : [[], 0];
+  const referencePoints = activeTab === "config" ? await getReferencePoints(supabase, project.id) : [];
 
   const tiposDelModulo = {
     poligonales: POLYGONAL_TYPE_OPTIONS,
@@ -302,7 +295,7 @@ export default async function ProjectHubPage({
           {reports.length === 0 ? (
             <EmptyState
               title="Aún no hay informes"
-              description="Un informe reúne poligonales y nivelaciones calculadas y controles de asentamientos cerrados de este proyecto, y produce un documento imprimible con su registro de trazabilidad."
+              description="Un informe reúne poligonales y nivelaciones calculadas y controles de asentamientos con alguna visita calculada de este proyecto, y produce un documento imprimible."
             />
           ) : (
             <ul className="flex flex-col gap-2">
@@ -332,7 +325,6 @@ export default async function ProjectHubPage({
         <ProjectConfigTab
           project={project}
           referencePoints={referencePoints}
-          closedWork={closedWork}
         />
       )}
     </div>

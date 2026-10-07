@@ -5,7 +5,8 @@
 // visitas en el tiempo. Las hojas se organizan en consecuencia: las lecturas
 // crudas por visita y punto, los valores derivados con su alerta, el resumen
 // con los umbrales vigentes y, desde la Fase 18, la libreta de nivelación de
-// cada visita que se capturó con ella.
+// cada visita. Desde la Fase 37 nada se cierra y toda visita se mide con
+// libreta, por tramos y sin compensar.
 
 import type ExcelJS from "exceljs";
 import { computeTrends } from "@/lib/calculations/settlement";
@@ -23,10 +24,10 @@ import {
 } from "./workbook";
 import {
   ALERT_LEVEL_LABELS,
-  CAPTURE_MODE_LABELS,
+  VISIT_STATUS_LABELS,
   type AlertLevel,
-  type CaptureMode,
   type SettlementHistory,
+  type VisitStatus,
 } from "@/types/settlement";
 import { POINT_TYPE_LABELS, type PointType } from "@/types/leveling";
 import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
@@ -60,9 +61,6 @@ export interface SiteRow {
   name: string;
   description: string | null;
   structure_type: string;
-  status: string;
-  closed_at: string | null;
-  closed_by: string | null;
   notes: string | null;
   created_at: string | null;
 }
@@ -73,9 +71,13 @@ export interface VisitRow {
   date: string;
   status: string;
   operator: string | null;
-  weather_conditions: string | null;
-  /** Orden de precisión y equipo de nivel, propios de la visita (§ Fase 8). */
-  precision_order: PrecisionOrder;
+  /** La nota de la visita (Fase 37, decisión 19). */
+  notes: string | null;
+  /**
+   * El orden que alcanza su tramo peor; null si alguno no se verifica (Fase
+   * 37, decisión 15). El equipo de nivel es de la visita (§ Fase 8).
+   */
+  precision_order: PrecisionOrder | null;
   equipment_brand: string | null;
   equipment_model: string | null;
   equipment_serial: string | null;
@@ -83,12 +85,7 @@ export interface VisitRow {
   level_type: LevelType | null;
   /** ISO 17123-2: desviación típica en mm por km de doble nivelación. */
   km_precision_mm: number | string | null;
-  /**
-   * Captura y cierre de la visita (Fase 18). En `book`, el cierre, la
-   * tolerancia y el «cumple» se derivan de la libreta; en `direct`, el cierre
-   * es el tecleado y la tolerancia queda en null.
-   */
-  capture_mode: CaptureMode;
+  /** El BM del lugar del primer tramo y el cierre del tramo peor (Fase 37). */
   reference_bm_code: string | null;
   reference_bm_elevation: number | string | null;
   closure_error_mm: number | string | null;
@@ -107,6 +104,8 @@ export interface BookReadingRow {
   reading_order: number;
   point_code: string;
   point_type: string;
+  /** La fila arranca un tramo desde un BM del lugar (Fase 37). */
+  starts_section: boolean | null;
   backsight: number | string | null;
   foresight: number | string | null;
   back_distance_m: number | string | null;
@@ -116,6 +115,16 @@ export interface BookReadingRow {
   elevation_corrected: number | string | null;
   /** La cota de catálogo de un BM de control (Fase 30); null en las demás filas. */
   catalog_elevation: number | string | null;
+}
+
+/** «Calculada», «En medición», «Borrador». */
+function statusLabel(status: string): string {
+  return VISIT_STATUS_LABELS[status as VisitStatus] ?? status;
+}
+
+/** El orden que alcanza la visita, o «Sin verificación». */
+function verificationLabel(order: PrecisionOrder | null): string {
+  return order ? PRECISION_ORDER_LABELS[order] : "Sin verificación";
 }
 
 function num(value: number | string | null | undefined): number | null {
@@ -174,20 +183,22 @@ function sheetRawData(
   });
 
   let row = 5 + points.length + 1;
-  // Una fila por visita con su modo de captura, su amarre y su cierre (Fase
-  // 18). Va en un bloque propio y no como columnas de la tabla de cotas, que
-  // es de una fila por lectura: ahí se repetiría en cada punto, y una visita
-  // sin cotas todavía no tendría fila donde mostrarlos.
+  // Una fila por visita con su estado, su BM de arranque, su verificación y
+  // su nota (Fases 18 y 37). Va en un bloque propio y no como columnas de la
+  // tabla de cotas, que es de una fila por lectura: ahí se repetiría en cada
+  // punto, y una visita sin cotas todavía no tendría fila donde mostrarlos.
   writeSection(s, row, "Visitas");
   row += 1;
   setHeaders(s, row, [
     "Visita",
     "Fecha",
-    "Captura",
-    "BM de amarre",
-    "Cota amarre (m)",
+    "Estado",
+    "BM de arranque",
+    "Cota BM (m)",
+    "Verificación",
     "Cierre (mm)",
     "Tolerancia (mm)",
+    "Nota",
   ]);
   row += 1;
   for (const visit of visits) {
@@ -197,13 +208,15 @@ function sheetRawData(
       [
         visit.visit_number,
         visit.date,
-        CAPTURE_MODE_LABELS[visit.capture_mode],
+        statusLabel(visit.status),
         visit.reference_bm_code,
         num(visit.reference_bm_elevation),
+        verificationLabel(visit.precision_order),
         num(visit.closure_error_mm),
         num(visit.tolerance_mm),
+        visit.notes?.trim() || null,
       ],
-      [null, null, null, null, DECIMALS.elevation, 1, 1],
+      [null, null, null, null, DECIMALS.elevation, null, 1, 1, null],
     );
     row += 1;
   }
@@ -215,7 +228,7 @@ function sheetRawData(
   // repetido como ya se repite Visita/Fecha/Estado), y no se colapsa a la
   // visita más reciente como en el Resumen: el instrumento puede cambiar
   // entre campañas, y este es el único artefacto que conserva sin pérdida
-  // qué equipo midió cada visita cerrada, incluidas las que ya no son la
+  // qué equipo midió cada visita, incluidas las que ya no son la
   // última (§ Fase 8 — es justo la pérdida de trazabilidad que la fase existe
   // para cerrar).
   setHeaders(s, row, [
@@ -248,7 +261,7 @@ function sheetRawData(
         [
           visit.visit_number,
           visit.date,
-          visit.status === "closed" ? "Cerrada" : "Abierta",
+          statusLabel(visit.status),
           codeById.get(reading.pointId) ?? reading.pointId,
           reading.elevation,
           equipoVisita,
@@ -348,7 +361,6 @@ function sheetSummary(
       STRUCTURE_TYPE_LABELS[site.structure_type as StructureType] ??
         site.structure_type,
     ],
-    ["Estado", site.status === "closed" ? "Cerrado" : "Activo"],
     ["Puntos del catálogo", points.length],
     ["Visitas registradas", visits.length],
   ]);
@@ -361,10 +373,7 @@ function sheetSummary(
     row += 1;
     writeSection(s, row, "Equipo: nivel (última visita)");
     row = writePairs(s, row + 1, [
-      [
-        "Orden de precisión",
-        PRECISION_ORDER_LABELS[lastVisit.precision_order],
-      ],
+      ["Verificación", verificationLabel(lastVisit.precision_order)],
       [
         "Equipo",
         equipmentLine(
@@ -410,52 +419,39 @@ function sheetSummary(
   writeSection(s, row, "Trazabilidad");
   writePairs(s, row + 1, [
     ["Creado", site.created_at],
-    ["Cerrado", site.closed_at],
-    ["Cerrado por", site.closed_by],
     ["Notas", site.notes],
   ]);
 }
 
 /**
- * Cabecera de la libreta de una visita, en una línea: visita, fecha, amarre y
- * cierre con su veredicto. Sin tolerancia (libreta sin distancias) no hay
- * veredicto posible y se dice así, en vez de callarlo.
+ * Cabecera de la libreta de una visita, en una línea: visita, fecha, el BM de
+ * su primer tramo y el cierre de su tramo peor con el orden que alcanza, o
+ * «sin verificación» (Fase 37, decisión 15).
  */
 function bookTitle(visit: VisitRow): string {
   const cota = num(visit.reference_bm_elevation);
-  const amarre = visit.reference_bm_code
-    ? `Amarre ${visit.reference_bm_code}` +
-      (cota === null ? "" : ` (${cota.toFixed(DECIMALS.elevation)})`)
-    : "Sin amarre";
+  const desde = visit.reference_bm_code
+    ? `Desde ${visit.reference_bm_code}` + (cota === null ? "" : ` (${cota.toFixed(DECIMALS.elevation)})`)
+    : "Sin BM de arranque";
 
   const cierre = num(visit.closure_error_mm);
   const tolerancia = num(visit.tolerance_mm);
-  const veredicto =
-    tolerancia === null
-      ? "sin tolerancia"
-      : visit.meets_tolerance === null
-        ? null
-        : visit.meets_tolerance
-          ? "cumple"
-          : "no cumple";
   const cierreTexto = [
     cierre === null ? "Sin cierre" : `Cierre ${signedMm(cierre)} mm`,
     tolerancia === null ? null : `tolerancia ${tolerancia.toFixed(1)} mm`,
-    veredicto,
+    verificationLabel(visit.precision_order).toLowerCase(),
   ]
     .filter((t): t is string => t !== null)
     .join(" · ");
 
-  return [`Visita ${visit.visit_number}`, visit.date, amarre, cierreTexto].join(
-    " — ",
-  );
+  return [`Visita ${visit.visit_number}`, visit.date, desde, cierreTexto].join(" — ");
 }
 
 /**
- * La libreta de nivelación de cada visita en modo `book` (Fase 18, decisión
- * 21): es el dato crudo del que salen sus cotas. Las visitas en `direct` no
- * tienen libreta y no aparecen; la hoja existe siempre, con un aviso si
- * ninguna la tiene, para que el libro no cambie de forma según el lugar.
+ * La libreta de nivelación de cada visita (Fase 18, decisión 21): es el dato
+ * crudo del que salen sus cotas. Cada fila lleva su tramo (Fase 37); la cota
+ * es la de la medida, sin compensar. La hoja existe siempre, con un aviso si
+ * ninguna visita tiene libreta, para que el libro no cambie de forma.
  */
 function sheetBooks(
   wb: ExcelJS.Workbook,
@@ -465,15 +461,13 @@ function sheetBooks(
 ): void {
   const s = wb.addWorksheet("Libretas");
   s.columns = [
-    { width: 14 }, { width: 16 }, { width: 11 }, { width: 12 }, { width: 11 },
-    { width: 11 }, { width: 12 }, { width: 12 }, { width: 17 }, { width: 17 },
+    { width: 8 }, { width: 14 }, { width: 16 }, { width: 11 }, { width: 12 },
+    { width: 11 }, { width: 11 }, { width: 12 }, { width: 12 }, { width: 17 },
   ];
 
   setSheetTitle(s, `${site.name} — libretas de nivelación de las visitas`);
 
-  const conLibreta = visits.filter(
-    (v) => v.capture_mode === "book" && (bookByVisit[v.id]?.length ?? 0) > 0,
-  );
+  const conLibreta = visits.filter((v) => (bookByVisit[v.id]?.length ?? 0) > 0);
   if (conLibreta.length === 0) {
     s.getCell(3, 1).value =
       "Ninguna visita de este lugar tiene libreta de nivelación.";
@@ -481,10 +475,10 @@ function sheetBooks(
   }
 
   const formats = [
-    null, null,
+    null, null, null,
     DECIMALS.elevation, DECIMALS.coordinate, DECIMALS.elevation,
     DECIMALS.elevation, DECIMALS.coordinate,
-    DECIMALS.elevation, DECIMALS.elevation, DECIMALS.elevation,
+    DECIMALS.elevation, DECIMALS.elevation,
   ];
 
   let row = 3;
@@ -492,6 +486,7 @@ function sheetBooks(
     writeSection(s, row, bookTitle(visit));
     row += 1;
     setHeaders(s, row, [
+      "Tramo",
       "Punto",
       "Tipo",
       "V+ (m)",
@@ -500,7 +495,6 @@ function sheetBooks(
       "V− (m)",
       "Dist. V− (m)",
       "Cota (m)",
-      "Cota compensada (m)",
       "Cota de catálogo (m)",
     ]);
     row += 1;
@@ -508,11 +502,14 @@ function sheetBooks(
     const filas = [...bookByVisit[visit.id]!].sort(
       (a, b) => a.reading_order - b.reading_order,
     );
-    for (const r of filas) {
+    let tramo = 0;
+    for (const [i, r] of filas.entries()) {
+      if (i === 0 || r.starts_section) tramo += 1;
       writeRow(
         s,
         row,
         [
+          tramo,
           r.point_code,
           POINT_TYPE_LABELS[r.point_type as PointType] ?? r.point_type,
           num(r.backsight),
@@ -521,7 +518,6 @@ function sheetBooks(
           num(r.foresight),
           num(r.fore_distance_m),
           num(r.elevation_calculated),
-          num(r.elevation_corrected),
           num(r.catalog_elevation),
         ],
         formats,
@@ -537,8 +533,8 @@ function sheetBooks(
  * Libro completo de un lugar de control de asentamientos.
  *
  * `bookByVisit` son las filas de libreta indexadas por `visit_id`. Es opcional
- * porque un lugar solo con visitas en `direct` no tiene ninguna; la hoja
- * «Libretas» sale igual, con su aviso.
+ * porque un lugar sin visitas no tiene ninguna; la hoja «Libretas» sale
+ * igual, con su aviso.
  */
 export function buildSettlementWorkbook(
   site: SiteRow,

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildBookTemplate,
-  benchmarkChecksOfBook,
   catalogElevationsOf,
   checkBenchmarks,
   computeVisitBook,
@@ -249,75 +247,6 @@ describe("deriveControlElevations", () => {
   });
 });
 
-describe("buildBookTemplate", () => {
-  const DATE = "2025-03-10";
-
-  it("sin libreta anterior: amarre, puntos vigentes como intermedias y amarre", () => {
-    const points = [point("PC-10"), point("PC-2"), point("PC-1", { retiredOn: "2025-01-01" })];
-    expect(buildBookTemplate(null, points, DATE, "BM-1")).toEqual([
-      { pointCode: "BM-1", pointType: "bm" },
-      { pointCode: "PC-2", pointType: "intermediate" },
-      { pointCode: "PC-10", pointType: "intermediate" },
-      { pointCode: "BM-1", pointType: "bm" },
-    ]);
-  });
-
-  it("desde la libreta anterior, con el amarre de esta visita", () => {
-    const previous = prototypeBook().map((x) => ({
-      pointCode: x.pointCode,
-      pointType: x.pointType,
-    }));
-    const t = buildBookTemplate(previous, POINTS, DATE, "BM-2");
-    expect(t[0]).toEqual({ pointCode: "BM-2", pointType: "bm" });
-    expect(t.at(-1)).toEqual({ pointCode: "BM-2", pointType: "bm" });
-    expect(t.map((x) => x.pointCode).slice(1, -1)).toEqual([
-      "PC-01", "PC-02", "PC-03", "PC-04", "CP-1", "PC-05", "PC-06", "PC-07", "PC-08",
-    ]);
-    expect(t.find((x) => x.pointCode === "CP-1")!.pointType).toBe("pc");
-  });
-
-  it("sin amarre elegido conserva el de la libreta anterior", () => {
-    const previous = [
-      { pointCode: "BM-1", pointType: "bm" as const },
-      { pointCode: "PC-01", pointType: "intermediate" as const },
-      { pointCode: "BM-1", pointType: "bm" as const },
-    ];
-    const t = buildBookTemplate(previous, [point("PC-01")], DATE, "  ");
-    expect(t[0]!.pointCode).toBe("BM-1");
-  });
-
-  it("quita los puntos dados de baja y añade los dados de alta antes del cierre", () => {
-    const previous = [
-      { pointCode: "BM-1", pointType: "bm" as const },
-      { pointCode: "PC-01", pointType: "intermediate" as const },
-      { pointCode: "PC-02", pointType: "intermediate" as const },
-      { pointCode: "BM-1", pointType: "bm" as const },
-    ];
-    const points = [
-      point("PC-01"),
-      point("PC-02", { retiredOn: "2025-03-01" }),
-      point("PC-03", { activeFrom: "2025-03-10" }),
-      point("PC-04", { activeFrom: "2025-04-01" }),
-    ];
-    expect(buildBookTemplate(previous, points, DATE, "BM-1")).toEqual([
-      { pointCode: "BM-1", pointType: "bm" },
-      { pointCode: "PC-01", pointType: "intermediate" },
-      { pointCode: "PC-03", pointType: "intermediate" },
-      { pointCode: "BM-1", pointType: "bm" },
-    ]);
-  });
-
-  it("una libreta anterior de menos de dos filas se ignora", () => {
-    const t = buildBookTemplate(
-      [{ pointCode: "BM-1", pointType: "bm" }],
-      [point("PC-01")],
-      DATE,
-      "BM-1",
-    );
-    expect(t).toHaveLength(3);
-  });
-});
-
 // --- Estabilidad de los BMs (Fase 30) -----------------------------------------
 // La libreta del prototipo con su punto de cambio renombrado BM-2: un BM de
 // control. Su cota calculada es exactamente CP (100.3400) y su distancia
@@ -452,34 +381,3 @@ describe("catalogElevationsOf", () => {
   });
 });
 
-describe("benchmarkChecksOfBook", () => {
-  // Las filas como llegan de la base: los DECIMAL, como cadena.
-  const fila = (over: Record<string, unknown>) => ({
-    point_code: "PC-01",
-    foresight: "1.2000",
-    elevation_calculated: "100.3000",
-    distance_accumulated_km: "0.040",
-    catalog_elevation: null,
-    ...over,
-  }) as unknown as Parameters<typeof benchmarkChecksOfBook>[0][number];
-
-  it("comprueba la libreta guardada con la copia de la cota de catálogo", () => {
-    const [check, ...rest] = benchmarkChecksOfBook(
-      [
-        fila({ point_code: "BM-1", foresight: null, elevation_calculated: "100.0000", distance_accumulated_km: "0.000" }),
-        fila({}),
-        fila({ point_code: "BM-2", elevation_calculated: "100.8512", distance_accumulated_km: "0.250", catalog_elevation: "100.8450" }),
-      ],
-      "tercer_orden",
-    );
-    expect(rest).toEqual([]);
-    expect(check).toMatchObject({ rowIndex: 2, code: "BM-2", catalogElevation: 100.845, measuredElevation: 100.8512 });
-    expect(check!.differenceMm).toBeCloseTo(6.2, 9);
-    expect(check!.toleranceMm).toBeCloseTo(6.0, 9);
-    expect(check!.meetsTolerance).toBe(false);
-  });
-
-  it("una libreta sin BM de control no da comprobaciones", () => {
-    expect(benchmarkChecksOfBook([fila({})], "tercer_orden")).toEqual([]);
-  });
-});

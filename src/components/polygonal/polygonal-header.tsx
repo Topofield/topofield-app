@@ -30,7 +30,7 @@ interface PolygonalHeaderProps {
   exportHref: string;
   /** Informes consolidados que incluyen la poligonal: borrarla los deja sin su sección. */
   reportTitles: string[];
-  /** En el paso de Informe, la primera acción es imprimirlo, como en `ProcessShell`. */
+  /** En el paso de Informe, la primera acción es imprimirlo. */
   printable?: boolean;
 }
 

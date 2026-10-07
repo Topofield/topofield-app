@@ -15,9 +15,6 @@ const CHIP_LABELS: Record<StatusFilter, string> = {
   todos: "Todos",
   borradores: "Borradores",
   calculados: "Calculados",
-  cerrados: "Cerrados",
-  rechazados: "Rechazados",
-  activos: "Activos",
 };
 
 /**
@@ -189,28 +186,31 @@ export function ProcessListToolbar({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por estado">
-        {chips.map((value) => {
-          const chip = { value, label: CHIP_LABELS[value] };
-          const activo = chip.value === filters.estado;
-          return (
-            <Link
-              key={chip.value}
-              href={chipHref(projectId, modulo, filters, chip.value)}
-              aria-current={activo ? "true" : undefined}
-              className={cn(
-                "rounded-full border px-3 py-1 text-sm transition-colors",
-                activo
-                  ? "border-mira bg-mira text-on-mira"
-                  : "border-rule bg-card text-ink-2 hover:text-ink",
-              )}
-            >
-              {chip.label}{" "}
-              <span className="tabular-nums">({counts[chip.value]})</span>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Un lugar no tiene estado (Fase 37): sin chips. */}
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por estado">
+          {chips.map((value) => {
+            const chip = { value, label: CHIP_LABELS[value] };
+            const activo = chip.value === filters.estado;
+            return (
+              <Link
+                key={chip.value}
+                href={chipHref(projectId, modulo, filters, chip.value)}
+                aria-current={activo ? "true" : undefined}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-sm transition-colors",
+                  activo
+                    ? "border-mira bg-mira text-on-mira"
+                    : "border-rule bg-card text-ink-2 hover:text-ink",
+                )}
+              >
+                {chip.label}{" "}
+                <span className="tabular-nums">({counts[chip.value]})</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

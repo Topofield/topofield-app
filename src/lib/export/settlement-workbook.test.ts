@@ -15,9 +15,6 @@ const SITE: SiteRow = {
   name: "Edificio Torre Central",
   description: "Monitoreo de asentamientos",
   structure_type: "edificio",
-  status: "active",
-  closed_at: null,
-  closed_by: null,
   notes: null,
   created_at: "2026-01-01T00:00:00Z",
 };
@@ -56,9 +53,9 @@ function visit(over: Partial<VisitRow> = {}): VisitRow {
     id: "v0",
     visit_number: 0,
     date: "2026-01-01",
-    status: "closed",
+    status: "calculated",
     operator: null,
-    weather_conditions: null,
+    notes: null,
     precision_order: "tercer_orden",
     equipment_brand: null,
     equipment_model: null,
@@ -66,7 +63,6 @@ function visit(over: Partial<VisitRow> = {}): VisitRow {
     equipment_calibration_date: null,
     level_type: null,
     km_precision_mm: null,
-    capture_mode: "direct",
     reference_bm_code: null,
     reference_bm_elevation: null,
     closure_error_mm: null,
@@ -78,8 +74,8 @@ function visit(over: Partial<VisitRow> = {}): VisitRow {
 }
 
 const VISIT_ROWS: VisitRow[] = [
-  visit({ id: "v0", visit_number: 0, date: "2026-01-01", status: "closed" }),
-  visit({ id: "v1", visit_number: 1, date: "2026-02-01", status: "draft" }),
+  visit({ id: "v0", visit_number: 0, date: "2026-01-01", status: "calculated" }),
+  visit({ id: "v1", visit_number: 1, date: "2026-02-01", status: "in_progress" }),
 ];
 
 const VISIT_INPUTS: VisitInput[] = [
@@ -217,13 +213,26 @@ describe("buildSettlementWorkbook", () => {
     expect(etiquetas).not.toContain("Pares que superan la distorsión");
   });
 
-  it("distingue la visita cerrada de la abierta en los datos crudos", () => {
+  // Fase 37: la visita no se cierra; está calculada o en medición.
+  it("lleva el estado de cada visita en los datos crudos, sin cerrada ni abierta", () => {
     const raw = build().getWorksheet("Datos Crudos")!;
     const estados = raw
       .getColumn(3)
       .values.filter((v): v is string => typeof v === "string");
-    expect(estados).toContain("Cerrada");
-    expect(estados).toContain("Abierta");
+    expect(estados).toContain("Calculada");
+    expect(estados).toContain("En medición");
+    expect(estados).not.toContain("Cerrada");
+    expect(estados).not.toContain("Abierta");
+  });
+
+  it("el resumen no tiene estado del lugar ni registro de cierre", () => {
+    const etiquetas = build()
+      .getWorksheet("Resumen")!
+      .getColumn(1)
+      .values.filter((v): v is string => typeof v === "string");
+    for (const fuera of ["Estado", "Cerrado", "Cerrado por", "Orden de precisión"]) {
+      expect(etiquetas).not.toContain(fuera);
+    }
   });
 
   // Los puntos de control no tienen posición (Fase 29).
@@ -279,15 +288,13 @@ describe("buildSettlementWorkbook", () => {
     const fila = (label: string) => etiquetas.findIndex((v) => v === label);
 
     expect(res.getCell(fila("Equipo"), 2).value).toBe("Leica NA2 · s/n LC-7");
-    expect(res.getCell(fila("Orden de precisión"), 2).value).toBe(
-      "Primer orden",
-    );
+    expect(res.getCell(fila("Verificación"), 2).value).toBe("Primer orden");
     expect(res.getCell(fila("Tipo de nivel"), 2).value).toBe("Automático");
   });
 
   // El Resumen puede colapsar a la última visita (es un resumen); «Datos
   // Crudos» no puede: es el artefacto archivable, y ahí el equipo de una
-  // visita cerrada antigua tiene que seguir leyéndose aunque exista una
+  // visita antigua tiene que seguir leyéndose aunque exista una
   // visita más nueva con otro instrumento. Con una sola visita este test
   // pasaría aunque el colapso volviera — por eso son dos, con equipos
   // distintos, y se comprueba que CADA una conserva el suyo.
@@ -297,7 +304,6 @@ describe("buildSettlementWorkbook", () => {
         id: "v0",
         visit_number: 0,
         date: "2026-01-01",
-        status: "closed",
         equipment_brand: "Sokkia",
         equipment_model: "B40",
         level_type: "digital",
@@ -307,7 +313,6 @@ describe("buildSettlementWorkbook", () => {
         id: "v1",
         visit_number: 1,
         date: "2026-02-01",
-        status: "closed",
         equipment_brand: "Leica",
         equipment_model: "NA2",
         equipment_serial: "LC-7",
@@ -361,6 +366,7 @@ describe("buildSettlementWorkbook", () => {
       reading_order: 0,
       point_code: "BM-1",
       point_type: "bm",
+      starts_section: false,
       backsight: null,
       foresight: null,
       back_distance_m: null,
@@ -425,25 +431,26 @@ describe("buildSettlementWorkbook", () => {
       id: "v3",
       visit_number: 3,
       date: "2026-04-01",
-      capture_mode: "book",
       reference_bm_code: "BM-1",
       reference_bm_elevation: "100.0000",
       closure_error_mm: "0.0",
       tolerance_mm: null,
       meets_tolerance: null,
+      precision_order: null,
     }),
     visit({
       id: "v1",
       visit_number: 1,
       date: "2026-02-01",
-      capture_mode: "direct",
-      closure_error_mm: "2.5",
+      status: "in_progress",
+      precision_order: null,
+      notes: "Sin la armada 2: llovía.",
     }),
     visit({
       id: "v2",
       visit_number: 2,
       date: "2026-03-01",
-      capture_mode: "book",
+      precision_order: "segundo_orden",
       reference_bm_code: "BM-1",
       reference_bm_elevation: "100.0000",
       closure_error_mm: "-1.2",
@@ -457,8 +464,6 @@ describe("buildSettlementWorkbook", () => {
     bookByVisit: Record<string, BookReadingRow[]> = {
       v2: LIBRETA_V2,
       v3: LIBRETA_V3,
-      // Una visita `direct` con filas huérfanas no debe salir en la hoja.
-      v1: [bookRow({ reading_order: 0, point_code: "HUERFANA" })],
     },
   ) {
     return buildSettlementWorkbook(
@@ -477,13 +482,14 @@ describe("buildSettlementWorkbook", () => {
     return Array.from({ length: 10 }, (_, i) => sheet.getCell(r, i + 1).value);
   }
 
-  it("la hoja «Libretas» lista las visitas en libreta con su cabecera y sus filas", () => {
+  it("la hoja «Libretas» lista las visitas con libreta, con su cabecera, su tramo y sus filas", () => {
     const hoja = buildConLibretas().getWorksheet("Libretas")!;
 
     expect(hoja.getCell("A3").value).toBe(
-      "Visita 2 — 2026-03-01 — Amarre BM-1 (100.0000) — Cierre -1.2 mm · tolerancia 8.9 mm · cumple",
+      "Visita 2 — 2026-03-01 — Desde BM-1 (100.0000) — Cierre -1.2 mm · tolerancia 8.9 mm · segundo orden",
     );
     expect(fila(hoja, 4)).toEqual([
+      "Tramo",
       "Punto",
       "Tipo",
       "V+ (m)",
@@ -492,33 +498,38 @@ describe("buildSettlementWorkbook", () => {
       "V− (m)",
       "Dist. V− (m)",
       "Cota (m)",
-      "Cota compensada (m)",
       "Cota de catálogo (m)",
     ]);
-    // Ordenadas por `reading_order`, con el tipo en español y en número.
-    expect(fila(hoja, 5)).toEqual([
-      "BM-1", "BM", 1.2345, 20.5, 101.2345, null, null, 100, 100, null,
-    ]);
-    expect(fila(hoja, 6)).toEqual([
-      "P-01", "Punto de cambio", 1.5, 19.8, 101.501, 1.2335, 21, 100.001, 100.0005, null,
-    ]);
-    expect(fila(hoja, 7)).toEqual([
-      "BM-1", "BM", null, null, null, 1.501, 20, 100.001, 100, null,
-    ]);
-    expect(hoja.getCell("C6").numFmt).toBe("0.0000");
-    expect(hoja.getCell("D6").numFmt).toBe("0.000");
-    expect(hoja.getCell("E6").numFmt).toBe("0.0000");
-    expect(hoja.getCell("G6").numFmt).toBe("0.000");
+    // Ordenadas por `reading_order`, con el tipo en español y en número; la
+    // cota es la de la medida, sin compensar (Fase 37).
+    expect(fila(hoja, 5)).toEqual([1, "BM-1", "BM", 1.2345, 20.5, 101.2345, null, null, 100, null]);
+    expect(fila(hoja, 6)).toEqual([1, "P-01", "Punto de cambio", 1.5, 19.8, 101.501, 1.2335, 21, 100.001, null]);
+    expect(fila(hoja, 7)).toEqual([1, "BM-1", "BM", null, null, null, 1.501, 20, 100.001, null]);
+    expect(hoja.getCell("D6").numFmt).toBe("0.0000");
+    expect(hoja.getCell("E6").numFmt).toBe("0.000");
+    expect(hoja.getCell("F6").numFmt).toBe("0.0000");
+    expect(hoja.getCell("H6").numFmt).toBe("0.000");
     expect(hoja.getCell("I6").numFmt).toBe("0.0000");
 
-    // Fila en blanco y la siguiente visita, sin tolerancia.
+    // Fila en blanco y la siguiente visita, sin verificación.
     expect(fila(hoja, 8).every((v) => v === null)).toBe(true);
     expect(hoja.getCell("A9").value).toBe(
-      "Visita 3 — 2026-04-01 — Amarre BM-1 (100.0000) — Cierre 0.0 mm · sin tolerancia",
+      "Visita 3 — 2026-04-01 — Desde BM-1 (100.0000) — Cierre 0.0 mm · sin verificación",
     );
-    expect(hoja.getCell("A11").value).toBe("BM-1");
-    expect(hoja.getCell("A12").value).toBe("P-02");
-    expect(hoja.getCell("B12").value).toBe("Intermedio");
+    expect(hoja.getCell("B11").value).toBe("BM-1");
+    expect(hoja.getCell("B12").value).toBe("P-02");
+    expect(hoja.getCell("C12").value).toBe("Intermedio");
+  });
+
+  it("la hoja «Libretas» numera los tramos: uno nuevo en cada arranque desde un BM", () => {
+    const libreta = [
+      bookRow({ reading_order: 0, starts_section: true, backsight: "1.5000" }),
+      bookRow({ reading_order: 1, point_code: "P-01", point_type: "intermediate", foresight: "1.2000" }),
+      bookRow({ reading_order: 2, point_code: "BM-2", starts_section: true, backsight: "1.1000" }),
+      bookRow({ reading_order: 3, point_code: "P-02", point_type: "intermediate", foresight: "1.3000" }),
+    ];
+    const hoja = buildConLibretas(VISITAS_MIXTAS, { v2: libreta }).getWorksheet("Libretas")!;
+    expect([5, 6, 7, 8].map((r) => hoja.getCell(r, 1).value)).toEqual([1, 1, 2, 2]);
   });
 
   it("la hoja «Libretas» da la cota de catálogo del BM de control (Fase 30)", () => {
@@ -536,28 +547,26 @@ describe("buildSettlementWorkbook", () => {
       bookRow({ reading_order: 3, foresight: "2.2450", elevation_calculated: "100.0000" }),
     ];
     const hoja = buildConLibretas(VISITAS_MIXTAS, { v2: libreta }).getWorksheet("Libretas")!;
-    expect(hoja.getCell("A6").value).toBe("BM-2");
+    expect(hoja.getCell("B6").value).toBe("BM-2");
     expect(hoja.getCell("J6").value).toBe(100.845);
     expect(hoja.getCell("J6").numFmt).toBe("0.0000");
     expect(hoja.getCell("J5").value).toBeNull();
   });
 
-  it("la hoja «Libretas» deja fuera las visitas en cotas directas", () => {
+  it("la hoja «Libretas» deja fuera las visitas sin filas", () => {
     const hoja = buildConLibretas().getWorksheet("Libretas")!;
     const columnaA = hoja
       .getColumn(1)
       .values.filter((v): v is string => typeof v === "string");
     expect(columnaA.some((v) => v.startsWith("Visita 1 "))).toBe(false);
-    expect(columnaA).not.toContain("HUERFANA");
     expect(columnaA.filter((v) => v.startsWith("Visita "))).toHaveLength(2);
   });
 
   it("la hoja «Libretas» avisa cuando ninguna visita tiene libreta", () => {
     const aviso = "Ninguna visita de este lugar tiene libreta de nivelación.";
-    // Solo visitas `direct`, y una `book` todavía sin filas.
     const visitas = [
-      visit({ id: "v1", visit_number: 1, capture_mode: "direct" }),
-      visit({ id: "v2", visit_number: 2, date: "2026-03-01", capture_mode: "book" }),
+      visit({ id: "v1", visit_number: 1 }),
+      visit({ id: "v2", visit_number: 2, date: "2026-03-01" }),
     ];
     const hoja = buildConLibretas(visitas, { v2: [] }).getWorksheet("Libretas")!;
     expect(hoja.getCell("A3").value).toBe(aviso);
@@ -567,36 +576,31 @@ describe("buildSettlementWorkbook", () => {
     expect(build().getWorksheet("Libretas")!.getCell("A3").value).toBe(aviso);
   });
 
-  it("Datos Crudos añade la captura, el amarre y el cierre de cada visita", () => {
+  it("Datos Crudos añade el estado, el BM de arranque, la verificación y la nota de cada visita", () => {
     const raw = buildConLibretas().getWorksheet("Datos Crudos")!;
     // Catálogo en filas 4-6, «Visitas» en la 8 con su encabezado en la 9.
     expect(raw.getCell("A8").value).toBe("Visitas");
-    expect(
-      Array.from({ length: 7 }, (_, i) => raw.getCell(9, i + 1).value),
-    ).toEqual([
+    expect(Array.from({ length: 9 }, (_, i) => raw.getCell(9, i + 1).value)).toEqual([
       "Visita",
       "Fecha",
-      "Captura",
-      "BM de amarre",
-      "Cota amarre (m)",
+      "Estado",
+      "BM de arranque",
+      "Cota BM (m)",
+      "Verificación",
       "Cierre (mm)",
       "Tolerancia (mm)",
+      "Nota",
     ]);
-    // En orden cronológico: la 1 (directa), la 2 y la 3 (libreta).
-    const visitaFila = (r: number) =>
-      Array.from({ length: 7 }, (_, i) => raw.getCell(r, i + 1).value);
+    // En orden cronológico.
+    const visitaFila = (r: number) => Array.from({ length: 9 }, (_, i) => raw.getCell(r, i + 1).value);
     expect(visitaFila(10)).toEqual([
-      1, "2026-02-01", "Cotas directas", null, null, 2.5, null,
+      1, "2026-02-01", "En medición", null, null, "Sin verificación", null, null, "Sin la armada 2: llovía.",
     ]);
-    expect(visitaFila(11)).toEqual([
-      2, "2026-03-01", "Libreta de nivelación", "BM-1", 100, -1.2, 8.9,
-    ]);
-    expect(visitaFila(12)).toEqual([
-      3, "2026-04-01", "Libreta de nivelación", "BM-1", 100, 0, null,
-    ]);
+    expect(visitaFila(11)).toEqual([2, "2026-03-01", "Calculada", "BM-1", 100, "Segundo orden", -1.2, 8.9, null]);
+    expect(visitaFila(12)).toEqual([3, "2026-04-01", "Calculada", "BM-1", 100, "Sin verificación", 0, null, null]);
     expect(raw.getCell("E11").numFmt).toBe("0.0000");
-    expect(raw.getCell("F11").numFmt).toBe("0.0");
     expect(raw.getCell("G11").numFmt).toBe("0.0");
+    expect(raw.getCell("H11").numFmt).toBe("0.0");
     // La tabla de cotas sigue a continuación.
     expect(raw.getCell("A14").value).toBe("Cotas medidas por visita");
   });

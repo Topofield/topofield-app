@@ -9,14 +9,7 @@ import {
 } from "@/app/(app)/projects/[id]/actions";
 import type { Project } from "@/types/project";
 
-export function DeleteProjectDialog({
-  project,
-  closedWork,
-}: {
-  project: Project;
-  /** Lugares y visitas cerrados: con alguno, no se puede eliminar. */
-  closedWork: number;
-}) {
+export function DeleteProjectDialog({ project }: { project: Project }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -58,16 +51,12 @@ export function DeleteProjectDialog({
             Eliminar proyecto
           </p>
           <p className="text-xs text-ink-2">
-            {closedWork > 0
-              ? `Tiene ${closedWork} ${closedWork === 1 ? "registro cerrado" : "registros cerrados"} (lugares o visitas de asentamientos), que no se pueden borrar. Si ya no lo usas, archívalo.`
-              : "Borra el proyecto con sus procesos, lugares y puntos de referencia, de forma permanente."}
+            Borra el proyecto con sus procesos, lugares y puntos de referencia, de forma permanente.
           </p>
         </div>
-        {closedWork === 0 && (
-          <Button variant="danger" onClick={() => setConfirmOpen(true)}>
-            Eliminar
-          </Button>
-        )}
+        <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+          Eliminar
+        </Button>
       </div>
 
       <Modal

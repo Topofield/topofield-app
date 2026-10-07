@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   pointReferenceChanged,
-  undoRetirementBlocker,
   validateActiveFrom,
   validateReadingCapture,
   validateRetirement,
   neighborVisitDates,
   validateVisitCapture,
-  validateVisitClose,
-  type SiteVisit,
 } from "./settlement";
 import type { PointInput, VisitInput } from "@/types/settlement";
 
@@ -180,98 +177,6 @@ describe("validateVisitCapture", () => {
   });
 });
 
-describe("validateVisitClose", () => {
-  it("bloquea el cierre si falta la lectura de algún punto del catálogo", () => {
-    const P2: PointInput = { ...P1, id: "p2", code: "P-02" };
-    const r = validateVisitClose(
-      {
-        id: "v1",
-        visitNumber: 1,
-        date: "2025-02-15",
-        readings: [{ pointId: "p1", elevation: 99.99 }],
-      },
-      [P1, P2],
-      null,
-      [],
-    );
-    expect(r.errors.readings).toBeDefined();
-  });
-
-  it("permite cerrar una visita completa", () => {
-    const r = validateVisitClose(
-      {
-        id: "v1",
-        visitNumber: 1,
-        date: "2025-02-15",
-        readings: [{ pointId: "p1", elevation: 99.99 }],
-      },
-      [P1],
-      null,
-      [],
-    );
-    expect(r.errors).toEqual({});
-  });
-
-  it("NO bloquea el cierre por un asentamiento en alarma", () => {
-    // Un dato alarmante es un hallazgo del monitoreo, no un error de captura:
-    // es justo el caso que el módulo existe para documentar. La desviación
-    // (1.5 m) supera MAX_PLAUSIBLE_DEVIATION_M (1 m) a propósito, para que sí
-    // dispare warnings.elevation — si no, el test pasaría igual sin ningún
-    // asentamiento y no probaría nada.
-    const r = validateVisitClose(
-      {
-        id: "v1",
-        visitNumber: 1,
-        date: "2025-02-15",
-        readings: [{ pointId: "p1", elevation: 98.5 }], // −1.5 m
-      },
-      [P1],
-      null,
-      [],
-    );
-    expect(r.readingIssues.p1?.warnings.elevation).toBeDefined();
-    expect(r.errors).toEqual({});
-  });
-
-  it("bloquea el cierre si la fecha está fuera de orden respecto a la visita anterior", () => {
-    // El cierre repite la comprobación de orden cronológico: sella la visita
-    // como inmutable, así que es el último punto donde puede atajarse una
-    // fecha que dejaría un intervalo negativo grabado para siempre.
-    const r = validateVisitClose(
-      {
-        id: "v1",
-        visitNumber: 1,
-        date: "2025-01-10",
-        readings: [{ pointId: "p1", elevation: 99.99 }],
-      },
-      [P1],
-      "2025-01-15",
-      [],
-    );
-    expect(r.errors.date).toBeDefined();
-  });
-
-  it("acumula el mensaje de duplicado y el de faltantes en vez de pisarse", () => {
-    const P2: PointInput = { ...P1, id: "p2", code: "P-02" };
-    const r = validateVisitClose(
-      {
-        id: "v1",
-        visitNumber: 1,
-        date: "2025-02-15",
-        readings: [
-          { pointId: "p1", elevation: 99.99 },
-          { pointId: "p1", elevation: 99.98 },
-        ],
-      },
-      [P1, P2],
-      null,
-      [],
-    );
-    expect(r.errors.readings).toContain("más de una lectura");
-    expect(r.errors.readings).toContain("Faltan lecturas de: P-02");
-  });
-});
-
 // ============================================================================
 // Fase 11 — estado de los BMs
 // ============================================================================
@@ -286,107 +191,14 @@ const P7: PointInput = {
 };
 
 /** Una visita con lecturas de los puntos dados, todas a 100 m. */
-function visitaCon(
-  n: number,
-  date: string,
-  ids: string[],
-  closed = false,
-): SiteVisit {
+function visitaCon(n: number, date: string, ids: string[]): VisitInput {
   return {
     id: `v${n}`,
     visitNumber: n,
     date,
     readings: ids.map((pointId) => ({ pointId, elevation: 100 })),
-    closed,
   };
 }
-
-describe("validateVisitClose — vigencia (Fase 11)", () => {
-  // Se prueba por validateVisitClose, que es la puerta de closeVisitAction,
-  // y no por isPointActiveOn suelta (aprendizaje de la Fase 9).
-  it("no exige el punto de baja en una visita posterior a la baja", () => {
-    const v = visitaCon(4, "2025-04-15", ["p1", "p7"]);
-    const r = validateVisitClose(v, [P1, P5, P7], "2025-03-15", []);
-    expect(r.errors).toEqual({});
-  });
-
-  it("sigue exigiendo el punto de baja en una visita anterior a la baja", () => {
-    const v = visitaCon(2, "2025-02-15", ["p1"]);
-    const r = validateVisitClose(v, [P1, P5], "2025-01-15", []);
-    expect(r.errors.readings).toContain("Faltan lecturas de: P-05");
-  });
-
-  it("no exige el punto de alta en una visita anterior a su alta", () => {
-    const v = visitaCon(2, "2025-02-15", ["p1"]);
-    const r = validateVisitClose(v, [P1, P7], "2025-01-15", []);
-    expect(r.errors).toEqual({});
-  });
-
-  it("exige el punto de alta en una visita posterior a su alta", () => {
-    const v = visitaCon(3, "2025-03-15", ["p1"]);
-    const r = validateVisitClose(v, [P1, P7], "2025-02-15", []);
-    expect(r.errors.readings).toContain("Faltan lecturas de: P-07");
-  });
-});
-
-describe("validateVisitClose — la línea base no puede quedar abierta (Fase 11)", () => {
-  it("rechaza cerrar si la primera lectura de un punto sin C0 está en una visita anterior abierta", () => {
-    const v2 = visitaCon(2, "2025-03-15", ["p1", "p7"]); // abierta: base de P-07
-    const v3 = visitaCon(3, "2025-04-15", ["p1", "p7"]);
-    const r = validateVisitClose(v3, [P1, P7], "2025-03-15", [v2, v3]);
-    // Desde la Fase 26 (C-15) bloquea también P-01, que tiene C0: su lectura
-    // anterior está en la misma visita abierta.
-    expect(r.errors.readings).toBe(
-      "Cierra antes la visita 2: P-01, P-07 se calculan contra sus lecturas.",
-    );
-  });
-
-  it("permite cerrar cuando la visita de la línea base ya está cerrada", () => {
-    const v2 = visitaCon(2, "2025-03-15", ["p1", "p7"], true);
-    const v3 = visitaCon(3, "2025-04-15", ["p1", "p7"]);
-    const r = validateVisitClose(v3, [P1, P7], "2025-03-15", [v2, v3]);
-    expect(r.errors).toEqual({});
-  });
-
-  it("permite cerrar la propia visita de la línea base", () => {
-    const v2 = visitaCon(2, "2025-03-15", ["p1", "p7"]);
-    const r = validateVisitClose(v2, [P1, P7], "2025-02-15", [v2]);
-    expect(r.errors).toEqual({});
-  });
-
-  it("un punto con C0 tampoco se cierra con su lectura anterior abierta (Fase 26, C-15)", () => {
-    // Su acumulado parte de la C0, pero su parcial y su velocidad se miden
-    // contra la lectura de v0: corregirla después cambiaría v1 cerrada.
-    const v0 = visitaCon(0, "2025-01-15", ["p1"]); // abierta
-    const v1 = visitaCon(1, "2025-02-15", ["p1"]);
-    const r = validateVisitClose(v1, [P1], "2025-01-15", [v0, v1]);
-    expect(r.errors.readings).toBe("Cierra antes la visita 0: P-01 se calcula contra sus lecturas.");
-  });
-});
-
-describe("validateVisitClose — la lectura anterior no puede quedar abierta (Fase 26, C-15)", () => {
-  it("con la anterior cerrada y la intermedia abierta, bloquea la intermedia", () => {
-    const v0 = visitaCon(0, "2025-01-15", ["p1"], true);
-    const v1 = visitaCon(1, "2025-02-15", ["p1"]); // abierta
-    const v2 = visitaCon(2, "2025-03-15", ["p1"]);
-    const r = validateVisitClose(v2, [P1], "2025-02-15", [v0, v1, v2]);
-    expect(r.errors.readings).toBe("Cierra antes la visita 1: P-01 se calcula contra sus lecturas.");
-  });
-
-  it("con todas las anteriores cerradas, cierra", () => {
-    const v0 = visitaCon(0, "2025-01-15", ["p1"], true);
-    const v1 = visitaCon(1, "2025-02-15", ["p1"], true);
-    const v2 = visitaCon(2, "2025-03-15", ["p1"]);
-    expect(validateVisitClose(v2, [P1], "2025-02-15", [v0, v1, v2]).errors).toEqual({});
-  });
-
-  it("y comprueba la fecha contra la visita siguiente (C-16)", () => {
-    const v1 = visitaCon(1, "2025-03-15", ["p1"], true);
-    const v2 = visitaCon(2, "2025-03-15", ["p1"], true);
-    const r = validateVisitClose(v1, [P1], null, [v1, v2]);
-    expect(r.errors.date).toBe("La fecha debe ser anterior a la de la visita siguiente (2025-03-15).");
-  });
-});
 
 describe("neighborVisitDates y la fecha entre vecinas (Fase 26, C-16)", () => {
   const visitas = [
@@ -474,35 +286,14 @@ describe("validateRetirement", () => {
   });
 });
 
-describe("undoRetirementBlocker", () => {
-  it("permite deshacer si ninguna visita cerrada es posterior a la baja", () => {
-    expect(
-      undoRetirementBlocker("2025-04-01", [{ visitNumber: 3, date: "2025-03-15" }]),
-    ).toBeNull();
-  });
-
-  it("no permite deshacer si hay una visita cerrada en la misma fecha de la baja", () => {
-    // El límite es inclusivo: la fecha de baja ya no es vigente, así que una
-    // visita cerrada ese día se cerró sin el punto.
-    expect(
-      undoRetirementBlocker("2025-04-01", [{ visitNumber: 4, date: "2025-04-01" }]),
-    ).toContain("la visita 4");
-  });
-});
-
 describe("validateActiveFrom", () => {
-  it("acepta un alta posterior a la última visita cerrada", () => {
-    expect(validateActiveFrom("2025-03-01", "2025-02-15")).toBeNull();
+  // Fase 37: ninguna visita se cierra, así que el alta admite cualquier fecha.
+  it("acepta cualquier fecha válida", () => {
+    expect(validateActiveFrom("2025-01-01")).toBeNull();
   });
 
-  it("rechaza un alta igual o anterior a la última visita cerrada", () => {
-    expect(validateActiveFrom("2025-02-15", "2025-02-15")).toContain(
-      "posterior a la última visita cerrada",
-    );
-  });
-
-  it("acepta cualquier fecha válida si el lugar no tiene visitas cerradas", () => {
-    expect(validateActiveFrom("2025-01-01", null)).toBeNull();
+  it("rechaza una fecha que no es de calendario", () => {
+    expect(validateActiveFrom("2025-02-30")).toBe("El punto necesita una fecha de alta válida.");
   });
 });
 

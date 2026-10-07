@@ -1,5 +1,5 @@
 // Validación del control de asentamientos — funciones puras (PRD § 5.1 capa de
-// captura, § 5.2 capa de cierre). Sin React, sin Supabase.
+// captura). Sin React, sin Supabase. Desde la Fase 37 no hay capa de cierre.
 //
 // La capa estadística (§ 5.3) NO vive aquí y NO bloquea: un asentamiento en
 // alarma es un hallazgo del monitoreo, no un error de captura. Su cálculo está
@@ -8,11 +8,6 @@
 import { isPointActiveOn } from "@/lib/calculations/settlement";
 import { formatDateOnly } from "@/lib/utils/format";
 import type { PointInput, ReadingInput, VisitInput } from "@/types/settlement";
-
-/** Una visita del lugar con su estado, para las reglas que miran el histórico. */
-export interface SiteVisit extends VisitInput {
-  closed: boolean;
-}
 
 /** Issues de una lectura, indexados por celda de la tabla. */
 export interface ReadingCaptureIssues {
@@ -85,9 +80,8 @@ export function validateReadingCapture(
  * siguiente, o `null` (Fase 26, C-16). El número se asigna en orden de fecha
  * —una visita nueva va después de la última—, así que la fecha de una visita
  * tiene que quedar entre las de sus vecinas. Antes se comparaba solo con la
- * última de fecha estrictamente anterior, y una visita abierta podía igualar
- * la fecha de otra o saltar por encima de una cerrada, cambiando su parcial y
- * su velocidad.
+ * última de fecha estrictamente anterior, y una visita podía igualar la fecha
+ * de otra o saltar por encima de ella, cambiando su parcial y su velocidad.
  */
 export function neighborVisitDates(
   visit: Pick<VisitInput, "visitNumber">,
@@ -113,7 +107,7 @@ export function neighborVisitDates(
  * (`neighborVisitDates`), o `null`. La fecha tiene que quedar estrictamente
  * entre las dos: antes de la anterior daría intervalos negativos y velocidades
  * con el signo invertido; igual a otra deja el intervalo en cero; después de la
- * siguiente reordena la serie y cambia el parcial de visitas ya cerradas.
+ * siguiente reordena la serie y cambia el parcial de las demás.
  */
 export function validateVisitCapture(
   visit: VisitInput,
@@ -179,109 +173,6 @@ function outsideValidityMessage(point: PointInput, date: string): string {
   return `${point.code} se dio de alta el ${formatDateOnly(point.activeFrom ?? date)}; no admite lecturas en una visita anterior.`;
 }
 
-/**
- * Valida que una visita pueda cerrarse (§ 5.2).
- *
- * Exige que todos los puntos **vigentes** en la fecha de la visita tengan
- * lectura: una visita cerrada es el registro inmutable de una fecha, y
- * cerrarla incompleta deja un hueco que ya no se puede rellenar. Un punto de
- * baja o todavía no dado de alta no se exige (Fase 11).
- *
- * `siteVisits` son las visitas del lugar con su estado. Una visita no se
- * cierra si sigue abierta una visita ANTERIOR contra cuyas lecturas se calcula:
- * la de la lectura anterior de cada punto —parcial, velocidad, alerta— y, para
- * un punto sin C0, la de su primera lectura, su línea base. Si se cerrara,
- * editar esa lectura abierta cambiaría lo que el panel, el informe y el Excel
- * recalculan en vivo para esta visita, que ya sería inmutable. La Fase 11 lo
- * impidió para la línea base; la Fase 26 (C-15), para la lectura anterior.
- *
- * También repite la comprobación de orden cronológico de `validateVisitCapture`
- * (vía `previousVisitDate` y la visita siguiente de `siteVisits`): el cierre
- * sella la visita como inmutable, así que es el último punto donde una fecha
- * fuera de orden puede atajarse.
- *
- * NO evalúa los umbrales de alerta. Un punto en alarma se cierra con
- * normalidad; es el hallazgo que el monitoreo busca documentar.
- *
- * Con libreta (Fase 18), una comprobación aritmética fallida bloquea: no es un
- * resultado de campo sino una libreta mal formada, como en nivelación. La
- * tolerancia NO bloquea: fuera de ella la visita solo avisa (decisión 5 del
- * PRD de la Fase 18).
- */
-export function validateVisitClose(
-  visit: VisitInput,
-  points: PointInput[],
-  previousVisitDate: string | null,
-  siteVisits: readonly SiteVisit[],
-  book: { arithmeticCheckOk: boolean; turningPoint?: string | null } | null = null,
-): VisitCaptureIssues {
-  const issues = validateVisitCapture(
-    visit,
-    points,
-    previousVisitDate,
-    neighborVisitDates(visit, siteVisits.filter((v) => v.id !== visit.id)).next,
-  );
-  const messages: string[] = [];
-
-  // Un punto de cambio incompleto dice qué fila corregir (Fase 24); si no lo
-  // hay, el mensaje genérico de la comprobación aritmética.
-  if (book?.turningPoint) {
-    issues.errors.book = book.turningPoint;
-  } else if (book && !book.arithmeticCheckOk) {
-    issues.errors.book =
-      "La comprobación aritmética de la libreta no cuadra: ΣV+ − ΣV− no coincide con el desnivel.";
-  }
-
-  const measured = new Set(visit.readings.map((r) => r.pointId));
-  const missing = points.filter(
-    (p) => isPointActiveOn(p, visit.date) && !measured.has(p.id),
-  );
-  if (missing.length > 0) {
-    messages.push(`Faltan lecturas de: ${missing.map((p) => p.code).join(", ")}.`);
-  }
-
-  // Las visitas abiertas contra cuyas lecturas se calcula esta (Fase 26,
-  // C-15). El parcial, la velocidad y la alerta de un punto se miden contra su
-  // lectura anterior, y un punto sin C0 acumula desde su primera lectura, la
-  // línea base: si esas visitas siguen abiertas, corregirlas después cambiaría
-  // lo que esta deja sellado. Antes solo se protegía la línea base.
-  const byId = new Map(points.map((p) => [p.id, p]));
-  const others = siteVisits.filter((v) => v.id !== visit.id);
-  const blocking = new Map<number, string[]>();
-  const block = (v: SiteVisit, code: string) => {
-    const codes = blocking.get(v.visitNumber) ?? [];
-    if (!codes.includes(code)) codes.push(code);
-    blocking.set(v.visitNumber, codes);
-  };
-  for (const pointId of measured) {
-    const point = byId.get(pointId);
-    if (!point) continue;
-    const prior = others
-      .filter((v) => v.date < visit.date && v.readings.some((r) => r.pointId === pointId))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    const previous = prior.at(-1);
-    if (previous && !previous.closed) block(previous, point.code);
-    const baseline = prior[0];
-    if (point.initialElevation === null && baseline && !baseline.closed) {
-      block(baseline, point.code);
-    }
-  }
-  for (const [visitNumber, codes] of [...blocking].sort((a, b) => a[0] - b[0])) {
-    messages.push(
-      `Cierra antes la visita ${visitNumber}: ${codes.join(", ")} se ${codes.length === 1 ? "calcula" : "calculan"} contra sus lecturas.`,
-    );
-  }
-
-  if (messages.length > 0) {
-    const text = messages.join(" ");
-    issues.errors.readings = issues.errors.readings
-      ? `${issues.errors.readings} ${text}`
-      : text;
-  }
-
-  return issues;
-}
-
 // ============================================================================
 // Estado de los BMs: dar de baja, deshacer la baja, dar de alta (Fase 11).
 // Reglas puras; las Server Actions de `point-actions.ts` las aplican.
@@ -291,8 +182,8 @@ export function validateVisitClose(
  * ¿Se puede dar de baja el punto con esta fecha y este motivo?
  *
  * `retiredOn` es la primera fecha en que ya no se mide, así que debe ser
- * POSTERIOR a su última lectura, en cualquier visita, abierta o cerrada: si
- * no, esa lectura quedaría fuera de vigencia (y el trigger de la base la
+ * POSTERIOR a su última lectura, en cualquier visita: si no, esa lectura
+ * quedaría fuera de vigencia (y el trigger de la base la
  * rechazaría igualmente).
  */
 export function validateRetirement(input: {
@@ -317,48 +208,13 @@ export function validateRetirement(input: {
 }
 
 /**
- * ¿Se puede deshacer la baja? Solo para corregir un error: mientras ninguna
- * visita CERRADA tenga fecha igual o posterior a la baja. Después es
- * definitiva — un BM reencontrado puede haberse movido, y vuelve como punto
- * nuevo con otro código.
- *
- * Devuelve el motivo del rechazo, nombrando la visita que la hace definitiva,
- * o null si se puede.
+ * ¿Es válida la fecha de alta de un punto nuevo? Desde la Fase 37 ninguna
+ * visita se cierra, así que cualquier fecha de calendario sirve: las visitas
+ * posteriores lo esperan como pendiente.
  */
-export function undoRetirementBlocker(
-  retiredOn: string,
-  closedVisits: readonly { visitNumber: number; date: string }[],
-): string | null {
-  const blocking = closedVisits
-    .filter((v) => v.date >= retiredOn)
-    .sort((a, b) => a.date.localeCompare(b.date))[0];
-  if (!blocking) return null;
-  return `La baja ya es definitiva: la visita ${blocking.visitNumber} (${formatDateOnly(blocking.date)}), posterior a la baja, está cerrada.`;
+export function validateActiveFrom(activeFrom: string): string | null {
+  return isCalendarDate(activeFrom) ? null : "El punto necesita una fecha de alta válida.";
 }
-
-/**
- * ¿Es válida la fecha de alta de un punto nuevo?
- *
- * Debe ser POSTERIOR a la última visita cerrada del lugar: esa visita se
- * cerró sin el punto, y darlo de alta antes la dejaría incompleta a
- * posteriori.
- */
-export function validateActiveFrom(
-  activeFrom: string,
-  lastClosedVisitDate: string | null,
-): string | null {
-  if (!isCalendarDate(activeFrom)) {
-    return "El punto necesita una fecha de alta válida.";
-  }
-  if (lastClosedVisitDate !== null && activeFrom <= lastClosedVisitDate) {
-    return `La fecha de alta debe ser posterior a la última visita cerrada (${formatDateOnly(lastClosedVisitDate)}).`;
-  }
-  return null;
-}
-
-/** El mensaje de la C0 bloqueada (Fase 23). */
-export const REFERENCE_LOCKED_MESSAGE =
-  "El punto tiene lecturas en visitas cerradas: su C0 ya no cambia. El código y la ubicación sí.";
 
 /**
  * ¿Cambia la C0 del punto (Fase 23)? Se compara a la escala de la base, cotas

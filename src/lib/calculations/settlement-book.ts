@@ -19,7 +19,6 @@ import { levelingTolerance } from "./tolerances";
 import type {
   ComputedReading,
   LevelingResult,
-  PointType,
   ReadingInput,
 } from "@/types/leveling";
 import { PRECISION_ORDERS, type PrecisionOrder } from "@/types/project";
@@ -262,84 +261,6 @@ export function checkBenchmarks(
     });
   });
   return checks;
-}
-
-/**
- * Las comprobaciones de los BM de control de una libreta YA GUARDADA (Fase 30),
- * con la cota de catálogo que se copió al guardarla. Lo usan la vista de la
- * visita y el panel, que no recalculan la libreta: leen sus filas.
- */
-export function benchmarkChecksOfBook(
-  rows: Pick<
-    SettlementBookReading,
-    "point_code" | "foresight" | "elevation_calculated" | "distance_accumulated_km" | "catalog_elevation"
-  >[],
-  order: PrecisionOrder,
-): BenchmarkCheck[] {
-  const n = (v: number | string | null) => (v === null ? null : Number(v));
-  return checkBenchmarks(
-    rows.map((r) => ({
-      pointCode: r.point_code,
-      foresight: n(r.foresight),
-      elevationCalculated: n(r.elevation_calculated) ?? Number.NaN,
-      distanceAccumulatedKm: n(r.distance_accumulated_km),
-    })),
-    rows.map((r) => n(r.catalog_elevation)),
-    order,
-  );
-}
-
-export interface TemplateRow {
-  pointCode: string;
-  pointType: PointType;
-}
-
-/**
- * La libreta que el editor propone cuando la visita no tiene ninguna, para que
- * en campo solo haya que llenar lecturas (decisión 16).
- *
- * - Con la libreta de la visita anterior: su secuencia de códigos y tipos, con
- *   la primera y la última fila cambiadas al amarre de esta visita (si ya lo
- *   tiene), sin los puntos de control que ya no están vigentes y con los que se
- *   dieron de alta añadidos antes del cierre.
- * - Sin ella: amarre, los puntos de control vigentes como intermedias —una
- *   sola armada— y amarre. El nivelador inserta los puntos de cambio que
- *   necesite.
- */
-export function buildBookTemplate(
-  previous: TemplateRow[] | null,
-  points: PointInput[],
-  visitDate: string,
-  amarreCode: string,
-): TemplateRow[] {
-  const amarre = amarreCode.trim();
-  const active = points.filter((p) => isPointActiveOn(p, visitDate)).sort(byCode);
-
-  if (!previous || previous.length < 2) {
-    return [
-      { pointCode: amarre, pointType: "bm" },
-      ...active.map((p) => ({ pointCode: p.code, pointType: "intermediate" as const })),
-      { pointCode: amarre, pointType: "bm" },
-    ];
-  }
-
-  const controlOf = (code: string) => points.find((p) => samePointCode(p.code, code));
-  const middle = previous.slice(1, -1).filter((r) => {
-    const p = controlOf(r.pointCode);
-    return !p || isPointActiveOn(p, visitDate);
-  });
-  const added = active
-    .filter((p) => !middle.some((r) => samePointCode(r.pointCode, p.code)))
-    .map((p) => ({ pointCode: p.code, pointType: "intermediate" as const }));
-
-  const first = amarre || previous[0]!.pointCode;
-  const last = amarre || previous.at(-1)!.pointCode;
-  return [
-    { pointCode: first, pointType: "bm" },
-    ...middle.map((r) => ({ pointCode: r.pointCode, pointType: r.pointType })),
-    ...added,
-    { pointCode: last, pointType: "bm" },
-  ];
 }
 
 // ---------------------------------------------------------------------------

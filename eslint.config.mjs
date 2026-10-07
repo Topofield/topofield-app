@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Artefactos que genera `supabase start`. No son código del proyecto y
     // están fuera del control de versiones.
     "supabase/.temp/**",
+    // Los worktrees de otras sesiones (fuera de git, como `.claude/` entero):
+    // traen su propio `.next/` y no son código de esta rama.
+    ".claude/**",
   ]),
 ]);
 

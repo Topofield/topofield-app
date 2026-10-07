@@ -7,14 +7,11 @@ import type { Project, ReferencePoint } from "@/types/project";
 interface ProjectConfigTabProps {
   project: Project;
   referencePoints: ReferencePoint[];
-  /** Registros cerrados del proyecto: con alguno, no se puede eliminar. */
-  closedWork: number;
 }
 
 export function ProjectConfigTab({
   project,
   referencePoints,
-  closedWork,
 }: ProjectConfigTabProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -26,7 +23,7 @@ export function ProjectConfigTab({
         points={referencePoints}
       />
       <Card title="Zona de peligro">
-        <DeleteProjectDialog project={project} closedWork={closedWork} />
+        <DeleteProjectDialog project={project} />
       </Card>
     </div>
   );
