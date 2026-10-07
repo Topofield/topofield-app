@@ -4,7 +4,14 @@ import { useState, useTransition } from "react";
 import { Alert, Button, EMPTY_DMS, Input, Modal, NumberInput, Select, type DmsValue } from "@/components/design-system";
 import { ensureCatalogPointAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import { azimuthFromCoordinates } from "@/lib/calculations/angles";
-import { catalogMoves, type CatalogUser } from "@/lib/polygonal-amarre";
+import {
+  catalogMoves,
+  catalogPointOf,
+  repeatedPointName,
+  resolveCatalogPoint,
+  type CatalogUser,
+  type NamedPoint,
+} from "@/lib/polygonal-amarre";
 import { formatCoordinate } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import { readingDmsError } from "@/lib/validators/polygonal";
@@ -100,17 +107,11 @@ function readAzimuth(v: DmsValue, what: string): Dms3 | string {
   return problem ? `${what}: ${problem}` : dms;
 }
 
-type NamedPoint = { code: string; north: number; east: number };
-
-/** El primer nombre que se repite con otras coordenadas entre los puntos del amarre. */
-function repeatedName(points: NamedPoint[]): string | null {
-  for (const [i, p] of points.entries()) {
-    if (points.slice(i + 1).some((q) => q.code === p.code && (q.north !== p.north || q.east !== p.east))) {
-      return p.code;
-    }
-  }
-  return null;
-}
+/** ¿Cambió el punto desde que se abrió el popup? */
+const edited = (now: PointFields, before: PointFields) =>
+  now.code.trim() !== before.code.trim() ||
+  parseNumber(now.north) !== parseNumber(before.north) ||
+  parseNumber(now.east) !== parseNumber(before.east);
 
 /**
  * Los puntos de amarre (Fase 35, maqueta «Datos A»): la estación de partida y la
@@ -133,11 +134,18 @@ export function AmarreDialog({
   const catalog = referencePoints.filter((p) => p.north !== null && p.east !== null);
   const currentRef = referencePoints.find((p) => p.id === a.referencePointId) ?? null;
 
-  const [start, setStart] = useState<PointFields>({
-    code: a.startCode,
-    north: a.startCode ? text(a.startNorth) : "",
-    east: a.startCode ? text(a.startEast) : "",
-  });
+  // Los campos al abrir. La partida y la llegada son la copia que guarda el
+  // proceso, que puede diferir del catálogo si este se corrigió después o si la
+  // poligonal se georreferenció: sin tocarlas, no corrigen el catálogo.
+  const [opened] = useState(() => ({
+    start: {
+      code: a.startCode,
+      north: a.startCode ? text(a.startNorth) : "",
+      east: a.startCode ? text(a.startEast) : "",
+    },
+    end: { code: a.endCode ?? "", north: text(a.endNorth), east: text(a.endEast) },
+  }));
+  const [start, setStart] = useState<PointFields>(opened.start);
   const [mode, setMode] = useState<ReferenceMode>(
     a.referencePointId !== null ? "point" : a.referenceCode !== null ? "azimuth" : a.startCode ? "none" : "point",
   );
@@ -147,11 +155,7 @@ export function AmarreDialog({
     east: text(currentRef?.east == null ? null : Number(currentRef.east)),
   });
   const [azimuth, setAzimuth] = useState<DmsValue>(a.startAzimuth ? fieldsOf(a.startAzimuth) : { ...EMPTY_DMS });
-  const [end, setEnd] = useState<PointFields>({
-    code: a.endCode ?? "",
-    north: text(a.endNorth),
-    east: text(a.endEast),
-  });
+  const [end, setEnd] = useState<PointFields>(opened.end);
   const [endAzimuth, setEndAzimuth] = useState<DmsValue>(a.endAzimuth ? fieldsOf(a.endAzimuth) : { ...EMPTY_DMS });
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -165,21 +169,20 @@ export function AmarreDialog({
       : null;
   const measured = draft.stations.some((st) => st.readings.length > 0 || st.distance !== null);
 
+  // ¿Va el punto al catálogo? Sí, salvo que movería uno sin que el usuario lo
+  // haya tocado. La referencia va siempre: el popup la abre con la del catálogo.
+  const catalogPoints = referencePoints.map(catalogPointOf);
+  const goesToCatalog = (p: NamedPoint, now: PointFields, before: PointFields) =>
+    edited(now, before) || resolveCatalogPoint(catalogPoints, p).kind !== "move";
+
   // Los puntos del catálogo que cambian de coordenadas si se guarda así.
   const t = readPoint(end, "");
-  const toCatalog = [mode !== "none" ? s : null, mode === "point" ? r : null, controlled ? t : null].filter(
-    (p): p is NamedPoint => p !== null && typeof p !== "string",
-  );
-  const moves = catalogMoves(
-    referencePoints.map((p) => ({
-      id: p.id,
-      code: p.code,
-      north: p.north == null ? null : Number(p.north),
-      east: p.east == null ? null : Number(p.east),
-    })),
-    toCatalog,
-    others,
-  );
+  const toCatalog = [
+    mode !== "none" && typeof s !== "string" && goesToCatalog(s, start, opened.start) ? s : null,
+    mode === "point" && typeof r !== "string" ? r : null,
+    controlled && typeof t !== "string" && goesToCatalog(t, end, opened.end) ? t : null,
+  ].filter((p): p is NamedPoint => p !== null);
+  const moves = catalogMoves(catalogPoints, toCatalog, others);
 
   function submit() {
     setError(null);
@@ -224,17 +227,19 @@ export function AmarreDialog({
       }
     }
 
-    // Ahora un punto existente se corrige: con el mismo nombre, el segundo pisaría al primero.
-    const repeated = repeatedName(
+    const repeated = repeatedPointName(
       [mode !== "none" ? startPoint : null, refPoint, endPoint].filter((p): p is NamedPoint => p !== null),
     );
     if (repeated) {
       return setError(`${repeated} está dos veces con coordenadas distintas: cada punto necesita su propio nombre.`);
     }
 
+    const startToCatalog = mode !== "none" && goesToCatalog(startPoint, start, opened.start);
+    const endToCatalog = endPoint !== null && goesToCatalog(endPoint, end, opened.end);
+
     startTransition(async () => {
       // Sin 0 atrás la partida puede ser local: solo el amarre va al catálogo.
-      if (mode !== "none") {
+      if (startToCatalog) {
         const saved = await callAction(() => ensureCatalogPointAction(projectId, startPoint));
         if (!saved.ok) return setError(saved.error);
       }
@@ -244,7 +249,7 @@ export function AmarreDialog({
         if (!saved.ok) return setError(saved.error);
         referencePointId = saved.id;
       }
-      if (endPoint) {
+      if (endPoint && endToCatalog) {
         const saved = await callAction(() => ensureCatalogPointAction(projectId, endPoint!));
         if (!saved.ok) return setError(saved.error);
       }
@@ -364,8 +369,8 @@ export function AmarreDialog({
         {moves.length > 0 && (
           <Alert variant="warning" title="Se corrige en el catálogo del proyecto">
             <ul className="flex flex-col gap-1">
-              {moves.map((m) => (
-                <li key={m.code}>
+              {moves.map((m, i) => (
+                <li key={`${m.code}-${i}`}>
                   {m.code}: antes N {formatCoordinate(m.north)} · E {formatCoordinate(m.east)}.
                   {m.usedBy.length > 0 && <> También lo usa {m.usedBy.map((n) => `«${n}»`).join(", ")}.</>}
                 </li>

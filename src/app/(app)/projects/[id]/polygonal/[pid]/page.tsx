@@ -8,8 +8,8 @@ import { processReportState } from "@/lib/reports/state";
 import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
+  getPolygonalAmarres,
   getPolygonalProcess,
-  getPolygonalProcesses,
   getPolygonalStations,
   getProjectById,
   getReferencePoints,
@@ -45,7 +45,7 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
     getReferencePoints(supabase, id),
     getReports(supabase, id),
     // Para el aviso del amarre: qué otras poligonales usan un punto que se corrige.
-    step === "datos" ? getPolygonalProcesses(supabase, id) : Promise.resolve([]),
+    step === "datos" ? getPolygonalAmarres(supabase, id) : Promise.resolve([]),
   ]);
   if (!project) notFound();
 

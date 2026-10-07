@@ -23,23 +23,56 @@ export type CatalogResolution =
   | { kind: "move"; id: string }
   | { kind: "create" };
 
+/** Un punto con nombre y coordenadas, como lo teclea el popup. */
+export interface NamedPoint {
+  code: string;
+  north: number;
+  east: number;
+}
+
+/** Un punto de `reference_points` como lo lee la base: las coordenadas llegan como texto o nulas. */
+export function catalogPointOf(p: {
+  id: string;
+  code: string;
+  north: number | string | null;
+  east: number | string | null;
+}): CatalogPoint {
+  return {
+    id: p.id,
+    code: p.code,
+    north: p.north == null ? null : Number(p.north),
+    east: p.east == null ? null : Number(p.east),
+  };
+}
+
 /** Medio milímetro: lo que separa dos coordenadas guardadas con 3 o 4 decimales. */
 const SAME_COORDINATE_M = 0.0005;
 
-export function resolveCatalogPoint(
-  catalog: readonly CatalogPoint[],
-  point: { code: string; north: number; east: number },
-): CatalogResolution {
+const sameCoordinates = (a: { north: number; east: number }, b: { north: number; east: number }) =>
+  Math.abs(a.north - b.north) <= SAME_COORDINATE_M && Math.abs(a.east - b.east) <= SAME_COORDINATE_M;
+
+export function resolveCatalogPoint(catalog: readonly CatalogPoint[], point: NamedPoint): CatalogResolution {
   const code = point.code.trim();
   const existing = catalog.find((p) => p.code.trim() === code);
   if (!existing) return { kind: "create" };
   if (existing.north === null || existing.east === null) {
     return { kind: "complete", id: existing.id };
   }
-  const same =
-    Math.abs(Number(existing.north) - point.north) <= SAME_COORDINATE_M &&
-    Math.abs(Number(existing.east) - point.east) <= SAME_COORDINATE_M;
-  return same ? { kind: "reuse", id: existing.id } : { kind: "move", id: existing.id };
+  return sameCoordinates({ north: existing.north, east: existing.east }, point)
+    ? { kind: "reuse", id: existing.id }
+    : { kind: "move", id: existing.id };
+}
+
+/**
+ * El primer nombre que se repite con otras coordenadas entre los puntos del
+ * amarre: como un punto existente se corrige, el segundo pisaría al primero.
+ */
+export function repeatedPointName(points: readonly NamedPoint[]): string | null {
+  for (const [i, p] of points.entries()) {
+    const code = p.code.trim();
+    if (points.slice(i + 1).some((q) => q.code.trim() === code && !sameCoordinates(p, q))) return code;
+  }
+  return null;
 }
 
 /** Otra poligonal del proyecto, por los puntos de su amarre. */
@@ -61,14 +94,13 @@ export interface CatalogMove {
 /** Los puntos del catálogo que cambian de coordenadas al guardar el amarre. */
 export function catalogMoves(
   catalog: readonly CatalogPoint[],
-  points: readonly { code: string; north: number; east: number }[],
+  points: readonly NamedPoint[],
   others: readonly CatalogUser[],
 ): CatalogMove[] {
   return points.flatMap((point) => {
-    const resolution = resolveCatalogPoint(catalog, point);
-    if (resolution.kind !== "move") return [];
-    const existing = catalog.find((p) => p.id === resolution.id)!;
-    const code = existing.code.trim();
+    const code = point.code.trim();
+    const existing = catalog.find((p) => p.code.trim() === code);
+    if (!existing || resolveCatalogPoint([existing], point).kind !== "move") return [];
     const usedBy = others
       .filter(
         (o) => o.referencePointId === existing.id || o.startCode?.trim() === code || o.endCode?.trim() === code,

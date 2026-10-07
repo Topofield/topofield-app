@@ -1,7 +1,7 @@
 // Fase 35, decisión 9: los puntos del amarre van al catálogo del proyecto. Desde
 // las correcciones de la Fase 35, el popup también corrige sus coordenadas.
 import { describe, expect, it } from "vitest";
-import { catalogMoves, resolveCatalogPoint } from "./polygonal-amarre";
+import { catalogMoves, catalogPointOf, repeatedPointName, resolveCatalogPoint } from "./polygonal-amarre";
 
 const catalog = [
   { id: "a", code: "TT4", north: 100142.809, east: 101436.5 },
@@ -81,5 +81,46 @@ describe("catalogMoves", () => {
         others,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("repeatedPointName", () => {
+  it("el mismo nombre con otras coordenadas se repite", () => {
+    expect(
+      repeatedPointName([
+        { code: "E1", north: 1000, east: 1000 },
+        { code: "R1", north: 1100, east: 1000 },
+        { code: "E1", north: 1000.5, east: 1000 },
+      ]),
+    ).toBe("E1");
+  });
+
+  it("dentro del medio milímetro es el mismo punto, como en el catálogo", () => {
+    expect(
+      repeatedPointName([
+        { code: "TT4", north: 100142.809, east: 101436.5 },
+        { code: "TT4", north: 100142.8093, east: 101436.5 },
+      ]),
+    ).toBeNull();
+  });
+
+  it("nombres distintos no se repiten", () => {
+    expect(
+      repeatedPointName([
+        { code: "E1", north: 1, east: 1 },
+        { code: "E2", north: 1, east: 1 },
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe("catalogPointOf", () => {
+  it("las coordenadas de la base, que llegan como texto o nulas, pasan a número o null", () => {
+    expect(catalogPointOf({ id: "a", code: "TT4", north: "100142.8090", east: null })).toEqual({
+      id: "a",
+      code: "TT4",
+      north: 100142.809,
+      east: null,
+    });
   });
 });

@@ -9,7 +9,7 @@ import {
   dmsToDecimal,
 } from "@/lib/calculations/angles";
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
-import { resolveCatalogPoint } from "@/lib/polygonal-amarre";
+import { catalogPointOf, resolveCatalogPoint } from "@/lib/polygonal-amarre";
 import {
   validateLeastSquaresWeights,
   hasCaptureErrors,
@@ -605,15 +605,11 @@ export async function ensureCatalogPointAction(
     .eq("project_id", projectId);
   if (readError) return { ok: false, error: logDbError(readError, "No se pudo leer el catálogo.") };
 
-  const resolution = resolveCatalogPoint(
-    (catalog ?? []).map((p) => ({
-      id: p.id,
-      code: p.code,
-      north: p.north == null ? null : Number(p.north),
-      east: p.east == null ? null : Number(p.east),
-    })),
-    { code, north: point.north, east: point.east },
-  );
+  const resolution = resolveCatalogPoint((catalog ?? []).map(catalogPointOf), {
+    code,
+    north: point.north,
+    east: point.east,
+  });
   switch (resolution.kind) {
     case "reuse":
       return { ok: true, id: resolution.id };
