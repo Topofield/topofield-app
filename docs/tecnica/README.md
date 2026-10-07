@@ -3402,8 +3402,8 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-07):** la nube tiene aplicadas las **treinta y siete**
-migraciones, hasta `20261007000000_nivelacion_sin_cierre` (Fase 36, paso 2).
+**Estado actual (2026-10-07):** la nube tiene aplicadas las **treinta y ocho**
+migraciones, hasta `20261007010000_amarre_atomico` (correcciones de la Fase 35).
 Todas se empujaron antes del merge a `main`, salvo las tres que borran
 columnas, que fueron después: la de la Fase 29 y el paso 2 de las Fases 35 y
 36 (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
@@ -3437,6 +3437,12 @@ tres calculadas y una en curso. El paso 2 se aplicó después del merge del PR
 con valor por defecto. Se borra la firma de tres argumentos y se crea la de
 cuatro, con sus permisos: el código anterior llama con tres y sigue
 funcionando, así que la migración va **antes** del merge, en un solo paso.
+El usuario la empujó antes del merge, con `db push` desde el worktree de la
+rama: producción tenía todo hasta `20261007000000` y solo se aplicó esta.
+Verificado después en solo lectura (`migration list` y un `db dump` del
+esquema): queda una sola `save_polygonal_process`, la de cuatro argumentos
+con `p_catalog` por defecto `'[]'`, `SECURITY INVOKER`, y `EXECUTE` solo para
+`authenticated` y `service_role`.
 
 **La Fase 36 repitió el esquema en dos pasos** (2026-10-07). El paso 1
 (`20261006010000_ux_nivelacion`: las columnas del alta, `precision_order`
