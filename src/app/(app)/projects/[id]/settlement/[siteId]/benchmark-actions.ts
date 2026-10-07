@@ -9,6 +9,7 @@ import { samePointCode } from "@/lib/calculations/leveling";
 import { createClient } from "@/lib/supabase/server";
 import { recomputeSite } from "@/lib/supabase/settlement-sync";
 import { logDbError } from "@/lib/errors/user-message";
+import type { ImportedBenchmark } from "@/lib/import/benchmarks";
 
 export interface BenchmarkActionResult {
   ok: boolean;
@@ -21,13 +22,6 @@ export interface BenchmarkPayload {
   code: string;
   elevation: number;
   description: string | null;
-}
-
-export interface ImportedBenchmark {
-  code: string;
-  elevation: number;
-  description: string | null;
-  source: string | null;
 }
 
 type Client = Awaited<ReturnType<typeof createClient>>;

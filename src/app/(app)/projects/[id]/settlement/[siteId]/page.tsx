@@ -104,7 +104,15 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         />
       )}
       {activeTab === "puntos" && <PlaceTab site={site} points={sitePoints} hasVisits={visits.length > 0} />}
-      {activeTab === "bms" && <BenchmarksTab benchmarks={benchmarks} />}
+      {activeTab === "bms" && (
+        <BenchmarksTab
+          supabase={supabase}
+          projectId={project.id}
+          siteId={site.id}
+          benchmarks={benchmarks}
+          booksByVisit={await getSiteBooks(supabase, site.id)}
+        />
+      )}
       {activeTab === "informe" && (
         <ProcessReport
           project={project}

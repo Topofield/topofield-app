@@ -1,43 +1,61 @@
-import { Card } from "@/components/design-system";
-import { formatElevation } from "@/lib/utils/format";
-import type { getSiteBenchmarks } from "@/lib/supabase/queries";
+import { levelingDraftOf, levelingRecordOf } from "@/components/leveling/leveling-save";
+import { BenchmarksPanel, type LevelingOption } from "@/components/settlement/benchmarks-panel";
+import { adoptedElevationsOf, samePointCode } from "@/lib/calculations/leveling";
+import type { createClient } from "@/lib/supabase/server";
+import {
+  getLevelingProcesses,
+  getLevelingReadings,
+  type getSiteBenchmarks,
+  type getSiteBooks,
+} from "@/lib/supabase/queries";
+import { formatDateOnly } from "@/lib/utils/format";
+import { PRECISION_ORDER_LABELS } from "@/types/project";
 
 /**
- * Pestaña BMs del lugar (Fase 37, decisión 12): los BM desde donde se arman
- * las visitas. Son del lugar y no se sincronizan con nada.
+ * Pestaña BMs del lugar (Fase 37, decisiones 12 y 13). Prepara en el servidor
+ * lo que la tabla necesita: en cuántas visitas arranca un tramo en cada BM, y
+ * las nivelaciones calculadas del proyecto con sus cotas ajustadas, para
+ * importarlas.
  */
-export function BenchmarksTab({ benchmarks }: { benchmarks: Awaited<ReturnType<typeof getSiteBenchmarks>> }) {
-  return (
-    <Card
-      title="BM del lugar"
-      description="Los puntos de cota conocida desde donde se arman las visitas. Son de este lugar: no se sincronizan con nada."
-    >
-      {benchmarks.length === 0 ? (
-        <p className="text-sm text-ink-2">Este lugar todavía no tiene BM.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-2">
-                <th className="py-2 pr-3 font-medium">Código</th>
-                <th className="py-2 pr-3 text-right font-medium">Cota (m)</th>
-                <th className="py-2 pr-3 font-medium">Descripción</th>
-                <th className="py-2 pr-3 font-medium">Origen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {benchmarks.map((b) => (
-                <tr key={b.id} className="border-b border-rule last:border-0">
-                  <td className="py-2 pr-3 font-medium">{b.code}</td>
-                  <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatElevation(b.elevation)}</td>
-                  <td className="py-2 pr-3 text-ink-2">{b.description ?? "—"}</td>
-                  <td className="py-2 pr-3 text-ink-2">{b.source ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Card>
+export async function BenchmarksTab({
+  supabase,
+  projectId,
+  siteId,
+  benchmarks,
+  booksByVisit,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  projectId: string;
+  siteId: string;
+  benchmarks: Awaited<ReturnType<typeof getSiteBenchmarks>>;
+  booksByVisit: Awaited<ReturnType<typeof getSiteBooks>>;
+}) {
+  const starts = Object.values(booksByVisit).map((rows) =>
+    rows.filter((r) => r.reading_order === 1 || r.starts_section).map((r) => r.point_code),
   );
+  const rows = benchmarks.map((b) => ({
+    id: b.id,
+    code: b.code,
+    elevation: b.elevation,
+    description: b.description,
+    source: b.source,
+    amarres: starts.filter((codes) => codes.some((c) => samePointCode(c, b.code))).length,
+  }));
+
+  const processes = (await getLevelingProcesses(supabase, projectId)).filter((p) => p.status === "calculated");
+  const levelings: LevelingOption[] = [];
+  for (const process of processes) {
+    const record = levelingRecordOf(levelingDraftOf(process, await getLevelingReadings(supabase, process.id)));
+    const adjusted = adoptedElevationsOf(record.result, record.input);
+    if (!adjusted || adjusted.length === 0) continue;
+    const order = record.order ? PRECISION_ORDER_LABELS[record.order].toLowerCase() : "sin orden";
+    levelings.push({
+      id: process.id,
+      label: `${process.name} · ${order}`,
+      source: `Nivelación «${process.name}», ${formatDateOnly(process.updated_at.slice(0, 10))}`,
+      points: adjusted.map((a) => ({ pointCode: a.pointCode, elevation: a.elevation })),
+    });
+  }
+
+  return <BenchmarksPanel siteId={siteId} benchmarks={rows} levelings={levelings} />;
 }
