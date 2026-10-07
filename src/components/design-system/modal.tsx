@@ -45,17 +45,18 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative w-full rounded-lg border border-rule bg-card shadow-lg",
-          // Solo el grande limita su alto y desplaza el cuerpo: los diálogos
-          // de formulario quedan como estaban, sin recortar nada.
-          size === "lg" ? "flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col" : "max-w-md",
+          // Todos limitan su alto: un formulario que crece —el equipo de la
+          // poligonal al desplegarse— se salía por arriba y por abajo de la
+          // pantalla, sin desplazar, y el pie con sus botones quedaba fuera.
+          "relative flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-lg border border-rule bg-card shadow-lg",
+          size === "lg" ? "max-w-2xl" : "max-w-md",
         )}
       >
         <header className="border-b border-rule px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
         </header>
-        {/* En el grande, el cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
-        <div className={cn("px-6 py-4", size === "lg" && "overflow-y-auto")}>{children}</div>
+        {/* El cuerpo desplaza si no cabe: cabecera y pie quedan a la vista. */}
+        <div className="overflow-y-auto px-6 py-4">{children}</div>
         {footer && (
           <footer className="flex justify-end gap-2 border-t border-rule px-6 py-4">
             {footer}
