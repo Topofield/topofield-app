@@ -19,7 +19,7 @@ import {
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
-import { formatDateOnly } from "@/lib/utils/format";
+import { formatDateOnly, todayInBogota } from "@/lib/utils/format";
 import { BenchmarksTab } from "./benchmarks-tab";
 import { PanelTab } from "./panel-tab";
 import { PlaceTab } from "./place-tab";
@@ -63,7 +63,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
     getReports(supabase, project.id),
   ]);
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = todayInBogota();
   const activos = sitePoints.map(pointInputOf).filter((p) => isPointActiveOn(p, hoy)).length;
   const base = visits[0]?.date;
   const basePath = `/projects/${project.id}/settlement/${site.id}`;
