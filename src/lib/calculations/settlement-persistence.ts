@@ -18,6 +18,10 @@ import type {
   VisitResult,
 } from "@/types/settlement";
 
+/** Un número calculado tal como va a la base: NaN o infinito, como null. */
+const finite = (v: number | null | undefined): number | null =>
+  v != null && Number.isFinite(v) ? v : null;
+
 /** Forma mínima de una lectura ya persistida, para comparar con la recalculada. */
 export interface PersistedReading {
   point_id: string;
@@ -79,8 +83,6 @@ function velocityChanged(computed: number | null, persisted: number | null): boo
 export interface VisitsToRewriteInput {
   /** El histórico ya recalculado, tal como lo devuelve `computeHistory`. */
   recalculated: VisitResult[];
-  /** Estado de cada visita por id (`draft` | `calculated` | `closed`). */
-  statusByVisit: Map<string, string>;
   /** Lecturas persistidas, indexadas por visita y luego por punto. */
   persistedByVisit: Map<string, Map<string, PersistedReading>>;
   /**
@@ -97,21 +99,14 @@ export interface VisitRewrite {
 }
 
 /**
- * Visitas ABIERTAS cuyas lecturas quedaron obsoletas, con solo las filas que
- * cambiaron.
- *
- * Las visitas CERRADAS nunca se devuelven: conservan la clasificación con la
- * que se cerraron, que es lo correcto para la trazabilidad —una visita cerrada
- * documenta el criterio vigente en su momento— y no un descuido. El trigger de
- * base lo impediría igualmente, pero la regla se decide aquí en vez de
- * delegarla a un error de la base.
+ * Visitas cuyas lecturas quedaron obsoletas, con solo las filas que cambiaron.
+ * Desde la Fase 37 ninguna se cierra, así que todas se reescriben (decisión 18).
  *
  * Devolver solo las lecturas cambiadas, y no la visita entera, evita reescribir
  * filas idénticas en cada guardado.
  */
 export function visitsToRewrite({
   recalculated,
-  statusByVisit,
   persistedByVisit,
   skipVisitId,
 }: VisitsToRewriteInput): VisitRewrite[] {
@@ -119,7 +114,6 @@ export function visitsToRewrite({
 
   for (const visit of recalculated) {
     if (visit.visitId === skipVisitId) continue;
-    if (statusByVisit.get(visit.visitId) === "closed") continue;
     if (visit.readings.length === 0) continue;
 
     const persistedByPoint = persistedByVisit.get(visit.visitId);
@@ -145,8 +139,9 @@ export function visitsToRewrite({
  *   la tecleada sola dejaría vacía la celda de una libreta por taquimetría.
  * - `point_id` enlaza la fila con su punto de control por código. Lo usa el
  *   renombrado de puntos (decisión 20); la derivación de cotas no lo necesita.
- * - `catalog_elevation` es la cota de catálogo de un BM de control, por fila
- *   (`catalogElevationsOf`, Fase 30): la copia que conserva una visita cerrada.
+ * - `catalog_elevation` es la cota del BM leído en la fila, por fila (Fase
+ *   30; desde la Fase 37, la del BM del lugar al guardar).
+ * - `starts_section` marca el inicio de cada tramo; la primera fila siempre.
  */
 export function bookRowsToPersist(
   visitId: string,
@@ -170,14 +165,17 @@ export function bookRowsToPersist(
       back_lower_m: row.backLowerM,
       fore_upper_m: row.foreUpperM,
       fore_lower_m: row.foreLowerM,
-      back_distance_m: r?.backDistanceResolvedM ?? null,
-      fore_distance_m: r?.foreDistanceResolvedM ?? null,
-      distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
-      instrument_height: r?.instrumentHeight ?? null,
-      elevation_calculated: r?.elevationCalculated ?? null,
-      elevation_corrected: r?.elevationCorrected ?? null,
-      correction_applied: r?.correctionApplied ?? null,
+      back_distance_m: finite(r?.backDistanceResolvedM),
+      fore_distance_m: finite(r?.foreDistanceResolvedM),
+      distance_accumulated_km: finite(r?.distanceAccumulatedKm),
+      instrument_height: finite(r?.instrumentHeight),
+      // Una fila por leer o tras una cadena incompleta tiene la cota en NaN
+      // (Fase 37): a la base va como null.
+      elevation_calculated: finite(r?.elevationCalculated),
+      elevation_corrected: finite(r?.elevationCorrected),
+      correction_applied: finite(r?.correctionApplied),
       catalog_elevation: catalogElevations[i] ?? null,
+      starts_section: i === 0 || Boolean(row.startsSection),
     };
   });
 }

@@ -1,16 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
+import { bookRowOf } from "@/lib/calculations/settlement-book";
 import {
   visitsToRewrite,
   type PersistedReading,
 } from "@/lib/calculations/settlement-persistence";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
-import type { PointInput, VisitInput } from "@/types/settlement";
+import { recalculateSite } from "@/lib/calculations/visit-record";
+import type { BookRowPayload, PointInput, VisitInput } from "@/types/settlement";
 import { logDbError } from "@/lib/errors/user-message";
 
 /**
  * Recalcula el histórico de un lugar y reescribe las lecturas de sus visitas
- * ABIERTAS que quedaron obsoletas.
+ * que quedaron obsoletas.
  *
  * Existe porque el `alert_status`, el parcial, el acumulado y la velocidad se
  * **persisten** en `settlement_readings`, y por tanto son una caché derivada
@@ -24,9 +26,7 @@ import { logDbError } from "@/lib/errors/user-message";
  *   · editar los umbrales del lugar  → `saveSiteAction`
  *   · editar la C0                   → `savePointAction`
  *
- * Las visitas CERRADAS no se tocan: conservan la clasificación con la que se
- * cerraron, que es lo correcto para la trazabilidad. `visitsToRewrite` decide
- * eso, aquí solo se escribe.
+ * Desde la Fase 37 ninguna visita se cierra: todas se reescriben si cambian.
  *
  * `dryRun` no escribe: solo cuenta cuántas lecturas se reescribirían. Lo usa
  * `scripts/resincronizar-asentamientos.mjs` para simular antes de aplicar el
@@ -59,8 +59,6 @@ export async function resyncSiteReadings(
     .select("*, settlement_visits!inner(site_id)")
     .eq("settlement_visits.site_id", siteId);
 
-  const statusByVisit = new Map<string, string>();
-  for (const v of visits ?? []) statusByVisit.set(v.id, v.status);
 
   const persistedByVisit = new Map<string, Map<string, PersistedReading>>();
   const readingsByVisit = new Map<
@@ -94,7 +92,6 @@ export async function resyncSiteReadings(
 
   const rewrites = visitsToRewrite({
     recalculated: history.visits,
-    statusByVisit,
     persistedByVisit,
   });
 
@@ -118,4 +115,97 @@ export async function resyncSiteReadings(
   }
 
   return { ok: true, rewritten };
+}
+
+/**
+ * Recalcula TODAS las visitas de un lugar desde su libreta, con los BM del
+ * lugar y sin compensar (Fase 37), y las guarda. Lo usan el cambio de la cota
+ * de un BM (decisión 13) y el script de resincronización del despliegue, que
+ * pasa a la regla nueva las visitas que se guardaron compensadas.
+ *
+ * Una visita por llamada a `save_visit`: cada una es atómica; si una falla, el
+ * error dice cuál y las anteriores quedan recalculadas, que es correcto.
+ *
+ * `dryRun` no escribe: cuenta las visitas y las lecturas cuya cota cambia.
+ */
+export async function recomputeSite(
+  supabase: SupabaseClient,
+  siteId: string,
+  { dryRun = false }: { dryRun?: boolean } = {},
+): Promise<{ ok: true; visits: number; changedReadings: number } | { ok: false; error: string }> {
+  const { data: site } = await supabase.from("sites").select("*").eq("id", siteId).maybeSingle();
+  if (!site) return { ok: false, error: "Lugar no encontrado." };
+
+  const [{ data: points }, { data: benchmarks }, { data: visits }] = await Promise.all([
+    supabase.from("settlement_points").select("*").eq("site_id", siteId),
+    supabase.from("site_benchmarks").select("code, elevation").eq("site_id", siteId),
+    supabase.from("settlement_visits").select("id, visit_number, date").eq("site_id", siteId).order("date"),
+  ]);
+  const visitIds = (visits ?? []).map((v) => v.id);
+  const [{ data: bookRows }, { data: stored }] = await Promise.all([
+    supabase.from("settlement_book_readings").select("*").in("visit_id", visitIds).order("reading_order"),
+    supabase.from("settlement_readings").select("visit_id, point_id, elevation").in("visit_id", visitIds),
+  ]);
+
+  const storedByVisit = new Map<string, { pointId: string; elevation: number }[]>();
+  for (const r of stored ?? []) {
+    const list = storedByVisit.get(r.visit_id) ?? [];
+    list.push({ pointId: r.point_id, elevation: Number(r.elevation) });
+    storedByVisit.set(r.visit_id, list);
+  }
+  const rowsByVisit = new Map<string, BookRowPayload[]>();
+  for (const row of bookRows ?? []) {
+    const list = rowsByVisit.get(row.visit_id) ?? [];
+    list.push(bookRowOf(row));
+    rowsByVisit.set(row.visit_id, list);
+  }
+  const results = recalculateSite({
+    points: (points ?? []).map(pointInputOf),
+    benchmarks: (benchmarks ?? []).map((b) => ({ code: b.code, elevation: Number(b.elevation) })),
+    thresholds: thresholdsOf(site),
+    visits: (visits ?? []).map((v) => ({
+      id: v.id,
+      visitNumber: v.visit_number,
+      date: v.date,
+      rows: rowsByVisit.get(v.id) ?? [],
+      elevations: storedByVisit.get(v.id) ?? [],
+    })),
+  });
+
+  const storedElevation = new Map(
+    (stored ?? []).map((r) => [`${r.visit_id}:${r.point_id}`, Number(r.elevation)]),
+  );
+  const changedReadings = results.reduce(
+    (n, { visitId, readings }) =>
+      n +
+      readings.filter((r) => {
+        const before = storedElevation.get(`${visitId}:${r.pointId}`);
+        return before == null || Math.abs(before - r.elevation) > 0.00005;
+      }).length,
+    0,
+  );
+  if (dryRun) return { ok: true, visits: results.length, changedReadings };
+
+  for (const { visitId, record, readings } of results) {
+    // Solo las visitas con libreta: sin filas no hay nada que recalcular.
+    if (!rowsByVisit.has(visitId)) continue;
+    const { error } = await supabase.rpc("save_visit", {
+      p_visit_id: visitId,
+      p_header: record.header,
+      p_book: record.rows,
+      p_readings: readings.map((r) => ({
+        point_id: r.pointId,
+        elevation: r.elevation,
+        partial_settlement: r.partialSettlement,
+        accumulated_settlement: r.accumulatedSettlement,
+        velocity: r.velocity,
+        alert_status: r.alertStatus,
+      })),
+      p_rewrites: [],
+    });
+    if (error) {
+      return { ok: false, error: logDbError(error, "No se pudo recalcular una visita del lugar.") };
+    }
+  }
+  return { ok: true, visits: results.length, changedReadings };
 }

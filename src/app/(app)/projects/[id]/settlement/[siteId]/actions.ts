@@ -438,15 +438,11 @@ export async function saveVisitAction(
   // ya mostraba el nuevo. Divergencia sin error — el hallazgo CRÍTICO 2 de la
   // ronda de correcciones.
   //
-  // Solo se reescriben las visitas ABIERTAS (draft/calculated) cuyo valor
-  // calculado difiere del persistido: las CERRADAS son inmutables por diseño
-  // (el trigger `settlement_readings_reject_write_when_closed` las protege de
-  // todos modos) y conservan el criterio con el que se cerraron — eso es lo
-  // correcto para la trazabilidad, no un descuido. Comparar antes de escribir
-  // evita reescribir visitas cuyos valores no cambiaron.
+  // Se reescriben las visitas cuyo valor calculado difiere del persistido;
+  // desde la Fase 37 ninguna se cierra. Comparar antes de escribir evita
+  // reescribir visitas cuyos valores no cambiaron.
   const rewrites = visitsToRewrite({
     recalculated: history.visits,
-    statusByVisit: context.statusByVisit,
     persistedByVisit: context.persistedReadingsByVisit,
     skipVisitId: payload.visitId,
   });
