@@ -161,10 +161,39 @@ export interface TotalStationIdentityFields {
   serial: string;
 }
 
+/** Marca, modelo y n.º de serie, para escribir. */
+function IdentityInputs({
+  value,
+  onChange,
+}: {
+  value: TotalStationIdentityFields;
+  onChange: (value: TotalStationIdentityFields) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <Input
+        label="Marca"
+        value={value.brand}
+        onChange={(e) => onChange({ ...value, brand: e.target.value })}
+      />
+      <Input
+        label="Modelo"
+        value={value.model}
+        onChange={(e) => onChange({ ...value, model: e.target.value })}
+      />
+      <Input
+        label="N.º de serie"
+        value={value.serial}
+        onChange={(e) => onChange({ ...value, serial: e.target.value })}
+      />
+    </div>
+  );
+}
+
 /**
- * Solo la identidad del equipo, con «Tomar del catálogo» del tipo (Fases 35 y
- * 36, decisión 2 y 3): es lo que piden el alta de la poligonal y la de la
- * nivelación. Las precisiones y la calibración no entran en ningún cálculo.
+ * Solo la identidad del equipo, con «Tomar del catálogo» del tipo (Fase 36,
+ * decisión 3): es lo que pide el alta de la nivelación. Las precisiones y la
+ * calibración no entran en ningún cálculo.
  */
 export function EquipmentIdentity({
   kind,
@@ -184,33 +213,21 @@ export function EquipmentIdentity({
           onChange({ brand: item.brand ?? "", model: item.model ?? "", serial: item.serial ?? "" })
         }
       />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Input
-          label="Marca"
-          value={value.brand}
-          onChange={(e) => onChange({ ...value, brand: e.target.value })}
-        />
-        <Input
-          label="Modelo"
-          value={value.model}
-          onChange={(e) => onChange({ ...value, model: e.target.value })}
-        />
-        <Input
-          label="N.º de serie"
-          value={value.serial}
-          onChange={(e) => onChange({ ...value, serial: e.target.value })}
-        />
-      </div>
+      <IdentityInputs value={value} onChange={onChange} />
     </div>
   );
 }
 
-/** La identidad de la estación total: el alta de la poligonal (Fase 35). */
+/**
+ * La identidad de la estación total en el alta de la poligonal (Fase 35), sin
+ * el catálogo desde sus correcciones: el selector, con solo el equipo de la
+ * demo, parecía la única forma de darlo. Se escribe.
+ */
 export function TotalStationIdentity(props: {
   value: TotalStationIdentityFields;
   onChange: (value: TotalStationIdentityFields) => void;
 }) {
-  return <EquipmentIdentity kind="total_station" {...props} />;
+  return <IdentityInputs {...props} />;
 }
 
 /** Equipo de nivel con el catálogo (Fase 25). Ver `TotalStationEquipment`. */
