@@ -1067,7 +1067,9 @@ La visita no usa los puntos de referencia del proyecto (§ 4.2).
 La tabla da el **código**, la **cota**, la **descripción**, el **origen** —de
 dónde vino— y en cuántas **visitas** arranca un tramo —«Amarre en 12»—.
 
-- **+ BM** agrega uno: código, cota y una descripción opcional.
+- **+ BM** agrega uno: código, cota y una descripción opcional. El código no
+  puede repetir el de otro BM del lugar, aunque cambien las mayúsculas o los
+  espacios: «bm-1» es el mismo BM que «BM-1».
 - **Editar** cambia sus datos. Si el BM lo usan algunas visitas, cambiar su
   **cota** o su **código** avisa en cuántas —«BM-1 se usa en 14 visitas: al
   guardar se recalculan sus cotas»— y **Guardar y recalcular** las recalcula.
@@ -1169,6 +1171,13 @@ armada y el punto que faltan. **Retomar medición** abre esa armada con el
 cursor en la primera lectura que falta. Nada se pierde: lo leído ya está
 guardado.
 
+**Puntos sin lectura.** Debajo de la libreta, un aviso nombra los puntos de
+control vigentes que no tienen fila —«P-05 no tiene lectura en la libreta:
+queda sin cota en esta visita.»—, por ejemplo tras importar un archivo al que
+le falta alguno. Otro avisa la lectura de un punto que no está vigente en la
+fecha de la visita: no se usa. Un punto con su fila por leer no avisa: eso es
+la medición a medias.
+
 Una visita sin armadas muestra **+ Agregar la primera armada**. Si el lugar no
 tiene BM, la libreta pide agregar uno en la pestaña **BMs**: cada armada sale
 de un BM del lugar o de un punto de cambio.
@@ -1216,7 +1225,8 @@ quedan en el popup.
 Los botones:
 
 - **Seguir después** cierra el popup. Lo leído ya está guardado; si falta algo,
-  la visita queda En medición.
+  la visita queda En medición. Con un dato mal escrito no se cierra —tampoco
+  con la X—: muestra el error hasta que lo corrija o lo borre.
 - **Terminar armada** la da por terminada: los puntos que quedaron sin leer
   salen de la libreta.
 - **Terminar y seguir con la armada 3** —si la libreta ya la trae—,
@@ -1255,7 +1265,8 @@ como en nivelación (§ 6.9), con tres diferencias:
   lecturas.
 
 Revise el tipo de cada punto antes de aceptar: los puntos de control suelen
-ser vistas intermedias. **Usar estas lecturas** guarda la libreta.
+ser vistas intermedias. **Usar estas lecturas** guarda la libreta. Si al
+archivo le falta algún punto del lugar, la libreta lo avisa (§ 7.6).
 
 ### 7.9 El cálculo
 

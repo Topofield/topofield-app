@@ -1880,7 +1880,9 @@ export default function ManualPage() {
         <ul className="ml-5 list-disc space-y-1">
           <li>
             <strong>+ BM</strong> agrega uno: código, cota y una descripción
-            opcional.
+            opcional. El código no puede repetir el de otro BM del lugar,
+            aunque cambien las mayúsculas o los espacios: «bm-1» es el mismo BM
+            que «BM-1».
           </li>
           <li>
             <strong>Editar</strong> cambia sus datos. Si el BM lo usan algunas
@@ -2076,6 +2078,16 @@ export default function ManualPage() {
         </p>
 
         <p>
+          <strong>Puntos sin lectura.</strong> Debajo de la libreta, un aviso
+          nombra los puntos de control vigentes que no tienen fila —«P-05 no
+          tiene lectura en la libreta: queda sin cota en esta visita.»—, por
+          ejemplo tras importar un archivo al que le falta alguno. Otro avisa
+          la lectura de un punto que no está vigente en la fecha de la visita:
+          no se usa. Un punto con su fila por leer no avisa: eso es la medición
+          a medias.
+        </p>
+
+        <p>
           Una visita sin armadas muestra{" "}
           <strong>+ Agregar la primera armada</strong>. Si el lugar no tiene
           BM, la libreta pide agregar uno en la pestaña <strong>BMs</strong>:
@@ -2164,7 +2176,9 @@ export default function ManualPage() {
         <ul className="ml-5 list-disc space-y-1">
           <li>
             <strong>Seguir después</strong> cierra el popup. Lo leído ya está
-            guardado; si falta algo, la visita queda En medición.
+            guardado; si falta algo, la visita queda En medición. Con un dato
+            mal escrito no se cierra —tampoco con la X—: muestra el error hasta
+            que lo corrija o lo borre.
           </li>
           <li>
             <strong>Terminar armada</strong> la da por terminada: los puntos
@@ -2240,7 +2254,8 @@ export default function ManualPage() {
         <p>
           Revise el tipo de cada punto antes de aceptar: los puntos de control
           suelen ser vistas intermedias. <strong>Usar estas lecturas</strong>{" "}
-          guarda la libreta.
+          guarda la libreta. Si al archivo le falta algún punto del lugar, la
+          libreta lo avisa (§ 7.6).
         </p>
 
         <h3 id="calculo-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">

@@ -78,6 +78,12 @@ que entra al repositorio con esta fase.
 >   - un punto de cambio seguido de un tramo desde un BM dejaba la visita «En
 >     medición» para siempre, con una armada fantasma;
 >   - una visita de cotas tecleadas perdía sus cotas con «Editar datos».
+> - **Y, a petición del usuario, cuatro de sus menores**, antes del despliegue
+>   y sin tocar la base: la libreta avisa los puntos vigentes sin lectura y la
+>   lectura de un punto de baja; «Seguir después» con un dato mal escrito deja
+>   el popup abierto con su error; un BM no repite el código de otro del lugar
+>   salvo mayúsculas o espacios; el «hoy» del lugar es el de Bogotá. Los demás
+>   siguen en la deuda técnica (§ 11 de la doc técnica).
 
 ## Propósito
 

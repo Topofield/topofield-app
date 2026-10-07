@@ -5,7 +5,7 @@ está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
 **Última actualización:** 2026-10-07 · Fase 37 cerrada en su rama, con el
-despliegue en tres pasos preparado y sin aplicar (§ 13) · 1168 tests y 141
+despliegue en tres pasos preparado y sin aplicar (§ 13) · 1174 tests y 141
 pruebas de base (pgTAP) · **desplegado en producción** hasta la Fase 36 y las
 correcciones de la 35 ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -2507,7 +2507,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1168 tests en 93 archivos, Vitest, entorno `node` **sin jsdom**. Además, 141
+1174 tests en 93 archivos, Vitest, entorno `node` **sin jsdom**. Además, 141
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2517,7 +2517,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
 | `lib/validators/polygonal.test.ts` | 63 | Captura de poligonal, `expectStationCapture`, código de punto obligatorio; pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la captura parcial de una cerrada y `stationCaptureIssues`, que valida el promedio de las lecturas, y la cabecera de un guardado hecho a mano (Fase 35) |
-| `lib/validators/settlement.test.ts` | 30 | Captura de asentamientos; vigencia, regla de la línea base abierta, baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); la fecha entre sus vecinas (Fase 26); el alta en cualquier fecha de calendario (Fase 37, que retiró el cierre, deshacer la baja con visitas cerradas y la alarma que no bloqueaba el cierre) |
+| `lib/validators/settlement.test.ts` | 33 | Captura de asentamientos; vigencia, regla de la línea base abierta, baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); la fecha entre sus vecinas (Fase 26); el alta en cualquier fecha de calendario (Fase 37, que retiró el cierre, deshacer la baja con visitas cerradas y la alarma que no bloqueaba el cierre); un BM que repite el código de otro del lugar salvo mayúsculas o espacios, y el que se edita no choca consigo mismo (revisión final de la Fase 37) |
 | `lib/validators/leveling.test.ts` | 39 | Captura de nivelación: hilos y su hilo medio, distancias por visual —obligatorias en BM y puntos de cambio, en cero o negativas un error (Fase 26)—, rango de las lecturas; la V+ del BM inicial y la última fila de un recorrido que cierra, salvo con `allowUnfinished`, la libreta a medias de la nivelación (Fase 36); sin avisos de equilibrado, tampoco con la ida de El Verjón (Fase 36); el punto de cambio incompleto: aviso en la celda, y `turningPointBlocker` con su fila, también en la vuelta (Fase 24) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
 | `lib/calculations/polygonal-detect.test.ts` | 11 | **El orden y el tipo de ángulo detectados** (Fase 35): las fronteras de cada orden, sin verificación y sin alcanzar el ordinario; interior y exterior, con y sin fila de cierre; la TT4 en tercer orden; `observedAzimuths` y `angularConditionCount` |
@@ -2568,7 +2568,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `components/leveling/profile-data.test.ts` | 5 | El perfil de la libreta con las carteras reales (Fase 36): cada armada con su mira atrás, el nivel a la altura del instrumento y la mira adelante, y la intermedia en su armada; la contraparte en el sentido de la ida, escalada a su largo; la vuelta con su propio eje; el tramo 2 sin contraparte; sin armadas, sin perfil |
 | `components/settlement/visit-armadas.test.ts` | 17 | **La armada de la visita** (Fase 37): dos armadas por un punto de cambio, un tramo nuevo, la plantilla sin lecturas; leer y escribir una armada sin tocar las otras; agregar desde un BM del lugar o desde el punto de cambio; «Terminar armada» quita los puntos sin leer; el punto repetido solo se quita si es una vista; quitar la última armada; la libreta importada como un tramo; un punto de cambio seguido de un tramo desde un BM no abre otra armada, y su V− se quita (revisión final) |
 | `components/settlement/visit-armada-form.test.ts` | 13 | El popup de la armada (Fase 37): lo que falta por leer en `null`, la coma decimal, los hilos, los errores con su vista, la V− a un BM del lugar o a un punto de cambio, sin vista adelante; del guardado al formulario y una armada nueva; componer la armada y contar los puntos leídos |
-| `components/settlement/visit-libreta-rows.test.ts` | 22 | El paso 1 · Libreta (Fase 37): los rótulos de la tabla, la cota de la medida y la AI, la VI de los puntos, el lápiz de cada fila, el punto «pendiente» y el tramo de enlace; las armadas a medias y sin V−; los tramos con su cierre y su orden, abiertos, sin distancias o a medias; qué retomar; el movimiento desde la visita anterior y sus avisos |
+| `components/settlement/visit-libreta-rows.test.ts` | 25 | El paso 1 · Libreta (Fase 37): los rótulos de la tabla, la cota de la medida y la AI, la VI de los puntos, el lápiz de cada fila, el punto «pendiente» y el tramo de enlace; las armadas a medias y sin V−; los tramos con su cierre y su orden, abiertos, sin distancias o a medias; qué retomar; el movimiento desde la visita anterior y sus avisos; los puntos vigentes sin lectura, juntos, y la lectura de un punto de baja, sin contar la fila por leer (revisión final) |
 | `components/settlement/visit-results.test.ts` | 4 | El paso 2 · Resultados (Fase 37): la franja, una fila por punto con su tendencia, la visita base y una visita sin lecturas |
 | `components/settlement/visit-dialog-form.test.ts` | 5 | El popup de la visita (Fase 37): la fecha de calendario, los textos vacíos en `null` y el aviso de la plantilla, con anterior, sin ella y sin BM |
 | `components/settlement/site-dialog-form.test.ts` | 5 | El popup del lugar (Fase 37): el nombre, los umbrales crecientes y positivos, la descripción vacía y el resumen de los umbrales plegados |
@@ -2730,30 +2730,32 @@ vale **antes** del despliegue: desde él, las visitas nuevas toman el
 `SiteVisitInput.elevations` deja de hacer falta cuando no quede ninguna visita
 sin libreta.
 
-**Lo que dejó la revisión final de la Fase 37, sin corregir.**
+**Lo que dejó la revisión final de la Fase 37.** Cuatro hallazgos menores se
+corrigieron antes del despliegue, cada uno con su commit: la libreta avisa los
+puntos vigentes sin lectura y la lectura de un punto de baja
+(`pointIssueAlerts`, con los `missing` e `inactive` de `bookElevations`);
+«Seguir después» con un dato mal escrito deja el popup abierto con su error
+(verificado en pantalla); un BM no repite el código de otro del lugar salvo
+mayúsculas o espacios (`benchmarkCodeClash`, en la acción: el único de la base
+sigue exacto), y el «hoy» del lugar es el de Bogotá (`todayInBogota`). Quedan
+sin corregir:
 
-- La libreta ya no avisa de un punto vigente que no está en la visita ni de
-  la lectura de un punto de baja: `bookElevations` los calcula como `missing`
-  e `inactive`, pero solo `duplicate` llega a la pantalla.
-- «Seguir después» con un número mal escrito cierra el popup de la armada y
-  lo tecleado se pierde sin aviso: el error de lectura no pasa por `lastOk`.
-- Dos BM cuyo código solo difiere en mayúsculas o espacios («BM-1» y «bm1»)
-  caben a la vez: el único es exacto y el motor compara con `samePointCode`.
 - Renombrar un BM escribe en tres pasos (el BM, las filas de libreta,
   `recomputeSite`), no en una función de Postgres; si el recálculo falla a
-  medias, guardar la misma cota no lo reintenta.
+  medias, guardar la misma cota no lo reintenta. No se pierde nada: renombrarlo
+  otra vez lo arregla.
 - El informe del lugar calcula su serie solo con las visitas calculadas; el
   panel y las lecturas guardadas, también con las que están en medición. Una
   visita a medias en mitad de la serie cambia distinto el parcial de la
-  siguiente en los dos sitios.
+  siguiente en los dos sitios. Es a propósito: el informe no muestra una
+  visita a medias.
 - El Excel no da la verificación de cada tramo, solo la del tramo peor, y
   sigue imprimiendo `site.notes`, que el alta ya no pide.
 - `meets_tolerance` queda en `false` en un tramo cerrado sin distancias (sin
-  orden); debería quedar nulo.
-- La nota del popup de nueva visita toma «hoy» en UTC: después de las 19:00
-  en Bogotá arma la plantilla con la fecha de mañana.
-- Los puntos de la cartera llevan ubicación vacía; editar uno exige
-  escribirla.
+  orden); debería quedar nulo. Ninguna pantalla ni el Excel lo leen en la
+  visita: la libreta dice «Sin distancias: el cierre no da orden».
+- Los puntos de la cartera llevan ubicación vacía —la hoja no la trae—;
+  editar uno exige escribirla.
 
 **El semáforo por velocidad alarma por ruido (visto en la Fase 37).** Con los
 umbrales de edificio y visitas cada siete días, un milímetro son 4.35 mm/mes
