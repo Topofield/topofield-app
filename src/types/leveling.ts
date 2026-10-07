@@ -111,6 +111,13 @@ export interface LevelingInput {
    * anterior del acumulado (ver `accumulateDistances`, Fase 19).
    */
   distancesReconstructed?: boolean;
+  /**
+   * Cuándo se compensa (Fase 36). «always»: siempre que haya contra qué
+   * cerrar, cumpla o no; es la regla de la nivelación, que avisa si no
+   * alcanza ningún orden. «within_tolerance» (por omisión): solo si cumple el
+   * orden declarado, como pide el marco teórico § 8.1; es la de la visita.
+   */
+  compensation?: "always" | "within_tolerance";
 }
 
 export interface ComputedReading extends ReadingInput {
@@ -171,6 +178,8 @@ export interface LevelingResult {
    * se reparte al compensar. Null sin vuelta o si no es abierta.
    */
   circuitClosureMm: number | null;
+  /** Las cotas corregidas están compensadas: ida y vuelta, o el circuito de la abierta. */
+  compensated: boolean;
 }
 
 /**

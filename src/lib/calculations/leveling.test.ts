@@ -1039,6 +1039,7 @@ describe("levelingProcessVerdict", () => {
     meetsDiscrepancy: null,
     adoptedHeightDifference: null,
     circuitClosureMm: null,
+    compensated: false,
   };
   it("cerrada y de enlace: el cierre", () => {
     expect(levelingProcessVerdict({ ...base, meetsTolerance: true, meetsDiscrepancy: false }, "closed")).toBe(true);

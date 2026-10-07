@@ -18,6 +18,7 @@ const base: LevelingResult = {
   meetsDiscrepancy: null,
   adoptedHeightDifference: null,
   circuitClosureMm: null,
+  compensated: false,
 };
 
 describe("levelingVerdictFor", () => {

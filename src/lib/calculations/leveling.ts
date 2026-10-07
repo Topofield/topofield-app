@@ -2,6 +2,7 @@
 // Funciones puras de TypeScript: sin React, sin hooks, sin Supabase. Solo math.
 
 import { levelingTolerance } from "./tolerances";
+import { PRECISION_ORDERS, type PrecisionOrder } from "@/types/project";
 import type {
   AdoptedElevation,
   ComputedReading,
@@ -355,6 +356,9 @@ function knownClosingElevation(input: LevelingInput): number | null {
  */
 export function computeLeveling(input: LevelingInput): LevelingResult {
   const reconstructed = input.distancesReconstructed ?? false;
+  const always = input.compensation === "always";
+  let forwardCompensated = false;
+  let returnCompensated = false;
   const forward = computeRun(input.forward, input.startElevation, { reconstructed });
   const known = knownClosingElevation(input);
 
@@ -384,14 +388,16 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       toleranceMm = levelingTolerance(input.order, totalDistanceKm);
       meetsTolerance = withinTolerance(closureErrorMm, toleranceMm);
 
-      // Solo se compensa un trabajo que cumple la tolerancia. Si no cumple,
-      // se repite el levantamiento (marco teórico § 8.1).
-      if (meetsTolerance) {
+      // Solo se compensa un trabajo que cumple la tolerancia (marco teórico
+      // § 8.1), salvo con «always»: la nivelación compensa siempre y avisa
+      // (Fase 36, decisión 5).
+      if (meetsTolerance || always) {
         readings = applyProportionalCorrection(
           forward.readings,
           closureErrorMm,
           totalDistanceKm,
         );
+        forwardCompensated = true;
       }
     }
   }
@@ -478,7 +484,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
       // promedio de ida y vuelta ponderado por sus distancias.
       circuitClosureMm = (forward.heightDifference + back.heightDifference) * 1000;
       const circuitKm = totalDistanceKm + returnDistanceKm;
-      if (meetsDiscrepancy === true && valid(circuitKm)) {
+      if ((meetsDiscrepancy === true || always) && valid(circuitKm)) {
         readings = applyCircuitCorrection(forward.readings, circuitClosureMm, 0, circuitKm);
         backReadings = applyCircuitCorrection(
           back.readings,
@@ -486,15 +492,22 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
           totalDistanceKm,
           circuitKm,
         );
+        forwardCompensated = true;
+        returnCompensated = true;
       }
-    } else if (returnMeets === true && returnErrorMm != null) {
+    } else if (
+      returnErrorMm != null &&
+      (returnMeets === true || (always && returnToleranceMm != null))
+    ) {
       // Cerrada o de enlace: la vuelta cierra en el BM de partida y se
-      // compensa con su propio error, como la ida con el suyo.
+      // compensa con su propio error, como la ida con el suyo. Con «always»
+      // basta una distancia válida, que es lo que garantiza la tolerancia.
       backReadings = applyProportionalCorrection(
         back.readings,
         returnErrorMm,
         returnDistanceKm,
       );
+      returnCompensated = true;
     }
 
     returnResult = {
@@ -536,6 +549,7 @@ export function computeLeveling(input: LevelingInput): LevelingResult {
     meetsDiscrepancy,
     adoptedHeightDifference,
     circuitClosureMm,
+    compensated: forwardCompensated && (returnResult == null || returnCompensated),
   };
 }
 
@@ -566,6 +580,62 @@ export function levelingProcessVerdict(
   const runs = [result.meetsTolerance, result.return ? result.return.meetsTolerance : true];
   if (runs.includes(null)) return null;
   return !runs.includes(false);
+}
+
+/**
+ * El orden más alto que cumple el trabajo (Fase 36): en la cerrada y la de
+ * enlace, |e| ≤ K·√D en la ida y, si la hay, en la vuelta con su distancia; en
+ * la abierta con vuelta, la discrepancia contra K·√D·√2 sobre el recorrido más
+ * corto. `verifiable` es falso si no hay con qué juzgar: una abierta sin vuelta
+ * o una libreta sin distancias.
+ */
+export function detectLevelingOrder(
+  result: LevelingResult,
+  type: LevelingType,
+): { order: PrecisionOrder | null; verifiable: boolean } {
+  const valid = (km: number | null | undefined): km is number =>
+    km != null && Number.isFinite(km) && km > 0;
+  const tests: ((order: PrecisionOrder) => boolean)[] = [];
+  if (type === "open") {
+    const back = result.return;
+    const d = result.discrepancyMm;
+    if (!back || d == null) return { order: null, verifiable: false };
+    if (!valid(result.forward.distanceKm) || !valid(back.distanceKm)) {
+      return { order: null, verifiable: false };
+    }
+    const km = Math.min(result.forward.distanceKm, back.distanceKm);
+    tests.push((o) => withinTolerance(d, levelingTolerance(o, km) * Math.SQRT2));
+  } else {
+    const e = result.closureErrorMm;
+    const km = result.forward.distanceKm;
+    if (e == null || !valid(km)) return { order: null, verifiable: false };
+    tests.push((o) => withinTolerance(e, levelingTolerance(o, km)));
+    if (result.return) {
+      const eBack = result.return.errorMm;
+      const kmBack = result.return.distanceKm;
+      if (eBack == null || !valid(kmBack)) return { order: null, verifiable: false };
+      tests.push((o) => withinTolerance(eBack, levelingTolerance(o, kmBack)));
+    }
+  }
+  const order = PRECISION_ORDERS.find((o) => tests.every((t) => t(o))) ?? null;
+  return { order, verifiable: true };
+}
+
+/**
+ * Calcula con el orden detectado (Fase 36). Compensa siempre; las cifras de
+ * tolerancia del resultado son las del orden alcanzado, o las del ordinario si
+ * no alcanza ninguno, para que la pantalla diga por cuánto se pasa.
+ */
+export function computeLevelingDetected(
+  input: Omit<LevelingInput, "order" | "compensation">,
+): { result: LevelingResult; order: PrecisionOrder | null; verifiable: boolean } {
+  const probe = computeLeveling({ ...input, order: "ordinario", compensation: "always" });
+  const { order, verifiable } = detectLevelingOrder(probe, input.type);
+  const result =
+    order && order !== "ordinario"
+      ? computeLeveling({ ...input, order, compensation: "always" })
+      : probe;
+  return { result, order, verifiable };
 }
 
 /**
@@ -698,7 +768,7 @@ export function adoptedElevationsOf(
   result: LevelingResult,
   input: Pick<LevelingInput, "type" | "startElevation" | "endElevation">,
 ): AdoptedElevation[] | null {
-  if (levelingProcessVerdict(result, input.type) !== true) return null;
+  if (!result.compensated) return null;
   const forward = result.forward.readings;
   const knownPoints = knownBmsOf(forward, input);
   const rows = [...forward, ...(result.return?.readings ?? [])].map((r) => ({
