@@ -8,10 +8,11 @@ import { callAction } from "@/lib/errors/action-call";
 import { cn } from "@/lib/utils/cn";
 import type { LevelingType } from "@/types/leveling";
 import {
+  detailsNotices,
   EMPTY_LEVELING_DETAILS,
-  validateLevelingDetails,
   type LevelingDetails,
   type LevelingDetailsForm,
+  validateLevelingDetails,
 } from "./leveling-details";
 
 const TYPES: { type: LevelingType; label: string; help: string; drawing: React.ReactNode }[] = [
@@ -68,6 +69,8 @@ type DialogProps =
       initial: LevelingDetailsForm;
       /** Ya hay lecturas: cambiar el tipo o un BM recalcula la libreta. */
       hasReadings: boolean;
+      /** Las armadas de la vuelta: quitar la vuelta las borra. */
+      returnArmadas: number;
       onSave: (details: LevelingDetails) => Promise<{ ok: boolean; error?: string }>;
       open: boolean;
       onClose: () => void;
@@ -85,14 +88,10 @@ export function LevelingDetailsDialog(props: DialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const set = (patch: Partial<LevelingDetailsForm>) => setForm((f) => ({ ...f, ...patch }));
-  const recalcs =
-    props.mode === "edit" &&
-    props.hasReadings &&
-    (form.type !== props.initial.type ||
-      form.startBmCode !== props.initial.startBmCode ||
-      form.startBmElevation !== props.initial.startBmElevation ||
-      form.endBmCode !== props.initial.endBmCode ||
-      form.endBmElevation !== props.initial.endBmElevation);
+  const notices =
+    props.mode === "edit"
+      ? detailsNotices(props.initial, form, { hasReadings: props.hasReadings, returnArmadas: props.returnArmadas })
+      : [];
 
   function submit() {
     setError(null);
@@ -239,7 +238,11 @@ export function LevelingDetailsDialog(props: DialogProps) {
             />
           </div>
         )}
-        {recalcs && <Alert variant="warning">Cambiar el tipo o un BM recalcula la libreta.</Alert>}
+        {notices.map((n) => (
+          <Alert key={n} variant="warning">
+            {n}
+          </Alert>
+        ))}
         <details className="rounded-md border border-rule" open={props.mode === "edit"}>
           <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">
             Ubicación, responsable y equipo <span className="font-normal text-ink-2">· opcional</span>

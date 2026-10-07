@@ -75,3 +75,27 @@ export function validateLevelingDetails(
   return { details: { ...form, startBmElevation: read.bm.startElevation, endBmElevation: read.bm.endElevation } };
 }
 
+/**
+ * Lo que «Editar datos» avisa antes de guardar: que cambiar el tipo o un BM
+ * recalcula la libreta, y que quitar la vuelta borra su libreta.
+ */
+export function detailsNotices(
+  initial: LevelingDetailsForm,
+  form: LevelingDetailsForm,
+  { hasReadings, returnArmadas }: { hasReadings: boolean; returnArmadas: number },
+): string[] {
+  const notices: string[] = [];
+  const recalcs =
+    form.type !== initial.type ||
+    form.startBmCode !== initial.startBmCode ||
+    form.startBmElevation !== initial.startBmElevation ||
+    form.endBmCode !== initial.endBmCode ||
+    form.endBmElevation !== initial.endBmElevation;
+  if (hasReadings && recalcs) notices.push("Cambiar el tipo o un BM recalcula la libreta.");
+  if (initial.hasReturnRun && !form.hasReturnRun && returnArmadas > 0) {
+    notices.push(
+      `Sin vuelta se borra la libreta de la vuelta: ${returnArmadas} ${returnArmadas === 1 ? "armada" : "armadas"}.`,
+    );
+  }
+  return notices;
+}

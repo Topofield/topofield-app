@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_LEVELING_DETAILS, validateLevelingBm, validateLevelingDetails } from "./leveling-details";
+import { detailsNotices, EMPTY_LEVELING_DETAILS, validateLevelingBm, validateLevelingDetails } from "./leveling-details";
 
 const base = { ...EMPTY_LEVELING_DETAILS, name: "El Verjón", startBmCode: "D1", startBmElevation: "3288.5" };
 
@@ -50,5 +50,23 @@ describe("validateLevelingBm (el popup del BM)", () => {
     expect(validateLevelingBm({ ...bm, type: "link", endBmCode: "D4", endBmElevation: "3315.0855" })).toEqual({
       bm: { startCode: "D1", startElevation: 3288.5, endCode: "D4", endElevation: 3315.0855 },
     });
+  });
+});
+
+describe("los avisos de Editar datos", () => {
+  const initial = { ...base, type: "open" as const, hasReturnRun: true };
+
+  it("quitar la vuelta avisa que se borra su libreta", () => {
+    expect(detailsNotices(initial, { ...initial, hasReturnRun: false }, { hasReadings: true, returnArmadas: 10 })).toContain(
+      "Sin vuelta se borra la libreta de la vuelta: 10 armadas.",
+    );
+    expect(detailsNotices(initial, { ...initial, hasReturnRun: false }, { hasReadings: true, returnArmadas: 0 })).toEqual([]);
+  });
+
+  it("cambiar el tipo o un BM avisa que se recalcula la libreta", () => {
+    expect(detailsNotices(initial, { ...initial, type: "closed" }, { hasReadings: true, returnArmadas: 0 })).toEqual([
+      "Cambiar el tipo o un BM recalcula la libreta.",
+    ]);
+    expect(detailsNotices(initial, { ...initial, startBmElevation: "3290" }, { hasReadings: false, returnArmadas: 0 })).toEqual([]);
   });
 });

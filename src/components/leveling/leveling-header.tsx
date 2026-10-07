@@ -15,6 +15,7 @@ import { formatEquipmentLine } from "@/lib/utils/format";
 import { levelingKindLabel, type LevelingProcess, type LevelingReading } from "@/types/leveling";
 import { PROCESS_STATUS_LABELS } from "@/types/polygonal";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
+import { armadaSpans } from "./armadas";
 import { LevelingDetailsDialog } from "./leveling-details-dialog";
 import type { LevelingDetails, LevelingDetailsForm } from "./leveling-details";
 import { draftWithBm, levelingDraftOf, levelingInputOf, levelingPayloadOf } from "./leveling-save";
@@ -135,6 +136,7 @@ export function LevelingHeader({
           open={editing}
           onClose={() => setEditing(false)}
           hasReadings={readings.length > 1}
+          returnArmadas={armadaSpans(levelingDraftOf(process, readings).return).length}
           initial={formOf(process)}
           onSave={saveDetails}
         />
