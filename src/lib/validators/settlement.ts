@@ -5,6 +5,7 @@
 // alarma es un hallazgo del monitoreo, no un error de captura. Su cálculo está
 // en src/lib/calculations/settlement.ts y su presentación en el semáforo.
 
+import { samePointCode } from "@/lib/calculations/leveling";
 import { isPointActiveOn } from "@/lib/calculations/settlement";
 import { formatDateOnly } from "@/lib/utils/format";
 import type { PointInput, ReadingInput, VisitInput } from "@/types/settlement";
@@ -228,4 +229,18 @@ export function pointReferenceChanged(
   const a = current.initial_elevation;
   const b = next.initialElevation;
   return a === null || b === null ? a !== b : a.toFixed(4) !== b.toFixed(4);
+}
+
+/**
+ * El BM del lugar con el que choca un código (revisión final de la Fase 37):
+ * el motor empareja los códigos sin mayúsculas ni espacios (`samePointCode`),
+ * así que «bm-1» junto a «BM-1» haría ambigua la cota de arranque. `selfId`
+ * excluye al BM que se edita. Null si no choca.
+ */
+export function benchmarkCodeClash(
+  code: string,
+  benchmarks: readonly { id: string; code: string }[],
+  selfId?: string,
+): string | null {
+  return benchmarks.find((b) => b.id !== selfId && samePointCode(b.code, code))?.code ?? null;
 }

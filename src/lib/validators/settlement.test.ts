@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  benchmarkCodeClash,
   pointReferenceChanged,
   validateActiveFrom,
   validateReadingCapture,
@@ -314,5 +315,26 @@ describe("pointReferenceChanged (Fase 23)", () => {
     expect(pointReferenceChanged(punto, { initialElevation: null })).toBe(true);
     expect(pointReferenceChanged({ initial_elevation: null }, { initialElevation: 100.12 })).toBe(true);
     expect(pointReferenceChanged({ initial_elevation: null }, { initialElevation: null })).toBe(false);
+  });
+});
+
+describe("benchmarkCodeClash (revisión final de la Fase 37)", () => {
+  const bms = [
+    { id: "a", code: "BM-1" },
+    { id: "b", code: "BM-2" },
+  ];
+
+  it("un código que solo difiere en mayúsculas o espacios choca con el BM que ya está", () => {
+    expect(benchmarkCodeClash("bm-1", bms)).toBe("BM-1");
+    expect(benchmarkCodeClash(" BM-2 ", bms)).toBe("BM-2");
+  });
+
+  it("un código nuevo no choca", () => {
+    expect(benchmarkCodeClash("BM-3", bms)).toBeNull();
+  });
+
+  it("al editar, el BM no choca consigo mismo", () => {
+    expect(benchmarkCodeClash("bm-1", bms, "a")).toBeNull();
+    expect(benchmarkCodeClash("bm-2", bms, "a")).toBe("BM-2");
   });
 });

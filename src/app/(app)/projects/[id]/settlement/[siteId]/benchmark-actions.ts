@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { allRows } from "@/lib/supabase/paginate";
 import { recomputeSite } from "@/lib/supabase/settlement-sync";
 import { logDbError } from "@/lib/errors/user-message";
+import { benchmarkCodeClash } from "@/lib/validators/settlement";
 import type { ImportedBenchmark } from "@/lib/import/benchmarks";
 
 export interface BenchmarkActionResult {
@@ -96,6 +97,14 @@ export async function saveBenchmarkAction(
   const site = await loadSite(supabase, siteId);
   if (!site) return { ok: false, error: "Lugar no encontrado." };
   const code = payload.code.trim();
+
+  const { data: siblings, error: siblingsError } = await supabase
+    .from("site_benchmarks")
+    .select("id, code")
+    .eq("site_id", siteId);
+  if (siblingsError) return { ok: false, error: logDbError(siblingsError, "No se pudo guardar el BM.") };
+  const clash = benchmarkCodeClash(code, siblings, payload.id);
+  if (clash) return { ok: false, error: `Ya hay un BM ${clash} en este lugar.` };
 
   if (!payload.id) {
     // La visita de origen tiene que ser de este lugar.
@@ -208,11 +217,13 @@ export async function importBenchmarksAction(
   const site = await loadSite(supabase, siteId);
   if (!site) return { ok: false, error: "Lugar no encontrado." };
 
-  const { data: existing } = await supabase.from("site_benchmarks").select("code").eq("site_id", siteId);
-  const repeated = items.find((i) => (existing ?? []).some((e) => samePointCode(e.code, i.code)));
+  const { data: existing } = await supabase.from("site_benchmarks").select("id, code").eq("site_id", siteId);
+  const repeated = items.find((i) => benchmarkCodeClash(i.code, existing ?? []));
   if (repeated) {
     return { ok: false, error: `Ya hay un BM ${repeated.code.trim()} en este lugar: quítalo de la importación o edítalo.` };
   }
+  const twice = items.find((i, n) => items.slice(0, n).some((b) => samePointCode(b.code, i.code)));
+  if (twice) return { ok: false, error: `${twice.code.trim()} viene dos veces en la importación.` };
 
   const { error } = await supabase.from("site_benchmarks").insert(
     items.map((i) => ({
