@@ -9,7 +9,7 @@ import {
   visitsToRewrite,
   type PersistedReading,
 } from "@/lib/calculations/settlement-persistence";
-import { visitRecordOf } from "@/lib/calculations/visit-record";
+import { visitRecordOf, visitSaveOf } from "@/lib/calculations/visit-record";
 import { neighborVisitDates, validateVisitCapture } from "@/lib/validators/settlement";
 import { bookIssueMessage, validateBook } from "@/lib/validators/settlement-book";
 import { hasReadingErrors } from "@/lib/validators/leveling";
@@ -288,11 +288,15 @@ export async function saveVisitAction(
 
   const others = context.visits.filter((v) => v.id !== payload.visitId);
   const neighbors = neighborVisitDates({ visitNumber: visit.visit_number }, others);
+  // Una visita de cotas tecleadas, sin libreta, conserva sus cotas y su
+  // cabecera al guardar sus datos (revisión final de la Fase 37).
+  const stored = context.visits.find((v) => v.id === payload.visitId)?.readings ?? [];
+  const toSave = visitSaveOf(record, payload.book, stored);
   const candidate: VisitInput = {
     id: payload.visitId,
     visitNumber: visit.visit_number,
     date: payload.date,
-    readings: record.elevations.map(({ pointId, elevation }) => ({ pointId, elevation })),
+    readings: toSave.elevations,
   };
   const issues = validateVisitCapture(candidate, context.points, neighbors.previous, neighbors.next);
   if (Object.keys(issues.errors).length > 0) {
@@ -326,7 +330,7 @@ export async function saveVisitAction(
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
       equipment_serial: payload.equipmentSerial,
-      ...record.header,
+      ...toSave.header,
     },
     p_book: record.rows,
     p_readings: computed.readings.map(readingRow),

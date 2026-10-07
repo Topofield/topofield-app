@@ -231,12 +231,16 @@ export async function recomputeSite(
   if (dryRun) return { ok: true, visits: results.length, changedVisits, changedReadings };
 
   for (const { visitId, record, readings } of results) {
-    // Solo las visitas con libreta: sin filas no hay nada que recalcular.
-    if (!rowsByVisit.has(visitId)) continue;
+    // Una visita sin libreta —de cotas tecleadas, anterior a la Fase 37—
+    // conserva sus cotas, su cabecera y su libreta vacía; se guardan sus
+    // lecturas, cuyo parcial y velocidad dependen de las vecinas. Una sin
+    // libreta ni lecturas no tiene nada que guardar.
+    const hasBook = rowsByVisit.has(visitId);
+    if (!hasBook && readings.length === 0) continue;
     const { error } = await supabase.rpc("save_visit", {
       p_visit_id: visitId,
-      p_header: record.header,
-      p_book: record.rows,
+      p_header: hasBook ? record.header : {},
+      p_book: hasBook ? record.rows : [],
       p_readings: readings.map((r) => ({
         point_id: r.pointId,
         elevation: r.elevation,

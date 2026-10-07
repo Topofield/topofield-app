@@ -21,7 +21,7 @@ interface VisitImportButtonProps {
   benchmarkCodes: string[];
   /** Los puntos de control del lugar, para marcarlos en la vista previa. */
   pointCodes: string[];
-  /** La visita ya tiene lecturas: se reemplazan, y se avisa. */
+  /** La visita ya tiene lecturas o cotas tecleadas: se reemplazan, y se avisa. */
   hasReadings: boolean;
 }
 
@@ -170,7 +170,9 @@ export function VisitImportButton({
                 </Alert>
               )}
               {hasReadings && (
-                <Alert variant="warning">La visita ya tiene lecturas: su libreta se reemplazará por la del archivo.</Alert>
+                <Alert variant="warning">
+                  La visita ya tiene lecturas o cotas: se reemplazarán por las del archivo.
+                </Alert>
               )}
               {file.warnings.map((w) => (
                 <Alert key={w} variant="warning">

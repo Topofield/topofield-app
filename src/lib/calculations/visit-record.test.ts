@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recalculateSite, visitRecordOf } from "./visit-record";
+import { recalculateSite, visitRecordOf, visitSaveOf } from "./visit-record";
 import { thresholdsFor } from "./tolerances";
 import type { BookRowPayload, PointInput } from "@/types/settlement";
 import type { PointType } from "@/types/leveling";
@@ -75,5 +75,26 @@ describe("el recálculo del lugar", () => {
     const sinLibreta = { id: "v1", visitNumber: 1, date: "2025-01-07", rows: [], elevations: [{ pointId: "TA-01", elevation: 100.5 }] };
     const res = recalculateSite({ points: [point("TA-01")], benchmarks: BMS, thresholds, visits: [sinLibreta, visits[1]!] });
     expect(res[1]!.readings[0]).toMatchObject({ elevation: 100.498, partialSettlement: -2 });
+  });
+});
+
+describe("visitSaveOf (revisión final de la Fase 37)", () => {
+  const stored = [{ pointId: "TA-01", elevation: 100.5955 }];
+
+  it("una visita de cotas tecleadas, sin libreta, conserva sus cotas y su cabecera", () => {
+    const rec = visitRecordOf({ visitId: "v1", date: "2025-01-10", rows: [], points: [point("TA-01")], benchmarks: BMS });
+    expect(visitSaveOf(rec, [], stored)).toEqual({ elevations: stored, header: {} });
+  });
+
+  it("con libreta, guarda lo que da la libreta", () => {
+    const rec = visitRecordOf({ visitId: "v12", date: "2025-10-14", rows: alameda12, points: [point("TA-01"), point("TA-08")], benchmarks: BMS });
+    const out = visitSaveOf(rec, alameda12, stored);
+    expect(out.header).toBe(rec.header);
+    expect(out.elevations.map((e) => e.pointId)).toEqual(["TA-01", "TA-08"]);
+  });
+
+  it("una visita nueva, sin libreta ni cotas, queda en borrador", () => {
+    const rec = visitRecordOf({ visitId: "v2", date: "2025-02-10", rows: [], points: [point("TA-01")], benchmarks: BMS });
+    expect(visitSaveOf(rec, [], [])).toEqual({ elevations: [], header: rec.header });
   });
 });

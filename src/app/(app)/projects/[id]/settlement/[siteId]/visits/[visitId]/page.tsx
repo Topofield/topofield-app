@@ -103,7 +103,10 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
               visit={visitData}
               benchmarkCodes={benchmarks.map((b) => b.code)}
               pointCodes={points.map((p) => p.code)}
-              hasReadings={book.some((r) => r.backsight != null || r.foresight != null)}
+              hasReadings={
+                book.some((r) => r.backsight != null || r.foresight != null) ||
+                (visitInputs.find((v) => v.id === visit.id)?.readings.length ?? 0) > 0
+              }
             />
           ) : undefined
         }

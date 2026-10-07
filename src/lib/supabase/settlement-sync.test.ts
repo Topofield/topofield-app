@@ -13,8 +13,12 @@ type Result = { data: unknown; error: { message: string; code?: string } | null 
  * filtro. Como PostgREST, corta en 1000 filas por petición (`max_rows`), con
  * `range` o sin él.
  */
-function fakeClient(tables: Record<string, Result>): SupabaseClient {
+function fakeClient(tables: Record<string, Result>, rpcCalls: { fn: string; args: Record<string, unknown> }[] = []): SupabaseClient {
   return {
+    rpc(fn: string, args: Record<string, unknown>) {
+      rpcCalls.push({ fn, args });
+      return Promise.resolve({ data: null, error: null });
+    },
     from(table: string) {
       const result = tables[table] ?? { data: [], error: null };
       let range: [number, number] = [0, Infinity];
@@ -123,5 +127,50 @@ describe("recomputeSite con más de 1000 filas (revisión final de la Fase 37)",
       { dryRun: true },
     );
     expect(r).toMatchObject({ ok: true, changedVisits: 1, changedReadings: 1 });
+  });
+});
+
+describe("recomputeSite con visitas de cotas tecleadas (revisión final de la Fase 37)", () => {
+  // La visita 1 tiene libreta; la 2, cotas tecleadas sin libreta. Cambiar la
+  // libreta de la 1 cambia el parcial de la 2: su caché también se guarda,
+  // sin tocar su cabecera ni su libreta.
+  const points = [{ id: "p1", site_id: "s1", code: "P-1", location_description: "", initial_elevation: null, active_from: null, retired_on: null, retirement_reason: null }];
+  const visits = [
+    { id: "v1", visit_number: 1, date: "2025-01-10" },
+    { id: "v2", visit_number: 2, date: "2025-02-10" },
+  ];
+  const book = [
+    { visit_id: "v1", reading_order: 1, point_code: "BM-1", point_type: "bm", starts_section: true, backsight: 1.5, foresight: null, back_upper_m: null, back_lower_m: null, fore_upper_m: null, fore_lower_m: null, back_distance_m: null, fore_distance_m: null },
+    { visit_id: "v1", reading_order: 2, point_code: "P-1", point_type: "intermediate", starts_section: false, backsight: null, foresight: 1.2, back_upper_m: null, back_lower_m: null, fore_upper_m: null, fore_lower_m: null, back_distance_m: null, fore_distance_m: null },
+  ];
+  const stored = [
+    { visit_id: "v1", point_id: "p1", elevation: 100.2 },
+    { visit_id: "v2", point_id: "p1", elevation: 100.29 },
+  ];
+
+  it("guarda las lecturas de la visita sin libreta, sin su cabecera ni su libreta", async () => {
+    const calls: { fn: string; args: Record<string, unknown> }[] = [];
+    const r = await recomputeSite(
+      fakeClient(
+        {
+          sites: { data: SITE, error: null },
+          settlement_points: { data: points, error: null },
+          site_benchmarks: { data: [{ code: "BM-1", elevation: 100 }], error: null },
+          settlement_visits: { data: visits, error: null },
+          settlement_book_readings: { data: book, error: null },
+          settlement_readings: { data: stored, error: null },
+        },
+        calls,
+      ),
+      "s1",
+    );
+    expect(r.ok).toBe(true);
+    const v2 = calls.find((c) => c.args.p_visit_id === "v2");
+    expect(v2?.args.p_header).toEqual({});
+    expect(v2?.args.p_book).toEqual([]);
+    const [reading] = v2!.args.p_readings as { point_id: string; elevation: number; partial_settlement: number }[];
+    expect(reading).toMatchObject({ point_id: "p1", elevation: 100.29 });
+    // La visita 1 ahora da 100.3: el parcial de la 2 es −10 mm.
+    expect(reading!.partial_settlement).toBeCloseTo(-10, 6);
   });
 });

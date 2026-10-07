@@ -111,6 +111,22 @@ export function visitRecordOf({ visitId, date, rows, points, benchmarks }: Visit
 }
 
 /**
+ * Lo que se guarda de una visita (revisión final de la Fase 37). Con libreta,
+ * lo que da su libreta. Sin libreta pero con cotas guardadas —las de cotas
+ * tecleadas anteriores a la Fase 37—, esas cotas y su cabecera intactas:
+ * «Editar datos» no puede borrarlas. Una visita nueva sin nada queda en
+ * borrador.
+ */
+export function visitSaveOf(
+  record: VisitRecord,
+  rows: readonly BookRowPayload[],
+  stored: readonly { pointId: string; elevation: number }[],
+): { elevations: { pointId: string; elevation: number }[]; header: Partial<VisitRecordHeader> } {
+  if (rows.length === 0 && stored.length > 0) return { elevations: [...stored], header: {} };
+  return { elevations: record.elevations.map(({ pointId, elevation }) => ({ pointId, elevation })), header: record.header };
+}
+
+/**
  * Todas las visitas de un lugar recalculadas desde su libreta (Fase 37): el
  * registro de cada una y sus lecturas en el histórico. Lo usan el cambio de la
  * cota de un BM (decisión 13) y la resincronización tras dejar de compensar.
