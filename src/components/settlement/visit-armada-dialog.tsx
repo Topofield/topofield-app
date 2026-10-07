@@ -272,10 +272,10 @@ export function VisitArmadaDialog({
     proceed({ after, rows: finished });
   }
 
+  /** Guarda y cierra; con un dato mal escrito se queda abierto con su error, para no perder lo tecleado. */
   async function later() {
     setBusy(true);
-    await commit();
-    const ok = await queue.current.then(() => lastOk.current);
+    const ok = await commit();
     setBusy(false);
     if (ok) onClose();
   }
