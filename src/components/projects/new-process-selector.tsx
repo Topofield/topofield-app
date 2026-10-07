@@ -4,15 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button, buttonClasses, Modal } from "@/components/design-system";
 import { PolygonalDetailsDialog } from "@/components/polygonal/polygonal-details-dialog";
+import { LevelingDetailsDialog } from "@/components/leveling/leveling-details-dialog";
 
 /**
  * Botón "+ Nuevo Proceso" con el selector de tipo. Los tres módulos están
- * disponibles desde la Fase 5. La poligonal se da de alta en un popup, sin
- * salir del hub (Fase 35).
+ * disponibles desde la Fase 5. La poligonal (Fase 35) y la nivelación (Fase 36)
+ * se dan de alta en un popup, sin salir del hub.
  */
 export function NewProcessSelector({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [polygonalOpen, setPolygonalOpen] = useState(false);
+  const [levelingOpen, setLevelingOpen] = useState(false);
 
   return (
     <>
@@ -36,12 +38,16 @@ export function NewProcessSelector({ projectId }: { projectId: string }) {
           >
             Poligonal
           </Button>
-          <Link
-            href={`/projects/${projectId}/leveling/new`}
-            className={buttonClasses({ variant: "secondary" })}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setOpen(false);
+              setLevelingOpen(true);
+            }}
           >
             Nivelación
-          </Link>
+          </Button>
           <Link
             href={`/projects/${projectId}/sites/new`}
             className={buttonClasses({ variant: "secondary" })}
@@ -56,6 +62,14 @@ export function NewProcessSelector({ projectId }: { projectId: string }) {
           projectId={projectId}
           open={polygonalOpen}
           onClose={() => setPolygonalOpen(false)}
+        />
+      )}
+      {levelingOpen && (
+        <LevelingDetailsDialog
+          mode="create"
+          projectId={projectId}
+          open={levelingOpen}
+          onClose={() => setLevelingOpen(false)}
         />
       )}
     </>
