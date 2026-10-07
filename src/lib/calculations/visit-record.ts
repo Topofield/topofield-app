@@ -12,6 +12,7 @@ import {
   bookRowInputOf,
   bookVerification,
   computeBook,
+  verifyingBenchmarks,
   visitStatusOf,
 } from "./settlement-book";
 import { bookRowsToPersist } from "./settlement-persistence";
@@ -78,7 +79,7 @@ const round = (v: number | null, d: number) =>
 
 export function visitRecordOf({ visitId, date, rows, points, benchmarks }: VisitRecordInput): VisitRecord {
   const inputs = rows.map(bookRowInputOf);
-  const book = computeBook(inputs, benchmarks);
+  const book = computeBook(inputs, benchmarks, visitId);
   const verification = bookVerification(book);
   const { readings: elevations, issues } = bookElevations(book, inputs, points, date);
   const first = book.tramos[0];
@@ -89,7 +90,7 @@ export function visitRecordOf({ visitId, date, rows, points, benchmarks }: Visit
   const benchmarkElevations = rows.map((row) =>
     points.some((p) => samePointCode(p.code, row.pointCode))
       ? null
-      : (benchmarks.find((b) => samePointCode(b.code, row.pointCode))?.elevation ?? null),
+      : (verifyingBenchmarks(benchmarks, visitId).find((b) => samePointCode(b.code, row.pointCode))?.elevation ?? null),
   );
   return {
     book,

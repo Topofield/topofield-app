@@ -1070,6 +1070,7 @@ export type Database = {
           description: string | null
           elevation: number
           id: string
+          origin_visit_id: string | null
           site_id: string
           source: string | null
           updated_at: string
@@ -1080,6 +1081,7 @@ export type Database = {
           description?: string | null
           elevation: number
           id?: string
+          origin_visit_id?: string | null
           site_id: string
           source?: string | null
           updated_at?: string
@@ -1090,11 +1092,19 @@ export type Database = {
           description?: string | null
           elevation?: number
           id?: string
+          origin_visit_id?: string | null
           site_id?: string
           source?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "site_benchmarks_origin_visit_id_fkey"
+            columns: ["origin_visit_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_visits"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "site_benchmarks_site_id_fkey"
             columns: ["site_id"]

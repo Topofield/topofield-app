@@ -75,7 +75,7 @@ async function loadContext(
   const [{ data: points }, { data: benchmarks }, { data: visits }, { data: readings }] =
     await Promise.all([
       supabase.from("settlement_points").select("*").eq("site_id", siteId),
-      supabase.from("site_benchmarks").select("code, elevation").eq("site_id", siteId).order("code"),
+      supabase.from("site_benchmarks").select("code, elevation, origin_visit_id").eq("site_id", siteId).order("code"),
       // En orden de fecha: el motor y los validadores recorren las visitas así
       // (Fase 26, C-16).
       supabase
@@ -117,6 +117,7 @@ async function loadContext(
   const benchmarkInputs: BenchmarkInput[] = (benchmarks ?? []).map((b) => ({
     code: b.code,
     elevation: Number(b.elevation),
+    originVisitId: b.origin_visit_id,
   }));
 
   return {

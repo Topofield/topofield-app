@@ -98,3 +98,25 @@ describe("visitSaveOf (revisión final de la Fase 37)", () => {
     expect(visitSaveOf(rec, [], [])).toEqual({ elevations: [], header: rec.header });
   });
 });
+
+describe("un punto auxiliar guardado en los BM del lugar (revisión final de la Fase 37)", () => {
+  // Armada desde BM-1 con V− a AUX, que se guardó en los BM con su cota medida
+  // en esta visita (100.3): no puede verificar el tramo que la midió.
+  const rows = [
+    r("BM-1", "bm", 1.5, null, 20, null, true),
+    r("P1", "intermediate", null, 1.2),
+    r("AUX", "pc", null, 1.2, null, 20),
+  ];
+  const bms = [...BMS, { code: "AUX", elevation: 100.3, originVisitId: "v1" }];
+
+  it("en la visita que lo midió, el tramo sigue sin verificación", () => {
+    const rec = visitRecordOf({ visitId: "v1", date: "2025-01-10", rows, points: [point("P1")], benchmarks: bms });
+    expect(rec.book.tramos.map((t) => t.kind)).toEqual(["open"]);
+    expect(rec.header).toMatchObject({ precision_order: null, meets_tolerance: null, closure_error_mm: null });
+  });
+
+  it("en otra visita, verifica como cualquier BM del lugar", () => {
+    const rec = visitRecordOf({ visitId: "v2", date: "2025-02-10", rows, points: [point("P1")], benchmarks: bms });
+    expect(rec.book.tramos.map((t) => t.kind)).toEqual(["link"]);
+  });
+});

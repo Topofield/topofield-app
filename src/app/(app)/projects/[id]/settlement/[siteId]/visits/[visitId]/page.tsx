@@ -46,7 +46,7 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
     book.length === 0
       ? null
       : (() => {
-          const v = bookVerification(computeBook(inputs, benchmarks));
+          const v = bookVerification(computeBook(inputs, benchmarks.map((b) => ({ ...b, originVisitId: b.origin_visit_id })), visit.id));
           return v.verified && v.order ? PRECISION_ORDER_LABELS[v.order] : "Sin verificación";
         })();
   const equipment = formatEquipmentLine(visit.equipment_brand, visit.equipment_model);
@@ -59,7 +59,7 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
     equipmentSerial: visit.equipment_serial,
   };
   const pointInputs = points.map(pointInputOf);
-  const benchmarkInputs = benchmarks.map((b) => ({ code: b.code, elevation: b.elevation }));
+  const benchmarkInputs = benchmarks.map((b) => ({ code: b.code, elevation: b.elevation, originVisitId: b.origin_visit_id }));
   const thresholds = thresholdsOf(site);
 
   return (

@@ -44,7 +44,7 @@ interface PanelTabProps {
 export function PanelTab({ project, site, sitePoints, visits, readingsBySite, booksByVisit, benchmarks }: PanelTabProps) {
   const points: PointInput[] = sitePoints.map(pointInputOf);
   const codes = Object.fromEntries(points.map((p) => [p.id, p.code]));
-  const benchmarkInputs = benchmarks.map((b) => ({ code: b.code, elevation: b.elevation }));
+  const benchmarkInputs = benchmarks.map((b) => ({ code: b.code, elevation: b.elevation, originVisitId: b.origin_visit_id }));
 
   const visitInputs: VisitInput[] = visits.map((v) => ({
     id: v.id,
@@ -71,7 +71,7 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite, bo
     const bookRows = (booksByVisit[visit.id] ?? []).map((r) => bookRowInputOf(bookRowOf(r)));
     const notLeveling =
       bookRows.length > 0
-        ? bookBenchmarkChecks(computeBook(bookRows, benchmarkInputs), bookRows, benchmarkInputs, points).filter(
+        ? bookBenchmarkChecks(computeBook(bookRows, benchmarkInputs, visit.id), bookRows, benchmarkInputs, points, visit.id).filter(
             (check) => check.meetsTolerance === false,
           )
         : [];

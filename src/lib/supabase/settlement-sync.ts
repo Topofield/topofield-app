@@ -153,7 +153,7 @@ export async function recomputeSite(
   });
   const [pointsRes, benchmarksRes, visitsRes] = await Promise.all([
     supabase.from("settlement_points").select("*").eq("site_id", siteId),
-    supabase.from("site_benchmarks").select("code, elevation").eq("site_id", siteId),
+    supabase.from("site_benchmarks").select("code, elevation, origin_visit_id").eq("site_id", siteId),
     supabase.from("settlement_visits").select("id, visit_number, date").eq("site_id", siteId).order("date"),
   ]);
   for (const r of [pointsRes, benchmarksRes, visitsRes]) if (r.error) return fail(r.error);
@@ -199,7 +199,11 @@ export async function recomputeSite(
   }
   const results = recalculateSite({
     points: (points ?? []).map(pointInputOf),
-    benchmarks: (benchmarks ?? []).map((b) => ({ code: b.code, elevation: Number(b.elevation) })),
+    benchmarks: (benchmarks ?? []).map((b) => ({
+      code: b.code,
+      elevation: Number(b.elevation),
+      originVisitId: b.origin_visit_id,
+    })),
     thresholds: thresholdsOf(site),
     visits: (visits ?? []).map((v) => ({
       id: v.id,

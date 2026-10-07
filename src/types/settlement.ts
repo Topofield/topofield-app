@@ -193,6 +193,11 @@ export interface BookRowPayload {
 export interface BenchmarkInput {
   code: string;
   elevation: number;
+  /**
+   * La visita que lo midió: un punto auxiliar guardado en los BM del lugar
+   * (revisión final de la Fase 37). No verifica esa visita.
+   */
+  originVisitId?: string | null;
 }
 
 /** Cómo termina un tramo: en su BM, en otro BM del lugar o en sus puntos. */

@@ -13,6 +13,7 @@ import {
   bookElevations,
   bookRowInputOf,
   computeBook,
+  verifyingBenchmarks,
 } from "@/lib/calculations/settlement-book";
 import { benchmarkCheckMessage } from "@/lib/validators/settlement-book";
 import { cn } from "@/lib/utils/cn";
@@ -69,8 +70,8 @@ export function VisitLibretaTab({
 
   const view = useMemo(() => {
     const inputs = draft.map(bookRowInputOf);
-    const computed = computeBook(inputs, benchmarks);
-    const checks = bookBenchmarkChecks(computed, inputs, benchmarks, points);
+    const computed = computeBook(inputs, benchmarks, visitId);
+    const checks = bookBenchmarkChecks(computed, inputs, benchmarks, points, visitId);
     const { readings } = bookElevations(computed, inputs, points, visit.date);
     const candidate: VisitInput = {
       id: visitId,
@@ -97,7 +98,9 @@ export function VisitLibretaTab({
 
   const spans = visitArmadaSpans(draft);
   const empty = draft.length === 0;
-  const changePoint = pendingChangePoint(draft, benchmarks);
+  // Un punto auxiliar que esta visita guardó en los BM sigue siendo, en ella,
+  // un punto de cambio.
+  const changePoint = pendingChangePoint(draft, verifyingBenchmarks(benchmarks, visitId));
 
   function open(k: number, focusRow: number | null = null, start?: ArmadaStart) {
     setDialog({
@@ -269,6 +272,7 @@ export function VisitLibretaTab({
         <VisitArmadaDialog
           key={`${dialog.opened}:${dialog.k}`}
           siteId={siteId}
+          visitId={visitId}
           visitNumber={visitNumber}
           rows={draft}
           k={dialog.k}

@@ -11,6 +11,7 @@ import {
   bookBenchmarkChecks,
   bookRowInputOf,
   computeBook,
+  verifyingBenchmarks,
 } from "@/lib/calculations/settlement-book";
 import { callAction } from "@/lib/errors/action-call";
 import { benchmarkCheckMessage } from "@/lib/validators/settlement-book";
@@ -42,6 +43,7 @@ type SaveResult = ActionResult | { ok: false; error: string };
 
 interface VisitArmadaDialogProps {
   siteId: string;
+  visitId: string;
   visitNumber: number;
   /** La libreta de la visita como está guardada (el borrador). */
   rows: BookRowPayload[];
@@ -77,6 +79,7 @@ const fmt4 = (v: number | null | undefined) => (finite(v) ? v.toFixed(4) : "—"
  */
 export function VisitArmadaDialog({
   siteId,
+  visitId,
   visitNumber,
   rows,
   k,
@@ -89,6 +92,9 @@ export function VisitArmadaDialog({
   onClose,
 }: VisitArmadaDialogProps) {
   const [isNew] = useState(() => k >= visitArmadaSpans(rows).length);
+  // Los BM que esta visita no midió: un punto auxiliar que guardó en los BM
+  // sigue siendo, en ella, un punto de cambio (revisión final de la Fase 37).
+  const own = useMemo(() => verifyingBenchmarks(benchmarks, visitId), [benchmarks, visitId]);
   const [form, setForm] = useState<VisitArmadaForm>(() =>
     visitArmadaFormOf(isNew ? null : visitArmadaAt(rows, k), start),
   );
@@ -114,7 +120,7 @@ export function VisitArmadaDialog({
   // Lo «ya guardado» es la libreta armada con el formulario sin tocar: así
   // abrir y cerrar una armada, o una nueva sin teclear nada, no guarda.
   const [initialKey] = useState(() => {
-    const read = readVisitArmadaForm(form, benchmarks);
+    const read = readVisitArmadaForm(form, verifyingBenchmarks(benchmarks, visitId));
     const composed = "armada" in read ? composeArmada(rows, k, read.armada) : null;
     return JSON.stringify(composed && "rows" in composed ? composed.rows : rows);
   });
@@ -125,16 +131,16 @@ export function VisitArmadaDialog({
 
   // --- El cálculo en vivo: la libreta con esta armada como va. ---------------
   const live = useMemo(() => {
-    const read = readVisitArmadaForm(form, benchmarks);
+    const read = readVisitArmadaForm(form, own);
     const composed = "armada" in read ? composeArmada(rows, k, read.armada) : null;
     const candidate = composed && "rows" in composed ? composed.rows : rows;
     const inputs = candidate.map(bookRowInputOf);
-    const book = computeBook(inputs, benchmarks);
+    const book = computeBook(inputs, benchmarks, visitId);
     const span = visitArmadaSpans(candidate)[k] ?? null;
     const tramo = span ? book.tramos.find((t) => t.start <= span.opener && span.opener <= t.end) : undefined;
     const closes = tramo && span?.closer === tramo.end && tramo.kind !== "open" ? tramoItems({ tramos: [tramo], readings: [] })[0] : null;
     const checks = span
-      ? bookBenchmarkChecks(book, inputs, benchmarks, points).filter(
+      ? bookBenchmarkChecks(book, inputs, benchmarks, points, visitId).filter(
           (c) => c.rowIndex > span.opener && c.rowIndex <= (span.closer ?? span.intermediates.at(-1) ?? span.opener),
         )
       : [];
@@ -144,7 +150,7 @@ export function VisitArmadaDialog({
       p.pointCode.trim() === "" && p.reading.trim() === "" ? null : (span?.intermediates[j++] ?? null),
     );
     return { book, span, tramo, closes, checks, pointRows };
-  }, [form, rows, k, benchmarks, points]);
+  }, [form, rows, k, benchmarks, points, own, visitId]);
 
   const elevationAt = (i: number | null | undefined) =>
     i == null ? null : live.book.readings[i]?.elevationCalculated ?? null;
@@ -154,10 +160,10 @@ export function VisitArmadaDialog({
       ? live.book.readings[live.span.opener]?.instrumentHeight
       : null;
   const foreCode = form.foreCode.trim();
-  const foreBm = foreCode !== "" ? benchmarks.find((b) => samePointCode(b.code, foreCode)) : undefined;
+  const foreBm = foreCode !== "" ? own.find((b) => samePointCode(b.code, foreCode)) : undefined;
   const foreIsPoint = foreCode !== "" && points.some((p) => samePointCode(p.code, foreCode));
   const hasFore = !form.noFore && foreCode !== "";
-  const changePoint = isNew ? pendingChangePoint(rows, benchmarks) : null;
+  const changePoint = isNew ? pendingChangePoint(rows, own) : null;
   const spans = visitArmadaSpans(rows);
   const canRemove = !isNew && k === spans.length - 1;
   const count = readCount(form.points);
@@ -207,7 +213,7 @@ export function VisitArmadaDialog({
 
   /** Arma la libreta con el formulario y la guarda; null si el formulario tiene un error. */
   function compose(f: VisitArmadaForm): BookRowPayload[] | null {
-    const read = readVisitArmadaForm(f, benchmarks);
+    const read = readVisitArmadaForm(f, own);
     if ("error" in read) {
       setError(read.error);
       return null;
@@ -256,7 +262,9 @@ export function VisitArmadaDialog({
     // Una V− a un punto auxiliar: ¿pasa a los BM del lugar? (decisión 11)
     const span = visitArmadaSpans(finished)[k];
     const found = auxiliaryPoints(finished, points, benchmarks).find((a) => a.rowIndex === span?.closer);
-    const elevation = found ? computeBook(finished.map(bookRowInputOf), benchmarks).readings[found.rowIndex]?.elevationCalculated : null;
+    const elevation = found
+      ? computeBook(finished.map(bookRowInputOf), benchmarks, visitId).readings[found.rowIndex]?.elevationCalculated
+      : null;
     if (found && finite(elevation)) {
       setAux({ code: found.code, elevation: Number(elevation.toFixed(4)), rows: finished, after });
       return;
@@ -604,6 +612,7 @@ export function VisitArmadaDialog({
         <DuplicateDialog
           duplicate={duplicate}
           benchmarks={benchmarks}
+          visitId={visitId}
           onBack={() => setDuplicate(null)}
           onDrop={(other) => {
             const dropped = dropBookRow(duplicate.sent, other);
@@ -633,6 +642,8 @@ export function VisitArmadaDialog({
       {aux && (
         <AuxiliaryDialog
           siteId={siteId}
+          visitId={visitId}
+          visitNumber={visitNumber}
           k={k}
           aux={aux}
           onSkip={() => {
@@ -655,11 +666,13 @@ export function VisitArmadaDialog({
 function DuplicateDialog({
   duplicate,
   benchmarks,
+  visitId,
   onBack,
   onDrop,
 }: {
   duplicate: { code: string; rows: number[]; sent: BookRowPayload[] };
   benchmarks: BenchmarkInput[];
+  visitId: string;
   onBack: () => void;
   onDrop: (row: number) => void;
 }) {
@@ -667,8 +680,8 @@ function DuplicateDialog({
   const [keep, setKeep] = useState(a);
   const other = keep === a ? b : a;
   const book = useMemo(
-    () => computeBook(duplicate.sent.map(bookRowInputOf), benchmarks),
-    [duplicate.sent, benchmarks],
+    () => computeBook(duplicate.sent.map(bookRowInputOf), benchmarks, visitId),
+    [duplicate.sent, benchmarks, visitId],
   );
   const spans = visitArmadaSpans(duplicate.sent);
   const armadaOf = (i: number) => spans.findIndex((s) => s.intermediates.includes(i) || s.closer === i);
@@ -740,12 +753,16 @@ function DuplicateDialog({
 /** «¿Guardar CP-1 en los BM del lugar?» (decisión 11). */
 function AuxiliaryDialog({
   siteId,
+  visitId,
+  visitNumber,
   k,
   aux,
   onSkip,
   onSaved,
 }: {
   siteId: string;
+  visitId: string;
+  visitNumber: number;
   k: number;
   aux: { code: string; elevation: number };
   onSkip: () => void;
@@ -763,6 +780,9 @@ function AuxiliaryDialog({
         code: aux.code,
         elevation: aux.elevation,
         description: description.trim() === "" ? null : description.trim(),
+        // La visita que lo midió no se verifica contra él.
+        originVisitId: visitId,
+        source: `Punto auxiliar de la visita ${visitNumber}`,
       }),
     );
     if (!r.ok) {

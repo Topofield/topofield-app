@@ -110,13 +110,27 @@ function benchmarkOf(code: string, benchmarks: readonly BenchmarkInput[]): Bench
 }
 
 /**
+ * Los BM que pueden verificar una visita: todos menos los que ella misma
+ * midió —un punto auxiliar que se guardó en los BM del lugar—, que darían un
+ * cierre de cero contra su propia medida (revisión final de la Fase 37).
+ */
+export function verifyingBenchmarks(benchmarks: readonly BenchmarkInput[], visitId?: string): BenchmarkInput[] {
+  return visitId ? benchmarks.filter((b) => b.originVisitId == null || b.originVisitId !== visitId) : [...benchmarks];
+}
+
+/**
  * La libreta de una visita, tramo a tramo y sin compensar (Fase 37, decisión
  * 14). Un tramo arranca en un BM del lugar; termina en otro BM del lugar (de
  * enlace), en el mismo (cerrado) o en sus puntos (abierto). Su cierre solo
  * verifica: la cota de cada punto es la de su lectura.
  */
-export function computeBook(rows: readonly BookRowInput[], benchmarks: readonly BenchmarkInput[]): VisitBook {
+export function computeBook(
+  rows: readonly BookRowInput[],
+  benchmarks: readonly BenchmarkInput[],
+  visitId?: string,
+): VisitBook {
   const starts = tramoStarts(rows);
+  const verifying = verifyingBenchmarks(benchmarks, visitId);
   const tramos: TramoResult[] = [];
   const readings: ComputedReading[] = [];
   starts.forEach((start, k) => {
@@ -149,7 +163,7 @@ export function computeBook(rows: readonly BookRowInput[], benchmarks: readonly 
       slice.every((row, j) => j === 0 || row.pointType === "intermediate" || valid[j]);
     const endBm =
       slice.length > 1 && last.pointType !== "intermediate" && valid.at(-1)
-        ? benchmarkOf(last.pointCode, benchmarks)
+        ? benchmarkOf(last.pointCode, verifying)
         : undefined;
     const kind = !endBm ? "open" : samePointCode(endBm.code, first.pointCode) ? "closed" : "link";
     const result = computeLeveling({
@@ -354,8 +368,10 @@ export function bookBenchmarkChecks(
   rows: readonly BookRowInput[],
   benchmarks: readonly BenchmarkInput[],
   points: Pick<PointInput, "code">[],
+  visitId?: string,
 ): BenchmarkCheck[] {
   const checks: BenchmarkCheck[] = [];
+  const verifying = verifyingBenchmarks(benchmarks, visitId);
   for (const tramo of book.tramos) {
     for (let i = tramo.start + 1; i <= tramo.end; i++) {
       if (i === tramo.end && tramo.kind !== "open") continue;
@@ -363,7 +379,7 @@ export function bookBenchmarkChecks(
       const computed = book.readings[i]!;
       if (row.foresight == null || !Number.isFinite(computed.elevationCalculated)) continue;
       if (points.some((p) => samePointCode(p.code, row.pointCode))) continue;
-      const bm = benchmarks.find((b) => samePointCode(b.code, row.pointCode));
+      const bm = verifying.find((b) => samePointCode(b.code, row.pointCode));
       if (!bm) continue;
       const measuredElevation = round4(computed.elevationCalculated);
       const raw = Math.round((measuredElevation - bm.elevation) * 1e4) / 10;

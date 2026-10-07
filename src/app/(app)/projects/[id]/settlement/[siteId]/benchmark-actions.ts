@@ -23,6 +23,10 @@ export interface BenchmarkPayload {
   code: string;
   elevation: number;
   description: string | null;
+  /** Un punto auxiliar guardado desde una visita: la visita que lo midió. */
+  originVisitId?: string | null;
+  /** De dónde vino; por omisión, «Tecleado». */
+  source?: string | null;
 }
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -94,12 +98,23 @@ export async function saveBenchmarkAction(
   const code = payload.code.trim();
 
   if (!payload.id) {
+    // La visita de origen tiene que ser de este lugar.
+    if (payload.originVisitId) {
+      const { data: origin } = await supabase
+        .from("settlement_visits")
+        .select("id")
+        .eq("id", payload.originVisitId)
+        .eq("site_id", siteId)
+        .maybeSingle();
+      if (!origin) return { ok: false, error: "Visita no encontrada." };
+    }
     const { error } = await supabase.from("site_benchmarks").insert({
       site_id: siteId,
       code,
       elevation: payload.elevation,
       description: payload.description,
-      source: "Tecleado",
+      source: payload.source ?? "Tecleado",
+      origin_visit_id: payload.originVisitId ?? null,
     });
     if (error) {
       if (error.code === "23505") return { ok: false, error: `Ya hay un BM ${code} en este lugar.` };

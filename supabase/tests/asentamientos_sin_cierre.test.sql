@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(31);
+select plan(33);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a371', 'asentsincierre@topofield.test'),
@@ -32,6 +32,8 @@ insert into public.site_benchmarks (site_id, code, elevation) values
 -- --- El esquema --------------------------------------------------------------
 select has_table('public', 'site_benchmarks', 'existe site_benchmarks');
 select col_is_unique('public', 'site_benchmarks', array['site_id', 'code'], 'un código por lugar');
+select has_column('public', 'site_benchmarks', 'origin_visit_id', 'el BM dice qué visita lo midió');
+select fk_ok('public', 'site_benchmarks', 'origin_visit_id', 'public', 'settlement_visits', 'id', 'y apunta a la visita');
 select has_column('public', 'settlement_book_readings', 'starts_section', 'la fila marca el inicio de un tramo');
 select col_is_null('public', 'settlement_visits', 'precision_order', 'la visita sin verificar no tiene orden');
 select is_empty(
