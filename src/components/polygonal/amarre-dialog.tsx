@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Alert, Button, EMPTY_DMS, Input, Modal, NumberInput, Select, type DmsValue } from "@/components/design-system";
 import { ensureCatalogPointAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import { azimuthFromCoordinates } from "@/lib/calculations/angles";
+import { catalogMoves, type CatalogUser } from "@/lib/polygonal-amarre";
 import { formatCoordinate } from "@/lib/utils/format";
 import { parseNumber } from "@/lib/utils/parse";
 import { readingDmsError } from "@/lib/validators/polygonal";
@@ -37,6 +38,8 @@ interface AmarreDialogProps {
   projectId: string;
   draft: PolygonalDraft;
   referencePoints: ReferencePoint[];
+  /** Las otras poligonales del proyecto: el aviso dice cuáles usan un punto que se corrige. */
+  others: CatalogUser[];
   angleFormat: AngleInputFormat;
   onSave: (next: PolygonalDraft) => Promise<{ ok: boolean; error?: string }>;
   onClose: () => void;
@@ -97,13 +100,34 @@ function readAzimuth(v: DmsValue, what: string): Dms3 | string {
   return problem ? `${what}: ${problem}` : dms;
 }
 
+type NamedPoint = { code: string; north: number; east: number };
+
+/** El primer nombre que se repite con otras coordenadas entre los puntos del amarre. */
+function repeatedName(points: NamedPoint[]): string | null {
+  for (const [i, p] of points.entries()) {
+    if (points.slice(i + 1).some((q) => q.code === p.code && (q.north !== p.north || q.east !== p.east))) {
+      return p.code;
+    }
+  }
+  return null;
+}
+
 /**
  * Los puntos de amarre (Fase 35, maqueta «Datos A»): la estación de partida y la
  * referencia del 0 atrás, cada una con «Tomar del catálogo»; la referencia
  * admite solo el azimut. En la abierta con control, la llegada. Al guardar, los
- * puntos con coordenadas van al catálogo del proyecto (decisión 9).
+ * puntos con coordenadas van al catálogo del proyecto (decisión 9); si uno ya
+ * estaba con otras, se corrige allí, con aviso previo.
  */
-export function AmarreDialog({ projectId, draft, referencePoints, angleFormat, onSave, onClose }: AmarreDialogProps) {
+export function AmarreDialog({
+  projectId,
+  draft,
+  referencePoints,
+  others,
+  angleFormat,
+  onSave,
+  onClose,
+}: AmarreDialogProps) {
   const a = draft.amarre;
   const controlled = draft.details.type === "open_controlled";
   const catalog = referencePoints.filter((p) => p.north !== null && p.east !== null);
@@ -140,6 +164,22 @@ export function AmarreDialog({ projectId, draft, referencePoints, angleFormat, o
       ? azimuthFromCoordinates(s.north, s.east, r.north, r.east)
       : null;
   const measured = draft.stations.some((st) => st.readings.length > 0 || st.distance !== null);
+
+  // Los puntos del catálogo que cambian de coordenadas si se guarda así.
+  const t = readPoint(end, "");
+  const toCatalog = [mode !== "none" ? s : null, mode === "point" ? r : null, controlled ? t : null].filter(
+    (p): p is NamedPoint => p !== null && typeof p !== "string",
+  );
+  const moves = catalogMoves(
+    referencePoints.map((p) => ({
+      id: p.id,
+      code: p.code,
+      north: p.north == null ? null : Number(p.north),
+      east: p.east == null ? null : Number(p.east),
+    })),
+    toCatalog,
+    others,
+  );
 
   function submit() {
     setError(null);
@@ -182,6 +222,14 @@ export function AmarreDialog({ projectId, draft, referencePoints, angleFormat, o
         if (typeof az === "string") return setError(az);
         endAz = az;
       }
+    }
+
+    // Ahora un punto existente se corrige: con el mismo nombre, el segundo pisaría al primero.
+    const repeated = repeatedName(
+      [mode !== "none" ? startPoint : null, refPoint, endPoint].filter((p): p is NamedPoint => p !== null),
+    );
+    if (repeated) {
+      return setError(`${repeated} está dos veces con coordenadas distintas: cada punto necesita su propio nombre.`);
     }
 
     startTransition(async () => {
@@ -313,6 +361,18 @@ export function AmarreDialog({ projectId, draft, referencePoints, angleFormat, o
           </fieldset>
         )}
 
+        {moves.length > 0 && (
+          <Alert variant="warning" title="Se corrige en el catálogo del proyecto">
+            <ul className="flex flex-col gap-1">
+              {moves.map((m) => (
+                <li key={m.code}>
+                  {m.code}: antes N {formatCoordinate(m.north)} · E {formatCoordinate(m.east)}.
+                  {m.usedBy.length > 0 && <> También lo usa {m.usedBy.map((n) => `«${n}»`).join(", ")}.</>}
+                </li>
+              ))}
+            </ul>
+          </Alert>
+        )}
         {measured && (
           <Alert variant="warning">Ya hay mediciones: cambiar el amarre recalcula la poligonal con ellas.</Alert>
         )}
