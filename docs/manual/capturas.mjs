@@ -52,6 +52,12 @@ const tt4 = proyecto
   ? sql(`select id from public.polygonal_processes where name like 'Poligonal V10%bowditch' and project_id='${proyecto}';`)
   : "";
 const nivelacion = sql("select id from public.leveling_processes where name like 'Circuito BM-1%';");
+// Fase 36 — El Verjón, del «Proyecto de ejemplo»: ida y vuelta por los mismos
+// puntos, para la libreta, la armada y la compensación.
+const verjon = sql("select id from public.leveling_processes where name like 'El Verjón%' limit 1;");
+const proyectoVerjon = verjon
+  ? sql(`select project_id from public.leveling_processes where id='${verjon}';`)
+  : "";
 const proyectoMonitoreo = sql("select id from public.projects where name='Edificio en monitoreo' limit 1;");
 const lugarMonitoreo = sql("select id from public.sites where name='Edificio Torre Central' limit 1;");
 // Fase 18 — el lugar con libreta de nivelación en cada visita. Se usa la
@@ -68,6 +74,7 @@ if (
   !proyecto ||
   !tt4 ||
   !nivelacion ||
+  !verjon ||
   !proyectoMonitoreo ||
   !lugarMonitoreo ||
   !lugarLibreta ||
@@ -237,32 +244,54 @@ console.log("✓", "22-georreferenciar");
 await page.keyboard.press("Escape");
 await page.setViewportSize({ width: 1280, height: 800 });
 
-// Nivelación
-await page.goto(`${BASE}/projects/${proyecto}/leveling/new`, { waitUntil: "networkidle" });
-await capturar("11-nueva-nivelacion");
-await page.goto(`${BASE}/projects/${proyecto}/leveling/${nivelacion}`, { waitUntil: "networkidle" });
-await capturar("12-editor-nivelacion", { fullPage: true });
+// Nivelación (Fase 36): el alta en un popup y la pantalla por pasos.
+await page.goto(`${BASE}/projects/${proyecto}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "+ Nuevo Proceso" }).click();
+await page.getByRole("dialog").getByRole("button", { name: "Nivelación", exact: true }).click();
+const altaNivelacion = page.getByRole("dialog", { name: "Nueva nivelación" });
+await altaNivelacion.getByLabel("Título").fill("El Verjón — ida y vuelta");
+await altaNivelacion.getByText("Abierta", { exact: true }).click();
+await altaNivelacion.getByText("por los mismos puntos").click();
+await altaNivelacion.getByLabel("BM de partida").fill("D1");
+await altaNivelacion.getByLabel("Cota conocida (m)").fill("3288.5000");
+await page.waitForTimeout(400);
+await altaNivelacion.screenshot({ path: join(OUT, "11-nueva-nivelacion.png") });
+console.log("✓", "11-nueva-nivelacion");
+await page.keyboard.press("Escape");
+
+// Paso 1 · Libreta de El Verjón: el BM, la tabla de la hoja, la comprobación
+// aritmética y el perfil con las miras, con la vuelta tenue.
+const pasosNivelacion = `${BASE}/projects/${proyectoVerjon}/leveling/${verjon}`;
+await page.goto(`${pasosNivelacion}?tab=libreta`, { waitUntil: "networkidle" });
+await capturar("12-libreta-nivelacion", { fullPage: true });
+
+// El popup de la armada 2 de la ida, sin guardar. Alto para que quepa entero.
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.getByRole("button", { name: "Editar la armada 2" }).first().click();
+await page.waitForTimeout(500);
+await page.getByRole("dialog", { name: "Armada 2 · ida" }).screenshot({ path: join(OUT, "32-armada-nivelacion.png") });
+console.log("✓", "32-armada-nivelacion");
+await page.keyboard.press("Escape");
+await page.setViewportSize({ width: 1280, height: 800 });
+
+// Paso 2 · Compensación: el orden alcanzado con su «Por qué», la tabla de la
+// ida y la vuelta y el gráfico ×1000.
+await page.goto(`${pasosNivelacion}?tab=compensacion`, { waitUntil: "networkidle" });
+await page.getByText("Por qué segundo orden").click();
+await capturar("33-compensacion-nivelacion", { fullPage: true });
 
 // Fase 16 — importar el crudo de nivel digital en la libreta del Circuito
-// BM-1. Se captura el diálogo con la previsualización, sin aceptar.
+// BM-1. Se captura el diálogo con la previsualización, sin aceptar: aceptar
+// guarda la libreta (Fase 36).
+await page.goto(`${BASE}/projects/${proyecto}/leveling/${nivelacion}?tab=libreta`, { waitUntil: "networkidle" });
 await page.setViewportSize({ width: 1280, height: 1400 });
-await page.getByRole("button", { name: "Importar desde archivo" }).click();
+await page.getByRole("button", { name: "Importar .L o CSV" }).first().click();
 const importar = page.getByRole("dialog");
 await importar.locator('input[type="file"]').setInputFiles(join(AQUI, "..", "carteras", "CRDUDO-TRAMO2.L"));
 await page.waitForTimeout(600);
 await importar.screenshot({ path: join(OUT, "23-importar-nivelacion.png") });
 console.log("✓", "23-importar-nivelacion");
-
-// Fase 17 — el mismo crudo aceptado como ida y vuelta (sin guardar): la tabla
-// de puntos homólogos.
-await importar.getByRole("button", { name: "Usar estas lecturas" }).click();
-await page.waitForTimeout(800);
-const homologos = page.getByRole("heading", { name: "Puntos homólogos" });
-await homologos.scrollIntoViewIfNeeded();
-await homologos
-  .locator("xpath=ancestor::*[contains(@class,'rounded')][1]")
-  .screenshot({ path: join(OUT, "24-puntos-homologos.png") });
-console.log("✓", "24-puntos-homologos");
+await page.keyboard.press("Escape");
 await page.setViewportSize({ width: 1280, height: 800 });
 
 // Control de asentamientos
