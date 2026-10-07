@@ -24,6 +24,8 @@ interface ProcessHeaderProps {
   exportHref: string;
   /** En el paso de Informe, la primera acción es imprimirlo. */
   printable?: boolean;
+  /** Una acción propia del módulo, la primera: «+ Nueva visita» del lugar (Fase 37). */
+  primaryAction?: ReactNode;
   onEdit: () => void;
   duplicate: () => Promise<DraftSaveResult>;
   remove: () => Promise<DraftSaveResult>;
@@ -56,6 +58,7 @@ export function ProcessHeader({
   updatedAt,
   exportHref,
   printable = false,
+  primaryAction,
   onEdit,
   duplicate,
   remove,
@@ -102,6 +105,7 @@ export function ProcessHeader({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {printable && <PrintButton size="sm" />}
+          {primaryAction}
           <Button variant="secondary" size="sm" onClick={onEdit}>
             Editar datos
           </Button>

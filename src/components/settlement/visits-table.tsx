@@ -1,18 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Badge, StatusIndicator } from "@/components/design-system";
-import { formatDateShort, formatSignedMm, formatBookClosure } from "@/lib/utils/format";
-import {
-  ALERT_LEVEL_LABELS,
-  VISIT_STATUS_LABELS,
-  type AlertLevel,
-  type CaptureMode,
-  type VisitStatus,
-} from "@/types/settlement";
-import { VISIT_STATUS_TONE } from "@/lib/process-status";
-
+import { cn } from "@/lib/utils/cn";
+import { formatDateShort, formatSignedMm } from "@/lib/utils/format";
+import { ALERT_LEVEL_LABELS, type AlertLevel, type VisitStatus } from "@/types/settlement";
 
 /** Una fila de la tabla: la visita ya resumida en el servidor. */
 export interface VisitTableRow {
@@ -20,15 +12,10 @@ export interface VisitTableRow {
   visitNumber: number;
   date: string;
   status: VisitStatus;
-  captureMode: CaptureMode;
   mean: number | null;
   maxSettlement: { code: string; value: number } | null;
   maxMove: { code: string; value: number } | null;
-  amarre: { code: string; elevation: number | null } | null;
-  closureErrorMm: number | null;
-  toleranceMm: number | null;
-  meetsTolerance: boolean | null;
-  /** «BM-2 no nivela con BM-1», si algún BM de control no nivela (Fase 30). */
+  /** «BM-2 no nivela con BM-1», si algún BM leído de paso no nivela (Fase 30). */
   bmWarning: string | null;
   worstAlert: AlertLevel;
 }
@@ -38,30 +25,26 @@ interface VisitsTableProps {
   rows: VisitTableRow[];
   /** `/projects/…/settlement/…/visits`, al que se añade el id. */
   hrefBase: string;
+  /** La visita elegida, resaltada aquí y en la tendencia de al lado (Fase 37). */
+  selectedId?: string | null;
+  onSelect?: (visitId: string) => void;
 }
 
 /**
- * Visitas del lugar (Fase 18), con las columnas del prototipo: promedio,
- * máximo, amarre, mayor movimiento y cierre de la libreta, además del nivel
- * de alerta y del estado del proceso. La fila entera abre la visita; el
- * enlace de la primera columna es la navegación real para teclado y lector.
+ * Visitas del lugar (Fase 18; columnas de la Fase 37, lienzo «Lugar B»):
+ * promedio, máximo, mayor movimiento y alerta. Pulsar la fila la elige para
+ * resaltarla en la tendencia; el enlace de la primera columna abre la visita.
  */
-export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
-  const router = useRouter();
-
+export function VisitsTable({ rows, hrefBase, selectedId = null, onSelect }: VisitsTableProps) {
   if (rows.length === 0) {
-    return (
-      <p className="text-sm text-ink-2">
-        Aún no hay visitas registradas en este lugar.
-      </p>
-    );
+    return <p className="text-sm text-ink-2">Aún no hay visitas registradas en este lugar.</p>;
   }
 
   return (
     // `relative`: el texto `sr-only` de las celdas es absoluto, y sin un
     // contenedor posicionado escapa del recorte y ensancha la página entera
     // en un teléfono.
-    <div className="relative max-h-[28rem] overflow-auto">
+    <div className="relative max-h-[32rem] overflow-auto">
       <table className="w-full text-sm">
         <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-rule text-left text-xs text-ink-2">
@@ -69,25 +52,24 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
             <th className="py-2 pr-3 font-medium">Fecha</th>
             <th className="py-2 pr-3 text-right font-medium">Promedio (mm)</th>
             <th className="py-2 pr-3 text-right font-medium">Máximo (mm)</th>
-            <th className="py-2 pr-3 font-medium">Amarre</th>
             <th className="py-2 pr-3 text-right font-medium">Mayor Δ (mm)</th>
-            <th className="py-2 pr-3 text-right font-medium">Cierre (mm)</th>
             <th className="py-2 pr-3 font-medium">Alerta</th>
-            <th className="py-2 pr-3 font-medium">Estado</th>
           </tr>
         </thead>
         <tbody>
           {[...rows].reverse().map((row) => {
             const href = `${hrefBase}/${row.visitId}`;
-            const closure =
-              row.captureMode === "book"
-                ? formatBookClosure(row.closureErrorMm, row.toleranceMm, row.meetsTolerance)
-                : null;
+            const selected = row.visitId === selectedId;
             return (
               <tr
                 key={row.visitId}
-                onClick={() => router.push(href)}
-                className="cursor-pointer border-b border-rule last:border-0 hover:bg-paper"
+                onClick={onSelect ? () => onSelect(row.visitId) : undefined}
+                aria-selected={onSelect ? selected : undefined}
+                className={cn(
+                  "border-b border-rule last:border-0",
+                  onSelect && "cursor-pointer hover:bg-paper",
+                  selected && "bg-mira-bg",
+                )}
               >
                 <td className="whitespace-nowrap py-2 pr-3">
                   <Link
@@ -97,16 +79,23 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                   >
                     Visita {row.visitNumber}
                   </Link>
-                  {row.visitNumber === 0 && (
-                    <span className="ml-1 text-ink-2">(base)</span>
+                  {row.visitNumber === 0 && <span className="ml-1 text-ink-2">(base)</span>}
+                  {row.status === "in_progress" && (
+                    <Badge tone="neutral" className="ml-2">
+                      En medición
+                    </Badge>
                   )}
                 </td>
                 <td className="whitespace-nowrap py-2 pr-3 text-ink-2">
                   {formatDateShort(row.date)}
+                  {row.bmWarning && (
+                    <span className="font-semibold text-warning" title={row.bmWarning}>
+                      <span aria-hidden> ⚠</span>
+                      <span className="sr-only"> ({row.bmWarning})</span>
+                    </span>
+                  )}
                 </td>
-                <td className="py-2 pr-3 text-right font-mono tabular-nums">
-                  {formatSignedMm(row.mean)}
-                </td>
+                <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatSignedMm(row.mean)}</td>
                 <td className="whitespace-nowrap py-2 pr-3 text-right font-mono tabular-nums">
                   {row.maxSettlement ? (
                     <>
@@ -115,26 +104,6 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                     </>
                   ) : (
                     "—"
-                  )}
-                </td>
-                <td className="whitespace-nowrap py-2 pr-3">
-                  {row.amarre ? (
-                    <>
-                      {row.amarre.code}{" "}
-                      {row.amarre.elevation != null && (
-                        <span className="font-mono tabular-nums text-ink-2">
-                          {row.amarre.elevation.toFixed(4)}
-                        </span>
-                      )}
-                      {row.bmWarning && (
-                        <span className="font-mono font-semibold text-warning" title={row.bmWarning}>
-                          <span aria-hidden> ⚠</span>
-                          <span className="sr-only"> ({row.bmWarning})</span>
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-ink-2">—</span>
                   )}
                 </td>
                 <td className="whitespace-nowrap py-2 pr-3 text-right font-mono tabular-nums">
@@ -147,32 +116,8 @@ export function VisitsTable({ rows, hrefBase }: VisitsTableProps) {
                     "—"
                   )}
                 </td>
-                <td className="whitespace-nowrap py-2 pr-3 text-right font-mono tabular-nums">
-                  {closure ? (
-                    <span
-                      className={closure.status === "out" ? "font-semibold text-warning" : undefined}
-                      title={closure.detail}
-                    >
-                      {closure.status === "out" && <span aria-hidden>⚠ </span>}
-                      {closure.value.replace(" mm", "")}
-                      {closure.status === "out" && (
-                        <span className="sr-only"> (fuera de tolerancia)</span>
-                      )}
-                    </span>
-                  ) : (
-                    formatSignedMm(row.closureErrorMm)
-                  )}
-                </td>
                 <td className="whitespace-nowrap py-2 pr-3">
-                  <StatusIndicator
-                    level={row.worstAlert}
-                    label={ALERT_LEVEL_LABELS[row.worstAlert]}
-                  />
-                </td>
-                <td className="py-2 pr-3">
-                  <Badge tone={VISIT_STATUS_TONE[row.status]}>
-                    {VISIT_STATUS_LABELS[row.status]}
-                  </Badge>
+                  <StatusIndicator level={row.worstAlert} label={ALERT_LEVEL_LABELS[row.worstAlert]} />
                 </td>
               </tr>
             );

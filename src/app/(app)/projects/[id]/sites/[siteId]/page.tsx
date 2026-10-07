@@ -5,10 +5,11 @@ interface SitePageProps {
 }
 
 /**
- * La configuración del lugar vive desde la Fase 22 en la pestaña «Puntos y
- * lugar» de su pantalla. Los enlaces antiguos llevan allí.
+ * El catálogo de puntos vive en la pestaña «Puntos» de la pantalla del lugar
+ * (Fase 22; los datos del lugar, desde la Fase 37, en «Editar datos»). Los
+ * enlaces antiguos llevan allí.
  */
 export default async function SitePage({ params }: SitePageProps) {
   const { id, siteId } = await params;
-  redirect(`/projects/${id}/settlement/${siteId}?tab=lugar`);
+  redirect(`/projects/${id}/settlement/${siteId}?tab=puntos`);
 }

@@ -51,6 +51,8 @@ interface TrendChartProps {
   thresholds: ChartThresholds;
   /** Si se pasa, cada visita es pulsable y la abre. */
   onSelectVisit?: (visitId: string) => void;
+  /** La visita elegida en la tabla de al lado, resaltada (Fase 37). */
+  highlightId?: string | null;
 }
 
 const HEIGHT = 300;
@@ -95,7 +97,7 @@ function visitLabel(visit: TrendVisit): string {
  * (descenso) se dibuja hacia abajo, y el eje llega al umbral siguiente al
  * punto más hundido, para que se vea cuánto falta.
  */
-export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProps) {
+export function TrendChart({ visits, thresholds, onSelectVisit, highlightId = null }: TrendChartProps) {
   const { ref, width } = useContainerWidth();
   // Visita señalada con el ratón o el foco: su resumen sale en un recuadro.
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -225,6 +227,12 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
                 plotHeight={plotH}
               />
 
+              {/* La visita elegida en la tabla, de lado a lado (Fase 37) */}
+              {(() => {
+                const h = marks.find((m) => m.visit.visitId === highlightId);
+                return h ? <rect x={h.x - 10} y={0} width={20} height={plotH} className="fill-mira-bg" /> : null;
+              })()}
+
               {/* Banda de mínimo a máximo */}
               {bandSegments.map((top, i) => {
                 const low = bandLows[i] ?? [];
@@ -272,7 +280,7 @@ export function TrendChart({ visits, thresholds, onSelectVisit }: TrendChartProp
                   key={visit.visitId}
                   cx={x}
                   cy={y}
-                  r={4}
+                  r={visit.visitId === highlightId ? 6 : 4}
                   strokeWidth={1.5}
                   className="fill-ink stroke-card"
                 />

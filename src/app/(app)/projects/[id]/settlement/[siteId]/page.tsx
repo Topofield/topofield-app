@@ -1,25 +1,24 @@
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/design-system";
+import { Tabs } from "@/components/design-system";
 import { ProcessReport } from "@/components/process/process-report";
-import { processReportState } from "@/lib/reports/state";
-import { ProcessShell } from "@/components/process/process-shell";
 import { NewVisitDialog } from "@/components/settlement/new-visit-dialog";
+import { SiteHeader } from "@/components/settlement/site-header";
 import { isPointActiveOn, pointInputOf } from "@/lib/calculations/settlement";
-import { SITE_STATUS_TONE } from "@/lib/process-status";
+import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getPointIdsWithClosedReadings,
   getProjectById,
   getReferencePoints,
   getReports,
   getSettlementReadingsBySite,
   getSite,
+  getSiteBenchmarks,
   getSiteBooks,
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
 import { formatDateOnly } from "@/lib/utils/format";
-import { SITE_STATUS_LABELS, STRUCTURE_TYPE_LABELS } from "@/types/site";
+import { BenchmarksTab } from "./benchmarks-tab";
 import { PanelTab } from "./panel-tab";
 import { PlaceTab } from "./place-tab";
 
@@ -30,77 +29,69 @@ interface SettlementPageProps {
 
 const TABS = [
   { id: "panel", label: "Panel" },
-  { id: "lugar", label: "Puntos y lugar" },
+  { id: "puntos", label: "Puntos" },
+  { id: "bms", label: "BMs" },
   { id: "informe", label: "Informe" },
 ];
 
 /**
- * Pantalla de un control de asentamientos (Fase 22): pestañas Panel —KPIs,
- * visitas, gráficas y análisis—, Puntos y lugar —datos, umbrales y catálogo—
- * e Informe.
+ * Pantalla de un lugar de asentamientos (Fase 37, lienzo «Lugar B»): la
+ * cabecera común, con «+ Nueva visita», y las pestañas Panel —visitas y
+ * tendencia lado a lado—, Puntos, BMs e Informe. Sin estado: el lugar no se
+ * cierra.
  */
 export default async function SettlementPage({ params, searchParams }: SettlementPageProps) {
   const { id, siteId } = await params;
   const { tab } = await searchParams;
-  const activeTab = tab === "lugar" || tab === "informe" ? tab : "panel";
+  // «lugar» era la pestaña Puntos y lugar hasta la Fase 37.
+  const activeTab =
+    tab === "puntos" || tab === "lugar" ? "puntos" : tab === "bms" || tab === "informe" ? tab : "panel";
 
   const supabase = await createClient();
-
   const project = await getProjectById(supabase, id);
-  if (!project) {
-    notFound();
-  }
-
+  if (!project) notFound();
   const site = await getSite(supabase, siteId);
-  if (!site || site.project_id !== project.id || site.kind !== "settlement") {
-    notFound();
-  }
+  if (!site || site.project_id !== project.id || site.kind !== "settlement") notFound();
 
-  // Los informes, para reabrir el lugar (Fase 34) y para la pestaña Informe.
-  const state = processReportState(site.status);
-  const [sitePoints, visits, referencePoints, reports] = await Promise.all([
+  const [sitePoints, visits, benchmarks, referencePoints, reports] = await Promise.all([
     getSitePoints(supabase, site.id),
     getVisits(supabase, site.id),
+    getSiteBenchmarks(supabase, site.id),
     getReferencePoints(supabase, project.id),
-    state !== "draft" || activeTab === "informe"
-      ? getReports(supabase, project.id)
-      : Promise.resolve([]),
+    getReports(supabase, project.id),
   ]);
 
   const hoy = new Date().toISOString().slice(0, 10);
   const activos = sitePoints.map(pointInputOf).filter((p) => isPointActiveOn(p, hoy)).length;
   const base = visits[0]?.date;
   const basePath = `/projects/${project.id}/settlement/${site.id}`;
+  const summary =
+    `${activos} ${activos === 1 ? "punto" : "puntos"} de control · ` +
+    `${benchmarks.length} BM` +
+    (base ? ` · base el ${formatDateOnly(base)}` : "");
 
   return (
-    <ProcessShell
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: project.name, href: `/projects/${project.id}?tab=processes&modulo=asentamientos` },
-        { label: site.name },
-      ]}
-      title={site.name}
-      badge={<Badge tone={SITE_STATUS_TONE[site.status]}>{SITE_STATUS_LABELS[site.status]}</Badge>}
-      subtitle={
-        `Control de asentamientos · ${STRUCTURE_TYPE_LABELS[site.structure_type]} · ` +
-        `${activos} ${activos === 1 ? "punto" : "puntos"} de control` +
-        (base ? ` · lectura base el ${formatDateOnly(base)}` : "")
-      }
-      basePath={basePath}
-      tabs={TABS}
-      activeTab={activeTab}
-      reportTab="informe"
-      exportHref={`${basePath}/export`}
-      actions={
-        // Tarea 9: la cabecera del lugar se rehace (Fase 37); ya no se reabre.
-        <NewVisitDialog
-          projectId={project.id}
-          siteId={site.id}
-          referencePoints={referencePoints}
-          previous={visits.at(-1) ?? null}
-        />
-      }
-    >
+    <div className="flex flex-col gap-6">
+      <SiteHeader
+        projectId={project.id}
+        projectName={project.name}
+        site={site}
+        summary={summary}
+        reportTitles={reportsIncluding(reports, "site", site.id).map((r) => r.title)}
+        printable={activeTab === "informe"}
+        newVisit={
+          // Tarea 11: el popup de la nueva visita (Fase 37).
+          <NewVisitDialog
+            projectId={project.id}
+            siteId={site.id}
+            referencePoints={referencePoints}
+            previous={visits.at(-1) ?? null}
+          />
+        }
+      />
+      <div className="print:hidden">
+        <Tabs items={TABS} activeId={activeTab} basePath={basePath} />
+      </div>
       {activeTab === "panel" && (
         <PanelTab
           project={project}
@@ -109,26 +100,21 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
           visits={visits}
           readingsBySite={await getSettlementReadingsBySite(supabase, site.id)}
           booksByVisit={await getSiteBooks(supabase, site.id)}
+          benchmarks={benchmarks}
         />
       )}
-      {activeTab === "lugar" && (
-        <PlaceTab
-          projectId={project.id}
-          site={site}
-          points={sitePoints}
-          visits={visits}
-          referenceLocked={await getPointIdsWithClosedReadings(supabase, site.id)}
-        />
-      )}
+      {activeTab === "puntos" && <PlaceTab site={site} points={sitePoints} hasVisits={visits.length > 0} />}
+      {activeTab === "bms" && <BenchmarksTab benchmarks={benchmarks} />}
       {activeTab === "informe" && (
         <ProcessReport
           project={project}
           process={{ type: "site", id: site.id, name: site.name }}
-          state={state}
+          state="draft"
+          includable={visits.some((v) => v.status === "calculated")}
           reports={reports}
-          notes={site.notes}
+          notes={site.description}
         />
       )}
-    </ProcessShell>
+    </div>
   );
 }

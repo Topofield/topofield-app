@@ -401,6 +401,18 @@ export async function getSite(
   return (data ?? null) as Site | null;
 }
 
+/** Los BM de un lugar (Fase 37), por código. */
+export async function getSiteBenchmarks(supabase: Client, siteId: string) {
+  if (!UUID_RE.test(siteId)) return [];
+  const { data, error } = await supabase
+    .from("site_benchmarks")
+    .select("*")
+    .eq("site_id", siteId)
+    .order("code", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((b) => ({ ...b, elevation: Number(b.elevation) }));
+}
+
 /** Catálogo de puntos de un lugar, por código. */
 export async function getSitePoints(
   supabase: Client,

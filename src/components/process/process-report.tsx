@@ -57,9 +57,9 @@ export async function ProcessReport({
   reports,
   includable = state === "closed",
 }: ProcessReportProps) {
-  // La poligonal y la nivelación no se cierran (Fases 35 y 36): sin marca de
-  // borrador ni registro de cierre, con la fecha del informe.
-  const unclosable = process.type === "polygonal" || process.type === "leveling";
+  // Ningún proceso se cierra ya (Fases 35, 36 y 37): sin marca de borrador ni
+  // registro de cierre, con la fecha del informe.
+  const unclosable = process.type === "polygonal" || process.type === "leveling" || process.type === "site";
   // Cerrado conforme o rechazado: no cambia mientras siga cerrado, y tiene fecha
   // y registro de cierre.
   const closed = !unclosable && state !== "draft";
@@ -147,6 +147,8 @@ export async function ProcessReport({
               ? "Un informe consolidado incluye la poligonal cuando está calculada."
               : process.type === "leveling"
                 ? "Un informe consolidado incluye la nivelación cuando su libreta está completa."
+                : process.type === "site"
+                ? "Un informe consolidado incluye el lugar cuando tiene alguna visita calculada."
                 : state === "rejected"
                 ? "Un informe consolidado no incluye procesos rechazados."
                 : "Un informe consolidado solo incluye procesos cerrados."}

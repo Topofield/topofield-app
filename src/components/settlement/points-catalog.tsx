@@ -14,13 +14,13 @@ import {
 import {
   createPointAction,
   deletePointAction,
+  pointImpactAction,
   retirePointAction,
   savePointAction,
   undoRetirementAction,
   type PointPayload,
 } from "@/app/(app)/projects/[id]/sites/[siteId]/point-actions";
 import { formatDateOnly, formatElevation } from "@/lib/utils/format";
-import { REFERENCE_LOCKED_MESSAGE } from "@/lib/validators/settlement";
 import type { SettlementPoint } from "@/types/settlement";
 import { readNumberText } from "@/lib/utils/parse";
 
@@ -40,23 +40,11 @@ interface PendingDelete {
 interface PointsCatalogProps {
   siteId: string;
   points: SettlementPoint[];
-  /** Sin acciones de edición cuando el lugar está cerrado. */
-  disabled?: boolean;
   /**
    * El lugar ya tiene visitas: un punto nuevo es de ALTA (Fase 11), con fecha
    * de alta y sin C0 —su línea base es su primera lectura—.
    */
   hasVisits: boolean;
-  /**
-   * Por cada punto de baja, por qué ya no se puede deshacer la baja, o null
-   * si todavía se puede. Lo calcula el servidor con `undoRetirementBlocker`.
-   */
-  undoBlockers: Record<string, string | null>;
-  /**
-   * Puntos con lecturas en visitas cerradas (Fase 23): su C0 ya no cambia,
-   * así que el diálogo de edición la bloquea.
-   */
-  referenceLocked: string[];
 }
 
 interface FormState {
@@ -127,14 +115,7 @@ function parseOptionalNumber(
  * patrón de `reference-points-manager.tsx` (validación en cliente, acción
  * como función dentro de `startTransition`, cierre del modal en el callback).
  */
-export function PointsCatalog({
-  siteId,
-  points,
-  disabled,
-  hasVisits,
-  undoBlockers,
-  referenceLocked,
-}: PointsCatalogProps) {
+export function PointsCatalog({ siteId, points, hasVisits }: PointsCatalogProps) {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -147,11 +128,14 @@ export function PointsCatalog({
   const [retiredOn, setRetiredOn] = useState("");
   const [reason, setReason] = useState("");
   const [retireError, setRetireError] = useState<string | null>(null);
+  /** Cambiar una C0 con historia (Fase 37): cuántas visitas cambian, ya avisado. */
+  const [c0Notice, setC0Notice] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function open(next: Dialog) {
     setErrors({});
     setServerError(null);
+    setC0Notice(null);
     const initial = formOf(next.mode === "edit" ? next.point : null);
     if (next.mode === "create" && hasVisits) initial.activeFrom = todayInBogota();
     setForm(initial);
@@ -207,7 +191,20 @@ export function PointsCatalog({
     };
 
     const isEdit = dialog?.mode === "edit";
+    const c0Changed =
+      isEdit &&
+      (dialog.point.initial_elevation == null ? null : Number(dialog.point.initial_elevation)) !==
+        payload.initialElevation;
     startTransition(async () => {
+      // Cambiar la C0 de un punto con historia cambia su acumulado en cada
+      // visita (Fase 37, decisión 18): se avisa cuántas antes de guardar.
+      if (isEdit && c0Changed && c0Notice === null) {
+        const { visits } = await pointImpactAction(siteId, dialog.point.id);
+        if (visits > 0) {
+          setC0Notice(visits);
+          return;
+        }
+      }
       const response = isEdit
         ? await savePointAction(dialog.point.id, payload)
         : await createPointAction(payload);
@@ -295,17 +292,14 @@ export function PointsCatalog({
   const point = dialog?.mode === "edit" ? dialog.point : null;
   // Un punto de alta: uno nuevo en un lugar con visitas, o uno que ya lo era.
   const isAltaForm = point ? point.active_from !== null : hasVisits;
-  const referenceIsLocked = point !== null && referenceLocked.includes(point.id);
 
   return (
     <Card
       title="Catálogo de puntos"
       actions={
-        !disabled && (
-          <Button size="sm" onClick={() => open({ mode: "create" })}>
-            Agregar punto
-          </Button>
-        )
+        <Button size="sm" onClick={() => open({ mode: "create" })}>
+          Agregar punto
+        </Button>
       }
     >
       {deleteError && (
@@ -328,7 +322,7 @@ export function PointsCatalog({
                 <th className="py-2 pr-3 font-medium">Ubicación</th>
                 <th className="py-2 pr-3 font-medium">Cota C0</th>
                 <th className="py-2 pr-3 font-medium">Estado</th>
-                {!disabled && <th className="py-2 pr-3" />}
+                <th className="py-2 pr-3" />
               </tr>
             </thead>
             <tbody>
@@ -353,27 +347,19 @@ export function PointsCatalog({
                   <td className="py-2 pr-3">
                     <PointState point={item} />
                   </td>
-                  {!disabled && (
-                    <td className="py-2 pr-3">
+                  <td className="py-2 pr-3">
                       {item.retired_on !== null ? (
-                        // Un punto de baja no se edita (su historia está
-                        // cerrada). Solo se deshace la baja, mientras se pueda.
-                        undoBlockers[item.id] ? (
-                          <p className="max-w-56 text-right text-xs text-ink-2">
-                            {undoBlockers[item.id]}
-                          </p>
-                        ) : (
-                          <div className="flex justify-end">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={isPending}
-                              onClick={() => handleUndoRetirement(item)}
-                            >
-                              Deshacer baja
-                            </Button>
-                          </div>
-                        )
+                        // Un punto de baja no se edita: primero se deshace la baja.
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={isPending}
+                            onClick={() => handleUndoRetirement(item)}
+                          >
+                            Deshacer baja
+                          </Button>
+                        </div>
                       ) : (
                         <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                           <Button
@@ -401,8 +387,7 @@ export function PointsCatalog({
                           </Button>
                         </div>
                       )}
-                    </td>
-                  )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -440,12 +425,14 @@ export function PointsCatalog({
                   value={form.initialElevation}
                   onChange={set("initialElevation")}
                   error={errors.initialElevation}
-                  disabled={referenceIsLocked}
                 />
               </div>
             )}
-            {referenceIsLocked && (
-              <p className="text-sm text-ink-2">{REFERENCE_LOCKED_MESSAGE}</p>
+            {c0Notice !== null && (
+              <Alert variant="warning">
+                Cambiar la C0 cambia el acumulado de este punto en {c0Notice}{" "}
+                {c0Notice === 1 ? "visita" : "visitas"}. Guarda otra vez para confirmar.
+              </Alert>
             )}
             {isAltaForm && (
               <Input

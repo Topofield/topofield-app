@@ -1,22 +1,22 @@
-import { Card, EmptyState } from "@/components/design-system";
-import { AnalysisPanel } from "@/components/settlement/analysis-panel";
-import { ThresholdSwatch } from "@/components/settlement/charts/chart-parts";
-import { PointsScatter } from "@/components/settlement/charts/points-scatter";
-import { SiteKpis } from "@/components/settlement/site-kpis";
-import { SiteTrend } from "@/components/settlement/site-trend";
-import { VisitsTable, type VisitTableRow } from "@/components/settlement/visits-table";
+import { SitePanel } from "@/components/settlement/site-panel";
+import type { VisitTableRow } from "@/components/settlement/visits-table";
 import {
   computeHistory,
-  computeTrends,
   detectTrendDeviations,
   pointInputOf,
 } from "@/lib/calculations/settlement";
-import { benchmarkChecksOfBook } from "@/lib/calculations/settlement-book";
+import {
+  bookBenchmarkChecks,
+  bookRowInputOf,
+  bookRowOf,
+  computeBook,
+} from "@/lib/calculations/settlement-book";
 import { summarizeSite } from "@/lib/calculations/settlement-summary";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
-import { formatTrendDeviation, settlementPointLabel } from "@/lib/utils/format";
+import { formatSignedMm, formatTrendDeviation, settlementPointLabel } from "@/lib/utils/format";
 import type {
   getSettlementReadingsBySite,
+  getSiteBenchmarks,
   getSiteBooks,
   getSitePoints,
   getVisits,
@@ -31,31 +31,26 @@ interface PanelTabProps {
   sitePoints: Awaited<ReturnType<typeof getSitePoints>>;
   visits: Awaited<ReturnType<typeof getVisits>>;
   readingsBySite: Awaited<ReturnType<typeof getSettlementReadingsBySite>>;
-  /** Las libretas de las visitas, para la comprobación de los BM (Fase 30). */
+  /** Las libretas de las visitas, para los BM leídos de paso (Fase 30). */
   booksByVisit: Awaited<ReturnType<typeof getSiteBooks>>;
+  benchmarks: Awaited<ReturnType<typeof getSiteBenchmarks>>;
 }
 
 /**
- * Pestaña Panel del control de asentamientos (Fase 18, layout del prototipo;
- * pestaña desde la Fase 22): umbrales, KPIs, visitas, tendencia, evolución
- * por punto y semáforo de la última visita. El histórico se
- * calcula en el servidor con `computeHistory` —el mismo motor que usan las
- * Server Actions al guardar—, con los umbrales vigentes: una visita cerrada se
- * reclasifica si se editan los umbrales. Sus lecturas no cambian, porque una
- * visita solo se cierra con las anteriores cerradas (Fase 26, C-15).
+ * Pestaña Panel del lugar (Fase 37, lienzo «Lugar B»). El histórico se calcula
+ * en el servidor con `computeHistory` —el mismo motor que usan las acciones al
+ * guardar—, con los umbrales vigentes: todo en vivo, sin nada cerrado.
  */
-export function PanelTab({ project, site, sitePoints, visits, readingsBySite, booksByVisit }: PanelTabProps) {
+export function PanelTab({ project, site, sitePoints, visits, readingsBySite, booksByVisit, benchmarks }: PanelTabProps) {
   const points: PointInput[] = sitePoints.map(pointInputOf);
   const codes = Object.fromEntries(points.map((p) => [p.id, p.code]));
+  const benchmarkInputs = benchmarks.map((b) => ({ code: b.code, elevation: b.elevation }));
 
   const visitInputs: VisitInput[] = visits.map((v) => ({
     id: v.id,
     visitNumber: v.visit_number,
     date: v.date,
-    readings: (readingsBySite[v.id] ?? []).map((r) => ({
-      pointId: r.point_id,
-      elevation: Number(r.elevation),
-    })),
+    readings: (readingsBySite[v.id] ?? []).map((r) => ({ pointId: r.point_id, elevation: Number(r.elevation) })),
   }));
 
   const thresholds = thresholdsOf(site);
@@ -67,26 +62,16 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite, bo
     alarm: thresholds.accumulatedAlarm,
   };
 
-  // Aviso de lectura fuera de tendencia de la última visita (Fase 12) y
-  // tendencia de cada punto (Fase 31), con el margen fijo de la Fase 37.
-  const trends = computeTrends(history.visits);
-  const lastVisitId = history.visits.at(-1)?.visitId;
-  const deviations = detectTrendDeviations(history.visits);
-  const lastVisitTrendWarnings = Object.fromEntries(
-    [...(lastVisitId ? (deviations.get(lastVisitId) ?? []) : [])].map(
-      ([pointId, deviation]) => [pointId, formatTrendDeviation(deviation)],
-    ),
-  );
-
   const summaryById = new Map(summary.visits.map((s) => [s.visitId, s]));
   const withCode = (v: { pointId: string; value: number } | null) =>
     v ? { code: codes[v.pointId] ?? "—", value: v.value } : null;
-  const visitRows: VisitTableRow[] = visits.map((visit) => {
+  const rows: VisitTableRow[] = visits.map((visit) => {
     const s = summaryById.get(visit.id);
-    // Los BM de control que no nivelan con el amarre (Fase 30).
+    // Los BM del lugar leídos de paso que no nivelan (Fase 30).
+    const bookRows = (booksByVisit[visit.id] ?? []).map((r) => bookRowInputOf(bookRowOf(r)));
     const notLeveling =
-      visit.capture_mode === "book"
-        ? benchmarkChecksOfBook(booksByVisit[visit.id] ?? [], visit.precision_order).filter(
+      bookRows.length > 0
+        ? bookBenchmarkChecks(computeBook(bookRows, benchmarkInputs), bookRows, benchmarkInputs, points).filter(
             (check) => check.meetsTolerance === false,
           )
         : [];
@@ -95,29 +80,27 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite, bo
       visitNumber: visit.visit_number,
       date: visit.date,
       status: visit.status,
-      captureMode: visit.capture_mode,
       mean: s?.mean ?? null,
       maxSettlement: withCode(s?.maxSettlement ?? null),
       maxMove: withCode(s?.maxMove ?? null),
-      amarre: visit.reference_bm_code
-        ? {
-            code: visit.reference_bm_code,
-            elevation:
-              visit.reference_bm_elevation == null ? null : Number(visit.reference_bm_elevation),
-          }
-        : null,
-      closureErrorMm: visit.closure_error_mm == null ? null : Number(visit.closure_error_mm),
-      toleranceMm: visit.tolerance_mm == null ? null : Number(visit.tolerance_mm),
-      meetsTolerance: visit.meets_tolerance,
       bmWarning:
         notLeveling.length > 0
-          ? `${notLeveling.map((check) => check.code).join(" y ")} no nivela con ${visit.reference_bm_code ?? "el amarre"}`
+          ? `${notLeveling.map((c) => `${c.code} ${formatSignedMm(c.differenceMm)} mm`).join(" y ")} de su cota en los BM del lugar`
           : null,
       worstAlert: s?.worstAlert ?? "normal",
     };
   });
 
-  const hrefBase = `/projects/${project.id}/settlement/${site.id}/visits`;
+  // Los avisos de tendencia de todas las visitas (Fase 12), con el margen fijo.
+  const numberOf = new Map(visits.map((v) => [v.id, v.visit_number]));
+  const warnings = [...detectTrendDeviations(history.visits).entries()].flatMap(([visitId, byPoint]) =>
+    [...byPoint.entries()].map(([pointId, deviation]) => ({
+      id: `${visitId}:${pointId}`,
+      title: `${codes[pointId] ?? "—"} · visita ${numberOf.get(visitId) ?? "?"}`,
+      text: formatTrendDeviation(deviation),
+    })),
+  );
+
   const trendVisits = summary.visits.map((s) => ({
     visitId: s.visitId,
     label: s.visitNumber === 0 ? "Visita 0 (base)" : `Visita ${s.visitNumber}`,
@@ -133,72 +116,36 @@ export function PanelTab({ project, site, sitePoints, visits, readingsBySite, bo
       label: settlementPointLabel(p),
       values: history.visits.flatMap((v) => {
         const r = v.readings.find((x) => x.pointId === p.id);
-        return r?.accumulatedSettlement != null
-          ? [{ date: v.date, value: r.accumulatedSettlement }]
-          : [];
+        return r?.accumulatedSettlement != null ? [{ date: v.date, value: r.accumulatedSettlement }] : [];
       }),
     }))
     .filter((s) => s.values.length > 0);
 
-  const hasReadings = history.visits.some((v) => v.readings.length > 0);
+  // La última visita en una línea: cuántos puntos normales y los más asentados.
+  const lastReadings = history.visits.at(-1)?.readings ?? [];
+  const normals = lastReadings.filter((r) => r.alertStatus === "normal").length;
+  const mostSettled = [...lastReadings]
+    .filter((r) => r.accumulatedSettlement != null)
+    .sort((a, b) => a.accumulatedSettlement! - b.accumulatedSettlement!)
+    .slice(0, 3)
+    .map((r) => `${codes[r.pointId] ?? "—"} ${formatSignedMm(r.accumulatedSettlement)}`);
+  const lastVisitNote =
+    lastReadings.length > 0
+      ? `${normals} de ${lastReadings.length} normales en la última visita · más asentados: ${mostSettled.join(" · ")}`
+      : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2">
-        <li className="flex items-center gap-1.5">
-          <ThresholdSwatch level="caution" /> Precaución -{chartThresholds.caution} mm
-        </li>
-        <li className="flex items-center gap-1.5">
-          <ThresholdSwatch level="alert" /> Alerta -{chartThresholds.alert} mm
-        </li>
-        <li className="flex items-center gap-1.5">
-          <ThresholdSwatch level="alarm" /> Alarma -{chartThresholds.alarm} mm
-        </li>
-      </ul>
-
-      <SiteKpis summary={summary} codes={codes} />
-
-      <Card
-        title="Visitas"
-        description="Abre una visita para ver sus puntos de control y su registro de nivelación."
-      >
-        <VisitsTable rows={visitRows} hrefBase={hrefBase} />
-      </Card>
-
-      <Card
-        title="Tendencia del asentamiento"
-        description="Promedio de los puntos de control en cada visita, con el rango entre el más y el menos asentado."
-      >
-        {hasReadings ? (
-          <SiteTrend visits={trendVisits} thresholds={chartThresholds} hrefBase={hrefBase} />
-        ) : (
-          <EmptyState
-            title="Todavía no hay lecturas"
-            description="La tendencia se dibuja con las visitas que ya tienen cotas."
-          />
-        )}
-      </Card>
-
-      <Card
-        title="Evolución por punto"
-        description="Acumulado de cada punto de control en el tiempo. Elige un punto para resaltarlo."
-      >
-        {hasReadings && summary.baseDate ? (
-          <PointsScatter series={scatterSeries} baseDate={summary.baseDate} thresholds={chartThresholds} />
-        ) : (
-          <EmptyState
-            title="Todavía no hay lecturas"
-            description="La gráfica se dibuja con el acumulado de cada visita."
-          />
-        )}
-      </Card>
-
-      <AnalysisPanel
-        points={points}
-        visits={history.visits}
-        trends={trends}
-        lastVisitTrendWarnings={lastVisitTrendWarnings}
-      />
-    </div>
+    <SitePanel
+      summary={summary}
+      codes={codes}
+      thresholds={thresholds}
+      rows={rows}
+      hrefBase={`/projects/${project.id}/settlement/${site.id}/visits`}
+      trendVisits={trendVisits}
+      scatterSeries={scatterSeries}
+      chartThresholds={chartThresholds}
+      warnings={warnings}
+      lastVisitNote={lastVisitNote}
+    />
   );
 }
