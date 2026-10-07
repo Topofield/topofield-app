@@ -59,7 +59,7 @@ export function precisionSummaryRows(sections: ReportSection[]): PrecisionSummar
         s.data.process.equipment_serial,
       );
     } else if (s.kind === "site") {
-      const last = s.data.history.visits[s.data.history.visits.length - 1];
+      const last = s.data.report.history.visits.at(-1);
       precision = last ? `Peor alerta: ${ALERT_LEVEL_LABELS[last.worstAlert]}` : "Sin visitas";
       const lastVisit = s.data.visits[s.data.visits.length - 1];
       if (lastVisit) {

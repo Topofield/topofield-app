@@ -20,7 +20,7 @@ import {
   getSitePoints,
   getVisits,
 } from "@/lib/supabase/queries";
-import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
+import { pointInputOf } from "@/lib/calculations/settlement";
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import { correctionBreakdown, type CorrectionBreakdown } from "@/lib/calculations/correction-breakdown";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
@@ -28,9 +28,10 @@ import { captureRows, type CaptureRow } from "@/components/polygonal/capture-row
 import { draftOf, inputOf } from "@/components/polygonal/polygonal-save";
 import type { AngleInputFormat, AngleType, PolygonalInput, PolygonalResult } from "@/types/polygonal";
 import type { PrecisionOrder } from "@/types/project";
-import type { PointInput, VisitInput } from "@/types/settlement";
+import type { PointInput } from "@/types/settlement";
 import type { IncludedProcess } from "@/types/report";
 import { levelingSectionData, type LevelingSectionData } from "./leveling-data";
+import { siteReportOf, type SiteReport } from "./site-data";
 
 type Client = SupabaseClient<Database>;
 
@@ -68,8 +69,10 @@ export interface SiteSectionData {
   points: Awaited<ReturnType<typeof getSitePoints>>;
   /** Los mismos puntos en la forma que consume la gráfica. */
   pointInputs: PointInput[];
+  /** Las visitas calculadas, las que informa (Fase 37). */
   visits: Awaited<ReturnType<typeof getVisits>>;
-  history: ReturnType<typeof computeHistory>;
+  /** El informe sencillo: veredicto, visitas, últimos puntos y avisos (`siteReportOf`). */
+  report: SiteReport;
 }
 
 /** Una sección del informe, ya resuelta a datos. */
@@ -149,34 +152,24 @@ export async function loadReportSections(
         getSettlementReadingsBySite(supabase, site.id),
       ]);
       const pointInputs: PointInput[] = points.map(pointInputOf);
-      const visitInputs: VisitInput[] = visits.map((v) => ({
-        id: v.id,
-        visitNumber: v.visit_number,
-        date: v.date,
-        readings: (readingsBySite[v.id] ?? []).map((r) => ({
-          pointId: r.point_id,
-          elevation: Number(r.elevation),
+      const report = siteReportOf({
+        thresholds: thresholdsOf(site),
+        points: pointInputs,
+        visits: visits.map((v) => ({
+          id: v.id,
+          visitNumber: v.visit_number,
+          date: v.date,
+          status: v.status,
+          precisionOrder: v.precision_order,
+          notes: v.notes,
+          readings: (readingsBySite[v.id] ?? []).map((r) => ({ pointId: r.point_id, elevation: Number(r.elevation) })),
         })),
-      }));
-      const history = computeHistory(pointInputs, visitInputs, thresholdsOf(site));
-      return { kind: "site", entry, data: { site, points, pointInputs, visits, history } };
+      });
+      return {
+        kind: "site",
+        entry,
+        data: { site, points, pointInputs, visits: visits.filter((v) => v.status === "calculated"), report },
+      };
     }),
   );
-}
-
-/** Cuándo y quién cerró lo que la sección describe. */
-export function closureOf(section: ReportSection): {
-  closedAt: string | null;
-  closedBy: string | null;
-} {
-  switch (section.kind) {
-    // La poligonal (Fase 35) y la nivelación (Fase 36) no se cierran.
-    case "polygonal":
-    case "leveling":
-      return { closedAt: null, closedBy: null };
-    case "site":
-      return { closedAt: section.data.site.closed_at, closedBy: section.data.site.closed_by };
-    case "missing":
-      return { closedAt: null, closedBy: null };
-  }
 }

@@ -4,7 +4,6 @@ import { DatosTab } from "@/components/polygonal/datos-tab";
 import { PolygonalHeader } from "@/components/polygonal/polygonal-header";
 import { PolygonalSteps, type PolygonalStep } from "@/components/polygonal/polygonal-steps";
 import { ProcessReport } from "@/components/process/process-report";
-import { processReportState } from "@/lib/reports/state";
 import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -70,7 +69,6 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
         <ProcessReport
           project={project}
           process={{ type: "polygonal", id: process.id, name: process.name }}
-          state={processReportState(process.status)}
           notes={process.notes}
           reports={reports}
           includable={process.status === "calculated"}

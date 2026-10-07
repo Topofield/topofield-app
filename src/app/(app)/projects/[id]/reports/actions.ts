@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getClosedWorkForReports,
+  getReportableWork,
   getProjectById,
 } from "@/lib/supabase/queries";
 import { coverOf } from "@/lib/reports/cover";
@@ -59,7 +59,7 @@ export async function createReportAction(
   if (!project) return { ok: false, error: "Proyecto no encontrado." };
 
   // Se parte de lo que la base dice que se puede incluir, no de lo que llegó.
-  const disponibles = await getClosedWorkForReports(supabase, project.id);
+  const disponibles = await getReportableWork(supabase, project.id);
   const porClave = new Map(
     disponibles.filter(isEligible).map((c) => [`${c.kind}:${c.id}`, c]),
   );

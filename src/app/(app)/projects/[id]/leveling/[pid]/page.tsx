@@ -5,7 +5,6 @@ import { LibretaTab } from "@/components/leveling/libreta-tab";
 import { LevelingSteps, type LevelingStep } from "@/components/leveling/leveling-steps";
 import { ProcessReport } from "@/components/process/process-report";
 import { reportsIncluding } from "@/lib/reports/including";
-import { processReportState } from "@/lib/reports/state";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLevelingProcess,
@@ -63,7 +62,6 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
         <ProcessReport
           project={project}
           process={{ type: "leveling", id: process.id, name: process.name }}
-          state={processReportState(process.status)}
           includable={process.status === "calculated"}
           notes={process.notes}
           reports={reports}

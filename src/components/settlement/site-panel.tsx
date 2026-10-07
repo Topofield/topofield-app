@@ -27,7 +27,7 @@ interface SitePanelProps {
 }
 
 /** Un indicador de la franja: rótulo, valor y su detalle. */
-function Kpi({ label, value, unit, hint }: { label: string; value: string; unit?: string; hint?: string }) {
+export function Kpi({ label, value, unit, hint }: { label: string; value: string; unit?: string; hint?: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <span className="text-xs text-ink-2">{label}</span>

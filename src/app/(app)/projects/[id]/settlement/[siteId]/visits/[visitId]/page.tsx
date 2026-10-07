@@ -1,11 +1,12 @@
-import { EmptyState } from "@/components/design-system";
 import { ProcessSteps } from "@/components/process/process-steps";
 import { visitArmadaSpans } from "@/components/settlement/visit-armadas";
 import type { VisitData } from "@/components/settlement/visit-dialog-form";
 import { VisitHeader } from "@/components/settlement/visit-header";
 import { VisitImportButton } from "@/components/settlement/visit-import-dialog";
 import { VisitLibretaTab } from "@/components/settlement/visit-libreta-tab";
-import { pointInputOf } from "@/lib/calculations/settlement";
+import { visitResultsOf } from "@/components/settlement/visit-results";
+import { VisitResultsTab } from "@/components/settlement/visit-results-tab";
+import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import { bookRowInputOf, bookVerification, computeBook } from "@/lib/calculations/settlement-book";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { formatDateOnly, formatEquipmentLine } from "@/lib/utils/format";
@@ -59,6 +60,7 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
   };
   const pointInputs = points.map(pointInputOf);
   const benchmarkInputs = benchmarks.map((b) => ({ code: b.code, elevation: b.elevation }));
+  const thresholds = thresholdsOf(site);
 
   return (
     <div className="flex flex-col gap-4">
@@ -118,11 +120,18 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
           benchmarks={benchmarkInputs}
           points={pointInputs}
           others={visitInputs.filter((v) => v.id !== visit.id)}
-          thresholds={thresholdsOf(site)}
+          thresholds={thresholds}
         />
       ) : (
-        // Tarea 13: los resultados.
-        <EmptyState title="Resultados" description="Los resultados de la visita." />
+        <VisitResultsTab
+          results={visitResultsOf(computeHistory(pointInputs, visitInputs, thresholds).visits, visit.id, pointInputs)}
+          note={visit.notes?.trim() || null}
+          thresholds={{
+            caution: thresholds.accumulatedCaution,
+            alert: thresholds.accumulatedAlert,
+            alarm: thresholds.accumulatedAlarm,
+          }}
+        />
       )}
     </div>
   );

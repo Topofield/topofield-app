@@ -129,7 +129,6 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         <ProcessReport
           project={project}
           process={{ type: "site", id: site.id, name: site.name }}
-          state="draft"
           includable={visits.some((v) => v.status === "calculated")}
           reports={reports}
           notes={site.description}

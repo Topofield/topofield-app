@@ -649,15 +649,15 @@ export async function getSiteSummariesByProject(
 
 /**
  * Los trabajos que un informe puede incluir, en el formato que consume el
- * selector: las poligonales y las nivelaciones **calculadas** (Fases 35 y 36:
- * no se cierran) y los lugares **cerrados**.
+ * selector: las poligonales y las nivelaciones **calculadas** (Fases 35 y 36)
+ * y los lugares con alguna visita calculada (Fase 37). Nada se cierra.
  *
  * Trae los tres tipos con el mismo `select` mínimo para poder ordenarlos y
  * mostrarlos juntos. El filtro por estado se aplica aquí además de en
  * `isEligible`: la consulta evita traer filas que se van a descartar, y la
  * función pura sigue siendo la que decide la regla —y la que tiene los tests.
  */
-export async function getClosedWorkForReports(
+export async function getReportableWork(
   supabase: Client,
   projectId: string,
 ): Promise<EligibleCandidate[]> {
@@ -676,13 +676,15 @@ export async function getClosedWorkForReports(
       .eq("project_id", projectId)
       .eq("status", "calculated")
       .order("updated_at", { ascending: true }),
+    // Un lugar entra con alguna visita calculada (Fase 37): el `!inner` con el
+    // filtro deja solo esos.
     supabase
       .from("sites")
-      .select("id, name, status, closed_at")
+      .select("id, name, settlement_visits!inner(id)")
       .eq("project_id", projectId)
       .eq("kind", "settlement")
-      .eq("status", "closed")
-      .order("closed_at", { ascending: true }),
+      .eq("settlement_visits.status", "calculated")
+      .order("created_at", { ascending: true }),
   ]);
 
   if (polygonals.error) throw polygonals.error;
@@ -706,7 +708,7 @@ export async function getClosedWorkForReports(
       kind: "site" as const,
       id: r.id,
       name: r.name,
-      status: r.status,
+      status: "calculated",
     })),
   ];
 }

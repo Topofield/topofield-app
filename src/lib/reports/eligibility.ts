@@ -1,10 +1,8 @@
 // Qué puede incluirse en un informe (§ 4.7). Funciones puras.
 //
-// Es la regla que sostiene todo el generador: como el informe NO guarda una
-// copia de los datos —se reconstruye al abrirlo—, solo puede incluir cosas que
-// la base protege. De ahí que la elegibilidad sea exactamente «cerrado», y que
-// se decida aquí, con tests, y no dentro de una consulta. Desde la Fase 34 lo
-// cerrado se puede reabrir, y el informe que lo incluye muestra lo que haya.
+// Desde la Fase 37 nada se cierra: un informe consolidado no guarda copia de
+// los datos —se reconstruye al abrirlo— y muestra lo que cada proceso tenga.
+// La regla que queda es no informar lo que está a medias.
 
 /** Tipo de trabajo incluible en un informe. */
 export type CandidateKind = "polygonal" | "leveling" | "site";
@@ -14,35 +12,22 @@ export interface EligibleCandidate {
   id: string;
   name: string;
   /**
-   * `status` de la fila: `calculated` / ... en poligonal y nivelación,
-   * `active` / `closed` en un lugar.
+   * `status` de la fila en una poligonal o una nivelación. En un lugar, que no
+   * tiene estado, lo deriva la consulta: `calculated` si alguna de sus
+   * visitas lo está.
    */
   status: string;
 }
 
 /**
- * ¿Puede este trabajo entrar en un informe?
- *
- * Una poligonal o una nivelación, si está **calculada**: desde las Fases 35 y
- * 36 no se cierran, y su informe muestra lo que tengan. Un lugar, solo si está
- * **cerrado**, y por dos razones distintas que coinciden:
- *
- * - Un proceso cerrado es inmutable por trigger de base mientras siga
- *   cerrado, así que regenerar el informe da el mismo resultado hasta que
- *   alguien lo reabra (Fase 34).
- * - El § 4.6 excluye explícitamente los **rechazados**: quedan como referencia
- *   pero no se informan. Un `rejected` está tan «terminado» como un `closed`,
- *   de modo que sin esta regla se colaría.
- *
- * Para un LUGAR de asentamientos la unidad es el lugar cerrado, no la visita:
- * un lugar activo admite visitas nuevas aunque ya tenga varias cerradas, y su
- * informe cambiaría al reabrirlo.
+ * ¿Puede este trabajo entrar en un informe? Si está **calculado**: una
+ * poligonal (Fase 35) o una nivelación (Fase 36) calculada, cumpla o no un
+ * orden —su informe lo alerta—, y un lugar con alguna visita calculada (Fase
+ * 37). A medias, no. El § 4.6 excluye además los **rechazados**, que ya no
+ * existen pero la regla los deja fuera.
  */
 export function isEligible(candidate: EligibleCandidate): boolean {
-  // La poligonal (Fase 35) y la nivelación (Fase 36) no se cierran: entran
-  // calculadas, cumplan o no un orden, y su informe lo alerta. A medias, no.
-  if (candidate.kind === "polygonal" || candidate.kind === "leveling") return candidate.status === "calculated";
-  return candidate.status === "closed";
+  return candidate.status === "calculated";
 }
 
 /** Filtra una lista de candidatos, conservando el orden recibido. */
