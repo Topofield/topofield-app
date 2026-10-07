@@ -982,9 +982,6 @@ export type Database = {
       }
       settlement_visits: {
         Row: {
-          capture_mode: string
-          closed_at: string | null
-          closed_by: string | null
           closure_error_mm: number | null
           created_at: string
           date: string
@@ -1007,12 +1004,8 @@ export type Database = {
           total_distance_km: number | null
           updated_at: string
           visit_number: number
-          weather_conditions: string | null
         }
         Insert: {
-          capture_mode?: string
-          closed_at?: string | null
-          closed_by?: string | null
           closure_error_mm?: number | null
           created_at?: string
           date: string
@@ -1035,12 +1028,8 @@ export type Database = {
           total_distance_km?: number | null
           updated_at?: string
           visit_number: number
-          weather_conditions?: string | null
         }
         Update: {
-          capture_mode?: string
-          closed_at?: string | null
-          closed_by?: string | null
           closure_error_mm?: number | null
           created_at?: string
           date?: string
@@ -1063,7 +1052,6 @@ export type Database = {
           total_distance_km?: number | null
           updated_at?: string
           visit_number?: number
-          weather_conditions?: string | null
         }
         Relationships: [
           {
@@ -1121,8 +1109,6 @@ export type Database = {
           accumulated_alarm: number
           accumulated_alert: number
           accumulated_caution: number
-          closed_at: string | null
-          closed_by: string | null
           created_at: string
           description: string | null
           id: string
@@ -1130,7 +1116,6 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string
-          status: string
           structure_type: string
           updated_at: string
           velocity_alarm: number
@@ -1141,8 +1126,6 @@ export type Database = {
           accumulated_alarm?: number
           accumulated_alert?: number
           accumulated_caution?: number
-          closed_at?: string | null
-          closed_by?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1150,7 +1133,6 @@ export type Database = {
           name: string
           notes?: string | null
           project_id: string
-          status?: string
           structure_type: string
           updated_at?: string
           velocity_alarm?: number
@@ -1161,8 +1143,6 @@ export type Database = {
           accumulated_alarm?: number
           accumulated_alert?: number
           accumulated_caution?: number
-          closed_at?: string | null
-          closed_by?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1170,7 +1150,6 @@ export type Database = {
           name?: string
           notes?: string | null
           project_id?: string
-          status?: string
           structure_type?: string
           updated_at?: string
           velocity_alarm?: number
@@ -1195,10 +1174,6 @@ export type Database = {
       georeference_polygonal: {
         Args: { p_header: Json; p_process_id: string; p_stations: Json }
         Returns: undefined
-      }
-      is_reopening: {
-        Args: { new_row: Json; old_row: Json }
-        Returns: boolean
       }
       owns_reading_station: {
         Args: { target_station: string }

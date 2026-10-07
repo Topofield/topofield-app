@@ -9,16 +9,6 @@ import type { LevelType, PrecisionOrder } from "./project";
 export const VISIT_STATUSES = ["draft", "in_progress", "calculated"] as const;
 export type VisitStatus = (typeof VISIT_STATUSES)[number];
 
-/**
- * Cómo se capturan las cotas de una visita (Fase 18):
- * - `book`: con su libreta de nivelación; las cotas de los puntos de control
- *   se DERIVAN de ella en el servidor.
- * - `direct`: tecleadas punto por punto. Las visitas anteriores a la Fase 18,
- *   o una nivelación procesada fuera de la app.
- */
-export const CAPTURE_MODES = ["book", "direct"] as const;
-export type CaptureMode = (typeof CAPTURE_MODES)[number];
-
 /** Niveles del semáforo (§ 6.11). El orden es significativo: peor gana. */
 export const ALERT_LEVELS = ["normal", "caution", "alert", "alarm"] as const;
 export type AlertLevel = (typeof ALERT_LEVELS)[number];
@@ -27,14 +17,14 @@ export type AlertLevel = (typeof ALERT_LEVELS)[number];
 
 export type SettlementPoint = Tables<"settlement_points">;
 
-export type SettlementVisit = Omit<
-  Tables<"settlement_visits">,
-  "status" | "level_type" | "precision_order" | "capture_mode"
-> & {
+/**
+ * Una visita. Desde la Fase 37 toda visita se mide con libreta, y su orden es
+ * el del tramo peor: null si alguno no se verifica.
+ */
+export type SettlementVisit = Omit<Tables<"settlement_visits">, "status" | "level_type" | "precision_order"> & {
   status: VisitStatus;
   level_type: LevelType | null;
-  precision_order: PrecisionOrder;
-  capture_mode: CaptureMode;
+  precision_order: PrecisionOrder | null;
 };
 
 /** Una fila de la libreta de nivelación de una visita (Fase 18). */
@@ -281,11 +271,6 @@ export interface DerivedElevation {
 }
 
 // --- Etiquetas en español ---
-
-export const CAPTURE_MODE_LABELS: Record<CaptureMode, string> = {
-  book: "Libreta de nivelación",
-  direct: "Cotas directas",
-};
 
 export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
   draft: "Borrador",

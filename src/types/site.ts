@@ -19,11 +19,8 @@ export type StructureType = (typeof STRUCTURE_TYPES)[number];
 export const SITE_KINDS = ["grouping", "settlement"] as const;
 export type SiteKind = (typeof SITE_KINDS)[number];
 
-/**
- * Un lugar. Desde la Fase 37 no tiene estado: `status`, `closed_at` y
- * `closed_by` quedan fuera del tipo hasta que la migración los borre.
- */
-export type Site = Omit<Tables<"sites">, "structure_type" | "status" | "kind" | "closed_at" | "closed_by"> & {
+/** Un lugar. Desde la Fase 37 no tiene estado. */
+export type Site = Omit<Tables<"sites">, "structure_type" | "kind"> & {
   structure_type: StructureType;
   kind: SiteKind;
 };

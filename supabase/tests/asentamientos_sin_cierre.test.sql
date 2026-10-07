@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(20);
+select plan(31);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a371', 'asentsincierre@topofield.test'),
@@ -55,6 +55,18 @@ select hasnt_trigger('public', 'settlement_points',
 select hasnt_function('public', 'reject_write_on_closed_visit_reading', 'fuera la función de las lecturas cerradas');
 select hasnt_function('public', 'reject_reference_change_with_closed_readings', 'y la de la C0');
 
+-- --- Paso 2: fuera las columnas de cierre y las funciones de inmutabilidad --------
+select hasnt_column('public', 'settlement_visits', 'closed_at', 'la visita no tiene closed_at');
+select hasnt_column('public', 'settlement_visits', 'closed_by', 'ni closed_by');
+select hasnt_column('public', 'settlement_visits', 'weather_conditions', 'ni el clima');
+select hasnt_column('public', 'settlement_visits', 'capture_mode', 'ni el modo de captura');
+select hasnt_column('public', 'sites', 'status', 'el lugar no tiene estado');
+select hasnt_column('public', 'sites', 'closed_at', 'ni closed_at');
+select hasnt_column('public', 'sites', 'closed_by', 'ni closed_by');
+select hasnt_function('public', 'reject_update_on_closed_process', 'fuera la función de inmutabilidad');
+select hasnt_function('public', 'reject_delete_on_closed_process', 'y la del borrado');
+select hasnt_function('public', 'is_reopening', array['jsonb', 'jsonb'], 'y la de reabrir');
+
 -- --- Como el dueño -------------------------------------------------------------
 set local role authenticated;
 select set_config('request.jwt.claims',
@@ -92,6 +104,9 @@ select lives_ok(
   $$ insert into site_benchmarks (site_id, code, elevation)
      values ('00000000-0000-4000-8000-00000000c371', 'BM-2', 100.845) $$,
   'el dueño agrega un BM a su lugar');
+select throws_ok(
+  $$ update settlement_visits set status = 'closed' where id = '00000000-0000-4000-8000-00000000e371' $$,
+  '23514', null, 'una visita ya no se cierra: el estado no admite closed');
 select lives_ok(
   $$ delete from settlement_visits where id = '00000000-0000-4000-8000-00000000e371' $$,
   'cualquier visita se borra');

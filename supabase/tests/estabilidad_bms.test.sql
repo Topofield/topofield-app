@@ -27,8 +27,8 @@ insert into public.reference_points (id, project_id, code, type, elevation) valu
 insert into public.sites (id, project_id, name, structure_type) values
   ('00000000-0000-4000-8000-00000000c301', '00000000-0000-4000-8000-00000000b301',
    'Edificio', 'edificio');
-insert into public.settlement_visits (id, site_id, visit_number, date, capture_mode) values
-  ('00000000-0000-4000-8000-0000000f3101', '00000000-0000-4000-8000-00000000c301', 0, '2026-01-10', 'book');
+insert into public.settlement_visits (id, site_id, visit_number, date) values
+  ('00000000-0000-4000-8000-0000000f3101', '00000000-0000-4000-8000-00000000c301', 0, '2026-01-10');
 
 set local role authenticated;
 select set_config('request.jwt.claims',
