@@ -1,5 +1,5 @@
 import { PointsCatalog } from "@/components/settlement/points-catalog";
-import { SiteForm } from "@/components/settlement/site-form";
+import { SiteDataButton } from "@/components/settlement/site-dialog";
 import { undoRetirementBlocker } from "@/lib/validators/settlement";
 import type { getSitePoints, getVisits } from "@/lib/supabase/queries";
 import type { Site } from "@/types/site";
@@ -19,10 +19,6 @@ interface PlaceTabProps {
  * `sites/[siteId]`, que ahora redirige aquí.
  */
 export function PlaceTab({ projectId, site, points, visits, referenceLocked }: PlaceTabProps) {
-  // El diálogo de cierre resume cuántas visitas se van a congelar (§ 4.6):
-  // cerrar el lugar cierra TODAS sus visitas de una vez.
-  const visitsOpen = visits.filter((v) => v.status !== "closed").length;
-
   // Por cada punto de baja, si la baja todavía se puede deshacer (Fase 11).
   // La misma regla que aplica `undoRetirementAction` al ejecutarla.
   const closedVisits = visits
@@ -35,27 +31,12 @@ export function PlaceTab({ projectId, site, points, visits, referenceLocked }: P
     }
   }
 
-  // En el servidor: formatear la hora con `Intl` en el cliente rompe la
-  // hidratación (el ICU de Node y el del navegador difieren).
-  const closedLabel =
-    site.status === "closed" && site.closed_at
-      ? new Intl.DateTimeFormat("es-CO", {
-          dateStyle: "long",
-          timeStyle: "short",
-          timeZone: "America/Bogota",
-        }).format(new Date(site.closed_at))
-      : null;
-
   return (
     <div className="flex flex-col gap-6">
-      <SiteForm
-        projectId={projectId}
-        site={site}
-        pointsCount={points.length}
-        visitsTotal={visits.length}
-        visitsOpen={visitsOpen}
-        closedLabel={closedLabel}
-      />
+      {/* Tarea 9: «Editar datos» pasa a la cabecera del lugar (Fase 37). */}
+      <div className="flex justify-end">
+        <SiteDataButton projectId={projectId} site={site} />
+      </div>
       <PointsCatalog
         siteId={site.id}
         points={points}
