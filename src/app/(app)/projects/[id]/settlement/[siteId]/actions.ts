@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { allRows } from "@/lib/supabase/paginate";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import { bookRowInputOf, bookRowOf, bookTemplate } from "@/lib/calculations/settlement-book";
 import {
@@ -83,10 +84,14 @@ async function loadContext(
         .eq("site_id", siteId)
         .order("date")
         .order("visit_number"),
-      supabase
-        .from("settlement_readings")
-        .select("*, settlement_visits!inner(site_id)")
-        .eq("settlement_visits.site_id", siteId),
+      allRows((from, to) =>
+        supabase
+          .from("settlement_readings")
+          .select("*, settlement_visits!inner(site_id)")
+          .eq("settlement_visits.site_id", siteId)
+          .order("id")
+          .range(from, to),
+      ),
     ]);
 
   // Las lecturas ya persistidas de cada visita, por id: tras recalcular, la

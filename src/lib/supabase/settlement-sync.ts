@@ -9,6 +9,7 @@ import { thresholdsOf } from "@/lib/calculations/tolerances";
 import { recalculateSite } from "@/lib/calculations/visit-record";
 import type { BookRowPayload, PointInput, VisitInput } from "@/types/settlement";
 import { logDbError } from "@/lib/errors/user-message";
+import { allRows } from "./paginate";
 
 /**
  * Recalcula el histórico de un lugar y reescribe las lecturas de sus visitas
@@ -54,10 +55,14 @@ export async function resyncSiteReadings(
     .select("*")
     .eq("site_id", siteId);
 
-  const { data: readings } = await supabase
-    .from("settlement_readings")
-    .select("*, settlement_visits!inner(site_id)")
-    .eq("settlement_visits.site_id", siteId);
+  const { data: readings } = await allRows((from, to) =>
+    supabase
+      .from("settlement_readings")
+      .select("*, settlement_visits!inner(site_id)")
+      .eq("settlement_visits.site_id", siteId)
+      .order("id")
+      .range(from, to),
+  );
 
 
   const persistedByVisit = new Map<string, Map<string, PersistedReading>>();
@@ -157,8 +162,24 @@ export async function recomputeSite(
   const { data: visits } = visitsRes;
   const visitIds = (visits ?? []).map((v) => v.id);
   const [bookRes, storedRes] = await Promise.all([
-    supabase.from("settlement_book_readings").select("*").in("visit_id", visitIds).order("reading_order"),
-    supabase.from("settlement_readings").select("visit_id, point_id, elevation").in("visit_id", visitIds),
+    allRows((from, to) =>
+      supabase
+        .from("settlement_book_readings")
+        .select("*")
+        .in("visit_id", visitIds)
+        .order("visit_id")
+        .order("reading_order")
+        .range(from, to),
+    ),
+    allRows((from, to) =>
+      supabase
+        .from("settlement_readings")
+        .select("visit_id, point_id, elevation")
+        .in("visit_id", visitIds)
+        .order("visit_id")
+        .order("point_id")
+        .range(from, to),
+    ),
   ]);
   for (const r of [bookRes, storedRes]) if (r.error) return fail(r.error);
   const { data: bookRows } = bookRes;
@@ -192,13 +213,19 @@ export async function recomputeSite(
   const storedElevation = new Map(
     (stored ?? []).map((r) => [`${r.visit_id}:${r.point_id}`, Number(r.elevation)]),
   );
-  const changedPerVisit = results.map(
-    ({ visitId, readings }) =>
-      readings.filter((r) => {
-        const before = storedElevation.get(`${visitId}:${r.pointId}`);
-        return before == null || Math.abs(before - r.elevation) > 0.00005;
-      }).length,
-  );
+  // Lo que cambia en una visita con libreta: las cotas recalculadas que no son
+  // las guardadas, y las guardadas que ya no salen de la libreta, que
+  // `save_visit` purgaría.
+  const changedPerVisit = results.map(({ visitId, readings }) => {
+    if (!rowsByVisit.has(visitId)) return 0;
+    const changed = readings.filter((r) => {
+      const before = storedElevation.get(`${visitId}:${r.pointId}`);
+      return before == null || Math.abs(before - r.elevation) > 0.00005;
+    }).length;
+    const computed = new Set(readings.map((r) => r.pointId));
+    const purged = (storedByVisit.get(visitId) ?? []).filter((r) => !computed.has(r.pointId)).length;
+    return changed + purged;
+  });
   const changedReadings = changedPerVisit.reduce((a, b) => a + b, 0);
   const changedVisits = changedPerVisit.filter((n) => n > 0).length;
   if (dryRun) return { ok: true, visits: results.length, changedVisits, changedReadings };

@@ -7,6 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { samePointCode } from "@/lib/calculations/leveling";
 import { createClient } from "@/lib/supabase/server";
+import { allRows } from "@/lib/supabase/paginate";
 import { recomputeSite } from "@/lib/supabase/settlement-sync";
 import { logDbError } from "@/lib/errors/user-message";
 import type { ImportedBenchmark } from "@/lib/import/benchmarks";
@@ -37,11 +38,15 @@ async function loadSite(supabase: Client, siteId: string) {
 
 /** Las filas de libreta del lugar que nombran un código: (fila, visita). */
 async function rowsNaming(supabase: Client, siteId: string, code: string) {
-  const { data } = await supabase
-    .from("settlement_book_readings")
-    .select("id, visit_id, point_code, settlement_visits!inner(site_id)")
-    .eq("settlement_visits.site_id", siteId);
-  return (data ?? []).filter((r) => samePointCode(r.point_code, code));
+  const { data } = await allRows((from, to) =>
+    supabase
+      .from("settlement_book_readings")
+      .select("id, visit_id, point_code, settlement_visits!inner(site_id)")
+      .eq("settlement_visits.site_id", siteId)
+      .order("id")
+      .range(from, to),
+  );
+  return data.filter((r) => samePointCode(r.point_code, code));
 }
 
 function revalidateSite(projectId: string, siteId: string) {

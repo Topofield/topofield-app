@@ -8,9 +8,9 @@ import {
   getSettlementReadingsBySite,
   getSite,
   getSiteBenchmarks,
-  getSiteBooks,
   getSitePoints,
   getVisit,
+  getVisitBook,
   getVisits,
 } from "@/lib/supabase/queries";
 import { bookRowOf } from "@/lib/calculations/settlement-book";
@@ -35,11 +35,12 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
   if (!visitWithReadings || visitWithReadings.visit.site_id !== site.id) notFound();
   const { visit } = visitWithReadings;
 
-  const [points, allVisits, readingsBySite, booksByVisit, benchmarks] = await Promise.all([
+  // La libreta, solo la de esta visita: cada lectura guarda la libreta entera.
+  const [points, allVisits, readingsBySite, visitBook, benchmarks] = await Promise.all([
     getSitePoints(supabase, site.id),
     getVisits(supabase, site.id),
     getSettlementReadingsBySite(supabase, site.id),
-    getSiteBooks(supabase, site.id),
+    getVisitBook(supabase, visit.id),
     getSiteBenchmarks(supabase, site.id),
   ]);
 
@@ -64,6 +65,6 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
     visitInputs,
     benchmarks,
     /** La libreta guardada, como la usan el motor y los popups. */
-    book: (booksByVisit[visit.id] ?? []).map(bookRowOf),
+    book: visitBook.map(bookRowOf),
   };
 }

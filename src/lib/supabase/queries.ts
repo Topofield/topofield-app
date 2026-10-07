@@ -2,6 +2,7 @@
 // server (lo crea la página, una vez por request) y devuelven datos tipados.
 // No mutan: las mutaciones viven en los Server Actions junto a cada ruta.
 
+import { allRows } from "./paginate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Project, ProjectStatus, ReferencePoint } from "@/types/project";
@@ -116,22 +117,30 @@ export async function getDashboardKpis(
       .eq("projects.status", "active"),
     // No es `head: true`: hace falta la fila con el `site_id` de cada visita
     // calculada, para reducirla a lugares únicos abajo (ver JSDoc).
-    supabase
-      .from("settlement_visits")
-      .select("site_id, sites!inner(project_id, projects!inner(status))")
-      .eq("status", "calculated")
-      .eq("sites.projects.status", "active"),
+    allRows((from, to) =>
+      supabase
+        .from("settlement_visits")
+        .select("site_id, sites!inner(project_id, projects!inner(status))")
+        .eq("status", "calculated")
+        .eq("sites.projects.status", "active")
+        .order("id")
+        .range(from, to),
+    ),
     // «Fuera de tolerancia» no aplica a una visita: lo equivalente es que
     // algún lugar tenga al menos un punto en alerta o alarma (ver JSDoc). Se
     // trae el `site_id` de cada lectura afectada (no `head: true`, hace falta
     // la fila) y se reduce a lugares únicos abajo. Solo en visitas calculadas:
     // una en medición aún no informa (Fase 37).
-    supabase
-      .from("settlement_readings")
-      .select("settlement_visits!inner(site_id, status, sites!inner(projects!inner(status)))")
-      .in("alert_status", ["alert", "alarm"])
-      .eq("settlement_visits.status", "calculated")
-      .eq("settlement_visits.sites.projects.status", "active"),
+    allRows((from, to) =>
+      supabase
+        .from("settlement_readings")
+        .select("settlement_visits!inner(site_id, status, sites!inner(projects!inner(status)))")
+        .in("alert_status", ["alert", "alarm"])
+        .eq("settlement_visits.status", "calculated")
+        .eq("settlement_visits.sites.projects.status", "active")
+        .order("id")
+        .range(from, to),
+    ),
   ]);
   if (calculatedVisitsError) throw calculatedVisitsError;
   if (alarmingError) throw alarmingError;
@@ -493,10 +502,14 @@ export async function getSettlementReadingsBySite(
   siteId: string,
 ): Promise<Record<string, SettlementReading[]>> {
   if (!UUID_RE.test(siteId)) return {};
-  const { data, error } = await supabase
-    .from("settlement_readings")
-    .select("*, settlement_visits!inner(site_id)")
-    .eq("settlement_visits.site_id", siteId);
+  const { data, error } = await allRows((from, to) =>
+    supabase
+      .from("settlement_readings")
+      .select("*, settlement_visits!inner(site_id)")
+      .eq("settlement_visits.site_id", siteId)
+      .order("id")
+      .range(from, to),
+  );
   if (error) throw error;
 
   const grouped: Record<string, SettlementReading[]> = {};
@@ -532,11 +545,15 @@ export async function getSiteBooks(
   siteId: string,
 ): Promise<Record<string, SettlementBookReading[]>> {
   if (!UUID_RE.test(siteId)) return {};
-  const { data, error } = await supabase
-    .from("settlement_book_readings")
-    .select("*, settlement_visits!inner(site_id)")
-    .eq("settlement_visits.site_id", siteId)
-    .order("reading_order", { ascending: true });
+  const { data, error } = await allRows((from, to) =>
+    supabase
+      .from("settlement_book_readings")
+      .select("*, settlement_visits!inner(site_id)")
+      .eq("settlement_visits.site_id", siteId)
+      .order("visit_id", { ascending: true })
+      .order("reading_order", { ascending: true })
+      .range(from, to),
+  );
   if (error) throw error;
 
   const grouped: Record<string, SettlementBookReading[]> = {};
@@ -585,10 +602,14 @@ export async function getSiteSummariesByProject(
   const summaries: Record<string, { visitCount: number; worstAlert: AlertLevel }> =
     {};
 
-  const { data: visits, error: visitsError } = await supabase
-    .from("settlement_visits")
-    .select("site_id, sites!inner(project_id)")
-    .eq("sites.project_id", projectId);
+  const { data: visits, error: visitsError } = await allRows((from, to) =>
+    supabase
+      .from("settlement_visits")
+      .select("site_id, sites!inner(project_id)")
+      .eq("sites.project_id", projectId)
+      .order("id")
+      .range(from, to),
+  );
   if (visitsError) throw visitsError;
 
   for (const row of visits ?? []) {
@@ -597,10 +618,14 @@ export async function getSiteSummariesByProject(
     entry.visitCount += 1;
   }
 
-  const { data: readings, error: readingsError } = await supabase
-    .from("settlement_readings")
-    .select("alert_status, settlement_visits!inner(site_id, sites!inner(project_id))")
-    .eq("settlement_visits.sites.project_id", projectId);
+  const { data: readings, error: readingsError } = await allRows((from, to) =>
+    supabase
+      .from("settlement_readings")
+      .select("alert_status, settlement_visits!inner(site_id, sites!inner(project_id))")
+      .eq("settlement_visits.sites.project_id", projectId)
+      .order("id")
+      .range(from, to),
+  );
   if (readingsError) throw readingsError;
 
   for (const row of readings ?? []) {

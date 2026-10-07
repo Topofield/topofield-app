@@ -1,3 +1,4 @@
+import { allRows } from "@/lib/supabase/paginate";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -66,12 +67,15 @@ export async function GET(
   const bookVisitIds = visits.map((v) => v.id);
   const bookByVisit: Record<string, BookReadingRow[]> = {};
   if (bookVisitIds.length > 0) {
-    const { data: bookRows, error } = await supabase
-      .from("settlement_book_readings")
-      .select("*")
-      .in("visit_id", bookVisitIds)
-      .order("visit_id", { ascending: true })
-      .order("reading_order", { ascending: true });
+    const { data: bookRows, error } = await allRows((from, to) =>
+      supabase
+        .from("settlement_book_readings")
+        .select("*")
+        .in("visit_id", bookVisitIds)
+        .order("visit_id", { ascending: true })
+        .order("reading_order", { ascending: true })
+        .range(from, to),
+    );
     if (error) throw error;
     for (const row of bookRows ?? []) {
       (bookByVisit[row.visit_id] ??= []).push(row);
