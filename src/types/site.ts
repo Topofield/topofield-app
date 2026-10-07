@@ -12,9 +12,6 @@ export const STRUCTURE_TYPES = [
 ] as const;
 export type StructureType = (typeof STRUCTURE_TYPES)[number];
 
-export const SITE_STATUSES = ["active", "closed"] as const;
-export type SiteStatus = (typeof SITE_STATUSES)[number];
-
 /**
  * `grouping`: agrupa poligonales y nivelaciones y no se muestra como lugar;
  * `settlement`: control de asentamientos (Fase 22).
@@ -22,9 +19,9 @@ export type SiteStatus = (typeof SITE_STATUSES)[number];
 export const SITE_KINDS = ["grouping", "settlement"] as const;
 export type SiteKind = (typeof SITE_KINDS)[number];
 
-export type Site = Omit<Tables<"sites">, "structure_type" | "status" | "kind"> & {
+/** Un lugar. Desde la Fase 37 no tiene estado. */
+export type Site = Omit<Tables<"sites">, "structure_type" | "kind"> & {
   structure_type: StructureType;
-  status: SiteStatus;
   kind: SiteKind;
 };
 
@@ -35,7 +32,3 @@ export const STRUCTURE_TYPE_LABELS: Record<StructureType, string> = {
   otro: "Otro",
 };
 
-export const SITE_STATUS_LABELS: Record<SiteStatus, string> = {
-  active: "Activo",
-  closed: "Cerrado",
-};

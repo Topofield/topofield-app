@@ -2,6 +2,7 @@
 // server (lo crea la página, una vez por request) y devuelven datos tipados.
 // No mutan: las mutaciones viven en los Server Actions junto a cada ruta.
 
+import { allRows } from "./paginate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Project, ProjectStatus, ReferencePoint } from "@/types/project";
@@ -19,7 +20,7 @@ import type {
   SettlementReading,
 } from "@/types/settlement";
 import { worst } from "@/lib/calculations/settlement";
-import { countGroupOf, NO_PROCESSES, type ProcessCounts } from "@/lib/process-counts";
+import type { ProcessCounts } from "@/lib/process-counts";
 import type { EligibleCandidate } from "@/lib/reports/eligibility";
 import type { Report } from "@/types/report";
 import type { Equipment } from "@/types/equipment";
@@ -65,8 +66,8 @@ export interface DashboardKpis {
  * conteo por proyecto quedan coherentes entre sí.
  *
  * `settlementCalculated` cuenta lugares DISTINTOS con al menos una visita en
- * estado `calculated`; un lugar cuyas visitas están todas en `draft` o
- * `closed` no suma (igual que `polygonalCalculated`/`levelingCalculated`
+ * estado `calculated`; un lugar cuyas visitas están todas en `draft` o en
+ * medición no suma (igual que `polygonalCalculated`/`levelingCalculated`
  * tampoco cuentan procesos en otro estado). PostgREST no ofrece
  * `count(distinct ...)`:
  * se trae el `site_id` de cada visita calculada con `head: false` (no puede
@@ -116,26 +117,30 @@ export async function getDashboardKpis(
       .eq("projects.status", "active"),
     // No es `head: true`: hace falta la fila con el `site_id` de cada visita
     // calculada, para reducirla a lugares únicos abajo (ver JSDoc).
-    supabase
-      .from("settlement_visits")
-      .select("site_id, sites!inner(project_id, projects!inner(status))")
-      .eq("status", "calculated")
-      .eq("sites.projects.status", "active"),
+    allRows((from, to) =>
+      supabase
+        .from("settlement_visits")
+        .select("site_id, sites!inner(project_id, projects!inner(status))")
+        .eq("status", "calculated")
+        .eq("sites.projects.status", "active")
+        .order("id")
+        .range(from, to),
+    ),
     // «Fuera de tolerancia» no aplica a una visita: lo equivalente es que
     // algún lugar tenga al menos un punto en alerta o alarma (ver JSDoc). Se
     // trae el `site_id` de cada lectura afectada (no `head: true`, hace falta
-    // la fila) y se reduce a lugares únicos abajo. Solo en visitas abiertas
-    // de lugares activos (Fase 24): como en poligonales y nivelaciones, el KPI
-    // pide revisar lo que falta cerrar, no lo ya cerrado.
-    supabase
-      .from("settlement_readings")
-      .select(
-        "settlement_visits!inner(site_id, status, sites!inner(status, projects!inner(status)))",
-      )
-      .in("alert_status", ["alert", "alarm"])
-      .eq("settlement_visits.status", "calculated")
-      .eq("settlement_visits.sites.status", "active")
-      .eq("settlement_visits.sites.projects.status", "active"),
+    // la fila) y se reduce a lugares únicos abajo. Solo en visitas calculadas:
+    // una en medición aún no informa (Fase 37).
+    allRows((from, to) =>
+      supabase
+        .from("settlement_readings")
+        .select("settlement_visits!inner(site_id, status, sites!inner(projects!inner(status)))")
+        .in("alert_status", ["alert", "alarm"])
+        .eq("settlement_visits.status", "calculated")
+        .eq("settlement_visits.sites.projects.status", "active")
+        .order("id")
+        .range(from, to),
+    ),
   ]);
   if (calculatedVisitsError) throw calculatedVisitsError;
   if (alarmingError) throw alarmingError;
@@ -196,30 +201,27 @@ export async function getDashboardProjects(
  * del lugar completo, no cada visita individual.
  *
  * Un proyecto sin procesos no aparece en el resultado; quien consulte debe
- * tratar la ausencia como `NO_PROCESSES`.
+ * tratar la ausencia como `NO_PROCESSES`. Desde la Fase 37 nada se cierra:
+ * solo el total.
  */
 export async function getProcessCountsByProject(
   supabase: Client,
 ): Promise<Record<string, ProcessCounts>> {
   const [polygonal, leveling, sites] = await Promise.all([
-    supabase.from("polygonal_processes").select("project_id, status"),
-    supabase.from("leveling_processes").select("project_id, status"),
-    supabase.from("sites").select("project_id, status").eq("kind", "settlement"),
+    supabase.from("polygonal_processes").select("project_id"),
+    supabase.from("leveling_processes").select("project_id"),
+    supabase.from("sites").select("project_id").eq("kind", "settlement"),
   ]);
 
   for (const { error } of [polygonal, leveling, sites]) {
     if (error) throw error;
   }
 
-  // Por estado desde la Fase 24: la tarjeta distingue en curso, cerrados y
-  // rechazados.
   const counts: Record<string, ProcessCounts> = {};
   for (const rows of [polygonal.data, leveling.data, sites.data]) {
-    for (const { project_id, status } of rows ?? []) {
+    for (const { project_id } of rows ?? []) {
       if (project_id == null) continue;
-      const current = counts[project_id] ?? { ...NO_PROCESSES };
-      current[countGroupOf(status)] += 1;
-      counts[project_id] = current;
+      counts[project_id] = { total: (counts[project_id]?.total ?? 0) + 1 };
     }
   }
   return counts;
@@ -415,6 +417,18 @@ export async function getSite(
   return (data ?? null) as Site | null;
 }
 
+/** Los BM de un lugar (Fase 37), por código. */
+export async function getSiteBenchmarks(supabase: Client, siteId: string) {
+  if (!UUID_RE.test(siteId)) return [];
+  const { data, error } = await supabase
+    .from("site_benchmarks")
+    .select("*")
+    .eq("site_id", siteId)
+    .order("code", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((b) => ({ ...b, elevation: Number(b.elevation) }));
+}
+
 /** Catálogo de puntos de un lugar, por código. */
 export async function getSitePoints(
   supabase: Client,
@@ -488,10 +502,14 @@ export async function getSettlementReadingsBySite(
   siteId: string,
 ): Promise<Record<string, SettlementReading[]>> {
   if (!UUID_RE.test(siteId)) return {};
-  const { data, error } = await supabase
-    .from("settlement_readings")
-    .select("*, settlement_visits!inner(site_id)")
-    .eq("settlement_visits.site_id", siteId);
+  const { data, error } = await allRows((from, to) =>
+    supabase
+      .from("settlement_readings")
+      .select("*, settlement_visits!inner(site_id)")
+      .eq("settlement_visits.site_id", siteId)
+      .order("id")
+      .range(from, to),
+  );
   if (error) throw error;
 
   const grouped: Record<string, SettlementReading[]> = {};
@@ -500,24 +518,6 @@ export async function getSettlementReadingsBySite(
     (grouped[reading.visit_id] ??= []).push(reading);
   }
   return grouped;
-}
-
-/**
- * Los puntos del lugar con alguna lectura en una visita cerrada (Fase 23): su
- * C0 ya no cambia.
- */
-export async function getPointIdsWithClosedReadings(
-  supabase: Client,
-  siteId: string,
-): Promise<string[]> {
-  if (!UUID_RE.test(siteId)) return [];
-  const { data, error } = await supabase
-    .from("settlement_readings")
-    .select("point_id, settlement_visits!inner(site_id, status)")
-    .eq("settlement_visits.site_id", siteId)
-    .eq("settlement_visits.status", "closed");
-  if (error) throw error;
-  return [...new Set((data ?? []).map((r) => r.point_id))];
 }
 
 /** La libreta de nivelación de una visita (Fase 18), en orden de captura. */
@@ -545,11 +545,15 @@ export async function getSiteBooks(
   siteId: string,
 ): Promise<Record<string, SettlementBookReading[]>> {
   if (!UUID_RE.test(siteId)) return {};
-  const { data, error } = await supabase
-    .from("settlement_book_readings")
-    .select("*, settlement_visits!inner(site_id)")
-    .eq("settlement_visits.site_id", siteId)
-    .order("reading_order", { ascending: true });
+  const { data, error } = await allRows((from, to) =>
+    supabase
+      .from("settlement_book_readings")
+      .select("*, settlement_visits!inner(site_id)")
+      .eq("settlement_visits.site_id", siteId)
+      .order("visit_id", { ascending: true })
+      .order("reading_order", { ascending: true })
+      .range(from, to),
+  );
   if (error) throw error;
 
   const grouped: Record<string, SettlementBookReading[]> = {};
@@ -584,25 +588,10 @@ export async function getSiteBooks(
  * creado y uno con diez visitas en verde no se distinguen aquí a propósito;
  * quien necesite esa distinción debe mirar `visitCount`.
  *
- * LIMITACIÓN CONOCIDA — puede discrepar con el panel de detalle del lugar:
  * `worstAlert` sale del `alert_status` que el servidor escribió al guardar
- * cada visita (`saveVisitAction`), calculado con los umbrales del lugar
- * VIGENTES EN ESE MOMENTO. El panel de detalle (`settlement/[siteId]/page.tsx`)
- * en cambio recalcula con `computeHistory` y los umbrales ACTUALES del lugar.
- * `saveSiteAction` no reescribe las lecturas existentes al editar umbrales, así
- * que si alguien corrige los umbrales de un lugar que ya tiene visitas
- * guardadas, esta función y el panel pueden mostrar semáforos distintos para
- * el mismo lugar hasta que esas visitas se vuelvan a guardar.
- *
- * El valor autoritativo es el RECALCULADO, no el persistido: los umbrales son
- * un criterio de interpretación del proyecto, no un dato de campo, y al
- * corregirlos el semáforo debería reinterpretarse entero. Aun así, aquí se
- * lee a propósito el `alert_status` ya guardado en vez de recalcular por
- * lugar: recalcular reintroduciría el N+1 (3 consultas por lugar) que esta
- * función existe para evitar. El arreglo de fondo, pendiente, es que
- * `saveSiteAction` reescriba el `alert_status` de las visitas ABIERTAS al
- * cambiar los umbrales — las CERRADAS deben conservar el criterio con el que
- * se cerraron, por trazabilidad. Ver deuda técnica de la Fase 5.
+ * cada visita. Coincide con el panel del lugar, que recalcula en vivo:
+ * `saveSiteAction` lo reescribe al cambiar los umbrales (`resyncSiteReadings`)
+ * y, desde la Fase 37, ninguna visita se cierra, así que todas se reescriben.
  */
 export async function getSiteSummariesByProject(
   supabase: Client,
@@ -613,10 +602,14 @@ export async function getSiteSummariesByProject(
   const summaries: Record<string, { visitCount: number; worstAlert: AlertLevel }> =
     {};
 
-  const { data: visits, error: visitsError } = await supabase
-    .from("settlement_visits")
-    .select("site_id, sites!inner(project_id)")
-    .eq("sites.project_id", projectId);
+  const { data: visits, error: visitsError } = await allRows((from, to) =>
+    supabase
+      .from("settlement_visits")
+      .select("site_id, sites!inner(project_id)")
+      .eq("sites.project_id", projectId)
+      .order("id")
+      .range(from, to),
+  );
   if (visitsError) throw visitsError;
 
   for (const row of visits ?? []) {
@@ -625,10 +618,14 @@ export async function getSiteSummariesByProject(
     entry.visitCount += 1;
   }
 
-  const { data: readings, error: readingsError } = await supabase
-    .from("settlement_readings")
-    .select("alert_status, settlement_visits!inner(site_id, sites!inner(project_id))")
-    .eq("settlement_visits.sites.project_id", projectId);
+  const { data: readings, error: readingsError } = await allRows((from, to) =>
+    supabase
+      .from("settlement_readings")
+      .select("alert_status, settlement_visits!inner(site_id, sites!inner(project_id))")
+      .eq("settlement_visits.sites.project_id", projectId)
+      .order("id")
+      .range(from, to),
+  );
   if (readingsError) throw readingsError;
 
   for (const row of readings ?? []) {
@@ -651,15 +648,15 @@ export async function getSiteSummariesByProject(
 
 /**
  * Los trabajos que un informe puede incluir, en el formato que consume el
- * selector: las poligonales y las nivelaciones **calculadas** (Fases 35 y 36:
- * no se cierran) y los lugares **cerrados**.
+ * selector: las poligonales y las nivelaciones **calculadas** (Fases 35 y 36)
+ * y los lugares con alguna visita calculada (Fase 37). Nada se cierra.
  *
  * Trae los tres tipos con el mismo `select` mínimo para poder ordenarlos y
  * mostrarlos juntos. El filtro por estado se aplica aquí además de en
  * `isEligible`: la consulta evita traer filas que se van a descartar, y la
  * función pura sigue siendo la que decide la regla —y la que tiene los tests.
  */
-export async function getClosedWorkForReports(
+export async function getReportableWork(
   supabase: Client,
   projectId: string,
 ): Promise<EligibleCandidate[]> {
@@ -678,13 +675,15 @@ export async function getClosedWorkForReports(
       .eq("project_id", projectId)
       .eq("status", "calculated")
       .order("updated_at", { ascending: true }),
+    // Un lugar entra con alguna visita calculada (Fase 37): el `!inner` con el
+    // filtro deja solo esos.
     supabase
       .from("sites")
-      .select("id, name, status, closed_at")
+      .select("id, name, settlement_visits!inner(id)")
       .eq("project_id", projectId)
       .eq("kind", "settlement")
-      .eq("status", "closed")
-      .order("closed_at", { ascending: true }),
+      .eq("settlement_visits.status", "calculated")
+      .order("created_at", { ascending: true }),
   ]);
 
   if (polygonals.error) throw polygonals.error;
@@ -708,7 +707,7 @@ export async function getClosedWorkForReports(
       kind: "site" as const,
       id: r.id,
       name: r.name,
-      status: r.status,
+      status: "calculated",
     })),
   ];
 }
@@ -759,30 +758,3 @@ export async function getReport(
   return (data as unknown as Report | null) ?? null;
 }
 
-/**
- * Cuánto trabajo cerrado tiene un proyecto: lugares cerrados y visitas
- * cerradas (Fase 22). Lo cerrado no se borra —los triggers de inmutabilidad lo
- * impiden—, así que un proyecto con trabajo cerrado no se puede eliminar: se
- * archiva. La poligonal (Fase 35) y la nivelación (Fase 36) no se cierran y no
- * cuentan.
- */
-export async function getClosedWorkCount(supabase: Client, projectId: string): Promise<number> {
-  if (!UUID_RE.test(projectId)) return 0;
-  // La poligonal (Fase 35) y la nivelación (Fase 36) no se cierran.
-  const [sites, visits] = await Promise.all([
-    supabase
-      .from("sites")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("status", "closed"),
-    supabase
-      .from("settlement_visits")
-      .select("id, sites!inner(project_id)", { count: "exact", head: true })
-      .eq("sites.project_id", projectId)
-      .eq("status", "closed"),
-  ]);
-  for (const r of [sites, visits]) {
-    if (r.error) throw r.error;
-  }
-  return (sites.count ?? 0) + (visits.count ?? 0);
-}

@@ -17,21 +17,19 @@ export interface ProcessRow {
   kind: RowKind;
   name: string;
   href: string;
-  /** «Poligonal · Cerrada», «Nivelación · De enlace», «Edificio · 14 visitas». */
+  /** «Poligonal abierta», «Nivelación · De enlace», «Edificio · 14 visitas». */
   kindLabel: string;
-  statusLabel: string;
+  /** El estado del cálculo; null en un lugar, que no tiene estado (Fase 37). */
+  statusLabel: string | null;
   statusTone: StatusTone;
   /** Lo que el proceso dio: precisión, cierre, peor alerta. */
   result: ReactNode;
   /** ¿Cumple la tolerancia? `undefined` si el módulo no tiene esa columna. */
   meets?: boolean | null;
   updatedAt: string;
-  /** Cerrado o rechazado: solo se puede duplicar. */
-  closed: boolean;
   /**
-   * Informes consolidados que lo incluyen (Fase 34): un proceso reabierto se
-   * puede eliminar, y el diálogo avisa de que esos informes perderán la
-   * sección.
+   * Informes consolidados que lo incluyen (Fase 34): el diálogo de eliminar
+   * avisa de que esos informes perderán la sección.
    */
   reportTitles?: string[];
 }
@@ -136,6 +134,8 @@ export function ProcessTable({
   resultLabel: string;
 }) {
   const conCumple = rows.some((r) => r.meets !== undefined);
+  // Un lugar no tiene estado (Fase 37): sin la columna.
+  const conEstado = rows.some((r) => r.statusLabel != null);
   const href = (c: SortKey) => sortHref(projectId, modulo, filters, c);
 
   return (
@@ -146,7 +146,7 @@ export function ProcessTable({
           <thead>
             <tr className="border-b border-rule text-left text-xs text-ink-2">
               <SortableHeader columna="nombre" etiqueta="Nombre" href={href("nombre")} filters={filters} />
-              <th scope="col" className="px-4 py-3 font-medium">Estado</th>
+              {conEstado && <th scope="col" className="px-4 py-3 font-medium">Estado</th>}
               <SortableHeader columna="precision" etiqueta={resultLabel} href={href("precision")} filters={filters} />
               {conCumple && (
                 <th scope="col" className="px-4 py-3 text-center font-medium">Cumple</th>
@@ -171,9 +171,11 @@ export function ProcessTable({
                   </Link>
                   <p className="text-xs text-ink-2">{r.kindLabel}</p>
                 </td>
-                <td className="px-4 py-3">
-                  <Badge tone={r.statusTone}>{r.statusLabel}</Badge>
-                </td>
+                {conEstado && (
+                  <td className="px-4 py-3">
+                    {r.statusLabel && <Badge tone={r.statusTone}>{r.statusLabel}</Badge>}
+                  </td>
+                )}
                 <td className="px-4 py-3 font-mono tabular-nums text-ink-2">{r.result}</td>
                 {conCumple && (
                   <td className="px-4 py-3 text-center">
@@ -188,7 +190,6 @@ export function ProcessTable({
                     kind={r.kind}
                     id={r.id}
                     name={r.name}
-                    closed={r.closed}
                     reportTitles={r.reportTitles}
                   />
                 </td>
@@ -209,7 +210,7 @@ export function ProcessTable({
                   {r.name}
                 </Link>
               </div>
-              <Badge tone={r.statusTone}>{r.statusLabel}</Badge>
+              {r.statusLabel && <Badge tone={r.statusTone}>{r.statusLabel}</Badge>}
             </div>
             <div className="mt-3 flex items-center justify-between gap-3 text-xs text-ink-2">
               <span className="inline-flex items-center gap-1.5 font-mono tabular-nums">
@@ -225,7 +226,6 @@ export function ProcessTable({
                 kind={r.kind}
                 id={r.id}
                 name={r.name}
-                closed={r.closed}
                 reportTitles={r.reportTitles}
               />
             </div>

@@ -1,20 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Button, buttonClasses, Modal } from "@/components/design-system";
+import { Button, Modal } from "@/components/design-system";
 import { PolygonalDetailsDialog } from "@/components/polygonal/polygonal-details-dialog";
 import { LevelingDetailsDialog } from "@/components/leveling/leveling-details-dialog";
+import { SiteDialog } from "@/components/settlement/site-dialog";
 
 /**
  * Botón "+ Nuevo Proceso" con el selector de tipo. Los tres módulos están
- * disponibles desde la Fase 5. La poligonal (Fase 35) y la nivelación (Fase 36)
- * se dan de alta en un popup, sin salir del hub.
+ * disponibles desde la Fase 5. La poligonal (Fase 35), la nivelación (Fase 36)
+ * y el lugar de asentamientos (Fase 37) se dan de alta en un popup, sin salir
+ * del hub.
  */
 export function NewProcessSelector({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [polygonalOpen, setPolygonalOpen] = useState(false);
   const [levelingOpen, setLevelingOpen] = useState(false);
+  const [siteOpen, setSiteOpen] = useState(false);
 
   return (
     <>
@@ -48,12 +50,16 @@ export function NewProcessSelector({ projectId }: { projectId: string }) {
           >
             Nivelación
           </Button>
-          <Link
-            href={`/projects/${projectId}/sites/new`}
-            className={buttonClasses({ variant: "secondary" })}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setOpen(false);
+              setSiteOpen(true);
+            }}
           >
             Control de Asentamientos
-          </Link>
+          </Button>
         </div>
       </Modal>
       {polygonalOpen && (
@@ -63,6 +69,9 @@ export function NewProcessSelector({ projectId }: { projectId: string }) {
           open={polygonalOpen}
           onClose={() => setPolygonalOpen(false)}
         />
+      )}
+      {siteOpen && (
+        <SiteDialog mode="create" projectId={projectId} open={siteOpen} onClose={() => setSiteOpen(false)} />
       )}
       {levelingOpen && (
         <LevelingDetailsDialog

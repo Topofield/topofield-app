@@ -5,7 +5,7 @@ import {
   visitsToRewrite,
   type PersistedReading,
 } from "./settlement-persistence";
-import { bookRowInputOf, bookRowOf, computeVisitBook } from "./settlement-book";
+import { bookRowInputOf, bookRowOf, computeBook } from "./settlement-book";
 import type { AlertLevel, BookRowPayload, VisitResult } from "@/types/settlement";
 
 /** Lectura recalculada, con valores por defecto que los tests van pisando. */
@@ -131,12 +131,9 @@ describe("readingChanged", () => {
 });
 
 describe("visitsToRewrite", () => {
-  const abierta = new Map([["v1", "draft"]]);
-
   it("devuelve la visita cuyas lecturas cambiaron", () => {
     const out = visitsToRewrite({
       recalculated: [visit({ readings: [computed({ alertStatus: "alert" })] })],
-      statusByVisit: abierta,
       persistedByVisit: new Map([["v1", new Map([["p1", persisted()]])]]),
     });
     expect(out).toHaveLength(1);
@@ -147,28 +144,24 @@ describe("visitsToRewrite", () => {
   it("no devuelve nada cuando nada cambió", () => {
     const out = visitsToRewrite({
       recalculated: [visit()],
-      statusByVisit: abierta,
       persistedByVisit: new Map([["v1", new Map([["p1", persisted()]])]]),
     });
     expect(out).toEqual([]);
   });
 
-  // Trazabilidad: una visita cerrada documenta el criterio con el que se
-  // evaluó en su momento. El trigger de base lo impediría de todos modos, pero
-  // la regla se decide aquí, no se delega al error de la base.
-  it("nunca devuelve una visita CERRADA, aunque sus valores difieran", () => {
+  // Fase 37, decisión 18: ya nada se cierra, así que todas las visitas se
+  // reescriben si su valor cambió.
+  it("devuelve cualquier visita cuyos valores difieran", () => {
     const out = visitsToRewrite({
       recalculated: [visit({ readings: [computed({ alertStatus: "alarm" })] })],
-      statusByVisit: new Map([["v1", "closed"]]),
       persistedByVisit: new Map([["v1", new Map([["p1", persisted()]])]]),
     });
-    expect(out).toEqual([]);
+    expect(out.map((v) => v.visitId)).toEqual(["v1"]);
   });
 
   it("excluye la visita que se está guardando, que se escribe aparte", () => {
     const out = visitsToRewrite({
       recalculated: [visit({ readings: [computed({ alertStatus: "alarm" })] })],
-      statusByVisit: abierta,
       persistedByVisit: new Map([["v1", new Map([["p1", persisted()]])]]),
       skipVisitId: "v1",
     });
@@ -178,7 +171,6 @@ describe("visitsToRewrite", () => {
   it("omite visitas sin lecturas recalculadas", () => {
     const out = visitsToRewrite({
       recalculated: [visit({ readings: [] })],
-      statusByVisit: abierta,
       persistedByVisit: new Map(),
     });
     expect(out).toEqual([]);
@@ -194,7 +186,6 @@ describe("visitsToRewrite", () => {
           ],
         }),
       ],
-      statusByVisit: abierta,
       persistedByVisit: new Map([
         [
           "v1",
@@ -214,32 +205,26 @@ describe("visitsToRewrite", () => {
   it("trata como nuevas las lecturas de una visita sin filas persistidas", () => {
     const out = visitsToRewrite({
       recalculated: [visit()],
-      statusByVisit: abierta,
       persistedByVisit: new Map(),
     });
     expect(out).toHaveLength(1);
     expect(out[0]?.readings).toHaveLength(1);
   });
 
-  it("procesa varias visitas y respeta el estado de cada una", () => {
+  it("procesa varias visitas", () => {
     const out = visitsToRewrite({
       recalculated: [
         visit({ visitId: "v1", readings: [computed({ alertStatus: "alarm" })] }),
         visit({ visitId: "v2", readings: [computed({ alertStatus: "alarm" })] }),
         visit({ visitId: "v3", readings: [computed({ alertStatus: "alarm" })] }),
       ],
-      statusByVisit: new Map([
-        ["v1", "draft"],
-        ["v2", "closed"],
-        ["v3", "calculated"],
-      ]),
       persistedByVisit: new Map([
         ["v1", new Map([["p1", persisted()]])],
         ["v2", new Map([["p1", persisted()]])],
         ["v3", new Map([["p1", persisted()]])],
       ]),
     });
-    expect(out.map((v) => v.visitId)).toEqual(["v1", "v3"]);
+    expect(out.map((v) => v.visitId)).toEqual(["v1", "v2", "v3"]);
   });
 });
 
@@ -251,8 +236,8 @@ describe("bookRowsToPersist (Fase 18)", () => {
   ];
 
   it("numera desde 1, enlaza el punto por código y guarda las distancias resueltas", () => {
-    const result = computeVisitBook(rows.map(bookRowInputOf), 100, "tercer_orden");
-    const out = bookRowsToPersist("v1", rows, result.forward.readings, [
+    const book = computeBook(rows.map(bookRowInputOf), [{ code: "BM-1", elevation: 100 }]);
+    const out = bookRowsToPersist("v1", rows, book.readings, [
       { id: "p1", code: "PC-01" },
     ], [null, null, null]);
     expect(out.map((r) => r.reading_order)).toEqual([1, 2, 3]);
@@ -265,8 +250,8 @@ describe("bookRowsToPersist (Fase 18)", () => {
   });
 
   it("sella la cota de catálogo solo en las filas de los BM de control (Fase 30)", () => {
-    const result = computeVisitBook(rows.map(bookRowInputOf), 100, "tercer_orden");
-    const out = bookRowsToPersist("v1", rows, result.forward.readings, [], [null, 100.845, null]);
+    const book = computeBook(rows.map(bookRowInputOf), [{ code: "BM-1", elevation: 100 }]);
+    const out = bookRowsToPersist("v1", rows, book.readings, [], [null, 100.845, null]);
     expect(out.map((r) => r.catalog_elevation)).toEqual([null, 100.845, null]);
   });
 });

@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getClosedWorkCount } from "@/lib/supabase/queries";
 import { logDbError } from "@/lib/errors/user-message";
 import { validateProjectInput } from "@/lib/validators/project";
 import { validateReferencePointInput } from "@/lib/validators/reference-point";
@@ -74,20 +73,12 @@ export async function restoreProjectAction(formData: FormData): Promise<void> {
 }
 
 /**
- * Borrado definitivo, con todo lo que cuelga del proyecto (cascada). Un
- * proyecto con trabajo cerrado no se puede borrar: lo cerrado es inmutable y
- * los triggers rechazan el borrado. Antes el error se ignoraba y se volvía al
- * dashboard como si hubiera funcionado (Fase 22).
+ * Borrado definitivo, con todo lo que cuelga del proyecto (cascada). Desde la
+ * Fase 37 nada se cierra, así que ningún trigger lo impide. Un error no se
+ * ignora: antes se volvía al dashboard como si hubiera funcionado (Fase 22).
  */
 export async function deleteProjectAction(projectId: string): Promise<ActionResult> {
   const supabase = await createClient();
-  const cerrado = await getClosedWorkCount(supabase, projectId);
-  if (cerrado > 0) {
-    return {
-      ok: false,
-      error: "El proyecto tiene trabajo cerrado y no se puede eliminar. Puedes archivarlo.",
-    };
-  }
   const { error } = await supabase.from("projects").delete().eq("id", projectId);
   if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el proyecto.") };
   revalidatePath("/dashboard");

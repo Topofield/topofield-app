@@ -27,14 +27,14 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `src/app/(app)/projects/[id]/` → hub del proyecto, tabs de procesos/informes/config
 - `src/app/(app)/projects/[id]/polygonal/[pid]/` → poligonal: pasos Datos · Ajuste · Informe, y `export/` (Excel); el alta es un popup del hub
 - `src/app/(app)/projects/[id]/leveling/[pid]/` → nivelación: pasos Libreta · Compensación · Informe, y `export/` (Excel); el alta es un popup del hub
-- `src/app/(app)/projects/[id]/settlement/[siteId]/` → lugar de asentamientos: pestañas Panel · Puntos y lugar · Informe; `visits/[visitId]/` y su `editar/`
-- `src/app/(app)/projects/[id]/sites/` → alta del lugar (`[siteId]` redirige a la pestaña Puntos y lugar)
+- `src/app/(app)/projects/[id]/settlement/[siteId]/` → lugar de asentamientos: pestañas Panel · Puntos · BMs · Informe; `visits/[visitId]/` con los pasos Libreta · Resultados; el alta del lugar y de la visita son popups
+- `src/app/(app)/projects/[id]/sites/` → acciones del lugar y de sus puntos (`[siteId]` redirige a la pestaña Puntos)
 - `src/app/(app)/projects/[id]/reports/` → informes consolidados: `new/` y `[reportId]/print/`
 - `src/components/design-system/` → sistema de diseño propio (NO usar shadcn/ui)
 - `src/components/{polygonal,leveling,settlement}/` → editores y paneles de cada módulo
-- `src/components/process/` → la cabecera, los pasos y el borrador comunes de la poligonal y la nivelación (Fase 36), `ProcessShell` de asentamientos y el informe de un proceso
+- `src/components/process/` → la cabecera, los pasos y el borrador comunes de la poligonal, la nivelación y la visita de asentamientos (Fases 36 y 37), y el informe de un proceso
 - `src/components/reports/` → alta del informe y sus secciones, compartidas con la pestaña Informe; `math.tsx`, las fórmulas en MathML
-- `src/components/projects/`, `navigation/` → dashboard, hub, la barra superior fija con su menú de cuenta (Fase 33) y la guarda de cambios sin guardar
+- `src/components/projects/`, `navigation/` → dashboard, hub, la barra superior fija con su menú de cuenta (Fase 33)
 - `src/components/equipment/` → página del catálogo de equipos, selector «Tomar del catálogo» y su contexto, que carga el layout de `(app)`
 - `src/lib/calculations/` → algoritmos topográficos puros (sin dependencias de React)
 - `src/lib/calculations/polygonal.ts` → Bowditch, Tránsito, Crandall, Mínimos cuadrados (con `least-squares.ts`)
@@ -61,10 +61,11 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - IMPORTANT: el registro exige el código de `SIGNUP_INVITE_CODE` y confirmación de correo. La variable NO lleva prefijo `NEXT_PUBLIC_` y solo se lee en el Server Action; si falta, el registro se bloquea (nunca se abre).
 - No usar shadcn/ui ni ninguna librería de componentes. El sistema de diseño está en `src/components/design-system/` y se construye sobre Tailwind puro.
 - Las coordenadas van a 3 decimales (0.000), las cotas a 4 decimales (0.0000), los ángulos en DMS.
-- Los procesos con status "closed" son inmutables. Nunca generar UPDATE sobre un proceso cerrado. Una excepción, y los triggers admiten solo esa: **reabrir** —visita o lugar— devuelve el estado a abierto y borra `closed_at`/`closed_by` sin tocar nada más (Fase 34).
+- **Ningún proceso se cierra** (Fases 35, 36 y 37): ni la poligonal, ni la nivelación, ni el lugar, ni la visita. No hay estados `closed`/`rejected`, ni `closed_at`/`closed_by`, ni triggers de inmutabilidad ni reabrir: todo se recalcula en vivo y se propaga.
 - **La poligonal no se cierra** (Fase 35): no tiene triggers de cierre, ni `closed_at`/`closed_by`, ni los estados `closed`/`rejected`; su orden de precisión y su tipo de ángulo se detectan al calcular (`computePolygonalDetected`), no se declaran. Un informe consolidado la incluye calculada.
-- **La nivelación tampoco** (Fase 36): su orden se detecta al compensar (`computeLevelingDetected`) y **se compensa siempre** que haya contra qué cerrar, con aviso si no alcanza ningún orden; la visita de asentamientos conserva «solo dentro de tolerancia». Se captura por armada en popups sobre el modelo por punto de `leveling_readings`; la libreta a medias se guarda `in_progress`, sin compensar (`pendingRun`). En la nivelación se dice «cota ajustada», no «adoptada».
-- Lo que alimenta un resultado cerrado también queda fijo: la C0 de un punto con lecturas en una visita cerrada no cambia (trigger en `settlement_points`), y un informe emitido no admite UPDATE: guarda su portada en `reports.cover` y solo se elimina y se regenera.
+- **La nivelación tampoco** (Fase 36): su orden se detecta al compensar (`computeLevelingDetected`) y **se compensa siempre** que haya contra qué cerrar, con aviso si no alcanza ningún orden. Se captura por armada en popups sobre el modelo por punto de `leveling_readings`; la libreta a medias se guarda `in_progress`, sin compensar (`pendingRun`). En la nivelación se dice «cota ajustada», no «adoptada».
+- **Los asentamientos tampoco** (Fase 37): una visita es una lista de armadas sobre `settlement_book_readings`; cada tramo sale de un BM del lugar (`site_benchmarks`, copias que no se sincronizan) y **no se compensa**: la cota es AI − lectura, y el cierre solo verifica (`computeBook`, `visitRecordOf`). Cada lectura se guarda al escribirla; la visita a medias queda `in_progress`. El margen de la tendencia es fijo.
+- Un informe emitido no admite UPDATE: guarda su portada en `reports.cover` y solo se elimina y se regenera.
 - Los guardados que escriben varias tablas van por una función de Postgres (`supabase.rpc`: `save_polygonal_process`, `save_leveling_process`, `save_visit`, `georeference_polygonal`) para que sean atómicos. Son `SECURITY INVOKER`, con columnas explícitas, y solo escriben: el cálculo sigue en TypeScript, en la Server Action.
 - El catálogo de equipos (`equipment`) es una **plantilla**: elegir un equipo copia sus datos en las columnas `equipment_*` y de precisión del proceso o de la visita. Ningún proceso lo referencia, así que editar o borrar un equipo nunca cambia lo ya medido ni informado.
 - Cada tabla tiene Row Level Security (RLS) en Supabase. El user solo ve sus propios proyectos.
@@ -73,7 +74,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Consultar `PRD-TopoField.md` por sección según la tarea: `§3` modelo de datos y SQL · `§4.6` cierre y bloqueo · `§5` reglas de validación (`§5.4` tolerancias por orden) · `§6` algoritmos de cálculo · `§9` orden de implementación.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 36, todas cerradas.
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 37, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.

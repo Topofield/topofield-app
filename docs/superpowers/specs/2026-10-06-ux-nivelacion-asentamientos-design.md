@@ -241,6 +241,28 @@ Con la cartera real: 7 visitas, 16 puntos y el BM de la piscina.
 - Quitar el clima y las notas de la visita.
 - Si el lugar conserva algún estado sin el cierre.
 
+**Revisión del lienzo (2026-10-07).** Publicado el 2026-10-07
+(<https://claude.ai/artifact/A7D1YuGXNC2ZMv1hnRMq3j>), con la cartera real y,
+para lo que ella no tiene —varias armadas, BM leídos de paso—, la visita 12 de
+Torre Alameda. Lo que eligió el usuario:
+
+| Superficie | Decisión |
+|---|---|
+| Lugar | **B**: la tabla de visitas y, fija al lado, la tendencia; los indicadores en una franja; el semáforo completo vive en Resultados. Pestañas Panel · Puntos · BMs · Informe |
+| Alta de la visita | Fecha, nivelador, nota y equipo plegado. **No define cómo se mide** ni pide BM: la libreta llega armada como la visita anterior |
+| Captura | **B**: la libreta de la nivelación. Las lecturas a los puntos desde una posición del nivel van en la columna VI («V−» era el nombre coloquial) |
+| Armadas | Una visita es **una lista de armadas**; la interfaz dice «+ Armada», nunca «libreta». Cada armada arranca con su V+ desde **un BM del lugar** —empieza un tramo— o desde **un punto de cambio**, la V− de otra armada. Una V− a un BM del lugar verifica el tramo |
+| Guardado | **Cada lectura se guarda al escribirla.** Si la medición se interrumpe, la visita queda «En medición» y «Retomar medición» abre la armada en el siguiente punto |
+| Al guardar | Un punto de control en dos armadas: se muestran las dos lecturas y **se elige cuál se elimina**. Un punto auxiliar al que llegó una V−: **se pregunta** si pasa a los BM del lugar |
+| BM | **Catálogo propio del lugar**, en su pestaña: se agregan, se editan y se importan de una nivelación calculada del proyecto (sus cotas ajustadas) o de un CSV. **Se copian** y anotan su origen: no se sincronizan. Cambiar la cota de un BM recalcula las visitas que se arman desde él, con aviso |
+| Cotas tecleadas | **Se quitan**: toda visita se mide con libreta. Al importar un CSV o un `.L` se guardan las lecturas y la cota sale siempre de la medida |
+| Compensación | **Las visitas no se compensan**: la cota es AI − lectura. El cierre de cada tramo se calcula y dice el orden alcanzado, sin corregir nada |
+| Margen de la tendencia | **Simplificado**: un margen fijo entre dos visitas, sin orden ni longitud de circuito |
+| Lo anclado al cierre | **Libertad total**: todo se recalcula en vivo, cualquier visita se borra, los puntos se dan de alta y de baja sin restricciones, y cambiar una C0 con historia avisa |
+| Nota | **Una nota por visita**, que se ve en la visita y en el informe; fuera el clima |
+| Estado del lugar | **Ninguno** |
+| Cartera real | Entra a la **demo** como el lugar «Control de asentamiento estructural» |
+
 ### La cartera real a la demo y al seed
 
 Con las decisiones ya tomadas por el usuario el 2026-10-03:

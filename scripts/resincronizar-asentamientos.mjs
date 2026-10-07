@@ -1,20 +1,19 @@
-// Resincroniza las lecturas persistidas de las visitas ABIERTAS de cada lugar
-// de monitoreo con el motor actual.
+// Recalcula las visitas de cada lugar de monitoreo con el motor de la Fase 37:
+// por tramos, desde los BM del lugar y SIN compensar.
 //
-// Por qué existe: la Fase 11 cambió la línea base de los puntos SIN C0. Antes
-// su acumulado era null; ahora se mide contra su primera lectura. El panel, el
-// informe y el Excel recalculan en vivo y lo ven solos, pero el hub del
-// proyecto lee el `alert_status` PERSISTIDO, que solo se reescribe al guardar
-// la visita. Sin este script, una visita abierta de un punto sin C0 seguiría
-// clasificada con el acumulado viejo hasta que alguien la guarde.
+// Para qué sirve ahora: es el paso 2 del despliegue de la Fase 37 (PRD,
+// Despliegue). Hasta la Fase 36 las visitas con libreta guardaban la cota
+// compensada en `settlement_readings`, y de esas cotas guardadas parten el
+// panel, el informe, el Excel y el hub; la cabecera de la visita guarda
+// además su cierre y su orden. Todo eso solo se reescribe al volver a guardar
+// la visita. Este script las pasa todas a la regla nueva de una vez. Va
+// después del paso 1: sin `site_benchmarks` no hay BM contra qué recalcular.
 //
-// Qué hace: por cada lugar abierto, cuenta sus puntos sin C0 y llama a
-// `resyncSiteReadings` —la misma función que usan `saveSiteAction` y
-// `savePointAction`, que recalcula con `computeHistory`—. Nunca SQL que imite
-// al motor (aprendizaje de la Fase 9).
-//
-// Qué NO hace: tocar visitas CERRADAS ni lugares cerrados. Son inmutables por
-// trigger, y una visita cerrada conserva la clasificación con la que se cerró.
+// Qué hace: por cada lugar de control de asentamientos llama a
+// `recomputeSite` —la misma función que usa el cambio de la cota de un BM—,
+// que recalcula con `recalculateSite` y guarda cada visita con `save_visit`.
+// Nunca SQL que imite al motor (aprendizaje de la Fase 9). Desde la Fase 37
+// nada está cerrado: todas las visitas se recalculan.
 //
 // Uso (tsx resuelve los imports de TypeScript y los alias `@/`):
 //   npx tsx --env-file=.env.local scripts/resincronizar-asentamientos.mjs            (simula)
@@ -22,7 +21,7 @@
 //   SUPABASE_URL=... SUPABASE_SECRET_KEY=... npx tsx scripts/... --aplicar           (otra base)
 
 import { createClient } from "@supabase/supabase-js";
-import { resyncSiteReadings } from "../src/lib/supabase/settlement-sync.ts";
+import { recomputeSite } from "../src/lib/supabase/settlement-sync.ts";
 
 const APLICAR = process.argv.includes("--aplicar");
 
@@ -45,45 +44,36 @@ console.log(APLICAR ? "Modo: APLICAR (escribe)\n" : "Modo: simulación (no escri
 
 const { data: lugares, error: errLugares } = await db
   .from("sites")
-  .select("id, name, status")
+  .select("id, name")
+  .eq("kind", "settlement")
   .order("name");
 if (errLugares) throw errLugares;
 
+let visitasTotales = 0;
 let lecturasTotales = 0;
 let lugaresConCambios = 0;
 
 for (const lugar of lugares ?? []) {
-  if (lugar.status === "closed") {
-    console.log(`  ⊘ ${lugar.name} — cerrado: inmutable, no se toca.`);
-    continue;
-  }
-
-  const { count: sinC0 } = await db
-    .from("settlement_points")
-    .select("id", { count: "exact", head: true })
-    .eq("site_id", lugar.id)
-    .is("initial_elevation", null);
-
-  const resultado = await resyncSiteReadings(db, lugar.id, { dryRun: !APLICAR });
+  const resultado = await recomputeSite(db, lugar.id, { dryRun: !APLICAR });
   if (!resultado.ok) {
     console.error(`  ✗ ${lugar.name} — ${resultado.error}`);
     process.exitCode = 1;
     continue;
   }
-
-  if (resultado.rewritten === 0) {
-    console.log(`  ✓ ${lugar.name} — al día (${sinC0 ?? 0} puntos sin C0).`);
+  if (resultado.changedReadings === 0) {
+    console.log(`  ✓ ${lugar.name} — al día (${resultado.visits} visitas).`);
     continue;
   }
-
   lugaresConCambios += 1;
-  lecturasTotales += resultado.rewritten;
+  visitasTotales += resultado.changedVisits;
+  lecturasTotales += resultado.changedReadings;
   console.log(
-    `  ${APLICAR ? "↻" : "·"} ${lugar.name} — ${resultado.rewritten} lecturas ${APLICAR ? "reescritas" : "a reescribir"} (${sinC0 ?? 0} puntos sin C0).`,
+    `  ${APLICAR ? "↻" : "·"} ${lugar.name} — ${resultado.changedVisits} de ${resultado.visits} visitas y ` +
+      `${resultado.changedReadings} lecturas ${APLICAR ? "recalculadas" : "cambian"}.`,
   );
 }
 
 console.log(
-  `\n${lugaresConCambios} lugares, ${lecturasTotales} lecturas ${APLICAR ? "reescritas" : "a reescribir"}.` +
+  `\n${lugaresConCambios} lugares, ${visitasTotales} visitas y ${lecturasTotales} lecturas ${APLICAR ? "recalculadas" : "cambian"}.` +
     (APLICAR || lecturasTotales === 0 ? "" : " Repite con --aplicar para escribir."),
 );

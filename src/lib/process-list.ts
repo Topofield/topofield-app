@@ -4,15 +4,10 @@
 //
 // Desde la Fase 22 sirve a los tres módulos del hub: poligonales, nivelaciones
 // y lugares de asentamientos. Cada uno pasa su propia métrica de «resultado»
-// para ordenar; los estados de un lugar son «activo» y «cerrado».
+// para ordenar. Desde la Fase 37 nada se cierra ni se rechaza, y el lugar no
+// tiene estado.
 
-export type StatusFilter =
-  | "todos"
-  | "borradores"
-  | "calculados"
-  | "cerrados"
-  | "rechazados"
-  | "activos";
+export type StatusFilter = "todos" | "borradores" | "calculados";
 
 /** Lo que el filtro necesita de un proceso o de un lugar. */
 export interface Filterable {
@@ -79,12 +74,6 @@ function matchesStatus(process: Filterable, estado: StatusFilter): boolean {
       return process.status === "draft" || process.status === "in_progress";
     case "calculados":
       return process.status === "calculated";
-    case "cerrados":
-      return process.status === "closed";
-    case "rechazados":
-      return process.status === "rejected";
-    case "activos":
-      return process.status === "active";
   }
 }
 
@@ -151,8 +140,5 @@ export function countByStatus(processes: Filterable[]): StatusCounts {
     todos: processes.length,
     borradores: count("borradores"),
     calculados: count("calculados"),
-    cerrados: count("cerrados"),
-    rechazados: count("rechazados"),
-    activos: count("activos"),
   };
 }

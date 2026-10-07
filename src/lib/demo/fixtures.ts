@@ -27,7 +27,6 @@ import {
 } from "./carteras";
 import { CRUDO_TRAMO2 } from "./crudo-tramo2";
 import {
-  ALAMEDA_AMARRES,
   ALAMEDA_POINTS,
   alamedaVisits,
   type PuntoAlameda,
@@ -100,12 +99,7 @@ export const REFERENCIAS_DEMO: ReferenciaDemo[] = [
     elevation: 2541.7545,
     description: "BM de arranque y cierre del tramo 2 (crudo del nivel digital Leica)",
   },
-  ...ALAMEDA_AMARRES.map((a) => ({
-    code: a.code,
-    type: a.type,
-    elevation: a.elevation,
-    description: a.description,
-  })),
+  // Los BM de Torre Alameda ya no van aquí: son BM del lugar (Fase 37).
 ];
 
 // ---------------------------------------------------------------------------
@@ -371,13 +365,12 @@ export interface AsentamientoDemo {
   points: PuntoAlameda[];
   /** Cotas, BM de amarre y cierre de la libreta de cada visita. */
   visits: VisitaAlameda[];
-  notes: string;
 }
 
 /**
  * Torre Alameda, la simulación del prototipo: ocho puntos, catorce visitas con
- * libreta, BM-1 y BM-2 alternados y la visita 9 fuera de tolerancia. El mismo
- * nivel digital que el seed le asigna. Queda cerrada para su informe.
+ * libreta, BM-1 y BM-2 alternados y la visita 9 fuera de todos los órdenes. El
+ * mismo nivel digital que el seed le asigna. Entra al informe de la demo.
  */
 export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
   name: "Torre Alameda",
@@ -392,8 +385,6 @@ export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
   kmPrecisionMm: 1.0,
   points: ALAMEDA_POINTS,
   visits: alamedaVisits(),
-  notes:
-    "Lugar cerrado tras catorce visitas.",
 };
 
 /**

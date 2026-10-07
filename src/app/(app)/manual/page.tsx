@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import {
-  AVISOS_LIBRETA,
   CAPTURAS,
   COLUMNAS_LISTADO,
   ESTADOS_PROCESO,
@@ -18,13 +17,14 @@ import {
   TIPOS_POLIGONAL,
   TIPOS_PUNTO_NIVELACION,
   TOLERANCIA_NIVELACION,
+  VERIFICACION_TRAMO,
   type Captura as DatosCaptura,
 } from "./manual-data";
 
 export const metadata: Metadata = {
   title: "Manual de usuario — TopoField",
   description:
-    "Cómo usar TopoField: proyectos, poligonales, nivelación, control de asentamientos, cierre con trazabilidad y trabajo en campo.",
+    "Cómo usar TopoField: proyectos, poligonales, nivelación, control de asentamientos, informes y trabajo en campo.",
 };
 
 /**
@@ -43,10 +43,9 @@ export default function ManualPage() {
         <h1 className="text-3xl font-bold">Manual de usuario</h1>
         <p className="mt-2 max-w-2xl text-ink">
           Cómo registrar los datos de campo, calcularlos con validación en vivo
-          y cerrarlos con trazabilidad. Cubre lo que la aplicación permite hacer
-          hoy, que es el alcance completo del proyecto: los tres módulos de
-          proceso, el cierre con trazabilidad, los informes y la exportación a
-          Excel.
+          e informarlos. Cubre lo que la aplicación permite hacer hoy, que es
+          el alcance completo del proyecto: los tres módulos de proceso, los
+          informes y la exportación a Excel.
         </p>
       </header>
 
@@ -79,14 +78,15 @@ export default function ManualPage() {
           equipo usado y el <strong>orden de precisión</strong> no viven
           aquí: van en cada proceso —poligonal, nivelación, visita de
           asentamiento—, porque pueden cambiar de un levantamiento a otro
-          dentro de un mismo proyecto. El orden de una poligonal o de una
-          nivelación no se declara: se detecta al calcularla.
+          dentro de un mismo proyecto. El orden no se declara: se detecta al
+          calcular.
         </p>
 
         <p>
           <strong>Proceso.</strong> Un levantamiento concreto dentro de un
           proyecto: una poligonal, una nivelación, un control de asentamientos.
-          Cada proceso pasa por estados:
+          La poligonal, la nivelación y cada visita de asentamientos pasan por
+          estados:
         </p>
 
         <Tabla
@@ -98,26 +98,17 @@ export default function ManualPage() {
           ))}
         </Tabla>
 
-        <p>
-          <strong>Cierre.</strong> El acto de dar por terminada una visita o
-          un lugar de asentamientos. Queda registrado con fecha, hora y autor,
-          y{" "}
-          <strong>
-            a partir de ese momento las mediciones y el veredicto no se pueden
-            modificar
-          </strong>
-          . Es lo que da trazabilidad al trabajo.{" "}
-          <strong>La poligonal y la nivelación no se cierran</strong>: quedan
-          calculadas, se corrigen cuando haga falta, y su informe dice qué
-          orden de precisión alcanzaron (§ 5 y § 6).
-        </p>
+        <p>El lugar de asentamientos no tiene estado: agrupa sus visitas.</p>
 
-        <Nota titulo="Sobre la inmutabilidad">
-          Un proceso cerrado no se puede editar ni eliminar, ni desde la
-          interfaz ni por ninguna otra vía. La restricción está aplicada en la
-          propia base de datos, no solo en la pantalla. Para corregirlo, se
-          reabre (§ 8).
-        </Nota>
+        <p>
+          <strong>Cálculo en vivo.</strong> Ningún proceso se cierra (§ 8): lo
+          que se captura se guarda al confirmarlo y todo se recalcula al
+          momento. Corregir una lectura, la cota de un BM o la C0 de un punto
+          cambia lo que depende de ellos, y la aplicación avisa antes cuánto
+          cambia. Lo que queda fijo es el{" "}
+          <strong>informe consolidado</strong> ya emitido: para corregirlo, se
+          elimina y se genera de nuevo (§ 10).
+        </p>
       </Seccion>
 
       {/* ── 2. Entrar a la aplicación ──────────────────────────────────── */}
@@ -155,9 +146,12 @@ export default function ManualPage() {
             Leica.
           </li>
           <li>
-            <strong>Torre Alameda</strong>, un control de asentamientos
-            simulado con catorce visitas y su libreta de nivelación en cada
-            una.
+            Dos controles de asentamientos: <strong>Torre Alameda</strong>,
+            simulado, con catorce visitas, BM-1 y BM-2 como BM del lugar, la
+            visita 9 sin verificación y la 13 con BM-2 desplazado; y la cartera
+            real <strong>Control de asentamiento estructural</strong>: dieciséis
+            puntos y siete visitas de una armada desde el BM de la piscina, de
+            marzo a junio de 2022.
           </li>
           <li>Un informe consolidado por módulo.</li>
         </ul>
@@ -205,15 +199,14 @@ export default function ManualPage() {
             <strong>Fuera de tolerancia</strong> — procesos calculados que no
             cumplen su tolerancia —una poligonal o una nivelación, si no
             alcanza ningún orden—, y lugares con algún punto en alerta o alarma
-            en una visita abierta. Requieren revisión.
+            en una visita calculada. Requieren revisión.
           </li>
         </ul>
 
         <p>
           Debajo, sus proyectos. El selector{" "}
           <strong>Activos / Archivados</strong> filtra la lista. Cada tarjeta
-          indica cuántos procesos tiene el proyecto y cuántos están en curso,
-          cerrados o rechazados.
+          indica cuántos procesos tiene el proyecto.
         </p>
 
         <p>
@@ -223,9 +216,10 @@ export default function ManualPage() {
         <Nota titulo="Empieza con un proyecto de ejemplo">
           La primera vez que entra, su cuenta ya trae un{" "}
           <strong>«Proyecto de ejemplo»</strong> con carteras de campo reales
-          —poligonales y nivelaciones—, un lugar de control de asentamientos
-          simulado y sus informes, para que explore la aplicación con datos
-          reales (§ 2). Puede modificarlo o archivarlo cuando quiera.
+          —poligonales, nivelaciones y un control de asentamientos—, otro
+          control de asentamientos simulado y sus informes, para que explore la
+          aplicación con datos reales (§ 2). Puede modificarlo o archivarlo
+          cuando quiera.
         </Nota>
       </Seccion>
 
@@ -245,11 +239,10 @@ export default function ManualPage() {
         </p>
 
         <Nota titulo="El equipo y el orden de precisión no se piden aquí">
-          Van en cada proceso: cada visita de asentamiento declara su orden y
-          su equipo, y cada poligonal y cada nivelación su equipo —su orden se
-          detecta al calcularla—. Un mismo proyecto puede así tener
-          trabajos de distinto orden, medidos con instrumentos distintos y en
-          fechas distintas. Vea{" "}
+          Cada poligonal, cada nivelación y cada visita de asentamiento lleva
+          su equipo, y su orden se detecta al calcularla. Un mismo proyecto
+          puede así tener trabajos de distinto orden, medidos con instrumentos
+          distintos y en fechas distintas. Vea{" "}
           <a href="#poligonales" className="underline">
             § 5
           </a>
@@ -284,9 +277,10 @@ export default function ManualPage() {
           <li>
             <strong>Informes</strong> — los informes{" "}
             <strong>consolidados</strong>, que reúnen poligonales y
-            nivelaciones calculadas y controles de asentamientos cerrados en un
-            solo documento. Se detalla en «10. Informes». Cada proceso tiene
-            además su propio informe, en su pantalla (4.4).
+            nivelaciones calculadas y controles de asentamientos con alguna
+            visita calculada en un solo documento. Se detalla en «10.
+            Informes». Cada proceso tiene además su propio informe, en su
+            pantalla (4.4).
           </li>
           <li>
             <strong>Configuración</strong> — los datos del proyecto (también la
@@ -301,17 +295,14 @@ export default function ManualPage() {
           Los <strong>puntos de referencia</strong> son coordenadas conocidas
           (vértices geodésicos, mojones) que puede reutilizar como punto de
           partida o de llegada de sus poligonales, sin volver a teclearlas.
-          Los que tienen cota sirven además como BM de sus nivelaciones y
-          como <strong>BM de amarre</strong> de las visitas de asentamiento.
+          Las visitas de asentamiento no los usan: cada lugar tiene sus propios
+          BM (§ 7.3).
         </p>
 
         <p>
           <strong>Archivar o eliminar.</strong> Archivar oculta el proyecto de
           la lista activa del dashboard; puede restaurarlo cuando quiera.
-          Eliminarlo lo borra con todo lo que contiene, y solo es posible si no
-          tiene nada cerrado: un lugar o una visita de asentamientos cerrados
-          son registros que no se borran. En ese caso la configuración dice
-          cuántos tiene y propone archivarlo.
+          Eliminarlo lo borra con todo lo que contiene, de forma permanente.
         </p>
 
         <h3 className="mt-4 text-lg font-semibold">
@@ -334,10 +325,9 @@ export default function ManualPage() {
         <p>
           <strong>Filtrar por estado.</strong> Los chips muestran cuántos hay
           en cada grupo, así que ve la distribución del proyecto sin desplegar
-          nada. Pulse uno para ver solo ese grupo. En poligonales y
-          nivelaciones los estados son <strong>Borradores</strong> y{" "}
-          <strong>Calculados</strong>: no se cierran. En control de
-          asentamientos, <strong>Activos</strong> y <strong>Cerrados</strong>.
+          nada. Pulse uno para ver solo ese grupo:{" "}
+          <strong>Borradores</strong> o <strong>Calculados</strong>. El control
+          de asentamientos no los tiene: el lugar no tiene estado.
         </p>
 
         <p>
@@ -379,35 +369,27 @@ export default function ManualPage() {
         </p>
 
         <p>
-          <strong>Acciones por fila.</strong> Cada fila ofrece:
+          <strong>Acciones por fila.</strong> Cada fila ofrece siempre las
+          tres, porque ningún proceso se cierra:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
             <strong>Duplicar</strong> — crea uno nuevo con la misma
-            configuración, en borrador: una poligonal sin estaciones, una
-            nivelación sin lecturas, un lugar con sus umbrales y su catálogo de
-            puntos pero sin visitas.
+            configuración: una poligonal sin estaciones, una nivelación sin
+            lecturas, un lugar con sus umbrales, su catálogo de puntos y sus BM
+            pero sin visitas.
           </li>
           <li>
             <strong>Renombrar</strong> — cambia el nombre sin abrirlo.
           </li>
           <li>
             <strong>Eliminar</strong> — lo borra con lo que contiene, con
-            confirmación previa. Un lugar con alguna visita cerrada no se puede
-            eliminar. Si lo que borra está en un informe consolidado —porque se
-            reabrió después de emitirlo—, la confirmación lo avisa: el informe
-            quedará sin esa sección.
+            confirmación previa. Si lo que borra está en un informe
+            consolidado, la confirmación lo avisa: el informe quedará sin esa
+            sección.
           </li>
         </ul>
-
-        <Nota titulo="Lo cerrado solo se puede duplicar">
-          Un lugar cerrado no admite renombrarse ni eliminarse. Una poligonal
-          o una nivelación siempre admite las tres acciones: no se cierran. Si
-          necesita rehacer un levantamiento cerrado, duplíquelo: obtendrá una
-          copia editable y el original queda intacto como constancia. Para
-          corregir el mismo lugar, reábralo desde su pantalla (§ 8).
-        </Nota>
 
         <p>
           En el teléfono, la tabla se convierte en tarjetas, una por fila, con
@@ -419,8 +401,20 @@ export default function ManualPage() {
         </h3>
 
         <p>
-          Los controles de asentamientos se abren en la pantalla de siempre. La
-          poligonal y la nivelación tienen la suya, por pasos (
+          Los tres módulos comparten la cabecera. Lleva sus rótulos —el tipo
+          y, si lo tiene, el estado—, el nombre, sus datos y cuándo se guardó
+          por última vez, y las acciones <strong>Editar datos</strong>,{" "}
+          <strong>Exportar a Excel</strong> (§ 11) y, bajo{" "}
+          <strong>⋯</strong>, <strong>Duplicar</strong> y{" "}
+          <strong>Eliminar</strong>. La ruta de la barra devuelve al listado
+          del que vino.
+        </p>
+
+        <p>
+          Debajo van los pasos de la poligonal —<strong>Datos</strong>,{" "}
+          <strong>Ajuste</strong> e <strong>Informe</strong>— y de la
+          nivelación —<strong>Libreta</strong>,{" "}
+          <strong>Compensación</strong> e <strong>Informe</strong>— (
           <a href="#pantalla-por-pasos" className="underline">
             § 5.3
           </a>{" "}
@@ -428,61 +422,42 @@ export default function ManualPage() {
           <a href="#pantalla-por-pasos-nivelacion" className="underline">
             § 6.5
           </a>
+          ), o las pestañas del lugar de asentamientos —
+          <strong>Panel</strong>, <strong>Puntos</strong>,{" "}
+          <strong>BMs</strong> e <strong>Informe</strong>—, cuya cabecera
+          añade <strong>+ Nueva visita</strong> (
+          <a href="#asentamientos" className="underline">
+            § 7
+          </a>
           ).
         </p>
 
         <p>
-          <strong>La cabecera.</strong> El nombre, el estado y el tipo del
-          proceso, y dos acciones: <strong>Exportar a Excel</strong> (§ 11) y{" "}
-          <strong>Ver informe</strong>. Si el proceso está cerrado, una
-          tercera: <strong>Reabrir</strong> (§ 8). La ruta de la barra devuelve
-          al listado del que vino.
+          <strong>No hay botón Guardar.</strong> Cada popup guarda al
+          confirmar, y la libreta de una visita, lectura por lectura (
+          <a href="#armada-visita" className="underline">
+            § 7.7
+          </a>
+          ).
         </p>
 
         <p>
-          <strong>Las pestañas.</strong> <strong>Proceso</strong> reúne todo el
-          trabajo: configuración, captura, cálculo, gráfico y análisis, que se
-          recalculan mientras escribe. <strong>Informe</strong> muestra el
-          informe de ese proceso, listo para{" "}
-          <strong>Imprimir o guardar como PDF</strong> (§ 10). El control de
-          asentamientos tiene tres: <strong>Panel</strong>,{" "}
-          <strong>Puntos y lugar</strong> e <strong>Informe</strong> (§ 7); la
-          poligonal, sus tres pasos: <strong>Datos</strong>,{" "}
-          <strong>Ajuste</strong> e <strong>Informe</strong>, y la nivelación
-          los suyos: <strong>Libreta</strong>,{" "}
-          <strong>Compensación</strong> e <strong>Informe</strong>.
+          <strong>El informe.</strong> El paso o la pestaña{" "}
+          <strong>Informe</strong> muestra el informe de ese proceso, listo
+          para <strong>Imprimir o guardar como PDF</strong> (§ 10), que pasa a
+          ser la primera acción de la cabecera.
         </p>
 
         <Captura {...CAPTURAS.informeDelProceso} />
 
         <p>
-          Mientras el proceso no esté cerrado, su informe lleva la marca{" "}
-          <strong>«Borrador — el informe se emite al cerrar el proceso»</strong>,
-          también en el PDF: sirve para revisar antes de cerrar. Si se cerró
-          como rechazado, lleva en cambio la marca{" "}
-          <strong>«Rechazado»</strong>: queda como constancia y no entra en
-          informes consolidados. El de una poligonal o una nivelación no lleva
-          marca: no se cierran. Debajo, fuera de la impresión, aparecen los
-          informes consolidados que ya lo incluyen y, si puede entrar en uno
-          —un lugar cerrado, o una poligonal o una nivelación calculadas—, un
-          botón para generar uno nuevo con él.
+          No lleva marca de borrador ni registro de cierre: ningún proceso se
+          cierra, y el informe muestra lo que tenga al abrirlo. Debajo, fuera
+          de la impresión, aparecen los informes consolidados que ya lo
+          incluyen y, si puede entrar en uno —una poligonal o una nivelación
+          calculadas, o un lugar con alguna visita calculada—, un botón para
+          generar uno nuevo con él.
         </p>
-
-        <p>
-          <strong>La barra de acciones.</strong> Mientras el proceso se puede
-          editar, <strong>Guardar</strong> y <strong>Cerrar proceso</strong> van
-          en una barra fija al pie de la pantalla, siempre a la vista. A su
-          izquierda dice si hay <strong>cambios sin guardar</strong> o qué
-          impide guardar. La poligonal y la nivelación no la tienen: cada
-          popup guarda al confirmar.
-        </p>
-
-        <Nota titulo="Salir sin guardar pregunta">
-          Si tiene cambios sin guardar y pulsa una miga, otra pestaña o
-          cualquier enlace de la aplicación, un diálogo pregunta antes de
-          salir; al recargar o cerrar la pestaña, pregunta el navegador. Los
-          botones atrás y adelante del navegador no preguntan.
-        </Nota>
 
         <VolverArriba />
       </Seccion>
@@ -1743,55 +1718,95 @@ export default function ManualPage() {
           anterior y desde el inicio.
         </p>
 
-        <h3 className="text-lg font-semibold">7.1 El lugar</h3>
+        <p>
+          Se trabaja como lo mide el topógrafo, igual que la poligonal y la
+          nivelación (§ 5 y § 6): el <strong>lugar</strong> se crea en un popup
+          y tiene cuatro pestañas —<strong>Panel</strong>,{" "}
+          <strong>Puntos</strong>, <strong>BMs</strong> e{" "}
+          <strong>Informe</strong>—, y cada <strong>visita</strong>, dos pasos
+          —<strong>1 · Libreta</strong> y <strong>2 · Resultados</strong>—.{" "}
+          <strong>No hay botón Guardar</strong>: cada popup guarda al
+          confirmar, y la libreta, lectura por lectura. La visita{" "}
+          <strong>no se compensa</strong> —la cota de cada punto es la de su
+          lectura— y <strong>nada se cierra</strong>: todo se recalcula en
+          vivo.
+        </p>
+
+        <h3 id="lugar" className="scroll-mt-6 text-lg font-semibold">
+          7.1 El lugar
+        </h3>
 
         <p>
           Un <strong>lugar</strong> es el sitio que se monitorea: un
           edificio, una presa, un terraplén. Agrupa un catálogo de puntos de
-          control y sus visitas sucesivas — es el equivalente, para este
-          módulo, a lo que una poligonal o una nivelación son para los otros
-          dos.
+          control, sus BM y sus visitas sucesivas —es el equivalente, para
+          este módulo, a lo que una poligonal o una nivelación son para los
+          otros dos—.
         </p>
 
         <Captura {...CAPTURAS.nuevoLugar} />
 
         <p>
           Desde el proyecto,{" "}
-          <strong>+ Nuevo Proceso → Control de Asentamientos</strong>.
-          Indique el nombre y el <strong>tipo de estructura</strong>:
-          edificio, presa, terraplén u otro. Elegir el tipo aplica un juego
-          de <strong>umbrales de alerta</strong> típico para ese tipo de
-          estructura —de velocidad y de asentamiento acumulado— que puede
-          editar a continuación si el caso lo requiere.
+          <strong>+ Nuevo Proceso → Control de Asentamientos</strong> abre un
+          popup:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Nombre</strong>, el único obligatorio.
+          </li>
+          <li>
+            <strong>Tipo de estructura</strong>: edificio, presa, terraplén u
+            otro. Precarga los umbrales del semáforo, y cambiarlo los vuelve a
+            precargar.
+          </li>
+          <li>
+            <strong>Descripción</strong>, opcional.
+          </li>
+          <li>
+            <strong>Umbrales del semáforo</strong>, plegados: los de velocidad
+            y de asentamiento acumulado típicos del tipo de estructura, que
+            puede editar si el caso lo requiere.
+          </li>
+        </ul>
+
+        <p>
+          <strong>Crear lugar</strong> lleva a su panel. Los puntos de control
+          se agregan después, en la pestaña Puntos (§ 7.2). Estos datos se
+          cambian con <strong>Editar datos</strong>, en la cabecera, que abre
+          el mismo popup.
         </p>
 
         <p>
-          Al abrir un lugar desde el proyecto se ve su pantalla (4.4), con tres
-          pestañas: <strong>Panel</strong>, con el historial del monitoreo
-          (7.4); <strong>Puntos y lugar</strong>, con los datos, los umbrales y
-          el catálogo de puntos (7.2); e <strong>Informe</strong>. En la
-          cabecera, <strong>+ Nueva visita</strong> (7.3),{" "}
-          <strong>Exportar a Excel</strong> y <strong>Ver informe</strong>.
+          <strong>La pantalla del lugar.</strong> La cabecera lleva el tipo de
+          estructura, el nombre, cuántos puntos de control y BM tiene, la
+          fecha de la lectura base y cuándo se guardó por última vez; y las
+          acciones <strong>+ Nueva visita</strong> (§ 7.4),{" "}
+          <strong>Editar datos</strong>, <strong>Exportar a Excel</strong>{" "}
+          (§ 11) y, bajo <strong>⋯</strong>, <strong>Duplicar</strong> y{" "}
+          <strong>Eliminar</strong>. Debajo, las pestañas{" "}
+          <strong>Panel</strong> (§ 7.11), <strong>Puntos</strong> (§ 7.2),{" "}
+          <strong>BMs</strong> (§ 7.3) e <strong>Informe</strong> (§ 7.12).
         </p>
 
-        <h3 className="mt-4 text-lg font-semibold">
-          7.2 Catalogar los puntos
+        <p>
+          El lugar <strong>no tiene estado</strong>: ni activo ni cerrado.
+          Admite visitas siempre.
+        </p>
+
+        <h3 id="puntos-control" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.2 Los puntos de control
         </h3>
 
         <Captura {...CAPTURAS.editorLugar} />
 
         <p>
-          Ya creado el lugar, en su pestaña <strong>Puntos y lugar</strong>{" "}
-          agregue sus <strong>puntos de control</strong>: código, ubicación
-          y la <strong>cota inicial (C0)</strong> — la referencia contra la que
-          se mide el asentamiento acumulado de todas las visitas futuras.
-        </p>
-
-        <p>
-          Los puntos no llevan coordenadas: el módulo mide cuánto baja cada
-          punto, no dónde está, así que no calcula distancias entre puntos,
-          asentamientos diferenciales ni distorsión angular. Un lugar cerrado
-          antes de este cambio tampoco los muestra ya.
+          En la pestaña <strong>Puntos</strong>,{" "}
+          <strong>Agregar punto</strong> pide el <strong>código</strong>, la{" "}
+          <strong>ubicación</strong> y la <strong>cota C0</strong>: la
+          referencia contra la que se mide el asentamiento acumulado de todas
+          las visitas.
         </p>
 
         <p>
@@ -1801,248 +1816,543 @@ export default function ManualPage() {
         </p>
 
         <p>
-          Cuando un punto ya se midió en una visita <strong>cerrada</strong>,
-          su C0 queda fija: los asentamientos con que se cerró esa visita
-          dependen de ella. El diálogo <strong>Editar</strong> la muestra
-          bloqueada; el código y la ubicación se siguen pudiendo cambiar.
+          Los puntos no llevan coordenadas: el módulo mide cuánto baja cada
+          punto, no dónde está, así que no calcula distancias entre puntos,
+          asentamientos diferenciales ni distorsión angular.
         </p>
 
         <p>
-          <strong>Renombrar un punto</strong> cambia también su código en la
-          libreta de las visitas <strong>abiertas</strong> (
-          <a href="#registrar-visita" className="underline">
-            § 7.3
-          </a>
-          ), para que su cota siga saliendo de su fila. Las visitas cerradas
-          conservan el código con que se midieron.
+          La tabla da el código, la ubicación, la C0 y el estado de cada punto
+          —<strong>Vigente</strong>, <strong>Alta el …</strong> o{" "}
+          <strong>De baja desde el …</strong>, con su motivo—, y sus acciones:{" "}
+          <strong>Editar</strong>, <strong>Dar de baja</strong> y{" "}
+          <strong>Eliminar</strong>.
         </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Editar</strong> cambia el código, la ubicación y la C0,
+            aunque el punto ya tenga lecturas. Cambiar la <strong>C0</strong>{" "}
+            de un punto medido cambia su acumulado en cada visita: el popup
+            avisa en cuántas —«Cambiar la C0 cambia el acumulado de este punto
+            en 7 visitas»— y, al guardar otra vez, todo se recalcula.
+          </li>
+          <li>
+            <strong>Renombrar un punto</strong> cambia también su código en la
+            libreta de todas las visitas, para que su cota siga saliendo de su
+            fila.
+          </li>
+          <li>
+            <strong>Eliminar</strong> un punto con lecturas pide confirmación,
+            con cuántas se pierden: <strong>Eliminar de todos modos</strong>.
+          </li>
+        </ul>
 
         <p>
           El catálogo puede cambiar a mitad del monitoreo —un punto se
           destruye, otro se instala—; ver{" "}
           <a href="#baja-alta" className="underline">
-            § 7.7
+            § 7.13
           </a>
           .
         </p>
 
-        <h3
-          id="registrar-visita"
-          className="mt-4 scroll-mt-6 text-lg font-semibold"
-        >
-          7.3 Registrar una visita
+        <h3 id="bms-lugar" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.3 Los BM del lugar
         </h3>
 
+        <Captura {...CAPTURAS.bmsLugar} />
+
         <p>
-          Cada <strong>visita</strong> es una fecha en la que se releyeron
-          los puntos del catálogo. La primera visita registrada es la{" "}
-          <strong>visita 0 o línea base</strong>: fija el punto de partida y
-          no tiene velocidad, porque no hay una visita anterior contra la que
-          compararla. Su acumulado es cero en los puntos cuya C0 es su lectura
-          de esta visita; si la C0 viene de otra medición, la visita 0 muestra
-          ya lo que el punto se movió desde entonces.
+          Cada lugar tiene su propio catálogo de <strong>BM</strong>: los
+          puntos de cota conocida desde donde se arman las visitas. Son del
+          lugar y no se sincronizan con nada. La visita no usa los puntos de
+          referencia del proyecto (§ 4.2).
         </p>
 
         <p>
-          <strong>Crear la visita.</strong> En el panel del lugar (
-          <a href="#panel-lugar" className="underline">
-            § 7.4
-          </a>
-          ), <strong>+ Nueva visita</strong> pide:
+          La tabla da el <strong>código</strong>, la <strong>cota</strong>, la{" "}
+          <strong>descripción</strong>, el <strong>origen</strong> —de dónde
+          vino— y en cuántas <strong>visitas</strong> arranca un tramo
+          —«Amarre en 12»—.
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>+ BM</strong> agrega uno: código, cota y una descripción
+            opcional. El código no puede repetir el de otro BM del lugar,
+            aunque cambien las mayúsculas o los espacios: «bm-1» es el mismo BM
+            que «BM-1».
+          </li>
+          <li>
+            <strong>Editar</strong> cambia sus datos. Si el BM lo usan algunas
+            visitas, cambiar su <strong>cota</strong> o su{" "}
+            <strong>código</strong> avisa en cuántas —«BM-1 se usa en 14
+            visitas: al guardar se recalculan sus cotas»— y{" "}
+            <strong>Guardar y recalcular</strong> las recalcula. Un código
+            nuevo cambia también en sus libretas.
+          </li>
+          <li>
+            <strong>Eliminar</strong> solo se puede si ninguna visita lo usa.
+          </li>
+          <li>
+            <strong>Importar BM</strong> los trae de dos fuentes:
+            <ul className="ml-5 mt-1 list-[circle] space-y-1">
+              <li>
+                <strong>De una nivelación del proyecto</strong>: elija una
+                nivelación calculada y marque sus puntos; entran con su{" "}
+                <strong>cota ajustada</strong> de hoy (§ 6.7).
+              </li>
+              <li>
+                <strong>De un CSV</strong>: una fila por BM con{" "}
+                <code>codigo,cota,descripcion</code> —la descripción es
+                opcional—, separada por coma o por punto y coma. Con punto y
+                coma, la cota admite coma decimal.
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+        <Nota titulo="Los BM importados son copias">
+          Anotan su origen, pero no siguen a su fuente: si la nivelación cambia
+          después, el BM no. Se corrigen aquí. Un código que ya está en el
+          lugar no se importa: quítelo de la importación o edítelo.
+        </Nota>
+
+        <p>
+          Un BM también puede nacer en campo: el punto auxiliar donde termina
+          una armada (§ 7.7).
+        </p>
+
+        <h3 id="nueva-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.4 Una visita nueva
+        </h3>
+
+        <p>
+          Cada <strong>visita</strong> es una fecha en la que se releyeron los
+          puntos. La primera es la <strong>línea base</strong>: fija el punto
+          de partida y no tiene velocidad, porque no hay una visita anterior
+          contra la que compararla. Su acumulado es cero en los puntos cuya C0
+          es su lectura de esta visita; si la C0 viene de otra medición, la
+          primera visita muestra ya lo que el punto se movió desde entonces.
         </p>
 
         <Captura {...CAPTURAS.nuevaVisita} />
 
+        <p>
+          <strong>+ Nueva visita</strong>, en la cabecera del lugar, abre un
+          popup:
+        </p>
+
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>Fecha</strong> y <strong>Nivelador</strong>. La fecha tiene
-            que ser posterior a la de la última visita: dos visitas del mismo
-            lugar no comparten fecha, y al editar una visita abierta su fecha
-            tiene que quedar entre la de la anterior y la de la siguiente.
+            <strong>Fecha</strong>: posterior a la de la última visita. Dos
+            visitas del mismo lugar no comparten fecha, y al editar una su
+            fecha tiene que quedar entre la de la anterior y la de la
+            siguiente.
           </li>
           <li>
-            <strong>Captura</strong> — cómo llegan las cotas:{" "}
-            <em>digitar la libreta de nivelación</em>,{" "}
-            <em>importar la libreta desde un archivo</em> o{" "}
-            <em>cotas directas</em>, para una nivelación calculada fuera de la
-            aplicación.
+            <strong>Nivelador</strong>.
           </li>
           <li>
-            <strong>BM de amarre</strong> — el banco de nivel sobre el que se
-            cierra la nivelación de la visita. Elíjalo del catálogo de puntos
-            de referencia del proyecto (§ 4.2), que trae código y cota, o
-            tecléelo con <strong>Otro (entrada libre)</strong> si el proyecto
-            no lo tiene registrado. Para digitar es obligatorio; al importar
-            puede dejarlo vacío, porque lo trae el archivo.
+            <strong>Nota</strong>, opcional: sale en los Resultados y en el
+            informe.
           </li>
           <li>
-            El <strong>orden de precisión</strong> y los datos del{" "}
-            <strong>nivel</strong>.
+            <strong>Equipo</strong>, plegado y opcional: marca, modelo y
+            número de serie del nivel, o <strong>Tomar del catálogo</strong>{" "}
+            (§ 12).
           </li>
         </ul>
 
         <p>
-          El nivelador, el amarre, el orden y el equipo{" "}
-          <strong>vienen de la visita anterior</strong>: cambie solo lo que no
-          sea igual. <strong>Crear y abrir</strong> lleva al editor de la
-          visita, con el diálogo de importación ya abierto si eligió importar.
+          <strong>No pide BM ni cómo se mide.</strong> La libreta llega{" "}
+          <strong>armada como la de la visita anterior</strong>: las mismas
+          armadas, con sus BM, sus puntos de cambio y sus puntos de control,
+          sin lecturas; sin los puntos dados de baja y con los dados de alta.
+          La primera visita llega con una armada desde el primer BM del lugar
+          y todos los puntos vigentes. El popup dice cuál de las dos trae. Si
+          el lugar no tiene BM, pide agregarlos antes en la pestaña BMs
+          (§ 7.3).
         </p>
 
         <p>
-          Cada visita declara también el <strong>orden de precisión</strong>{" "}
-          con que se midió y los datos del <strong>nivel</strong> usado:
-          marca, modelo, número de serie, fecha de calibración, tipo
-          (automático o digital) y desviación típica en mm por km de doble
-          nivelación (ISO 17123-2). El instrumento puede cambiar entre una
-          visita y la siguiente —pueden pasar meses—, así que cada visita
-          lleva su propio equipo, no el lugar.
+          <strong>Crear y empezar</strong> abre la visita en su libreta. Solo
+          queda teclear las lecturas.
         </p>
 
+        <h3 id="pantalla-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.5 La pantalla de la visita
+        </h3>
+
         <p>
-          <strong>La libreta de nivelación.</strong> En una visita con
-          libreta, las cotas de los puntos de control{" "}
-          <strong>no se teclean: salen de la libreta</strong>. Es la libreta de
-          la nivelación (§ 6.2 y § 6.3) —V+, V−, distancia a cada mira, hilos
-          con nivel automático— y forma un{" "}
-          <strong>circuito cerrado sobre el BM de amarre</strong>: la primera
-          y la última fila son el amarre.
+          La <strong>cabecera</strong> lleva cuántas <strong>armadas</strong>{" "}
+          tiene la visita, su <strong>verificación</strong> —el orden que
+          alcanza o <strong>Sin verificación</strong> (§ 7.9)— y su estado:{" "}
+          <strong>En medición</strong> si falta alguna lectura,{" "}
+          <strong>Calculada</strong> si no. Debajo, «Visita 12 · fecha», el
+          nivelador, el equipo y cuándo se guardó por última vez. Las
+          acciones:
         </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>← →</strong> pasan a la visita anterior o a la siguiente,
+            en el mismo paso.
+          </li>
+          <li>
+            <strong>Editar datos</strong> abre el popup del alta: fecha,
+            nivelador, nota y equipo.
+          </li>
+          <li>
+            <strong>Eliminar</strong> borra la visita con su libreta y sus
+            lecturas. Cualquier visita se elimina, también una del medio: el
+            parcial y la velocidad de la siguiente se recalculan contra la
+            anterior.
+          </li>
+        </ul>
+
+        <p>
+          Debajo van los dos pasos y, a la derecha,{" "}
+          <strong>Importar .L o CSV</strong> (§ 7.8).
+        </p>
+
+        <h3
+          id="paso-libreta-visita"
+          className="mt-4 scroll-mt-6 text-lg font-semibold"
+        >
+          7.6 Paso 1 · Libreta
+        </h3>
 
         <Captura {...CAPTURAS.editorVisita} />
 
         <p>
-          Para capturar en campo, la libreta llega{" "}
-          <strong>precargada</strong> con la secuencia de la visita anterior
-          —códigos y tipos, sin lecturas— y el amarre de esta visita. Si no
-          hay visita anterior con libreta, con el amarre, los puntos de
-          control como intermedios y el amarre otra vez. Solo queda llenar las
-          lecturas. Además:
+          Dos columnas: a la izquierda, la libreta; a la derecha, fijas
+          mientras baja la página, las armadas, la verificación de cada tramo
+          y el movimiento de cada punto desde la visita anterior.
+        </p>
+
+        <p>
+          <strong>La tabla de la hoja.</strong> La de la nivelación (§ 6.6):{" "}
+          <strong>Punto</strong>, <strong>V+</strong> y su distancia,{" "}
+          <strong>AI</strong>, <strong>V−</strong> y su distancia,{" "}
+          <strong>VI</strong> —la lectura a un punto de control— y la{" "}
+          <strong>cota</strong>. Los rótulos marcan el{" "}
+          <strong>BM del lugar</strong> donde arranca cada tramo, los{" "}
+          <strong>puntos de cambio</strong>, el BM del lugar donde el tramo{" "}
+          <strong>cierra</strong> o <strong>llega</strong>, un BM del lugar
+          leído de paso con su diferencia —«BM · -0.4 mm»— y los puntos{" "}
+          <strong>pendientes</strong> de leer. El lápiz de cada fila abre su
+          armada (§ 7.7).
+        </p>
+
+        <p>
+          <strong>Armadas.</strong> Una fila por armada —«Armada 1 · desde
+          BM-1», con de dónde sale, cuántas vistas a puntos lleva y su V−— con{" "}
+          <strong>Editar</strong>, o <strong>Retomar</strong> si le falta
+          alguna lectura. <strong>+ Armada</strong> agrega la siguiente.
+        </p>
+
+        <p>
+          <strong>Los tramos.</strong> Una tarjeta por tramo —«Tramo desde
+          BM-1», «vuelve a BM-1»— con su <strong>Cierre</strong> y su{" "}
+          <strong>Orden alcanzado</strong> (§ 7.9). Debajo, el aviso de cada BM
+          del lugar leído de paso y la nota «Las cotas son las de la medida: el
+          cierre comprueba, no se reparte.»
+        </p>
+
+        <p>
+          <strong>Movimiento desde la visita anterior.</strong> Una barra por
+          punto, en mm, y el aviso de cada lectura fuera de tendencia (§ 7.9):
+          «B10 bajó 50.0 mm en 12 días; a su ritmo anterior serían unos 17.1
+          mm. Verifica la lectura.»
+        </p>
+
+        <p>
+          <strong>La medición a medias.</strong> Si falta alguna lectura, la
+          visita queda <strong>En medición</strong> y la libreta lo dice
+          arriba: <strong>La medición quedó a medias</strong>, con la armada y
+          el punto que faltan. <strong>Retomar medición</strong> abre esa
+          armada con el cursor en la primera lectura que falta. Nada se
+          pierde: lo leído ya está guardado.
+        </p>
+
+        <p>
+          <strong>Puntos sin lectura.</strong> Debajo de la libreta, un aviso
+          nombra los puntos de control vigentes que no tienen fila —«P-05 no
+          tiene lectura en la libreta: queda sin cota en esta visita.»—, por
+          ejemplo tras importar un archivo al que le falta alguno. Otro avisa
+          la lectura de un punto que no está vigente en la fecha de la visita:
+          no se usa. Un punto con su fila por leer no avisa: eso es la medición
+          a medias.
+        </p>
+
+        <p>
+          Una visita sin armadas muestra{" "}
+          <strong>+ Agregar la primera armada</strong>. Si el lugar no tiene
+          BM, la libreta pide agregar uno en la pestaña <strong>BMs</strong>:
+          cada armada sale de un BM del lugar o de un punto de cambio.
+        </p>
+
+        <p>
+          En el teléfono, la libreta es la lista de armadas, con sus lecturas
+          y sus cotas; pulsar una la abre (§ 9).
+        </p>
+
+        <h3 id="armada-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.7 La armada
+        </h3>
+
+        <Captura {...CAPTURAS.armadaVisita} />
+
+        <p>
+          Una <strong>armada</strong> es una posición del nivel (§ 6.2): una
+          vista atrás a un punto con cota, las vistas a los puntos de control
+          y, si la hay, una vista adelante. Su popup —«Armada 2 · visita 12»—
+          tiene tres partes:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            la casilla del punto <strong>sugiere</strong> los códigos del
-            catálogo y el del amarre;
+            <strong>Vista atrás · V+.</strong> <strong>Desde</strong> dónde
+            sale: <strong>Un BM del lugar</strong>, que se elige de la lista y
+            empieza un tramo, o <strong>Un punto de cambio</strong>, la V− de
+            la armada anterior, que solo se ofrece si esa armada terminó en
+            uno. Se elige antes de la primera lectura guardada; después, y al
+            editar, queda fijo. Luego, la lectura y la distancia,{" "}
+            <strong>opcional</strong>, con{" "}
+            <strong>+ Hilos superior e inferior (opcional)</strong> como en la
+            nivelación.
           </li>
           <li>
-            <strong>Insertar</strong> añade una fila debajo de la actual, por
-            ejemplo para un punto de cambio que la secuencia no traía;
+            <strong>Vistas a los puntos.</strong> Una fila por punto, ya
+            cargada con los de la plantilla: su <strong>lectura</strong> (VI),
+            su <strong>cota</strong> en vivo y un <strong>✓</strong> cuando
+            quedó guardada. <strong>+ Otro punto</strong> agrega uno con
+            código libre.
           </li>
           <li>
-            bajo el código, una nota marca las filas que son{" "}
-            <strong>Punto de control</strong> o <strong>BM de amarre</strong>.
+            <strong>Vista adelante · V−.</strong>{" "}
+            <strong>Sin vista adelante</strong> termina la armada en sus
+            puntos. Si no, el <strong>punto</strong>, su{" "}
+            <strong>lectura</strong> y su <strong>distancia</strong>, opcional:
+            <ul className="ml-5 mt-1 list-[circle] space-y-1">
+              <li>
+                a un <strong>BM del lugar</strong>, con el rótulo{" "}
+                <strong>cierra en un BM</strong>: el tramo que salió de su BM{" "}
+                <strong>cierra</strong> en él, si es el mismo, o{" "}
+                <strong>llega</strong>, si es otro, y se verifica. El popup
+                muestra el <strong>Cierre</strong> o la{" "}
+                <strong>Llegada</strong> y el <strong>Orden alcanzado</strong>;
+              </li>
+              <li>
+                a <strong>otro punto</strong>, con el rótulo{" "}
+                <strong>punto de cambio</strong>: la armada siguiente puede
+                seguir desde él. Si no es punto de control ni BM del lugar, es
+                un <strong>punto auxiliar</strong>.
+              </li>
+            </ul>
           </li>
         </ul>
 
         <p>
-          Debajo de la tabla, el resumen: ΣV+, ΣV−, el error de cierre y la
-          tolerancia K·√D del orden de la visita.
+          Abajo, en vivo, la <strong>altura del instrumento</strong> y la cota
+          del punto adelante.
         </p>
 
         <p>
-          <strong>De dónde sale la cota de cada punto.</strong> De la fila de
-          la libreta con su código y con <strong>vista menos</strong>. Si el
-          cierre cumple la tolerancia del orden de la visita, es la cota{" "}
-          <strong>compensada</strong> (§ 6.7); si no, la calculada: a
-          diferencia de una nivelación, la visita no compensa un cierre fuera
-          de tolerancia. La tabla{" "}
-          <strong>Cotas de los puntos de control</strong>, bajo la libreta,
-          las muestra en solo lectura, y el servidor las recalcula al pulsar{" "}
-          <strong>Guardar visita</strong>.
+          <strong>Cada lectura se guarda al escribirla</strong>: al salir del
+          campo o con Enter, que además pasa al campo siguiente, como en la
+          libreta de papel. Los guardados van en orden, y el pie dice cómo
+          van: «Leídos 5 de 9 · guardado», «guardando…» o «sin guardar». Si la
+          red falla, el error se queda en el popup con lo tecleado, y se
+          reintenta con la lectura siguiente. Los errores de captura —una
+          lectura fuera de 0 a 4 m, una distancia de cero, un punto sin
+          código— también se quedan en el popup.
         </p>
 
-        <p>La libreta avisa de lo que no cuadra:</p>
-
-        <Tabla
-          caption="Avisos de la libreta de la visita"
-          columnas={["Situación", "Qué ocurre"]}
-        >
-          {AVISOS_LIBRETA.map((a) => (
-            <Fila key={a.situacion} celdas={[a.situacion, a.ocurre]} />
-          ))}
-        </Tabla>
-
-        <Nota titulo="Fuera de tolerancia solo avisa">
-          Un cierre que no alcanza la tolerancia es un resultado de campo, no
-          un error de captura: se registra, y el aviso queda en el editor, en
-          la columna Cierre del panel, en la vista de la visita y al cerrarla.
-          Conviene revisar la libreta o repetir la nivelación. La comprobación
-          aritmética sí bloquea el cierre, porque una suma que no cuadra es un
-          error de la libreta.
-        </Nota>
-
-        <p>
-          <strong>Comprobar los BM.</strong> Todas las cotas de la visita salen
-          del BM de amarre. Si ese BM se movió, todos los puntos parecen
-          asentarse a la vez. Para detectarlo, haga pasar el circuito también
-          por <strong>otro BM del catálogo</strong> (§ 4.2), por ejemplo como
-          una lectura más de la primera armada. Es lo que recomienda el
-          protocolo de campo: nivelar primero entre BMs.
-        </p>
-
-        <p>
-          La aplicación compara la cota que la libreta le da a ese BM —la
-          calculada, antes de compensar— con la del catálogo. La tolerancia es
-          K·√L del orden de la visita, con L la distancia desde el amarre
-          hasta ese BM.
-        </p>
+        <p>Los botones:</p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            Si nivela, el resumen de la libreta lo dice: «BM-2 nivela con BM-1:
-            -0.4 mm, tolerancia 2.0 mm.»
+            <strong>Seguir después</strong> cierra el popup. Lo leído ya está
+            guardado; si falta algo, la visita queda En medición. Con un dato
+            mal escrito no se cierra —tampoco con la X—: muestra el error hasta
+            que lo corrija o lo borre.
           </li>
           <li>
-            Si no, avisa con las dos cotas. Uno de los dos BM pudo moverse, o
-            hay un error en la libreta o en la cota del catálogo. Con dos BM
-            no se sabe cuál se movió; con un tercero, comparándolos entre sí,
-            sí.
+            <strong>Terminar armada</strong> la da por terminada: los puntos
+            que quedaron sin leer salen de la libreta.
+          </li>
+          <li>
+            <strong>Terminar y seguir con la armada 3</strong> —si la libreta
+            ya la trae—, <strong>Terminar y seguir desde CP-1</strong> —si la
+            V− fue a un punto de cambio— o{" "}
+            <strong>Terminar y agregar armada</strong>: termina y abre la
+            siguiente.
+          </li>
+          <li>
+            <strong>Quitar la armada</strong>, en la última, la borra.
+          </li>
+        </ul>
+
+        <p>Dos preguntas al guardar:</p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Un punto de control en dos armadas.</strong> Una visita da
+            una cota por punto. El popup «TA-04 está en dos armadas» muestra
+            las dos lecturas con su cota y su diferencia: elija la que se
+            queda, y <strong>Eliminar la de la armada N</strong> borra la
+            otra.
+          </li>
+          <li>
+            <strong>Una V− a un punto auxiliar.</strong> Al terminar la
+            armada, «¿Guardar CP-1 en los BM del lugar?», con su cota medida
+            hoy y una descripción opcional.{" "}
+            <strong>Guardar en los BM</strong> lo agrega al lugar (§ 7.3), y
+            las próximas visitas pueden armarse desde él;{" "}
+            <strong>Solo en esta visita</strong> lo deja como punto de cambio.
           </li>
         </ul>
 
         <p>
-          <strong>Solo avisa</strong>: la visita se guarda y se cierra igual.
-          El aviso queda en el editor, junto al amarre en la tabla de visitas
-          del panel, en la vista de la visita y al cerrarla.
+          En el teléfono, el popup ocupa la pantalla, con la barra de guardado
+          fija abajo.
         </p>
 
-        <p>
-          Cuentan los puntos de referencia de tipo BM, con cota y distintos
-          del amarre. Un código que también es punto de control del lugar se
-          trata como punto de control. Al guardar, la visita conserva la cota
-          de catálogo con que se comparó: si después se corrige el catálogo,
-          una visita cerrada no cambia.
-        </p>
-
-        <p>
-          <strong>Importar la libreta.</strong> Con un nivel digital,{" "}
-          <strong>Importar desde archivo</strong> pasa a la libreta el archivo{" "}
-          <strong>.L de Leica</strong> o la <strong>plantilla CSV</strong> de
-          TopoField, como en nivelación (§ 6.9), con dos diferencias: el
-          archivo se lee siempre como <strong>un solo recorrido</strong> —el
-          circuito cerrado sobre el amarre, sin ida y vuelta— y{" "}
-          <strong>el amarre sale de su primera fila</strong>: si la visita no
-          tenía o tenía otro, se propone el del archivo. Si la visita ya tenía
-          libreta, se reemplaza, con aviso. Nada se guarda hasta pulsar{" "}
-          <strong>Guardar visita</strong>.
-        </p>
+        <h3 id="importar-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.8 Importar la libreta
+        </h3>
 
         <Captura {...CAPTURAS.importarLibretaVisita} />
 
         <p>
-          <strong>Cotas directas.</strong> Para una nivelación procesada fuera
-          de la aplicación, elija <strong>Cotas directas</strong> en{" "}
-          <em>Captura de las cotas</em>: se teclea la{" "}
-          <strong>cota medida</strong> de cada punto y el{" "}
-          <strong>error de cierre (mm)</strong>, que se registra tal cual, sin
-          tolerancia. Las visitas registradas antes de que existiera la
-          libreta siguen en este modo. Al cambiar de modo, el editor avisa de
-          lo que descartará al guardar: la libreta o las cotas tecleadas.
+          Con un nivel digital, <strong>Importar .L o CSV</strong>, a la
+          derecha de los pasos, pasa a la libreta el archivo{" "}
+          <strong>.L de Leica</strong> o la <strong>plantilla CSV</strong> de
+          TopoField, como en nivelación (§ 6.9), con tres diferencias:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            el archivo se lee como <strong>un solo tramo</strong> desde el BM
+            de su primera fila, que{" "}
+            <strong>tiene que estar en los BM del lugar</strong>; si no, el
+            diálogo pide agregarlo antes en la pestaña BMs;
+          </li>
+          <li>
+            se guardan las <strong>lecturas</strong>: la cota de cada punto
+            sale de la medida, no del archivo;
+          </li>
+          <li>
+            <strong>reemplaza la libreta</strong> de la visita, y el diálogo lo
+            avisa si ya tenía lecturas.
+          </li>
+        </ul>
+
+        <p>
+          Revise el tipo de cada punto antes de aceptar: los puntos de control
+          suelen ser vistas intermedias. <strong>Usar estas lecturas</strong>{" "}
+          guarda la libreta. Si al archivo le falta algún punto del lugar, la
+          libreta lo avisa (§ 7.6).
+        </p>
+
+        <h3 id="calculo-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.9 El cálculo
+        </h3>
+
+        <p>
+          La visita <strong>no compensa</strong>: el cierre de un tramo
+          comprueba la medida, no se reparte. La cota de cada punto es la de
+          su lectura:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>AI = cota + V+</strong>: la altura del instrumento de la
+            armada, con la cota del BM del lugar o del punto de cambio de donde
+            sale.
+          </li>
+          <li>
+            <strong>Cota = AI − lectura</strong>: la VI de un punto de control,
+            o la V− del punto adelante.
+          </li>
+        </ul>
+
+        <p>
+          <strong>Los tramos.</strong> Un tramo empieza en una armada que sale
+          de un BM del lugar y sigue por sus puntos de cambio. Si su última V−
+          cae en un BM del lugar, se <strong>verifica</strong>: en el mismo BM
+          es un <strong>cierre</strong>; en otro, una{" "}
+          <strong>llegada</strong>. El error se contrasta con la tolerancia
+          K·√L de cada orden, con L la distancia del tramo en kilómetros y K la
+          de la nivelación (§ 6.7), y el tramo alcanza el orden más alto que
+          cumple.
+        </p>
+
+        <Tabla
+          caption="Verificación de un tramo de la visita"
+          columnas={["El tramo…", "Qué dice"]}
+        >
+          {VERIFICACION_TRAMO.map((t) => (
+            <Fila key={t.tramo} celdas={[t.tramo, t.dice]} />
+          ))}
+        </Tabla>
+
+        <p>
+          La cartera real es una sola armada por visita, de radiaciones desde
+          el BM de la piscina: sus tramos terminan en sus puntos y quedan sin
+          verificación.
         </p>
 
         <p>
-          <strong>El cálculo.</strong> En los dos modos, con la cota de cada
-          punto, la aplicación calcula al instante:
+          <strong>La verificación de la visita</strong> es la de su tramo
+          peor: si todos se verifican, el orden más bajo de ellos; si alguno
+          no, <strong>Sin verificación</strong>. La llevan la cabecera de la
+          visita, el informe y el Excel. En Torre Alameda, la visita 12, de dos
+          armadas por CP-1, cierra en −1.6 mm en BM-1: segundo orden. La 9
+          supera todas las tolerancias y queda sin verificación.
+        </p>
+
+        <p>
+          <strong>Un BM del lugar leído de paso.</strong> Todas las cotas de un
+          tramo salen de su BM de arranque: si ese BM se movió, todos los
+          puntos parecen asentarse a la vez. Para detectarlo, haga pasar la
+          libreta también por <strong>otro BM del lugar</strong>, como una
+          vista más. Es lo que recomienda el protocolo de campo: nivelar
+          primero entre BMs.
+        </p>
+
+        <p>
+          La aplicación compara la cota que la libreta le da a ese BM con la
+          suya en los BM del lugar, con la tolerancia de{" "}
+          <strong>tercer orden</strong> sobre la distancia recorrida desde el
+          arranque:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            si nivela, la libreta lo dice: «BM-2 nivela con BM-1: -0.4 mm,
+            tolerancia 2.0 mm.»;
+          </li>
+          <li>
+            si no, avisa con las dos cotas. Uno de los dos BM pudo moverse, o
+            hay un error en la libreta o en la cota del BM. Con dos BM no se
+            sabe cuál se movió; con un tercero, comparándolos entre sí, sí.
+          </li>
+        </ul>
+
+        <p>
+          <strong>Solo avisa.</strong> El aviso queda en la libreta, en el
+          popup de la armada y con <strong>⚠</strong> junto a la fecha en la
+          tabla de visitas del panel. En Torre Alameda, la visita 13 muestra
+          BM-2 desplazado.
+        </p>
+
+        <p>
+          <strong>Parcial, acumulado, velocidad y estado.</strong> Con la cota
+          de cada punto, la aplicación calcula al instante:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
@@ -2067,7 +2377,7 @@ export default function ManualPage() {
             <strong>Estado</strong> — el nivel de alerta de ese punto,
             semáforo explicado en{" "}
             <a href="#panel-lugar" className="underline">
-              § 7.4
+              § 7.11
             </a>
             .
           </li>
@@ -2080,16 +2390,14 @@ export default function ManualPage() {
         </p>
 
         <p>
-          La tabla de cotas pide los puntos <strong>vigentes</strong> en la
-          fecha de la visita. Un punto de baja, o dado de alta después de esa
-          fecha, no aparece, y una nota debajo de la tabla dice cuál falta y
-          por qué, para que la ausencia no parezca un olvido.
+          La lectura de un punto que no está vigente en la fecha de la visita
+          —de baja, o dado de alta después— no se usa.
         </p>
 
         <p>
           <strong>Lecturas fuera de tendencia.</strong> Desde la tercera
           lectura de un punto, la aplicación compara cada cota con la
-          tendencia de ese punto y avisa bajo la cota si la lectura:
+          tendencia de ese punto y avisa si la lectura:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
@@ -2105,14 +2413,17 @@ export default function ManualPage() {
 
         <p>
           El margen absorbe el ruido de medición de las dos cotas que se
-          comparan y sale de la tolerancia de cierre del circuito de cada
-          visita: de su orden de precisión y de la longitud de su libreta. Con
-          dos circuitos de 112 m en tercer orden, como los de Torre Alameda,
-          es de 2,8 mm; con dos de 1,5 km, de 10,4 mm. Una visita capturada
-          sin libreta cuenta como un circuito de 500 m: entre dos visitas así,
-          el margen es de 1,5 mm en primer orden, 3 en segundo, 6 en tercero y
-          12 en ordinario. Moverse <strong>menos</strong> de lo previsto nunca
-          avisa, porque un asentamiento por consolidación frena con el tiempo.
+          comparan, y es <strong>fijo: 6 mm</strong> entre dos visitas, sin
+          depender del orden ni de la longitud de la libreta. Moverse{" "}
+          <strong>menos</strong> de lo previsto nunca avisa, porque un
+          asentamiento por consolidación frena con el tiempo. En la cartera
+          real, B10 avisa en la visita 3 —baja 50.0 mm en 12 días, donde su
+          ritmo preveía unos 17.1— y en la 4, contra su tendencia.
+        </p>
+
+        <p>
+          El aviso sale en la libreta (§ 7.6), en los avisos del panel (§ 7.11)
+          y en el informe.
         </p>
 
         <Nota titulo="El aviso no bloquea">
@@ -2122,23 +2433,82 @@ export default function ManualPage() {
           segunda se compara contra una velocidad ya contaminada.
         </Nota>
 
+        <h3 id="paso-resultados" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.10 Paso 2 · Resultados
+        </h3>
+
+        <Captura {...CAPTURAS.vistaVisita} />
+
+        <p>
+          <strong>Indicadores.</strong> Una franja con cuatro:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Asentamiento máximo</strong>: el acumulado de mayor
+            magnitud, con sus puntos.
+          </li>
+          <li>
+            <strong>Promedio</strong>: el promedio encadenado de la visita
+            (§ 7.11), con su cambio frente a la anterior.
+          </li>
+          <li>
+            <strong>Mayor movimiento</strong>: el parcial de mayor magnitud,
+            con sus puntos y los días desde la anterior.
+          </li>
+          <li>
+            <strong>Alerta</strong>: la peor de la visita, y cuántos puntos
+            están en precaución o más.
+          </li>
+        </ul>
+
+        <p>
+          <strong>Nota de la visita.</strong> La que se escribió en el alta o
+          en <strong>Editar datos</strong>.
+        </p>
+
+        <p>
+          <strong>Puntos de control.</strong> Por punto:{" "}
+          <strong>Cota (m)</strong>, <strong>Parcial</strong>,{" "}
+          <strong>Acumulado</strong>, <strong>Velocidad</strong>,{" "}
+          <strong>Estado</strong> —el semáforo (§ 7.11)— y{" "}
+          <strong>Tendencia</strong>: <strong>Acelera</strong> o{" "}
+          <strong>Converge</strong>.
+        </p>
+
+        <p>
+          <strong>Tendencia.</strong> Desde la tercera lectura de un punto,
+          dice si <strong>acelera</strong> —su velocidad crece más de lo que
+          explica el error de las lecturas— o <strong>converge</strong>. Las
+          dos velocidades salen de las tres últimas cotas del punto, así que
+          el margen suma el ruido de las tres: con visitas a intervalos
+          iguales, es unas √3 veces el del aviso de lectura fuera de
+          tendencia, dividido entre el intervalo. En Torre Alameda, con
+          visitas cada 28 días, 11,3 mm/mes. Un solo salto no basta para decir
+          que un punto acelera.
+        </p>
+
+        <p>
+          <strong>El gráfico.</strong> Al lado, fijo:{" "}
+          <strong>Acumulado</strong>, por punto, con las líneas de los
+          umbrales, o <strong>Desde la anterior</strong>, el movimiento de cada
+          punto.
+        </p>
+
         <h3 id="panel-lugar" className="mt-4 scroll-mt-6 text-lg font-semibold">
-          7.4 El panel del lugar
+          7.11 El panel del lugar
         </h3>
 
         <Captura {...CAPTURAS.panelAsentamientos} />
 
         <p>
           Abrir el lugar desde el proyecto lleva a su pestaña{" "}
-          <strong>Panel</strong>, que reúne el historial completo. La cabecera
-          dice cuántos puntos de control tiene y la fecha de la lectura base;
-          arriba del panel, la leyenda de los tres umbrales de acumulado que
-          dibujan las gráficas.
+          <strong>Panel</strong>, que reúne el historial completo.
         </p>
 
         <p>
-          <strong>Indicadores.</strong> Cinco, sobre la última visita y el
-          histórico:
+          <strong>Indicadores.</strong> Cinco, en una franja, sobre la última
+          visita y el histórico:
         </p>
 
         <Tabla
@@ -2160,52 +2530,60 @@ export default function ManualPage() {
         </p>
 
         <p>
-          <strong>Visitas.</strong> De la más reciente a la más antigua; pulse
-          una fila para abrir la visita (
-          <a href="#vista-visita" className="underline">
-            § 7.5
-          </a>
-          ). Por visita: el promedio y el máximo del acumulado, el BM de
-          amarre con su cota —con <strong>⚠</strong> si otro BM de la
-          libreta no nivela con él (§ 7.3)—, el <strong>mayor Δ</strong>{" "}
-          desde la anterior,
-          el <strong>cierre</strong> de la libreta en mm —con{" "}
-          <strong>⚠</strong> si supera la tolerancia; en cotas directas, el
-          tecleado—, la peor alerta y el estado: borrador, calculada o
-          cerrada.
+          <strong>Visitas.</strong> De la más reciente a la más antigua: la
+          visita —con <strong>En medición</strong> si le falta alguna
+          lectura—, la fecha —con <strong>⚠</strong> si un BM del lugar leído
+          de paso no nivela (§ 7.9)—, el promedio y el máximo del acumulado, el{" "}
+          <strong>mayor Δ</strong> desde la anterior y la peor alerta. Pulse
+          una fila para resaltarla en la tendencia; el enlace de la visita la
+          abre.
         </p>
 
         <p>
-          <strong>Tendencia del asentamiento.</strong> El promedio de los
-          puntos en cada visita, con una banda que va del punto menos asentado
-          al más asentado y las líneas de los umbrales. El eje horizontal es
-          el <strong>tiempo</strong>, no el número de visita: si las visitas
-          pasan de quincenales a mensuales, la pendiente no se exagera. Pulse
-          una visita en la línea para abrirla.
+          <strong>Tendencia.</strong> Al lado, fija mientras baja la página,
+          con dos vistas:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Promedio</strong>: el promedio de los puntos en cada
+            visita, con una banda que va del punto menos asentado al más
+            asentado y las líneas de los umbrales. La visita elegida en la
+            tabla va resaltada. El eje horizontal es el{" "}
+            <strong>tiempo</strong>, no el número de visita: si las visitas
+            pasan de quincenales a mensuales, la pendiente no se exagera.
+          </li>
+          <li>
+            <strong>Por punto</strong>: el acumulado de cada punto de control
+            según los días desde la lectura base. Los chips de arriba muestran
+            el último valor de cada punto; pulse uno para resaltarlo y atenuar
+            los demás, y <strong>Todos</strong> para volver. Cada punto se
+            distingue por{" "}
+            <strong>forma de marcador además de color</strong> (círculo,
+            cuadrado, triángulo, rombo, cruz), y las marcas «(de baja)» y
+            «(alta …)» señalan los puntos que salieron o entraron a mitad del
+            monitoreo.
+          </li>
+        </ul>
+
+        <p>
+          Debajo, la última visita en una línea: cuántos puntos están normales
+          y los tres más asentados. Bajo cada gráfica,{" "}
+          <strong>Ver datos en tabla</strong> despliega los mismos valores en
+          texto: la alternativa para cuando la gráfica no basta.
         </p>
 
         <p>
-          <strong>Evolución por punto.</strong> El acumulado de cada punto de
-          control según los días desde la lectura base. Los chips de arriba
-          muestran el último valor de cada punto; pulse uno para resaltarlo y
-          atenuar los demás, y <strong>Todos</strong> para volver. Cada punto
-          se distingue por{" "}
-          <strong>forma de marcador además de color</strong> (círculo,
-          cuadrado, triángulo, rombo, cruz), y las marcas «(de baja)» y
-          «(alta …)» señalan los puntos que salieron o entraron a mitad del
-          monitoreo.
+          <strong>Avisos.</strong> Las lecturas fuera de tendencia de todas las
+          visitas, por punto y visita (§ 7.9).
         </p>
 
         <p>
-          Bajo cada gráfica, <strong>Ver datos en tabla</strong> despliega los
-          mismos valores en texto: la alternativa para cuando la gráfica no
-          basta.
-        </p>
-
-        <p>
-          <strong>Semáforo por punto.</strong> El estado de cada punto en la
-          última visita, según sus umbrales de velocidad y de acumulado —
-          gana el peor de los dos. Tiene cuatro niveles:
+          <strong>Semáforo por punto.</strong> El estado de cada punto, según
+          sus umbrales de velocidad y de acumulado — gana el peor de los dos.
+          La columna de alerta de las visitas da el peor de cada una, y la
+          columna Estado de los Resultados, el de cada punto (§ 7.10). Tiene
+          cuatro niveles:
         </p>
 
         <Tabla
@@ -2224,168 +2602,76 @@ export default function ManualPage() {
         </Nota>
 
         <p>
-          La columna de estado del semáforo muestra además la marca{" "}
-          <strong>⚠ Lectura fuera de tendencia</strong> cuando la lectura de
-          la última visita la tuvo. No cambia el nivel del semáforo: es un
-          aviso sobre la calidad del dato, no sobre la gravedad del
-          movimiento. Es útil cuando el mismo punto sale en{" "}
-          <strong>Alerta</strong> y <strong>Acelerando</strong>: la marca
-          indica que lo más probable es una lectura mal tomada, no una
-          aceleración real.
-        </p>
-
-        <p>
-          <strong>Tendencia.</strong> Desde la tercera visita de un punto, la
-          columna dice si <strong>acelera</strong> —su velocidad crece más de
-          lo que explica el error de las lecturas— o{" "}
-          <strong>converge</strong>. Las dos velocidades salen de las tres
-          últimas cotas del punto, así que el margen suma el ruido de las
-          tres, con el circuito de cada visita: es unas √3 veces el del aviso
-          de lectura fuera de tendencia. En Torre Alameda, 5,35 mm/mes. Un
-          solo salto no basta para decir que un punto acelera.
-        </p>
-
-        <p>
           <strong>Un dato en alarma se registra con normalidad.</strong> El
           semáforo es un diagnóstico, no un control de captura: la aplicación{" "}
-          <strong>nunca</strong> impide guardar una visita ni cerrarla por
-          tener puntos en alerta o alarma. Un asentamiento alarmante es
-          exactamente el hallazgo que este módulo existe para documentar;
-          bloquearlo ocultaría el dato que más importa.
+          <strong>nunca</strong> impide guardar una lectura por dejar un punto
+          en alerta o alarma. Un asentamiento alarmante es exactamente el
+          hallazgo que este módulo existe para documentar; bloquearlo
+          ocultaría el dato que más importa.
         </p>
 
-        <h3 id="vista-visita" className="mt-4 scroll-mt-6 text-lg font-semibold">
-          7.5 La vista de una visita
-        </h3>
-
-        <Captura {...CAPTURAS.vistaVisita} />
-
-        <p>
-          Abrir una visita, desde la tabla o desde la tendencia, lleva a su
-          vista, en solo lectura. Arriba, <strong>← Volver</strong> al lugar,
-          la fecha, el amarre, el nivelador y el equipo, y las flechas{" "}
-          <strong>← →</strong> para pasar a la visita anterior o a la
-          siguiente. Las acciones: <strong>Ver registro de nivelación</strong>
-          , en las visitas con libreta, y <strong>Editar</strong> y{" "}
-          <strong>Cerrar visita</strong> mientras siga abierta. Una visita
-          cerrada no se edita.
-        </p>
-
-        <p>
-          <strong>Indicadores.</strong> El asentamiento máximo; el promedio,
-          con su diferencia frente a la visita anterior —la media de lo que se
-          movieron los puntos medidos en las dos—; el mayor movimiento
-          desde la anterior; los puntos en alerta, de los medidos; el{" "}
-          <strong>cierre de nivelación</strong>, con la tolerancia y si
-          cumple; y la peor alerta junto al estado de la visita. Si otro BM de
-          la libreta no nivela con el amarre, un aviso debajo lo dice, con las
-          dos cotas (§ 7.3).
-        </p>
-
-        <p>
-          <strong>Puntos de control.</strong> Por punto: la cota base (su C0
-          o su primera lectura), la cota actual, el acumulado, el Δ desde la
-          anterior, la velocidad y la alerta, con la marca de lectura fuera de
-          tendencia. Seleccione un punto para ver al lado —debajo, en
-          pantallas angostas— su <strong>historial</strong>: el acumulado
-          hasta esta visita frente a los umbrales, y cuánto le falta para el
-          siguiente: «Le faltan 21.3 mm para el umbral de alerta (−50 mm)», o
-          si ya superó el de alarma.
-        </p>
-
-        <p>
-          <strong>Barras.</strong>{" "}
-          <em>Asentamiento acumulado por punto</em>, con las líneas de los
-          umbrales, y <em>Movimiento desde la visita anterior</em>. Pulse una
-          barra para seleccionar su punto.
-        </p>
-
-        <p>
-          <strong>Registro de nivelación.</strong> Un panel lateral con la
-          libreta tal como se guardó: la fecha, el nivelador, el equipo y el
-          BM de amarre; por fila, la armada, el punto, V+, AI, la vista
-          intermedia (V. int.), V−, la cota y la cota compensada; y al pie
-          ΣV+, ΣV−, el error de cierre, la tolerancia y la comprobación de
-          cada BM de control (§ 7.3). Las vistas intermedias
-          de los puntos de control van resaltadas: de ellas sale la cota del
-          punto. Se cierra con <strong>Cerrar</strong> o con Esc.
-        </p>
-
-        <Captura {...CAPTURAS.registroNivelacion} />
-
-        <h3 className="mt-4 text-lg font-semibold">
-          7.6 Cerrar una visita o el lugar
+        <h3 id="informe-lugar" className="mt-4 scroll-mt-6 text-lg font-semibold">
+          7.12 El informe del lugar
         </h3>
 
         <p>
-          Cerrar una <strong>visita</strong> la deja en solo lectura: es el
-          registro de campo de una fecha concreta, y mientras está cerrada
-          no admite cambios. Se exige lectura de todos los puntos{" "}
-          <strong>vigentes</strong> en su fecha; los de baja no.
+          La pestaña <strong>Informe</strong> muestra el informe del lugar,
+          listo para <strong>Imprimir o guardar como PDF</strong> (§ 10). Es la
+          misma sección que lleva en un informe consolidado:
         </p>
 
-        <p>
-          En una visita con libreta, el diálogo de cierre muestra además el
-          cierre de la libreta.{" "}
-          <strong>
-            Si la comprobación aritmética no cuadra, no se puede cerrar
-          </strong>
-          : corrija la libreta. Si el cierre supera la tolerancia, solo avisa:
-          la visita se cierra con sus cotas sin compensar. Lo mismo si otro BM
-          no nivela con el amarre (§ 7.3): el diálogo lo recuerda y la visita
-          se cierra igual.
-        </p>
-
-        <Nota titulo="Cierre las visitas en orden">
-          El parcial, la velocidad y la alerta de cada punto se miden contra su
-          lectura anterior, y un punto sin C0 acumula desde su primera lectura.
-          Si la visita que tiene esas lecturas sigue abierta, la aplicación no
-          deja cerrar las posteriores: «Cierra antes la visita 2: P-01, P-07 se
-          calculan contra sus lecturas». Si esas lecturas siguieran editables,
-          corregirlas movería lo que ya quedó cerrado.
-        </Nota>
-
-        <p>
-          Cerrar el <strong>lugar</strong> termina el monitoreo por completo:
-          el lugar y todas sus visitas —cerradas o no— quedan en solo
-          lectura. Use el cierre del lugar cuando el seguimiento del sitio
-          haya concluido, no visita por visita. El botón{" "}
-          <strong>Cerrar lugar</strong> está en la barra de la pestaña{" "}
-          <strong>Puntos y lugar</strong>.
-        </p>
-
-        <p>
-          <strong>Eliminar una visita.</strong> Solo se puede eliminar la{" "}
-          <strong>última</strong> visita del lugar, y solo si no está cerrada:
-          el botón <strong>Eliminar</strong> aparece en su vista. Una visita
-          intermedia no se borra, porque dejaría un hueco en la numeración y
-          cambiaría el asentamiento parcial y la velocidad de la siguiente.
-        </p>
+        <ol className="ml-5 list-decimal space-y-1">
+          <li>
+            Los datos del lugar: tipo de estructura, puntos de control —y
+            cuáles están de baja—, visitas, y el BM de arranque y el equipo de
+            la última.
+          </li>
+          <li>
+            <strong>Veredicto</strong>: la peor alerta de la última visita y el
+            mayor acumulado, con lo que le falta para el umbral siguiente, y si
+            las visitas se verifican (§ 7.9).
+          </li>
+          <li>
+            <strong>Cómo se calcula</strong>: cuatro fórmulas —la altura del
+            instrumento, la cota de cada punto, el acumulado y la velocidad— y
+            los umbrales del semáforo.
+          </li>
+          <li>
+            <strong>Evolución</strong>: el acumulado de cada punto en el
+            tiempo.
+          </li>
+          <li>
+            <strong>Visitas</strong>: el promedio, el máximo, el mayor Δ, la
+            verificación y la peor alerta de cada una.
+          </li>
+          <li>
+            <strong>Puntos de la última visita</strong>: su acumulado, su
+            velocidad y su estado.
+          </li>
+          <li>
+            <strong>Notas de las visitas</strong> y <strong>avisos</strong> de
+            lecturas fuera de tendencia.
+          </li>
+        </ol>
 
         <p>
-          <strong>Reabrir.</strong> Una visita cerrada se reabre con{" "}
-          <strong>Reabrir</strong>, en su vista, y vuelve a editarse. Si el
-          lugar está cerrado, primero se reabre el lugar: su botón{" "}
-          <strong>Reabrir</strong> está en la cabecera, donde estaba{" "}
-          <strong>Nueva visita</strong>. Reabrir el lugar no reabre sus
-          visitas: las cerradas siguen cerradas. Si la visita tiene visitas
-          posteriores, el diálogo lo recuerda: el parcial, la velocidad y la
-          alerta de la siguiente se calculan contra sus lecturas, y cambian si
-          cambian ellas.
+          Informa las visitas <strong>calculadas</strong>: las que están en
+          medición se nombran aparte y entran cuando se terminan. Un informe
+          consolidado admite el lugar con alguna visita calculada (§ 10).
         </p>
 
         <h3 id="baja-alta" className="mt-4 scroll-mt-6 text-lg font-semibold">
-          7.7 Dar de baja y de alta un punto
+          7.13 Dar de baja y de alta un punto
         </h3>
 
         <p>
           Los puntos que se miden no son siempre los mismos durante todo el
-          monitoreo. Un BM se destruye, se tapa o se pierde; otro se instala
-          cuando la obra avanza.
+          monitoreo. Un punto se destruye, se tapa o se pierde; otro se
+          instala cuando la obra avanza.
         </p>
 
         <p>
-          <strong>Dar de baja.</strong> En el catálogo,{" "}
+          <strong>Dar de baja.</strong> En la pestaña Puntos,{" "}
           <strong>Dar de baja</strong> pide dos datos:
         </p>
 
@@ -2405,66 +2691,68 @@ export default function ManualPage() {
           La baja <strong>no borra nada</strong>. Las lecturas anteriores
           siguen en el análisis, la gráfica muestra la serie hasta su última
           lectura con la marca «(de baja)», y el informe cuenta el punto y
-          dice desde cuándo está de baja. Un punto de baja no se edita.
+          dice desde cuándo está de baja. Las visitas nuevas ya no lo traen en
+          su libreta. Un punto de baja no se edita.
         </p>
 
         <p>
-          <strong>Deshacer una baja</strong> solo sirve para corregir un
-          error, y solo mientras ninguna visita cerrada tenga fecha igual o
-          posterior a la baja. Después es definitiva, y el catálogo dice qué
-          visita la hizo definitiva. Si un BM tapado aparece de nuevo, puede
-          haberse movido: regístrelo como <strong>punto nuevo</strong>, con
-          otro código y su propia línea base, no como la continuación de su
-          serie.
+          <strong>Deshacer baja</strong> la quita, para corregir un error. Si un
+          punto tapado aparece de nuevo, puede haberse movido: regístrelo como{" "}
+          <strong>punto nuevo</strong>, con otro código y su propia línea base,
+          no como la continuación de su serie.
         </p>
 
         <Nota titulo="Borrar no es dar de baja">
-          Un punto con lecturas en visitas cerradas no se puede eliminar: es
-          parte del registro del monitoreo. Borrar queda para los puntos
-          creados por error.
+          Eliminar un punto se lleva sus lecturas de todas las visitas. Si se
+          perdió en campo, dele de baja: su serie sigue en el análisis. Borrar
+          queda para los puntos creados por error.
         </Nota>
 
         <p>
           <strong>Dar de alta.</strong> Un punto que se agrega cuando el lugar
           ya tiene visitas se da de alta: el formulario pide la{" "}
           <strong>fecha de alta</strong> en lugar de la C0, porque su línea
-          base será su <strong>primera lectura</strong>, no la visita 0 del
-          lugar. La fecha debe ser posterior a la última visita cerrada, que
-          se cerró sin él. El punto se exige en las visitas desde esa fecha y
-          no en las anteriores.
+          base será su <strong>primera lectura</strong>, no la de la primera
+          visita del lugar. Las visitas nuevas desde esa fecha lo traen en su
+          libreta; a una que ya existe se agrega con{" "}
+          <strong>+ Otro punto</strong> (§ 7.7).
         </p>
 
         <VolverArriba />
       </Seccion>
 
-      {/* ── 8. Cerrar un proceso ───────────────────────────────────────── */}
-      <Seccion id="cierre" titulo="8. Cerrar un proceso">
+      {/* ── 8. Sin cierre ──────────────────────────────────────────────── */}
+      <Seccion id="cierre" titulo="8. Sin cierre">
         <p>
-          En control de asentamientos se cierran las <strong>visitas</strong> y
-          el <strong>lugar</strong> (§ 7.6).{" "}
-          <strong>La poligonal y la nivelación no se cierran</strong>: quedan
-          calculadas y se corrigen cuando haga falta; su informe dice qué orden
-          alcanzaron y alerta si no alcanzan ninguno (§ 5.7 y § 6.10).
+          Ningún proceso se cierra: ni la poligonal (§ 5), ni la nivelación
+          (§ 6), ni el lugar o la visita de asentamientos (§ 7). No hay{" "}
+          <strong>Cerrar</strong> ni <strong>Reabrir</strong>, ni modo de solo
+          lectura, ni registro de cierre, y un proyecto se puede eliminar
+          siempre (§ 4.2).
         </p>
 
-        <p>
-          Cerrar deja el trabajo en solo lectura. El diálogo de cierre resume
-          el resultado y la fecha, y debe marcar la confirmación
-          explícitamente. Si la comprobación aritmética de la libreta de una
-          visita no cuadra, no se puede cerrar: corrija la libreta. Cerrado, el
-          trabajo se abre en solo lectura: los campos están deshabilitados y no
-          hay barra de acciones. Su pestaña <strong>Informe</strong> ya no
-          lleva la marca de borrador: es el informe del trabajo cerrado.
-        </p>
+        <p>Lo que daba el cierre lo dan ahora tres cosas:</p>
 
-        <p>
-          <strong>Reabrir.</strong> Una visita o un lugar cerrados se reabren
-          con <strong>Reabrir</strong>. Vuelven a editarse, y se cierran otra
-          vez con el diálogo de siempre. Se borra su registro de cierre —fecha
-          y responsable—, y el nuevo cierre escribe el suyo. Si el lugar está
-          en un informe consolidado, el diálogo lo avisa: el informe mostrará
-          los datos nuevos (§ 10).
-        </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Todo se recalcula en vivo.</strong> Corregir una lectura,
+            la cota de un BM o la C0 de un punto recalcula lo que depende de
+            ellos —en asentamientos, todas las visitas que los usan—, y la
+            aplicación avisa antes cuánto cambia.
+          </li>
+          <li>
+            <strong>El orden se detecta.</strong> La poligonal, la nivelación
+            y cada tramo de una visita dicen qué orden de precisión
+            alcanzaron, y su informe alerta si no alcanzan ninguno (§ 5.5,
+            § 6.7 y § 7.9).
+          </li>
+          <li>
+            <strong>El informe consolidado queda fijo.</strong> Guarda la
+            portada del día en que se emitió y no se edita: para corregirlo, se
+            elimina y se genera de nuevo (§ 10). Sus secciones muestran los
+            datos actuales de cada proceso; un PDF ya descargado no cambia.
+          </li>
+        </ul>
       </Seccion>
 
       {/* ── 9. Trabajo en campo ────────────────────────────────────────── */}
@@ -2488,6 +2776,15 @@ export default function ManualPage() {
         <p>
           La navegación se reduce a un retorno al nivel anterior, en lugar de la
           ruta completa.
+        </p>
+
+        <p>
+          <strong>Una visita de asentamientos en el teléfono.</strong> La
+          libreta es la lista de armadas, y el popup de la armada ocupa la
+          pantalla, con la barra de guardado fija abajo. Cada lectura se guarda
+          al salir del campo: si se pierde la señal, lo tecleado se queda en el
+          popup y se guarda con la lectura siguiente; si hay que irse,{" "}
+          <strong>Retomar medición</strong> sigue donde quedó (§ 7.6 y § 7.7).
         </p>
 
         <p>
@@ -2515,61 +2812,46 @@ export default function ManualPage() {
         <p>Hay dos clases de informe:</p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>El informe de un proceso</strong> está en su pestaña{" "}
-            <strong>Informe</strong> (4.4): no hay que generarlo. Mientras el
-            proceso no esté cerrado sale como borrador; el de una poligonal o
-            una nivelación, que no se cierran, sin marca.
+            <strong>El informe de un proceso</strong> está en su paso o
+            pestaña <strong>Informe</strong> (4.4): no hay que generarlo, y no
+            lleva marca de borrador, porque ningún proceso se cierra.
           </li>
           <li>
-            <strong>Un informe consolidado</strong> reúne varios trabajos ya
-            terminados de un proyecto en un solo documento imprimible, con
+            <strong>Un informe consolidado</strong> reúne varios trabajos
+            calculados de un proyecto en un solo documento imprimible, con
             título, orden y observaciones propios. Se genera en la pestaña{" "}
             <strong>Informes</strong> del proyecto.
           </li>
         </ul>
-        <p>
-          Los dos llevan el registro de quién cerró cada cosa y cuándo, con el
-          nombre de la persona. Las poligonales y las nivelaciones no tienen
-          fila en él: no se cierran.
-        </p>
 
         <h3 className="text-lg font-semibold text-ink">
           Qué puede incluirse
         </h3>
         <p>
-          <strong>Poligonales y nivelaciones calculadas y lugares cerrados</strong>,
-          en un informe consolidado. El informe no guarda una copia de las
+          <strong>
+            Poligonales y nivelaciones calculadas y lugares con alguna visita
+            calculada
+          </strong>
+          , en un informe consolidado. El informe no guarda una copia de las
           mediciones: las vuelve a leer cada vez que se abre. Solo guarda su
           título, sus observaciones, la lista de procesos y la portada del día
           en que se emitió.
         </p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            Un lugar <strong>cerrado</strong> no puede cambiar sus mediciones ni
-            su veredicto mientras siga cerrado, así que su sección dice lo
-            mismo hoy y dentro de un año. Si se reabre (§ 8), el informe
-            muestra sus datos actuales y, mientras siga abierto, «—» en su
-            registro de cierre, y el pie dice que se reabrió después de
-            emitirlo.
+            Una <strong>poligonal</strong> o una <strong>nivelación</strong>{" "}
+            entran calculadas, cumplan o no un orden, y su sección muestra lo
+            que tengan al abrir el informe. Si no alcanzan ningún orden, la
+            sección lo alerta. Una nivelación con la libreta a medias no entra.
           </li>
           <li>
-            Una <strong>poligonal</strong> o una <strong>nivelación</strong> no
-            se cierran: entran calculadas, cumplan o no un orden, y su sección
-            muestra lo que tengan al abrir el informe. Si no alcanzan ningún
-            orden, la sección lo alerta. Una nivelación con la libreta a medias
-            no entra.
+            Un <strong>lugar</strong> entra con sus visitas calculadas, y su
+            sección muestra lo que tenga al abrir el informe: una visita nueva
+            aparece sola. Las que están en medición se nombran aparte y entran
+            cuando se terminan (§ 7.12).
           </li>
         </ul>
         <p>Un PDF ya descargado no cambia.</p>
-        <p>De ahí se sigue una consecuencia:</p>
-        <ul className="ml-5 list-disc space-y-1">
-          <li>
-            En control de asentamientos se incluye el{" "}
-            <strong>lugar cerrado</strong>, no una visita suelta: un lugar
-            todavía activo admite visitas nuevas, así que su informe cambiaría
-            solo.
-          </li>
-        </ul>
         <p>
           Si el proyecto no tiene nada que incluir, la pantalla se lo dice en
           vez de ofrecer un formulario que no llevaría a ninguna parte.
@@ -2580,9 +2862,9 @@ export default function ManualPage() {
         </h3>
         <p>
           En la pestaña <strong>Informes</strong> del proyecto, pulse{" "}
-          <strong>Generar Nuevo Informe</strong>. Desde la pestaña{" "}
-          <strong>Informe</strong> de un lugar cerrado o de una poligonal o una
-          nivelación calculadas,{" "}
+          <strong>Generar Nuevo Informe</strong>. Desde el{" "}
+          <strong>Informe</strong> de una poligonal o una nivelación
+          calculadas, o de un lugar con alguna visita calculada,{" "}
           <strong>Generar un informe consolidado con este proceso</strong> abre
           el mismo formulario con ese proceso ya marcado.
         </p>
@@ -2622,10 +2904,9 @@ export default function ManualPage() {
           con sus resultados <strong>y su equipo</strong> —en las poligonales,
           con la corrección por método y su dibujo (§ 5.7)—, el resumen
           consolidado de precisiones —con una columna de equipo y, en las
-          poligonales, el orden alcanzado—, sus observaciones y el registro de
-          cierre. El equipo ya no es un
-          dato del proyecto: cada sección imprime el que declaró su propio
-          proceso (en asentamientos, el de la visita más reciente).
+          poligonales, el orden alcanzado— y sus observaciones. El equipo ya no
+          es un dato del proyecto: cada sección imprime el que declaró su
+          propio proceso (en asentamientos, el de la visita más reciente).
         </p>
         <p className="text-sm text-ink-2">
           El PDF lo genera su navegador, no la aplicación. Los márgenes y los
@@ -2670,11 +2951,12 @@ export default function ManualPage() {
 
         <p>
           En control de asentamientos, «Datos Crudos» añade un bloque{" "}
-          <strong>«Visitas»</strong> con el modo de captura, el BM de amarre,
-          el cierre y la tolerancia de cada una, y el libro lleva una cuarta
-          hoja, <strong>«Libretas»</strong>: la libreta de cada visita que la
-          tiene, con sus cotas calculadas y compensadas y la cota de catálogo
-          de los BM de control (§ 7.3).
+          <strong>«Visitas»</strong> con el estado, el BM de arranque, la
+          verificación, el cierre, la tolerancia y la nota de cada una, y el
+          libro lleva una cuarta hoja, <strong>«Libretas»</strong>: la libreta
+          de cada visita, fila por fila con su <strong>tramo</strong>, la cota
+          de la medida —sin compensar— y la de los BM del lugar leídos de paso
+          (§ 7.9).
         </p>
 
         <p>
@@ -2699,24 +2981,11 @@ export default function ManualPage() {
           <strong>Eliminar</strong>.
         </p>
 
-        <p>En el formulario de equipo de cada visita:</p>
-        <ul className="ml-5 list-disc space-y-1">
-          <li>
-            <strong>Tomar del catálogo</strong> copia los datos del equipo
-            elegido en los campos, que siguen editables.
-          </li>
-          <li>
-            <strong>Guardar en el catálogo</strong> guarda lo que ha tecleado.
-            Si el mismo aparato —misma marca, modelo y serie— ya está, el botón
-            dice «Ya está en el catálogo».
-          </li>
-        </ul>
-
         <p>
-          En una poligonal y en una nivelación, el equipo es solo su identidad
-          —marca, modelo y número de serie—. En la nivelación,{" "}
-          <strong>Tomar del catálogo</strong> la copia; en la poligonal se
-          escribe.
+          En un proceso, el equipo es solo su identidad —marca, modelo y número
+          de serie—. En una nivelación y en una visita de asentamientos,{" "}
+          <strong>Tomar del catálogo</strong> copia los datos del nivel elegido
+          en los campos, que siguen editables; en la poligonal se escriben.
         </p>
 
         <Nota titulo="El catálogo es una plantilla">
@@ -2726,10 +2995,9 @@ export default function ManualPage() {
         </Nota>
 
         <p>
-          <strong>Calibración de más de un año.</strong> La lista y el
-          formulario avisan cuando la fecha de calibración tiene más de 12
-          meses: en una visita, a la fecha de la visita. Es un aviso; la visita
-          se guarda igual.
+          <strong>Calibración de más de un año.</strong> La lista avisa cuando
+          la fecha de calibración tiene más de 12 meses. Es un aviso: el equipo
+          se usa igual.
         </p>
       </Seccion>
 

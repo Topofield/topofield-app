@@ -14,8 +14,6 @@ export interface DbErrorLike {
 }
 
 const BY_CODE: Record<string, string> = {
-  // restrict_violation: los triggers de inmutabilidad de lo cerrado.
-  "23001": "Está cerrado y ya no admite cambios.",
   // foreign_key_violation: algo lo referencia (p. ej. un lugar con procesos).
   "23503": "No se puede: hay otros datos que dependen de este registro.",
   // unique_violation.

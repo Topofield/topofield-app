@@ -128,7 +128,7 @@ export function levelingTolerance(
 // ============================================================================
 
 import type { StructureType } from "@/types/site";
-import type { Thresholds, VisitCircuit } from "@/types/settlement";
+import type { Thresholds } from "@/types/settlement";
 
 /**
  * Días de un mes, para convertir un intervalo entre visitas a meses.
@@ -144,14 +144,6 @@ import type { Thresholds, VisitCircuit } from "@/types/settlement";
 export const DAYS_PER_MONTH = 365.25 / 12;
 
 /**
- * Circuito que se supone a una visita sin libreta, en km, para el margen de
- * ruido de la tendencia (Fase 32, D-7). En captura directa no hay longitud;
- * con 0.5 km, dos visitas así dan el margen de la Fase 12 (K·√0.25), que
- * equivalía a dos circuitos de esa longitud.
- */
-export const DIRECT_CAPTURE_CIRCUIT_KM = 0.5;
-
-/**
  * Cuánto puede superar una lectura el ritmo anterior de su punto antes de
  * avisar como «excesiva»: el doble. Holgado a propósito — una aceleración real
  * menor es asunto del indicador de aceleración y de los umbrales de
@@ -159,31 +151,36 @@ export const DIRECT_CAPTURE_CIRCUIT_KM = 0.5;
  */
 export const TREND_DEVIATION_RATE_FACTOR = 2;
 
+// T² = K²·L con K de tercer orden y L = 0.5 km: 72 mm² exactos. Se trabaja
+// con T² y no con T para que dos visitas den 6 mm sin ruido de coma flotante
+// (12·√½ al cuadrado da 72.00000000000001).
+const VISIT_TOLERANCE_SQ_MM2 = LEVELING_TOLERANCE_K.tercer_orden ** 2 * 0.5;
+
+/**
+ * Lo que puede errar la cota de un punto en una visita, para el margen de
+ * ruido de la tendencia (Fase 37, decisión 17): la de una visita sin libreta
+ * en tercer orden, K·√0.5 km. Fijo: sin orden ni longitud de circuito, dos
+ * visitas dan 6 mm, el margen que ya tenían las cotas tecleadas.
+ */
+export const SETTLEMENT_VISIT_TOLERANCE_MM = Math.sqrt(VISIT_TOLERANCE_SQ_MM2);
+
 /**
  * Margen de ruido, en mm, del parcial entre dos visitas: lo que el error de
  * medición de las dos cotas explica (Fase 32, D-7). Lo usan el aviso de
  * lectura fuera de tendencia y «Acelerando».
  *
- *   m = ½·√(Tₚ² + Tₙ²),   T = K·√L, la tolerancia del circuito de cada visita
+ *   m = ½·√(T² + T²),   T fijo (decisión 17 de la Fase 37)
  *
  * Es el criterio de USACE EM 1110-2-1009 (2018), § 2-3.b: un desplazamiento es
  * significativo si pasa de 1.96·√(σₚ² + σₙ²). Si K·√L es el límite al 95 % del
  * cierre de un circuito (NGS 3, § 3.1.3), σ_km = K/1.96, y la cota de un punto
- * compensado tiene, como mucho —a mitad de circuito—, σ = σ_km·√(L/4).
+ * tiene, como mucho —a mitad de circuito—, σ = σ_km·√(L/4).
  *
- * Cada visita entra con su orden y la longitud de su libreta; sin libreta, con
- * `DIRECT_CAPTURE_CIRCUIT_KM`. Hasta la Fase 32 el margen era K·√0.25 para
- * todas, con el orden de la última. Se calcula como √(Kₚ²·Lₚ + Kₙ²·Lₙ)/2, sin
- * pasar por cada T, para que dos visitas sin libreta den 6 mm exactos en tercer
- * orden.
+ * Hasta la Fase 37 cada visita entraba con su orden y la longitud de su
+ * libreta; la visita ya no declara orden y el usuario pidió simplificarlo.
  */
-export function trendDeviationMargin(previous: VisitCircuit, current: VisitCircuit): number {
-  return Math.sqrt(squaredTolerance(previous) + squaredTolerance(current)) / 2;
-}
-
-/** T² = K²·L del circuito de una visita; sin libreta, L = `DIRECT_CAPTURE_CIRCUIT_KM`. */
-function squaredTolerance({ order, km }: VisitCircuit): number {
-  return LEVELING_TOLERANCE_K[order] ** 2 * (km != null && km > 0 ? km : DIRECT_CAPTURE_CIRCUIT_KM);
+export function trendDeviationMargin(): number {
+  return Math.sqrt(2 * VISIT_TOLERANCE_SQ_MM2) / 2;
 }
 
 /**
@@ -191,25 +188,16 @@ function squaredTolerance({ order, km }: VisitCircuit): number {
  * 32, hallazgo 4 del PRD). Las dos velocidades dependen de tres cotas:
  *
  *   v₂ − v₁ = (h₃ − h₂)/Δt₂ − (h₂ − h₁)/Δt₁
- *   margen  = ½·√(T₁²/Δt₁² + T₂²·(1/Δt₁ + 1/Δt₂)² + T₃²/Δt₂²)
+ *   margen  = ½·√(T²/Δt₁² + T²·(1/Δt₁ + 1/Δt₂)² + T²/Δt₂²)
  *
- * con el mismo criterio de `trendDeviationMargin`: 1.96 veces el error típico,
- * y la cota de cada visita con σ = T/(2·1.96). Con todo igual es √3 veces
- * m/Δt. El margen de una sola diferencia, que se usaba hasta aquí, dejaba un
- * 13 % de «Acelerando» falsos con circuitos cortos.
+ * con el mismo criterio de `trendDeviationMargin` y T fijo. Con Δt iguales es
+ * √3 veces m/Δt.
  */
-export function accelerationMargin(
-  first: VisitCircuit,
-  middle: VisitCircuit,
-  last: VisitCircuit,
-  firstMonths: number,
-  lastMonths: number,
-): number {
+export function accelerationMargin(firstMonths: number, lastMonths: number): number {
+  const t2 = VISIT_TOLERANCE_SQ_MM2;
   return (
     Math.sqrt(
-      squaredTolerance(first) / firstMonths ** 2 +
-        squaredTolerance(middle) * (1 / firstMonths + 1 / lastMonths) ** 2 +
-        squaredTolerance(last) / lastMonths ** 2,
+      t2 / firstMonths ** 2 + t2 * (1 / firstMonths + 1 / lastMonths) ** 2 + t2 / lastMonths ** 2,
     ) / 2
   );
 }

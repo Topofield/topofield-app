@@ -24,15 +24,23 @@ function Pencil({ label, onClick }: { label: string; onClick: () => void }) {
 }
 
 const TH = "py-2 px-2 text-right text-xs font-medium whitespace-nowrap";
+/** Los rótulos que no resaltan la fila: una vista intermedia, una lectura por tomar. */
+const QUIET = new Set(["intermedia", "pendiente"]);
 const TD = "py-2 px-2 text-right whitespace-nowrap tabular-nums";
 const GROUP = "border-l border-rule";
 
 /**
  * La tabla de la hoja (Fase 36, libreta B): Punto, V+ y su distancia, AI, V− y
  * su distancia, VI y la cota sin compensar. Solo lectura; el lápiz de una fila
- * abre la armada que la fila cierra.
+ * abre la armada que la fila cierra. La visita (Fase 37) trae sus rótulos.
  */
-export function LibretaTable({ rows, onEdit }: { rows: SheetRow[]; onEdit: (armada: number) => void }) {
+export function LibretaTable({
+  rows,
+  onEdit,
+}: {
+  rows: (Omit<SheetRow, "badge"> & { badge: string | null })[];
+  onEdit: (armada: number) => void;
+}) {
   const decimals = readingDecimals(rows.flatMap((r) => [r.backsight, r.foresight, r.intermediate]));
   const reading = (v: number | null) => (v == null ? dash : formatReading(v, decimals));
   return (
@@ -77,12 +85,12 @@ export function LibretaTable({ rows, onEdit }: { rows: SheetRow[]; onEdit: (arma
           {rows.map((row, i) => (
             <tr
               key={i}
-              className={cn("border-b border-rule last:border-b-0", row.badge && row.badge !== "intermedia" && "bg-mira-bg/40")}
+              className={cn("border-b border-rule last:border-b-0", row.badge && !QUIET.has(row.badge) && "bg-mira-bg/40")}
             >
               <td className="py-1.5 px-2 whitespace-nowrap">
                 <span className="block font-semibold">{row.pointCode}</span>
                 {row.badge && (
-                  <Badge tone={row.badge === "intermedia" ? "neutral" : "primary"} className="px-2 py-0">
+                  <Badge tone={QUIET.has(row.badge) ? "neutral" : "primary"} className="px-2 py-0">
                     {row.badge}
                   </Badge>
                 )}

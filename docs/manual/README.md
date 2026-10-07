@@ -1,12 +1,11 @@
 # Manual de usuario — TopoField
 
 TopoField es una plataforma web para gestionar procesos topográficos: registrar
-los datos de campo, calcularlos con validación en tiempo real y cerrarlos con
-trazabilidad.
+los datos de campo, calcularlos con validación en tiempo real e informarlos.
 
 Este manual cubre lo que la aplicación permite hacer **hoy**, que es el
-alcance completo del proyecto: los tres módulos de proceso, el cierre con
-trazabilidad, los informes y la exportación a Excel.
+alcance completo del proyecto: los tres módulos de proceso, los informes y la
+exportación a Excel.
 
 > **Este documento es la fuente de la redacción.** La página `/manual` de la
 > aplicación (`src/app/(app)/manual/`) es una maquetación de este mismo texto
@@ -14,7 +13,7 @@ trazabilidad, los informes y la exportación a Excel.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-10-06 · Fase 35 (La poligonal como la mide el topógrafo).
+**Última actualización:** 2026-10-07 · Fase 37 (Los asentamientos como los mide el topógrafo).
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -30,7 +29,7 @@ La aplicación está publicada en
 5. [Poligonales](#5-poligonales)
 6. [Nivelación](#6-nivelación)
 7. [Control de Asentamientos](#7-control-de-asentamientos)
-8. [Cerrar un proceso](#8-cerrar-un-proceso)
+8. [Sin cierre](#8-sin-cierre)
 9. [Trabajo en campo](#9-trabajo-en-campo)
 10. [Informes](#10-informes)
 11. [Exportar a Excel](#11-exportar-a-excel)
@@ -47,31 +46,26 @@ Tres ideas ordenan toda la aplicación:
 ubicación, el datum y la proyección. El equipo usado y el **orden de
 precisión** no viven aquí: van en cada proceso —poligonal, nivelación, visita
 de asentamiento—, porque pueden cambiar de un levantamiento a otro dentro de un
-mismo proyecto. El orden de una poligonal o de una nivelación no se declara:
-se detecta al calcularla.
+mismo proyecto. El orden no se declara: se detecta al calcular.
 
 **Proceso.** Un levantamiento concreto dentro de un proyecto: una poligonal, una
-nivelación, un control de asentamientos. Cada proceso pasa por estados:
+nivelación, un control de asentamientos. La poligonal, la nivelación y cada
+visita de asentamientos pasan por estados:
 
 | Estado | Significado |
 |---|---|
 | **Borrador** | Creado, sin datos suficientes |
-| **En progreso** | Con datos de campo, aún sin cálculo completo |
-| **Calculado** | Cálculo resuelto; se puede revisar y, en asentamientos, cerrar |
-| **Cerrado** | Terminado y conforme. **Inmutable** mientras siga cerrado |
-| **Rechazado** | Terminado pero fuera de tolerancia. **Inmutable** mientras siga cerrado |
+| **En progreso** | Con datos de campo, aún sin cálculo completo. En una visita se dice **En medición** |
+| **Calculado** | Cálculo resuelto, listo para revisar y para un informe |
 
-**Cierre.** El acto de dar por terminada una visita o un lugar de
-asentamientos. Queda registrado con fecha, hora y autor, y **a partir de ese
-momento las mediciones y el veredicto no se pueden modificar**. Es lo que da
-trazabilidad al trabajo. **La poligonal y la nivelación no se cierran**:
-quedan calculadas, se corrigen cuando haga falta, y su informe dice qué orden
-de precisión alcanzaron (§ 5 y § 6).
+El lugar de asentamientos no tiene estado: agrupa sus visitas.
 
-> **Sobre la inmutabilidad**
-> Un proceso cerrado no se puede editar ni eliminar, ni desde la interfaz ni por
-> ninguna otra vía. La restricción está aplicada en la propia base de datos, no
-> solo en la pantalla. Para corregirlo, se reabre (§ 8).
+**Cálculo en vivo.** Ningún proceso se cierra (§ 8): lo que se captura se
+guarda al confirmarlo y todo se recalcula al momento. Corregir una lectura, la
+cota de un BM o la C0 de un punto cambia lo que depende de ellos, y la
+aplicación avisa antes cuánto cambia. Lo que queda fijo es el **informe
+consolidado** ya emitido: para corregirlo, se elimina y se genera de nuevo
+(§ 10.3).
 
 ---
 
@@ -96,8 +90,11 @@ aplicación sin capturar nada:
   —verá su discrepancia, la diferencia punto a punto entre ida y vuelta y la
   compensación del circuito—, y el **tramo 2**, leído del archivo de un nivel
   digital Leica.
-- **Torre Alameda**, un control de asentamientos simulado con catorce visitas
-  y su libreta de nivelación en cada una.
+- Dos controles de asentamientos: **Torre Alameda**, simulado, con catorce
+  visitas, BM-1 y BM-2 como BM del lugar, la visita 9 sin verificación y la 13
+  con BM-2 desplazado; y la cartera real **Control de asentamiento
+  estructural**: dieciséis puntos y siete visitas de una armada desde el BM de
+  la piscina, de marzo a junio de 2022.
 - Un informe consolidado por módulo.
 
 Puede modificarlo o archivarlo cuando quiera.
@@ -132,19 +129,18 @@ Arriba, tres indicadores del estado general:
 - **Procesos calculados** — levantamientos resueltos, listos para revisar.
 - **Fuera de tolerancia** — procesos calculados que no cumplen su tolerancia
   —una poligonal o una nivelación, si no alcanza ningún orden—, y lugares con
-  algún punto en alerta o alarma en una visita abierta. Requieren revisión.
+  algún punto en alerta o alarma en una visita calculada. Requieren revisión.
 
 Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
-Cada tarjeta indica cuántos procesos tiene el proyecto y cuántos están en
-curso, cerrados o rechazados.
+Cada tarjeta indica cuántos procesos tiene el proyecto.
 
 Use **+ Nuevo Proyecto** para crear uno.
 
 > **Empieza con un proyecto de ejemplo.** La primera vez que entra, su cuenta ya
-> trae un **«Proyecto de ejemplo»** con carteras de campo reales —poligonales y
-> nivelaciones—, un lugar de control de asentamientos simulado y sus informes,
-> para que explore la aplicación con datos reales (§ 2). Puede modificarlo o
-> archivarlo cuando quiera.
+> trae un **«Proyecto de ejemplo»** con carteras de campo reales —poligonales,
+> nivelaciones y un control de asentamientos—, otro control de asentamientos
+> simulado y sus informes, para que explore la aplicación con datos reales
+> (§ 2). Puede modificarlo o archivarlo cuando quiera.
 
 ---
 
@@ -159,13 +155,12 @@ cliente, ubicación y, si quiere, las coordenadas geográficas en grados
 decimales— y el **sistema de referencia**: datum y proyección. El proyecto se
 crea al pulsar **Crear proyecto**.
 
-> **El equipo y el orden de precisión no se piden aquí.** Van en cada
-> proceso: cada visita de asentamiento declara su orden y su equipo, y cada
-> poligonal y cada nivelación su equipo —su orden se detecta al calcularla—. Un
-> mismo proyecto puede así tener trabajos de distinto orden, medidos con
-> instrumentos distintos y en fechas distintas.
+> **El equipo y el orden de precisión no se piden aquí.** Cada poligonal, cada
+> nivelación y cada visita de asentamiento lleva su equipo, y su orden se
+> detecta al calcularla. Un mismo proyecto puede así tener trabajos de
+> distinto orden, medidos con instrumentos distintos y en fechas distintas.
 > Vea [§ 5.2](#52-crear-una-poligonal), [§ 6.4](#64-crear-una-nivelación) y
-> [§ 7.3](#73-registrar-una-visita).
+> [§ 7.4](#74-una-visita-nueva).
 
 ### 4.2 El proyecto por dentro
 
@@ -179,8 +174,8 @@ tres pestañas:
 [§ 4.3](#43-el-listado-de-procesos).
 
 **Informes** — los informes **consolidados**, que reúnen poligonales y
-nivelaciones calculadas y controles de asentamientos cerrados en un solo
-documento. Se detalla en [§ 10](#10-informes). Cada
+nivelaciones calculadas y controles de asentamientos con alguna visita
+calculada en un solo documento. Se detalla en [§ 10](#10-informes). Cada
 proceso tiene además su propio informe, en su pantalla
 ([§ 4.4](#44-la-pantalla-de-un-proceso)).
 
@@ -191,14 +186,12 @@ puntos de referencia, y archivar o eliminar el proyecto.
 
 Los **puntos de referencia** son coordenadas conocidas (vértices geodésicos,
 mojones) que puede reutilizar como punto de partida o de llegada de sus
-poligonales, sin volver a teclearlas. Los que tienen cota sirven además como
-BM de sus nivelaciones y como **BM de amarre** de las visitas de asentamiento.
+poligonales, sin volver a teclearlas. Las visitas de asentamiento no los
+usan: cada lugar tiene sus propios BM (§ 7.3).
 
 **Archivar o eliminar.** Archivar oculta el proyecto de la lista activa del
 dashboard; puede restaurarlo cuando quiera. Eliminarlo lo borra con todo lo
-que contiene, y solo es posible si no tiene nada cerrado: un lugar o una
-visita de asentamientos cerrados son registros que no se borran. En ese caso
-la configuración dice cuántos tiene y propone archivarlo.
+que contiene, de forma permanente.
 
 ### 4.3 El listado de procesos
 
@@ -211,9 +204,8 @@ acentos: «via» encuentra «Vía terciaria».
 
 **Filtrar por estado.** Los chips muestran cuántos hay en cada grupo, así que
 ve la distribución del proyecto sin desplegar nada. Pulse uno para ver solo
-ese grupo. En poligonales y nivelaciones los estados son **Borradores** y
-**Calculados**: no se cierran. En control de asentamientos, **Activos** y
-**Cerrados**.
+ese grupo: **Borradores** o **Calculados**. El control de asentamientos no los
+tiene: el lugar no tiene estado.
 
 **Filtrar por tipo.** El selector acota a un tipo de poligonal, de nivelación
 o de estructura.
@@ -230,7 +222,7 @@ todo de un clic.
 | Columna | Qué muestra |
 |---|---|
 | Nombre | Nombre y tipo (en asentamientos, el tipo de estructura y cuántas visitas tiene) |
-| Estado | Borrador, En progreso o Calculado en una poligonal o una nivelación; Activo o Cerrado en un lugar |
+| Estado | Borrador, En progreso o Calculado. No aparece en asentamientos |
 | Resultado | La **precisión** relativa de una poligonal, el **cierre** de una nivelación (o su discrepancia, si es abierta con vuelta) o la **alerta** de un lugar |
 | Cumple | ✓ si alcanza algún orden, ✕ si no, — si no aplica. No aparece en asentamientos |
 | Última actividad | Cuándo se modificó por última vez |
@@ -242,65 +234,50 @@ Pulse **Nombre**, la columna de resultado o **Última actividad** para ordenar
 por esa columna; pulsar de nuevo invierte el orden. Por defecto se ordena por
 actividad reciente, así que lo que está trabajando queda arriba.
 
-**Acciones por fila.** Cada fila ofrece:
+**Acciones por fila.** Cada fila ofrece siempre las tres, porque ningún
+proceso se cierra:
 
-- **Duplicar** — crea uno nuevo con la misma configuración, en borrador: una
-  poligonal sin estaciones, una nivelación sin lecturas, un lugar con sus
-  umbrales y su catálogo de puntos pero sin visitas.
+- **Duplicar** — crea uno nuevo con la misma configuración: una poligonal sin
+  estaciones, una nivelación sin lecturas, un lugar con sus umbrales, su
+  catálogo de puntos y sus BM pero sin visitas.
 - **Renombrar** — cambia el nombre sin abrirlo.
-- **Eliminar** — lo borra con lo que contiene, con confirmación previa. Un
-  lugar con alguna visita cerrada no se puede eliminar. Si lo que borra está en
-  un informe consolidado —porque se reabrió después de emitirlo—, la
-  confirmación lo avisa: el informe quedará sin esa sección.
-
-> **Lo cerrado solo se puede duplicar.** Un lugar cerrado no admite
-> renombrarse ni eliminarse. Una poligonal o una nivelación siempre admite las
-> tres acciones: no se cierran. Si necesita rehacer un levantamiento cerrado,
-> duplíquelo: obtendrá una copia editable y el original queda intacto como
-> constancia. Para corregir el mismo lugar, reábralo desde su pantalla (§ 8).
+- **Eliminar** — lo borra con lo que contiene, con confirmación previa. Si lo
+  que borra está en un informe consolidado, la confirmación lo avisa: el
+  informe quedará sin esa sección.
 
 En el teléfono, la tabla se convierte en tarjetas, una por fila, con las
 mismas acciones.
 
 ### 4.4 La pantalla de un proceso
 
-Los controles de asentamientos se abren en la pantalla de siempre. La
-poligonal y la nivelación tienen la suya, por pasos
-([§ 5.3](#53-la-pantalla-por-pasos) y [§ 6.5](#65-la-pantalla-por-pasos)).
+Los tres módulos comparten la cabecera. Lleva sus rótulos —el tipo y, si lo
+tiene, el estado—, el nombre, sus datos y cuándo se guardó por última vez, y
+las acciones
+**Editar datos**, **Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y, bajo
+**⋯**, **Duplicar** y **Eliminar**. La ruta de la barra devuelve al listado
+del que vino.
 
-**La cabecera.** El nombre, el estado y el tipo del proceso, y dos acciones:
-**Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. Si el
-proceso está cerrado, una tercera: **Reabrir** (§ 8). La ruta de la barra
-devuelve al listado del que vino.
+Debajo van los pasos de la poligonal —**Datos**, **Ajuste** e **Informe**— y
+de la nivelación —**Libreta**, **Compensación** e **Informe**—
+([§ 5.3](#53-la-pantalla-por-pasos) y [§ 6.5](#65-la-pantalla-por-pasos)), o
+las pestañas del lugar de asentamientos —**Panel**, **Puntos**, **BMs** e
+**Informe**—, cuya cabecera añade **+ Nueva visita**
+([§ 7](#7-control-de-asentamientos)).
 
-**Las pestañas.** **Proceso** reúne todo el trabajo: configuración, captura,
-cálculo, gráfico y análisis, que se recalculan mientras escribe. **Informe**
-muestra el informe de ese proceso, listo para **Imprimir o guardar como PDF**
-([§ 10](#10-informes)). El control de asentamientos tiene tres: **Panel**,
-**Puntos y lugar** e **Informe** ([§ 7](#7-control-de-asentamientos)); la
-poligonal, sus tres pasos: **Datos**, **Ajuste** e **Informe**, y la
-nivelación los suyos: **Libreta**, **Compensación** e **Informe**.
+**No hay botón Guardar.** Cada popup guarda al confirmar, y la libreta de una
+visita, lectura por lectura (§ 7.7).
+
+**El informe.** El paso o la pestaña **Informe** muestra el informe de ese
+proceso, listo para **Imprimir o guardar como PDF** ([§ 10](#10-informes)),
+que pasa a ser la primera acción de la cabecera.
 
 ![Informe de un proceso, en su pestaña](../../public/manual/30-informe-del-proceso.png)
 
-Mientras el proceso no esté cerrado, su informe lleva la marca **«Borrador —
-el informe se emite al cerrar el proceso»**, también en el PDF: sirve para
-revisar antes de cerrar. Si se cerró como rechazado, lleva en cambio la marca
-**«Rechazado»**: queda como constancia y no entra en informes consolidados. El
-de una poligonal o una nivelación no lleva marca: no se cierran. Debajo, fuera
-de la impresión, aparecen los informes consolidados que ya lo incluyen y, si
-puede entrar en uno —un lugar cerrado, o una poligonal o una nivelación
-calculadas—, un botón para generar uno nuevo con él.
-
-**La barra de acciones.** Mientras el proceso se puede editar, **Guardar** y
-**Cerrar proceso** van en una barra fija al pie de la pantalla, siempre a la
-vista. A su izquierda dice si hay **cambios sin guardar** o qué impide guardar.
-La poligonal y la nivelación no la tienen: cada popup guarda al confirmar.
-
-> **Salir sin guardar pregunta.** Si tiene cambios sin guardar y pulsa una
-> miga, otra pestaña o cualquier enlace de la aplicación, un diálogo pregunta
-> antes de salir; al recargar o cerrar la pestaña, pregunta el navegador. Los
-> botones atrás y adelante del navegador no preguntan.
+No lleva marca de borrador ni registro de cierre: ningún proceso se cierra, y
+el informe muestra lo que tenga al abrirlo. Debajo, fuera de la impresión,
+aparecen los informes consolidados que ya lo incluyen y, si puede entrar en
+uno —una poligonal o una nivelación calculadas, o un lugar con alguna visita
+calculada—, un botón para generar uno nuevo con él.
 
 ---
 
@@ -1006,191 +983,347 @@ El control de asentamientos sigue el descenso de una estructura en el tiempo:
 cada visita mide la cota de un conjunto de puntos, y la aplicación calcula
 cuánto ha bajado cada uno desde la visita anterior y desde el inicio.
 
+Se trabaja como lo mide el topógrafo, igual que la poligonal y la nivelación
+(§ 5 y § 6): el **lugar** se crea en un popup y tiene cuatro pestañas
+—**Panel**, **Puntos**, **BMs** e **Informe**—, y cada **visita**, dos pasos
+—**1 · Libreta** y **2 · Resultados**—. **No hay botón Guardar**: cada popup
+guarda al confirmar, y la libreta, lectura por lectura. La visita **no se
+compensa** —la cota de cada punto es la de su lectura— y **nada se cierra**:
+todo se recalcula en vivo.
+
 ### 7.1 El lugar
 
 Un **lugar** es el sitio que se monitorea: un edificio, una presa, un
-terraplén. Agrupa un catálogo de puntos de control y sus visitas sucesivas —
-es el equivalente, para este módulo, a lo que una poligonal o una nivelación
-son para los otros dos.
+terraplén. Agrupa un catálogo de puntos de control, sus BM y sus visitas
+sucesivas —es el equivalente, para este módulo, a lo que una poligonal o una
+nivelación son para los otros dos—.
 
 ![Nuevo lugar](../../public/manual/13-nuevo-lugar.png)
 
-Desde el proyecto, **+ Nuevo Proceso → Control de Asentamientos**. Indique el
-nombre y el **tipo de estructura**: edificio, presa, terraplén u otro. Elegir
-el tipo aplica un juego de **umbrales de alerta** típico para ese tipo de
-estructura — de velocidad y de asentamiento acumulado — que puede editar a
-continuación si el caso lo requiere.
+Desde el proyecto, **+ Nuevo Proceso → Control de Asentamientos** abre un
+popup:
 
-Al abrir un lugar desde el proyecto se ve su pantalla
-([§ 4.4](#44-la-pantalla-de-un-proceso)), con tres pestañas: **Panel**, con
-el historial del monitoreo (§ 7.4); **Puntos y lugar**, con los datos, los
-umbrales y el catálogo de puntos (§ 7.2); e **Informe**. En la cabecera,
-**+ Nueva visita** (§ 7.3), **Exportar a Excel** y **Ver informe**.
+- **Nombre**, el único obligatorio.
+- **Tipo de estructura**: edificio, presa, terraplén u otro. Precarga los
+  umbrales del semáforo, y cambiarlo los vuelve a precargar.
+- **Descripción**, opcional.
+- **Umbrales del semáforo**, plegados: los de velocidad y de asentamiento
+  acumulado típicos del tipo de estructura, que puede editar si el caso lo
+  requiere.
 
-### 7.2 Catalogar los puntos
+**Crear lugar** lleva a su panel. Los puntos de control se agregan después,
+en la pestaña Puntos (§ 7.2). Estos datos se cambian con **Editar datos**, en
+la cabecera, que abre el mismo popup.
 
-![Pestaña Puntos y lugar, con el catálogo de puntos](../../public/manual/14-editor-lugar.png)
+**La pantalla del lugar.** La cabecera lleva el tipo de estructura, el
+nombre, cuántos puntos de control y BM tiene, la fecha de la lectura base y
+cuándo se guardó por última vez; y las acciones **+ Nueva visita** (§ 7.4),
+**Editar datos**, **Exportar a Excel** (§ 11) y, bajo **⋯**, **Duplicar** y
+**Eliminar**. Debajo, las pestañas **Panel** (§ 7.11), **Puntos** (§ 7.2),
+**BMs** (§ 7.3) e **Informe** (§ 7.12).
 
-Ya creado el lugar, en su pestaña **Puntos y lugar** agregue sus **puntos de
-control**: código, ubicación y la **cota inicial (C0)** — la referencia
-contra la que se mide el asentamiento acumulado de todas las visitas futuras.
+El lugar **no tiene estado**: ni activo ni cerrado. Admite visitas siempre.
 
-Los puntos no llevan coordenadas: el módulo mide cuánto baja cada punto, no
-dónde está, así que no calcula distancias entre puntos, asentamientos
-diferenciales ni distorsión angular. Un lugar cerrado antes de este cambio
-tampoco los muestra ya.
+### 7.2 Los puntos de control
+
+![Pestaña Puntos, con el catálogo de puntos](../../public/manual/14-editor-lugar.png)
+
+En la pestaña **Puntos**, **Agregar punto** pide el **código**, la
+**ubicación** y la **cota C0**: la referencia contra la que se mide el
+asentamiento acumulado de todas las visitas.
 
 La C0 es opcional. Si la deja vacía, la **línea base del punto es su primera
 lectura**: esa lectura queda con acumulado 0 y las siguientes se miden contra
 ella.
 
-Cuando un punto ya se midió en una visita **cerrada**, su C0 queda fija: los
-asentamientos con que se cerró esa visita dependen de ella. El diálogo
-**Editar** la muestra bloqueada; el código y la ubicación se siguen pudiendo
-cambiar.
+Los puntos no llevan coordenadas: el módulo mide cuánto baja cada punto, no
+dónde está, así que no calcula distancias entre puntos, asentamientos
+diferenciales ni distorsión angular.
 
-**Renombrar un punto** cambia también su código en la libreta de las visitas
-**abiertas** (§ 7.3), para que su cota siga saliendo de su fila. Las visitas
-cerradas conservan el código con que se midieron.
+La tabla da el código, la ubicación, la C0 y el estado de cada punto
+—**Vigente**, **Alta el …** o **De baja desde el …**, con su motivo—, y sus
+acciones: **Editar**, **Dar de baja** y **Eliminar**.
+
+- **Editar** cambia el código, la ubicación y la C0, aunque el punto ya tenga
+  lecturas. Cambiar la **C0** de un punto medido cambia su acumulado en cada
+  visita: el popup avisa en cuántas —«Cambiar la C0 cambia el acumulado de
+  este punto en 7 visitas»— y, al guardar otra vez, todo se recalcula.
+- **Renombrar un punto** cambia también su código en la libreta de todas las
+  visitas, para que su cota siga saliendo de su fila.
+- **Eliminar** un punto con lecturas pide confirmación, con cuántas se
+  pierden: **Eliminar de todos modos**.
 
 El catálogo puede cambiar a mitad del monitoreo —un punto se destruye, otro se
-instala—; ver [§ 7.7](#77-dar-de-baja-y-de-alta-un-punto).
+instala—; ver [§ 7.13](#713-dar-de-baja-y-de-alta-un-punto).
 
-### 7.3 Registrar una visita
+### 7.3 Los BM del lugar
 
-Cada **visita** es una fecha en la que se releyeron los puntos del catálogo.
-La primera visita registrada es la **visita 0 o línea base**: fija el punto
-de partida y no tiene velocidad, porque no hay una visita anterior contra la
-que compararla. Su acumulado es cero en los puntos cuya C0 es su lectura de
-esta visita; si la C0 viene de otra medición, la visita 0 muestra ya lo que el
-punto se movió desde entonces.
+![Pestaña BMs, con los BM del lugar](../../public/manual/35-bms-lugar.png)
 
-**Crear la visita.** En el panel del lugar (§ 7.4), **+ Nueva visita** pide:
+Cada lugar tiene su propio catálogo de **BM**: los puntos de cota conocida
+desde donde se arman las visitas. Son del lugar y no se sincronizan con nada.
+La visita no usa los puntos de referencia del proyecto (§ 4.2).
 
-![Formulario de nueva visita](../../public/manual/25-nueva-visita.png)
+La tabla da el **código**, la **cota**, la **descripción**, el **origen** —de
+dónde vino— y en cuántas **visitas** arranca un tramo —«Amarre en 12»—.
 
-- **Fecha** y **Nivelador**. La fecha tiene que ser posterior a la de la
-  última visita: dos visitas del mismo lugar no comparten fecha, y al editar
-  una visita abierta su fecha tiene que quedar entre la de la anterior y la de
-  la siguiente.
-- **Captura** — cómo llegan las cotas: *digitar la libreta de nivelación*,
-  *importar la libreta desde un archivo* o *cotas directas*, para una
-  nivelación calculada fuera de la aplicación.
-- **BM de amarre** — el banco de nivel sobre el que se cierra la nivelación
-  de la visita. Elíjalo del catálogo de puntos de referencia del proyecto
-  (§ 4.2), que trae código y cota, o tecléelo con **Otro (entrada libre)** si
-  el proyecto no lo tiene registrado. Para digitar es obligatorio; al importar
-  puede dejarlo vacío, porque lo trae el archivo.
-- El **orden de precisión** y los datos del **nivel**.
+- **+ BM** agrega uno: código, cota y una descripción opcional. El código no
+  puede repetir el de otro BM del lugar, aunque cambien las mayúsculas o los
+  espacios: «bm-1» es el mismo BM que «BM-1».
+- **Editar** cambia sus datos. Si el BM lo usan algunas visitas, cambiar su
+  **cota** o su **código** avisa en cuántas —«BM-1 se usa en 14 visitas: al
+  guardar se recalculan sus cotas»— y **Guardar y recalcular** las recalcula.
+  Un código nuevo cambia también en sus libretas.
+- **Eliminar** solo se puede si ninguna visita lo usa.
+- **Importar BM** los trae de dos fuentes:
+  - **De una nivelación del proyecto**: elija una nivelación calculada y marque
+    sus puntos; entran con su **cota ajustada** de hoy (§ 6.7).
+  - **De un CSV**: una fila por BM con `codigo,cota,descripcion` —la
+    descripción es opcional—, separada por coma o por punto y coma. Con punto
+    y coma, la cota admite coma decimal.
 
-El nivelador, el amarre, el orden y el equipo **vienen de la visita
-anterior**: cambie solo lo que no sea igual. **Crear y abrir** lleva al
-editor de la visita, con el diálogo de importación ya abierto si eligió
-importar.
+> **Los BM importados son copias.** Anotan su origen, pero no siguen a su
+> fuente: si la nivelación cambia después, el BM no. Se corrigen aquí. Un
+> código que ya está en el lugar no se importa: quítelo de la importación o
+> edítelo.
 
-Cada visita declara también el **orden de precisión** con que se midió y los
-datos del **nivel** usado: marca, modelo, número de serie, fecha de
-calibración, tipo (automático o digital) y desviación típica en mm por km de
-doble nivelación (ISO 17123-2). El instrumento puede cambiar entre una visita
-y la siguiente —pueden pasar meses—, así que cada visita lleva su propio
-equipo, no el lugar.
+Un BM también puede nacer en campo: el punto auxiliar donde termina una
+armada (§ 7.7).
 
-**La libreta de nivelación.** En una visita con libreta, las cotas de los
-puntos de control **no se teclean: salen de la libreta**. Es la libreta de la
-nivelación (§ 6.2 y § 6.3) —V+, V−, distancia a cada mira, hilos con nivel
-automático— y forma un **circuito cerrado sobre el BM de amarre**: la
-primera y la última fila son el amarre.
+### 7.4 Una visita nueva
 
-![Editor de la visita: cabecera, libreta de nivelación y cotas de los puntos de control](../../public/manual/16-editor-visita.png)
+Cada **visita** es una fecha en la que se releyeron los puntos. La primera es
+la **línea base**: fija el punto de partida y no tiene velocidad, porque no hay
+una visita anterior contra la que compararla. Su acumulado es cero en los
+puntos cuya C0 es su lectura de esta visita; si la C0 viene de otra medición,
+la primera visita muestra ya lo que el punto se movió desde entonces.
 
-Para capturar en campo, la libreta llega **precargada** con la secuencia de la
-visita anterior —códigos y tipos, sin lecturas— y el amarre de esta visita.
-Si no hay visita anterior con libreta, con el amarre, los puntos de control
-como intermedios y el amarre otra vez. Solo queda llenar las lecturas.
-Además:
+![Popup Nueva visita](../../public/manual/25-nueva-visita.png)
 
-- la casilla del punto **sugiere** los códigos del catálogo y el del amarre;
-- **Insertar** añade una fila debajo de la actual, por ejemplo para un punto
-  de cambio que la secuencia no traía;
-- bajo el código, una nota marca las filas que son **Punto de control** o
-  **BM de amarre**.
+**+ Nueva visita**, en la cabecera del lugar, abre un popup:
 
-Debajo de la tabla, el resumen: ΣV+, ΣV−, el error de cierre y la tolerancia
-K·√D del orden de la visita.
+- **Fecha**: posterior a la de la última visita. Dos visitas del mismo lugar no
+  comparten fecha, y al editar una su fecha tiene que quedar entre la de la
+  anterior y la de la siguiente.
+- **Nivelador**.
+- **Nota**, opcional: sale en los Resultados y en el informe.
+- **Equipo**, plegado y opcional: marca, modelo y número de serie del nivel, o
+  **Tomar del catálogo** (§ 12).
 
-**De dónde sale la cota de cada punto.** De la fila de la libreta con su
-código y con **vista menos**. Si el cierre cumple la tolerancia del orden de
-la visita, es la cota **compensada** (§ 6.7); si no, la calculada: a
-diferencia de una nivelación, la visita no compensa un cierre fuera de
-tolerancia. La tabla
-**Cotas de los puntos de control**, bajo la libreta, las muestra en solo
-lectura, y el servidor las recalcula al pulsar **Guardar visita**.
+**No pide BM ni cómo se mide.** La libreta llega **armada como la de la visita
+anterior**: las mismas armadas, con sus BM, sus puntos de cambio y sus puntos
+de control, sin lecturas; sin los puntos dados de baja y con los dados de
+alta. La primera visita llega con una armada desde el primer BM del lugar y
+todos los puntos vigentes. El popup dice cuál de las dos trae. Si el lugar no
+tiene BM, pide agregarlos antes en la pestaña BMs (§ 7.3).
 
-La libreta avisa de lo que no cuadra:
+**Crear y empezar** abre la visita en su libreta. Solo queda teclear las
+lecturas.
 
-| Situación | Qué ocurre |
-|---|---|
-| El cierre supera la tolerancia | **Solo avisa.** La visita se guarda y se cierra igual, con sus cotas sin compensar |
-| Otro BM del catálogo no nivela con el amarre | **Solo avisa**: ver «Comprobar los BM», abajo |
-| Faltan las distancias por visual | Avisa: sin distancias no se evalúa la tolerancia ni se compensa |
-| Todavía no se leyó el amarre de cierre | «Libreta incompleta»: aún no hay error de cierre |
-| La primera o la última fila no es el BM de amarre | **No se puede guardar** |
-| Un punto de control sin vista menos | Avisa: el punto queda sin cota |
-| Un punto que no está vigente en la fecha | Avisa: su lectura no se usa |
-| El mismo punto con vista menos en dos filas | **No se puede guardar** hasta dejar una |
-| La comprobación aritmética no cuadra | **No se puede cerrar la visita** (§ 7.6) |
+### 7.5 La pantalla de la visita
 
-> **Fuera de tolerancia solo avisa.** Un cierre que no alcanza la tolerancia
-> es un resultado de campo, no un error de captura: se registra, y el aviso
-> queda en el editor, en la columna Cierre del panel, en la vista de la visita
-> y al cerrarla. Conviene revisar la libreta o repetir la nivelación. La
-> comprobación aritmética sí bloquea el cierre, porque una suma que no cuadra
-> es un error de la libreta.
+La **cabecera** lleva cuántas **armadas** tiene la visita, su
+**verificación** —el orden que alcanza o **Sin verificación** (§ 7.9)— y su
+estado: **En medición** si falta alguna lectura, **Calculada** si no. Debajo,
+«Visita 12 · fecha», el nivelador, el equipo y cuándo se guardó por última
+vez. Las acciones:
 
-**Comprobar los BM.** Todas las cotas de la visita salen del BM de amarre. Si
-ese BM se movió, todos los puntos parecen asentarse a la vez. Para detectarlo,
-haga pasar el circuito también por **otro BM del catálogo** (§ 4.2), por
-ejemplo como una lectura más de la primera armada. Es lo que recomienda el
-protocolo de campo: nivelar primero entre BMs.
+- **← →** pasan a la visita anterior o a la siguiente, en el mismo paso.
+- **Editar datos** abre el popup del alta: fecha, nivelador, nota y equipo.
+- **Eliminar** borra la visita con su libreta y sus lecturas. Cualquier visita
+  se elimina, también una del medio: el parcial y la velocidad de la
+  siguiente se recalculan contra la anterior.
 
-La aplicación compara la cota que la libreta le da a ese BM —la calculada,
-antes de compensar— con la del catálogo. La tolerancia es K·√L del orden de
-la visita, con L la distancia desde el amarre hasta ese BM.
+Debajo van los dos pasos y, a la derecha, **Importar .L o CSV** (§ 7.8).
 
-- Si nivela, el resumen de la libreta lo dice: «BM-2 nivela con BM-1:
-  -0.4 mm, tolerancia 2.0 mm.»
-- Si no, avisa con las dos cotas. Uno de los dos BM pudo moverse, o hay un
-  error en la libreta o en la cota del catálogo. Con dos BM no se sabe cuál
-  se movió; con un tercero, comparándolos entre sí, sí.
+### 7.6 Paso 1 · Libreta
 
-**Solo avisa**: la visita se guarda y se cierra igual. El aviso queda en el
-editor, junto al amarre en la tabla de visitas del panel, en la vista de la
-visita y al cerrarla.
+![Paso de Libreta de la visita 12 de Torre Alameda](../../public/manual/16-editor-visita.png)
 
-Cuentan los puntos de referencia de tipo BM, con cota y distintos del amarre.
-Un código que también es punto de control del lugar se trata como punto de
-control. Al guardar, la visita conserva la cota de catálogo con que se
-comparó: si después se corrige el catálogo, una visita cerrada no cambia.
+Dos columnas: a la izquierda, la libreta; a la derecha, fijas mientras baja la
+página, las armadas, la verificación de cada tramo y el movimiento de cada
+punto desde la visita anterior.
 
-**Importar la libreta.** Con un nivel digital, **Importar desde archivo** pasa
-a la libreta el archivo **.L de Leica** o la **plantilla CSV** de TopoField,
-como en nivelación (§ 6.9), con dos diferencias: el archivo se lee siempre
-como **un solo recorrido** —el circuito cerrado sobre el amarre, sin ida y
-vuelta— y **el amarre sale de su primera fila**: si la visita no tenía o
-tenía otro, se propone el del archivo. Si la visita ya tenía libreta, se
-reemplaza, con aviso. Nada se guarda hasta pulsar **Guardar visita**.
+**La tabla de la hoja.** La de la nivelación (§ 6.6): **Punto**, **V+** y su
+distancia, **AI**, **V−** y su distancia, **VI** —la lectura a un punto de
+control— y la **cota**. Los rótulos marcan el **BM del lugar** donde arranca
+cada tramo, los **puntos de cambio**, el BM del lugar donde el tramo
+**cierra** o **llega**, un BM del lugar leído de paso con su diferencia
+—«BM · -0.4 mm»— y los puntos **pendientes** de leer. El lápiz de cada fila
+abre su armada (§ 7.7).
+
+**Armadas.** Una fila por armada —«Armada 1 · desde BM-1», con de dónde sale,
+cuántas vistas a puntos lleva y su V−— con **Editar**, o **Retomar** si le
+falta alguna lectura. **+ Armada** agrega la siguiente.
+
+**Los tramos.** Una tarjeta por tramo —«Tramo desde BM-1», «vuelve a BM-1»—
+con su **Cierre** y su **Orden alcanzado** (§ 7.9). Debajo, el aviso de cada
+BM del lugar leído de paso y la nota «Las cotas son las de la medida: el
+cierre comprueba, no se reparte.»
+
+**Movimiento desde la visita anterior.** Una barra por punto, en mm, y el
+aviso de cada lectura fuera de tendencia (§ 7.9): «B10 bajó 50.0 mm en 12
+días; a su ritmo anterior serían unos 17.1 mm. Verifica la lectura.»
+
+**La medición a medias.** Si falta alguna lectura, la visita queda **En
+medición** y la libreta lo dice arriba: **La medición quedó a medias**, con la
+armada y el punto que faltan. **Retomar medición** abre esa armada con el
+cursor en la primera lectura que falta. Nada se pierde: lo leído ya está
+guardado.
+
+**Puntos sin lectura.** Debajo de la libreta, un aviso nombra los puntos de
+control vigentes que no tienen fila —«P-05 no tiene lectura en la libreta:
+queda sin cota en esta visita.»—, por ejemplo tras importar un archivo al que
+le falta alguno. Otro avisa la lectura de un punto que no está vigente en la
+fecha de la visita: no se usa. Un punto con su fila por leer no avisa: eso es
+la medición a medias.
+
+Una visita sin armadas muestra **+ Agregar la primera armada**. Si el lugar no
+tiene BM, la libreta pide agregar uno en la pestaña **BMs**: cada armada sale
+de un BM del lugar o de un punto de cambio.
+
+En el teléfono, la libreta es la lista de armadas, con sus lecturas y sus
+cotas; pulsar una la abre (§ 9).
+
+### 7.7 La armada
+
+![Popup de la armada 2 de la visita 12 de Torre Alameda](../../public/manual/34-armada-visita.png)
+
+Una **armada** es una posición del nivel (§ 6.2): una vista atrás a un punto
+con cota, las vistas a los puntos de control y, si la hay, una vista adelante.
+Su popup —«Armada 2 · visita 12»— tiene tres partes:
+
+- **Vista atrás · V+.** **Desde** dónde sale: **Un BM del lugar**, que se
+  elige de la lista y empieza un tramo, o **Un punto de cambio**, la V− de la
+  armada anterior, que solo se ofrece si esa armada terminó en uno. Se elige
+  antes de la primera lectura guardada; después, y al editar, queda fijo.
+  Luego, la lectura y la distancia, **opcional**, con **+ Hilos superior e
+  inferior (opcional)** como en la nivelación.
+- **Vistas a los puntos.** Una fila por punto, ya cargada con los de la
+  plantilla: su **lectura** (VI), su **cota** en vivo y un **✓** cuando quedó
+  guardada. **+ Otro punto** agrega uno con código libre.
+- **Vista adelante · V−.** **Sin vista adelante** termina la armada en sus
+  puntos. Si no, el **punto**, su **lectura** y su **distancia**, opcional:
+  - a un **BM del lugar**, con el rótulo **cierra en un BM**: el tramo que
+    salió de su BM **cierra** en él, si es el mismo, o **llega**, si es otro, y
+    se verifica. El popup muestra el **Cierre** o la **Llegada** y el **Orden
+    alcanzado**;
+  - a **otro punto**, con el rótulo **punto de cambio**: la armada siguiente
+    puede seguir desde él. Si no es punto de control ni BM del lugar, es un
+    **punto auxiliar**.
+
+Abajo, en vivo, la **altura del instrumento** y la cota del punto adelante.
+
+**Cada lectura se guarda al escribirla**: al salir del campo o con Enter, que
+además pasa al campo siguiente, como en la libreta de papel. Los guardados van
+en orden, y el pie dice cómo van: «Leídos 5 de 9 · guardado», «guardando…» o
+«sin guardar». Si la red falla, el error se queda en el popup con lo tecleado,
+y se reintenta con la lectura siguiente. Los errores de captura —una lectura
+fuera de 0 a 4 m, una distancia de cero, un punto sin código— también se
+quedan en el popup.
+
+Los botones:
+
+- **Seguir después** cierra el popup. Lo leído ya está guardado; si falta algo,
+  la visita queda En medición. Con un dato mal escrito no se cierra —tampoco
+  con la X—: muestra el error hasta que lo corrija o lo borre.
+- **Terminar armada** la da por terminada: los puntos que quedaron sin leer
+  salen de la libreta.
+- **Terminar y seguir con la armada 3** —si la libreta ya la trae—,
+  **Terminar y seguir desde CP-1** —si la V− fue a un punto de cambio— o
+  **Terminar y agregar armada**: termina y abre la siguiente.
+- **Quitar la armada**, en la última, la borra.
+
+Dos preguntas al guardar:
+
+- **Un punto de control en dos armadas.** Una visita da una cota por punto. El
+  popup «TA-04 está en dos armadas» muestra las dos lecturas con su cota y su
+  diferencia: elija la que se queda, y **Eliminar la de la armada N** borra la
+  otra.
+- **Una V− a un punto auxiliar.** Al terminar la armada, «¿Guardar CP-1 en los
+  BM del lugar?», con su cota medida hoy y una descripción opcional. **Guardar
+  en los BM** lo agrega al lugar (§ 7.3), y las próximas visitas pueden
+  armarse desde él; **Solo en esta visita** lo deja como punto de cambio.
+
+En el teléfono, el popup ocupa la pantalla, con la barra de guardado fija
+abajo.
+
+### 7.8 Importar la libreta
 
 ![Importar la libreta de la visita desde la plantilla CSV](../../public/manual/26-importar-libreta-visita.png)
 
-**Cotas directas.** Para una nivelación procesada fuera de la aplicación,
-elija **Cotas directas** en *Captura de las cotas*: se teclea la **cota
-medida** de cada punto y el **error de cierre (mm)**, que se registra tal
-cual, sin tolerancia. Las visitas registradas antes de que existiera la
-libreta siguen en este modo. Al cambiar de modo, el editor avisa de lo que
-descartará al guardar: la libreta o las cotas tecleadas.
+Con un nivel digital, **Importar .L o CSV**, a la derecha de los pasos, pasa a
+la libreta el archivo **.L de Leica** o la **plantilla CSV** de TopoField,
+como en nivelación (§ 6.9), con tres diferencias:
 
-**El cálculo.** En los dos modos, con la cota de cada punto, la aplicación
-calcula al instante:
+- el archivo se lee como **un solo tramo** desde el BM de su primera fila, que
+  **tiene que estar en los BM del lugar**; si no, el diálogo pide agregarlo
+  antes en la pestaña BMs;
+- se guardan las **lecturas**: la cota de cada punto sale de la medida, no del
+  archivo;
+- **reemplaza la libreta** de la visita, y el diálogo lo avisa si ya tenía
+  lecturas.
+
+Revise el tipo de cada punto antes de aceptar: los puntos de control suelen
+ser vistas intermedias. **Usar estas lecturas** guarda la libreta. Si al
+archivo le falta algún punto del lugar, la libreta lo avisa (§ 7.6).
+
+### 7.9 El cálculo
+
+La visita **no compensa**: el cierre de un tramo comprueba la medida, no se
+reparte. La cota de cada punto es la de su lectura:
+
+- **AI = cota + V+**: la altura del instrumento de la armada, con la cota del
+  BM del lugar o del punto de cambio de donde sale.
+- **Cota = AI − lectura**: la VI de un punto de control, o la V− del punto
+  adelante.
+
+**Los tramos.** Un tramo empieza en una armada que sale de un BM del lugar y
+sigue por sus puntos de cambio. Si su última V− cae en un BM del lugar, se
+**verifica**: en el mismo BM es un **cierre**; en otro, una **llegada**. El
+error se contrasta con la tolerancia K·√L de cada orden, con L la distancia
+del tramo en kilómetros y K la de la nivelación (§ 6.7), y el tramo alcanza el
+orden más alto que cumple.
+
+| El tramo… | Qué dice |
+|---|---|
+| Vuelve a su BM | Su cierre, en mm, y el orden alcanzado, con su tolerancia |
+| Llega a otro BM del lugar | Su llegada, en mm, y el orden alcanzado |
+| Termina en sus puntos | **Sin verificación**: no termina en un BM del lugar |
+| No tiene distancias | **Sin distancias**: el cierre no da orden |
+| Supera la tolerancia de todos los órdenes | **Fuera de los órdenes**: queda sin verificación |
+
+La cartera real es una sola armada por visita, de radiaciones desde el BM de
+la piscina: sus tramos terminan en sus puntos y quedan sin verificación.
+
+**La verificación de la visita** es la de su tramo peor: si todos se
+verifican, el orden más bajo de ellos; si alguno no, **Sin verificación**. La
+llevan la cabecera de la visita, el informe y el Excel. En Torre Alameda, la
+visita 12, de dos armadas por CP-1, cierra en −1.6 mm en BM-1: segundo orden.
+La 9 supera todas las tolerancias y queda sin verificación.
+
+**Un BM del lugar leído de paso.** Todas las cotas de un tramo salen de su BM
+de arranque: si ese BM se movió, todos los puntos parecen asentarse a la vez.
+Para detectarlo, haga pasar la libreta también por **otro BM del lugar**, como
+una vista más. Es lo que recomienda el protocolo de campo: nivelar primero
+entre BMs.
+
+La aplicación compara la cota que la libreta le da a ese BM con la suya en los
+BM del lugar, con la tolerancia de **tercer orden** sobre la distancia
+recorrida desde el arranque:
+
+- si nivela, la libreta lo dice: «BM-2 nivela con BM-1: -0.4 mm, tolerancia
+  2.0 mm.»;
+- si no, avisa con las dos cotas. Uno de los dos BM pudo moverse, o hay un
+  error en la libreta o en la cota del BM. Con dos BM no se sabe cuál se
+  movió; con un tercero, comparándolos entre sí, sí.
+
+**Solo avisa.** El aviso queda en la libreta, en el popup de la armada y con
+**⚠** junto a la fecha en la tabla de visitas del panel. En Torre Alameda, la
+visita 13 muestra BM-2 desplazado.
+
+**Parcial, acumulado, velocidad y estado.** Con la cota de cada punto, la
+aplicación calcula al instante:
 
 - **Parcial** — cuánto bajó (o subió) el punto desde la visita anterior, en mm.
 - **Acumulado** — cuánto ha bajado desde la línea base del punto —su C0 o,
@@ -1200,57 +1333,85 @@ calcula al instante:
   «un mes» genérico: una visita a 28 días y otra a 31 no dan la misma
   velocidad aunque el parcial fuera igual.
 - **Estado** — el nivel de alerta de ese punto, semáforo explicado en
-  [§ 7.4](#74-el-panel-del-lugar).
+  [§ 7.11](#711-el-panel-del-lugar).
 
 Un valor positivo es un **levantamiento**, no un asentamiento, y se muestra
 como tal: es un hallazgo que vale la pena revisar, no un error de signo.
 
-La tabla de cotas pide los puntos **vigentes** en la fecha de la visita. Un
-punto de baja, o dado de alta después de esa fecha, no aparece, y una nota
-debajo de la tabla dice cuál falta y por qué, para que la ausencia no parezca
-un olvido.
+La lectura de un punto que no está vigente en la fecha de la visita —de baja,
+o dado de alta después— no se usa.
 
 **Lecturas fuera de tendencia.** Desde la tercera lectura de un punto, la
-aplicación compara cada cota con la tendencia de ese punto y avisa bajo la
-cota si la lectura:
+aplicación compara cada cota con la tendencia de ese punto y avisa si la
+lectura:
 
 - va **contra** su tendencia más que el margen —por ejemplo, un punto que
   viene bajando y de pronto sube—, o
 - lo mueve **más del doble** de lo que su ritmo anterior preveía, más el
   margen.
 
-El margen absorbe el ruido de medición de las dos cotas que se comparan y sale
-de la tolerancia de cierre del circuito de cada visita: de su orden de
-precisión y de la longitud de su libreta. Con dos circuitos de 112 m en tercer
-orden, como los de Torre Alameda, es de 2,8 mm; con dos de 1,5 km, de 10,4 mm.
-Una visita capturada sin libreta cuenta como un circuito de 500 m: entre dos
-visitas así, el margen es de 1,5 mm en primer orden, 3 en segundo, 6 en
-tercero y 12 en ordinario. Moverse **menos** de lo previsto nunca avisa,
-porque un asentamiento por consolidación frena con el tiempo.
+El margen absorbe el ruido de medición de las dos cotas que se comparan, y es
+**fijo: 6 mm** entre dos visitas, sin depender del orden ni de la longitud de
+la libreta. Moverse **menos** de lo previsto nunca avisa, porque un
+asentamiento por consolidación frena con el tiempo. En la cartera real, B10
+avisa en la visita 3 —baja 50.0 mm en 12 días, donde su ritmo preveía unos
+17.1— y en la 4, contra su tendencia.
+
+El aviso sale en la libreta (§ 7.6), en los avisos del panel (§ 7.11) y en el
+informe.
 
 > **El aviso no bloquea.** Pide verificar la lectura en la libreta o volver a
 > medir; una lectura atípica también puede ser real. Si dos visitas seguidas
 > salen marcadas, casi siempre el error está en la primera: la segunda se
 > compara contra una velocidad ya contaminada.
 
-### 7.4 El panel del lugar
+### 7.10 Paso 2 · Resultados
 
-![Panel del lugar: indicadores, visitas, tendencia, evolución por punto y semáforo](../../public/manual/15-panel-asentamientos.png)
+![Paso de Resultados de la visita 7 de la cartera real](../../public/manual/27-vista-visita.png)
+
+**Indicadores.** Una franja con cuatro:
+
+- **Asentamiento máximo**: el acumulado de mayor magnitud, con sus puntos.
+- **Promedio**: el promedio encadenado de la visita (§ 7.11), con su cambio
+  frente a la anterior.
+- **Mayor movimiento**: el parcial de mayor magnitud, con sus puntos y los
+  días desde la anterior.
+- **Alerta**: la peor de la visita, y cuántos puntos están en precaución o
+  más.
+
+**Nota de la visita.** La que se escribió en el alta o en **Editar datos**.
+
+**Puntos de control.** Por punto: **Cota (m)**, **Parcial**, **Acumulado**,
+**Velocidad**, **Estado** —el semáforo (§ 7.11)— y **Tendencia**: **Acelera**
+o **Converge**.
+
+**Tendencia.** Desde la tercera lectura de un punto, dice si **acelera** —su
+velocidad crece más de lo que explica el error de las lecturas— o
+**converge**. Las dos velocidades salen de las tres últimas cotas del punto,
+así que el margen suma el ruido de las tres: con visitas a intervalos iguales,
+es unas √3 veces el del aviso de lectura fuera de tendencia, dividido entre el
+intervalo. En Torre Alameda, con visitas cada 28 días, 11,3 mm/mes. Un solo
+salto no basta para decir que un punto acelera.
+
+**El gráfico.** Al lado, fijo: **Acumulado**, por punto, con las líneas de los
+umbrales, o **Desde la anterior**, el movimiento de cada punto.
+
+### 7.11 El panel del lugar
+
+![Panel de la cartera real: indicadores, visitas, tendencia y avisos](../../public/manual/15-panel-asentamientos.png)
 
 Abrir el lugar desde el proyecto lleva a su pestaña **Panel**, que reúne el
-historial completo. La cabecera dice cuántos puntos de control tiene y la
-fecha de la lectura base; arriba del panel, la leyenda de los tres umbrales de
-acumulado que dibujan las gráficas.
+historial completo.
 
-**Indicadores.** Cinco, sobre la última visita y el histórico:
+**Indicadores.** Cinco, en una franja, sobre la última visita y el histórico:
 
 | Indicador | Qué muestra |
 |---|---|
 | Asentamiento máximo | El acumulado de mayor magnitud en la última visita, con su punto. Un levantamiento también cuenta |
 | Promedio actual | El promedio encadenado de la última visita (ver abajo) |
 | Velocidad máxima | La de mayor magnitud en la última visita, en mm/mes, con su punto |
-| Visitas en alerta | Cuántas visitas tienen algún punto en precaución o más |
-| Visitas | El total, con la fecha de la lectura base y la de la última |
+| Visitas en alerta | Cuántas visitas, de todas, tienen algún punto en precaución o más |
+| Umbrales | Los tres de acumulado, en mm, y los tres de velocidad, en mm/mes |
 
 El **promedio es encadenado**: el de la visita anterior más la media de lo que
 se movieron los puntos medidos en las dos. Un punto dado de alta entra con
@@ -1258,32 +1419,37 @@ acumulado 0 y uno dado de baja deja de contar; la media de los acumulados se
 movería con eso sin que nada se asentara, el encadenado no. Sin altas ni bajas,
 los dos coinciden.
 
-**Visitas.** De la más reciente a la más antigua; pulse una fila para abrir
-la visita (§ 7.5). Por visita: el promedio y el máximo del acumulado, el BM
-de amarre con su cota —con **⚠** si otro BM de la libreta no nivela con él
-(§ 7.3)—, el **mayor Δ** desde la anterior, el **cierre** de la
-libreta en mm —con **⚠** si supera la tolerancia; en cotas directas, el
-tecleado—, la peor alerta y el estado: borrador, calculada o cerrada.
+**Visitas.** De la más reciente a la más antigua: la visita —con **En
+medición** si le falta alguna lectura—, la fecha —con **⚠** si un BM del
+lugar leído de paso no nivela (§ 7.9)—, el promedio y el máximo del
+acumulado, el **mayor Δ** desde la anterior y la peor alerta. Pulse una fila
+para resaltarla en la tendencia; el enlace de la visita la abre.
 
-**Tendencia del asentamiento.** El promedio de los puntos en cada visita, con
-una banda que va del punto menos asentado al más asentado y las líneas de los
-umbrales. El eje horizontal es el **tiempo**, no el número de visita: si las
-visitas pasan de quincenales a mensuales, la pendiente no se exagera. Pulse
-una visita en la línea para abrirla.
+**Tendencia.** Al lado, fija mientras baja la página, con dos vistas:
 
-**Evolución por punto.** El acumulado de cada punto de control según los días
-desde la lectura base. Los chips de arriba muestran el último valor de cada
-punto; pulse uno para resaltarlo y atenuar los demás, y **Todos** para volver.
-Cada punto se distingue por **forma de marcador además de color** (círculo,
-cuadrado, triángulo, rombo, cruz), y las marcas «(de baja)» y «(alta …)»
-señalan los puntos que salieron o entraron a mitad del monitoreo.
+- **Promedio**: el promedio de los puntos en cada visita, con una banda que va
+  del punto menos asentado al más asentado y las líneas de los umbrales. La
+  visita elegida en la tabla va resaltada. El eje horizontal es el
+  **tiempo**, no el número de visita: si las visitas pasan de quincenales a
+  mensuales, la pendiente no se exagera.
+- **Por punto**: el acumulado de cada punto de control según los días desde la
+  lectura base. Los chips de arriba muestran el último valor de cada punto;
+  pulse uno para resaltarlo y atenuar los demás, y **Todos** para volver. Cada
+  punto se distingue por **forma de marcador además de color** (círculo,
+  cuadrado, triángulo, rombo, cruz), y las marcas «(de baja)» y «(alta …)»
+  señalan los puntos que salieron o entraron a mitad del monitoreo.
 
-Bajo cada gráfica, **Ver datos en tabla** despliega los mismos valores en
-texto: la alternativa para cuando la gráfica no basta.
+Debajo, la última visita en una línea: cuántos puntos están normales y los
+tres más asentados. Bajo cada gráfica, **Ver datos en tabla** despliega los
+mismos valores en texto: la alternativa para cuando la gráfica no basta.
 
-**Semáforo por punto.** El estado de cada punto en la última visita, según
-sus umbrales de velocidad y de acumulado — gana el peor de los dos. Tiene
-cuatro niveles:
+**Avisos.** Las lecturas fuera de tendencia de todas las visitas, por punto y
+visita (§ 7.9).
+
+**Semáforo por punto.** El estado de cada punto, según sus umbrales de
+velocidad y de acumulado — gana el peor de los dos. La columna de alerta de
+las visitas da el peor de cada una, y la columna Estado de los Resultados, el
+de cada punto (§ 7.10). Tiene cuatro niveles:
 
 | Nivel | Significado | Forma |
 |---|---|---|
@@ -1296,108 +1462,42 @@ cuatro niveles:
 > forma propia y su nombre escrito junto al indicador, así que se reconoce
 > igual con daltonismo o en una impresión en blanco y negro.
 
-La columna de estado del semáforo muestra además la marca **⚠ Lectura fuera
-de tendencia** cuando la lectura de la última visita la tuvo. No cambia el
-nivel del semáforo: es un aviso sobre la calidad del dato, no sobre la
-gravedad del movimiento. Es útil cuando el mismo punto sale en **Alerta** y
-**Acelerando**: la marca indica que lo más probable es una lectura mal tomada,
-no una aceleración real.
-
-**Tendencia.** Desde la tercera visita de un punto, la columna dice si
-**acelera** —su velocidad crece más de lo que explica el error de las lecturas—
-o **converge**. Las dos velocidades salen de las tres últimas cotas del punto,
-así que el margen suma el ruido de las tres, con el circuito de cada visita: es
-unas √3 veces el del aviso de lectura fuera de tendencia. En Torre Alameda,
-5,35 mm/mes. Un solo salto no basta para decir que un punto acelera.
-
 **Un dato en alarma se registra con normalidad.** El semáforo es un
 diagnóstico, no un control de captura: la aplicación **nunca** impide guardar
-una visita ni cerrarla por tener puntos en alerta o alarma. Un asentamiento
-alarmante es exactamente el hallazgo que este módulo existe para documentar;
+una lectura por dejar un punto en alerta o alarma. Un asentamiento alarmante
+es exactamente el hallazgo que este módulo existe para documentar;
 bloquearlo ocultaría el dato que más importa.
 
-### 7.5 La vista de una visita
+### 7.12 El informe del lugar
 
-![Vista de una visita con un punto seleccionado y su historial](../../public/manual/27-vista-visita.png)
+La pestaña **Informe** muestra el informe del lugar, listo para **Imprimir o
+guardar como PDF** (§ 10). Es la misma sección que lleva en un informe
+consolidado:
 
-Abrir una visita, desde la tabla o desde la tendencia, lleva a su vista, en
-solo lectura. Arriba, **← Volver** al lugar, la fecha, el amarre, el
-nivelador y el equipo, y las flechas **← →** para pasar a la visita anterior
-o a la siguiente. Las acciones: **Ver registro de nivelación**, en las
-visitas con libreta, y **Editar** y **Cerrar visita** mientras siga abierta.
-Una visita cerrada no se edita.
+1. Los datos del lugar: tipo de estructura, puntos de control —y cuáles están
+   de baja—, visitas, y el BM de arranque y el equipo de la última.
+2. **Veredicto**: la peor alerta de la última visita y el mayor acumulado, con
+   lo que le falta para el umbral siguiente, y si las visitas se verifican
+   (§ 7.9).
+3. **Cómo se calcula**: cuatro fórmulas —la altura del instrumento, la cota de
+   cada punto, el acumulado y la velocidad— y los umbrales del semáforo.
+4. **Evolución**: el acumulado de cada punto en el tiempo.
+5. **Visitas**: el promedio, el máximo, el mayor Δ, la verificación y la peor
+   alerta de cada una.
+6. **Puntos de la última visita**: su acumulado, su velocidad y su estado.
+7. **Notas de las visitas** y **avisos** de lecturas fuera de tendencia.
 
-**Indicadores.** El asentamiento máximo; el promedio, con su diferencia
-frente a la visita anterior —la media de lo que se movieron los puntos medidos
-en las dos—; el mayor movimiento desde la anterior; los puntos
-en alerta, de los medidos; el **cierre de nivelación**, con la tolerancia y si
-cumple; y la peor alerta junto al estado de la visita. Si otro BM de la libreta
-no nivela con el amarre, un aviso debajo lo dice, con las dos cotas (§ 7.3).
+Informa las visitas **calculadas**: las que están en medición se nombran
+aparte y entran cuando se terminan. Un informe consolidado admite el lugar con
+alguna visita calculada (§ 10.1).
 
-**Puntos de control.** Por punto: la cota base (su C0 o su primera lectura),
-la cota actual, el acumulado, el Δ desde la anterior, la velocidad y la
-alerta, con la marca de lectura fuera de tendencia. Seleccione un punto para
-ver al lado —debajo, en pantallas angostas— su **historial**: el acumulado hasta esta
-visita frente a los umbrales, y cuánto le falta para el siguiente: «Le faltan
-21.3 mm para el umbral de alerta (−50 mm)», o si ya superó el de alarma.
-
-**Barras.** *Asentamiento acumulado por punto*, con las líneas de los
-umbrales, y *Movimiento desde la visita anterior*. Pulse una barra para
-seleccionar su punto.
-
-**Registro de nivelación.** Un panel lateral con la libreta tal como se
-guardó: la fecha, el nivelador, el equipo y el BM de amarre; por fila, la
-armada, el punto, V+, AI, la vista intermedia (V. int.), V−, la cota y la
-cota compensada; y al pie ΣV+, ΣV−, el error de cierre, la tolerancia y la
-comprobación de cada BM de control (§ 7.3). Las
-vistas intermedias de los puntos de control van resaltadas: de ellas sale la
-cota del punto. Se cierra con **Cerrar** o con Esc.
-
-![Registro de nivelación de una visita](../../public/manual/28-registro-nivelacion.png)
-
-### 7.6 Cerrar una visita o el lugar
-
-Cerrar una **visita** la deja en solo lectura: es el registro de campo de una
-fecha concreta, y mientras está cerrada no admite cambios. Se exige lectura de
-todos los puntos **vigentes** en su fecha; los de baja no.
-
-En una visita con libreta, el diálogo de cierre muestra además el cierre de la
-libreta. **Si la comprobación aritmética no cuadra, no se puede cerrar**:
-corrija la libreta. Si el cierre supera la tolerancia, solo avisa: la visita
-se cierra con sus cotas sin compensar. Lo mismo si otro BM no nivela con el
-amarre (§ 7.3): el diálogo lo recuerda y la visita se cierra igual.
-
-> **Cierre las visitas en orden.** El parcial, la velocidad y la alerta de
-> cada punto se miden contra su lectura anterior, y un punto sin C0 acumula
-> desde su primera lectura. Si la visita que tiene esas lecturas sigue
-> abierta, la aplicación no deja cerrar las posteriores: «Cierra antes la
-> visita 2: P-01, P-07 se calculan contra sus lecturas». Si esas lecturas
-> siguieran editables, corregirlas movería lo que ya quedó cerrado.
-
-Cerrar el **lugar** termina el monitoreo por completo: el lugar y todas sus
-visitas —cerradas o no— quedan en solo lectura. Use el cierre del lugar
-cuando el seguimiento del sitio haya concluido, no visita por visita. El botón
-**Cerrar lugar** está en la barra de la pestaña **Puntos y lugar**.
-
-**Eliminar una visita.** Solo se puede eliminar la **última** visita del
-lugar, y solo si no está cerrada: el botón **Eliminar** aparece en su vista.
-Una visita intermedia no se borra, porque dejaría un hueco en la numeración y
-cambiaría el asentamiento parcial y la velocidad de la siguiente.
-
-**Reabrir.** Una visita cerrada se reabre con **Reabrir**, en su vista, y
-vuelve a editarse. Si el lugar está cerrado, primero se reabre el lugar: su
-botón **Reabrir** está en la cabecera, donde estaba **Nueva visita**. Reabrir
-el lugar no reabre sus visitas: las cerradas siguen cerradas. Si la visita
-tiene visitas posteriores, el diálogo lo recuerda: el parcial, la velocidad y
-la alerta de la siguiente se calculan contra sus lecturas, y cambian si
-cambian ellas.
-
-### 7.7 Dar de baja y de alta un punto
+### 7.13 Dar de baja y de alta un punto
 
 Los puntos que se miden no son siempre los mismos durante todo el monitoreo.
-Un BM se destruye, se tapa o se pierde; otro se instala cuando la obra avanza.
+Un punto se destruye, se tapa o se pierde; otro se instala cuando la obra
+avanza.
 
-**Dar de baja.** En el catálogo, **Dar de baja** pide dos datos:
+**Dar de baja.** En la pestaña Puntos, **Dar de baja** pide dos datos:
 
 - **De baja desde** — la primera fecha en que el punto ya **no** se mide. Debe
   ser posterior a su última lectura.
@@ -1406,47 +1506,44 @@ Un BM se destruye, se tapa o se pierde; otro se instala cuando la obra avanza.
 
 La baja **no borra nada**. Las lecturas anteriores siguen en el análisis, la
 gráfica muestra la serie hasta su última lectura con la marca «(de baja)», y
-el informe cuenta el punto y dice desde cuándo está de baja. Un punto de baja
-no se edita.
+el informe cuenta el punto y dice desde cuándo está de baja. Las visitas
+nuevas ya no lo traen en su libreta. Un punto de baja no se edita.
 
-**Deshacer una baja** solo sirve para corregir un error, y solo mientras
-ninguna visita cerrada tenga fecha igual o posterior a la baja. Después es
-definitiva, y el catálogo dice qué visita la hizo definitiva. Si un BM tapado
-aparece de nuevo, puede haberse movido: regístrelo como **punto nuevo**, con
-otro código y su propia línea base, no como la continuación de su serie.
+**Deshacer baja** la quita, para corregir un error. Si un punto tapado aparece
+de nuevo, puede haberse movido: regístrelo como **punto nuevo**, con otro
+código y su propia línea base, no como la continuación de su serie.
 
-> **Borrar no es dar de baja.** Un punto con lecturas en visitas cerradas no
-> se puede eliminar: es parte del registro del monitoreo. Borrar queda para
-> los puntos creados por error.
+> **Borrar no es dar de baja.** Eliminar un punto se lleva sus lecturas de
+> todas las visitas. Si se perdió en campo, dele de baja: su serie sigue en el
+> análisis. Borrar queda para los puntos creados por error.
 
 **Dar de alta.** Un punto que se agrega cuando el lugar ya tiene visitas se da
 de alta: el formulario pide la **fecha de alta** en lugar de la C0, porque su
-línea base será su **primera lectura**, no la visita 0 del lugar. La fecha
-debe ser posterior a la última visita cerrada, que se cerró sin él. El punto
-se exige en las visitas desde esa fecha y no en las anteriores.
+línea base será su **primera lectura**, no la de la primera visita del lugar.
+Las visitas nuevas desde esa fecha lo traen en su libreta; a una que ya existe
+se agrega con **+ Otro punto** (§ 7.7).
 
 ---
 
-## 8. Cerrar un proceso
+## 8. Sin cierre
 
-En control de asentamientos se cierran las **visitas** y el **lugar** (§ 7.6).
-**La poligonal y la nivelación no se cierran**: quedan calculadas y se
-corrigen cuando haga falta; su informe dice qué orden alcanzaron y alerta si
-no alcanzan ninguno (§ 5.7 y § 6.10).
+Ningún proceso se cierra: ni la poligonal (§ 5), ni la nivelación (§ 6), ni
+el lugar o la visita de asentamientos (§ 7). No hay **Cerrar** ni
+**Reabrir**, ni modo de solo lectura, ni registro de cierre, y un proyecto se
+puede eliminar siempre (§ 4.2).
 
-Cerrar deja el trabajo en solo lectura. El diálogo de cierre resume el
-resultado y la fecha, y debe marcar la confirmación explícitamente. Si la
-comprobación aritmética de la libreta de una visita no cuadra, no se puede
-cerrar: corrija la libreta. Cerrado, el trabajo se abre en solo lectura: los
-campos están deshabilitados y no hay barra de acciones. Su pestaña
-**Informe** ya no lleva la marca de borrador: es el informe del trabajo
-cerrado.
+Lo que daba el cierre lo dan ahora tres cosas:
 
-**Reabrir.** Una visita o un lugar cerrados se reabren con **Reabrir**.
-Vuelven a editarse, y se cierran otra vez con el diálogo de siempre. Se borra
-su registro de cierre —fecha y responsable—, y el nuevo cierre escribe el
-suyo. Si el lugar está en un informe consolidado, el diálogo lo avisa: el
-informe mostrará los datos nuevos (§ 10.1).
+- **Todo se recalcula en vivo.** Corregir una lectura, la cota de un BM o la
+  C0 de un punto recalcula lo que depende de ellos —en asentamientos, todas
+  las visitas que los usan—, y la aplicación avisa antes cuánto cambia.
+- **El orden se detecta.** La poligonal, la nivelación y cada tramo de una
+  visita dicen qué orden de precisión alcanzaron, y su informe alerta si no
+  alcanzan ninguno (§ 5.5, § 6.7 y § 7.9).
+- **El informe consolidado queda fijo.** Guarda la portada del día en que se
+  emitió y no se edita: para corregirlo, se elimina y se genera de nuevo
+  (§ 10.3). Sus secciones muestran los datos actuales de cada proceso; un PDF
+  ya descargado no cambia.
 
 ---
 
@@ -1464,6 +1561,12 @@ grados, minutos y segundos son lo bastante amplios para usarse con guantes.
 
 La navegación se reduce a un retorno al nivel anterior, en lugar de la ruta
 completa.
+
+**Una visita de asentamientos en el teléfono.** La libreta es la lista de
+armadas, y el popup de la armada ocupa la pantalla, con la barra de guardado
+fija abajo. Cada lectura se guarda al salir del campo: si se pierde la señal,
+lo tecleado se queda en el popup y se guarda con la lectura siguiente; si hay
+que irse, **Retomar medición** sigue donde quedó (§ 7.6 y § 7.7).
 
 **Coma o punto decimal.** Las celdas numéricas aceptan los dos: `2541,7545` y
 `2541.7545` son el mismo número, y el teclado del teléfono ofrece el separador
@@ -1483,43 +1586,30 @@ cansa menos. Se cambia en el menú de cuenta (§ 2).
 
 Hay dos clases de informe:
 
-- **El informe de un proceso** está en su pestaña **Informe**
-  ([§ 4.4](#44-la-pantalla-de-un-proceso)): no hay que generarlo. Mientras el
-  proceso no esté cerrado sale como borrador; el de una poligonal o una
-  nivelación, que no se cierran, sin marca.
-- **Un informe consolidado** reúne varios trabajos ya terminados de un
-  proyecto en un solo documento imprimible, con título, orden y observaciones
-  propios. Se genera en la pestaña **Informes** del proyecto.
-
-Los dos llevan el registro de quién cerró cada cosa y cuándo, con el nombre
-de la persona. Las poligonales y las nivelaciones no tienen fila en él: no
-se cierran.
+- **El informe de un proceso** está en su paso o pestaña **Informe**
+  ([§ 4.4](#44-la-pantalla-de-un-proceso)): no hay que generarlo, y no lleva
+  marca de borrador, porque ningún proceso se cierra.
+- **Un informe consolidado** reúne varios trabajos calculados de un proyecto
+  en un solo documento imprimible, con título, orden y observaciones propios.
+  Se genera en la pestaña **Informes** del proyecto.
 
 ### 10.1 Qué puede incluirse
 
-**Poligonales y nivelaciones calculadas y lugares cerrados**, en un informe
-consolidado. El
-informe no guarda una copia de las mediciones: las vuelve a leer cada vez que
-se abre. Solo guarda su título, sus observaciones, la lista de procesos y la
-portada del día en que se emitió (§ 10.3).
+**Poligonales y nivelaciones calculadas y lugares con alguna visita
+calculada**, en un informe consolidado. El informe no guarda una copia de las
+mediciones: las vuelve a leer cada vez que se abre. Solo guarda su título, sus
+observaciones, la lista de procesos y la portada del día en que se emitió
+(§ 10.3).
 
-- Un lugar **cerrado** no puede cambiar sus mediciones ni su veredicto
-  mientras siga cerrado, así que su sección dice lo mismo hoy y dentro de un
-  año. Si se reabre (§ 8), el informe muestra sus datos actuales y, mientras
-  siga abierto, «—» en su registro de cierre, y el pie dice que se reabrió
-  después de emitirlo.
-- Una **poligonal** o una **nivelación** no se cierran: entran calculadas,
-  cumplan o no un orden, y su sección muestra lo que tengan al abrir el
-  informe. Si no alcanzan ningún orden, la sección lo alerta. Una nivelación
-  con la libreta a medias no entra.
+- Una **poligonal** o una **nivelación** entran calculadas, cumplan o no un
+  orden, y su sección muestra lo que tengan al abrir el informe. Si no
+  alcanzan ningún orden, la sección lo alerta. Una nivelación con la libreta a
+  medias no entra.
+- Un **lugar** entra con sus visitas calculadas, y su sección muestra lo que
+  tenga al abrir el informe: una visita nueva aparece sola. Las que están en
+  medición se nombran aparte y entran cuando se terminan (§ 7.12).
 
 Un PDF ya descargado no cambia.
-
-De ahí se sigue una consecuencia:
-
-- En control de asentamientos, lo que se incluye es el **lugar cerrado**, no
-  una visita suelta. Un lugar todavía activo admite visitas nuevas, así que su
-  informe cambiaría solo.
 
 Si el proyecto no tiene nada que incluir, la pantalla se lo dice en vez de
 ofrecer un formulario que no llevaría a ninguna parte.
@@ -1527,10 +1617,9 @@ ofrecer un formulario que no llevaría a ninguna parte.
 ### 10.2 Generar un informe consolidado
 
 En la pestaña **Informes** del proyecto, pulse **Generar Nuevo Informe**. Desde
-la pestaña **Informe** de un lugar cerrado o de una poligonal o una nivelación
-calculadas,
-**Generar un informe consolidado con este proceso** abre el mismo formulario
-con ese proceso ya marcado.
+el **Informe** de una poligonal o una nivelación calculadas, o de un lugar con
+alguna visita calculada, **Generar un informe consolidado con este proceso**
+abre el mismo formulario con ese proceso ya marcado.
 
 ![Nuevo informe](../../public/manual/18-nuevo-informe.png)
 
@@ -1539,7 +1628,7 @@ Se pide:
 | Campo | Para qué |
 |---|---|
 | Título | Encabeza la portada del documento |
-| Procesos a incluir | Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares cerrados |
+| Procesos a incluir | Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares con alguna visita calculada |
 | Orden de las secciones | Con las flechas ↑ ↓ ordena cómo saldrán |
 | Observaciones | Texto libre que se imprime al final |
 
@@ -1560,8 +1649,9 @@ una sección
 por proceso con sus resultados **y su equipo** —en las poligonales, con la
 corrección por método y su dibujo (§ 5.7)—, el resumen consolidado de
 precisiones —con una columna de equipo y, en las poligonales, el orden
-alcanzado—, sus observaciones y el registro de cierre. El equipo ya no es un dato del proyecto: cada sección imprime el que
-declaró su propio proceso (en asentamientos, el de la visita más reciente).
+alcanzado— y sus observaciones. El equipo ya no es un dato del proyecto: cada
+sección imprime el que declaró su propio proceso (en asentamientos, el de la
+visita más reciente).
 
 > El PDF lo genera su navegador, no la aplicación. Los márgenes y los
 > encabezados de página dependen de lo que usted elija en ese diálogo.
@@ -1591,10 +1681,10 @@ libro da lo que daría guardar la nivelación ahora: el orden detectado y las
 cotas compensadas, también en una guardada antes de que el orden se detectara.
 
 En control de asentamientos, «Datos Crudos» añade un bloque **«Visitas»**
-con el modo de captura, el BM de amarre, el cierre y la tolerancia de cada
-una, y el libro lleva una cuarta hoja, **«Libretas»**: la libreta de cada
-visita que la tiene, con sus cotas calculadas y compensadas y la cota de
-catálogo de los BM de control (§ 7.3).
+con el estado, el BM de arranque, la verificación, el cierre, la tolerancia y
+la nota de cada una, y el libro lleva una cuarta hoja, **«Libretas»**: la
+libreta de cada visita, fila por fila con su **tramo**, la cota de la medida
+—sin compensar— y la de los BM del lugar leídos de paso (§ 7.9).
 
 A diferencia del informe, la exportación funciona **en cualquier estado**:
 también sobre un borrador. Las celdas que aún no se han calculado salen
@@ -1613,25 +1703,17 @@ serie, fecha de calibración y precisión: angular y de distancia en una
 estación total; tipo y desviación típica en un nivel. Cada sección tiene
 **Agregar**, y cada equipo **Editar** y **Eliminar**.
 
-En el formulario de equipo de cada visita:
-
-- **Tomar del catálogo** copia los datos del equipo elegido en los campos, que
-  siguen editables.
-- **Guardar en el catálogo** guarda lo que ha tecleado. Si el mismo aparato
-  —misma marca, modelo y serie— ya está, el botón dice «Ya está en el
-  catálogo».
-
-En una poligonal y en una nivelación, el equipo es solo su identidad —marca,
-modelo y número de serie—. En la nivelación, **Tomar del catálogo** la copia;
-en la poligonal se escribe.
+En un proceso, el equipo es solo su identidad —marca, modelo y número de
+serie—. En una nivelación y en una visita de asentamientos, **Tomar del
+catálogo** copia los datos del nivel elegido en los campos, que siguen
+editables; en la poligonal se escriben.
 
 > **El catálogo es una plantilla.** Cada proceso guarda su propia copia del
 > equipo: corregir o eliminar un equipo del catálogo no cambia ningún
 > proceso, visita ni informe ya hecho.
 
-**Calibración de más de un año.** La lista y el formulario avisan cuando la
-fecha de calibración tiene más de 12 meses: en una visita, a la fecha de la
-visita. Es un aviso; la visita se guarda igual.
+**Calibración de más de un año.** La lista avisa cuando la fecha de
+calibración tiene más de 12 meses. Es un aviso: el equipo se usa igual.
 
 ---
 
@@ -1642,15 +1724,12 @@ En el menú de cuenta —el círculo con su inicial, arriba a la derecha—:
 **Sistema**, **Claro** u **Oscuro** (§ 2). Con **Sistema**, sigue la
 configuración del teléfono o del computador.
 
-**Cerré una visita o un lugar por error. ¿Puedo reabrirlo?**
-Sí: con **Reabrir** (§ 8). Vuelve a ser editable y se cierra otra vez cuando
-esté listo.
-
-**¿Cómo cierro una poligonal o una nivelación?**
-No se cierran: quedan calculadas y se corrigen cuando haga falta. El paso de
-Ajuste o de Compensación y su informe dicen qué orden de precisión alcanzaron
-(§ 5.5 y § 6.7); si no alcanzan ninguno, el informe lo alerta. Un informe
-consolidado las incluye calculadas.
+**¿Cómo cierro un proceso?**
+No se cierra (§ 8): ni la poligonal, ni la nivelación, ni el lugar o la visita
+de asentamientos. Quedan calculados y se corrigen cuando haga falta. El paso
+de Ajuste o de Compensación, la verificación de cada visita y su informe dicen
+qué orden de precisión alcanzaron (§ 5.5, § 6.7 y § 7.9); si no alcanzan
+ninguno, el informe lo alerta. Un informe consolidado los incluye calculados.
 
 **¿Por qué una poligonal muestra «Sin verificación de cierre»?**
 Es de tipo *abierta sin control*: no regresa al punto de partida ni llega a un
@@ -1662,16 +1741,16 @@ Que el cierre fue exacto: el error lineal es cero o despreciable. Ocurre con
 datos teóricos o levantamientos muy precisos.
 
 **¿Dónde declaro el equipo y el orden de precisión que usé?**
-En cada proceso, no en el proyecto. Cada visita de asentamiento declara su
-orden y su equipo en su propia configuración. Una poligonal o una nivelación
-declara su equipo en el alta, y su orden no se declara: se detecta al
-calcularla (§ 5.5 y § 6.7). Si el equipo es el de siempre, tómelo del
-catálogo de equipos (§ 12).
+El equipo, en cada proceso y no en el proyecto: una poligonal o una nivelación
+lo declara en su alta, y cada visita de asentamiento en la suya. El orden no se
+declara en ninguno: se detecta al calcular (§ 5.5, § 6.7 y § 7.9). Si el
+equipo es el de siempre, tómelo del catálogo de equipos (§ 12).
 
 **Mi nivelación no alcanza ningún orden. ¿Por qué se compensó?**
 Porque la nivelación compensa siempre que haya contra qué cerrar, y avisa:
 en la práctica, un trabajo fuera de tolerancia se repite (§ 6.7). Una visita
-de asentamientos, en cambio, no compensa un cierre fuera de tolerancia.
+de asentamientos, en cambio, no compensa nunca: su cierre solo comprueba
+(§ 7.9).
 
 **Levanté una poligonal en un sistema local. ¿Puedo pasarla a coordenadas
 reales?**
@@ -1679,12 +1758,11 @@ Sí: **Georreferenciar** (§ 5.6), con dos estaciones de coordenadas conocidas,
 o editando el amarre con las coordenadas reales de la partida y la referencia.
 El orden alcanzado no cambia.
 
-**¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?**
-En una visita, la aplicación no lo juzga: registra el equipo para el informe,
-y lo que dice si el trabajo cumple es el cierre contra la tolerancia del
-orden. Si el equipo no da para el orden, lo más probable es que el cierre no
-cumpla. Una poligonal o una nivelación no eligen orden: alcanzan el que su
-cierre permite.
+**¿La aplicación juzga si mi equipo da para el orden que necesito?**
+No: registra el equipo para el informe. Lo que dice si el trabajo cumple es su
+cierre contra la tolerancia de cada orden: ningún proceso elige orden, alcanza
+el que su cierre permite. Si el equipo no da para el orden que necesita, lo
+más probable es que el cierre no lo alcance.
 
 **Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición
 está bien?**
@@ -1698,21 +1776,24 @@ Porque la libreta no ha llegado a su BM: falta marcar la casilla de fin en
 la última armada —«Llega al BM», «Llega a …» o «Fin de la ida»—, o terminar
 la vuelta. El paso de Compensación dice qué falta (§ 6.7).
 
-**Un punto quedó en alarma. ¿Puedo seguir guardando y cerrando la visita?**
+**Un punto quedó en alarma. ¿Puedo seguir midiendo?**
 Sí. El semáforo es un diagnóstico, no un bloqueo: un punto en alerta o alarma
-se guarda y se cierra igual que cualquier otro. Es justamente el dato que el
-control de asentamientos busca detectar y dejar documentado.
+se guarda igual que cualquier otro. Es justamente el dato que el control de
+asentamientos busca detectar y dejar documentado.
 
-**La libreta de una visita salió fuera de tolerancia. ¿Puedo cerrarla?**
-Sí. Fuera de tolerancia solo avisa: la visita se guarda y se cierra con sus
-cotas sin compensar, y el aviso queda en la columna Cierre del panel y en la
-vista de la visita. Lo que sí impide cerrarla es una comprobación aritmética
-que no cuadra, porque indica un error en la libreta.
+**Un tramo de mi visita no alcanza ningún orden. ¿Qué pasa?**
+Nada se bloquea: la visita queda calculada con las cotas de la medida, y el
+tramo y la visita dicen **Sin verificación** (§ 7.9). Conviene revisar la
+libreta o repetir la nivelación.
 
 **¿Por qué no puedo teclear la cota de un punto en la visita?**
-Porque la visita se captura con libreta: la cota sale de la vista menos del
-punto en la libreta. Si nivelaron y calcularon fuera de la aplicación, cambie
-*Captura de las cotas* a **Cotas directas**.
+Porque toda visita se mide con libreta: la cota sale de la lectura del punto,
+AI − lectura (§ 7.9). Si nivelaron con un nivel digital, importe su archivo
+.L o la plantilla CSV (§ 7.8).
+
+**La medición de una visita quedó a medias. ¿Perdí algo?**
+No: cada lectura se guarda al escribirla. La visita queda **En medición**, y
+**Retomar medición** abre la armada en la primera lectura que falta (§ 7.6).
 
 **¿Por qué la velocidad de dos visitas mensuales no me da el mismo número?**
 Porque se calcula con los días reales entre las dos fechas, no con «un mes»
@@ -1720,15 +1801,14 @@ fijo. Un intervalo de 28 días y uno de 31 producen velocidades distintas
 aunque el asentamiento parcial fuera idéntico.
 
 **¿Puedo eliminar un proyecto?**
-Si no tiene nada cerrado, sí, desde **Configuración**. Si tiene algún lugar o
-visita de asentamientos cerrados, no: esos registros no se borran. Archívelo
-para ocultarlo de la lista activa (§ 4.2).
+Sí, desde **Configuración**: se borra con todo lo que contiene, de forma
+permanente. Para ocultarlo de la lista activa sin borrarlo, archívelo (§ 4.2).
 
-**Salí de un editor y perdí lo que había tecleado.**
-Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el
-navegador le preguntó antes. Los botones atrás y adelante del navegador no
-preguntan: guarde antes de usarlos (§ 4.4). En una poligonal o una nivelación
-no hay qué perder: cada popup guarda al confirmar.
+**Salí de una pantalla y perdí lo que había tecleado.**
+Ninguna pantalla de proceso tiene botón Guardar: la poligonal y la nivelación
+guardan cada popup al confirmar, y la visita de asentamientos cada lectura al
+salir del campo o con Enter (§ 4.4). Solo se pierde lo tecleado en un popup
+que se cierra sin confirmar.
 
 **¿Otros usuarios pueden ver mis proyectos?**
 No. Cada usuario accede solo a los suyos; la restricción se aplica en la base de

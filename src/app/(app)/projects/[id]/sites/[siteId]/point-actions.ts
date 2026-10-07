@@ -3,13 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
-import {
-  pointReferenceChanged,
-  REFERENCE_LOCKED_MESSAGE,
-  undoRetirementBlocker,
-  validateActiveFrom,
-  validateRetirement,
-} from "@/lib/validators/settlement";
+import { validateActiveFrom, validateRetirement } from "@/lib/validators/settlement";
 import { logDbError } from "@/lib/errors/user-message";
 
 export interface ActionResult {
@@ -18,7 +12,7 @@ export interface ActionResult {
   pointId?: string;
   /**
    * Solo en `deletePointAction`: el borrado no se ejecutó porque el punto
-   * tiene lecturas en visitas abiertas y hace falta que el usuario confirme.
+   * tiene lecturas y hace falta que el usuario confirme.
    * `lecturasAfectadas` es el número de lecturas que se perderían.
    */
   requiereConfirmacion?: boolean;
@@ -49,52 +43,45 @@ function validatePointPayload(payload: PointPayload): string | null {
   return null;
 }
 
-/** Carga el lugar y verifica que exista y no esté cerrado. */
-async function loadOpenSite(
+/** Carga el lugar y verifica que exista y sea de asentamientos. */
+async function loadSite(
   supabase: Awaited<ReturnType<typeof createClient>>,
   siteId: string,
 ) {
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id, kind")
+    .select("id, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
   // Un lugar de agrupación (Fase 22) no tiene catálogo de puntos.
   if (!site || site.kind !== "settlement") {
     return { ok: false as const, error: "Lugar no encontrado." };
   }
-  if (site.status === "closed") {
-    return {
-      ok: false as const,
-      error: "El lugar está cerrado; no admite cambios en el catálogo.",
-    };
-  }
   return { ok: true as const, site };
 }
 
-/**
- * Visitas del lugar, en orden de fecha, con su estado. Deciden si un punto
- * nuevo es original o de alta, y si una baja todavía se puede deshacer.
- */
-async function loadSiteVisits(
+/** ¿El lugar ya tiene visitas? Decide si un punto nuevo es original o de alta. */
+async function siteHasVisits(
   supabase: Awaited<ReturnType<typeof createClient>>,
   siteId: string,
-) {
-  const { data } = await supabase
+): Promise<boolean> {
+  const { count } = await supabase
     .from("settlement_visits")
-    .select("visit_number, date, status")
-    .eq("site_id", siteId)
-    .order("date", { ascending: true });
-  const visits = (data ?? []).map((v) => ({
-    visitNumber: v.visit_number,
-    date: v.date,
-    closed: v.status === "closed",
-  }));
-  return {
-    all: visits,
-    closed: visits.filter((v) => v.closed),
-    lastClosedDate: visits.filter((v) => v.closed).at(-1)?.date ?? null,
-  };
+    .select("id", { count: "exact", head: true })
+    .eq("site_id", siteId);
+  return (count ?? 0) > 0;
+}
+
+/** Cuántas visitas tienen lectura de un punto (Fase 37): para avisar antes de cambiarlo. */
+async function visitsWithReadings(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  pointId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from("settlement_readings")
+    .select("id", { count: "exact", head: true })
+    .eq("point_id", pointId);
+  return count ?? 0;
 }
 
 /** Fecha de la última lectura de un punto, en cualquier visita, o null. */
@@ -131,9 +118,9 @@ async function loadPoint(
  * Crea un punto del catálogo de un lugar.
  *
  * Si el lugar ya tiene visitas, el punto se da de ALTA (Fase 11): exige fecha
- * de alta posterior a la última visita cerrada y no lleva C0 —su línea base es
- * su primera lectura—. Si no tiene visitas, es un punto original, con C0
- * opcional como siempre.
+ * de alta y no lleva C0 —su línea base es su primera lectura—. Si no tiene
+ * visitas, es un punto original, con C0 opcional como siempre. Desde la Fase
+ * 37 la fecha de alta es libre: ya no hay visitas cerradas que la limiten.
  */
 export async function createPointAction(
   payload: PointPayload,
@@ -143,11 +130,10 @@ export async function createPointAction(
 
   const supabase = await createClient();
 
-  const siteCheck = await loadOpenSite(supabase, payload.siteId);
+  const siteCheck = await loadSite(supabase, payload.siteId);
   if (!siteCheck.ok) return { ok: false, error: siteCheck.error };
 
-  const visits = await loadSiteVisits(supabase, payload.siteId);
-  const isAlta = visits.all.length > 0;
+  const isAlta = await siteHasVisits(supabase, payload.siteId);
   if (isAlta) {
     if (payload.activeFrom === null) {
       return {
@@ -155,7 +141,7 @@ export async function createPointAction(
         error: "El lugar ya tiene visitas: indica la fecha de alta del punto.",
       };
     }
-    const altaError = validateActiveFrom(payload.activeFrom, visits.lastClosedDate);
+    const altaError = validateActiveFrom(payload.activeFrom);
     if (altaError) return { ok: false, error: altaError };
   }
 
@@ -198,14 +184,14 @@ export async function savePointAction(
 
   const supabase = await createClient();
 
-  const siteCheck = await loadOpenSite(supabase, payload.siteId);
+  const siteCheck = await loadSite(supabase, payload.siteId);
   if (!siteCheck.ok) return { ok: false, error: siteCheck.error };
 
   const current = await loadPoint(supabase, payload.siteId, pointId);
   if (!current) return { ok: false, error: "Punto no encontrado." };
 
   // Un punto de baja ya no tiene datos abiertos: editar su C0 solo
-  // reescribiría su historia cerrada, que el panel recalcula en vivo. Para corregirlo, primero se deshace la baja, si todavía se puede.
+  // reescribiría la historia de un punto que ya no se mide. Para corregirlo, primero se deshace la baja.
   if (current.retired_on !== null) {
     return {
       ok: false,
@@ -224,27 +210,14 @@ export async function savePointAction(
         error: "La fecha de alta no se cambia una vez medido el punto.",
       };
     }
-    const visits = await loadSiteVisits(supabase, payload.siteId);
-    const altaError = validateActiveFrom(payload.activeFrom, visits.lastClosedDate);
+    const altaError = validateActiveFrom(payload.activeFrom);
     if (altaError) return { ok: false, error: altaError };
     activeFrom = payload.activeFrom;
   }
 
-  // La C0 de un punto medido en una visita cerrada ya no cambia (Fase 23):
-  // los resultados con que se cerró dependen de ella. El trigger de la base
-  // garantiza lo mismo; aquí se da el mensaje.
+  // La C0 se cambia aunque el punto tenga historia (Fase 37, decisión 18): la
+  // pantalla avisa antes cuántas visitas cambian (`pointImpactAction`).
   const initialElevation = isAlta ? null : payload.initialElevation;
-  if (pointReferenceChanged(current, { ...payload, initialElevation })) {
-    const { count, error: countError } = await supabase
-      .from("settlement_readings")
-      .select("id, settlement_visits!inner(status)", { count: "exact", head: true })
-      .eq("point_id", pointId)
-      .eq("settlement_visits.status", "closed");
-    if (countError) {
-      return { ok: false, error: logDbError(countError, "No se pudo guardar el punto.") };
-    }
-    if ((count ?? 0) > 0) return { ok: false, error: REFERENCE_LOCKED_MESSAGE };
-  }
 
   const { error } = await supabase
     .from("settlement_points")
@@ -270,26 +243,15 @@ export async function savePointAction(
   // El código es la clave con que la libreta de una visita encuentra al punto
   // (Fase 18): la cota se deriva de la fila cuyo código coincide. Si el código
   // cambia y las filas no, el siguiente guardado de esa visita ya no
-  // encontraría el punto y su cota desaparecería sin aviso. Se renombran las
-  // filas de las visitas ABIERTAS; las cerradas son inmutables y conservan el
-  // código con que se midieron (PRD de la Fase 18, decisión 20).
+  // encontraría el punto. Se renombran las filas de todas sus visitas: desde la
+  // Fase 37 ninguna está cerrada.
   const newCode = payload.code.trim();
   if (newCode !== current.code) {
-    const { data: openVisits, error: visitsError } = await supabase
-      .from("settlement_visits")
-      .select("id")
-      .eq("site_id", payload.siteId)
-      .neq("status", "closed");
-    if (visitsError) return { ok: false, error: logDbError(visitsError, "No se pudo guardar el punto.") };
-    const openIds = (openVisits ?? []).map((v) => v.id);
-    if (openIds.length > 0) {
-      const { error: renameError } = await supabase
-        .from("settlement_book_readings")
-        .update({ point_code: newCode })
-        .eq("point_id", pointId)
-        .in("visit_id", openIds);
-      if (renameError) return { ok: false, error: logDbError(renameError, "No se pudo guardar el punto.") };
-    }
+    const { error: renameError } = await supabase
+      .from("settlement_book_readings")
+      .update({ point_code: newCode })
+      .eq("point_id", pointId);
+    if (renameError) return { ok: false, error: logDbError(renameError, "No se pudo guardar el punto.") };
   }
 
   // La C0 del punto puede haber cambiado, y de ella dependen valores YA
@@ -308,18 +270,23 @@ export async function savePointAction(
 }
 
 /**
+ * Cuántas visitas cambian si se cambia la C0 del punto o se elimina (Fase 37):
+ * la pantalla lo dice antes de confirmar.
+ */
+export async function pointImpactAction(siteId: string, pointId: string): Promise<{ visits: number }> {
+  const supabase = await createClient();
+  const point = await loadPoint(supabase, siteId, pointId);
+  if (!point) return { visits: 0 };
+  return { visits: await visitsWithReadings(supabase, pointId) };
+}
+
+/**
  * Elimina un punto del catálogo.
  *
- * Rechaza el borrado sin excepción si el punto tiene lecturas en visitas
- * cerradas: esas lecturas son parte del registro inmutable del monitoreo y
- * borrar el punto las dejaría huérfanas de catálogo.
- *
- * Si el punto tiene lecturas en visitas abiertas (`draft` / `calculated`),
- * el `DELETE` de `settlement_points` cascadea por la FK
- * `settlement_readings_point_id_fkey` y se llevaría esas lecturas con él: son
- * cotas medidas en terreno, no un registro administrativo, así que no se
- * borran a la primera. Sin `confirmado`, se informa cuántas lecturas se
- * perderían y no se borra nada; con `confirmado: true`, se procede.
+ * Si el punto tiene lecturas, el `DELETE` cascadea por la FK y se las lleva:
+ * son cotas medidas en terreno, así que no se borran a la primera. Sin
+ * `confirmado`, se informa cuántas se perderían y no se borra nada; con
+ * `confirmado: true`, se procede. Si se perdió en campo, mejor darlo de baja.
  */
 export async function deletePointAction(
   siteId: string,
@@ -328,46 +295,17 @@ export async function deletePointAction(
 ): Promise<ActionResult> {
   const supabase = await createClient();
 
-  const siteCheck = await loadOpenSite(supabase, siteId);
+  const siteCheck = await loadSite(supabase, siteId);
   if (!siteCheck.ok) return { ok: false, error: siteCheck.error };
 
-  const { count: lecturasCerradas } = await supabase
-    .from("settlement_readings")
-    .select("id, settlement_visits!inner(status)", {
-      count: "exact",
-      head: true,
-    })
-    .eq("point_id", pointId)
-    .eq("settlement_visits.status", "closed");
-  if ((lecturasCerradas ?? 0) > 0) {
-    return {
-      ok: false,
-      error:
-        "El punto tiene lecturas en visitas cerradas y no puede eliminarse. Si el BM se perdió o se destruyó, dalo de baja.",
-    };
-  }
-
   if (!confirmado) {
-    const { count: lecturasAbiertas } = await supabase
-      .from("settlement_readings")
-      .select("id, settlement_visits!inner(status)", {
-        count: "exact",
-        head: true,
-      })
-      .eq("point_id", pointId)
-      .neq("settlement_visits.status", "closed");
-    // Un punto sin lecturas se borra sin más. Uno CON lecturas en visitas
-    // abiertas arrastra esas mediciones por la FK en cascada, así que no se
-    // borra a la primera: se informa cuántas se perderían y se exige
-    // confirmación explícita. Son cotas medidas en terreno, no un registro
-    // administrativo.
-    if ((lecturasAbiertas ?? 0) > 0) {
-      const n = lecturasAbiertas ?? 0;
+    const n = await visitsWithReadings(supabase, pointId);
+    if (n > 0) {
       return {
         ok: false,
         requiereConfirmacion: true,
         lecturasAfectadas: n,
-        error: `El punto tiene ${n} ${n === 1 ? "lectura registrada" : "lecturas registradas"} en visitas abiertas. Si continúas, se eliminarán junto con el punto.`,
+        error: `El punto tiene ${n} ${n === 1 ? "lectura registrada" : "lecturas registradas"}. Si continúas, se eliminarán junto con el punto.`,
       };
     }
   }
@@ -399,7 +337,7 @@ export async function retirePointAction(
 ): Promise<ActionResult> {
   const supabase = await createClient();
 
-  const siteCheck = await loadOpenSite(supabase, siteId);
+  const siteCheck = await loadSite(supabase, siteId);
   if (!siteCheck.ok) return { ok: false, error: siteCheck.error };
 
   const point = await loadPoint(supabase, siteId, pointId);
@@ -428,17 +366,14 @@ export async function retirePointAction(
   return { ok: true };
 }
 
-/**
- * Deshace una baja. Solo para corregir un error: mientras ninguna visita
- * cerrada tenga fecha igual o posterior a la baja (`undoRetirementBlocker`).
- */
+/** Deshace una baja: para corregir un error (Fase 11; libre desde la Fase 37). */
 export async function undoRetirementAction(
   siteId: string,
   pointId: string,
 ): Promise<ActionResult> {
   const supabase = await createClient();
 
-  const siteCheck = await loadOpenSite(supabase, siteId);
+  const siteCheck = await loadSite(supabase, siteId);
   if (!siteCheck.ok) return { ok: false, error: siteCheck.error };
 
   const point = await loadPoint(supabase, siteId, pointId);
@@ -446,10 +381,6 @@ export async function undoRetirementAction(
   if (point.retired_on === null) {
     return { ok: false, error: "El punto no está de baja." };
   }
-
-  const visits = await loadSiteVisits(supabase, siteId);
-  const blocker = undoRetirementBlocker(point.retired_on, visits.closed);
-  if (blocker) return { ok: false, error: blocker };
 
   const { error } = await supabase
     .from("settlement_points")

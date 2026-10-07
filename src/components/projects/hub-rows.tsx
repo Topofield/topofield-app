@@ -5,7 +5,7 @@
 import { StatusIndicator } from "@/components/design-system";
 import type { ProcessRow } from "@/components/projects/process-table";
 import type { StatusFilter } from "@/lib/process-list";
-import { PROCESS_STATUS_TONE, SITE_STATUS_TONE } from "@/lib/process-status";
+import { PROCESS_STATUS_TONE } from "@/lib/process-status";
 import { formatPrecision, formatSignedMm } from "@/lib/utils/format";
 import {
   LEVELING_TYPE_CHOICE_LABELS,
@@ -20,14 +20,10 @@ import {
   type PolygonalProcess,
 } from "@/types/polygonal";
 import { ALERT_LEVEL_LABELS, type AlertLevel } from "@/types/settlement";
-import {
-  SITE_STATUS_LABELS,
-  STRUCTURE_TYPE_LABELS,
-  STRUCTURE_TYPES,
-  type Site,
-} from "@/types/site";
+import { STRUCTURE_TYPE_LABELS, STRUCTURE_TYPES, type Site } from "@/types/site";
 
-export const SITE_CHIPS: StatusFilter[] = ["todos", "activos", "cerrados"];
+/** El lugar no tiene estado (Fase 37): sin chips. */
+export const SITE_CHIPS: StatusFilter[] = [];
 /** La poligonal no se cierra (Fase 35): ni cerrados ni rechazados. */
 export const POLYGONAL_CHIPS: StatusFilter[] = ["todos", "borradores", "calculados"];
 /** Ni la nivelación (Fase 36). */
@@ -65,7 +61,6 @@ export function polygonalRow(projectId: string, p: PolygonalProcess): ProcessRow
         : "—",
     meets: p.meets_tolerance,
     updatedAt: p.updated_at,
-    closed: false,
   };
 }
 
@@ -97,7 +92,6 @@ export function levelingRow(projectId: string, p: LevelingProcess): ProcessRow {
     result,
     meets: p.meets_tolerance,
     updatedAt: p.updated_at,
-    closed: false,
   };
 }
 
@@ -105,13 +99,15 @@ const ALERT_SEVERITY: Record<AlertLevel, number> = { normal: 0, caution: 1, aler
 
 /** Un lugar con lo que el listado necesita, en la forma que filtra `process-list`. */
 export interface SiteItem extends Site {
+  status: string;
   type: string;
   visitCount: number;
   worstAlert: AlertLevel;
 }
 
 export function siteItem(site: Site, visitCount: number, worstAlert: AlertLevel): SiteItem {
-  return { ...site, type: site.structure_type, visitCount, worstAlert };
+  // Sin estado (Fase 37): el filtro de la lista no tiene chips para lugares.
+  return { ...site, status: "", type: site.structure_type, visitCount, worstAlert };
 }
 
 /** Mayor es peor: ordenar por alerta de mayor a menor pone arriba lo urgente. */
@@ -126,8 +122,8 @@ export function siteRow(projectId: string, s: SiteItem): ProcessRow {
     name: s.name,
     href: `/projects/${projectId}/settlement/${s.id}`,
     kindLabel: `${STRUCTURE_TYPE_LABELS[s.structure_type]} · ${s.visitCount} ${s.visitCount === 1 ? "visita" : "visitas"}`,
-    statusLabel: SITE_STATUS_LABELS[s.status],
-    statusTone: SITE_STATUS_TONE[s.status],
+    statusLabel: null,
+    statusTone: "neutral",
     result:
       s.visitCount === 0 ? (
         "Sin visitas"
@@ -137,6 +133,5 @@ export function siteRow(projectId: string, s: SiteItem): ProcessRow {
         </span>
       ),
     updatedAt: s.updated_at,
-    closed: s.status === "closed",
   };
 }

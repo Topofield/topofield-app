@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(17);
+select plan(15);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a361', 'nivsincierre@topofield.test');
@@ -33,12 +33,6 @@ values
   ('00000000-0000-4000-8000-00000000e361', 'forward', 1, 'BM1', 'bm', 1.5, null, 2600),
   ('00000000-0000-4000-8000-00000000e361', 'forward', 2, 'C1', 'pc', null, 0.266, 2601.234);
 
--- Una visita cerrada: asentamientos conserva su cierre.
-insert into public.settlement_visits (id, site_id, visit_number, date) values
-  ('00000000-0000-4000-8000-0000000f3610', '00000000-0000-4000-8000-00000000c362', 0, '2026-01-10');
-update public.settlement_visits
-   set status = 'closed', closed_at = now(), closed_by = '00000000-0000-4000-8000-00000000a361'
- where id = '00000000-0000-4000-8000-0000000f3610';
 
 -- --- El esquema --------------------------------------------------------------
 select has_column('public', 'leveling_processes', 'location', 'la nivelación tiene ubicación');
@@ -53,9 +47,6 @@ select is_empty(
   'la nivelación ya no tiene triggers de cierre');
 select hasnt_function('public', 'reject_write_on_closed_process_reading',
   'ni la función de sus lecturas, que solo usaba ella');
-select isnt_empty(
-  $$ select 1 from pg_trigger where tgname = 'settlement_visits_reject_update_on_closed' $$,
-  'la visita conserva el suyo');
 
 -- --- Sin registro de cierre (paso 2, después del merge) ---------------------
 select hasnt_column('public', 'leveling_processes', 'closed_at', 'la nivelación no tiene fecha de cierre');
@@ -80,9 +71,6 @@ select lives_ok(
   $$ delete from leveling_readings
       where process_id = '00000000-0000-4000-8000-00000000e361' and reading_order = 2 $$,
   'y sus lecturas se borran');
-select throws_ok(
-  $$ update settlement_visits set operator = 'Otro' where id = '00000000-0000-4000-8000-0000000f3610' $$,
-  '23001', null, 'la visita cerrada sigue siendo inmutable');
 
 -- --- El guardado escribe los datos del alta -----------------------------------
 select lives_ok(

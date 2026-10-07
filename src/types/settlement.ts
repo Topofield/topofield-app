@@ -3,21 +3,11 @@
 // src/lib/calculations/settlement.ts.
 
 import type { Tables } from "./database";
-import type { PointType } from "./leveling";
+import type { ComputedReading as LevelingComputedReading, PointType } from "./leveling";
 import type { LevelType, PrecisionOrder } from "./project";
 
-export const VISIT_STATUSES = ["draft", "calculated", "closed"] as const;
+export const VISIT_STATUSES = ["draft", "in_progress", "calculated"] as const;
 export type VisitStatus = (typeof VISIT_STATUSES)[number];
-
-/**
- * Cómo se capturan las cotas de una visita (Fase 18):
- * - `book`: con su libreta de nivelación; las cotas de los puntos de control
- *   se DERIVAN de ella en el servidor.
- * - `direct`: tecleadas punto por punto. Las visitas anteriores a la Fase 18,
- *   o una nivelación procesada fuera de la app.
- */
-export const CAPTURE_MODES = ["book", "direct"] as const;
-export type CaptureMode = (typeof CAPTURE_MODES)[number];
 
 /** Niveles del semáforo (§ 6.11). El orden es significativo: peor gana. */
 export const ALERT_LEVELS = ["normal", "caution", "alert", "alarm"] as const;
@@ -27,14 +17,14 @@ export type AlertLevel = (typeof ALERT_LEVELS)[number];
 
 export type SettlementPoint = Tables<"settlement_points">;
 
-export type SettlementVisit = Omit<
-  Tables<"settlement_visits">,
-  "status" | "level_type" | "precision_order" | "capture_mode"
-> & {
+/**
+ * Una visita. Desde la Fase 37 toda visita se mide con libreta, y su orden es
+ * el del tramo peor: null si alguno no se verifica.
+ */
+export type SettlementVisit = Omit<Tables<"settlement_visits">, "status" | "level_type" | "precision_order"> & {
   status: VisitStatus;
   level_type: LevelType | null;
-  precision_order: PrecisionOrder;
-  capture_mode: CaptureMode;
+  precision_order: PrecisionOrder | null;
 };
 
 /** Una fila de la libreta de nivelación de una visita (Fase 18). */
@@ -159,16 +149,6 @@ export interface TrendDeviation {
   marginMm: number;
 }
 
-/**
- * El circuito de nivelación de una visita, para el margen de ruido de la
- * tendencia (Fase 32, D-7): el orden que declaró y la longitud de su libreta,
- * en km. `km` es null si la visita se capturó sin libreta.
- */
-export interface VisitCircuit {
-  order: PrecisionOrder;
-  km: number | null;
-}
-
 /** Tendencia de la velocidad entre las dos últimas visitas de un punto. */
 export type Trend = "converging" | "accelerating";
 
@@ -201,6 +181,73 @@ export interface BookRowPayload {
   foreLowerM: number | null;
   backDistanceM: number | null;
   foreDistanceM: number | null;
+  /**
+   * La fila abre un tramo: su V+ sale de un BM del lugar con cota conocida
+   * (Fase 37, decisión 8). La primera fila siempre lo abre; sin el campo,
+   * `false`.
+   */
+  startsSection?: boolean;
+}
+
+/** Un BM del lugar, tal como lo usa el motor: código y cota (Fase 37). */
+export interface BenchmarkInput {
+  code: string;
+  elevation: number;
+  /**
+   * La visita que lo midió: un punto auxiliar guardado en los BM del lugar
+   * (revisión final de la Fase 37). No verifica esa visita.
+   */
+  originVisitId?: string | null;
+}
+
+/** Cómo termina un tramo: en su BM, en otro BM del lugar o en sus puntos. */
+export type TramoKind = "closed" | "link" | "open";
+
+/** Un tramo de la libreta de una visita, calculado sin compensar (Fase 37). */
+export interface TramoResult {
+  /** Índices de su primera y su última fila en la libreta. */
+  start: number;
+  end: number;
+  startCode: string;
+  /** El BM del lugar donde termina; null si es abierto. */
+  endCode: string | null;
+  kind: TramoKind;
+  /** null si arranca en un código que no es BM del lugar. */
+  startElevation: number | null;
+  /** Cierre (o llegada) en mm, a 0.1; null si es abierto. */
+  closureMm: number | null;
+  /** El orden que alcanza; null si es abierto, sin distancias o fuera de todos. */
+  order: PrecisionOrder | null;
+  /** K·√L del orden alcanzado, a 0.1; null sin orden. */
+  toleranceMm: number | null;
+  /** Longitud del tramo; null sin distancias. */
+  distanceKm: number | null;
+  /** Toda su cadena tiene lecturas: sin esto no hay cierre ni orden. */
+  complete: boolean;
+}
+
+/** La libreta de una visita, tramo a tramo y sin compensar (Fase 37). */
+export interface VisitBook {
+  tramos: TramoResult[];
+  /**
+   * Una por fila de la libreta, en su orden, calculadas sin compensar. Una
+   * fila sin su lectura, o detrás de una V+ o una V− que falta en la cadena
+   * de su tramo, tiene la cota en NaN: el motor de nivelación tomaría la
+   * lectura vacía por cero.
+   */
+  readings: LevelingComputedReading[];
+}
+
+/** La verificación de una visita: la de su tramo peor (Fase 37, decisión 15). */
+export interface VisitVerification {
+  /** Todos los tramos terminan en un BM del lugar y alcanzan un orden. */
+  verified: boolean;
+  /** El orden más bajo de los tramos; null si alguno no se verifica. */
+  order: PrecisionOrder | null;
+  /** El tramo peor: el primero sin verificar o el de orden más bajo. */
+  worst: TramoResult | null;
+  /** Suma de las longitudes; null si ningún tramo tiene distancias. */
+  distanceKm: number | null;
 }
 
 /**
@@ -230,15 +277,10 @@ export interface DerivedElevation {
 
 // --- Etiquetas en español ---
 
-export const CAPTURE_MODE_LABELS: Record<CaptureMode, string> = {
-  book: "Libreta de nivelación",
-  direct: "Cotas directas",
-};
-
 export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
   draft: "Borrador",
+  in_progress: "En medición",
   calculated: "Calculada",
-  closed: "Cerrada",
 };
 
 export const ALERT_LEVEL_LABELS: Record<AlertLevel, string> = {

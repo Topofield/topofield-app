@@ -1,3 +1,4 @@
+import { allRows } from "@/lib/supabase/paginate";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -15,7 +16,6 @@ import {
 } from "@/lib/export/settlement-workbook";
 import { safeFilename } from "@/lib/export/workbook";
 import type { PointInput, VisitInput } from "@/types/settlement";
-import { responsibleNames } from "@/lib/reports/responsible";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -63,19 +63,19 @@ export async function GET(
     })),
   }));
 
-  // Libretas de las visitas en modo `book`, para la hoja «Libretas» (Fase
-  // 18). Las `direct` no tienen libreta, así que no se consultan.
-  const bookVisitIds = visits
-    .filter((v) => v.capture_mode === "book")
-    .map((v) => v.id);
+  // Las libretas de las visitas, para la hoja «Libretas» (Fases 18 y 37).
+  const bookVisitIds = visits.map((v) => v.id);
   const bookByVisit: Record<string, BookReadingRow[]> = {};
   if (bookVisitIds.length > 0) {
-    const { data: bookRows, error } = await supabase
-      .from("settlement_book_readings")
-      .select("*")
-      .in("visit_id", bookVisitIds)
-      .order("visit_id", { ascending: true })
-      .order("reading_order", { ascending: true });
+    const { data: bookRows, error } = await allRows((from, to) =>
+      supabase
+        .from("settlement_book_readings")
+        .select("*")
+        .in("visit_id", bookVisitIds)
+        .order("visit_id", { ascending: true })
+        .order("reading_order", { ascending: true })
+        .range(from, to),
+    );
     if (error) throw error;
     for (const row of bookRows ?? []) {
       (bookByVisit[row.visit_id] ??= []).push(row);
@@ -85,11 +85,8 @@ export async function GET(
   const thresholds = thresholdsOf(site);
   const history = computeHistory(points, visitInputs, thresholds);
 
-  // «Cerrado por» con el nombre del responsable, no su id (Fase 22).
-  const names = await responsibleNames(supabase, [site.closed_by]);
-  const closedBy = site.closed_by ? (names.get(site.closed_by) ?? null) : null;
   const workbook = buildSettlementWorkbook(
-    { ...site, closed_by: closedBy },
+    site,
     sitePoints,
     visits,
     history,

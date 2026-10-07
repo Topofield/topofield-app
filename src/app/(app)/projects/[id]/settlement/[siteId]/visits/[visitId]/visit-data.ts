@@ -1,26 +1,26 @@
-// Carga compartida de la vista y del editor de una visita (Fase 18). No es un
-// Server Action: lo importan las dos páginas del servidor.
+// La carga de una visita (Fase 18; desde la Fase 37, para sus dos pasos). No
+// es un Server Action: lo importa la página del servidor.
 
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   getProjectById,
-  getReferencePoints,
   getSettlementReadingsBySite,
   getSite,
-  getSiteBooks,
+  getSiteBenchmarks,
   getSitePoints,
   getVisit,
+  getVisitBook,
   getVisits,
 } from "@/lib/supabase/queries";
-import { visitCircuitsOf } from "@/lib/calculations/settlement";
 import { bookRowOf } from "@/lib/calculations/settlement-book";
 import type { VisitInput } from "@/types/settlement";
 
 /**
- * El lugar, la visita y todo el histórico que su cálculo necesita. `notFound`
- * si algo no existe o no pertenece al proyecto (RLS lo oculta igual, pero un
- * id de otro lugar del mismo usuario no debe colarse por la URL).
+ * El lugar, la visita, sus BM y todo el histórico que su cálculo necesita.
+ * `notFound` si algo no existe o no pertenece al proyecto (RLS lo oculta
+ * igual, pero un id de otro lugar del mismo usuario no debe colarse por la
+ * URL).
  */
 export async function loadVisitData(id: string, siteId: string, visitId: string) {
   const supabase = await createClient();
@@ -33,21 +33,16 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
 
   const visitWithReadings = await getVisit(supabase, visitId);
   if (!visitWithReadings || visitWithReadings.visit.site_id !== site.id) notFound();
-  const { visit, readings } = visitWithReadings;
+  const { visit } = visitWithReadings;
 
-  const [points, allVisits, readingsBySite, booksByVisit, referencePoints] =
-    await Promise.all([
-      getSitePoints(supabase, site.id),
-      getVisits(supabase, site.id),
-      getSettlementReadingsBySite(supabase, site.id),
-      getSiteBooks(supabase, site.id),
-      getReferencePoints(supabase, project.id),
-    ]);
-
-  const initialElevations: Record<string, number> = {};
-  for (const reading of readings) {
-    initialElevations[reading.point_id] = Number(reading.elevation);
-  }
+  // La libreta, solo la de esta visita: cada lectura guarda la libreta entera.
+  const [points, allVisits, readingsBySite, visitBook, benchmarks] = await Promise.all([
+    getSitePoints(supabase, site.id),
+    getVisits(supabase, site.id),
+    getSettlementReadingsBySite(supabase, site.id),
+    getVisitBook(supabase, visit.id),
+    getSiteBenchmarks(supabase, site.id),
+  ]);
 
   // Todas las visitas con sus lecturas, en orden cronológico (`getVisits`
   // ordena por fecha). Una sola consulta con join, no una por visita.
@@ -60,21 +55,6 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
       elevation: Number(r.elevation),
     })),
   }));
-  const otherVisits = visitInputs.filter((v) => v.id !== visit.id);
-  const otherVisitCircuits = Object.fromEntries(
-    visitCircuitsOf(allVisits.filter((v) => v.id !== visit.id)),
-  );
-
-  // La libreta de la visita anterior en modo libreta, para la plantilla.
-  const previousWithBook = allVisits
-    .filter((v) => v.date < visit.date && (booksByVisit[v.id]?.length ?? 0) > 0)
-    .at(-1);
-  const previousBook = previousWithBook
-    ? booksByVisit[previousWithBook.id]!.map((r) => ({
-        pointCode: r.point_code,
-        pointType: r.point_type,
-      }))
-    : null;
 
   return {
     project,
@@ -83,12 +63,8 @@ export async function loadVisitData(id: string, siteId: string, visitId: string)
     points,
     allVisits,
     visitInputs,
-    otherVisits,
-    otherVisitCircuits,
-    initialElevations,
-    book: booksByVisit[visit.id] ?? [],
-    initialBook: (booksByVisit[visit.id] ?? []).map(bookRowOf),
-    previousBook,
-    referencePoints,
+    benchmarks,
+    /** La libreta guardada, como la usan el motor y los popups. */
+    book: visitBook.map(bookRowOf),
   };
 }

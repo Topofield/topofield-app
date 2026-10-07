@@ -6,18 +6,9 @@ import {
   computeLevelingDetected,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
-import {
-  computeHistory,
-  computeTrends,
-  detectTrendDeviations,
-} from "@/lib/calculations/settlement";
-import {
-  catalogElevationsOf,
-  checkBenchmarks,
-  bookRowInputOf,
-  computeVisitBook,
-  deriveControlElevations,
-} from "@/lib/calculations/settlement-book";
+import { computeTrends, detectTrendDeviations } from "@/lib/calculations/settlement";
+import { bookBenchmarkChecks, bookRowInputOf } from "@/lib/calculations/settlement-book";
+import { recalculateSite } from "@/lib/calculations/visit-record";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
 import type { ReadingInput } from "@/types/leveling";
 import type { PointInput } from "@/types/settlement";
@@ -32,8 +23,7 @@ import {
   type ProcesoDemo,
 } from "./fixtures";
 import { resultadosDe } from "./insertar-poligonal";
-import { generateVisitBook } from "./libreta-asentamientos";
-import { ALAMEDA_AMARRES, ALAMEDA_BM_FUERA, ALAMEDA_OUT_OF_TOLERANCE } from "./torre-alameda";
+import { alamedaBook, ALAMEDA_AMARRES, ALAMEDA_BM_FUERA, ALAMEDA_OUT_OF_TOLERANCE } from "./torre-alameda";
 
 // Fase 21: la demo son las carteras reales. Cada fixture pasa por el motor tal
 // como lo harán los `insertar-*.ts`, y se comprueba lo que la cartera enseña.
@@ -142,7 +132,7 @@ describe("nivelaciones de la demo — carteras reales", () => {
   });
 });
 
-describe("asentamientos de la demo — Torre Alameda", () => {
+describe("asentamientos de la demo — Torre Alameda (Fase 37: sin compensar ni cerrar)", () => {
   const f = ASENTAMIENTO_DEMO;
   const points: PointInput[] = f.points.map((p) => ({
     id: p.code,
@@ -151,97 +141,72 @@ describe("asentamientos de la demo — Torre Alameda", () => {
     activeFrom: null,
     retiredOn: null,
   }));
-  const books = f.visits.map((v, i) => {
-    const rows = generateVisitBook({
-      amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
-      targets: [v.bmControl, ...v.targets],
-      closureMm: v.closureMm,
-      order: f.precisionOrder,
-      seed: 100 + i,
-      perSetup: 5,
-    });
-    const result = computeVisitBook(rows.map(bookRowInputOf), v.amarre.elevation, f.precisionOrder);
-    const catalog = catalogElevationsOf(result.forward.readings, ALAMEDA_AMARRES, v.amarre.code, points);
-    return {
-      result,
-      km: totalDistanceFromReadings(rows.map(bookRowInputOf)),
-      derived: deriveControlElevations(result, points, v.date),
-      checks: checkBenchmarks(result.forward.readings, catalog, f.precisionOrder),
-    };
+  const benchmarks = ALAMEDA_AMARRES.map((a) => ({ code: a.code, elevation: a.elevation }));
+  const rows = f.visits.map((v, i) => alamedaBook(v, i, f.precisionOrder));
+  const site = recalculateSite({
+    points,
+    benchmarks,
+    thresholds: thresholdsFor("edificio"),
+    visits: f.visits.map((v, i) => ({ id: `v${i}`, visitNumber: i, date: v.date, rows: rows[i]! })),
   });
+  const history = site.map(({ visitId, readings }, i) => ({
+    visitId,
+    visitNumber: i,
+    date: f.visits[i]!.date,
+    readings,
+    worstAlert: "normal" as const,
+  }));
 
-  it("ocho puntos, catorce visitas y los dos BMs de amarre en el catálogo", () => {
+  it("ocho puntos, catorce visitas y los dos BM del lugar", () => {
     expect(f.points).toHaveLength(8);
     expect(f.visits).toHaveLength(14);
-    const codigos = new Set(REFERENCIAS_DEMO.map((r) => r.code));
-    for (const v of f.visits) expect(codigos.has(v.amarre.code)).toBe(true);
-    expect(new Set(f.visits.map((v) => v.amarre.code))).toEqual(new Set(["BM-1", "BM-2"]));
+    expect(new Set(f.visits.map((v) => v.amarre.code))).toEqual(new Set(ALAMEDA_AMARRES.map((a) => a.code)));
   });
 
-  it("solo la visita 9 cierra fuera de tolerancia", () => {
-    const fuera = books.flatMap((b, i) => (b.result.meetsTolerance === false ? [i] : []));
-    expect(fuera).toEqual([ALAMEDA_OUT_OF_TOLERANCE]);
+  it("cada visita queda calculada y solo la 9 sin verificación: su cierre no alcanza ningún orden", () => {
+    expect(site.every(({ record }) => record.header.status === "calculated")).toBe(true);
+    const sinVerificar = site.flatMap(({ record }, i) => (record.header.precision_order === null ? [i] : []));
+    expect(sinVerificar).toEqual([ALAMEDA_OUT_OF_TOLERANCE]);
   });
 
-  it("la libreta de cada visita reproduce la serie a 0.1 mm", () => {
-    books.forEach((b, i) => {
-      expect(b.derived.issues).toEqual([]);
-      for (const t of f.visits[i]!.targets) {
-        const got = b.derived.readings.find((r) => r.pointId === t.code)!.elevation;
-        expect(Math.abs(got - t.elevation)).toBeLessThanOrEqual(0.0001 + 1e-9);
+  it("sin compensar, cada cota se aparta de la serie menos que el cierre de su visita", () => {
+    site.forEach(({ record }, i) => {
+      expect(record.issues).toEqual([]);
+      const v = f.visits[i]!;
+      for (const t of v.targets) {
+        const got = record.elevations.find((e) => e.pointId === t.code)!.elevation;
+        expect(Math.abs(got - t.elevation) * 1000).toBeLessThanOrEqual(Math.abs(v.closureMm) + 0.1);
       }
     });
   });
 
   it("cada libreta pasa por el otro BM, que nivela salvo en la visita 13 (Fase 30)", () => {
-    books.forEach((b, i) => {
-      expect(b.checks).toHaveLength(1);
-      expect(b.checks[0]!.code).toBe(f.visits[i]!.amarre.code === "BM-1" ? "BM-2" : "BM-1");
+    const checks = site.map(({ record }, i) =>
+      bookBenchmarkChecks(record.book, rows[i]!.map(bookRowInputOf), benchmarks, points),
+    );
+    checks.forEach((c, i) => {
+      expect(c).toHaveLength(1);
+      expect(c[0]!.code).toBe(f.visits[i]!.amarre.code === "BM-1" ? "BM-2" : "BM-1");
     });
-    const fuera = books.flatMap((b, i) => (b.checks[0]!.meetsTolerance === false ? [i] : []));
+    const fuera = checks.flatMap((c, i) => (c[0]!.meetsTolerance === false ? [i] : []));
     expect(fuera).toEqual([ALAMEDA_BM_FUERA]);
-    // En la 13, BM-2 queda unos 8 mm por encima de su cota de catálogo.
-    expect(books[ALAMEDA_BM_FUERA]!.checks[0]!.differenceMm).toBeGreaterThan(7);
+    // En la 13, BM-2 queda unos 7 mm por encima de su cota en los BM del lugar.
+    expect(checks[ALAMEDA_BM_FUERA]![0]!.differenceMm).toBeGreaterThan(7);
   });
 
   it("el semáforo no sale todo verde", () => {
-    const history = computeHistory(
-      points,
-      f.visits.map((v, i) => ({
-        id: `v${i}`,
-        visitNumber: i,
-        date: v.date,
-        readings: books[i]!.derived.readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
-      })),
-      thresholdsFor("edificio"),
-    );
-    const niveles = new Set(history.visits.at(-1)!.readings.map((r) => r.alertStatus));
+    const niveles = new Set(site.at(-1)!.readings.map((r) => r.alertStatus));
     expect(niveles.size).toBeGreaterThan(1);
   });
 
-  it("con el margen de sus circuitos reales, ni avisos de tendencia ni «Acelerando» (Fase 32)", () => {
-    // Circuitos de unos 0.112 km: el margen baja de 6 a 2.8 mm.
-    expect(books.every((b) => Math.abs(b.km - 0.112) < 0.002)).toBe(true);
-    const history = computeHistory(
-      points,
-      f.visits.map((v, i) => ({
-        id: `v${i}`,
-        visitNumber: i,
-        date: v.date,
-        readings: books[i]!.derived.readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
-      })),
-      thresholdsFor("edificio"),
-    );
-    const circuitos = new Map(
-      books.map((b, i) => [`v${i}`, { order: f.precisionOrder, km: b.km }]),
-    );
-    expect(detectTrendDeviations(history.visits, circuitos).size).toBe(0);
-    expect(Object.values(computeTrends(history.visits, circuitos))).not.toContain("accelerating");
+  it("con el margen fijo, ni avisos de tendencia ni «Acelerando» (Fase 37, decisión 17)", () => {
+    expect(detectTrendDeviations(history).size).toBe(0);
+    expect(Object.values(computeTrends(history))).not.toContain("accelerating");
   });
 });
 
 describe("material de los informes de la demo", () => {
-  it("la TT4 alimenta el informe de poligonal, el tramo 2 el de nivelación y Torre Alameda se cierra", () => {
+  it("la TT4 alimenta el informe de poligonal y el tramo 2 el de nivelación", () => {
     expect(PROCESOS_DEMO.filter((p) => p.informe).map((p) => p.name)).toEqual([
       "Poligonal V10 — cartera TT4",
     ]);

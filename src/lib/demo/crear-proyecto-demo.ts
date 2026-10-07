@@ -24,6 +24,7 @@ import {
   REFERENCIAS_DEMO,
 } from "./fixtures";
 import { insertarAsentamiento } from "./insertar-asentamiento";
+import { insertarCartera } from "./insertar-cartera";
 import { insertarEquipos } from "./insertar-equipos";
 import { insertarInforme } from "./insertar-informe";
 import { insertarNivelacion } from "./insertar-nivelacion";
@@ -163,13 +164,9 @@ export async function crearProyectoDemo(
     if (nivelacion.informe) nivelacionInforme = { id, name: nivelacion.name };
   }
 
-  // --- Asentamientos: Torre Alameda, cerrada tras sus catorce visitas. ------
-  const { siteId, siteName } = await insertarAsentamiento(
-    supabase,
-    proyecto.id,
-    userId,
-    ASENTAMIENTO_DEMO,
-  );
+  // --- Asentamientos: Torre Alameda, simulada, y la cartera real (Fase 37). --
+  const { siteId, siteName } = await insertarAsentamiento(supabase, proyecto.id, ASENTAMIENTO_DEMO);
+  await insertarCartera(supabase, proyecto.id);
 
   // --- Un informe por módulo (§ 4.7): los informes se emiten por proceso. ---
   const informes: {
@@ -180,7 +177,7 @@ export async function crearProyectoDemo(
     ...(poligonalInforme
       ? [
           {
-            title: "Informe de cierre — Poligonal",
+            title: "Informe — Poligonal",
             observations:
               "Poligonal V10 amarrada a TT4, conforme a las tolerancias de tercer orden.",
             included: [
@@ -197,7 +194,7 @@ export async function crearProyectoDemo(
     ...(nivelacionInforme
       ? [
           {
-            title: "Informe de cierre — Nivelación",
+            title: "Informe — Nivelación",
             observations:
               "Tramo 2 medido con nivel digital, de C10 a C10: cierra en −0.4 mm y alcanza primer orden.",
             included: [
@@ -212,7 +209,7 @@ export async function crearProyectoDemo(
         ]
       : []),
     {
-      title: "Informe de cierre — Control de asentamientos",
+      title: "Informe — Control de asentamientos",
       observations:
         "Seguimiento de asentamientos de Torre Alameda tras catorce visitas.",
       included: [

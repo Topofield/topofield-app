@@ -2,99 +2,59 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { allRows } from "@/lib/supabase/paginate";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
+import { bookRowInputOf, bookRowOf, bookTemplate } from "@/lib/calculations/settlement-book";
 import {
-  bookRowInputOf,
-  bookRowOf,
-  catalogElevationsOf,
-  computeVisitBook,
-  deriveControlElevations,
-} from "@/lib/calculations/settlement-book";
-import { totalDistanceFromReadings } from "@/lib/calculations/leveling";
-import {
-  bookRowsToPersist,
   visitsToRewrite,
   type PersistedReading,
 } from "@/lib/calculations/settlement-persistence";
-import {
-  neighborVisitDates,
-  validateVisitCapture,
-  validateVisitClose,
-} from "@/lib/validators/settlement";
-import {
-  bookIssueMessage,
-  validateVisitBook,
-} from "@/lib/validators/settlement-book";
-import { hasReadingErrors, turningPointBlocker } from "@/lib/validators/leveling";
-import {
-  CAPTURE_MODES,
-  type BookRowPayload,
-  type CaptureMode,
-  type PointInput,
-  type SettlementBookReading,
-  type VisitInput,
-  type VisitStatus,
+import { visitRecordOf, visitSaveOf } from "@/lib/calculations/visit-record";
+import { neighborVisitDates, validateVisitCapture } from "@/lib/validators/settlement";
+import { bookIssueMessage, validateBook } from "@/lib/validators/settlement-book";
+import { hasReadingErrors } from "@/lib/validators/leveling";
+import type {
+  BenchmarkInput,
+  BookRowPayload,
+  PointInput,
+  SettlementBookReading,
+  VisitInput,
 } from "@/types/settlement";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
 import type { Site } from "@/types/site";
-import type { LevelType, PrecisionOrder } from "@/types/project";
 import { logDbError } from "@/lib/errors/user-message";
-import { reopenBlocker, reopenPatch } from "@/lib/reopen";
+import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
 
 export interface ActionResult {
   ok: boolean;
   error?: string;
   visitId?: string;
+  /**
+   * Un punto de control leído en dos armadas (Fase 37, decisión 10): su código
+   * y las dos filas, para que la libreta pregunte cuál se elimina.
+   */
+  duplicate?: { code: string; rows: number[] };
 }
 
-/** El BM de amarre de la visita: código y cota, copiados del catálogo o tecleados. */
-export interface ReferenceBm {
-  code: string;
-  elevation: number | null;
-}
-
-/** Lo que pide el formulario de nueva visita (PRD de la Fase 18, decisión 15). */
+/** Lo que pide el popup de nueva visita (Fase 37, decisión 4). */
 export interface NewVisitPayload {
   date: string;
   operator: string | null;
-  captureMode: CaptureMode;
-  referenceBm: ReferenceBm | null;
-  precisionOrder: PrecisionOrder;
+  notes: string | null;
   equipmentBrand: string | null;
   equipmentModel: string | null;
   equipmentSerial: string | null;
-  equipmentCalibrationDate: string | null;
-  levelType: LevelType | null;
-  kmPrecisionMm: number | null;
 }
 
-export interface VisitPayload {
+/** Lo que guarda la visita: su cabecera y su libreta completa (decisión 9). */
+export interface VisitPayload extends NewVisitPayload {
   siteId: string;
   visitId: string;
-  date: string;
-  operator: string | null;
-  weatherConditions: string | null;
-  /** Solo en `direct`: en `book` lo deriva el servidor de la libreta. */
-  closureErrorMm: number | null;
-  notes: string | null;
-  /** Solo en `direct`: en `book` las cotas se derivan de la libreta. */
-  readings: { pointId: string; elevation: number }[];
-  captureMode: CaptureMode;
-  referenceBm: ReferenceBm;
-  /** La libreta. En `direct` debe ir vacía: se purga la que hubiera. */
   book: BookRowPayload[];
-  /** Orden de precisión y equipo (nivel, ISO 17123-2). */
-  precisionOrder: PrecisionOrder;
-  equipmentBrand: string | null;
-  equipmentModel: string | null;
-  equipmentSerial: string | null;
-  equipmentCalibrationDate: string | null;
-  levelType: LevelType | null;
-  kmPrecisionMm: number | null;
 }
 
 /**
- * Carga el lugar, su catálogo y todas sus visitas con lecturas.
+ * Carga el lugar, su catálogo, sus BM y todas sus visitas con lecturas.
  *
  * El histórico completo es necesario aunque solo se guarde una visita: el
  * asentamiento parcial y la velocidad de un punto dependen de la visita
@@ -112,53 +72,37 @@ async function loadContext(
   // Un lugar de agrupación (Fase 22) no tiene visitas.
   if (!site || site.kind !== "settlement") return null;
 
-  const { data: points } = await supabase
-    .from("settlement_points")
-    .select("*")
-    .eq("site_id", siteId);
+  const [{ data: points }, { data: benchmarks }, { data: visits }, { data: readings }] =
+    await Promise.all([
+      supabase.from("settlement_points").select("*").eq("site_id", siteId),
+      supabase.from("site_benchmarks").select("code, elevation, origin_visit_id").eq("site_id", siteId).order("code"),
+      // En orden de fecha: el motor y los validadores recorren las visitas así
+      // (Fase 26, C-16).
+      supabase
+        .from("settlement_visits")
+        .select("*")
+        .eq("site_id", siteId)
+        .order("date")
+        .order("visit_number"),
+      allRows((from, to) =>
+        supabase
+          .from("settlement_readings")
+          .select("*, settlement_visits!inner(site_id)")
+          .eq("settlement_visits.site_id", siteId)
+          .order("id")
+          .range(from, to),
+      ),
+    ]);
 
-  // En orden de fecha: el motor y los validadores recorren las visitas así, y
-  // sin orden el de dos visitas dependía del de las filas (Fase 26, C-16).
-  const { data: visits } = await supabase
-    .from("settlement_visits")
-    .select("*")
-    .eq("site_id", siteId)
-    .order("date")
-    .order("visit_number");
-
-  const { data: readings } = await supabase
-    .from("settlement_readings")
-    .select("*, settlement_visits!inner(site_id)")
-    .eq("settlement_visits.site_id", siteId);
-
-  // Estado y lecturas ya persistidas de cada visita, indexadas por id. Las
-  // necesita `saveVisitAction` para saber, tras recalcular, qué visitas
-  // ABIERTAS quedaron con valores obsoletos en la base (ver CRÍTICO 2 de la
-  // ronda de correcciones) — las CERRADAS no se tocan.
-  const statusByVisit = new Map<string, VisitStatus>();
-  for (const v of visits ?? []) {
-    statusByVisit.set(v.id, v.status as VisitStatus);
-  }
-  const persistedReadingsByVisit = new Map<
-    string,
-    Map<string, PersistedReading>
-  >();
+  // Las lecturas ya persistidas de cada visita, por id: tras recalcular, la
+  // acción reescribe solo las que cambiaron.
+  const persistedReadingsByVisit = new Map<string, Map<string, PersistedReading>>();
+  const readingsByVisit = new Map<string, { pointId: string; elevation: number }[]>();
   for (const row of readings ?? []) {
-    const r = row as unknown as PersistedReading & { visit_id: string };
+    const r = row as unknown as PersistedReading & { visit_id: string; elevation: string | number };
     const byPoint = persistedReadingsByVisit.get(r.visit_id) ?? new Map();
     byPoint.set(r.point_id, r);
     persistedReadingsByVisit.set(r.visit_id, byPoint);
-  }
-
-  const pointInputs: PointInput[] = (points ?? []).map(pointInputOf);
-
-  const readingsByVisit = new Map<string, { pointId: string; elevation: number }[]>();
-  for (const row of readings ?? []) {
-    const r = row as unknown as {
-      visit_id: string;
-      point_id: string;
-      elevation: string | number;
-    };
     const list = readingsByVisit.get(r.visit_id) ?? [];
     list.push({ pointId: r.point_id, elevation: Number(r.elevation) });
     readingsByVisit.set(r.visit_id, list);
@@ -170,204 +114,192 @@ async function loadContext(
     date: v.date,
     readings: readingsByVisit.get(v.id) ?? [],
   }));
+  const benchmarkInputs: BenchmarkInput[] = (benchmarks ?? []).map((b) => ({
+    code: b.code,
+    elevation: Number(b.elevation),
+    originVisitId: b.origin_visit_id,
+  }));
 
   return {
     site: site as Site,
-    points: pointInputs,
+    points: (points ?? []).map(pointInputOf) as PointInput[],
+    benchmarks: benchmarkInputs,
     visits: visitInputs,
-    statusByVisit,
     persistedReadingsByVisit,
   };
 }
 
+/** La libreta guardada de una visita, en el orden de sus filas. */
+async function bookOf(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  visitId: string,
+): Promise<BookRowPayload[]> {
+  const { data } = await supabase
+    .from("settlement_book_readings")
+    .select("*")
+    .eq("visit_id", visitId)
+    .order("reading_order");
+  return ((data ?? []) as SettlementBookReading[]).map((row) => bookRowOf(row));
+}
+
+const readingRow = (r: {
+  pointId: string;
+  elevation: number;
+  partialSettlement: number | null;
+  accumulatedSettlement: number | null;
+  velocity: number | null;
+  alertStatus: string;
+}) => ({
+  point_id: r.pointId,
+  elevation: r.elevation,
+  partial_settlement: r.partialSettlement,
+  accumulated_settlement: r.accumulatedSettlement,
+  velocity: r.velocity,
+  alert_status: r.alertStatus,
+});
+
 /**
- * Crea una visita con el número siguiente y lo que trae el formulario: fecha,
- * nivelador, modo de captura, BM de amarre y equipo (Fase 18).
+ * Crea una visita con el número siguiente (Fase 37, decisión 4): fecha,
+ * nivelador, nota y equipo. Su libreta llega armada como la de la visita
+ * anterior —las mismas armadas, sus BM y sus puntos—, sin lecturas; sin
+ * anterior, una armada desde el primer BM del lugar con los puntos vigentes.
  */
 export async function createVisitAction(
   projectId: string,
   siteId: string,
   input: NewVisitPayload,
 ): Promise<ActionResult> {
-  const { date } = input;
-  if (!CAPTURE_MODES.includes(input.captureMode)) {
-    return { ok: false, error: "Modo de captura no válido." };
-  }
-  if (
-    input.referenceBm?.elevation != null &&
-    !Number.isFinite(input.referenceBm.elevation)
-  ) {
-    return { ok: false, error: "La cota del BM de amarre debe ser un número." };
-  }
   const supabase = await createClient();
-
   const context = await loadContext(supabase, siteId);
   if (!context) return { ok: false, error: "Lugar no encontrado." };
-  if (context.site.status === "closed") {
-    return { ok: false, error: "El lugar está cerrado; no admite visitas nuevas." };
-  }
 
   const nextNumber =
-    context.visits.length === 0
-      ? 0
-      : Math.max(...context.visits.map((v) => v.visitNumber)) + 1;
-
-  const previous = [...context.visits].sort((a, b) =>
-    a.date.localeCompare(b.date),
-  );
-  const previousDate = previous.at(-1)?.date ?? null;
+    context.visits.length === 0 ? 0 : Math.max(...context.visits.map((v) => v.visitNumber)) + 1;
+  const previous = context.visits.at(-1) ?? null;
 
   const issues = validateVisitCapture(
-    { id: "nueva", visitNumber: nextNumber, date, readings: [] },
+    { id: "nueva", visitNumber: nextNumber, date: input.date, readings: [] },
     context.points,
-    previousDate,
+    previous?.date ?? null,
   );
   if (Object.keys(issues.errors).length > 0) {
     return { ok: false, error: Object.values(issues.errors)[0] };
   }
 
-  const amarreCode = input.referenceBm?.code.trim() ?? "";
   const { data, error } = await supabase
     .from("settlement_visits")
     .insert({
       site_id: siteId,
       visit_number: nextNumber,
-      date,
+      date: input.date,
       operator: input.operator,
-      capture_mode: input.captureMode,
-      reference_bm_code: amarreCode === "" ? null : amarreCode,
-      reference_bm_elevation:
-        amarreCode === "" ? null : (input.referenceBm?.elevation ?? null),
-      precision_order: input.precisionOrder,
+      notes: input.notes,
       equipment_brand: input.equipmentBrand,
       equipment_model: input.equipmentModel,
       equipment_serial: input.equipmentSerial,
-      equipment_calibration_date: input.equipmentCalibrationDate,
-      level_type: input.levelType,
-      km_precision_mm: input.kmPrecisionMm,
     })
     .select("id")
     .single();
-
   if (error) {
-    // 23505 = unique_violation. `nextNumber` se calcula en memoria a partir
-    // del historial ya cargado; dos peticiones concurrentes (un doble clic,
-    // dos pestañas) pueden calcular el mismo número antes de que ninguna haya
-    // insertado, y el UNIQUE (site_id, visit_number) es la última defensa.
-    // Sin traducirlo, el usuario vería el mensaje crudo de Postgres, en
-    // inglés, dentro de una interfaz en español.
+    // 23505 = unique_violation: dos peticiones a la vez (un doble clic, dos
+    // pestañas) calcularon el mismo número; el UNIQUE (site_id, visit_number)
+    // es la última defensa.
     if (error.code === "23505") {
-      return {
-        ok: false,
-        error:
-          "Ya existe una visita con ese número. Recarga la página e inténtalo de nuevo.",
-      };
+      return { ok: false, error: "Ya existe una visita con ese número. Recarga la página e inténtalo de nuevo." };
     }
     return { ok: false, error: logDbError(error, "No se pudo crear la visita.") };
   }
 
-  // Se revalida con `context.site.project_id` (leído del lugar) y no con el
-  // `projectId` recibido como parámetro: el mismo criterio que en
-  // sites/actions.ts, para no confiar en un id que el cliente podría enviar
-  // sin relación con el lugar real.
+  const template = bookTemplate(
+    previous ? await bookOf(supabase, previous.id) : null,
+    context.points,
+    input.date,
+    context.benchmarks,
+  );
+  if (template.length > 0) {
+    const record = visitRecordOf({
+      visitId: data.id,
+      date: input.date,
+      rows: template,
+      points: context.points,
+      benchmarks: context.benchmarks,
+    });
+    const { error: bookError } = await supabase.rpc("save_visit", {
+      p_visit_id: data.id,
+      p_header: { date: input.date, ...record.header },
+      p_book: record.rows,
+      p_readings: [],
+      p_rewrites: [],
+    });
+    if (bookError) {
+      return { ok: false, error: logDbError(bookError, "La visita se creó, pero no su libreta.") };
+    }
+  }
+
+  // Con `context.site.project_id`, no con el `projectId` del cliente.
   revalidatePath(`/projects/${context.site.project_id}/settlement/${siteId}`);
   return { ok: true, visitId: data.id };
 }
 
 /**
- * Guarda una visita: su cabecera y sus lecturas, con los resultados
- * recalculados en el servidor.
- *
- * REVALIDA la captura antes de persistir (decisión #10). La clave publicable de
- * Supabase es pública por diseño, así que una llamada directa a esta acción
- * podría intentar guardar una visita que la interfaz habría bloqueado. Los
- * módulos de poligonal y nivelación nacieron sin esta comprobación y la
- * arrastraron como deuda; este nace con ella.
+ * Guarda una visita: su cabecera y su libreta completa, lectura por lectura
+ * (Fase 37, decisión 9). Todo se recalcula aquí —cotas, verificación, estado,
+ * histórico— con `visitRecordOf`; lo que el cliente muestre es una vista
+ * previa. REVALIDA antes de persistir: una llamada directa a la acción podría
+ * intentar guardar lo que la interfaz bloquea.
  */
 export async function saveVisitAction(
   projectId: string,
   payload: VisitPayload,
 ): Promise<ActionResult> {
   const supabase = await createClient();
-
   const context = await loadContext(supabase, payload.siteId);
   if (!context) return { ok: false, error: "Lugar no encontrado." };
-  if (context.site.status === "closed") {
-    return { ok: false, error: "El lugar está cerrado; no admite cambios." };
-  }
 
   const { data: visit } = await supabase
     .from("settlement_visits")
-    .select("id, status, visit_number")
+    .select("id, visit_number, site_id")
     .eq("id", payload.visitId)
     .maybeSingle();
-  if (!visit) return { ok: false, error: "Visita no encontrada." };
-  if (visit.status === "closed") {
-    return { ok: false, error: "La visita está cerrada; no admite cambios." };
+  if (!visit || visit.site_id !== payload.siteId) return { ok: false, error: "Visita no encontrada." };
+
+  const check = validateBook(payload.book.map(bookRowInputOf), context.benchmarks);
+  if (check.errors.length > 0) return { ok: false, error: check.errors[0] };
+  const rowIndex = check.rowIssues.findIndex((i) => Object.keys(i.errors).length > 0);
+  if (hasReadingErrors(check.rowIssues) && rowIndex >= 0) {
+    const first = Object.values(check.rowIssues[rowIndex]!.errors)[0];
+    return { ok: false, error: `Libreta, fila ${rowIndex + 1}: ${first}` };
   }
 
-  if (!CAPTURE_MODES.includes(payload.captureMode)) {
-    return { ok: false, error: "Modo de captura no válido." };
+  const record = visitRecordOf({
+    visitId: payload.visitId,
+    date: payload.date,
+    rows: payload.book,
+    points: context.points,
+    benchmarks: context.benchmarks,
+  });
+  const duplicate = record.issues.find((i) => i.kind === "duplicate");
+  if (duplicate && duplicate.kind === "duplicate") {
+    return {
+      ok: false,
+      error: bookIssueMessage(duplicate),
+      duplicate: { code: duplicate.code, rows: duplicate.rows },
+    };
   }
 
-  // --- Libreta (Fase 18) -----------------------------------------------------
-  // En modo `book` las cotas NO vienen del cliente: se derivan de la libreta,
-  // que se revalida y se recalcula aquí. Lo que el editor muestre en vivo es
-  // una vista previa; lo que se persiste sale de este cálculo.
-  const amarreCode = payload.referenceBm.code.trim();
-  const bookInputs = payload.book.map(bookRowInputOf);
-  let readings = payload.readings;
-  let book: ReturnType<typeof computeVisitBook> | null = null;
-  if (payload.captureMode === "book") {
-    const check = validateVisitBook(
-      bookInputs,
-      payload.referenceBm,
-    );
-    if (check.errors.length > 0) return { ok: false, error: check.errors[0] };
-    const rowIndex = check.rowIssues.findIndex(
-      (i) => Object.keys(i.errors).length > 0,
-    );
-    if (hasReadingErrors(check.rowIssues) && rowIndex >= 0) {
-      const first = Object.values(check.rowIssues[rowIndex]!.errors)[0];
-      return { ok: false, error: `Libreta, fila ${rowIndex + 1}: ${first}` };
-    }
-    readings = [];
-    if (bookInputs.length > 0) {
-      book = computeVisitBook(
-        bookInputs,
-        payload.referenceBm.elevation!,
-        payload.precisionOrder,
-      );
-      const derived = deriveControlElevations(book, context.points, payload.date);
-      const blocking = derived.issues.find((i) => i.level === "error");
-      if (blocking) return { ok: false, error: bookIssueMessage(blocking) };
-      readings = derived.readings.map(({ pointId, elevation }) => ({
-        pointId,
-        elevation,
-      }));
-    }
-  }
-
-  // --- Revalidación en el servidor -----------------------------------------
-  const others = context.visits
-    .filter((v) => v.id !== payload.visitId)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  // La fecha, entre las de sus visitas vecinas por número (Fase 26, C-16).
+  const others = context.visits.filter((v) => v.id !== payload.visitId);
   const neighbors = neighborVisitDates({ visitNumber: visit.visit_number }, others);
-
+  // Una visita de cotas tecleadas, sin libreta, conserva sus cotas y su
+  // cabecera al guardar sus datos (revisión final de la Fase 37).
+  const stored = context.visits.find((v) => v.id === payload.visitId)?.readings ?? [];
+  const toSave = visitSaveOf(record, payload.book, stored);
   const candidate: VisitInput = {
     id: payload.visitId,
     visitNumber: visit.visit_number,
     date: payload.date,
-    readings,
+    readings: toSave.elevations,
   };
-
-  const issues = validateVisitCapture(
-    candidate,
-    context.points,
-    neighbors.previous,
-    neighbors.next,
-  );
+  const issues = validateVisitCapture(candidate, context.points, neighbors.previous, neighbors.next);
   if (Object.keys(issues.errors).length > 0) {
     return { ok: false, error: Object.values(issues.errors)[0] };
   }
@@ -379,274 +311,48 @@ export async function saveVisitAction(
     }
   }
 
-  // --- Recálculo autoritativo ----------------------------------------------
-  const merged = [...others, candidate];
-  const history = computeHistory(
-    context.points,
-    merged,
-    thresholdsOf(context.site),
-  );
+  const history = computeHistory(context.points, [...others, candidate], thresholdsOf(context.site));
   const computed = history.visits.find((v) => v.visitId === payload.visitId);
   if (!computed) return { ok: false, error: "No se pudo calcular la visita." };
-
-  // En `book` el cierre, la tolerancia y la distancia son derivados de la
-  // libreta; en `direct` el cierre es el tecleado y lo demás no existe.
-  const round = (v: number | null, d: number) =>
-    v == null ? null : Number(v.toFixed(d));
-
-  // La cota de catálogo de los BM de control se copia en su fila (Fase 30),
-  // como la del amarre en la visita: corregir después el catálogo no cambia la
-  // comprobación de una visita cerrada.
-  let catalogElevations: (number | null)[] = [];
-  if (book) {
-    const { data: catalog, error: catalogError } = await supabase
-      .from("reference_points")
-      .select("code, type, elevation")
-      .eq("project_id", context.site.project_id);
-    if (catalogError) {
-      return { ok: false, error: logDbError(catalogError, "No se pudo guardar la visita.") };
-    }
-    catalogElevations = catalogElevationsOf(
-      book.forward.readings,
-      catalog ?? [],
-      amarreCode,
-      context.points,
-    );
-  }
-
-  // La libreta se guarda por (visit_id, reading_order) y se purgan las filas
-  // sobrantes. En `direct` la purga se lleva la libreta entera: el editor ya
-  // avisó.
-  const bookRows = book
-    ? bookRowsToPersist(
-        payload.visitId,
-        payload.book,
-        book.forward.readings,
-        context.points,
-        catalogElevations,
-      )
-    : [];
-
-  // --- Propagación a visitas posteriores ABIERTAS ---------------------------
-  // `computeHistory` recalculó TODO el histórico (`merged`), no solo la visita
-  // que se guarda: el parcial, el acumulado y la velocidad de cada visita
-  // dependen de la visita anterior con lectura de ese punto (ver
-  // `computeSettlements`). Insertar, borrar o mover en el tiempo una visita
-  // cambia esos valores en las visitas que le siguen cronológicamente, y hasta
-  // este punto solo se había persistido `payload.visitId`: las demás quedaban
-  // con el valor viejo en la base mientras el panel (que recalcula en cliente)
-  // ya mostraba el nuevo. Divergencia sin error — el hallazgo CRÍTICO 2 de la
-  // ronda de correcciones.
-  //
-  // Solo se reescriben las visitas ABIERTAS (draft/calculated) cuyo valor
-  // calculado difiere del persistido: las CERRADAS son inmutables por diseño
-  // (el trigger `settlement_readings_reject_write_when_closed` las protege de
-  // todos modos) y conservan el criterio con el que se cerraron — eso es lo
-  // correcto para la trazabilidad, no un descuido. Comparar antes de escribir
-  // evita reescribir visitas cuyos valores no cambiaron.
   const rewrites = visitsToRewrite({
     recalculated: history.visits,
-    statusByVisit: context.statusByVisit,
     persistedByVisit: context.persistedReadingsByVisit,
     skipVisitId: payload.visitId,
   });
 
-  const readingRow = (r: (typeof computed.readings)[number]) => ({
-    point_id: r.pointId,
-    elevation: r.elevation,
-    partial_settlement: r.partialSettlement,
-    accumulated_settlement: r.accumulatedSettlement,
-    velocity: r.velocity,
-    alert_status: r.alertStatus,
-  });
-
-  // Todo en una sola transacción (Fase 23), en el orden que imponen los
-  // triggers de vigencia —ver la migración `guardados_atomicos`—: purga de
-  // las lecturas que el usuario quitó, cabecera, libreta, lecturas y
-  // propagación. Si falla un paso no queda nada a medias: ni la fecha movida
-  // con la libreta vieja ni una visita sin lecturas.
-  const { error: saveError } = await supabase.rpc("save_visit", {
+  // Todo en una sola transacción (Fase 23): purga, cabecera, libreta, lecturas
+  // y propagación.
+  const { error } = await supabase.rpc("save_visit", {
     p_visit_id: payload.visitId,
     p_header: {
       date: payload.date,
       operator: payload.operator,
-      weather_conditions: payload.weatherConditions,
-      capture_mode: payload.captureMode,
-      reference_bm_code: amarreCode === "" ? null : amarreCode,
-      reference_bm_elevation:
-        amarreCode === "" ? null : payload.referenceBm.elevation,
-      closure_error_mm:
-        payload.captureMode === "book"
-          ? round(book?.closureErrorMm ?? null, 1)
-          : payload.closureErrorMm,
-      tolerance_mm: round(book?.toleranceMm ?? null, 1),
-      meets_tolerance: book?.meetsTolerance ?? null,
-      total_distance_km: book
-        ? round(totalDistanceFromReadings(bookInputs), 3)
-        : null,
       notes: payload.notes,
-      precision_order: payload.precisionOrder,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
       equipment_serial: payload.equipmentSerial,
-      equipment_calibration_date: payload.equipmentCalibrationDate,
-      level_type: payload.levelType,
-      km_precision_mm: payload.kmPrecisionMm,
-      status: readings.length > 0 ? "calculated" : "draft",
+      ...toSave.header,
     },
-    p_book: bookRows,
+    p_book: record.rows,
     p_readings: computed.readings.map(readingRow),
     p_rewrites: rewrites.flatMap((rewrite) =>
       rewrite.readings.map((r) => ({ visit_id: rewrite.visitId, ...readingRow(r) })),
     ),
   });
-  if (saveError) {
-    return { ok: false, error: logDbError(saveError, "No se pudo guardar la visita.") };
-  }
+  if (error) return { ok: false, error: logDbError(error, "No se pudo guardar la visita.") };
 
-  // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
-  revalidatePath(`/projects/${context.site.project_id}/settlement/${payload.siteId}`);
+  // La página de la visita también: su cabecera —armadas, verificación, «En
+  // medición»— vuelve en la misma respuesta de cada lectura guardada.
+  const sitePath = `/projects/${context.site.project_id}/settlement/${payload.siteId}`;
+  revalidatePath(sitePath);
+  revalidatePath(`${sitePath}/visits/${payload.visitId}`);
   return { ok: true };
 }
 
 /**
- * Cierra una visita: queda inmutable, con responsable y timestamp (§ 4.6).
- *
- * Exige que todos los puntos del catálogo tengan lectura. NO evalúa los
- * umbrales: una visita con puntos en alarma se cierra con normalidad, porque
- * ese es justo el hallazgo que el monitoreo documenta.
- */
-export async function closeVisitAction(
-  projectId: string,
-  siteId: string,
-  visitId: string,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Sesión no válida." };
-
-  const context = await loadContext(supabase, siteId);
-  if (!context) return { ok: false, error: "Lugar no encontrado." };
-
-  const visit = context.visits.find((v) => v.id === visitId);
-  if (!visit) return { ok: false, error: "Visita no encontrada." };
-
-  // La fecha de la visita anterior por número. El cierre también comprueba el
-  // orden: sellar como inmutable una visita fechada fuera de orden dejaría un
-  // intervalo imposible de corregir después (Fase 26, C-16).
-  const previousDate = neighborVisitDates(
-    visit,
-    context.visits.filter((v) => v.id !== visitId),
-  ).previous;
-
-  const siteVisits = context.visits.map((v) => ({
-    ...v,
-    closed: context.statusByVisit.get(v.id) === "closed",
-  }));
-
-  // Con libreta, la comprobación aritmética bloquea el cierre; la tolerancia
-  // solo avisa y no se mira aquí (Fase 18, decisión 5).
-  const { data: header } = await supabase
-    .from("settlement_visits")
-    .select("capture_mode, reference_bm_elevation, precision_order")
-    .eq("id", visitId)
-    .maybeSingle();
-  let bookCheck: { arithmeticCheckOk: boolean; turningPoint: string | null } | null = null;
-  if (header?.capture_mode === "book" && header.reference_bm_elevation != null) {
-    const { data: rows } = await supabase
-      .from("settlement_book_readings")
-      .select("*")
-      .eq("visit_id", visitId)
-      .order("reading_order");
-    if (rows && rows.length > 0) {
-      const result = computeVisitBook(
-        rows.map((r) => bookRowInputOf(bookRowOf(r as SettlementBookReading))),
-        Number(header.reference_bm_elevation),
-        header.precision_order as PrecisionOrder,
-      );
-      bookCheck = {
-        arithmeticCheckOk: result.arithmeticCheckOk,
-        turningPoint: turningPointBlocker(result),
-      };
-    }
-  }
-
-  const issues = validateVisitClose(
-    visit,
-    context.points,
-    previousDate,
-    siteVisits,
-    bookCheck,
-  );
-  if (Object.keys(issues.errors).length > 0) {
-    return { ok: false, error: Object.values(issues.errors)[0] };
-  }
-
-  const { error } = await supabase
-    .from("settlement_visits")
-    .update({
-      status: "closed",
-      closed_at: new Date().toISOString(),
-      closed_by: user.id,
-    })
-    .eq("id", visitId);
-
-  if (error) return { ok: false, error: logDbError(error, "No se pudo cerrar la visita.") };
-
-  // Igual criterio: `context.site.project_id`, no el `projectId` del parámetro.
-  revalidatePath(`/projects/${context.site.project_id}/settlement/${siteId}`);
-  return { ok: true };
-}
-
-/**
- * Reabre una visita cerrada (Fase 34): vuelve a `calculated`, sin registro de
- * cierre. Con el lugar cerrado no se puede: primero se reabre el lugar, cuyo
- * trigger rechaza escribir sus visitas.
- */
-export async function reopenVisitAction(siteId: string, visitId: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Sesión no válida." };
-
-  const { data: site } = await supabase
-    .from("sites")
-    .select("id, status, project_id")
-    .eq("id", siteId)
-    .maybeSingle();
-  if (!site) return { ok: false, error: "Lugar no encontrado." };
-  const { data: visit } = await supabase
-    .from("settlement_visits")
-    .select("id, status")
-    .eq("id", visitId)
-    .eq("site_id", siteId)
-    .maybeSingle();
-  if (!visit) return { ok: false, error: "Visita no encontrada." };
-  const blocker = reopenBlocker("visit", visit.status, site.status);
-  if (blocker) return { ok: false, error: blocker };
-
-  const { error } = await supabase
-    .from("settlement_visits")
-    .update(reopenPatch("visit"))
-    .eq("id", visitId);
-  if (error) return { ok: false, error: logDbError(error, "No se pudo reabrir la visita.") };
-
-  revalidatePath(`/projects/${site.project_id}/settlement/${siteId}/visits/${visitId}`);
-  revalidatePath(`/projects/${site.project_id}/settlement/${siteId}`);
-  revalidatePath(`/projects/${site.project_id}`);
-  return { ok: true };
-}
-
-/**
- * Elimina una visita (Fase 22): solo la última del lugar y sin cerrar.
- *
- * Borrar una intermedia dejaría un hueco en la numeración y cambiaría el
- * asentamiento parcial y la velocidad de la siguiente, que se miden contra la
- * visita anterior. La última no tiene quien dependa de ella: sus lecturas y
- * su libreta se van con ella (cascada) y el resto del histórico no cambia.
+ * Elimina cualquier visita (Fase 37, decisión 18): sus lecturas y su libreta
+ * se van con ella (cascada) y el histórico de las demás se recalcula —el
+ * parcial y la velocidad de la siguiente se miden contra la anterior—.
  */
 export async function deleteVisitAction(
   projectId: string,
@@ -656,30 +362,20 @@ export async function deleteVisitAction(
   const supabase = await createClient();
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id")
+    .select("id, project_id")
     .eq("id", siteId)
     .maybeSingle();
   if (!site || site.project_id !== projectId) return { ok: false, error: "Lugar no encontrado." };
-  if (site.status === "closed") {
-    return { ok: false, error: "El lugar está cerrado; sus visitas no se pueden eliminar." };
-  }
 
-  const { data: visits } = await supabase
+  const { error } = await supabase
     .from("settlement_visits")
-    .select("id, visit_number, status")
-    .eq("site_id", siteId)
-    .order("visit_number", { ascending: false })
-    .limit(1);
-  const ultima = visits?.[0];
-  if (!ultima || ultima.id !== visitId) {
-    return { ok: false, error: "Solo se puede eliminar la última visita del lugar." };
-  }
-  if (ultima.status === "closed") {
-    return { ok: false, error: "La visita está cerrada y no puede eliminarse." };
-  }
-
-  const { error } = await supabase.from("settlement_visits").delete().eq("id", visitId);
+    .delete()
+    .eq("id", visitId)
+    .eq("site_id", siteId);
   if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar la visita.") };
+
+  const resync = await resyncSiteReadings(supabase, siteId);
+  if (!resync.ok) return { ok: false, error: resync.error };
 
   revalidatePath(`/projects/${projectId}/settlement/${siteId}`);
   revalidatePath(`/projects/${projectId}`);

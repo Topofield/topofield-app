@@ -62,23 +62,19 @@ interface ProcessRowActionsProps {
   kind: RowKind;
   id: string;
   name: string;
-  /** Cerrado o rechazado: solo se puede duplicar. */
-  closed: boolean;
   /** Informes consolidados que lo incluyen: el borrado los avisa (Fase 34). */
   reportTitles?: string[];
 }
 
 /**
  * Acciones por fila del listado del hub, para poligonales, nivelaciones y
- * lugares. Lo cerrado solo admite duplicar: renombrar y eliminar quedan
- * ocultos, no deshabilitados — una acción visible pero inerte invita a
- * intentarla.
+ * lugares: duplicar, renombrar y eliminar. Desde la Fase 37 nada se cierra,
+ * así que toda fila tiene las tres.
  */
 export function ProcessRowActions({
   kind,
   id,
   name,
-  closed,
   reportTitles = [],
 }: ProcessRowActionsProps) {
   const k = KINDS[kind];
@@ -125,35 +121,31 @@ export function ProcessRowActions({
           Duplicar
         </Button>
 
-        {!closed && (
-          <>
-            <Button
-              size="sm"
-              variant="ghost"
-              type="button"
-              aria-label={`Renombrar «${name}»`}
-              onClick={() => {
-                setNombre(name);
-                setError(null);
-                setRenombrando(true);
-              }}
-            >
-              Renombrar
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              type="button"
-              aria-label={`Eliminar «${name}»`}
-              onClick={() => {
-                setError(null);
-                setEliminando(true);
-              }}
-            >
-              Eliminar
-            </Button>
-          </>
-        )}
+        <Button
+          size="sm"
+          variant="ghost"
+          type="button"
+          aria-label={`Renombrar «${name}»`}
+          onClick={() => {
+            setNombre(name);
+            setError(null);
+            setRenombrando(true);
+          }}
+        >
+          Renombrar
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          type="button"
+          aria-label={`Eliminar «${name}»`}
+          onClick={() => {
+            setError(null);
+            setEliminando(true);
+          }}
+        >
+          Eliminar
+        </Button>
       </div>
 
       {duplicateError && (

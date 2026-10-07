@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { generateVisitBook } from "./libreta-asentamientos";
-import {
-  bookRowInputOf,
-  computeVisitBook,
-  deriveControlElevations,
-} from "@/lib/calculations/settlement-book";
-import { validateVisitBook } from "@/lib/validators/settlement-book";
+import { bookRowInputOf } from "@/lib/calculations/settlement-book";
+import { visitRecordOf } from "@/lib/calculations/visit-record";
+import { validateBook } from "@/lib/validators/settlement-book";
 import type { PointInput } from "@/types/settlement";
 
 const TARGETS = [
@@ -27,14 +24,17 @@ const POINTS: PointInput[] = TARGETS.map((t) => ({
   retiredOn: null,
 }));
 
+// Desde la Fase 37 la libreta se calcula como la guarda la app: por tramos y
+// sin compensar (`visitRecordOf`).
 function run(closureMm: number, amarre = { code: "BM-1", elevation: 100 }, seed = 7) {
   const rows = generateVisitBook({ amarre, targets: TARGETS, closureMm, order: "tercer_orden", seed });
-  const inputs = rows.map(bookRowInputOf);
-  const check = validateVisitBook(inputs, amarre);
-  const result = computeVisitBook(inputs, amarre.elevation, "tercer_orden");
-  const derived = deriveControlElevations(result, POINTS, "2025-03-01");
-  return { rows, check, result, derived };
+  const check = validateBook(rows.map(bookRowInputOf), [amarre]);
+  const record = visitRecordOf({ visitId: "v", date: "2025-03-01", rows, points: POINTS, benchmarks: [amarre] });
+  return { rows, check, record };
 }
+
+const elevationOf = (record: ReturnType<typeof run>["record"], code: string) =>
+  record.elevations.find((r) => r.pointId === code)!.elevation;
 
 describe("generateVisitBook", () => {
   it("genera una libreta válida, cerrada en el amarre, con dos armadas y un punto de cambio", () => {
@@ -47,32 +47,30 @@ describe("generateVisitBook", () => {
     expect(rows.filter((r) => r.pointType === "intermediate")).toHaveLength(8);
   });
 
-  it("cierra con el error pedido y cumple la tolerancia", () => {
-    const { result } = run(-2.4);
-    expect(result.arithmeticCheckOk).toBe(true);
-    expect(result.closureErrorMm).toBeCloseTo(-2.4, 6);
-    expect(result.meetsTolerance).toBe(true);
+  it("cierra en el amarre con el error pedido y alcanza un orden", () => {
+    const [tramo] = run(-2.4).record.book.tramos;
+    expect(tramo).toMatchObject({ kind: "closed", closureMm: -2.4, complete: true });
+    expect(tramo!.order).not.toBeNull();
   });
 
-  it("las cotas compensadas reproducen las objetivo a la resolución de la base", () => {
+  it("sin compensar, cada cota se aparta de la objetivo menos que el cierre", () => {
     for (const closure of [0, 1.3, -2.4, 3.9]) {
       for (const seed of [1, 7, 42]) {
-        const { derived } = run(closure, { code: "BM-2", elevation: 100.845 }, seed);
-        expect(derived.issues).toEqual([]);
+        const { record } = run(closure, { code: "BM-2", elevation: 100.845 }, seed);
+        expect(record.issues).toEqual([]);
         for (const t of TARGETS) {
-          const got = derived.readings.find((r) => r.pointId === t.code)!.elevation;
-          expect(Math.abs(got - t.elevation)).toBeLessThanOrEqual(0.0001 + 1e-9);
+          const offMm = Math.abs(elevationOf(record, t.code) - t.elevation) * 1000;
+          expect(offMm).toBeLessThanOrEqual(Math.abs(closure) + 0.1);
         }
       }
     }
   });
 
-  it("fuera de tolerancia no compensa, y las cotas calculadas son las objetivo", () => {
-    const { result, derived } = run(9.8);
-    expect(result.meetsTolerance).toBe(false);
+  it("un cierre fuera de todos los órdenes deja las cotas en las objetivo y la visita sin orden", () => {
+    const { record } = run(9.8);
+    expect(record.header.precision_order).toBeNull();
     for (const t of TARGETS) {
-      const got = derived.readings.find((r) => r.pointId === t.code)!.elevation;
-      expect(Math.abs(got - t.elevation)).toBeLessThanOrEqual(0.0001 + 1e-9);
+      expect(Math.abs(elevationOf(record, t.code) - t.elevation)).toBeLessThanOrEqual(0.0001 + 1e-9);
     }
   });
 

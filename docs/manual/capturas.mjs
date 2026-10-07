@@ -60,14 +60,21 @@ const proyectoVerjon = verjon
   : "";
 const proyectoMonitoreo = sql("select id from public.projects where name='Edificio en monitoreo' limit 1;");
 const lugarMonitoreo = sql("select id from public.sites where name='Edificio Torre Central' limit 1;");
-// Fase 18 — el lugar con libreta de nivelación en cada visita. Se usa la
-// visita abierta más antigua: en el seed tiene libreta, visitas a los dos
-// lados para las flechas, y Editar y Cerrar visita a la vista.
-const lugarLibreta = sql("select id from public.sites where name='Torre Alameda' limit 1;");
+// Fase 37 — Torre Alameda del seed (la demo tiene otra con el mismo nombre):
+// su visita 12, de dos armadas por CP-1, con BM-2 leído de paso.
+const lugarLibreta = proyectoMonitoreo
+  ? sql(`select id from public.sites where name='Torre Alameda' and project_id='${proyectoMonitoreo}' limit 1;`)
+  : "";
 const visitaLibreta = lugarLibreta
-  ? sql(
-      `select id from public.settlement_visits where site_id='${lugarLibreta}' and status<>'closed' and capture_mode='book' order by date limit 1;`,
-    )
+  ? sql(`select id from public.settlement_visits where site_id='${lugarLibreta}' and visit_number=12;`)
+  : "";
+// La cartera real (Fase 37), en el «Proyecto de ejemplo»: su visita 7.
+const cartera = sql(
+  "select project_id || ' ' || id from public.sites where name='Control de asentamiento estructural' limit 1;",
+);
+const [proyectoCartera = "", lugarCartera = ""] = cartera.split(" ");
+const visitaCartera = lugarCartera
+  ? sql(`select id from public.settlement_visits where site_id='${lugarCartera}' and visit_number=7;`)
   : "";
 
 if (
@@ -78,9 +85,12 @@ if (
   !proyectoMonitoreo ||
   !lugarMonitoreo ||
   !lugarLibreta ||
-  !visitaLibreta
+  !visitaLibreta ||
+  !visitaCartera
 ) {
-  throw new Error("Faltan datos de seed. Corré: npm run seed");
+  throw new Error(
+    "Faltan datos de seed. Corré: npm run seed, inicia sesión una vez (crea el «Proyecto de ejemplo») y, si es una demo vieja, scripts/agregar-cartera-demo.mjs --aplicar",
+  );
 }
 
 /**
@@ -294,55 +304,63 @@ console.log("✓", "23-importar-nivelacion");
 await page.keyboard.press("Escape");
 await page.setViewportSize({ width: 1280, height: 800 });
 
-// Control de asentamientos
-await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/new`, { waitUntil: "networkidle" });
-await capturar("13-nuevo-lugar");
-await page.goto(`${BASE}/projects/${proyectoMonitoreo}/sites/${lugarMonitoreo}`, { waitUntil: "networkidle" });
+// Control de asentamientos (Fase 37): el alta del lugar en popup, desde el
+// selector de procesos del proyecto.
+await page.goto(`${BASE}/projects/${proyectoMonitoreo}?tab=processes&modulo=asentamientos`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "+ Nuevo Proceso" }).click();
+await page.getByRole("dialog").getByRole("button", { name: "Control de Asentamientos" }).click();
+await page.waitForTimeout(500);
+await page.getByRole("dialog", { name: "Nuevo lugar" }).screenshot({ path: join(OUT, "13-nuevo-lugar.png") });
+console.log("✓", "13-nuevo-lugar");
+await page.keyboard.press("Escape");
+
+// La pestaña Puntos de Torre Central: un punto de alta y uno de baja.
+await page.goto(`${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarMonitoreo}?tab=puntos`, { waitUntil: "networkidle" });
 await capturar("14-editor-lugar", { fullPage: true });
 
-// Fase 18 — Torre Alameda, con libreta en cada visita. El panel se recorta al
-// final del semáforo, su última tarjeta desde que la Fase 29 quitó la tabla de
-// diferenciales.
-const panelLibreta = `${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarLibreta}`;
-await page.goto(panelLibreta, { waitUntil: "networkidle" });
-await page.waitForTimeout(900);
-const semaforo = await page
-  .getByRole("heading", { name: "Semáforo por punto (última visita)" })
-  .locator("xpath=ancestor::*[contains(@class,'rounded')][1]")
-  .boundingBox();
-await capturar("15-panel-asentamientos", {
-  fullPage: true,
-  clip: { x: 0, y: 0, width: 1280, height: Math.ceil(semaforo.y + semaforo.height + 24) },
-});
+// El panel de la cartera real: la tabla de visitas, la tendencia y los avisos
+// de B10.
+const panelCartera = `${BASE}/projects/${proyectoCartera}/settlement/${lugarCartera}`;
+await page.goto(panelCartera, { waitUntil: "networkidle" });
+await capturar("15-panel-asentamientos", { fullPage: true });
 
-// El formulario de nueva visita, sin crearla. Alto para que quepa entero.
+// Los resultados de la visita 7 de la cartera.
+await page.goto(`${panelCartera}/visits/${visitaCartera}?tab=resultados`, { waitUntil: "networkidle" });
+await capturar("27-vista-visita", { fullPage: true });
+
+// Torre Alameda: sus BM del lugar, la nueva visita, la libreta de la visita
+// 12 y su segunda armada, que cierra en BM-1.
+const panelLibreta = `${BASE}/projects/${proyectoMonitoreo}/settlement/${lugarLibreta}`;
+await page.goto(`${panelLibreta}?tab=bms`, { waitUntil: "networkidle" });
+await capturar("35-bms-lugar", { fullPage: true });
+
+// El popup de nueva visita, sin crearla. Alto para que quepa entero.
+await page.goto(panelLibreta, { waitUntil: "networkidle" });
 await page.setViewportSize({ width: 1280, height: 1400 });
 await page.getByRole("button", { name: "+ Nueva visita" }).click();
 await page.waitForTimeout(500);
-await page.getByRole("dialog").screenshot({ path: join(OUT, "25-nueva-visita.png") });
+await page.getByRole("dialog", { name: "Nueva visita" }).screenshot({ path: join(OUT, "25-nueva-visita.png") });
 console.log("✓", "25-nueva-visita");
 await page.keyboard.press("Escape");
 await page.setViewportSize({ width: 1280, height: 800 });
 
-// La vista de la visita con el punto más asentado del seed seleccionado, y su
-// registro de nivelación.
 const vistaLibreta = `${panelLibreta}/visits/${visitaLibreta}`;
 await page.goto(vistaLibreta, { waitUntil: "networkidle" });
-await page.getByRole("button", { name: "TA-07", exact: true }).click();
-await capturar("27-vista-visita", { fullPage: true });
-await page.getByRole("button", { name: "Ver registro de nivelación" }).click();
-await page.waitForTimeout(600);
-await page.getByRole("dialog").screenshot({ path: join(OUT, "28-registro-nivelacion.png") });
-console.log("✓", "28-registro-nivelacion");
-await page.keyboard.press("Escape");
-
-// El editor con la libreta, y el diálogo de importación con la misma libreta
-// pasada a la plantilla CSV. Sin aceptar: el seed queda como estaba.
-await page.goto(`${vistaLibreta}/editar`, { waitUntil: "networkidle" });
 await capturar("16-editor-visita", { fullPage: true });
-await page.setViewportSize({ width: 1280, height: 1400 });
-await page.getByRole("button", { name: "Importar desde archivo" }).click();
-const importarVisita = page.getByRole("dialog");
+
+// La armada 2, tal como quedó: sin tocar nada, «Seguir después» no guarda.
+await page.setViewportSize({ width: 1280, height: 1500 });
+await page.getByRole("button", { name: "Editar la armada 2" }).first().click();
+await page.waitForTimeout(600);
+await page.getByRole("dialog", { name: /Armada 2/ }).screenshot({ path: join(OUT, "34-armada-visita.png") });
+console.log("✓", "34-armada-visita");
+await page.getByRole("dialog", { name: /Armada 2/ }).getByRole("button", { name: "Seguir después" }).click();
+await page.waitForTimeout(600);
+
+// El diálogo de importación con la misma libreta pasada a la plantilla CSV.
+// Sin aceptar: el seed queda como estaba.
+await page.getByRole("button", { name: "Importar .L o CSV" }).click();
+const importarVisita = page.getByRole("dialog", { name: "Importar la libreta de la visita" });
 await importarVisita.locator('input[type="file"]').setInputFiles({
   name: "libreta-visita.csv",
   mimeType: "text/csv",
@@ -363,7 +381,7 @@ let informe = sql(
   `select id from public.reports where project_id='${proyecto}' order by generated_at desc limit 1;`,
 );
 if (!informe) {
-  await page.getByLabel("Título").fill("Informe de cierre — etapa 1");
+  await page.getByLabel("Título").fill("Informe — etapa 1");
   const casillas = page.locator("fieldset input[type=checkbox]");
   const total = await casillas.count();
   for (let i = 0; i < total; i++) await casillas.nth(i).check();

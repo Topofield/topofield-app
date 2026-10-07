@@ -817,6 +817,7 @@ export type Database = {
           point_id: string | null
           point_type: string
           reading_order: number
+          starts_section: boolean
           visit_id: string
         }
         Insert: {
@@ -840,6 +841,7 @@ export type Database = {
           point_id?: string | null
           point_type: string
           reading_order: number
+          starts_section?: boolean
           visit_id: string
         }
         Update: {
@@ -863,6 +865,7 @@ export type Database = {
           point_id?: string | null
           point_type?: string
           reading_order?: number
+          starts_section?: boolean
           visit_id?: string
         }
         Relationships: [
@@ -979,9 +982,6 @@ export type Database = {
       }
       settlement_visits: {
         Row: {
-          capture_mode: string
-          closed_at: string | null
-          closed_by: string | null
           closure_error_mm: number | null
           created_at: string
           date: string
@@ -995,7 +995,7 @@ export type Database = {
           meets_tolerance: boolean | null
           notes: string | null
           operator: string | null
-          precision_order: string
+          precision_order: string | null
           reference_bm_code: string | null
           reference_bm_elevation: number | null
           site_id: string
@@ -1004,12 +1004,8 @@ export type Database = {
           total_distance_km: number | null
           updated_at: string
           visit_number: number
-          weather_conditions: string | null
         }
         Insert: {
-          capture_mode?: string
-          closed_at?: string | null
-          closed_by?: string | null
           closure_error_mm?: number | null
           created_at?: string
           date: string
@@ -1023,7 +1019,7 @@ export type Database = {
           meets_tolerance?: boolean | null
           notes?: string | null
           operator?: string | null
-          precision_order?: string
+          precision_order?: string | null
           reference_bm_code?: string | null
           reference_bm_elevation?: number | null
           site_id: string
@@ -1032,12 +1028,8 @@ export type Database = {
           total_distance_km?: number | null
           updated_at?: string
           visit_number: number
-          weather_conditions?: string | null
         }
         Update: {
-          capture_mode?: string
-          closed_at?: string | null
-          closed_by?: string | null
           closure_error_mm?: number | null
           created_at?: string
           date?: string
@@ -1051,7 +1043,7 @@ export type Database = {
           meets_tolerance?: boolean | null
           notes?: string | null
           operator?: string | null
-          precision_order?: string
+          precision_order?: string | null
           reference_bm_code?: string | null
           reference_bm_elevation?: number | null
           site_id?: string
@@ -1060,11 +1052,61 @@ export type Database = {
           total_distance_km?: number | null
           updated_at?: string
           visit_number?: number
-          weather_conditions?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "settlement_visits_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_benchmarks: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          elevation: number
+          id: string
+          origin_visit_id: string | null
+          site_id: string
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          elevation: number
+          id?: string
+          origin_visit_id?: string | null
+          site_id: string
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          elevation?: number
+          id?: string
+          origin_visit_id?: string | null
+          site_id?: string
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_benchmarks_origin_visit_id_fkey"
+            columns: ["origin_visit_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_benchmarks_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
@@ -1077,8 +1119,6 @@ export type Database = {
           accumulated_alarm: number
           accumulated_alert: number
           accumulated_caution: number
-          closed_at: string | null
-          closed_by: string | null
           created_at: string
           description: string | null
           id: string
@@ -1086,7 +1126,6 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string
-          status: string
           structure_type: string
           updated_at: string
           velocity_alarm: number
@@ -1097,8 +1136,6 @@ export type Database = {
           accumulated_alarm?: number
           accumulated_alert?: number
           accumulated_caution?: number
-          closed_at?: string | null
-          closed_by?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1106,7 +1143,6 @@ export type Database = {
           name: string
           notes?: string | null
           project_id: string
-          status?: string
           structure_type: string
           updated_at?: string
           velocity_alarm?: number
@@ -1117,8 +1153,6 @@ export type Database = {
           accumulated_alarm?: number
           accumulated_alert?: number
           accumulated_caution?: number
-          closed_at?: string | null
-          closed_by?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1126,7 +1160,6 @@ export type Database = {
           name?: string
           notes?: string | null
           project_id?: string
-          status?: string
           structure_type?: string
           updated_at?: string
           velocity_alarm?: number
@@ -1151,10 +1184,6 @@ export type Database = {
       georeference_polygonal: {
         Args: { p_header: Json; p_process_id: string; p_stations: Json }
         Returns: undefined
-      }
-      is_reopening: {
-        Args: { new_row: Json; old_row: Json }
-        Returns: boolean
       }
       owns_reading_station: {
         Args: { target_station: string }

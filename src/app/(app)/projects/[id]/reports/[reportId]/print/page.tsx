@@ -1,16 +1,13 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProjectById, getReport } from "@/lib/supabase/queries";
-import { closureOf, loadReportSections } from "@/lib/reports/sections";
-import { responsibleNames } from "@/lib/reports/responsible";
-import { issuedFooterNote, reopenedAfterIssue } from "@/lib/reports/state";
+import { loadReportSections } from "@/lib/reports/sections";
 import { precisionSummaryRows } from "@/lib/reports/summary";
 import { formatDate } from "@/lib/utils/format";
 import { CANDIDATE_KIND_LABELS } from "@/types/report";
 import { Breadcrumbs } from "@/components/design-system";
 import { DeleteReportButton } from "@/components/reports/delete-report-button";
 import { PrintButton } from "@/components/reports/print-button";
-import { ClosureRecord } from "@/components/reports/sections/closure-record";
 import { PrecisionSummary } from "@/components/reports/sections/precision-summary";
 import { ReportProcessSection } from "@/components/reports/sections/process-section";
 import { ReportCover } from "@/components/reports/sections/report-cover";
@@ -27,10 +24,8 @@ interface PrintPageProps {
  * `@media print`, que oculta la navegación de la aplicación.
  *
  * El contenido se **reconstruye** en cada visita a partir de los procesos que
- * el informe referencia: solo puede incluir procesos cerrados, cuyas
- * mediciones y veredicto la base protege mientras sigan cerrados. Desde la
- * Fase 34 un proceso se puede reabrir: el informe muestra entonces sus datos
- * actuales y «—» en su registro de cierre. La posición de una poligonal
+ * el informe referencia: muestra sus datos actuales. Desde la Fase 37 nada se
+ * cierra, así que no hay registro de cierre. La posición de una poligonal
  * georreferenciada después (Fase 15) también se muestra actualizada, con una
  * nota.
  *
@@ -49,17 +44,6 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
 
   const entries = [...report.included_processes].sort((a, b) => a.order - b.order);
   const sections = await loadReportSections(supabase, project.id, entries);
-  const names = await responsibleNames(
-    supabase,
-    sections.map((s) => closureOf(s).closedBy),
-  );
-  // Lo que se reabrió después de emitir el informe (Fase 34): el pie lo dice,
-  // porque el informe muestra sus datos actuales.
-  const reopened = reopenedAfterIssue(
-    sections.map((s) => ({ kind: s.kind, name: s.entry.name, closedAt: closureOf(s).closedAt })),
-  );
-  // Lo que se cierra: la poligonal y la nivelación no (Fases 35 y 36).
-  const closable = sections.filter((s) => s.kind === "site").length;
 
   return (
     <div className="report">
@@ -112,17 +96,9 @@ export default async function ReportPrintPage({ params }: PrintPageProps) {
         </section>
       )}
 
-      <ClosureRecord
-        sections={sections}
-        names={names}
-        footer={
-          <>
-            Informe emitido desde TopoField el{" "}
-            {report.generated_at ? formatDate(report.generated_at) : "—"}
-            {issuedFooterNote(reopened, closable)}
-          </>
-        }
-      />
+      <p className="report-footer">
+        Informe emitido desde TopoField el {report.generated_at ? formatDate(report.generated_at) : "—"}.
+      </p>
     </div>
   );
 }

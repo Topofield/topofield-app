@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/design-system";
 import { ReportForm } from "@/components/reports/report-form";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getClosedWorkForReports,
+  getReportableWork,
   getProjectById,
 } from "@/lib/supabase/queries";
 import { selectableProcesses } from "@/lib/reports/eligibility";
@@ -27,7 +27,7 @@ export default async function NewReportPage({ params, searchParams }: NewReportP
   // La consulta ya filtra por `status = 'closed'`; se pasa igualmente por la
   // función pura, que es la que define la regla y la que tiene los tests.
   const candidates = selectableProcesses(
-    await getClosedWorkForReports(supabase, project.id),
+    await getReportableWork(supabase, project.id),
   );
   const initialSelected = incluir === undefined ? [] : [incluir].flat();
 
@@ -40,7 +40,7 @@ export default async function NewReportPage({ params, searchParams }: NewReportP
           { label: "Nuevo informe" },
         ]}
         title="Nuevo informe"
-        subtitle="Reúne poligonales y nivelaciones calculadas y controles de asentamientos cerrados del proyecto en un solo documento."
+        subtitle="Reúne poligonales y nivelaciones calculadas y controles de asentamientos con alguna visita calculada del proyecto en un solo documento."
       />
       <ReportForm
         projectId={project.id}

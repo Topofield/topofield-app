@@ -45,32 +45,22 @@ describe("isEligible", () => {
     }
   });
 
-  it("acepta un lugar cerrado", () => {
-    expect(isEligible({ kind: "site", id: "s1", name: "Torre", status: "closed" })).toBe(true);
+  // Fase 37: el lugar no se cierra. Entra con alguna visita calculada; su
+  // `status` de candidato lo deriva la consulta de sus visitas.
+  it("acepta un lugar con alguna visita calculada", () => {
+    expect(isEligible({ kind: "site", id: "s1", name: "Torre", status: "calculated" })).toBe(true);
   });
 
-  // El § 4.6 lo dice explícitamente: un proceso rechazado «queda como
-  // referencia pero no se puede incluir en informes». Es una regla escrita
-  // hace fases que se ejerce por primera vez aquí.
-  it("RECHAZA un proceso rechazado, aunque esté cerrado en la práctica", () => {
-    expect(isEligible(nivelacion({ status: "rejected" }))).toBe(false);
-  });
-
-  // Un proceso abierto seguiría cambiando: el informe dejaría de ser
-  // reproducible, que es lo que sostiene no guardar una copia de los datos.
-  it("un lugar, en cualquier estado que no sea cerrado, no entra", () => {
-    for (const status of ["draft", "in_progress", "calculated", "active"] as const) {
+  it("un lugar sin visitas calculadas no entra", () => {
+    for (const status of ["draft", "in_progress", "active", "closed"]) {
       expect(isEligible({ kind: "site", id: "s1", name: "Torre", status })).toBe(false);
     }
   });
 
-  // Un lugar ACTIVO admite visitas nuevas aunque ya tenga varias cerradas:
-  // su informe cambiaría al reabrirlo. La unidad incluible es el lugar
-  // cerrado, no la visita suelta.
-  it("rechaza un lugar activo aunque tenga visitas cerradas", () => {
-    expect(isEligible({ kind: "site", id: "s1", name: "Torre", status: "active" })).toBe(
-      false,
-    );
+  // El § 4.6 lo dice explícitamente: un proceso rechazado «queda como
+  // referencia pero no se puede incluir en informes».
+  it("RECHAZA un proceso rechazado", () => {
+    expect(isEligible(nivelacion({ status: "rejected" }))).toBe(false);
   });
 });
 
@@ -80,7 +70,7 @@ describe("selectableProcesses", () => {
       poligonal({ id: "a" }),
       nivelacion({ id: "b", status: "rejected" }),
       poligonal({ id: "c", status: "draft" }),
-      { kind: "site", id: "d", name: "Torre", status: "closed" },
+      { kind: "site", id: "d", name: "Torre", status: "calculated" },
     ]);
     expect(out.map((p) => p.id)).toEqual(["a", "d"]);
   });

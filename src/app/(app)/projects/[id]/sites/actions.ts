@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { StructureType } from "@/types/site";
 import { resyncSiteReadings } from "@/lib/supabase/settlement-sync";
 import { logDbError } from "@/lib/errors/user-message";
-import { reopenBlocker, reopenPatch } from "@/lib/reopen";
 
 export interface ActionResult {
   ok: boolean;
@@ -24,7 +23,6 @@ export interface SitePayload {
   accumulatedCaution: number;
   accumulatedAlert: number;
   accumulatedAlarm: number;
-  notes: string | null;
 }
 
 /**
@@ -88,7 +86,6 @@ export async function createSiteAction(
       accumulated_caution: payload.accumulatedCaution,
       accumulated_alert: payload.accumulatedAlert,
       accumulated_alarm: payload.accumulatedAlarm,
-      notes: payload.notes,
     })
     .select("id")
     .single();
@@ -99,7 +96,7 @@ export async function createSiteAction(
   return { ok: true, siteId: data.id };
 }
 
-/** Guarda la configuración de un lugar. Rechaza lugares cerrados. */
+/** Guarda la configuración de un lugar. */
 export async function saveSiteAction(
   siteId: string,
   payload: SitePayload,
@@ -119,15 +116,12 @@ export async function saveSiteAction(
   // corresponde al lugar que en verdad se está guardando.
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id, kind")
+    .select("id, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
   // Un lugar de agrupación (Fase 22) no es un control de asentamientos: no
   // se edita ni se cierra como tal, aunque se llame a la acción directamente.
   if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
-  if (site.status === "closed") {
-    return { ok: false, error: "El lugar está cerrado; no admite cambios." };
-  }
 
   const { error } = await supabase
     .from("sites")
@@ -141,7 +135,6 @@ export async function saveSiteAction(
       accumulated_caution: payload.accumulatedCaution,
       accumulated_alert: payload.accumulatedAlert,
       accumulated_alarm: payload.accumulatedAlarm,
-      notes: payload.notes,
     })
     .eq("id", siteId);
 
@@ -153,9 +146,6 @@ export async function saveSiteAction(
   // panel del lugar recalcula en vivo, así que sin esto las dos vistas se
   // contradirían — y un informe que mezclara ambas fuentes se contradiría a sí
   // mismo dentro del mismo documento.
-  //
-  // Solo se reescriben las visitas ABIERTAS; las cerradas conservan el criterio
-  // con el que se cerraron, por trazabilidad.
   const resync = await resyncSiteReadings(supabase, siteId);
   if (!resync.ok) return { ok: false, error: resync.error };
 
@@ -164,78 +154,7 @@ export async function saveSiteAction(
   return { ok: true };
 }
 
-/** Cierra un lugar: fin del monitoreo. Queda en solo lectura. */
-export async function closeSiteAction(
-  projectId: string,
-  siteId: string,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Sesión no válida." };
-
-  // Igual que en saveSiteAction: se lee `project_id` de la fila y se usa ese
-  // valor para el revalidatePath, no el `projectId` que llega como parámetro
-  // desde el cliente, que podría no corresponder al lugar real.
-  const { data: site } = await supabase
-    .from("sites")
-    .select("id, status, project_id, kind")
-    .eq("id", siteId)
-    .maybeSingle();
-  // Un lugar de agrupación (Fase 22) no es un control de asentamientos: no
-  // se edita ni se cierra como tal, aunque se llame a la acción directamente.
-  if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
-  if (site.status === "closed") {
-    return { ok: false, error: "El lugar ya está cerrado." };
-  }
-
-  const { error } = await supabase
-    .from("sites")
-    .update({
-      status: "closed",
-      closed_at: new Date().toISOString(),
-      closed_by: user.id,
-    })
-    .eq("id", siteId);
-
-  if (error) return { ok: false, error: logDbError(error, "No se pudo cerrar el lugar.") };
-
-  revalidatePath(`/projects/${site.project_id}`);
-  return { ok: true };
-}
-
-/**
- * Reabre un lugar cerrado (Fase 34): vuelve a `active`, sin registro de
- * cierre. Admite visitas nuevas y sus visitas abiertas vuelven a editarse; las
- * cerradas siguen cerradas y se reabren una a una.
- */
-export async function reopenSiteAction(siteId: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Sesión no válida." };
-
-  const { data: site } = await supabase
-    .from("sites")
-    .select("id, status, project_id, kind")
-    .eq("id", siteId)
-    .maybeSingle();
-  // Un lugar de agrupación (Fase 22) no se cierra, así que tampoco se reabre.
-  if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
-  const blocker = reopenBlocker("site", site.status);
-  if (blocker) return { ok: false, error: blocker };
-
-  const { error } = await supabase.from("sites").update(reopenPatch("site")).eq("id", siteId);
-  if (error) return { ok: false, error: logDbError(error, "No se pudo reabrir el lugar.") };
-
-  revalidatePath(`/projects/${site.project_id}`);
-  revalidatePath(`/projects/${site.project_id}/settlement/${siteId}`);
-  return { ok: true };
-}
-
-/** Renombra un lugar (Fase 22), desde su fila en el hub. Rechaza los cerrados. */
+/** Renombra un lugar (Fase 22), desde su fila en el hub. */
 export async function renameSiteAction(siteId: string, name: string): Promise<ActionResult> {
   const limpio = name.trim();
   if (!limpio) return { ok: false, error: "El nombre no puede estar vacío." };
@@ -243,13 +162,10 @@ export async function renameSiteAction(siteId: string, name: string): Promise<Ac
   const supabase = await createClient();
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id, kind")
+    .select("id, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
   if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
-  if (site.status === "closed") {
-    return { ok: false, error: "El lugar está cerrado y no puede modificarse." };
-  }
 
   const { error } = await supabase.from("sites").update({ name: limpio }).eq("id", siteId);
   if (error) return { ok: false, error: logDbError(error, "No se pudo renombrar el lugar.") };
@@ -259,8 +175,8 @@ export async function renameSiteAction(siteId: string, name: string): Promise<Ac
 }
 
 /**
- * Duplica un lugar (Fase 22): datos, umbrales y catálogo de puntos vigentes,
- * sin visitas. Sirve para un monitoreo nuevo de la misma estructura. Los
+ * Duplica un lugar (Fase 22): datos, umbrales, catálogo de puntos vigentes y
+ * BM del lugar (Fase 37), sin visitas. Sirve para un monitoreo nuevo de la misma estructura. Los
  * puntos de baja no pasan; los que se dieron de alta a mitad del monitoreo
  * pasan como originales, porque en el lugar nuevo aún no hay visitas.
  */
@@ -316,38 +232,38 @@ export async function duplicateSiteAction(siteId: string): Promise<ActionResult>
     }
   }
 
+  // Los BM del lugar van con él (Fase 37): sin ellos la visita nueva no
+  // tendría desde dónde armarse.
+  const { data: bms } = await supabase
+    .from("site_benchmarks")
+    .select("code, elevation, description, source")
+    .eq("site_id", siteId);
+  if (bms && bms.length > 0) {
+    const { error: bmError } = await supabase
+      .from("site_benchmarks")
+      .insert(bms.map((b) => ({ ...b, site_id: copia.id })));
+    if (bmError) {
+      await supabase.from("sites").delete().eq("id", copia.id);
+      return { ok: false, error: logDbError(bmError, "No se pudieron copiar los BM del lugar.") };
+    }
+  }
+
   revalidatePath(`/projects/${original.project_id}`);
   return { ok: true, siteId: copia.id };
 }
 
 /**
- * Elimina un lugar con sus puntos y visitas (Fase 22). Solo si está activo y
- * ninguna de sus visitas está cerrada: una visita cerrada es un registro que
- * no se borra, y la base también lo impide.
+ * Elimina un lugar con sus puntos, sus BM y sus visitas (Fase 22). Desde la
+ * Fase 37 nada se cierra: cualquier lugar se elimina.
  */
 export async function deleteSiteAction(siteId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { data: site } = await supabase
     .from("sites")
-    .select("id, status, project_id, kind")
+    .select("id, project_id, kind")
     .eq("id", siteId)
     .maybeSingle();
   if (!site || site.kind !== "settlement") return { ok: false, error: "Lugar no encontrado." };
-  if (site.status === "closed") {
-    return { ok: false, error: "El lugar está cerrado y no puede eliminarse." };
-  }
-
-  const { count } = await supabase
-    .from("settlement_visits")
-    .select("id", { count: "exact", head: true })
-    .eq("site_id", siteId)
-    .eq("status", "closed");
-  if ((count ?? 0) > 0) {
-    return {
-      ok: false,
-      error: "El lugar tiene visitas cerradas: no se puede eliminar. Puedes cerrarlo.",
-    };
-  }
 
   const { error } = await supabase.from("sites").delete().eq("id", siteId);
   if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el lugar.") };
