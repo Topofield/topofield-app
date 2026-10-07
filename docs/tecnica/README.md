@@ -5,7 +5,7 @@ está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
 **Última actualización:** 2026-10-07 · Fase 37 cerrada en su rama, con el
-despliegue en tres pasos preparado y sin aplicar (§ 13) · 1152 tests y 139
+despliegue en tres pasos preparado y sin aplicar (§ 13) · 1168 tests y 141
 pruebas de base (pgTAP) · **desplegado en producción** hasta la Fase 36 y las
 correcciones de la 35 ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
@@ -691,6 +691,14 @@ cuatro políticas, como las de `settlement_points`). Los BM **se copian**: no se
 sincronizan con `reference_points` ni con la nivelación de la que se importan,
 así que corregir aquellos no cambia ninguna visita. La visita dejó de leer los
 puntos de referencia del proyecto, que sigue usando la poligonal.
+
+**`origin_visit_id`** (`20261008100000_bm_origen_visita.sql`, también del
+paso 1; revisión final) guarda la visita que midió un BM: un punto auxiliar
+que se guarda en los BM del lugar al terminar su armada, con `source` «Punto
+auxiliar de la visita N». El motor no lo usa para verificar esa visita
+(`verifyingBenchmarks`): sería un cierre de cero contra su propia medida, y en
+ella sigue siendo un punto de cambio. Las demás visitas lo usan como cualquier
+BM; si se borra la visita, queda como cualquier otro.
 
 El paso 1 (`20261008000000_ux_asentamientos.sql`) los llenó con los BM que ya
 usaba cada lugar: los del catálogo del proyecto que eran amarre de alguna
@@ -2499,7 +2507,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1152 tests en 91 archivos, Vitest, entorno `node` **sin jsdom**. Además, 139
+1168 tests en 93 archivos, Vitest, entorno `node` **sin jsdom**. Además, 141
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2533,9 +2541,9 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/calculations/least-squares.test.ts` | 27 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal |
 | `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, velocidad como cadena y a la precisión de su columna; desde la Fase 37, cualquier visita, sin excepción de las cerradas; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |
 | `lib/calculations/settlement-book-tramos.test.ts` | 11 | **Los tramos de la libreta de la visita** (Fase 37): dónde arranca cada uno; la visita 12 de Torre Alameda, cerrada en segundo orden con −1.6 mm y BM-1 en 99.9984, sin compensar; la cartera, abierta y sin orden; un tramo que arranca en otro BM toma su cota, uno de enlace, uno que arranca fuera de los BM del lugar; la cadena con una fila sin lectura, sin la V+ de la armada o sin la V− de un punto de cambio; la plantilla sin lecturas; la verificación del tramo peor |
-| `lib/calculations/settlement-book-plantilla.test.ts` | 12 | Las cotas de los puntos sin corregir, el punto en dos armadas como error con sus dos filas, el punto por leer y el ausente; la plantilla de la visita nueva —las armadas de la anterior sin lecturas, la baja y el alta, sin anterior y sin BM—; lo pendiente y el estado; el punto auxiliar (Fase 37) |
+| `lib/calculations/settlement-book-plantilla.test.ts` | 13 | Las cotas de los puntos sin corregir, el punto en dos armadas como error con sus dos filas, el punto por leer y el ausente; la plantilla de la visita nueva —las armadas de la anterior sin lecturas, la baja y el alta, sin anterior y sin BM—; lo pendiente y el estado; el punto auxiliar (Fase 37); un punto de cambio seguido de un tramo desde un BM no espera V+ (revisión final) |
 | `lib/calculations/settlement-book-bm.test.ts` | 3 | Un BM del lugar leído de paso, en tercer orden, y el de cierre no; el margen fijo de 6 mm; B10 de la cartera, «excesiva» en la visita 3 y «contraria» en la 4 (Fase 37) |
-| `lib/calculations/visit-record.test.ts` | 6 | **El registro de una visita** (Fase 37): un circuito cerrado en segundo orden, sin compensar y calculado; la cartera sin verificación; una fila por leer, sin cota y en medición; el recálculo del lugar al cambiar la cota de un BM, sin C0 y con ella; una visita sin libreta entra al histórico con sus cotas |
+| `lib/calculations/visit-record.test.ts` | 11 | **El registro de una visita** (Fase 37): un circuito cerrado en segundo orden, sin compensar y calculado; la cartera sin verificación; una fila por leer, sin cota y en medición; el recálculo del lugar al cambiar la cota de un BM, sin C0 y con ella; una visita sin libreta entra al histórico con sus cotas; `visitSaveOf`: una visita de cotas tecleadas conserva sus cotas y su cabecera; un punto auxiliar guardado en los BM no verifica la visita que lo midió, y sí las demás (revisión final) |
 | `lib/calculations/angles.test.ts` | 22 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13); promedio y dispersión de lecturas a través de 0°/360°, redondeo a 0.1″, coma decimal y sin aviso falso en la vista decimal (Fase 26) |
 | `lib/demo/fixtures.test.ts` | 20 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045) en tercer orden detectado y alimenta el informe, y la Vivero alcanza segundo orden (Fase 35); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos, en segundo orden detectado, y el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km en primer orden y alimenta el informe de nivelación (Fase 36); amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo, y con la regla «dentro de tolerancia» sin compensar cuando no cumple (Fase 28); Torre Alameda sin compensar ni cerrar (Fase 37): ocho puntos, catorce visitas y sus dos BM del lugar, todas calculadas y solo la 9 sin verificación, cada cota a menos del cierre de su visita de la serie, el otro BM que nivela salvo en la visita 13 (Fase 30) y, con el margen fijo, ni avisos de tendencia ni «Acelerando» |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
@@ -2558,12 +2566,14 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/errors/user-message.test.ts` | 4 | **Errores de la base para el usuario**: cada código conocido traducido sin dejar pasar el texto de Postgres; el check de un trigger propio, en español, pasa; el de una columna, no; código desconocido, el mensaje de la acción (Fase 22); desde la Fase 37 el `23001` del cierre también da el de la acción |
 | `components/design-system/page-header.test.ts` | 4 | `PageHeader` y `ActionBar`: título en `<header>` (se oculta al imprimir), sin contenedores vacíos, migas; barra fija, anunciada y fuera de la impresión (Fase 22) |
 | `components/leveling/profile-data.test.ts` | 5 | El perfil de la libreta con las carteras reales (Fase 36): cada armada con su mira atrás, el nivel a la altura del instrumento y la mira adelante, y la intermedia en su armada; la contraparte en el sentido de la ida, escalada a su largo; la vuelta con su propio eje; el tramo 2 sin contraparte; sin armadas, sin perfil |
-| `components/settlement/visit-armadas.test.ts` | 15 | **La armada de la visita** (Fase 37): dos armadas por un punto de cambio, un tramo nuevo, la plantilla sin lecturas; leer y escribir una armada sin tocar las otras; agregar desde un BM del lugar o desde el punto de cambio; «Terminar armada» quita los puntos sin leer; el punto repetido solo se quita si es una vista; quitar la última armada; la libreta importada como un tramo |
+| `components/settlement/visit-armadas.test.ts` | 17 | **La armada de la visita** (Fase 37): dos armadas por un punto de cambio, un tramo nuevo, la plantilla sin lecturas; leer y escribir una armada sin tocar las otras; agregar desde un BM del lugar o desde el punto de cambio; «Terminar armada» quita los puntos sin leer; el punto repetido solo se quita si es una vista; quitar la última armada; la libreta importada como un tramo; un punto de cambio seguido de un tramo desde un BM no abre otra armada, y su V− se quita (revisión final) |
 | `components/settlement/visit-armada-form.test.ts` | 13 | El popup de la armada (Fase 37): lo que falta por leer en `null`, la coma decimal, los hilos, los errores con su vista, la V− a un BM del lugar o a un punto de cambio, sin vista adelante; del guardado al formulario y una armada nueva; componer la armada y contar los puntos leídos |
 | `components/settlement/visit-libreta-rows.test.ts` | 22 | El paso 1 · Libreta (Fase 37): los rótulos de la tabla, la cota de la medida y la AI, la VI de los puntos, el lápiz de cada fila, el punto «pendiente» y el tramo de enlace; las armadas a medias y sin V−; los tramos con su cierre y su orden, abiertos, sin distancias o a medias; qué retomar; el movimiento desde la visita anterior y sus avisos |
 | `components/settlement/visit-results.test.ts` | 4 | El paso 2 · Resultados (Fase 37): la franja, una fila por punto con su tendencia, la visita base y una visita sin lecturas |
 | `components/settlement/visit-dialog-form.test.ts` | 5 | El popup de la visita (Fase 37): la fecha de calendario, los textos vacíos en `null` y el aviso de la plantilla, con anterior, sin ella y sin BM |
 | `components/settlement/site-dialog-form.test.ts` | 5 | El popup del lugar (Fase 37): el nombre, los umbrales crecientes y positivos, la descripción vacía y el resumen de los umbrales plegados |
+| `lib/supabase/paginate.test.ts` | 3 | **Leer todas las filas** (revisión final de la Fase 37): `allRows` trae las 2500 filas de una tabla que PostgREST corta en 1000, no salta filas con un corte menor que la página y devuelve el error de cualquier página |
+| `lib/supabase/settlement-sync.test.ts` | 5 | **`recomputeSite`** con un cliente simulado que corta en 1000 filas (revisión final): un error al leer los BM no pasa por «al día»; sin visitas, al día; 70 visitas de la cartera (1190 filas de libreta, 1120 lecturas) sin cambios; la simulación cuenta las lecturas que se purgarían; una visita de cotas tecleadas guarda sus lecturas sin tocar su cabecera ni su libreta |
 | `lib/import/benchmarks.test.ts` | 4 | Importar BM al lugar (Fase 37): de una nivelación con su origen, de un CSV con coma decimal y punto y coma, y los errores de cota y de código repetido con su línea |
 | `lib/reports/including.test.ts` | 5 | Los informes consolidados que incluyen un proceso, por tipo e id (Fase 22); el aviso al borrar algo que está en informes, con uno y con varios (Fase 34) |
 | `lib/reports/leveling-report.test.ts` | 10 | El informe sencillo de la nivelación, por tipo (Fase 36): el resumen con el orden detectado —Δ en la abierta con vuelta, el cierre en la cerrada, «Sin verificación» y «Libreta a medias»—; la sección de la abierta con vuelta, la cerrada con las dos lecturas de cada punto, la de enlace con su corrección, la abierta sin vuelta sin datos ajustados y la alerta fuera de todo orden; una libreta que no encadena: «Libreta con errores» y la alerta (revisión final) |
@@ -2611,7 +2621,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `poligonal_sin_cierre.test.sql` | 17 | La poligonal sin cierre (Fase 35): las columnas del alta y `precision_order` nulo; sin triggers de cierre (desde la Fase 36 la nivelación tampoco los tiene); sin `closed_at` ni `closed_by` y el CHECK que rechaza `closed` y `rejected`; se edita siempre; `save_polygonal_process` escribe `has_closing_row`, el tipo de ángulo, el orden nulo y los datos del alta. Desde la Fase 37 ya no comprueba el trigger de cierre de la visita |
 | `amarre_atomico.test.sql` | 12 | `save_polygonal_process` con `p_catalog` (correcciones de la Fase 35): corrige un punto y crea otro con el proceso, y la cabecera apunta al nuevo; si una estación falla, ni el catálogo ni la cabecera cambian; no corrige un punto de otro proyecto del mismo usuario; rechaza una escritura que no es `insert` ni `update`; la llamada de tres argumentos sigue guardando |
 | `nivelacion_sin_cierre.test.sql` | 15 | La nivelación sin cierre (Fase 36): las columnas del alta y `precision_order` nulo; sin triggers de cierre ni la función de sus lecturas; sin `closed_at` ni `closed_by` y el CHECK que rechaza `closed` y `rejected` (paso 2); se edita siempre; `save_leveling_process` escribe los datos del alta y un orden vacío. Desde la Fase 37 ya no comprueba el trigger de cierre de la visita |
-| `asentamientos_sin_cierre.test.sql` | 31 | Los asentamientos sin cierre (Fase 37): `site_benchmarks` con un código por lugar, `starts_section` y `precision_order` nulo; ni la visita, ni el lugar, ni sus lecturas, libreta o puntos tienen triggers de cierre, ni el de la C0, ni sus funciones; sin `closed_at`, `closed_by`, el clima ni `capture_mode` en la visita, sin `status`, `closed_at` ni `closed_by` en el lugar, y sin las funciones de inmutabilidad ni `is_reopening` (la segunda migración, paso 3 del despliegue); como el dueño, la visita queda `in_progress`, la C0 se cambia con lecturas, `save_visit` guarda filas sin lectura con su inicio de tramo, un código de BM repetido se rechaza, `closed` ya no se admite y cualquier visita se borra; otro usuario no ve ni agrega BM del lugar (RLS) |
+| `asentamientos_sin_cierre.test.sql` | 33 | Los asentamientos sin cierre (Fase 37): `site_benchmarks` con un código por lugar y la visita que midió cada BM (`origin_visit_id`, con su clave foránea), `starts_section` y `precision_order` nulo; ni la visita, ni el lugar, ni sus lecturas, libreta o puntos tienen triggers de cierre, ni el de la C0, ni sus funciones; sin `closed_at`, `closed_by`, el clima ni `capture_mode` en la visita, sin `status`, `closed_at` ni `closed_by` en el lugar, y sin las funciones de inmutabilidad ni `is_reopening` (la segunda migración, paso 3 del despliegue); como el dueño, la visita queda `in_progress`, la C0 se cambia con lecturas, `save_visit` guarda filas sin lectura con su inicio de tramo, un código de BM repetido se rechaza, `closed` ya no se admite y cualquier visita se borra; otro usuario no ve ni agrega BM del lugar (RLS) |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -2712,12 +2722,38 @@ del despliegue (`20261009000000_asentamientos_sin_cierre.sql`) borra la
 columna que distinguía las visitas de cotas tecleadas. Si la consulta previa
 de producción (§ 13) da alguna, se decide con el usuario antes del `db push`:
 sus cotas siguen en `settlement_readings` y entran al histórico tal cual
-(`SiteVisitInput.elevations` en `recalculateSite`; `recomputeSite` no las
-reescribe, porque no tienen libreta), pero se pierde la etiqueta. La consulta
+(`SiteVisitInput.elevations` en `recalculateSite`; `recomputeSite` guarda sus
+lecturas sin tocar su cabecera, y «Editar datos» las conserva: `visitSaveOf`),
+pero se pierde la etiqueta. La consulta
 vale **antes** del despliegue: desde él, las visitas nuevas toman el
 `DEFAULT 'direct'` de la columna hasta el paso 3, aunque tengan libreta.
 `SiteVisitInput.elevations` deja de hacer falta cuando no quede ninguna visita
 sin libreta.
+
+**Lo que dejó la revisión final de la Fase 37, sin corregir.**
+
+- La libreta ya no avisa de un punto vigente que no está en la visita ni de
+  la lectura de un punto de baja: `bookElevations` los calcula como `missing`
+  e `inactive`, pero solo `duplicate` llega a la pantalla.
+- «Seguir después» con un número mal escrito cierra el popup de la armada y
+  lo tecleado se pierde sin aviso: el error de lectura no pasa por `lastOk`.
+- Dos BM cuyo código solo difiere en mayúsculas o espacios («BM-1» y «bm1»)
+  caben a la vez: el único es exacto y el motor compara con `samePointCode`.
+- Renombrar un BM escribe en tres pasos (el BM, las filas de libreta,
+  `recomputeSite`), no en una función de Postgres; si el recálculo falla a
+  medias, guardar la misma cota no lo reintenta.
+- El informe del lugar calcula su serie solo con las visitas calculadas; el
+  panel y las lecturas guardadas, también con las que están en medición. Una
+  visita a medias en mitad de la serie cambia distinto el parcial de la
+  siguiente en los dos sitios.
+- El Excel no da la verificación de cada tramo, solo la del tramo peor, y
+  sigue imprimiendo `site.notes`, que el alta ya no pide.
+- `meets_tolerance` queda en `false` en un tramo cerrado sin distancias (sin
+  orden); debería quedar nulo.
+- La nota del popup de nueva visita toma «hoy» en UTC: después de las 19:00
+  en Bogotá arma la plantilla con la fecha de mañana.
+- Los puntos de la cartera llevan ubicación vacía; editar uno exige
+  escribirla.
 
 **El semáforo por velocidad alarma por ruido (visto en la Fase 37).** Con los
 umbrales de edificio y visitas cada siete días, un milímetro son 4.35 mm/mes
@@ -3931,7 +3967,7 @@ entre ellas, dos scripts:
 
 | Paso | Qué | Cuándo | Código viejo con ello | Código nuevo sin ello |
 |---|---|---|---|---|
-| 1 | `20261008000000_ux_asentamientos.sql`: fuera los triggers de cierre de visitas, lugares, lecturas, libreta y puntos —con el de la C0— y sus funciones; lo cerrado vuelve a `calculated` y `active`; `in_progress`, `precision_order` nulable y `starts_section`; `site_benchmarks` con su RLS, llena con los BM que ya usa cada lugar; `save_visit` escribe `starts_section` | **Antes** del merge | Funciona: sin triggers, su cierre solo cambia el estado; no lee `site_benchmarks` ni `starts_section`, y `save_visit` ignora el clima y el modo de captura que todavía manda | Falla: lee `site_benchmarks` |
+| 1 | `20261008000000_ux_asentamientos.sql` y `20261008100000_bm_origen_visita.sql` (la visita que midió un BM, revisión final): fuera los triggers de cierre de visitas, lugares, lecturas, libreta y puntos —con el de la C0— y sus funciones; lo cerrado vuelve a `calculated` y `active`; `in_progress`, `precision_order` nulable y `starts_section`; `site_benchmarks` con su RLS, llena con los BM que ya usa cada lugar; `save_visit` escribe `starts_section` | **Antes** del merge | Funciona: sin triggers, su cierre solo cambia el estado; no lee `site_benchmarks` ni `starts_section`, y `save_visit` ignora el clima y el modo de captura que todavía manda | Falla: lee `site_benchmarks` |
 | 2 | `scripts/resincronizar-asentamientos.mjs` (recalcular sin compensar todas las visitas guardadas) y `scripts/agregar-cartera-demo.mjs` (la cartera en las demos ya creadas), cada uno en simulación y después con `--aplicar` | **Después** del despliegue | — | Las lecturas guardadas —de las que leen el panel, el informe, el Excel y el hub— conservarían la cota compensada hasta el próximo guardado de cada visita; la demo ya creada no tendría la cartera |
 | 3 | `20261009000000_asentamientos_sin_cierre.sql`: vuelve a `calculated` lo cerrado en la ventana; fuera `closed_at` y `closed_by` de visitas y lugares, `sites.status`, el clima y `capture_mode`; el `CHECK` de `status` en `draft`, `in_progress` y `calculated`; fuera `reject_update_on_closed_process()`, `reject_delete_on_closed_process()` e `is_reopening()` | **Después** del merge | Fallaría: lee, inserta y cierra con esas columnas | Funciona: ya no las nombra |
 
@@ -3942,9 +3978,37 @@ tienen cotas tecleadas:
 select count(*) from public.settlement_visits where capture_mode = 'direct';
 ```
 
-Si da más de cero, se decide con el usuario si el paso 3 conserva la línea que
-borra `capture_mode`: las cotas de esas visitas siguen en
-`settlement_readings` y entran al histórico tal cual; se pierde la etiqueta.
+La revisión final de la fase añadió dos consultas de solo lectura antes del
+paso 2. Cuántas filas de libreta tiene el lugar más grande —antes de
+`allRows`, más de 1000 truncaban la lectura y un guardado borraba filas; ya no,
+pero conviene saberlo—:
+
+```sql
+select v.site_id, count(*) as filas
+from public.settlement_book_readings b
+join public.settlement_visits v on v.id = b.visit_id
+group by v.site_id order by filas desc limit 5;
+```
+
+Y qué visitas guardaron un BM de amarre con otra cota que la del catálogo del
+proyecto: el paso 1 llena `site_benchmarks` con la cota de hoy del catálogo, y
+el recálculo del paso 2 movería toda su serie en esa diferencia, que en la
+simulación se confunde con dejar de compensar:
+
+```sql
+select v.site_id, v.visit_number, v.reference_bm_code,
+       v.reference_bm_elevation, rp.elevation as catalogo
+from public.settlement_visits v
+join public.sites s on s.id = v.site_id
+join public.reference_points rp
+  on rp.project_id = s.project_id and upper(trim(rp.code)) = upper(trim(v.reference_bm_code))
+where v.reference_bm_elevation is distinct from rp.elevation;
+```
+
+Si la de `capture_mode` da más de cero, se decide con el usuario si el paso 3
+conserva la línea que borra `capture_mode`: las cotas de esas visitas siguen en
+`settlement_readings` y entran al histórico tal cual —guardar sus datos ya no
+las borra (`visitSaveOf`, revisión final)—; se pierde la etiqueta.
 La cuenta vale **antes del despliegue**: desde él, las visitas nuevas —y las de
 la cartera que agrega el paso 2— toman el `DEFAULT 'direct'` de la columna
 aunque tengan libreta; después solo cuentan las que no tienen filas en
@@ -3974,7 +4038,9 @@ visitas de cada una, todas menos la 9, que no se compensaba. En Torre Alameda
 las cotas cambian hasta 2.5 mm (hallazgo 4 del PRD).
 
 Como en las Fases 35 y 36, `db push` aplica **todas** las pendientes: el paso
-1 se empuja desde una copia del repositorio sin el paso 3. Después de cada
+1 —sus dos migraciones— se empuja desde una copia del repositorio sin el paso
+3. Localmente, la del origen del BM se aplicó con `migration up --local
+--include-all`, porque la del paso 3 ya estaba aplicada. Después de cada
 paso, en solo lectura: tras el 1, que no queda ningún trigger de cierre en las
 cinco tablas, que `site_benchmarks` tiene RLS y sus filas, que
 `precision_order` es nulable y que `save_visit` sigue `SECURITY INVOKER`, sin

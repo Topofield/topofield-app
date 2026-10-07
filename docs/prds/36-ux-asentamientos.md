@@ -67,6 +67,17 @@ que entra al repositorio con esta fase.
 >   Torre Alameda, la del seed y la de la demo: 13 de 14 visitas cada una).
 > - **ESLint ignora `.claude/`**: el worktree de otra sesión, con su `.next/`,
 >   hacía fallar `npm run lint`.
+> - **La revisión final corrigió cuatro cosas**, cada una con su prueba:
+>   - las libretas y lecturas de un lugar se leían en una sola petición, que
+>     PostgREST corta en 1000 filas: hacia las 60 visitas, cambiar un BM —o
+>     el script del paso 2— guardaba libretas mochas y borraba filas. Ahora se
+>     paginan (`allRows`) y la visita lee solo su libreta;
+>   - un punto auxiliar guardado en los BM del lugar «verificaba» la visita que
+>     lo midió (cierre 0, primer orden): `site_benchmarks.origin_visit_id`,
+>     una migración más en el paso 1, lo excluye de esa visita;
+>   - un punto de cambio seguido de un tramo desde un BM dejaba la visita «En
+>     medición» para siempre, con una armada fantasma;
+>   - una visita de cotas tecleadas perdía sus cotas con «Editar datos».
 
 ## Propósito
 
@@ -378,7 +389,7 @@ entrada, la § 13 con el despliegue) y las divergencias en este PRD.
 
 | Paso | Qué | Cuándo | Código viejo con ello | Código nuevo sin ello |
 |---|---|---|---|---|
-| 1 | Migración: reabrir lo cerrado, quitar los triggers, `in_progress`, `precision_order` nulable, `site_benchmarks` con sus BM y `save_visit` ampliado | **Antes** del merge | Funciona: sin triggers, su cierre solo cambia el estado; no lee `site_benchmarks` | Falla: lee `site_benchmarks` |
+| 1 | Migración: reabrir lo cerrado, quitar los triggers, `in_progress`, `precision_order` nulable, `site_benchmarks` con sus BM y `save_visit` ampliado; y la del origen de un BM (`origin_visit_id`, revisión final) | **Antes** del merge | Funciona: sin triggers, su cierre solo cambia el estado; no lee `site_benchmarks` | Falla: lee `site_benchmarks` |
 | 2 | Recalcular las visitas guardadas sin compensar y agregar la cartera a la demo ya creada (scripts) | **Después** del despliegue | — | Las visitas viejas mostrarían la cota compensada hasta su próximo guardado |
 | 3 | Migración: borrar columnas de cierre, `sites.status`, el clima, `capture_mode` y las funciones compartidas | **Después** del merge | Fallaría al cerrar: por eso va después | Funciona: ya no las nombra |
 
