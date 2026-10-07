@@ -1,7 +1,8 @@
 # PRD-de-fase 37 — Los asentamientos como los mide el topógrafo
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-07
+**Fecha de cierre:** 2026-10-07
 
 **Rama:** `fase-37-ux-asentamientos`
 **Petición:** del usuario, 2026-10-06: «haz un plan para que repliquemos este
@@ -18,6 +19,54 @@ al guardar.
 Excel—, la base, el hub, el dashboard, la demo, el seed y la documentación.
 **Cartera de referencia:** `docs/carteras/Control_asentamiento_estructural_ REAL.xlsx`,
 que entra al repositorio con esta fase.
+
+> **Divergencias de la implementación:**
+>
+> - **La distancia es opcional en la libreta de la visita** (§ D). `validateBook`
+>   heredaba de la nivelación la distancia obligatoria en cada V+ y V−, y
+>   rechazaba la cartera, que no la trae. Sin distancia el tramo queda sin
+>   orden; una distancia tecleada sigue sin poder ser cero.
+> - **«Terminar y seguir con la armada N»**: cuando la libreta ya trae la
+>   armada siguiente —la plantilla de la visita anterior—, el popup la abre;
+>   solo sin ella se agrega una nueva («… desde CP-1» o «… y agregar armada»).
+>   Salió en pantalla: la plantilla creaba una tercera armada.
+> - **«Quitar la armada»** para la última, que el lienzo no tenía: sin ella,
+>   una armada agregada por error no se podía quitar. Abrir y cerrar una
+>   armada sin teclear nada no guarda.
+> - **La importación de la visita tiene su propio diálogo** («Importar .L o
+>   CSV» en la barra de pasos), no el de la nivelación, que propone el tipo y
+>   la ida y vuelta: un tramo desde el BM de su primera fila, que debe estar en
+>   los BM del lugar.
+> - **La cabecera de la visita se refresca con cada lectura**: `saveVisitAction`
+>   revalida también la ruta de la visita.
+> - **El informe del lugar informa las visitas calculadas** y nombra las que
+>   están en medición: una visita a medias daría una «última visita» con la
+>   mitad de los puntos.
+> - **Ya nada se cierra**, así que el informe pierde también la marca de
+>   borrador, el registro de cierre y la nota de lo reabierto (`state.ts`,
+>   `ReportStateMark`, `ClosureRecord`, `closureOf`, `responsible.ts`), y la
+>   tarjeta del proyecto cuenta solo el total de procesos. En el hub el lugar
+>   no tiene columna de estado ni chips; los filtros «cerrados», «rechazados»
+>   y «activos» salen. `getClosedWorkForReports` pasa a `getReportableWork`.
+> - **La demo y el seed guardan con `insertarVisitas`** (sobre
+>   `recalculateSite`): Torre Central y Edificio Norte tienen libreta desde un
+>   BM nuevo de cada lugar (BM-C, BM-N), generada con cierre 0 para que su
+>   serie quede exacta; Torre Alameda deja sus BM en los del lugar y no en los
+>   puntos de referencia del proyecto. Los puntos de la cartera no tienen
+>   ubicación (la hoja no la da).
+> - **La rama trae `main`**: la corrección del amarre atómico (Fase 35, con su
+>   migración `20261007010000`, ya en producción) se fusionó antes del paso 2;
+>   `Modal` combina el alto limitado de todos los diálogos con el popup a
+>   pantalla completa en el teléfono, y `useProcessDraft` lleva el extra del
+>   amarre y la respuesta entera de la visita.
+> - **`capture_mode` se borra en el paso 3** solo si la consulta previa de
+>   producción da cero visitas con cotas tecleadas (§ Despliegue); sus cotas
+>   siguen en `settlement_readings` de todos modos.
+> - **En la base local**, la simulación de `resincronizar-asentamientos.mjs`
+>   dio 26 visitas y 192 lecturas que cambian al dejar de compensar (las dos
+>   Torre Alameda, la del seed y la de la demo: 13 de 14 visitas cada una).
+> - **ESLint ignora `.claude/`**: el worktree de otra sesión, con su `.next/`,
+>   hacía fallar `npm run lint`.
 
 ## Propósito
 

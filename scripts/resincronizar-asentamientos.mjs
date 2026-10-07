@@ -3,9 +3,11 @@
 //
 // Para qué sirve ahora: es el paso 2 del despliegue de la Fase 37 (PRD,
 // Despliegue). Hasta la Fase 36 las visitas con libreta guardaban la cota
-// compensada; el panel, el informe y el Excel recalculan en vivo, pero el hub
-// y la cabecera de cada visita leen lo guardado, que solo se reescribe al
-// volver a guardar. Este script las pasa todas a la regla nueva de una vez.
+// compensada en `settlement_readings`, y de esas cotas guardadas parten el
+// panel, el informe, el Excel y el hub; la cabecera de la visita guarda
+// además su cierre y su orden. Todo eso solo se reescribe al volver a guardar
+// la visita. Este script las pasa todas a la regla nueva de una vez. Va
+// después del paso 1: sin `site_benchmarks` no hay BM contra qué recalcular.
 //
 // Qué hace: por cada lugar de control de asentamientos llama a
 // `recomputeSite` —la misma función que usa el cambio de la cota de un BM—,

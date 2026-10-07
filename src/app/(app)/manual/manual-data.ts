@@ -115,44 +115,50 @@ export const CAPTURAS = {
   },
   nuevoLugar: {
     src: "/manual/13-nuevo-lugar.png",
-    alt: "Formulario de nuevo lugar, con el tipo de estructura y los umbrales de alerta.",
-    width: 2560,
-    height: 1600,
+    alt: "Popup Nuevo lugar: el nombre, el tipo de estructura con Edificio elegido y la nota de que precarga los umbrales, la descripción opcional, los umbrales del semáforo plegados con su resumen y el botón Crear lugar.",
+    width: 896,
+    height: 1172,
   },
   editorLugar: {
     src: "/manual/14-editor-lugar.png",
-    alt: "Pestaña Puntos y lugar: datos generales, umbrales y catálogo de puntos de control.",
+    alt: "Pestaña Puntos de Edificio Torre Central: el catálogo de puntos de control con su código, su ubicación, su cota C0 y su estado —vigente, dado de alta o de baja, con su motivo— y las acciones Editar, Dar de baja y Eliminar.",
     width: 2560,
-    height: 2948,
+    height: 1612,
   },
   panelAsentamientos: {
     src: "/manual/15-panel-asentamientos.png",
-    alt: "Panel del lugar Torre Alameda: los cinco indicadores, la tabla de visitas con los cierres fuera de tolerancia marcados con ⚠ y el ⚠ junto al amarre de la visita 13, donde BM-2 no nivela con BM-1, la tendencia del promedio con su banda y los umbrales, la evolución por punto con sus chips y el semáforo de la última visita.",
+    alt: "Panel de la cartera real Control de asentamiento estructural: la franja de cinco indicadores, la tabla de las siete visitas con su promedio, su máximo, su mayor Δ y su alerta, al lado la tendencia del promedio con su banda y los umbrales, y los avisos de B10 en las visitas 3 y 4.",
     width: 2560,
-    height: 5322,
+    height: 2104,
   },
   nuevaVisita: {
     src: "/manual/25-nueva-visita.png",
-    alt: "Formulario Nueva visita: fecha, nivelador, captura «Digitar la libreta de nivelación», BM de amarre BM-1 con cota 100.0000, orden de precisión y equipo tomados de la visita anterior.",
-    width: 1344,
-    height: 2340,
+    alt: "Popup Nueva visita de Torre Alameda: la fecha, el nivelador, la nota opcional, la nota de que la libreta llega armada como la de la visita anterior, el equipo plegado y opcional, y el botón Crear y empezar.",
+    width: 896,
+    height: 984,
   },
   importarLibretaVisita: {
     src: "/manual/26-importar-libreta-visita.png",
-    alt: "Diálogo Importar la libreta de la visita con la plantilla CSV: dos armadas y trece visuales, BM de amarre BM-1, el aviso de que la libreta actual se reemplazará y la libreta con los puntos de control marcados.",
+    alt: "Diálogo Importar la libreta de la visita con la plantilla CSV de la visita 12 de Torre Alameda: el formato, las armadas y visuales leídas, que sale de BM-1, el aviso de que la libreta de la visita se reemplazará y la libreta con los BM del lugar y los puntos de control marcados.",
     width: 1344,
-    height: 2236,
+    height: 2196,
   },
   vistaVisita: {
     src: "/manual/27-vista-visita.png",
-    alt: "Vista de la visita 12 de Torre Alameda: los seis indicadores, la tabla de puntos de control con TA-07 seleccionado, su historial con la nota «Le faltan 21.3 mm para el umbral de alerta» y las barras de acumulado y de movimiento por punto.",
+    alt: "Paso 2 · Resultados de la visita 7 de la cartera real: la franja de indicadores —asentamiento máximo, promedio y su cambio frente a la visita 6, mayor movimiento y alerta—, la nota de la visita, la tabla de los dieciséis puntos con su cota, parcial, acumulado, velocidad, estado y tendencia, y al lado el gráfico Acumulado por punto.",
     width: 2560,
-    height: 2820,
+    height: 2556,
   },
-  registroNivelacion: {
-    src: "/manual/28-registro-nivelacion.png",
-    alt: "Panel lateral Registro de nivelación de la visita 12: la libreta en dos armadas con las vistas intermedias de los puntos de control resaltadas, ΣV+, ΣV−, error de cierre de −1.6 mm dentro de la tolerancia de ±4.0 mm, y la comprobación de BM-2, que nivela con BM-1.",
-    width: 1536,
+  armadaVisita: {
+    src: "/manual/34-armada-visita.png",
+    alt: "Popup Armada 2 · visita 12 de Torre Alameda: la vista atrás desde CP-1, punto de cambio de la armada 1, con su lectura y su distancia opcional; las vistas a los puntos, cada una con su lectura, su cota y la marca de guardada; la vista adelante a BM-1 con el rótulo cierra en un BM; la altura del instrumento, el cierre de −1.6 mm y el orden alcanzado, segundo orden; y el pie con los puntos leídos y los botones Seguir después y Terminar armada.",
+    width: 1344,
+    height: 2496,
+  },
+  bmsLugar: {
+    src: "/manual/35-bms-lugar.png",
+    alt: "Pestaña BMs de Torre Alameda: los BM del lugar BM-1 y BM-2 con su cota, su descripción, su origen y en cuántas visitas arrancan un tramo, las acciones Editar y Eliminar, y los botones Importar BM y + BM.",
+    width: 2560,
     height: 1600,
   },
   dibujoPoligonal: {
@@ -175,9 +181,9 @@ export const CAPTURAS = {
   },
   editorVisita: {
     src: "/manual/16-editor-visita.png",
-    alt: "Editor de la visita: cabecera con la captura en libreta y el BM de amarre, la libreta de nivelación con las filas de punto de control y de BM de amarre marcadas, su resumen de cierre y la comprobación de BM-2, y debajo las cotas de los puntos de control que salen de ella.",
+    alt: "Paso 1 · Libreta de la visita 12 de Torre Alameda: la cabecera con 2 armadas, Segundo orden y Calculada; la tabla de la hoja con los rótulos BM del lugar, BM leído de paso, punto de cambio y cierra; y a la derecha las armadas, el tramo desde BM-1 que vuelve a BM-1 con su cierre y su orden, la comprobación de BM-2 y el movimiento de cada punto desde la visita anterior.",
     width: 2560,
-    height: 6194,
+    height: 2472,
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
@@ -237,7 +243,7 @@ export const SECCIONES: SeccionManual[] = [
   { id: "poligonales", titulo: "Poligonales" },
   { id: "nivelacion", titulo: "Nivelación" },
   { id: "asentamientos", titulo: "Control de Asentamientos" },
-  { id: "cierre", titulo: "Cerrar un proceso" },
+  { id: "cierre", titulo: "Sin cierre" },
   { id: "campo", titulo: "Trabajo en campo" },
   { id: "informes", titulo: "Informes" },
   { id: "export", titulo: "Exportar a Excel" },
@@ -251,20 +257,12 @@ export const ESTADOS_PROCESO = [
   { estado: "Borrador", significado: "Creado, sin datos suficientes" },
   {
     estado: "En progreso",
-    significado: "Con datos de campo, aún sin cálculo completo",
+    significado:
+      "Con datos de campo, aún sin cálculo completo. En una visita se dice En medición",
   },
   {
     estado: "Calculado",
-    significado:
-      "Cálculo resuelto; se puede revisar y, en asentamientos, cerrar",
-  },
-  {
-    estado: "Cerrado",
-    significado: "Terminado y conforme. Inmutable mientras siga cerrado",
-  },
-  {
-    estado: "Rechazado",
-    significado: "Terminado pero fuera de tolerancia. Inmutable mientras siga cerrado",
+    significado: "Cálculo resuelto, listo para revisar y para un informe",
   },
 ];
 
@@ -307,8 +305,7 @@ export const COLUMNAS_LISTADO = [
   },
   {
     columna: "Estado",
-    muestra:
-      "Borrador, En progreso o Calculado en una poligonal o una nivelación; Activo o Cerrado en un lugar",
+    muestra: "Borrador, En progreso o Calculado. No aparece en asentamientos",
   },
   {
     columna: "Resultado",
@@ -417,49 +414,32 @@ export const TOLERANCIA_NIVELACION = [
   { orden: "Ordinario", k: "24" },
 ];
 
-// --- § 7.3 Avisos de la libreta de la visita ---
+// --- § 7.9 Verificación de un tramo de la visita ---
 
-export const AVISOS_LIBRETA = [
+export const VERIFICACION_TRAMO = [
   {
-    situacion: "El cierre supera la tolerancia",
-    ocurre:
-      "Solo avisa. La visita se guarda y se cierra igual, con sus cotas sin compensar",
+    tramo: "Vuelve a su BM",
+    dice: "Su cierre, en mm, y el orden alcanzado, con su tolerancia",
   },
   {
-    situacion: "Otro BM del catálogo no nivela con el amarre",
-    ocurre: "Solo avisa: ver «Comprobar los BM», abajo",
+    tramo: "Llega a otro BM del lugar",
+    dice: "Su llegada, en mm, y el orden alcanzado",
   },
   {
-    situacion: "Faltan las distancias por visual",
-    ocurre: "Avisa: sin distancias no se evalúa la tolerancia ni se compensa",
+    tramo: "Termina en sus puntos",
+    dice: "Sin verificación: no termina en un BM del lugar",
   },
   {
-    situacion: "Todavía no se leyó el amarre de cierre",
-    ocurre: "«Libreta incompleta»: aún no hay error de cierre",
+    tramo: "No tiene distancias",
+    dice: "Sin distancias: el cierre no da orden",
   },
   {
-    situacion: "La primera o la última fila no es el BM de amarre",
-    ocurre: "No se puede guardar",
-  },
-  {
-    situacion: "Un punto de control sin vista menos",
-    ocurre: "Avisa: el punto queda sin cota",
-  },
-  {
-    situacion: "Un punto que no está vigente en la fecha",
-    ocurre: "Avisa: su lectura no se usa",
-  },
-  {
-    situacion: "El mismo punto con vista menos en dos filas",
-    ocurre: "No se puede guardar hasta dejar una",
-  },
-  {
-    situacion: "La comprobación aritmética no cuadra",
-    ocurre: "No se puede cerrar la visita (§ 7.6)",
+    tramo: "Supera la tolerancia de todos los órdenes",
+    dice: "Fuera de los órdenes: queda sin verificación",
   },
 ];
 
-// --- § 7.4 Indicadores del panel del lugar ---
+// --- § 7.11 Indicadores del panel del lugar ---
 
 export const INDICADORES_LUGAR = [
   {
@@ -477,15 +457,15 @@ export const INDICADORES_LUGAR = [
   },
   {
     indicador: "Visitas en alerta",
-    muestra: "Cuántas visitas tienen algún punto en precaución o más",
+    muestra: "Cuántas visitas, de todas, tienen algún punto en precaución o más",
   },
   {
-    indicador: "Visitas",
-    muestra: "El total, con la fecha de la lectura base y la de la última",
+    indicador: "Umbrales",
+    muestra: "Los tres de acumulado, en mm, y los tres de velocidad, en mm/mes",
   },
 ];
 
-// --- § 7.4 Niveles del semáforo de asentamientos ---
+// --- § 7.11 Niveles del semáforo de asentamientos ---
 
 export const NIVELES_SEMAFORO = [
   {
@@ -518,7 +498,7 @@ export const CAMPOS_INFORME = [
   {
     campo: "Procesos a incluir",
     para:
-      "Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares cerrados",
+      "Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares con alguna visita calculada",
   },
   {
     campo: "Orden de las secciones",
@@ -558,14 +538,9 @@ export const PREGUNTAS: Pregunta[] = [
       "En el menú de cuenta —el círculo con su inicial, arriba a la derecha—: Sistema, Claro u Oscuro (§ 2). Con Sistema, sigue la configuración del teléfono o del computador.",
   },
   {
-    pregunta: "Cerré una visita o un lugar por error. ¿Puedo reabrirlo?",
+    pregunta: "¿Cómo cierro un proceso?",
     respuesta:
-      "Sí: con Reabrir (§ 8). Vuelve a ser editable y se cierra otra vez cuando esté listo.",
-  },
-  {
-    pregunta: "¿Cómo cierro una poligonal o una nivelación?",
-    respuesta:
-      "No se cierran: quedan calculadas y se corrigen cuando haga falta. El paso de Ajuste o de Compensación y su informe dicen qué orden de precisión alcanzaron (§ 5.5 y § 6.7); si no alcanzan ninguno, el informe lo alerta. Un informe consolidado las incluye calculadas.",
+      "No se cierra (§ 8): ni la poligonal, ni la nivelación, ni el lugar o la visita de asentamientos. Quedan calculados y se corrigen cuando haga falta. El paso de Ajuste o de Compensación, la verificación de cada visita y su informe dicen qué orden de precisión alcanzaron (§ 5.5, § 6.7 y § 7.9); si no alcanzan ninguno, el informe lo alerta. Un informe consolidado los incluye calculados.",
   },
   {
     pregunta: "¿Por qué una poligonal muestra «Sin verificación de cierre»?",
@@ -580,12 +555,12 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Dónde declaro el equipo y el orden de precisión que usé?",
     respuesta:
-      "En cada proceso, no en el proyecto. Cada visita de asentamiento declara su orden y su equipo en su propia configuración. Una poligonal o una nivelación declara su equipo en el alta, y su orden no se declara: se detecta al calcularla (§ 5.5 y § 6.7). Si el equipo es el de siempre, tómelo del catálogo de equipos (§ 12).",
+      "El equipo, en cada proceso y no en el proyecto: una poligonal o una nivelación lo declara en su alta, y cada visita de asentamiento en la suya. El orden no se declara en ninguno: se detecta al calcular (§ 5.5, § 6.7 y § 7.9). Si el equipo es el de siempre, tómelo del catálogo de equipos (§ 12).",
   },
   {
     pregunta: "Mi nivelación no alcanza ningún orden. ¿Por qué se compensó?",
     respuesta:
-      "Porque la nivelación compensa siempre que haya contra qué cerrar, y avisa: en la práctica, un trabajo fuera de tolerancia se repite (§ 6.7). Una visita de asentamientos, en cambio, no compensa un cierre fuera de tolerancia.",
+      "Porque la nivelación compensa siempre que haya contra qué cerrar, y avisa: en la práctica, un trabajo fuera de tolerancia se repite (§ 6.7). Una visita de asentamientos, en cambio, no compensa nunca: su cierre solo comprueba (§ 7.9).",
   },
   {
     pregunta:
@@ -594,9 +569,9 @@ export const PREGUNTAS: Pregunta[] = [
       "Sí: Georreferenciar (§ 5.6), con dos estaciones de coordenadas conocidas, o editando el amarre con las coordenadas reales de la partida y la referencia. El orden alcanzado no cambia.",
   },
   {
-    pregunta: "¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?",
+    pregunta: "¿La aplicación juzga si mi equipo da para el orden que necesito?",
     respuesta:
-      "En una visita, la aplicación no lo juzga: registra el equipo para el informe, y lo que dice si el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no da para el orden, lo más probable es que el cierre no cumpla. Una poligonal o una nivelación no eligen orden: alcanzan el que su cierre permite.",
+      "No: registra el equipo para el informe. Lo que dice si el trabajo cumple es su cierre contra la tolerancia de cada orden: ningún proceso elige orden, alcanza el que su cierre permite. Si el equipo no da para el orden que necesita, lo más probable es que el cierre no lo alcance.",
   },
   {
     pregunta:
@@ -610,21 +585,24 @@ export const PREGUNTAS: Pregunta[] = [
       "Porque la libreta no ha llegado a su BM: falta marcar la casilla de fin en la última armada —«Llega al BM», «Llega a …» o «Fin de la ida»—, o terminar la vuelta. El paso de Compensación dice qué falta (§ 6.7).",
   },
   {
-    pregunta:
-      "La libreta de una visita salió fuera de tolerancia. ¿Puedo cerrarla?",
+    pregunta: "Un punto quedó en alarma. ¿Puedo seguir midiendo?",
     respuesta:
-      "Sí. Fuera de tolerancia solo avisa: la visita se guarda y se cierra con sus cotas sin compensar, y el aviso queda en la columna Cierre del panel y en la vista de la visita. Lo que sí impide cerrarla es una comprobación aritmética que no cuadra, porque indica un error en la libreta.",
+      "Sí. El semáforo es un diagnóstico, no un bloqueo: un punto en alerta o alarma se guarda igual que cualquier otro. Es justamente el dato que el control de asentamientos busca detectar y dejar documentado.",
+  },
+  {
+    pregunta: "Un tramo de mi visita no alcanza ningún orden. ¿Qué pasa?",
+    respuesta:
+      "Nada se bloquea: la visita queda calculada con las cotas de la medida, y el tramo y la visita dicen Sin verificación (§ 7.9). Conviene revisar la libreta o repetir la nivelación.",
   },
   {
     pregunta: "¿Por qué no puedo teclear la cota de un punto en la visita?",
     respuesta:
-      "Porque la visita se captura con libreta: la cota sale de la vista menos del punto en la libreta. Si nivelaron y calcularon fuera de la aplicación, cambie Captura de las cotas a Cotas directas.",
+      "Porque toda visita se mide con libreta: la cota sale de la lectura del punto, AI − lectura (§ 7.9). Si nivelaron con un nivel digital, importe su archivo .L o la plantilla CSV (§ 7.8).",
   },
   {
-    pregunta:
-      "Un punto quedó en alarma. ¿Puedo seguir guardando y cerrando la visita?",
+    pregunta: "La medición de una visita quedó a medias. ¿Perdí algo?",
     respuesta:
-      "Sí. El semáforo es un diagnóstico, no un bloqueo: un punto en alerta o alarma se guarda y se cierra igual que cualquier otro. Es justamente el dato que el control de asentamientos busca detectar y dejar documentado.",
+      "No: cada lectura se guarda al escribirla. La visita queda En medición, y Retomar medición abre la armada en la primera lectura que falta (§ 7.6).",
   },
   {
     pregunta:
@@ -635,12 +613,12 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Puedo eliminar un proyecto?",
     respuesta:
-      "Si no tiene nada cerrado, sí, desde Configuración. Si tiene algún lugar o visita de asentamientos cerrados, no: esos registros no se borran. Archívelo para ocultarlo de la lista activa (§ 4.2).",
+      "Sí, desde Configuración: se borra con todo lo que contiene, de forma permanente. Para ocultarlo de la lista activa sin borrarlo, archívelo (§ 4.2).",
   },
   {
-    pregunta: "Salí de un editor y perdí lo que había tecleado.",
+    pregunta: "Salí de una pantalla y perdí lo que había tecleado.",
     respuesta:
-      "Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el navegador le preguntó antes. Los botones atrás y adelante del navegador no preguntan: guarde antes de usarlos (§ 4.4). En una poligonal o una nivelación no hay qué perder: cada popup guarda al confirmar.",
+      "Ninguna pantalla de proceso tiene botón Guardar: la poligonal y la nivelación guardan cada popup al confirmar, y la visita de asentamientos cada lectura al salir del campo o con Enter (§ 4.4). Solo se pierde lo tecleado en un popup que se cierra sin confirmar.",
   },
   {
     pregunta: "¿Otros usuarios pueden ver mis proyectos?",

@@ -46,7 +46,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 34 | Reabrir procesos | [`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md) | cerrada |
 | 35 | La poligonal como la mide el topógrafo | [`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md) | cerrada |
 | 36 | La nivelación como la mide el topógrafo | [`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md) | cerrada |
-| 37 | Los asentamientos como los mide el topógrafo | [`prds/36-ux-asentamientos.md`](./prds/36-ux-asentamientos.md) | en curso |
+| 37 | Los asentamientos como los mide el topógrafo | [`prds/36-ux-asentamientos.md`](./prds/36-ux-asentamientos.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -560,6 +560,34 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 37 — Los asentamientos como los mide el topógrafo (2026-10-07)
+
+Las divergencias están en el PRD-de-fase (`prds/36-ux-asentamientos.md`), como
+en las Fases 35 y 36. Con ella ningún proceso se cierra: la poligonal (35), la
+nivelación (36) y ahora el lugar y la visita. El despliegue va en tres pasos
+(migración, scripts, migración), con las consultas previas de producción
+escritas en la doc técnica (§ 13).
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una cartera real como prueba de celdas vale más que diez fixtures.** La
+  prueba de la cartera compara las 112 cotas, acumulados y parciales con las
+  celdas de la hoja; destapó que el validador heredado exigía distancias que
+  la cartera no trae, algo que ninguna prueba sintética veía.
+- **Guardar a cada lectura convierte cada interacción en un guardado.** Abrir
+  y cerrar una armada sin teclear guardaba, porque se comparaba contra la
+  libreta del servidor y no contra la que arma el formulario; una armada nueva
+  se habría guardado vacía. Lo «ya guardado» tiene que ser lo que el propio
+  formulario produce sin tocarlo.
+- **Una plantilla cambia lo que significa «seguir».** El popup asumía que la
+  armada siguiente siempre se agrega; con la libreta de la visita anterior ya
+  existe, y se creaba una tercera. Solo la verificación en pantalla con la
+  plantilla real lo mostró.
+- **La base local es de todas las sesiones.** Otra sesión aplicó su migración
+  de la Fase 35 y la fusionó en `main` mientras esta fase avanzaba;
+  `migration up --local` se negó hasta traer `main` a la rama. Antes del paso
+  2 de una fase, `git fetch` y mirar `main..origin/main`.
 
 ### Cierre Fase 36 — La nivelación como la mide el topógrafo (2026-10-07)
 
