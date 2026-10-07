@@ -41,6 +41,8 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 33 | Header compacto | `32-header-compacto.md` | cerrada |
 | 34 | Reabrir procesos | `33-reabrir-procesos.md` | cerrada |
 | 35 | La poligonal como la mide el topógrafo | `34-ux-poligonal.md` | cerrada |
+| 36 | La nivelación como la mide el topógrafo | `35-ux-nivelacion.md` | en curso |
+| 37 | Los asentamientos como los mide el topógrafo | `36-ux-asentamientos.md` | pendiente |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
