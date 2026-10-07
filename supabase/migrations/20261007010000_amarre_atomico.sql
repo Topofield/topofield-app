@@ -155,3 +155,6 @@ $$;
 -- Al borrarse, la función perdió sus permisos: los mismos de la Fase 23.
 revoke execute on function public.save_polygonal_process(uuid, jsonb, jsonb, jsonb) from public, anon;
 grant execute on function public.save_polygonal_process(uuid, jsonb, jsonb, jsonb) to authenticated;
+
+-- Que PostgREST vea ya la firma nueva, sin esperar a su recarga automática.
+notify pgrst, 'reload schema';

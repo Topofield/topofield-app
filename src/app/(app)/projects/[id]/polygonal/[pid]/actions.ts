@@ -14,7 +14,6 @@ import {
   catalogPointsProblem,
   planCatalogWrites,
   type AmarrePoints,
-  type CatalogWrite,
 } from "@/lib/polygonal-amarre";
 import {
   validateLeastSquaresWeights,
@@ -36,6 +35,8 @@ import {
   type PolygonalInput,
   type PolygonalType,
 } from "@/types/polygonal";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface ActionResult {
   ok: boolean;
@@ -310,7 +311,7 @@ export async function savePolygonalProcessAction(
   // Fase 35): aquí se decide qué fila se crea o se corrige, y la función de
   // base las escribe en la misma transacción. Antes, una llamada por punto
   // ANTES de guardar dejaba el catálogo corregido si el guardado fallaba.
-  let catalog: { writes: CatalogWrite[]; referenceId: string | null } = { writes: [], referenceId: null };
+  let catalog: ReturnType<typeof planCatalogWrites> = { writes: [], referenceId: null };
   if (payload.catalogPoints) {
     const problem = catalogPointsProblem(payload, payload.catalogPoints);
     if (problem) return { ok: false, error: problem };
@@ -319,9 +320,14 @@ export async function savePolygonalProcessAction(
       .select("id, code, north, east")
       .eq("project_id", process.project_id);
     if (readError) return { ok: false, error: logDbError(readError, "No se pudo leer el catálogo.") };
-    // Una referencia nueva toma el id que el popup ya puso en el borrador.
+    // Una referencia nueva toma el id que el popup ya puso en el borrador, si es
+    // un UUID libre; si no, uno nuevo: un id que ya existe haría fallar el
+    // guardado entero sin decir por qué.
+    const proposed = payload.referencePointId;
+    const usable =
+      proposed !== null && UUID.test(proposed) && !(points ?? []).some((p) => p.id === proposed);
     catalog = planCatalogWrites((points ?? []).map(catalogPointOf), payload.catalogPoints, (role) =>
-      role === "reference" && payload.referencePointId ? payload.referencePointId : crypto.randomUUID(),
+      role === "reference" && usable ? proposed : crypto.randomUUID(),
     );
   }
 

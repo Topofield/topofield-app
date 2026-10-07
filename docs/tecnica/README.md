@@ -5,7 +5,7 @@ está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
 **Última actualización:** 2026-10-07 · Fase 36 cerrada, y correcciones de la
-Fase 35 · 1148 tests y 135 pruebas de base (pgTAP) ·
+Fase 35 · 1149 tests y 135 pruebas de base (pgTAP) ·
 **desplegado en producción** ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
 
 Otros documentos:
@@ -1916,8 +1916,9 @@ página. Las piezas:
   `save_polygonal_process`, en la misma transacción. La acción comprueba que
   coinciden con el amarre de la carga (`catalogPointsProblem`), decide qué
   fila se crea o se corrige y saca el azimut de las coordenadas nuevas de la
-  referencia. Una referencia nueva lleva desde el popup el id con que se crea:
-  un guardado encadenado antes de que llegue la página no la suelta. Uno que ya
+  referencia. Una referencia nueva lleva desde el popup el id con que se crea
+  —si es un UUID libre; si no, la acción da otro—: un guardado encadenado
+  antes de que llegue la página no la suelta. Uno que ya
   existe con otras coordenadas toma las tecleadas (`move`): así se corrige el
   amarre sin rehacer la poligonal. Hasta las correcciones de la Fase 35 era un
   conflicto, y el primer guardado del amarre ya mete sus puntos al catálogo:
@@ -2236,7 +2237,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1148 tests en 84 archivos, Vitest, entorno `node` **sin jsdom**. Además, 135
+1149 tests en 84 archivos, Vitest, entorno `node` **sin jsdom**. Además, 135
 pruebas de la base con pgTAP (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2263,7 +2264,7 @@ pruebas de la base con pgTAP (al final de esta sección).
 | `components/polygonal/angle-format.test.ts` | 7 | Ángulos en DMS o decimal, segundos con signo y la lectura de los campos DMS (Fase 35) |
 | `components/polygonal/order-verdict.test.ts` | 4 | El «Por qué» del orden alcanzado, orden por orden, con y sin condición angular (Fase 35) |
 | `components/polygonal/adjusted-table.test.ts` | 2 | La poligonal ajustada al estilo de la hoja: las coordenadas del punto de llegada y la fila Σ (Fase 35) |
-| `lib/polygonal-amarre.test.ts` | 21 | Los puntos del amarre al catálogo: reutilizar, completar, crear o mover el que tiene otras coordenadas; `catalogMoves`, los que cambian con sus coordenadas de antes y las otras poligonales que los usan; `repeatedPointName` con el medio milímetro, y `catalogPointOf`; `planCatalogWrites` —insertar, actualizar por id, un punto nuevo repetido una sola vez, el id propuesto para la referencia— y `catalogPointsProblem` (Fase 35 y sus correcciones) |
+| `lib/polygonal-amarre.test.ts` | 22 | Los puntos del amarre al catálogo: reutilizar, completar, crear o mover el que tiene otras coordenadas; `catalogMoves`, los que cambian con sus coordenadas de antes y las otras poligonales que los usan; `repeatedPointName` con el medio milímetro, y `catalogPointOf`; `planCatalogWrites` —insertar, actualizar por id, un punto nuevo repetido una sola vez, el id propuesto para la referencia— y `catalogPointsProblem`: puntos sin nombre o con coordenadas no finitas, que no son los del amarre o que repiten nombre (Fase 35 y sus correcciones) |
 | `components/reports/sections/polygonal-correction.test.tsx` | 5 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35) |
 | `components/reports/math.test.tsx` | 2 | Una letra griega sola va recta en MathML (Fase 35) |
 | `lib/errors/action-call.test.ts` | 3 | Un rechazo de red de una acción vuelve como error, sin lanzar, y las señales de navegación de Next pasan (Fase 35) |

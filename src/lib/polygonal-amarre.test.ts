@@ -235,6 +235,19 @@ describe("catalogPointsProblem", () => {
     expect(catalogPointsProblem(amarre, { start: null, reference: { ...R1, code: "R2" }, end: null })).toBe(message);
   });
 
+  it("un punto sin nombre o con coordenadas que no son números, también", () => {
+    const message = "Los puntos del amarre necesitan nombre y coordenadas.";
+    const vacío = { ...amarre, referencePointCode: " " };
+    expect(catalogPointsProblem(vacío, { start: null, reference: { ...R1, code: " " }, end: null })).toBe(message);
+    // NaN viaja como null en el JSON: coincide con una llegada nula de la carga.
+    const sinLlegada = { ...amarre, endNorth: null, endEast: null };
+    const nula = { code: "L1", north: null as unknown as number, east: null as unknown as number };
+    expect(catalogPointsProblem(sinLlegada, { start: null, reference: null, end: nula })).toBe(message);
+    expect(catalogPointsProblem(amarre, { start: null, reference: { ...R1, north: Infinity }, end: null })).toBe(
+      message,
+    );
+  });
+
   it("el mismo nombre con otras coordenadas, también", () => {
     expect(
       catalogPointsProblem(

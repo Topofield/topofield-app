@@ -175,8 +175,10 @@ export const repeatedPointMessage = (code: string) =>
 
 /**
  * Por qué no valen los puntos que la carga lleva al catálogo, o `null`. La
- * acción es alcanzable con una carga hecha a mano: la partida y la llegada
- * tienen que ser las del amarre, y la referencia, la que nombra.
+ * acción es alcanzable con una carga hecha a mano: cada punto necesita nombre y
+ * coordenadas finitas —un NaN llega como `null` y dejaría el punto sin ellas—,
+ * la partida y la llegada tienen que ser las del amarre, y la referencia, la
+ * que nombra.
  */
 export function catalogPointsProblem(
   amarre: {
@@ -190,6 +192,10 @@ export function catalogPointsProblem(
   },
   points: AmarrePoints,
 ): string | null {
+  const given = [points.start, points.reference, points.end].filter((p): p is NamedPoint => p !== null);
+  if (given.some((p) => p.code.trim() === "" || !Number.isFinite(p.north) || !Number.isFinite(p.east))) {
+    return "Los puntos del amarre necesitan nombre y coordenadas.";
+  }
   const is = (p: NamedPoint, code: string | null, north: number | null, east: number | null) =>
     p.code.trim() === code?.trim() && p.north === north && p.east === east;
   const matches =
@@ -197,8 +203,6 @@ export function catalogPointsProblem(
     (!points.end || is(points.end, amarre.endPointCode, amarre.endNorth, amarre.endEast)) &&
     (!points.reference || points.reference.code.trim() === amarre.referencePointCode?.trim());
   if (!matches) return "Los puntos del amarre no coinciden con los del proceso.";
-  const repeated = repeatedPointName(
-    [points.start, points.reference, points.end].filter((p): p is NamedPoint => p !== null),
-  );
+  const repeated = repeatedPointName(given);
   return repeated ? repeatedPointMessage(repeated) : null;
 }
