@@ -21,7 +21,6 @@ import { usePolygonalComputation, usePolygonalDraft } from "./use-polygonal-draf
 type Dialog = { kind: "amarre" } | { kind: "measurement"; mode: MeasurementMode; opened: number };
 
 interface DatosTabProps {
-  projectId: string;
   process: PolygonalProcess;
   stations: PolygonalStationWithReadings[];
   referencePoints: ReferencePoint[];
@@ -36,7 +35,7 @@ interface DatosTabProps {
  * fijo a la derecha. Cada popup guarda al confirmar con la carga completa: no
  * hay botón Guardar.
  */
-export function DatosTab({ projectId, process, stations, referencePoints, others, angleFormat }: DatosTabProps) {
+export function DatosTab({ process, stations, referencePoints, others, angleFormat }: DatosTabProps) {
   const { draft, save } = usePolygonalDraft(process, stations);
   const { input, result, angleType, referenceLabel, referenceCoords } = usePolygonalComputation(
     draft,
@@ -187,7 +186,6 @@ export function DatosTab({ projectId, process, stations, referencePoints, others
 
       {dialog?.kind === "amarre" && (
         <AmarreDialog
-          projectId={projectId}
           draft={draft}
           referencePoints={referencePoints}
           others={others}

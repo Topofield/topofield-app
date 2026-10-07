@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { savePolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
+import type { AmarrePoints } from "@/lib/polygonal-amarre";
 import type { ReferencePoint } from "@/types/project";
 import type { PolygonalInput, PolygonalProcess, PolygonalStationWithReadings } from "@/types/polygonal";
 import { draftOf, inputOf, payloadOf, type PolygonalDraft } from "./polygonal-save";
@@ -17,8 +18,10 @@ import { useProcessDraft } from "@/components/process/use-process-draft";
  */
 export function usePolygonalDraft(process: PolygonalProcess, stations: PolygonalStationWithReadings[]) {
   const base = useMemo(() => draftOf(process, stations), [process, stations]);
+  // Los puntos del amarre que van al catálogo viajan con ese guardado, no en el borrador.
   const persist = useCallback(
-    (next: PolygonalDraft) => savePolygonalProcessAction(payloadOf(process.id, next)),
+    (next: PolygonalDraft, catalogPoints?: AmarrePoints) =>
+      savePolygonalProcessAction({ ...payloadOf(process.id, next), catalogPoints }),
     [process.id],
   );
   return useProcessDraft(process.updated_at, base, persist);
