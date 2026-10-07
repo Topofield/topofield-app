@@ -149,9 +149,10 @@ recorrido (A) y el perfil con las miras y las visuales de cada armada (B).
 | Equilibrado de visuales | **Se quita**: no es parte del ajuste. Eran los avisos por armada (Fase 19, N7) y por sección (Fase 32, D-3); quitarlos no cambia ninguna cota. La libreta de las visitas usa los mismos validadores |
 | Informe | **Sencillo**: un resumen con el veredicto, los datos iniciales (la libreta), los datos ajustados y el gráfico comparado. El método en una frase, sin fórmulas paso a paso. Una versión por tipo; la abierta sin vuelta no tiene datos ajustados y dice que no tiene verificación |
 
-Quedan para el PRD la regla de compensación con el orden detectado (hallazgo 2)
-y dónde vive la importación del `.L` y del CSV (en el lienzo, en la barra de
-pasos).
+La regla de compensación con el orden detectado (hallazgo 2): **se compensa
+siempre**, sin limitantes, **con avisos** si no alcanza ningún orden («no
+dejemos limitantes pero sí avisos»). La importación del `.L` y del CSV va en la
+barra de pasos. El borrador del PRD está en `docs/prds/35-ux-nivelacion.md`.
 
 ### Lo que se quita con el cierre
 
