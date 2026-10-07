@@ -338,7 +338,7 @@ Desde el proyecto, **+ Nuevo Proceso → Poligonal** abre un popup:
   informe y en el Excel.
 - **Tipo de poligonal**, con una línea que explica cómo se verifica cada uno.
 - **Equipo**, plegado y opcional: marca, modelo y número de serie de la
-  estación total, o **Tomar del catálogo** (§ 12).
+  estación total, que se escriben.
 
 **Crear y empezar** lleva al paso de Datos. Lo que no se pide: el **orden de
 precisión** y el **tipo de ángulo** se detectan al calcular (§ 5.4 y § 5.5).
@@ -385,9 +385,12 @@ puntos de amarre** abre un popup con
   cierre angular.
 
 Los puntos con coordenadas se guardan en el catálogo del proyecto. Si el
-nombre ya existe con otras coordenadas, el popup lo dice: tómelo del catálogo
-o use otro nombre, porque ese punto puede estar en uso en otra poligonal. Sin
-0 atrás, la partida no va al catálogo: puede ser local.
+nombre ya existe con otras coordenadas, el punto toma las que usted tecleó: así
+se corrige el amarre, y la poligonal se recalcula con las mediciones que ya
+tiene, sin volver a medir. Antes de guardar, el popup avisa qué puntos cambian
+en el catálogo, con sus coordenadas de antes y las otras poligonales que los
+usan. Dos puntos del amarre no pueden llamarse igual con coordenadas
+distintas. Sin 0 atrás, la partida no va al catálogo: puede ser local.
 
 Con mediciones, el amarre se edita pero **no se pone ni se quita el 0 atrás**:
 cambiaría lo que significa el primer ángulo —de orientación a vértice, o al
@@ -1619,7 +1622,8 @@ En el formulario de equipo de cada visita:
   catálogo».
 
 En una poligonal y en una nivelación, el equipo es solo su identidad —marca,
-modelo y número de serie—, y **Tomar del catálogo** la copia.
+modelo y número de serie—. En la nivelación, **Tomar del catálogo** la copia;
+en la poligonal se escribe.
 
 > **El catálogo es una plantilla.** Cada proceso guarda su propia copia del
 > equipo: corregir o eliminar un equipo del catálogo no cambia ningún
