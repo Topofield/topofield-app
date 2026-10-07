@@ -1,20 +1,14 @@
-// Validación de la libreta de nivelación de una visita (Fase 18).
+// Validación de la libreta de nivelación de una visita (Fases 18 y 37).
 //
-// La libreta de la visita es una libreta de nivelación más —un circuito
-// cerrado—, así que hereda todas las reglas de captura de nivelación
-// (`validateRunCapture`). Lo que se añade aquí es lo propio de la visita: el
-// circuito arranca y cierra en el BM de amarre, cuya cota es obligatoria. Ver
-// docs/prds/17-libreta-panel-asentamientos.md, «Validación».
+// Cada fila pasa las reglas de captura de la nivelación
+// (`validateReadingCapture`); lo propio de la visita es que cada tramo arranca
+// en un BM del lugar y que la distancia es opcional. Lo que falta por leer no
+// es error: la visita se guarda en medición.
 
 import { resolveVisualDistances, samePointCode } from "@/lib/calculations/leveling";
 import { formatSignedMm } from "@/lib/utils/format";
-import {
-  validateReadingCapture,
-  validateRunCapture,
-  type ReadingCaptureIssues,
-} from "./leveling";
+import { validateReadingCapture, type ReadingCaptureIssues } from "./leveling";
 import type { BookRowInput as VisitBookRowInput } from "@/lib/calculations/settlement-book";
-import type { ReadingInput as BookRowInput } from "@/types/leveling";
 import type { BenchmarkCheck, BenchmarkInput, BookIssue } from "@/types/settlement";
 
 export interface VisitBookIssues {
@@ -22,64 +16,6 @@ export interface VisitBookIssues {
   rowIssues: ReadingCaptureIssues[];
   /** Errores de la libreta entera, que no pertenecen a una celda. */
   errors: string[];
-}
-
-/**
- * Valida la libreta de una visita. Una libreta vacía no exige nada: la visita
- * puede guardarse en borrador antes de salir a campo.
- */
-export function validateVisitBook(
-  rows: BookRowInput[],
-  amarre: { code: string; elevation: number | null },
-): VisitBookIssues {
-  if (rows.length === 0) return { rowIssues: [], errors: [] };
-
-  const errors: string[] = [];
-  const code = amarre.code.trim();
-  if (code === "") errors.push("Falta el BM de amarre de la visita.");
-  else if (amarre.elevation == null) errors.push("Falta la cota del BM de amarre.");
-  if (rows.length < 2) {
-    errors.push("La libreta necesita al menos la fila del amarre y la de cierre.");
-  }
-
-  // Un número no finito no llega desde el editor, pero sí en una llamada
-  // directa a la acción: el protocolo de las Server Actions transporta `NaN`,
-  // el validador de nivelación no lo filtra (sus comparaciones con `NaN` son
-  // falsas) y Postgres lo acepta en una columna `numeric`.
-  const numeric = [
-    "backsight", "foresight", "backUpperM", "backLowerM",
-    "foreUpperM", "foreLowerM", "backDistanceM", "foreDistanceM",
-  ] as const;
-  if (
-    (amarre.elevation != null && !Number.isFinite(amarre.elevation)) ||
-    rows.some((r) => numeric.some((k) => r[k] != null && !Number.isFinite(r[k])))
-  ) {
-    errors.push("La libreta tiene un valor que no es un número.");
-  }
-
-  const rowIssues = validateRunCapture(rows, "closed");
-  if (code !== "" && rows.length >= 2) {
-    const last = rows.length - 1;
-    const first = rowIssues[0]!;
-    if (!samePointCode(rows[0]!.pointCode, code)) {
-      first.errors = {
-        ...first.errors,
-        pointCode: `La libreta arranca en el BM de amarre (${code}).`,
-      };
-    }
-    if (rows[0]!.pointType !== "bm") {
-      first.errors = { ...first.errors, pointType: "El amarre es de tipo BM." };
-    }
-    if (!samePointCode(rows[last]!.pointCode, code)) {
-      const closing = rowIssues[last]!;
-      closing.errors = {
-        ...closing.errors,
-        pointCode: `La libreta cierra en el BM de amarre (${code}).`,
-      };
-    }
-  }
-
-  return { rowIssues, errors };
 }
 
 /**

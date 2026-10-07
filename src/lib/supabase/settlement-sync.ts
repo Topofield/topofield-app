@@ -126,13 +126,16 @@ export async function resyncSiteReadings(
  * Una visita por llamada a `save_visit`: cada una es atómica; si una falla, el
  * error dice cuál y las anteriores quedan recalculadas, que es correcto.
  *
- * `dryRun` no escribe: cuenta las visitas y las lecturas cuya cota cambia.
+ * `dryRun` no escribe: cuenta las visitas y las lecturas cuya cota cambia
+ * (`changedVisits`, `changedReadings`); `visits` es el total del lugar.
  */
 export async function recomputeSite(
   supabase: SupabaseClient,
   siteId: string,
   { dryRun = false }: { dryRun?: boolean } = {},
-): Promise<{ ok: true; visits: number; changedReadings: number } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; visits: number; changedVisits: number; changedReadings: number } | { ok: false; error: string }
+> {
   const { data: site } = await supabase.from("sites").select("*").eq("id", siteId).maybeSingle();
   if (!site) return { ok: false, error: "Lugar no encontrado." };
 
@@ -175,16 +178,16 @@ export async function recomputeSite(
   const storedElevation = new Map(
     (stored ?? []).map((r) => [`${r.visit_id}:${r.point_id}`, Number(r.elevation)]),
   );
-  const changedReadings = results.reduce(
-    (n, { visitId, readings }) =>
-      n +
+  const changedPerVisit = results.map(
+    ({ visitId, readings }) =>
       readings.filter((r) => {
         const before = storedElevation.get(`${visitId}:${r.pointId}`);
         return before == null || Math.abs(before - r.elevation) > 0.00005;
       }).length,
-    0,
   );
-  if (dryRun) return { ok: true, visits: results.length, changedReadings };
+  const changedReadings = changedPerVisit.reduce((a, b) => a + b, 0);
+  const changedVisits = changedPerVisit.filter((n) => n > 0).length;
+  if (dryRun) return { ok: true, visits: results.length, changedVisits, changedReadings };
 
   for (const { visitId, record, readings } of results) {
     // Solo las visitas con libreta: sin filas no hay nada que recalcular.
@@ -207,5 +210,5 @@ export async function recomputeSite(
       return { ok: false, error: logDbError(error, "No se pudo recalcular una visita del lugar.") };
     }
   }
-  return { ok: true, visits: results.length, changedReadings };
+  return { ok: true, visits: results.length, changedVisits, changedReadings };
 }

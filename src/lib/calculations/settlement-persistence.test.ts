@@ -5,7 +5,7 @@ import {
   visitsToRewrite,
   type PersistedReading,
 } from "./settlement-persistence";
-import { bookRowInputOf, bookRowOf, computeVisitBook } from "./settlement-book";
+import { bookRowInputOf, bookRowOf, computeBook } from "./settlement-book";
 import type { AlertLevel, BookRowPayload, VisitResult } from "@/types/settlement";
 
 /** Lectura recalculada, con valores por defecto que los tests van pisando. */
@@ -236,8 +236,8 @@ describe("bookRowsToPersist (Fase 18)", () => {
   ];
 
   it("numera desde 1, enlaza el punto por código y guarda las distancias resueltas", () => {
-    const result = computeVisitBook(rows.map(bookRowInputOf), 100, "tercer_orden");
-    const out = bookRowsToPersist("v1", rows, result.forward.readings, [
+    const book = computeBook(rows.map(bookRowInputOf), [{ code: "BM-1", elevation: 100 }]);
+    const out = bookRowsToPersist("v1", rows, book.readings, [
       { id: "p1", code: "PC-01" },
     ], [null, null, null]);
     expect(out.map((r) => r.reading_order)).toEqual([1, 2, 3]);
@@ -250,8 +250,8 @@ describe("bookRowsToPersist (Fase 18)", () => {
   });
 
   it("sella la cota de catálogo solo en las filas de los BM de control (Fase 30)", () => {
-    const result = computeVisitBook(rows.map(bookRowInputOf), 100, "tercer_orden");
-    const out = bookRowsToPersist("v1", rows, result.forward.readings, [], [null, 100.845, null]);
+    const book = computeBook(rows.map(bookRowInputOf), [{ code: "BM-1", elevation: 100 }]);
+    const out = bookRowsToPersist("v1", rows, book.readings, [], [null, 100.845, null]);
     expect(out.map((r) => r.catalog_elevation)).toEqual([null, 100.845, null]);
   });
 });

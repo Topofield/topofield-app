@@ -14,10 +14,11 @@
 //    detectados.
 //  - 2 procesos de nivelación: uno calculado (editable, para la captura del
 //    editor del manual) y uno cerrado (alimenta el informe de nivelación).
-//  - 3 lugares de monitoreo en "Edificio en monitoreo": "Edificio Torre
-//    Central" (7 puntos × 6 visitas, abierto y editable para las capturas),
-//    "Torre Alameda" (8 × 14 visitas con libreta, 12 cerradas) y "Edificio
-//    Norte" (4 × 3, cerrado, para el informe de asentamientos).
+//  - 4 lugares de monitoreo en "Edificio en monitoreo", cada visita con su
+//    libreta y nada cerrado (Fase 37): "Edificio Torre Central" (7 puntos × 6
+//    visitas, con un alta y una baja), "Torre Alameda" (8 × 14, dos BM),
+//    "Edificio Norte" (4 × 3, para el informe de asentamientos) y la cartera
+//    real «Control de asentamiento estructural» (16 × 7, una armada).
 //  - 3 informes: poligonal y nivelación en "Lote catastral", asentamientos en
 //    "Edificio en monitoreo".
 //  - Algunos reference_points para probar el CRUD de la tab Configuración.
@@ -27,9 +28,8 @@
 // El "Proyecto de ejemplo" no lo crea el seed: lo crea la aplicación en el
 // primer inicio de sesión (`profiles.demo_seeded_at` queda nulo).
 //
-// No es idempotente: recrea el usuario, y sobre una base con trabajo cerrado
-// el borrado falla, porque lo cerrado es inmutable. Ejecútelo siempre tras
-// `npx supabase db reset`.
+// No es idempotente: recrea el usuario y vuelve a insertar todo. Ejecútelo
+// siempre tras `npx supabase db reset`.
 //
 // Uso: con `npx supabase start` activo, ejecutar
 //   `npx supabase db reset && npm run seed`
@@ -55,27 +55,23 @@ import {
   computeLevelingDetected,
   totalDistanceFromReadings,
 } from "../src/lib/calculations/leveling.ts";
-import { computeHistory } from "../src/lib/calculations/settlement.ts";
-import {
-  bookRowInputOf,
-  catalogElevationsOf,
-  computeVisitBook,
-  deriveControlElevations,
-} from "../src/lib/calculations/settlement-book.ts";
-import { bookRowsToPersist } from "../src/lib/calculations/settlement-persistence.ts";
 import { generateVisitBook } from "../src/lib/demo/libreta-asentamientos.ts";
+import { insertarCartera } from "../src/lib/demo/insertar-cartera.ts";
+import { insertarVisitas } from "../src/lib/demo/insertar-visitas.ts";
 import {
   ALAMEDA_AMARRES,
   ALAMEDA_OUT_OF_TOLERANCE,
   ALAMEDA_POINTS as ALAMEDA_POINTS_DEMO,
+  alamedaBook,
   alamedaVisits,
 } from "../src/lib/demo/torre-alameda.ts";
 
-// El seed inserta puntos con `location_description`; la fuente compartida usa
+// El seed inserta puntos con nombres de columna; la fuente compartida usa
 // camelCase, como el resto de `src/lib/demo/`.
 const ALAMEDA_POINTS = ALAMEDA_POINTS_DEMO.map((p) => ({
-  ...p,
+  code: p.code,
   location_description: p.locationDescription,
+  initial_elevation: p.c0,
 }));
 import { thresholdsFor } from "../src/lib/calculations/tolerances.ts";
 import { decimalToDms, dmsToDecimal } from "../src/lib/calculations/angles.ts";
@@ -1092,12 +1088,12 @@ const NORTE_VISIT_DATES = ["2025-01-20", "2025-02-20", "2025-03-20"];
 
 // --- Torre Alameda (Fase 18): el lugar del prototipo, con libreta ----------
 //
-// Ocho puntos de control y dos BMs de amarre que se alternan, como en el
+// Ocho puntos de control y dos BM del lugar que se alternan, como en el
 // prototipo `docs/prototipos/Control de asentamientos, Torre Alameda.html`.
 // Cada visita lleva su libreta (dos armadas, punto de cambio, cierre en el
-// amarre) generada HACIA ATRÁS desde la serie: las cotas compensadas son las
-// de la serie (`generateVisitBook`). La visita 9 cierra fuera de tolerancia
-// para mostrar el aviso: se guarda y se cierra igual, sin compensar.
+// BM) generada HACIA ATRÁS desde la serie (`alamedaBook`). Sin compensar
+// (Fase 37), cada cota se aparta de la serie en su parte del cierre. La
+// visita 9 cierra fuera de todos los órdenes: queda sin verificación.
 
 // La serie, los puntos y los BMs viven en src/lib/demo/torre-alameda.ts, que
 // comparte con el proyecto de ejemplo (Fase 21).
@@ -1118,18 +1114,51 @@ function cotaEn(partialsMm, point, visitIndex) {
 }
 
 /**
- * Crea un lugar de monitoreo, su catálogo de puntos y sus visitas, con los
- * resultados calculados por `computeHistory` — nunca escritos a mano. Cierra el
- * lugar al final si `cfg.close` es true.
- *
- * `cfg`: { name, description, points, partialsMm, visitDates, operator?,
- * equipment?, close? }. `points` usa nombres de columna (`initial_elevation`).
+ * La libreta de una visita de un lugar con serie de cotas (Torre Central,
+ * Edificio Norte): hacia atrás desde las cotas de los puntos medidos, con
+ * cierre cero, así que la medida da la serie tal cual (Fase 37: toda visita
+ * se mide con libreta).
  */
-async function insertSettlementSite(projectId, userId, cfg) {
+function seriesBook(cfg, visitIndex) {
+  const targets = cfg.points
+    .map((p) => ({ code: p.code, elevation: cotaEn(cfg.partialsMm, p, visitIndex) }))
+    .filter((t) => t.elevation !== null);
+  const rows = generateVisitBook({
+    amarre: { code: cfg.benchmark.code, elevation: cfg.benchmark.elevation },
+    targets,
+    closureMm: 0,
+    order: "tercer_orden",
+    seed: 200 + visitIndex,
+    perSetup: 5,
+  });
+  return rows.map((row, k) => ({ ...row, startsSection: k === 0 }));
+}
+
+/** El nivel de una visita, como lo guarda `insertarVisitas`. */
+function levelOf(spec) {
+  return {
+    brand: spec.equipment_brand,
+    model: spec.equipment_model,
+    serial: spec.equipment_serial,
+    calibrationDate: spec.equipment_calibration_date,
+    levelType: spec.level_type,
+    kmPrecisionMm: spec.km_precision_mm,
+  };
+}
+
+/**
+ * Crea un lugar de monitoreo (Fase 37): su catálogo de puntos, sus BM del
+ * lugar y sus visitas, cada una con su libreta. Cotas, parciales, acumulados,
+ * velocidad y alerta los calcula `insertarVisitas` con la regla de la app —
+ * nunca se escriben a mano—, sin compensar y sin cerrar nada.
+ *
+ * `cfg`: { name, description, points, benchmarks, visits: [{ date, operator?,
+ * spec, rows }], retirements? }. `points` usa nombres de columna
+ * (`initial_elevation`); `spec` lleva el equipo de la visita.
+ */
+async function insertMonitoringSite(projectId, cfg) {
   // Los umbrales no se envían: los DEFAULT de la tabla `sites` son los mismos
-  // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75),
-  // así que el lugar queda coherente con el preset del motor sin duplicar las
-  // constantes aquí.
+  // que `thresholdsFor("edificio")` (velocity 2/5/10, accumulated 25/50/75).
   const siteId = await createSite(projectId, {
     name: cfg.name,
     description: cfg.description,
@@ -1148,11 +1177,19 @@ async function insertSettlementSite(projectId, userId, cfg) {
     )
     .select("id, code");
   if (pointsErr) throw pointsErr;
-
   const pointIdByCode = new Map(pointRows.map((p) => [p.code, p.id]));
 
-  // --- Motor real: computeHistory calcula parciales, acumulados, velocidad
-  // y nivel de alerta a partir únicamente de las cotas medidas. ------------
+  const { error: bmErr } = await admin.from("site_benchmarks").insert(
+    cfg.benchmarks.map((b) => ({
+      site_id: siteId,
+      code: b.code,
+      elevation: b.elevation,
+      description: b.description,
+      source: "Seed",
+    })),
+  );
+  if (bmErr) throw bmErr;
+
   const points = cfg.points.map((p) => ({
     id: pointIdByCode.get(p.code),
     code: p.code,
@@ -1163,57 +1200,20 @@ async function insertSettlementSite(projectId, userId, cfg) {
     retiredOn: null,
   }));
 
-  const visits = cfg.visitSpecs.map((spec, i) => ({
-    id: `visita-${i}`, // id provisional, solo para casar con el resultado de computeHistory
-    visitNumber: i,
-    date: spec.date,
-    readings: cfg.points
-      .map((p) => ({
-        pointId: pointIdByCode.get(p.code),
-        elevation: cotaEn(cfg.partialsMm, p, i),
-      }))
-      .filter((r) => r.elevation !== null),
-  }));
-
-  const history = computeHistory(points, visits, thresholdsFor("edificio"));
-
-  // El equipo se recupera por FECHA, no por posición en el array: la fecha es
-  // la identidad de la campaña, y así reordenar las visitas no puede mover un
-  // instrumento a otra. Sale de `cfg`, no del array global: la función sirve a
-  // los dos lugares que siembra el seed.
-  const specPorFecha = new Map(cfg.visitSpecs.map((v) => [v.date, v]));
-
-  for (const visitResult of history.visits) {
-    const visitSpec = specPorFecha.get(visitResult.date);
-    if (!visitSpec) throw new Error(`Visita sin spec: ${visitResult.date}`);
-    const { data: visitRow, error: visitErr } = await admin
-      .from("settlement_visits")
-      .insert({
-        site_id: siteId,
-        visit_number: visitResult.visitNumber,
-        date: visitResult.date,
-        operator: cfg.operator ?? "Seed TopoField",
-        ...equipmentOf(visitSpec),
-        status: "calculated",
-      })
-      .select("id")
-      .single();
-    if (visitErr) throw visitErr;
-
-    const readingRows = visitResult.readings.map((r) => ({
-      visit_id: visitRow.id,
-      point_id: r.pointId,
-      elevation: r.elevation,
-      partial_settlement: r.partialSettlement,
-      accumulated_settlement: r.accumulatedSettlement,
-      velocity: r.velocity,
-      alert_status: r.alertStatus,
-    }));
-    const { error: readingsErr } = await admin
-      .from("settlement_readings")
-      .insert(readingRows);
-    if (readingsErr) throw readingsErr;
-  }
+  await insertarVisitas(
+    admin,
+    siteId,
+    points,
+    cfg.benchmarks.map((b) => ({ code: b.code, elevation: b.elevation })),
+    thresholdsFor("edificio"),
+    cfg.visits.map((v, i) => ({
+      visitNumber: i,
+      date: v.date,
+      operator: v.operator ?? "Seed TopoField",
+      equipment: levelOf(v.spec),
+      rows: v.rows,
+    })),
+  );
 
   // Bajas (Fase 11), una vez insertadas las lecturas: el trigger de vigencia
   // rechazaría la baja si alguna lectura quedara en o después de su fecha.
@@ -1228,154 +1228,6 @@ async function insertSettlementSite(projectId, userId, cfg) {
     if (bajaErr) throw bajaErr;
   }
 
-  // Cierre diferido: cerrar el lugar bloquea por trigger toda escritura sobre
-  // sus visitas y lecturas, así que va al final, una vez cargado todo.
-  if (cfg.close) {
-    const { error: closeErr } = await admin
-      .from("sites")
-      .update({
-        status: "closed",
-        closed_at: new Date().toISOString(),
-        closed_by: userId,
-      })
-      .eq("id", siteId);
-    if (closeErr) throw closeErr;
-  }
-
-  return siteId;
-}
-
-// ----------------------------------------------------------------------------
-
-/**
- * Un lugar con libreta en todas sus visitas (Fase 18). Mismo orden que el
- * editor al guardar: visita → libreta → lecturas derivadas, y el cierre de
- * las visitas al final, porque el trigger no deja escribir la libreta de una
- * visita cerrada. Las lecturas salen de la libreta por el motor real
- * (`computeVisitBook` + `deriveControlElevations`), nunca de la serie.
- */
-async function insertBookSite(projectId, userId, cfg) {
-  const siteId = await createSite(projectId, {
-    name: cfg.name,
-    description: cfg.description,
-    structure_type: "edificio",
-  });
-
-  const { data: pointRows, error: pointsErr } = await admin
-    .from("settlement_points")
-    .insert(
-      cfg.points.map((p) => ({
-        site_id: siteId,
-        code: p.code,
-        location_description: p.location_description,
-        initial_elevation: p.c0,
-      })),
-    )
-    .select("id, code");
-  if (pointsErr) throw pointsErr;
-  const idByCode = new Map(pointRows.map((p) => [p.code, p.id]));
-  const points = cfg.points.map((p) => ({
-    id: idByCode.get(p.code),
-    code: p.code,
-    initialElevation: p.c0,
-    activeFrom: null,
-    retiredOn: null,
-  }));
-
-  const books = cfg.visits.map((v, i) => {
-    // La primera armada lee también el otro BM (Fase 30), como en la demo.
-    const rows = generateVisitBook({
-      amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
-      targets: [v.bmControl, ...v.targets],
-      closureMm: v.closureMm,
-      order: LEVEL_DIGITAL_MONITOREO.precision_order,
-      seed: 100 + i,
-      perSetup: 5,
-    });
-    const result = computeVisitBook(
-      rows.map(bookRowInputOf),
-      v.amarre.elevation,
-      LEVEL_DIGITAL_MONITOREO.precision_order,
-    );
-    const derived = deriveControlElevations(result, points, v.date);
-    return { rows, result, readings: derived.readings };
-  });
-
-  const history = computeHistory(
-    points,
-    cfg.visits.map((v, i) => ({
-      id: `visita-${i}`,
-      visitNumber: i,
-      date: v.date,
-      readings: books[i].readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
-    })),
-    thresholdsFor("edificio"),
-  );
-
-  const visitIds = [];
-  for (const [i, v] of cfg.visits.entries()) {
-    const { rows, result } = books[i];
-    const visitResult = history.visits.find((r) => r.visitNumber === i);
-    const { data: visitRow, error: visitErr } = await admin
-      .from("settlement_visits")
-      .insert({
-        site_id: siteId,
-        visit_number: i,
-        date: v.date,
-        operator: v.operator,
-        ...equipmentOf(LEVEL_DIGITAL_MONITOREO),
-        capture_mode: "book",
-        reference_bm_code: v.amarre.code,
-        reference_bm_elevation: v.amarre.elevation,
-        closure_error_mm: Number(result.closureErrorMm.toFixed(1)),
-        tolerance_mm: Number(result.toleranceMm.toFixed(1)),
-        meets_tolerance: result.meetsTolerance,
-        total_distance_km: Number(
-          totalDistanceFromReadings(rows.map(bookRowInputOf)).toFixed(3),
-        ),
-        status: "calculated",
-      })
-      .select("id")
-      .single();
-    if (visitErr) throw visitErr;
-    visitIds.push(visitRow.id);
-
-    const { error: bookErr } = await admin
-      .from("settlement_book_readings")
-      .insert(
-        bookRowsToPersist(
-          visitRow.id,
-          rows,
-          result.forward.readings,
-          points,
-          catalogElevationsOf(result.forward.readings, ALAMEDA_AMARRES, v.amarre.code, points),
-        ),
-      );
-    if (bookErr) throw bookErr;
-
-    const { error: readingsErr } = await admin.from("settlement_readings").insert(
-      visitResult.readings.map((r) => ({
-        visit_id: visitRow.id,
-        point_id: r.pointId,
-        elevation: r.elevation,
-        partial_settlement: r.partialSettlement,
-        accumulated_settlement: r.accumulatedSettlement,
-        velocity: r.velocity,
-        alert_status: r.alertStatus,
-      })),
-    );
-    if (readingsErr) throw readingsErr;
-  }
-
-  // Todas cerradas salvo las `openLast` últimas, que quedan para editar.
-  const toClose = visitIds.slice(0, visitIds.length - cfg.openLast);
-  if (toClose.length > 0) {
-    const { error: closeErr } = await admin
-      .from("settlement_visits")
-      .update({ status: "closed", closed_at: new Date().toISOString(), closed_by: userId })
-      .in("id", toClose);
-    if (closeErr) throw closeErr;
-  }
   return siteId;
 }
 
@@ -1524,53 +1376,73 @@ async function main() {
   });
   console.log(`  ✓ Proyecto "Edificio en monitoreo" — ${monitoreo}`);
 
-  const settlementSiteId = await insertSettlementSite(monitoreo, userId, {
+  const centralCfg = {
+    points: SETTLEMENT_POINTS,
+    partialsMm: PARTIALS_MM,
+    benchmark: { code: "BM-C", elevation: 101.0, description: "BM del andén de acceso" },
+  };
+  const settlementSiteId = await insertMonitoringSite(monitoreo, {
     name: "Edificio Torre Central",
     description:
       "Edificio de 6 niveles sobre arcilla blanda, con 6 puntos de control en grilla y uno en la ampliación.",
     points: SETTLEMENT_POINTS,
-    partialsMm: PARTIALS_MM,
-    visitSpecs: VISIT_SPECS,
+    benchmarks: [centralCfg.benchmark],
+    visits: VISIT_SPECS.map((spec, i) => ({ date: spec.date, spec, rows: seriesBook(centralCfg, i) })),
     retirements: SETTLEMENT_RETIREMENTS,
-    close: false,
   });
   console.log(
-    `  ✓ Lugar "Edificio Torre Central" (abierto) con ${SETTLEMENT_POINTS.length} puntos (P-07 de alta, P-05 de baja) y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
+    `  ✓ Lugar "Edificio Torre Central" con ${SETTLEMENT_POINTS.length} puntos (P-07 de alta, P-05 de baja) y ${VISIT_SPECS.length} visitas — ${settlementSiteId}`,
   );
 
-  // Tercer lugar, con libreta en cada visita (Fase 18): el del prototipo.
-  await insertReferencePoints(monitoreo, ALAMEDA_AMARRES);
+  // Con dos BM del lugar (Fase 18; BM del lugar desde la Fase 37): el del prototipo.
   const alamedaVisitsData = alamedaVisits();
-  const alamedaId = await insertBookSite(monitoreo, userId, {
+  const alamedaId = await insertMonitoringSite(monitoreo, {
     name: "Torre Alameda",
     description:
       "Torre de 14 niveles sobre suelo aluvial, con 8 puntos de control en columnas. Cada visita lleva su libreta de nivelación.",
     points: ALAMEDA_POINTS,
-    visits: alamedaVisitsData,
-    openLast: 2,
+    benchmarks: ALAMEDA_AMARRES,
+    visits: alamedaVisitsData.map((v, i) => ({
+      date: v.date,
+      operator: v.operator,
+      spec: LEVEL_DIGITAL_MONITOREO,
+      rows: alamedaBook(v, i, "tercer_orden"),
+    })),
   });
   console.log(
-    `  ✓ Lugar "Torre Alameda" (libreta) con ${ALAMEDA_POINTS.length} puntos y ${alamedaVisitsData.length} visitas, la ${ALAMEDA_OUT_OF_TOLERANCE} fuera de tolerancia — ${alamedaId}`,
+    `  ✓ Lugar "Torre Alameda" con ${ALAMEDA_POINTS.length} puntos y ${alamedaVisitsData.length} visitas, la ${ALAMEDA_OUT_OF_TOLERANCE} sin verificación — ${alamedaId}`,
   );
 
-  // Segundo lugar, cerrado, cuyo único fin es el informe de asentamientos.
-  const norteId = await insertSettlementSite(monitoreo, userId, {
-    name: "Edificio Norte",
-    description:
-      "Edificio de monitoreo cerrado tras 3 visitas: alimenta el informe de asentamientos.",
+  // El lugar del informe de asentamientos.
+  const norteCfg = {
     points: NORTE_POINTS,
     partialsMm: NORTE_PARTIALS_MM,
-    visitSpecs: NORTE_VISIT_DATES.map((date) => ({ date, ...LEVEL_DIGITAL_MONITOREO })),
-    close: true,
+    benchmark: { code: "BM-N", elevation: 101.0, description: "BM de la portería" },
+  };
+  const norteId = await insertMonitoringSite(monitoreo, {
+    name: "Edificio Norte",
+    description: "Edificio de monitoreo con 3 visitas: alimenta el informe de asentamientos.",
+    points: NORTE_POINTS,
+    benchmarks: [norteCfg.benchmark],
+    visits: NORTE_VISIT_DATES.map((date, i) => ({
+      date,
+      spec: LEVEL_DIGITAL_MONITOREO,
+      rows: seriesBook(norteCfg, i),
+    })),
   });
-  console.log(`  ✓ Lugar "Edificio Norte" (cerrado) — ${norteId}`);
+  console.log(`  ✓ Lugar "Edificio Norte" — ${norteId}`);
+
+  // La cartera real (Fase 37, decisión 23), con la misma función que la demo.
+  const carteraId = await insertarCartera(admin, monitoreo);
+  console.log(`  ✓ Lugar "Control de asentamiento estructural" (cartera real) — ${carteraId}`);
 
   // --- Informes por proceso (§ 4.7): uno de poligonal y uno de nivelación en
   // el lote, y uno de asentamientos en el proyecto de monitoreo. Un informe
-  // incluye poligonales y nivelaciones calculadas y lugares cerrados. --------
+  // incluye poligonales y nivelaciones calculadas y lugares con alguna visita
+  // calculada. ----------------------------------------------------------------
   if (poligonalInforme) {
     await insertReport(catastral, userId, {
-      title: "Informe de cierre — Poligonal",
+      title: "Informe — Poligonal",
       observations: "Levantamiento poligonal con cierre exacto: primer orden.",
       included: [
         { type: "polygonal", id: poligonalInforme.id, name: poligonalInforme.name, order: 0 },
@@ -1580,7 +1452,7 @@ async function main() {
   }
   if (nivelacionInforme) {
     await insertReport(catastral, userId, {
-      title: "Informe de cierre — Nivelación",
+      title: "Informe — Nivelación",
       observations: "Nivelación en circuito cerrado: alcanza tercer orden.",
       included: [
         { type: "leveling", id: nivelacionInforme.id, name: nivelacionInforme.name, order: 0 },
@@ -1589,7 +1461,7 @@ async function main() {
     console.log('  ✓ Informe de nivelación en "Lote catastral"');
   }
   await insertReport(monitoreo, userId, {
-    title: "Informe de cierre — Control de asentamientos",
+    title: "Informe — Control de asentamientos",
     observations:
       "Seguimiento de asentamientos del edificio tras las visitas mensuales.",
     included: [{ type: "site", id: norteId, name: "Edificio Norte", order: 0 }],

@@ -1,51 +1,26 @@
 // Inserta el lugar de control de asentamientos del proyecto de ejemplo: Torre
 // Alameda, la simulación del prototipo (Fase 21).
 //
-// Crea el lugar, su catálogo de puntos y sus visitas, con los parciales,
-// acumulados, velocidad y nivel de alerta calculados por `computeHistory` —
-// nunca escritos a mano. Cada visita lleva su libreta de nivelación, generada
-// hacia atrás desde la serie con `generateVisitBook`, y las cotas se derivan de
-// ella con el motor real: misma estrategia que `insertBookSite` en
-// `scripts/seed.mjs`. Los BMs de amarre ya están en el catálogo del proyecto
-// (`REFERENCIAS_DEMO`).
-//
-// Las escrituras van agrupadas —una por tabla— porque esto corre en el primer
-// acceso del usuario, con su cliente y bajo RLS: catorce visitas de una en una
-// serían decenas de viajes a la base.
+// Crea el lugar, su catálogo de puntos, sus BM (los del lugar, Fase 37) y sus
+// visitas. Cada visita lleva su libreta de nivelación, generada hacia atrás
+// desde la serie con `generateVisitBook`; cabecera, cotas y lecturas salen de
+// `insertarVisitas`, la misma regla que el guardado de la app: sin compensar y
+// sin cerrar nada.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { totalDistanceFromReadings } from "@/lib/calculations/leveling";
-import { computeHistory } from "@/lib/calculations/settlement";
-import {
-  bookRowInputOf,
-  catalogElevationsOf,
-  computeVisitBook,
-  deriveControlElevations,
-} from "@/lib/calculations/settlement-book";
-import { bookRowsToPersist } from "@/lib/calculations/settlement-persistence";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
-import { generateVisitBook } from "./libreta-asentamientos";
-import { ALAMEDA_AMARRES } from "./torre-alameda";
 import type { Database } from "@/types/database";
-import type { PointInput, VisitInput } from "@/types/settlement";
+import type { PointInput } from "@/types/settlement";
 import type { AsentamientoDemo } from "./fixtures";
+import { insertarVisitas } from "./insertar-visitas";
+import { alamedaBook, ALAMEDA_AMARRES } from "./torre-alameda";
 
 type Client = SupabaseClient<Database>;
 
-const round = (v: number | null, d: number) => (v == null ? null : Number(v.toFixed(d)));
-
-/**
- * Crea el lugar completo y lo cierra. Devuelve el `id` y el nombre del lugar,
- * que el orquestador usa para armar el informe de asentamientos.
- *
- * El orden importa: puntos → visitas → libretas y lecturas → cierre de las
- * visitas → cierre del lugar. Una visita o un lugar cerrados bloquean por
- * trigger toda escritura debajo, así que los cierres van al final.
- */
+/** Crea el lugar completo. Devuelve su `id` y su nombre, para el informe de la demo. */
 export async function insertarAsentamiento(
   supabase: Client,
   projectId: string,
-  userId: string,
   fixture: AsentamientoDemo,
 ): Promise<{ siteId: string; siteName: string }> {
   // Los umbrales no se envían: los DEFAULT de la tabla `sites` son los mismos
@@ -86,110 +61,39 @@ export async function insertarAsentamiento(
     retiredOn: null,
   }));
 
-  // La libreta de cada visita, hacia atrás desde la serie, con el BM de amarre
-  // de esa visita; las cotas salen de ella por el motor, como al guardar desde
-  // el editor. Las semillas son las del seed: la misma libreta en los dos. La
-  // primera armada lee también el otro BM, para comprobar que nivelan (Fase 30).
-  const books = fixture.visits.map((v, i) => {
-    const rows = generateVisitBook({
-      amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
-      targets: [v.bmControl, ...v.targets],
-      closureMm: v.closureMm,
-      order: fixture.precisionOrder,
-      seed: 100 + i,
-      perSetup: 5,
-    });
-    const result = computeVisitBook(
-      rows.map(bookRowInputOf),
-      v.amarre.elevation,
-      fixture.precisionOrder,
-    );
-    return { rows, result, readings: deriveControlElevations(result, points, v.date).readings };
-  });
-
-  const visitInputs: VisitInput[] = fixture.visits.map((v, i) => ({
-    id: `visita-${i}`, // provisional, solo para casar con el resultado
-    visitNumber: i,
-    date: v.date,
-    readings: books[i]!.readings.map(({ pointId, elevation }) => ({ pointId, elevation })),
-  }));
-  const history = computeHistory(points, visitInputs, thresholdsFor("edificio"));
-
-  // --- Las catorce visitas en una sola escritura. -----------------------------
-  const { data: visitRows, error: errVisitas } = await supabase
-    .from("settlement_visits")
-    .insert(
-      fixture.visits.map((v, i) => {
-        const book = books[i]!;
-        return {
-          site_id: lugar.id,
-          visit_number: i,
-          date: v.date,
-          operator: v.operator,
-          // La visita declara su orden y su nivel (Fase 8).
-          precision_order: fixture.precisionOrder,
-          equipment_brand: fixture.equipmentBrand,
-          equipment_model: fixture.equipmentModel,
-          equipment_serial: fixture.equipmentSerial,
-          equipment_calibration_date: fixture.equipmentCalibrationDate,
-          level_type: fixture.levelType,
-          km_precision_mm: fixture.kmPrecisionMm,
-          capture_mode: "book" as const,
-          reference_bm_code: v.amarre.code,
-          reference_bm_elevation: v.amarre.elevation,
-          closure_error_mm: round(book.result.closureErrorMm, 1),
-          tolerance_mm: round(book.result.toleranceMm, 1),
-          meets_tolerance: book.result.meetsTolerance,
-          total_distance_km: round(totalDistanceFromReadings(book.rows.map(bookRowInputOf)), 3),
-          status: "calculated" as const,
-        };
-      }),
-    )
-    .select("id, visit_number");
-  if (errVisitas) throw errVisitas;
-  const visitaId = new Map(visitRows.map((v) => [v.visit_number, v.id]));
-
-  // --- Libretas y lecturas de todas las visitas, una escritura cada una. -------
-  const libretas = fixture.visits.flatMap((_, i) => {
-    const book = books[i]!;
-    const catalog = catalogElevationsOf(
-      book.result.forward.readings,
-      ALAMEDA_AMARRES,
-      fixture.visits[i]!.amarre.code,
-      points,
-    );
-    return bookRowsToPersist(visitaId.get(i)!, book.rows, book.result.forward.readings, points, catalog);
-  });
-  const { error: errLibretas } = await supabase.from("settlement_book_readings").insert(libretas);
-  if (errLibretas) throw errLibretas;
-
-  const lecturas = history.visits.flatMap((visitResult) =>
-    visitResult.readings.map((r) => ({
-      visit_id: visitaId.get(visitResult.visitNumber)!,
-      point_id: r.pointId,
-      elevation: r.elevation,
-      partial_settlement: r.partialSettlement,
-      accumulated_settlement: r.accumulatedSettlement,
-      velocity: r.velocity,
-      alert_status: r.alertStatus,
+  // Los dos BM, en los BM del lugar (Fase 37, decisión 12).
+  const { error: errBms } = await supabase.from("site_benchmarks").insert(
+    ALAMEDA_AMARRES.map((a) => ({
+      site_id: lugar.id,
+      code: a.code,
+      elevation: a.elevation,
+      description: a.description,
+      source: "Proyecto de ejemplo",
     })),
   );
-  const { error: errLecturas } = await supabase.from("settlement_readings").insert(lecturas);
-  if (errLecturas) throw errLecturas;
+  if (errBms) throw errBms;
 
-  // --- Cierres: las visitas y después el lugar. --------------------------------
-  const ahora = new Date().toISOString();
-  const { error: errCierreVisitas } = await supabase
-    .from("settlement_visits")
-    .update({ status: "closed", closed_at: ahora, closed_by: userId })
-    .eq("site_id", lugar.id);
-  if (errCierreVisitas) throw errCierreVisitas;
-
-  const { error: errCierre } = await supabase
-    .from("sites")
-    .update({ status: "closed", closed_at: ahora, closed_by: userId })
-    .eq("id", lugar.id);
-  if (errCierre) throw errCierre;
+  await insertarVisitas(
+    supabase,
+    lugar.id,
+    points,
+    ALAMEDA_AMARRES.map((a) => ({ code: a.code, elevation: a.elevation })),
+    thresholdsFor("edificio"),
+    fixture.visits.map((v, i) => ({
+      visitNumber: i,
+      date: v.date,
+      operator: v.operator,
+      equipment: {
+        brand: fixture.equipmentBrand,
+        model: fixture.equipmentModel,
+        serial: fixture.equipmentSerial,
+        calibrationDate: fixture.equipmentCalibrationDate,
+        levelType: fixture.levelType,
+        kmPrecisionMm: fixture.kmPrecisionMm,
+      },
+      rows: alamedaBook(v, i, fixture.precisionOrder),
+    })),
+  );
 
   return { siteId: lugar.id, siteName: fixture.name };
 }

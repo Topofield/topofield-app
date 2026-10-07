@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { benchmarkCheckMessage, bookIssueMessage, validateBook, validateVisitBook } from "./settlement-book";
+import { benchmarkCheckMessage, bookIssueMessage, validateBook } from "./settlement-book";
 import type { PointType, ReadingInput as BookRow } from "@/types/leveling";
 
 function row(
@@ -24,104 +24,6 @@ function row(
     distanceAccumulatedKm: null,
   };
 }
-
-/** Una armada: amarre, un punto de control y cierre en el amarre. */
-const BOOK = [
-  row("BM-1", "bm", 1.5, null, 30, null),
-  row("PC-01", "intermediate", null, 1.2),
-  row("BM-1", "bm", null, 1.5001, null, 30),
-];
-const AMARRE = { code: "BM-1", elevation: 100 };
-
-describe("validateVisitBook", () => {
-  it("una libreta bien formada no tiene errores", () => {
-    const r = validateVisitBook(BOOK, AMARRE);
-    expect(r.errors).toEqual([]);
-    expect(r.rowIssues.every((i) => Object.keys(i.errors).length === 0)).toBe(true);
-  });
-
-  it("una libreta vacía no exige nada", () => {
-    const r = validateVisitBook([], { code: "", elevation: null });
-    expect(r.errors).toEqual([]);
-    expect(r.rowIssues).toEqual([]);
-  });
-
-  it("con lecturas exige el código y la cota del amarre", () => {
-    expect(validateVisitBook(BOOK, { code: " ", elevation: 100 }).errors).toEqual([
-      "Falta el BM de amarre de la visita.",
-    ]);
-    expect(validateVisitBook(BOOK, { code: "BM-1", elevation: null }).errors).toEqual([
-      "Falta la cota del BM de amarre.",
-    ]);
-  });
-
-  it("rechaza números no finitos, que una llamada directa sí puede enviar", () => {
-    const rows = [{ ...BOOK[0]!, backsight: Number.NaN }, BOOK[1]!, BOOK[2]!];
-    expect(validateVisitBook(rows, AMARRE).errors).toContain(
-      "La libreta tiene un valor que no es un número.",
-    );
-    expect(
-      validateVisitBook(BOOK, { code: "BM-1", elevation: Infinity }).errors,
-    ).toContain("La libreta tiene un valor que no es un número.");
-  });
-
-  it("exige al menos la fila del amarre y la de cierre", () => {
-    const r = validateVisitBook([BOOK[0]!], AMARRE);
-    expect(r.errors).toEqual([
-      "La libreta necesita al menos la fila del amarre y la de cierre.",
-    ]);
-  });
-
-  it("la primera y la última fila deben ser el amarre", () => {
-    const rows = [
-      row("BM-2", "bm", 1.5, null, 30, null),
-      row("PC-01", "intermediate", null, 1.2),
-      row("PC-01", "bm", null, 1.5, null, 30),
-    ];
-    const r = validateVisitBook(rows, AMARRE);
-    expect(r.rowIssues[0]!.errors.pointCode).toBe(
-      "La libreta arranca en el BM de amarre (BM-1).",
-    );
-    expect(r.rowIssues[2]!.errors.pointCode).toBe(
-      "La libreta cierra en el BM de amarre (BM-1).",
-    );
-  });
-
-  it("el amarre se reconoce sin distinguir espacios ni mayúsculas", () => {
-    const rows = BOOK.map((x) => ({ ...x, pointCode: x.pointCode === "BM-1" ? "bm-1 " : x.pointCode }));
-    const r = validateVisitBook(rows, AMARRE);
-    expect(r.rowIssues[0]!.errors.pointCode).toBeUndefined();
-  });
-
-  it("la primera fila debe ser de tipo BM", () => {
-    const rows = [{ ...BOOK[0]!, pointType: "pc" as const }, BOOK[1]!, BOOK[2]!];
-    const r = validateVisitBook(rows, AMARRE);
-    expect(r.rowIssues[0]!.errors.pointType).toBe("El amarre es de tipo BM.");
-  });
-
-  it("no avisa del equilibrado de visuales, que no es parte del ajuste (Fase 36)", () => {
-    // Dos armadas con la V+ 15 m más larga: hasta la Fase 36 avisaba por
-    // armada y por sección (30 m acumulados frente a 10 m de tercer orden).
-    const book = [
-      row("BM-1", "bm", 1.5, null, 45, null),
-      row("PC-01", "intermediate", null, 1.2),
-      row("CP-1", "pc", 1.4, 1.3, 45, 30),
-      row("BM-1", "bm", null, 1.6, null, 30),
-    ];
-    const r = validateVisitBook(book, AMARRE);
-    expect(r.rowIssues.every((i) => Object.keys(i.warnings).length === 0)).toBe(true);
-    expect(r.errors).toEqual([]);
-  });
-
-  it("propaga los errores de captura de nivelación", () => {
-    const rows = [row("BM-1", "bm", 5.2, null, 30, null), BOOK[1]!, BOOK[2]!];
-    const r = validateVisitBook(rows, AMARRE);
-    expect(r.rowIssues[0]!.errors.backsight).toBeDefined();
-    // La última fila de un circuito cerrado debe ser BM (regla de nivelación).
-    const open = [BOOK[0]!, BOOK[1]!, { ...BOOK[2]!, pointType: "pc" as const }];
-    expect(validateVisitBook(open, AMARRE).rowIssues[2]!.errors.pointType).toBeDefined();
-  });
-});
 
 describe("bookIssueMessage", () => {
   it("numera las filas desde 1", () => {

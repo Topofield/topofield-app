@@ -4,15 +4,19 @@
 //
 // Una sola copia para el seed y el proyecto de ejemplo (Fase 21). Datos puros y
 // deterministas: las libretas se generan HACIA ATRÁS desde la serie con
-// `generateVisitBook`, así que las cotas compensadas son las de la serie.
+// `generateVisitBook` (`alamedaBook`). Desde la Fase 37 las visitas no se
+// compensan: la cota de cada punto se aparta de la serie en su parte del
+// cierre, nunca más que el cierre de su visita.
 //
-// Ocho puntos de control y dos BMs de amarre que se alternan. La visita 9 cierra
-// fuera de tolerancia para mostrar el aviso: se guarda y se cierra igual, sin
-// compensar.
+// Ocho puntos de control y dos BM del lugar que se alternan. La visita 9 cierra
+// fuera de todos los órdenes para mostrar el aviso: queda sin verificación.
+
+import type { PrecisionOrder } from "@/types/project";
+import type { BookRowPayload } from "@/types/settlement";
+import { generateVisitBook } from "./libreta-asentamientos";
 
 export interface AmarreAlameda {
   code: string;
-  /** Tipo en el catálogo de puntos de referencia del proyecto. */
   type: "bm";
   elevation: number;
   description: string;
@@ -67,12 +71,9 @@ const ALAMEDA_BM2 = new Set([5, 11]);
 /** La visita que cierra fuera de tolerancia. */
 export const ALAMEDA_OUT_OF_TOLERANCE = 9;
 /**
- * La visita en que BM-2 ya no nivela con BM-1 (Fase 30): su cota compensada
- * queda 8 mm por encima de la de catálogo, y la calculada, que es la que se
- * compara, 7.4. Sus puntos de control salen de BM-1, que no se movió. En el
- * seed es la última y queda abierta (`openLast`); la demo la cierra con el
- * resto del lugar, y el aviso se conserva porque la cota de catálogo es una
- * copia guardada en la libreta.
+ * La visita en que BM-2 ya no nivela con BM-1 (Fase 30): la libreta lo da
+ * unos 7.4 mm por encima de su cota en los BM del lugar. Sus puntos de control
+ * salen de BM-1, que no se movió.
  */
 export const ALAMEDA_BM_FUERA = 13;
 
@@ -105,4 +106,22 @@ export function alamedaVisits(): VisitaAlameda[] {
       operator: i % 2 === 0 ? "J. Rodríguez" : "L. Cárdenas",
     };
   });
+}
+
+/**
+ * La libreta de una visita de Torre Alameda, hacia atrás desde la serie: sale
+ * de su BM del lugar, pasa por el otro (Fase 30) y por sus puntos, y vuelve
+ * con el cierre de la visita. Las semillas son las de siempre: la misma
+ * libreta en la demo, el seed y las pruebas.
+ */
+export function alamedaBook(v: VisitaAlameda, i: number, order: PrecisionOrder): BookRowPayload[] {
+  const rows = generateVisitBook({
+    amarre: { code: v.amarre.code, elevation: v.amarre.elevation },
+    targets: [v.bmControl, ...v.targets],
+    closureMm: v.closureMm,
+    order,
+    seed: 100 + i,
+    perSetup: 5,
+  });
+  return rows.map((row, k) => ({ ...row, startsSection: k === 0 }));
 }

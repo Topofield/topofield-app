@@ -1,7 +1,7 @@
 // Inserta un informe del proyecto de ejemplo.
 //
 // Un informe no guarda copia de los datos: se reconstruye al abrirlo a partir
-// de los procesos cerrados que incluye (todos inmutables por trigger). Aquí
+// de los procesos que incluye, con sus datos actuales. Aquí
 // solo se persiste la cabecera, la portada congelada (`cover`, Fase 23) y la
 // lista `included_processes`, con la misma forma que arma `createReportAction`.
 
