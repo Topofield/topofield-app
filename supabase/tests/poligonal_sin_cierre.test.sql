@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(20);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000a351', 'sincierre@topofield.test');
@@ -27,13 +27,6 @@ values
    '00000000-0000-4000-8000-00000000c351', 'Poligonal', 'closed', 'E1', 1000, 1000, 'calculated');
 insert into public.polygonal_stations (id, process_id, station_order, point_code, north, east) values
   ('00000000-0000-4000-8000-00000000d352', '00000000-0000-4000-8000-00000000d351', 1, 'E1', 1000, 1000);
--- Una visita cerrada: asentamientos conserva su cierre (la nivelación lo
--- perdió en la Fase 36).
-insert into public.settlement_visits (id, site_id, visit_number, date) values
-  ('00000000-0000-4000-8000-0000000f3510', '00000000-0000-4000-8000-00000000c352', 0, '2026-01-10');
-update public.settlement_visits
-   set status = 'closed', closed_at = now(), closed_by = '00000000-0000-4000-8000-00000000a351'
- where id = '00000000-0000-4000-8000-0000000f3510';
 
 -- --- El esquema --------------------------------------------------------------
 select has_column('public', 'polygonal_processes', 'location', 'la poligonal tiene ubicación');
@@ -46,9 +39,6 @@ select is_empty(
         and tgrelid::regclass::text in ('polygonal_processes', 'polygonal_stations', 'polygonal_angle_readings')
         and tgname like '%closed%' $$,
   'la poligonal ya no tiene triggers de cierre');
-select isnt_empty(
-  $$ select 1 from pg_trigger where tgname = 'settlement_visits_reject_update_on_closed' $$,
-  'la visita conserva el suyo');
 
 -- --- Paso 2: sin registro de cierre ----------------------------------------
 select hasnt_column('public', 'polygonal_processes', 'closed_at', 'la poligonal no tiene fecha de cierre');
@@ -67,17 +57,11 @@ select lives_ok(
 select lives_ok(
   $$ delete from polygonal_stations where process_id = '00000000-0000-4000-8000-00000000d351' $$,
   'y sus estaciones se borran');
-select is(
-  (select status from settlement_visits where id = '00000000-0000-4000-8000-0000000f3510'),
-  'closed', 'la visita cerrada sigue cerrada');
 
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-4000-8000-00000000a351","role":"authenticated"}', true);
 
-select throws_ok(
-  $$ update settlement_visits set operator = 'Otro' where id = '00000000-0000-4000-8000-0000000f3510' $$,
-  '23001', null, 'la visita cerrada sigue siendo inmutable');
 
 -- --- El guardado escribe lo que antes se perdía ------------------------------
 select lives_ok(

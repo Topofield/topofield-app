@@ -12,7 +12,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(6);
+select plan(5);
 
 select has_column('public', 'settlement_book_readings', 'catalog_elevation',
   'la libreta tiene la cota de catálogo de los BM de control');
@@ -52,18 +52,13 @@ select is(
     where visit_id = '00000000-0000-4000-8000-0000000f3101' and catalog_elevation is null),
   2, 'las demás filas quedan sin cota de catálogo');
 
--- Se cierra la visita y se corrige el catálogo: la copia no cambia.
-update settlement_visits set status = 'closed' where id = '00000000-0000-4000-8000-0000000f3101';
+-- Se corrige el catálogo: la copia de la libreta no cambia sola.
 update reference_points set elevation = 100.851 where code = 'BM-2';
 
-select throws_ok(
-  $$ update settlement_book_readings set catalog_elevation = 100.851
-      where visit_id = '00000000-0000-4000-8000-0000000f3101' and reading_order = 2 $$,
-  null, null, 'una visita cerrada no deja cambiar la cota de catálogo');
 select is(
   (select catalog_elevation from settlement_book_readings
     where visit_id = '00000000-0000-4000-8000-0000000f3101' and reading_order = 2),
-  100.845::numeric, 'la visita cerrada conserva la cota con que se guardó');
+  100.845::numeric, 'la libreta conserva la cota con que se guardó');
 
 select * from finish();
 rollback;

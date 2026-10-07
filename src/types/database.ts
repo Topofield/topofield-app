@@ -817,6 +817,7 @@ export type Database = {
           point_id: string | null
           point_type: string
           reading_order: number
+          starts_section: boolean
           visit_id: string
         }
         Insert: {
@@ -840,6 +841,7 @@ export type Database = {
           point_id?: string | null
           point_type: string
           reading_order: number
+          starts_section?: boolean
           visit_id: string
         }
         Update: {
@@ -863,6 +865,7 @@ export type Database = {
           point_id?: string | null
           point_type?: string
           reading_order?: number
+          starts_section?: boolean
           visit_id?: string
         }
         Relationships: [
@@ -995,7 +998,7 @@ export type Database = {
           meets_tolerance: boolean | null
           notes: string | null
           operator: string | null
-          precision_order: string
+          precision_order: string | null
           reference_bm_code: string | null
           reference_bm_elevation: number | null
           site_id: string
@@ -1023,7 +1026,7 @@ export type Database = {
           meets_tolerance?: boolean | null
           notes?: string | null
           operator?: string | null
-          precision_order?: string
+          precision_order?: string | null
           reference_bm_code?: string | null
           reference_bm_elevation?: number | null
           site_id: string
@@ -1051,7 +1054,7 @@ export type Database = {
           meets_tolerance?: boolean | null
           notes?: string | null
           operator?: string | null
-          precision_order?: string
+          precision_order?: string | null
           reference_bm_code?: string | null
           reference_bm_elevation?: number | null
           site_id?: string
@@ -1065,6 +1068,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "settlement_visits_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_benchmarks: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          elevation: number
+          id: string
+          site_id: string
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          elevation: number
+          id?: string
+          site_id: string
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          elevation?: number
+          id?: string
+          site_id?: string
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_benchmarks_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
