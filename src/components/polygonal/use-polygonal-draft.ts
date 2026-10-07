@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { savePolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/[pid]/actions";
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import type { ReferencePoint } from "@/types/project";
 import type { PolygonalInput, PolygonalProcess, PolygonalStationWithReadings } from "@/types/polygonal";
 import { draftOf, inputOf, payloadOf, type PolygonalDraft } from "./polygonal-save";
-import { callAction } from "@/lib/errors/action-call";
+import { useProcessDraft } from "@/components/process/use-process-draft";
 
 /**
  * El borrador de una poligonal en los pasos Datos y Ajuste (Fase 35), y su
@@ -16,23 +16,12 @@ import { callAction } from "@/lib/errors/action-call";
  * servidor (`updated_at` cambia con cada guardado).
  */
 export function usePolygonalDraft(process: PolygonalProcess, stations: PolygonalStationWithReadings[]) {
-  const [saved, setSaved] = useState<PolygonalDraft | null>(null);
-  const [seen, setSeen] = useState(process.updated_at);
-  if (seen !== process.updated_at) {
-    setSeen(process.updated_at);
-    setSaved(null);
-  }
-  const draft = useMemo(() => saved ?? draftOf(process, stations), [saved, process, stations]);
-  const save = useCallback(
-    async (next: PolygonalDraft) => {
-      // Un fallo de red vuelve como error al popup, sin perder lo tecleado.
-      const response = await callAction(() => savePolygonalProcessAction(payloadOf(process.id, next)));
-      if (response.ok) setSaved(next);
-      return response;
-    },
+  const base = useMemo(() => draftOf(process, stations), [process, stations]);
+  const persist = useCallback(
+    (next: PolygonalDraft) => savePolygonalProcessAction(payloadOf(process.id, next)),
     [process.id],
   );
-  return { draft, save };
+  return useProcessDraft(process.updated_at, base, persist);
 }
 
 /**
