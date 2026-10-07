@@ -3,8 +3,11 @@
 // en una transacción, y recalcula en el servidor. Sin «use client»: lo usan la
 // pantalla, la acción de crear y las pruebas.
 import type { ReadingDraft, SaveLevelingPayload } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
+import { computeLevelingDetected, totalDistanceFromReadings } from "@/lib/calculations/leveling";
 import type { LibretaRow } from "@/lib/import/leveling";
+import { roundHalfAwayFromZero } from "@/lib/utils/format";
 import type {
+  ComputedReading,
   LevelingInput,
   LevelingProcess,
   LevelingReading,
@@ -168,6 +171,95 @@ export function runRowsOf(draft: LevelingDraft, run: RunType): ReadingDraft[] {
   const rows = draft[run];
   if (rows.length > 0) return rows;
   return startRun(run === "forward" ? draft.bm.startCode : returnStartCode(draft), "bm");
+}
+
+/** El borrador de una carga de guardado: lo inverso de `levelingPayloadOf`. */
+export function draftOfPayload(p: SaveLevelingPayload): LevelingDraft {
+  return {
+    details: {
+      name: p.name,
+      type: p.type,
+      hasReturnRun: p.hasReturnRun,
+      location: p.location,
+      responsibleName: p.responsibleName,
+      responsibleRole: p.responsibleRole,
+      equipmentBrand: p.equipmentBrand,
+      equipmentModel: p.equipmentModel,
+      equipmentSerial: p.equipmentSerial,
+      notes: p.notes,
+    },
+    bm: { startCode: p.startBmCode, startElevation: p.startBmElevation, endCode: p.endBmCode, endElevation: p.endBmElevation },
+    forward: p.forward,
+    return: p.return,
+  };
+}
+
+/** A la escala de la columna, como la redondea la base: lo que se exporta es lo que se guarda. */
+const scaled = (v: number | null | undefined, decimals: number): number | null =>
+  v == null || !Number.isFinite(v) ? null : roundHalfAwayFromZero(v, decimals);
+
+function recordRows(run: RunType, drafts: readonly ReadingDraft[], computed: readonly ComputedReading[]) {
+  return drafts.map((d, i) => {
+    const r = computed[i];
+    return {
+      run_type: run,
+      reading_order: i + 1,
+      point_code: d.pointCode,
+      point_type: d.pointType,
+      backsight: d.backsight,
+      foresight: d.foresight,
+      back_upper_m: d.backUpperM,
+      back_lower_m: d.backLowerM,
+      fore_upper_m: d.foreUpperM,
+      fore_lower_m: d.foreLowerM,
+      // Resueltas por el motor: derivadas de los hilos cuando los hay.
+      // Persistir la tecleada sola dejaría la celda vacía en un proceso
+      // capturado por taquimetría, y el informe lee la fila sin recalcular.
+      back_distance_m: scaled(r?.backDistanceResolvedM, 3),
+      fore_distance_m: scaled(r?.foreDistanceResolvedM, 3),
+      // Derivado: lo escribe el motor, no el borrador del cliente.
+      distance_accumulated_km: scaled(r?.distanceAccumulatedKm, 3),
+      instrument_height: scaled(r?.instrumentHeight, 4),
+      elevation_calculated: scaled(r?.elevationCalculated, 4),
+      elevation_corrected: scaled(r?.elevationCorrected, 4),
+      correction_applied: scaled(r?.correctionApplied, 4),
+    };
+  });
+}
+
+/**
+ * Lo que guarda una nivelación (Fase 36): los resultados de la cabecera y las
+ * filas de la libreta, calculados con el orden detectado. Lo usan la acción
+ * de guardar y la exportación a Excel, que así da siempre lo que daría guardar
+ * ahora, también con una nivelación guardada antes de la fase. Una libreta a
+ * medias o que no encadena queda en curso, sin cierre ni orden.
+ */
+export function levelingRecordOf(draft: LevelingDraft) {
+  const input = levelingInputOf(draft);
+  const { result, order, verifiable, pending, broken } = computeLevelingDetected(input);
+  const closure = pending || broken ? null : result;
+  const header = {
+    total_distance_km: scaled(totalDistanceFromReadings(input.forward), 3),
+    // Guardar reemplaza la libreta entera: las distancias dejan de ser las
+    // que repartió el backfill de la Fase 9.
+    distances_reconstructed: false,
+    precision_order: order,
+    closure_error_mm: scaled(closure?.closureErrorMm, 1),
+    tolerance_mm: scaled(closure?.toleranceMm, 1),
+    // El veredicto guardado: alcanza algún orden. Sin con qué juzgar, ninguno.
+    meets_tolerance: verifiable ? order !== null : null,
+    forward_error_mm: scaled(closure?.forward.errorMm, 1),
+    return_error_mm: scaled(closure?.return?.errorMm, 1),
+    discrepancy_mm: scaled(closure?.discrepancyMm, 1),
+    discrepancy_tolerance_mm: scaled(closure?.discrepancyToleranceMm, 1),
+    meets_discrepancy: closure?.meetsDiscrepancy ?? null,
+    status: !closure ? (draft.forward.length > 1 ? "in_progress" : "draft") : ("calculated" as "draft" | "in_progress" | "calculated"),
+  };
+  const rows = [
+    ...recordRows("forward", draft.forward, result.forward.readings),
+    ...(draft.details.hasReturnRun && result.return ? recordRows("return", draft.return, result.return.readings) : []),
+  ];
+  return { header, rows, input, result, order, verifiable, pending, broken };
 }
 
 /** Lo que trae una importación del `.L` o del CSV (ver `LevelingImport`). */

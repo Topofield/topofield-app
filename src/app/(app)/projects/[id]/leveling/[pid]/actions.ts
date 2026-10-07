@@ -3,17 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
-import {
-  computeLevelingDetected,
-  totalDistanceFromReadings,
-} from "@/lib/calculations/leveling";
+import { draftOfPayload, levelingRecordOf } from "@/components/leveling/leveling-save";
 import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
-import type {
-  LevelingInput,
-  LevelingType,
-  PointType,
-  ReadingInput,
-} from "@/types/leveling";
+import type { LevelingType, PointType } from "@/types/leveling";
 
 export interface ActionResult {
   ok: boolean;
@@ -61,38 +53,6 @@ export interface SaveLevelingPayload {
   equipmentSerial: string | null;
 }
 
-function toReadingInput(draft: ReadingDraft): ReadingInput {
-  return {
-    pointCode: draft.pointCode,
-    pointType: draft.pointType,
-    backsight: draft.backsight,
-    foresight: draft.foresight,
-    backUpperM: draft.backUpperM,
-    backLowerM: draft.backLowerM,
-    foreUpperM: draft.foreUpperM,
-    foreLowerM: draft.foreLowerM,
-    backDistanceM: draft.backDistanceM,
-    foreDistanceM: draft.foreDistanceM,
-    // Derivado por el motor a partir de las distancias por visual; lo que
-    // envíe el cliente no se usa.
-    distanceAccumulatedKm: null,
-  };
-}
-
-function buildInput(payload: SaveLevelingPayload): Omit<LevelingInput, "order" | "compensation"> {
-  return {
-    type: payload.type,
-    startElevation: payload.startBmElevation,
-    endElevation: payload.type === "link" ? payload.endBmElevation : null,
-    forward: payload.forward.map(toReadingInput),
-    return: payload.hasReturnRun ? payload.return.map(toReadingInput) : null,
-    // Guardar deja `distances_reconstructed = false` (las distancias pasan a
-    // ser las de la libreta), así que se calcula con la regla del acumulado
-    // desde el origen (Fase 19), la de un proceso no reconstruido.
-    distancesReconstructed: false,
-  };
-}
-
 /**
  * Guarda la cabecera, las lecturas y los resultados de un proceso. El
  * servidor recalcula con `computeLevelingDetected` para que los resultados
@@ -111,7 +71,10 @@ export async function saveLevelingProcessAction(
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
 
-  const input = buildInput(payload);
+  // La entrada, el cálculo con el orden detectado y lo que se guarda salen de
+  // `levelingRecordOf`, el mismo que usa la exportación a Excel.
+  const record = levelingRecordOf(draftOfPayload(payload));
+  const { input } = record;
 
   // --- Revalidación en el servidor -----------------------------------------
   // La clave publicable de Supabase es pública por diseño: una llamada
@@ -137,59 +100,6 @@ export async function saveLevelingProcessAction(
     }
   }
 
-  // El orden se detecta y se compensa siempre (Fase 36, decisiones 4 y 5),
-  // salvo con la libreta a medias: entonces no hay cierre que guardar.
-  const { result, order, verifiable, pending } = computeLevelingDetected(input);
-  const closure = pending ? null : result;
-
-  // El total se deriva en el servidor, igual que el resto de resultados. Que
-  // el cliente lo mandara no lo haría autoritativo: la clave publicable de
-  // Supabase es pública por diseño y una llamada directa podría enviar
-  // cualquier número. De ese número depende la tolerancia K·√D.
-  const totalDistanceKm = totalDistanceFromReadings(input.forward);
-
-  const status = !pending ? "calculated" : payload.forward.length > 1 ? "in_progress" : "draft";
-
-  function runRows(
-    runType: "forward" | "return",
-    drafts: ReadingDraft[],
-    computedReadings: typeof result.forward.readings,
-  ) {
-    return drafts.map((draft, i) => {
-      const r = computedReadings[i];
-      return {
-        run_type: runType,
-        reading_order: i + 1,
-        point_code: draft.pointCode,
-        point_type: draft.pointType,
-        backsight: draft.backsight,
-        foresight: draft.foresight,
-        back_upper_m: draft.backUpperM,
-        back_lower_m: draft.backLowerM,
-        fore_upper_m: draft.foreUpperM,
-        fore_lower_m: draft.foreLowerM,
-        // Resueltas por el motor: derivadas de los hilos cuando los hay.
-        // Persistir la tecleada sola dejaría la celda vacía en un proceso
-        // capturado por taquimetría, y el informe lee la fila sin recalcular.
-        back_distance_m: r?.backDistanceResolvedM ?? null,
-        fore_distance_m: r?.foreDistanceResolvedM ?? null,
-        // Derivado: lo escribe el motor, no el borrador del cliente.
-        distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
-        instrument_height: r?.instrumentHeight ?? null,
-        elevation_calculated: r?.elevationCalculated ?? null,
-        elevation_corrected: r?.elevationCorrected ?? null,
-        correction_applied: r?.correctionApplied ?? null,
-      };
-    });
-  }
-
-  const rows = [
-    ...runRows("forward", payload.forward, result.forward.readings),
-    ...(payload.hasReturnRun && result.return != null
-      ? runRows("return", payload.return, result.return.readings)
-      : []),
-  ];
-
   // Cabecera y lecturas en una sola transacción (Fase 23): si falla un paso no
   // queda nada a medias. Las lecturas se reemplazan por completo.
   const { error: saveError } = await supabase.rpc("save_leveling_process", {
@@ -202,39 +112,18 @@ export async function saveLevelingProcessAction(
       end_bm_code: payload.endBmCode,
       end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
       has_return_run: payload.hasReturnRun,
-      total_distance_km: totalDistanceKm,
-      // Guardar reemplaza la libreta entera, así que las distancias dejan de
-      // ser las que inventó el backfill de la Fase 9 repartiendo por mitades.
-      // Sin esto el proceso quedaba marcado para siempre: el banner seguiría
-      // afirmando que sus distancias son reconstruidas —falso sobre datos ya
-      // medidos en campo, en una aplicación cuyo tema es la trazabilidad— y el
-      // equilibrado quedaría suprimido justo sobre las distancias reales que
-      // sí permiten evaluarlo.
-      distances_reconstructed: false,
-      precision_order: order,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
       equipment_serial: payload.equipmentSerial,
       location: payload.location,
       responsible_name: payload.responsibleName,
       responsible_role: payload.responsibleRole,
-      closure_error_mm: closure?.closureErrorMm ?? null,
-      tolerance_mm: closure?.toleranceMm ?? null,
-      // El veredicto guardado (Fase 36): alcanza algún orden. Sin con qué
-      // juzgar —una abierta sin vuelta—, ninguno.
-      meets_tolerance: verifiable ? order !== null : null,
-      forward_error_mm: closure?.forward.errorMm ?? null,
-      return_error_mm: closure?.return?.errorMm ?? null,
-      discrepancy_mm: closure?.discrepancyMm ?? null,
-      discrepancy_tolerance_mm:
-        closure?.discrepancyToleranceMm == null
-          ? null
-          : Number(closure.discrepancyToleranceMm.toFixed(1)),
-      meets_discrepancy: closure?.meetsDiscrepancy ?? null,
       notes: payload.notes,
-      status,
+      // Los resultados, el orden detectado y el estado (Fase 36): el total se
+      // deriva en el servidor, porque de él depende la tolerancia K·√D.
+      ...record.header,
     },
-    p_readings: rows,
+    p_readings: record.rows,
   });
   if (saveError) {
     return { ok: false, error: logDbError(saveError, "No se pudo guardar el proceso.") };

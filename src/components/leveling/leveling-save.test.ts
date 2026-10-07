@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
 import type { LevelingProcess, LevelingReading } from "@/types/leveling";
 import { computeLevelingDetected } from "@/lib/calculations/leveling";
+import { buildLevelingWorkbook, type LevelingProcessRow } from "@/lib/export/leveling-workbook";
 import {
   draftWithBm,
   draftWithImport,
   levelingDraftOf,
   levelingInputOf,
   levelingPayloadOf,
+  levelingRecordOf,
   returnStartCode,
   runRowsOf,
 } from "./leveling-save";
@@ -143,5 +145,55 @@ describe("leveling-save", () => {
       expect.objectContaining({ pointCode: "D1", pointType: "bm" }),
     ]);
     expect(runRowsOf(draft, "forward")).toBe(draft.forward);
+  });
+});
+
+describe("lo que se guarda y se exporta (revisión final)", () => {
+  const stored = [...rowsOf("forward", CARTERA_VERJON.ida), ...rowsOf("return", CARTERA_VERJON.vuelta)];
+
+  it("El Verjón: la cabecera con el orden detectado y las filas compensadas", () => {
+    const rec = levelingRecordOf(levelingDraftOf(process, stored));
+    expect(rec.header).toMatchObject({ status: "calculated", precision_order: "segundo_orden", meets_tolerance: true });
+    expect(rec.header.discrepancy_mm).toBeCloseTo(5.0, 6);
+    expect(rec.header.discrepancy_tolerance_mm).toBe(5.3);
+    expect(rec.rows).toHaveLength(24);
+    const d4 = rec.rows.find((r) => r.run_type === "forward" && r.point_code === "D4")!;
+    expect(d4.elevation_corrected).toBeCloseTo(3315.0855, 4);
+  });
+
+  it("con la escala de cada columna, como la guarda la base: el Excel dice lo mismo", () => {
+    const rec = levelingRecordOf(levelingDraftOf(process, stored));
+    expect(rec.header.discrepancy_mm).toBe(5);
+    expect(rec.header.total_distance_km).toBe(0.384);
+    const d4 = rec.rows.find((r) => r.run_type === "forward" && r.point_code === "D4")!;
+    expect(d4.elevation_corrected).toBe(3315.0855);
+    const c1 = rec.rows.find((r) => r.run_type === "forward" && r.point_code === "C 1")!;
+    expect(c1.correction_applied).toBe(0.0004);
+    expect(c1.distance_accumulated_km).toBe(0.06);
+  });
+
+  it("una libreta a medias se guarda en curso, sin cierre ni orden", () => {
+    const draft = levelingDraftOf(process, stored);
+    const rec = levelingRecordOf({ ...draft, forward: draft.forward.slice(0, 5), return: [] });
+    expect(rec.header).toMatchObject({
+      status: "in_progress",
+      precision_order: null,
+      meets_tolerance: null,
+      discrepancy_mm: null,
+      closure_error_mm: null,
+    });
+  });
+
+  it("el Excel de una nivelación guardada antes de la fase dice el orden detectado y las cotas compensadas", () => {
+    // Guardada antes de la fase: declaraba primer orden, no lo cumplía y quedó sin compensar.
+    const viejo = { ...process, precision_order: "primer_orden", meets_tolerance: false } as unknown as LevelingProcess;
+    const rec = levelingRecordOf(levelingDraftOf(viejo, stored));
+    const wb = buildLevelingWorkbook({ ...(viejo as unknown as LevelingProcessRow), ...rec.header }, rec.rows);
+    const resumen = wb.getWorksheet("Resumen")!;
+    const fila = resumen.getColumn(1).values.findIndex((v) => v === "Orden alcanzado");
+    expect(resumen.getCell(fila, 2).value).toBe("Segundo orden");
+    const ajustadas = wb.getWorksheet("Cotas ajustadas")!;
+    const c1 = [4, 5, 6, 7].find((n) => String(ajustadas.getRow(n).getCell(1).value).replace(/\s/g, "") === "C1")!;
+    expect(Number(ajustadas.getRow(c1).getCell(2).value)).toBeCloseTo(3289.44, 4);
   });
 });
