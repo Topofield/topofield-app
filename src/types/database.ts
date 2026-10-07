@@ -87,8 +87,6 @@ export type Database = {
       }
       leveling_processes: {
         Row: {
-          closed_at: string | null
-          closed_by: string | null
           closure_error_mm: number | null
           correction_method: string
           created_at: string
@@ -126,8 +124,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          closed_at?: string | null
-          closed_by?: string | null
           closure_error_mm?: number | null
           correction_method?: string
           created_at?: string
@@ -165,8 +161,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          closed_at?: string | null
-          closed_by?: string | null
           closure_error_mm?: number | null
           correction_method?: string
           created_at?: string
