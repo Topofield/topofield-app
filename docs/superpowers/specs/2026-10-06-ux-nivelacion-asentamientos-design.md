@@ -117,8 +117,8 @@ extrae y con qué nombre:
 8. **El equilibrado de visuales también depende del orden**
    (`SIGHT_BALANCE_LIMIT_M`: 2, 5, 10 y 10 m). En El Verjón, 12 de las 20
    armadas pasan de los 5 m de segundo orden y la ida suma 53.3 m más atrás
-   que adelante: el terreno sube 26.6 m en 384 m. Hoy es un aviso. Si contara
-   para el orden alcanzado, El Verjón bajaría a ordinario.
+   que adelante: el terreno sube 26.6 m en 384 m. Era un aviso; el usuario
+   decidió quitarlo (revisión del lienzo, abajo).
 
 ### Lienzo «Nivelación — rediseño de la UX»
 
@@ -136,15 +136,22 @@ recorrido (A) y el perfil con las miras y las visuales de cada armada (B).
 | **3 · Informe** | «Compensación proporcional a la distancia», con las fórmulas en MathML | — |
 | **Móvil** | La libreta con Tabla \| Recorrido y el popup de captura | — |
 
-**Decisiones para la revisión del lienzo:**
+**Revisión del lienzo (2026-10-06).** Lo que eligió el usuario:
 
-- Captura por armada o por punto.
-- Croquis del recorrido, perfil o los dos.
-- Quitar el tipo de nivel y llevar los hilos a cada visual.
-- La regla de compensación con el orden detectado (hallazgo 2).
-- Si el equilibrado sigue siendo un aviso o baja el orden alcanzado
-  (hallazgo 8).
-- La importación del `.L` y del CSV: dónde vive en la pantalla por pasos.
+| Superficie | Decisión |
+|---|---|
+| Alta | **B**, el tipo con el recorrido dibujado. La de enlace pide los dos BM, cada uno con código y cota |
+| BM | **Sin catálogo**: el código y la cota se teclean. La nivelación deja de leer los puntos de referencia del proyecto; las visitas, que usan el mismo selector, se deciden en la 37 |
+| Libreta | **B**, el perfil con las miras y las visuales de cada armada. Con vuelta, la contraparte —la vuelta al ver la ida y al revés— se dibuja tenue |
+| Captura | **A**, por armada. La lectura y la distancia siempre; los hilos superior e inferior, opcionales: si están, la distancia sale de ellos y se comprueba el hilo medio. Sin el tipo de nivel |
+| Compensación | Un solo gráfico: la cota ajustada a escala y lo medido separado de ella con la diferencia ×1000. Una versión por tipo: cerrada y de enlace (medida y ajustada), abierta con vuelta (ida, vuelta y ajustada) y abierta sin vuelta (sin compensación) |
+| Nombre | **«Cota ajustada»**, no «adoptada», como en la poligonal |
+| Equilibrado de visuales | **Se quita**: no es parte del ajuste. Eran los avisos por armada (Fase 19, N7) y por sección (Fase 32, D-3); quitarlos no cambia ninguna cota. La libreta de las visitas usa los mismos validadores |
+| Informe | **Sencillo**: un resumen con el veredicto, los datos iniciales (la libreta), los datos ajustados y el gráfico comparado. El método en una frase, sin fórmulas paso a paso. Una versión por tipo; la abierta sin vuelta no tiene datos ajustados y dice que no tiene verificación |
+
+Quedan para el PRD la regla de compensación con el orden detectado (hallazgo 2)
+y dónde vive la importación del `.L` y del CSV (en el lienzo, en la barra de
+pasos).
 
 ### Lo que se quita con el cierre
 
