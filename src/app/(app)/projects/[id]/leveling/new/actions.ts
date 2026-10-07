@@ -121,13 +121,12 @@ export async function createLevelingProcessAction(
       notes: null,
       forward: payload.readings.forward.map(toDraft),
       return: payload.readings.return.map(toDraft),
-      precisionOrder: payload.precisionOrder,
+      location: null,
+      responsibleName: null,
+      responsibleRole: null,
       equipmentBrand: payload.equipmentBrand,
       equipmentModel: payload.equipmentModel,
       equipmentSerial: payload.equipmentSerial,
-      equipmentCalibrationDate: payload.equipmentCalibrationDate,
-      levelType: payload.levelType,
-      kmPrecisionMm: payload.kmPrecisionMm,
     });
     if (!saved.ok) {
       await supabase.from("leveling_processes").delete().eq("id", data.id);

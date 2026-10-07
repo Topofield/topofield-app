@@ -4,20 +4,16 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
 import {
-  computeLeveling,
-  levelingProcessVerdict,
+  computeLevelingDetected,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
 import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
-import { deriveLevelingCloseStatus } from "./close-status";
-import { reopenProcess } from "@/lib/supabase/reopen-process";
 import type {
   LevelingInput,
   LevelingType,
   PointType,
   ReadingInput,
 } from "@/types/leveling";
-import type { LevelType, PrecisionOrder } from "@/types/project";
 
 export interface ActionResult {
   ok: boolean;
@@ -51,19 +47,18 @@ export interface SaveLevelingPayload {
   notes: string | null;
   forward: ReadingDraft[];
   return: ReadingDraft[];
-  /** Orden de precisión y equipo (nivel, ISO 17123-2). */
-  precisionOrder: PrecisionOrder;
+  /** Los datos del alta (Fase 36). */
+  location: string | null;
+  responsibleName: string | null;
+  responsibleRole: string | null;
+  /**
+   * Identidad del nivel (Fase 36): marca, modelo y serie. La calibración, el
+   * tipo de nivel y la σ ya no se piden; el guardado no los toca y se
+   * conservan los de antes.
+   */
   equipmentBrand: string | null;
   equipmentModel: string | null;
   equipmentSerial: string | null;
-  equipmentCalibrationDate: string | null;
-  levelType: LevelType | null;
-  kmPrecisionMm: number | null;
-}
-
-export interface CloseLevelingPayload {
-  processId: string;
-  asRejected: boolean;
 }
 
 function toReadingInput(draft: ReadingDraft): ReadingInput {
@@ -84,12 +79,11 @@ function toReadingInput(draft: ReadingDraft): ReadingInput {
   };
 }
 
-function buildInput(payload: SaveLevelingPayload): LevelingInput {
+function buildInput(payload: SaveLevelingPayload): Omit<LevelingInput, "order" | "compensation"> {
   return {
     type: payload.type,
     startElevation: payload.startBmElevation,
     endElevation: payload.type === "link" ? payload.endBmElevation : null,
-    order: payload.precisionOrder,
     forward: payload.forward.map(toReadingInput),
     return: payload.hasReturnRun ? payload.return.map(toReadingInput) : null,
     // Guardar deja `distances_reconstructed = false` (las distancias pasan a
@@ -100,10 +94,10 @@ function buildInput(payload: SaveLevelingPayload): LevelingInput {
 }
 
 /**
- * Guarda la configuración, las lecturas y los resultados de un proceso. El
- * servidor recalcula con computeLeveling para que los resultados persistidos
- * sean autoritativos: no se confía en lo que envía el cliente. Rechaza
- * procesos cerrados (inmutabilidad, § 4.6).
+ * Guarda la cabecera, las lecturas y los resultados de un proceso. El
+ * servidor recalcula con `computeLevelingDetected` para que los resultados
+ * persistidos sean autoritativos: no se confía en lo que envía el cliente. La
+ * nivelación no se cierra desde la Fase 36: siempre se puede guardar.
  */
 export async function saveLevelingProcessAction(
   payload: SaveLevelingPayload,
@@ -116,9 +110,6 @@ export async function saveLevelingProcessAction(
     .eq("id", payload.processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado; no admite cambios." };
-  }
 
   const input = buildInput(payload);
 
@@ -150,7 +141,8 @@ export async function saveLevelingProcessAction(
     }
   }
 
-  const result = computeLeveling(input);
+  // El orden se detecta y se compensa siempre (Fase 36, decisiones 4 y 5).
+  const { result, order, verifiable } = computeLevelingDetected(input);
 
   // El total se deriva en el servidor, igual que el resto de resultados. Que
   // el cliente lo mandara no lo haría autoritativo: la clave publicable de
@@ -226,18 +218,18 @@ export async function saveLevelingProcessAction(
       // equilibrado quedaría suprimido justo sobre las distancias reales que
       // sí permiten evaluarlo.
       distances_reconstructed: false,
-      precision_order: payload.precisionOrder,
+      precision_order: order,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
       equipment_serial: payload.equipmentSerial,
-      equipment_calibration_date: payload.equipmentCalibrationDate,
-      level_type: payload.levelType,
-      km_precision_mm: payload.kmPrecisionMm,
+      location: payload.location,
+      responsible_name: payload.responsibleName,
+      responsible_role: payload.responsibleRole,
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
-      // El veredicto guardado: el cierre, o la discrepancia en una abierta
-      // con vuelta (Fase 23).
-      meets_tolerance: levelingProcessVerdict(result, payload.type),
+      // El veredicto guardado (Fase 36): alcanza algún orden. Sin con qué
+      // juzgar —una abierta sin vuelta—, ninguno.
+      meets_tolerance: verifiable ? order !== null : null,
       forward_error_mm: result.forward.errorMm,
       return_error_mm: result.return?.errorMm ?? null,
       discrepancy_mm: result.discrepancyMm,
@@ -258,57 +250,6 @@ export async function saveLevelingProcessAction(
   revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
-}
-
-/**
- * Cierra un proceso (como `closed` o `rejected`) registrando la trazabilidad.
- *
- * El `status` final lo decide el servidor (`deriveLevelingCloseStatus`), no
- * el `asRejected` que manda el cliente: ver el comentario de esa función
- * para el porqué. El diálogo de cierre (`close-process-dialog.tsx`) sigue
- * evaluando `evaluateLevelingClosure` para la experiencia normal — esto es
- * defensa en profundidad detrás de la UI, no un reemplazo.
- */
-export async function closeLevelingProcessAction(
-  payload: CloseLevelingPayload,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Sesión no válida." };
-
-  const { data: process } = await supabase
-    .from("leveling_processes")
-    .select("id, status, project_id, type, has_return_run, meets_tolerance")
-    .eq("id", payload.processId)
-    .maybeSingle();
-  if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso ya está cerrado." };
-  }
-
-  const derived = deriveLevelingCloseStatus(process, payload.asRejected);
-  if (!derived.ok) return { ok: false, error: derived.error };
-
-  const { error } = await supabase
-    .from("leveling_processes")
-    .update({
-      status: derived.status,
-      closed_at: new Date().toISOString(),
-      closed_by: user.id,
-    })
-    .eq("id", payload.processId);
-  if (error) return { ok: false, error: "No se pudo cerrar el proceso." };
-
-  revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);
-  revalidatePath(`/projects/${process.project_id}`);
-  return { ok: true };
-}
-
-/** Reabre una nivelación cerrada o rechazada (Fase 34): ver `reopenProcess`. */
-export async function reopenLevelingProcessAction(processId: string): Promise<ActionResult> {
-  return reopenProcess("leveling", processId);
 }
 
 /**
@@ -337,6 +278,9 @@ export async function duplicateLevelingProcessAction(
     end_bm_code: original.end_bm_code,
     end_bm_elevation: original.end_bm_elevation,
     has_return_run: original.has_return_run,
+    location: original.location,
+    responsible_name: original.responsible_name,
+    responsible_role: original.responsible_role,
     correction_method: original.correction_method,
     precision_order: original.precision_order,
     equipment_brand: original.equipment_brand,
@@ -354,7 +298,7 @@ export async function duplicateLevelingProcessAction(
   return { ok: true };
 }
 
-/** Renombra una nivelación (Fase 22). Rechaza las cerradas: son inmutables. */
+/** Renombra una nivelación (Fase 22). */
 export async function renameLevelingProcessAction(
   processId: string,
   name: string,
@@ -369,9 +313,6 @@ export async function renameLevelingProcessAction(
     .eq("id", processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado y no puede modificarse." };
-  }
 
   const { error } = await supabase
     .from("leveling_processes")
@@ -383,10 +324,7 @@ export async function renameLevelingProcessAction(
   return { ok: true };
 }
 
-/**
- * Elimina una nivelación con sus lecturas (Fase 22). Rechaza las cerradas:
- * son inmutables, y la base también lo impide.
- */
+/** Elimina una nivelación con sus lecturas (Fase 22). */
 export async function deleteLevelingProcessAction(
   processId: string,
 ): Promise<ActionResult> {
@@ -397,9 +335,6 @@ export async function deleteLevelingProcessAction(
     .eq("id", processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado y no puede eliminarse." };
-  }
 
   const { error } = await supabase.from("leveling_processes").delete().eq("id", processId);
   if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el proceso.") };

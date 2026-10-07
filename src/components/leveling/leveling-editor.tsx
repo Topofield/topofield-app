@@ -37,7 +37,6 @@ import {
   type LevelingConfigState,
 } from "./leveling-config-fields";
 import type { BmValue } from "./bm-selector";
-import { CloseProcessDialog } from "./close-process-dialog";
 import { ReadingsTable, type ReadingDraftState } from "./readings-table";
 import { ResultsPanel } from "./results-panel";
 import { RunTabs } from "./run-tabs";
@@ -299,14 +298,12 @@ export function LevelingEditor({
           config.type === "link" ? parseNumber(config.endBm.elevation) : null,
         hasReturnRun: config.hasReturnRun,
         notes: process.notes,
-        precisionOrder: config.precisionOrder,
+        location: process.location,
+        responsibleName: process.responsible_name,
+        responsibleRole: process.responsible_role,
         equipmentBrand: config.level.equipmentBrand.trim() || null,
         equipmentModel: config.level.equipmentModel.trim() || null,
         equipmentSerial: config.level.equipmentSerial.trim() || null,
-        equipmentCalibrationDate:
-          config.level.equipmentCalibrationDate.trim() || null,
-        levelType: config.level.levelType === "" ? null : config.level.levelType,
-        kmPrecisionMm: parseNumber(config.level.kmPrecisionMm),
         forward: forward.map(draftToReadingDraft),
         return: config.hasReturnRun ? back.map(draftToReadingDraft) : [],
       });
@@ -498,13 +495,6 @@ export function LevelingEditor({
             >
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
-            <CloseProcessDialog
-              processId={process.id}
-              type={config.type}
-              result={result}
-              captureBlocked={captureBlocked || configBlocked}
-              dirty={dirty}
-            />
           </ActionBar>
         )}
         <UnsavedChangesGuard dirty={dirty} />
