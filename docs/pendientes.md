@@ -86,7 +86,8 @@ nivelación y asentamientos: «UX de nivelación y asentamientos», al final. So
 las **Fases 36 y 37**, con la hoja de ruta en
 [`superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md`](./superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md).
 La cartera real de asentamientos entra en la 37. La **Fase 36** se abrió el
-mismo día ([`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md)).
+mismo día ([`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md)) y se
+**cerró** el 2026-10-07.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como

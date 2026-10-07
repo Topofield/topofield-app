@@ -1,7 +1,8 @@
 # PRD-de-fase 36 — La nivelación como la mide el topógrafo
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-06
+**Fecha de cierre:** 2026-10-07
 
 **Rama:** `fase-36-ux-nivelacion`
 **Petición:** del usuario, 2026-10-06: «haz un plan para que repliquemos este
@@ -16,6 +17,66 @@ y el informe sencillo por tipo.
 **Módulo:** nivelación —alta, pantalla por pasos, compensación, informe,
 Excel—, la base, la demo, el seed y la documentación. De asentamientos solo
 cambia lo que comparte con la nivelación (los avisos de equilibrado).
+
+> **Divergencias de la implementación:**
+>
+> - **La libreta a medias se guarda en curso, sin compensar** (§ C). La
+>   captura por armada guarda tras cada una, y el servidor rechazaba una
+>   cerrada o de enlace cuya última fila no era el BM; además, el motor habría
+>   compensado contra el punto de cambio. `pendingRun` reconoce el recorrido
+>   sin terminar —sin armadas, la ida de una cerrada o de enlace que no llega a
+>   su BM, la de una abierta con vuelta sin «Fin de la ida» ni vuelta
+>   empezada, la vuelta que no llega al BM de partida—; entonces
+>   `computeLevelingDetected` calcula con `compensation: "never"`, sin orden,
+>   la acción guarda `in_progress` con el cierre en blanco y valida con
+>   `validateRunCapture(…, { allowUnfinished: true })`. La visita conserva su
+>   regla. Salió al capturar una cerrada en pantalla, no en el plan.
+> - **El renombrado del BM es una sola regla** (`draftWithBm`): cambia los
+>   extremos de cada recorrido que llevaban el código anterior, desde el popup
+>   del BM y desde «Editar datos».
+> - **En el teléfono la libreta es la lista por armada** de la maqueta «Móvil ·
+>   Libreta»; la tabla de la hoja, desde 640 px. El perfil va siempre en el
+>   sentido de la ida, con las distancias del recorrido que se mira y la
+>   contraparte escalada.
+> - **El gráfico de la compensación mide «medida − cota ajustada»**, la misma
+>   cota de la tabla: en el tramo 2, que vuelve por sus puntos, la medida se
+>   aparta hasta +2.4/−2.8 mm (el promedio de dos pasadas) y llega a −0.4 mm;
+>   la maqueta de la cerrada dibujaba la corrección fila a fila.
+> - **Con vuelta en una cerrada o de enlace**, la tabla y el informe usan la
+>   forma «con vuelta» (cota de la ida y de la vuelta); «Datos ajustados» del
+>   informe elige su forma por los datos: con vuelta, con puntos leídos dos
+>   veces, o con la corrección de cada punto.
+> - **El aviso de «No alcanza ningún orden»** no cita «(marco teórico § 8.1)»
+>   en la interfaz: una prueba de la Fase 22 prohíbe citar secciones ahí. El
+>   manual sí lo dice.
+> - **Las lecturas de mira se formatean por libreta**: con un nivel digital,
+>   todas a cuatro decimales, también la que termina en cero.
+> - **El Excel sigue leyendo lo guardado**: el orden alcanzado es el detectado
+>   al guardar; una nivelación anterior a la fase muestra el declarado hasta su
+>   primer guardado (deuda técnica, como en la poligonal).
+> - **Se retiró además** el código sin uso del cierre: `evaluateLevelingClosure`,
+>   `levelingProcessVerdict`, `configWithImport`, `LevelingConfigFields`, y el
+>   destino «process» de reabrir; `turningPointBlocker` se queda para la
+>   visita.
+> - **La demo y el seed** pierden `status` y `precisionOrder` de sus
+>   nivelaciones (el orden se detecta) y marcan con `informe` la que alimenta
+>   el informe. El seed no se ejecutó: exige `db reset` y la base local es
+>   compartida; su lógica es la de la demo, que tiene pruebas.
+> - **El popup del alta no ofrece importar**: el diálogo de importación trae
+>   su propio modal; se importa desde la barra de pasos o la libreta vacía.
+> - **Capturas**: nuevas `12-libreta-nivelacion`, `32-armada-nivelacion` y
+>   `33-compensacion-nivelacion`, de El Verjón; fuera `12-editor-nivelacion` y
+>   `24-puntos-homologos`, cuya tabla pasó a la columna «Vuelta − ida».
+> - **La revisión de toda la rama** no encontró nada crítico. Se corrigieron,
+>   cada una con su prueba vista fallar: el Excel de una nivelación guardada
+>   antes de la fase daba el orden declarado —rechazada, el que no cumplía— y
+>   cotas sin compensar como ajustadas (ahora la ruta usa `levelingRecordOf`,
+>   lo mismo que guarda la acción); desmarcar «Con vuelta» en «Editar datos»
+>   borraba su libreta sin aviso; agregar una armada tras una intermedia
+>   colgada escribía la V+ en la intermedia; y una libreta que no encadena se
+>   calculaba con orden y podía entrar a un consolidado (ahora queda en curso,
+>   sin orden ni compensación, y dice qué fila revisar). Los cabos menores
+>   quedaron en la § 11 de la doc técnica.
 
 ## Propósito
 
