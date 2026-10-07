@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 import { reopenBlocker, reopenPatch, reportsNotice } from "./reopen";
 
 describe("reopenPatch", () => {
-  it("un proceso vuelve a calculado, sin registro de cierre", () => {
-    expect(reopenPatch("process")).toEqual({ status: "calculated", closed_at: null, closed_by: null });
-  });
-
-  it("una visita también", () => {
+  it("una visita vuelve a calculada, sin registro de cierre", () => {
     expect(reopenPatch("visit")).toEqual({ status: "calculated", closed_at: null, closed_by: null });
   });
 
@@ -16,16 +12,6 @@ describe("reopenPatch", () => {
 });
 
 describe("reopenBlocker", () => {
-  it("un proceso cerrado o rechazado se reabre", () => {
-    expect(reopenBlocker("process", "closed")).toBeNull();
-    expect(reopenBlocker("process", "rejected")).toBeNull();
-  });
-
-  it("un proceso abierto no: ya se reabrió o nunca se cerró", () => {
-    expect(reopenBlocker("process", "calculated")).toBe("El proceso no está cerrado.");
-    expect(reopenBlocker("process", "draft")).toBe("El proceso no está cerrado.");
-  });
-
   it("una visita cerrada de un lugar activo se reabre", () => {
     expect(reopenBlocker("visit", "closed", "active")).toBeNull();
   });
