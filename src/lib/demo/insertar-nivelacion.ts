@@ -1,17 +1,13 @@
 // Inserta el proceso de nivelación del proyecto de ejemplo.
 //
-// Con `computeLeveling` como fuente de la verdad de los resultados
+// Con `computeLevelingDetected` como fuente de la verdad de los resultados
 // persistidos, igual que `insertarPoligonal` con `computePolygonal`: el
 // proyecto de ejemplo nunca queda desincronizado con lo que produciría
 // `saveLevelingProcessAction` en un guardado real. Misma estrategia que el
 // `insertLeveling` de `scripts/seed.mjs`.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  computeLeveling,
-  levelingProcessVerdict,
-  totalDistanceFromReadings,
-} from "@/lib/calculations/leveling";
+import { computeLevelingDetected, totalDistanceFromReadings } from "@/lib/calculations/leveling";
 import type { Database } from "@/types/database";
 import type { ReadingInput } from "@/types/leveling";
 import type { LecturaNivelacionDemo, NivelacionDemo } from "./fixtures";
@@ -36,26 +32,20 @@ function aReadingInput(r: LecturaNivelacionDemo): ReadingInput {
 }
 
 /**
- * Inserta la nivelación y sus lecturas —ida y, si la hay, vuelta—, y la cierra
- * en diferido si el fixture lo pide.
- *
- * Nace `calculated` y se cierra al final (no de entrada) porque los triggers
- * de inmutabilidad rechazan escribir lecturas bajo un proceso ya cerrado —
- * mismo motivo que en `insertarPoligonal`. Devuelve el `id` del proceso.
+ * Inserta la nivelación y sus lecturas —ida y, si la hay, vuelta—, calculada:
+ * la nivelación no se cierra (Fase 36). Devuelve el `id` del proceso.
  */
 export async function insertarNivelacion(
   supabase: Client,
   projectId: string,
   siteId: string,
-  userId: string,
   nivelacion: NivelacionDemo,
 ): Promise<string> {
-  const result = computeLeveling({
+  // El orden se detecta y se compensa siempre, como al guardar (Fase 36).
+  const { result, order, verifiable } = computeLevelingDetected({
     type: nivelacion.type,
     startElevation: nivelacion.startElevation,
     endElevation: nivelacion.endElevation ?? null,
-    // El orden lo declara el proceso (Fase 8), no ya el proyecto.
-    order: nivelacion.precisionOrder,
     forward: nivelacion.forward.map(aReadingInput),
     return: nivelacion.return ? nivelacion.return.map(aReadingInput) : null,
   });
@@ -76,10 +66,8 @@ export async function insertarNivelacion(
       total_distance_km: totalDistanceFromReadings(
         nivelacion.forward.map(aReadingInput),
       ),
-      // Orden y equipo viven en el proceso desde la Fase 8. A un nivel se le
-      // pide su tipo y su desviación típica en mm/km (ISO 17123-2), no la
-      // precisión angular de una estación total.
-      precision_order: nivelacion.precisionOrder,
+      // El orden alcanzado, detectado; el equipo vive en el proceso (Fase 8).
+      precision_order: order,
       equipment_brand: nivelacion.equipmentBrand,
       equipment_model: nivelacion.equipmentModel,
       equipment_serial: nivelacion.equipmentSerial,
@@ -89,7 +77,7 @@ export async function insertarNivelacion(
       status: "calculated",
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
-      meets_tolerance: levelingProcessVerdict(result, nivelacion.type),
+      meets_tolerance: verifiable ? order !== null : null,
       forward_error_mm: result.forward.errorMm,
       return_error_mm: result.return?.errorMm ?? null,
       discrepancy_mm: result.discrepancyMm,
@@ -147,18 +135,6 @@ export async function insertarNivelacion(
     .from("leveling_readings")
     .insert(filas);
   if (errFilas) throw errFilas;
-
-  if (nivelacion.status === "closed") {
-    const { error: errCierre } = await supabase
-      .from("leveling_processes")
-      .update({
-        status: "closed",
-        closed_at: new Date().toISOString(),
-        closed_by: userId,
-      })
-      .eq("id", proc.id);
-    if (errCierre) throw errCierre;
-  }
 
   return proc.id;
 }

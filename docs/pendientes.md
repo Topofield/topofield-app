@@ -81,6 +81,14 @@ cerrarla: «UX de la poligonal», al final. Es la **Fase 35**
 2026-10-06. La cartera real de asentamientos, que iba a ser la 35, pasa a la
 36.
 
+Ese mismo día pidió aplazar esa cartera y llevar el modelo de la poligonal a
+nivelación y asentamientos: «UX de nivelación y asentamientos», al final. Son
+las **Fases 36 y 37**, con la hoja de ruta en
+[`superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md`](./superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md).
+La cartera real de asentamientos entra en la 37. La **Fase 36** se abrió el
+mismo día ([`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md)) y se
+**cerró** el 2026-10-07.
+
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
 registro.
@@ -690,3 +698,25 @@ notación matemática.
 Después: «aprovechemos esto para deprecar la función de cerrar procesos […]
 no quiero limitar las modificaciones», quitándolo «de todo», por ahora solo en
 la poligonal.
+
+## UX de nivelación y asentamientos (Fases 36 y 37)
+
+El 2026-10-06, con la Fase 35 en producción, el usuario pidió: «podemos
+aplazar la siguiente fase, y mejor haz un plan para que repliquemos este
+modelo de ux/ui para el caso de nivelaciones y control de asentamientos,
+replicando lo que hicimos para refinar el diseño en el módulo de poligonales».
+
+Decidió:
+
+- **Quitar el cierre en los dos módulos**, como en la poligonal.
+- **Que los lienzos se propongan sin una descripción previa**, guiados por las
+  carteras: «en la parte de gráfico para la nivelación, por ejemplo, puede ir
+  dibujado el recorrido».
+- **Meter la cartera real de asentamientos en la fase de UX de asentamientos.**
+- **Extraer lo común en la fase de nivelación.**
+
+La nivelación va primero (Fase 36) y asentamientos después (Fase 37). La hoja
+de ruta, la receta de cada fase y el contenido de los dos lienzos están en
+[`superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md`](./superpowers/specs/2026-10-06-ux-nivelacion-asentamientos-design.md).
+Los lienzos se ajustan al verlos: «por ahora sí, al verlos visualmente
+ajustamos».

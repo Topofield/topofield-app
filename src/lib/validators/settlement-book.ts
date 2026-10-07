@@ -13,7 +13,6 @@ import {
   type ReadingCaptureIssues,
 } from "./leveling";
 import type { ReadingInput as BookRowInput } from "@/types/leveling";
-import type { PrecisionOrder } from "@/types/project";
 import type { BenchmarkCheck, BookIssue } from "@/types/settlement";
 
 export interface VisitBookIssues {
@@ -30,7 +29,6 @@ export interface VisitBookIssues {
 export function validateVisitBook(
   rows: BookRowInput[],
   amarre: { code: string; elevation: number | null },
-  order: PrecisionOrder,
 ): VisitBookIssues {
   if (rows.length === 0) return { rowIssues: [], errors: [] };
 
@@ -57,7 +55,7 @@ export function validateVisitBook(
     errors.push("La libreta tiene un valor que no es un número.");
   }
 
-  const rowIssues = validateRunCapture(rows, "closed", order, false);
+  const rowIssues = validateRunCapture(rows, "closed");
   if (code !== "" && rows.length >= 2) {
     const last = rows.length - 1;
     const first = rowIssues[0]!;

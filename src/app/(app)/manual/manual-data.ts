@@ -49,9 +49,9 @@ export const CAPTURAS = {
   },
   configuracionProyecto: {
     src: "/manual/05-configuracion-proyecto.png",
-    alt: "Pestaña de configuración del proyecto, con la edición de datos y los puntos de referencia.",
+    alt: "Pestaña de configuración del proyecto: la edición de datos, los puntos de referencia y la zona de peligro, con Archivar proyecto y Eliminar proyecto.",
     width: 2560,
-    height: 3170,
+    height: 3178,
   },
   nuevaPoligonal: {
     src: "/manual/06-nueva-poligonal.png",
@@ -85,28 +85,33 @@ export const CAPTURAS = {
   },
   nuevaNivelacion: {
     src: "/manual/11-nueva-nivelacion.png",
-    alt: "Formulario de nuevo proceso de nivelación, con el tipo y el BM de partida.",
+    alt: "Popup Nueva nivelación: el título, el tipo de recorrido con Abierta elegida y su dibujo, la casilla Con vuelta marcada, el BM de partida D1 con su cota 3288.5000, la ubicación, el responsable y el equipo plegados, la nota «El orden de precisión se detecta al compensar» y el botón Crear y empezar.",
+    width: 896,
+    height: 1308,
+  },
+  libretaNivelacion: {
+    src: "/manual/12-libreta-nivelacion.png",
+    alt: "Paso 1 · Libreta de El Verjón: la cabecera con Nivelación abierta con ida y vuelta, Calculado y Segundo orden; la tarjeta del BM de partida D1, 3288.5000 m; la tabla de la hoja de la ida —punto, V+, distancia, AI, V−, distancia, VI y cota— con los rótulos BM, intermedia y fin de la ida y un lápiz por fila; la comprobación aritmética, 26.583 m, cuadra, 384.3 m; y a la derecha el perfil de la ida con sus miras y visuales y la vuelta tenue.",
     width: 2560,
-    height: 1600,
+    height: 2274,
+  },
+  armadaNivelacion: {
+    src: "/manual/32-armada-nivelacion.png",
+    alt: "Popup Armada 2 · ida: el nivel entre C 1 y el punto siguiente; la vista atrás a C 1 con lectura 3.275 y distancia 28.1; la vista adelante a C 2 con lectura 0.224 y distancia 17.3, cada una con «+ Hilos superior e inferior (opcional)»; «+ Vista intermedia»; la altura del instrumento 3292.7160, la cota de C 2 3292.4920 y las dos distancias; y los botones Cancelar, Guardar y Guardar y seguir desde C 2.",
+    width: 1344,
+    height: 1536,
+  },
+  compensacionNivelacion: {
+    src: "/manual/33-compensacion-nivelacion.png",
+    alt: "Paso 2 · Compensación de El Verjón: corrección proporcional a la distancia; las cuatro cifras —discrepancia 5.0 mm, distancias 384.3 · 397.6 m, tolerancia de segundo orden 5.3 mm y Segundo orden— con «Por qué segundo orden» desplegado; la tabla de cotas compensadas y ajustadas con la cota de la ida y de la vuelta, su diferencia y las dos correcciones; el desnivel y la comprobación aritmética; y el gráfico de la ida, la vuelta y la ajustada con las diferencias ×1000.",
+    width: 2560,
+    height: 3842,
   },
   importarNivelacion: {
     src: "/manual/23-importar-nivelacion.png",
     alt: "Diálogo Importar libreta desde archivo con el crudo de un nivel digital Leica: 16 armadas, ida y vuelta con la vuelta en la armada 9, la elección de la cota del BM y la libreta de ida con los tipos de punto.",
     width: 1344,
     height: 2736,
-  },
-  puntosHomologos: {
-    src: "/manual/24-puntos-homologos.png",
-    alt: "Tabla de puntos homólogos del crudo de nivel digital leído como ida y vuelta: los residuos crecen hasta −5.2 mm a mitad del recorrido y vuelven a −0.4 mm, la discrepancia.",
-    width: 1984,
-    height: 1082,
-  },
-  editorNivelacion: {
-    src: "/manual/12-editor-nivelacion.png",
-    alt: "Editor de nivelación completo: veredicto, libreta, perfil, comprobación aritmética, cierre, cotas corregidas y cotas adoptadas.",
-    pie: "Circuito cerrado que cumple la tolerancia: el BM final corrige exacto a su cota conocida.",
-    width: 2560,
-    height: 4890,
   },
   nuevoLugar: {
     src: "/manual/13-nuevo-lugar.png",
@@ -176,15 +181,15 @@ export const CAPTURAS = {
   },
   nuevoInforme: {
     src: "/manual/18-nuevo-informe.png",
-    alt: "Formulario Nuevo informe: el título, los procesos a incluir —las poligonales calculadas del proyecto y una nivelación cerrada— y las observaciones generales.",
+    alt: "Formulario Nuevo informe: el título, los procesos a incluir —las poligonales y las nivelaciones calculadas del proyecto— y las observaciones generales.",
     width: 2560,
-    height: 2068,
+    height: 2140,
   },
   informeImprimible: {
     src: "/manual/19-informe-imprimible.png",
-    alt: "Informe consolidado de una nivelación, maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con sus resultados y su equipo, resumen consolidado de precisiones, observaciones y registro de cierre.",
+    alt: "Informe consolidado de una nivelación de circuito cerrado, maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con su tipo, su equipo, el error de cierre, la tolerancia y el orden alcanzado, sus datos iniciales y ajustados y el gráfico de lo medido y lo ajustado, resumen consolidado de precisiones, observaciones y pie de emisión.",
     width: 2560,
-    height: 3734,
+    height: 4752,
   },
   temaOscuro: {
     src: "/manual/29-tema-oscuro.png",
@@ -250,7 +255,8 @@ export const ESTADOS_PROCESO = [
   },
   {
     estado: "Calculado",
-    significado: "Cálculo resuelto; se puede revisar y, salvo una poligonal, cerrar",
+    significado:
+      "Cálculo resuelto; se puede revisar y, en asentamientos, cerrar",
   },
   {
     estado: "Cerrado",
@@ -302,7 +308,7 @@ export const COLUMNAS_LISTADO = [
   {
     columna: "Estado",
     muestra:
-      "Borrador, Calculado, Cerrado o Rechazado; Borrador o Calculado en una poligonal; Activo o Cerrado en un lugar",
+      "Borrador, En progreso o Calculado en una poligonal o una nivelación; Activo o Cerrado en un lugar",
   },
   {
     columna: "Resultado",
@@ -312,7 +318,7 @@ export const COLUMNAS_LISTADO = [
   {
     columna: "Cumple",
     muestra:
-      "✓ si cumple su tolerancia —una poligonal, si alcanza algún orden—, ✕ si no, — si no aplica. No aparece en asentamientos",
+      "✓ si alcanza algún orden, ✕ si no, — si no aplica. No aparece en asentamientos",
   },
   { columna: "Última actividad", muestra: "Cuándo se modificó por última vez" },
 ];
@@ -376,8 +382,8 @@ export const TIPOS_NIVELACION = [
   },
   {
     tipo: "Abierta",
-    descripcion: "No cierra contra ningún BM",
-    verificacion: "Sin vuelta, ninguno; con vuelta, la discrepancia entre ida y vuelta",
+    descripcion: "Termina en un punto sin cota conocida",
+    verificacion: "Sin vuelta, ninguna; con vuelta, la discrepancia entre ida y vuelta",
   },
 ];
 
@@ -402,7 +408,7 @@ export const TIPOS_PUNTO_NIVELACION = [
   },
 ];
 
-// --- § 6.5 Tolerancia K·√D de nivelación ---
+// --- § 6.7 Tolerancia K·√D de nivelación ---
 
 export const TOLERANCIA_NIVELACION = [
   { orden: "Primer orden", k: "3" },
@@ -504,21 +510,6 @@ export const NIVELES_SEMAFORO = [
   },
 ];
 
-// --- § 8 Desenlaces del cierre de una nivelación ---
-
-export const DESENLACES_CIERRE = [
-  { situacion: "Cumple la tolerancia", ocurre: "Se cierra como Cerrado" },
-  {
-    situacion: "No alcanza la tolerancia",
-    ocurre: "Solo se puede cerrar como Rechazado",
-  },
-  {
-    situacion:
-      "La comprobación aritmética no cuadra, o hay errores de captura",
-    ocurre: "No se puede cerrar. Corrija la libreta",
-  },
-];
-
 // --- § 10 Informes y § 11 Exportar a Excel ---
 
 /** Campos del formulario de alta de informe. */
@@ -527,7 +518,7 @@ export const CAMPOS_INFORME = [
   {
     campo: "Procesos a incluir",
     para:
-      "Marque los que quiera; aparecen las poligonales calculadas y los procesos cerrados",
+      "Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares cerrados",
   },
   {
     campo: "Orden de las secciones",
@@ -549,7 +540,7 @@ export const HOJAS_EXCEL = [
   {
     hoja: "Resumen",
     contiene:
-      "Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados",
+      "Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados; en una nivelación, el orden alcanzado",
   },
 ];
 
@@ -567,14 +558,14 @@ export const PREGUNTAS: Pregunta[] = [
       "En el menú de cuenta —el círculo con su inicial, arriba a la derecha—: Sistema, Claro u Oscuro (§ 2). Con Sistema, sigue la configuración del teléfono o del computador.",
   },
   {
-    pregunta: "Cerré un proceso por error. ¿Puedo reabrirlo?",
+    pregunta: "Cerré una visita o un lugar por error. ¿Puedo reabrirlo?",
     respuesta:
-      "Sí: con Reabrir, en la cabecera del proceso (§ 8). Vuelve a ser editable y se cierra otra vez cuando esté listo.",
+      "Sí: con Reabrir (§ 8). Vuelve a ser editable y se cierra otra vez cuando esté listo.",
   },
   {
-    pregunta: "¿Cómo cierro una poligonal?",
+    pregunta: "¿Cómo cierro una poligonal o una nivelación?",
     respuesta:
-      "No se cierra: queda calculada y se corrige cuando haga falta. El paso de Ajuste y su informe dicen qué orden de precisión alcanzó (§ 5.5); si no alcanza ninguno, el informe lo alerta. Un informe consolidado la incluye calculada.",
+      "No se cierran: quedan calculadas y se corrigen cuando haga falta. El paso de Ajuste o de Compensación y su informe dicen qué orden de precisión alcanzaron (§ 5.5 y § 6.7); si no alcanzan ninguno, el informe lo alerta. Un informe consolidado las incluye calculadas.",
   },
   {
     pregunta: "¿Por qué una poligonal muestra «Sin verificación de cierre»?",
@@ -589,13 +580,12 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Dónde declaro el equipo y el orden de precisión que usé?",
     respuesta:
-      "En cada proceso, no en el proyecto. Cada nivelación y cada visita de asentamiento declara su orden y su equipo en su propia configuración. Una poligonal declara su equipo en el alta, y su orden no se declara: se detecta al calcularla (§ 5.5). Si el equipo es el de siempre, tómelo del catálogo de equipos (§ 12).",
+      "En cada proceso, no en el proyecto. Cada visita de asentamiento declara su orden y su equipo en su propia configuración. Una poligonal o una nivelación declara su equipo en el alta, y su orden no se declara: se detecta al calcularla (§ 5.5 y § 6.7). Si el equipo es el de siempre, tómelo del catálogo de equipos (§ 12).",
   },
   {
-    pregunta:
-      "Cambié el orden de precisión de una nivelación abierta. ¿Se recalcula?",
+    pregunta: "Mi nivelación no alcanza ningún orden. ¿Por qué se compensó?",
     respuesta:
-      "Sí, al recalcularla. Una cerrada conserva su veredicto original, porque es inmutable.",
+      "Porque la nivelación compensa siempre que haya contra qué cerrar, y avisa: en la práctica, un trabajo fuera de tolerancia se repite (§ 6.7). Una visita de asentamientos, en cambio, no compensa un cierre fuera de tolerancia.",
   },
   {
     pregunta:
@@ -606,18 +596,18 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?",
     respuesta:
-      "En una nivelación o una visita, la aplicación no lo juzga: registra el equipo para el informe, y lo que dice si el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no da para el orden, lo más probable es que el cierre no cumpla. Una poligonal no elige orden: alcanza el que su cierre permite.",
+      "En una visita, la aplicación no lo juzga: registra el equipo para el informe, y lo que dice si el trabajo cumple es el cierre contra la tolerancia del orden. Si el equipo no da para el orden, lo más probable es que el cierre no cumpla. Una poligonal o una nivelación no eligen orden: alcanzan el que su cierre permite.",
   },
   {
     pregunta:
       "Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición está bien?",
     respuesta:
-      "No. La comprobación aritmética (ΣV+ − ΣV− = desnivel total) solo valida que las cuentas de gabinete están bien hechas: cuadra igual con un nivel descolimado. La calidad de la medición la juzga el error de cierre contra la tolerancia K·√D.",
+      "No. La comprobación aritmética (ΣV+ − ΣV− = desnivel total) solo valida que las cuentas de gabinete están bien hechas: cuadra igual con un nivel descolimado. La calidad de la medición la juzga el error de cierre contra la tolerancia K·√D, en el paso de Compensación (§ 6.7).",
   },
   {
-    pregunta: "¿Por qué una fila de mi libreta de nivelación no admite corrección?",
+    pregunta: "¿Por qué mi nivelación dice «Sin compensación todavía»?",
     respuesta:
-      "Le falta la distancia a alguna de sus miras. Es obligatoria en los puntos BM y de cambio: sin ella el recorrido no acumula, la distancia total sale menor de la real y el punto de cierre queda mal corregido. La distancia acumulada no se teclea — la calcula la aplicación sumando las distancias por visual.",
+      "Porque la libreta no ha llegado a su BM: falta marcar la casilla de fin en la última armada —«Llega al BM», «Llega a …» o «Fin de la ida»—, o terminar la vuelta. El paso de Compensación dice qué falta (§ 6.7).",
   },
   {
     pregunta:
@@ -645,12 +635,12 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Puedo eliminar un proyecto?",
     respuesta:
-      "Si no tiene nada cerrado, sí, desde Configuración. Si tiene algún proceso, lugar o visita cerrados, no: esos registros no se borran. Archívelo para ocultarlo de la lista activa (§ 4.2).",
+      "Si no tiene nada cerrado, sí, desde Configuración. Si tiene algún lugar o visita de asentamientos cerrados, no: esos registros no se borran. Archívelo para ocultarlo de la lista activa (§ 4.2).",
   },
   {
     pregunta: "Salí de un editor y perdí lo que había tecleado.",
     respuesta:
-      "Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el navegador le preguntó antes. Los botones atrás y adelante del navegador no preguntan: guarde antes de usarlos (§ 4.4). En una poligonal no hay qué perder: cada popup guarda al confirmar.",
+      "Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el navegador le preguntó antes. Los botones atrás y adelante del navegador no preguntan: guarde antes de usarlos (§ 4.4). En una poligonal o una nivelación no hay qué perder: cada popup guarda al confirmar.",
   },
   {
     pregunta: "¿Otros usuarios pueden ver mis proyectos?",

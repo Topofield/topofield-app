@@ -2,110 +2,154 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { LevelingReportSection } from "@/components/reports/sections/leveling-section";
-import type { LevelingSectionData, ReportSection } from "./sections";
+import { NIVELACION_VERJON, nivelacionTramo2, type LecturaNivelacionDemo, type NivelacionDemo } from "@/lib/demo/fixtures";
+import type { LevelingProcess, LevelingReading } from "@/types/leveling";
+import { levelingSectionData } from "./leveling-data";
+import type { ReportSection } from "./sections";
 import { precisionSummaryRows } from "./summary";
 
-// Fase 23: en una abierta con vuelta el informe muestra la discrepancia, que
-// es su veredicto; en una cerrada, el cierre y además la discrepancia.
+// Fase 36: el informe sencillo de la nivelación, por tipo, con el orden
+// detectado; la sección es la misma en la pestaña y en el consolidado.
 
-function nivelacion(over: Partial<LevelingSectionData["process"]>): LevelingSectionData {
-  return {
-    process: {
-      id: "l1",
-      project_id: "p1",
-      name: "El Verjón",
-      type: "open",
-      status: "calculated",
-      has_return_run: true,
-      closure_error_mm: null,
-      tolerance_mm: null,
-      meets_tolerance: true,
-      discrepancy_mm: 5,
-      discrepancy_tolerance_mm: 10.5,
-      meets_discrepancy: true,
-      total_distance_km: 0.384,
-      precision_order: "tercer_orden",
-      equipment_brand: null,
-      equipment_model: null,
-      equipment_serial: null,
-      level_type: "automatic",
-      km_precision_mm: null,
-      ...over,
-    } as LevelingSectionData["process"],
-    readings: [],
-  };
+function filas(run: "forward" | "return", rows: LecturaNivelacionDemo[]): LevelingReading[] {
+  return rows.map(
+    (r, i) =>
+      ({
+        id: `${run}-${i}`,
+        run_type: run,
+        reading_order: i + 1,
+        point_code: r.code,
+        point_type: r.type,
+        backsight: r.back ?? null,
+        foresight: r.fore ?? null,
+        back_upper_m: null,
+        back_lower_m: null,
+        fore_upper_m: null,
+        fore_lower_m: null,
+        back_distance_m: r.backDistanceM ?? null,
+        fore_distance_m: r.foreDistanceM ?? null,
+      }) as unknown as LevelingReading,
+  );
 }
 
-const seccion = (data: LevelingSectionData): ReportSection => ({
+function datos(
+  n: NivelacionDemo,
+  { sinVuelta = false, ida = n.forward, ...over }: { sinVuelta?: boolean; ida?: LecturaNivelacionDemo[] } & Partial<LevelingProcess> = {},
+) {
+  const vuelta = n.return && !sinVuelta ? n.return : null;
+  const process = {
+    id: "l1",
+    project_id: "p1",
+    name: n.name,
+    type: n.type,
+    status: "calculated",
+    start_bm_code: n.startBmCode,
+    start_bm_elevation: n.startElevation,
+    end_bm_code: n.endBmCode ?? null,
+    end_bm_elevation: n.endElevation ?? null,
+    has_return_run: vuelta != null,
+    location: null,
+    responsible_name: null,
+    responsible_role: null,
+    equipment_brand: null,
+    equipment_model: null,
+    equipment_serial: null,
+    notes: null,
+    updated_at: "2026-10-06T00:00:00Z",
+    ...over,
+  } as unknown as LevelingProcess;
+  return levelingSectionData(process, [...filas("forward", ida), ...(vuelta ? filas("return", vuelta) : [])]);
+}
+
+const seccion = (data: ReturnType<typeof datos>): ReportSection => ({
   kind: "leveling",
-  entry: { type: "leveling", id: data.process.id, name: data.process.name, order: 0 },
+  entry: { type: "leveling", id: "l1", name: "Nivelación", order: 0 },
   data,
 });
+const html = (data: ReturnType<typeof datos>) => renderToStaticMarkup(createElement(LevelingReportSection, { data }));
 
-describe("informe de una nivelación con vuelta (Fase 23)", () => {
-  it("abierta con vuelta: la discrepancia y su tolerancia, sin filas de cierre", () => {
-    const html = renderToStaticMarkup(createElement(LevelingReportSection, { data: nivelacion({}) }));
-    expect(html).toContain("Discrepancia ida y vuelta");
-    expect(html).toContain("5.0 mm (tolerancia 10.5 mm)");
-    expect(html).not.toContain("Error de cierre");
+const verjon = datos(NIVELACION_VERJON);
+const tramo2 = datos(nivelacionTramo2());
+// La ida de El Verjón, como si D4 fuera un BM de cota conocida (el lienzo).
+const enlace = datos(NIVELACION_VERJON, { sinVuelta: true, type: "link", end_bm_code: "D4", end_bm_elevation: 3315.0855 });
+
+describe("el resumen de precisión de una nivelación (Fase 36)", () => {
+  it("la abierta con vuelta, por la discrepancia y el orden detectado", () => {
+    const [row] = precisionSummaryRows([seccion(verjon)]);
+    expect(row).toMatchObject({ precision: "Δ 5.0 mm · Segundo orden", cumple: true });
   });
 
-  it("fuera de tolerancia lo dice", () => {
-    const html = renderToStaticMarkup(
-      createElement(LevelingReportSection, {
-        data: nivelacion({ discrepancy_mm: 12, meets_discrepancy: false, meets_tolerance: false }),
-      }),
-    );
-    expect(html).toContain("fuera de tolerancia");
+  it("la cerrada, por su cierre", () => {
+    const [row] = precisionSummaryRows([seccion(tramo2)]);
+    expect(row).toMatchObject({ precision: "-0.4 mm · Primer orden", cumple: true });
   });
 
-  it("cerrada con vuelta: el cierre y además la discrepancia", () => {
-    const html = renderToStaticMarkup(
-      createElement(LevelingReportSection, {
-        data: nivelacion({ type: "closed", closure_error_mm: -0.4, tolerance_mm: 14.2 }),
-      }),
-    );
-    expect(html).toContain("Error de cierre");
-    expect(html).toContain("Discrepancia ida y vuelta");
+  it("la abierta sin vuelta no tiene verificación", () => {
+    const [row] = precisionSummaryRows([seccion(datos(NIVELACION_VERJON, { sinVuelta: true }))]);
+    expect(row).toMatchObject({ precision: "Sin verificación", cumple: null });
   });
 
-  it("en el resumen, la abierta con vuelta se juzga por la discrepancia", () => {
-    const [fila] = precisionSummaryRows([seccion(nivelacion({}))]);
-    expect(fila!.precision).toBe("Δ 5.0 mm (tol. 10.5)");
-    expect(fila!.cumple).toBe(true);
+  it("una libreta que no encadena lo dice, sin orden", () => {
+    const ida = nivelacionTramo2().forward;
+    const roto = datos(nivelacionTramo2(), { ida: ida.map((x, i) => (i === 3 ? { ...x, back: undefined, backDistanceM: undefined } : x)) });
+    expect(roto.broken).toBe(true);
+    const [row] = precisionSummaryRows([seccion(roto)]);
+    expect(row).toMatchObject({ precision: "Libreta con errores", cumple: null });
+    expect(html(roto)).toContain("La libreta no encadena.");
   });
 
-  it("en el resumen, la cerrada sigue con su cierre", () => {
-    const [fila] = precisionSummaryRows([
-      seccion(nivelacion({ type: "closed", closure_error_mm: -0.4, tolerance_mm: 14.2 })),
-    ]);
-    expect(fila!.precision).toBe("-0.4 mm (tol. 14.2)");
+  it("una libreta a medias lo dice", () => {
+    // Como la deja la captura por armada: el último punto, sin V+ colgada.
+    const ida = nivelacionTramo2()
+      .forward.slice(0, 5)
+      .map((x, i) => (i === 4 ? { ...x, back: undefined, backDistanceM: undefined } : x));
+    const aMedias = datos(nivelacionTramo2(), { ida });
+    expect(aMedias.pending).toBe("forward");
+    const [row] = precisionSummaryRows([seccion(aMedias)]);
+    expect(row).toMatchObject({ precision: "Libreta a medias", cumple: null });
   });
 });
 
-describe("informe de una nivelación — cotas adoptadas (Fase 28)", () => {
-  const fila = (run_type: string, reading_order: number, point_code: string, elevation_corrected: string) =>
-    ({ id: `${run_type}${reading_order}`, run_type, reading_order, point_code, point_type: "pc", elevation_corrected }) as unknown as LevelingSectionData["readings"][number];
-
-  it("una cota por punto, con el BM de partida fijo", () => {
-    const data = nivelacion({ start_bm_elevation: 3288.5 } as Partial<LevelingSectionData["process"]>);
-    data.readings = [
-      fila("forward", 1, "D1", "3288.5000"),
-      fila("forward", 2, "C1", "3289.4414"),
-      fila("return", 1, "C1", "3289.4386"),
-      fila("return", 2, "D1", "3288.5000"),
-    ];
-    const html = renderToStaticMarkup(createElement(LevelingReportSection, { data }));
-    expect(html).toContain("Cotas adoptadas");
-    expect(html).toContain("3289.4400");
-    expect(html).toContain("BM de cota conocida");
-    expect(html).toContain("Promedio de 2 cotas compensadas");
+describe("la sección del informe, por tipo (Fase 36)", () => {
+  it("abierta con vuelta: veredicto, las dos libretas, ida y vuelta ajustadas y el gráfico", () => {
+    const out = html(verjon);
+    expect(out).toContain("Alcanza segundo orden.");
+    expect(out).toContain("no en la de primer orden (2.6 mm)");
+    expect(out).toContain("1. Datos iniciales");
+    expect(out).toContain("2. Datos ajustados");
+    expect(out).toContain("3. Ida, vuelta y ajustada");
+    expect(out).toContain("Cota vuelta");
+    expect(out).toContain("3289.4400");
+    expect(out).not.toMatch(/adoptada/i);
   });
 
-  it("sin compensación no hay tabla", () => {
-    const html = renderToStaticMarkup(
-      createElement(LevelingReportSection, { data: nivelacion({ meets_tolerance: false }) }),
-    );
-    expect(html).not.toContain("Cotas adoptadas");
+  it("cerrada: los puntos leídos dos veces con sus dos lecturas", () => {
+    const out = html(tramo2);
+    expect(out).toContain("Alcanza primer orden.");
+    expect(out).toContain("cabe en la tolerancia más exigente");
+    expect(out).toContain("1.ª lectura");
+    expect(out).toContain("2.ª lectura");
+    expect(out).toContain("3. Medido y ajustada");
+  });
+
+  it("de enlace: la corrección de cada punto hasta la cota de llegada", () => {
+    const out = html(enlace);
+    expect(out).toContain("Alcanza segundo orden.");
+    expect(out).toContain("no en la de primer orden (1.9 mm)");
+    expect(out).toContain("Corrección (mm)");
+    expect(out).toContain("3315.0855");
+  });
+
+  it("abierta sin vuelta: sin verificación y sin datos ajustados", () => {
+    const out = html(datos(NIVELACION_VERJON, { sinVuelta: true }));
+    expect(out).toContain("Sin verificación.");
+    expect(out).toContain("1. Datos iniciales");
+    expect(out).not.toContain("2. Datos ajustados");
+  });
+
+  it("fuera de todo orden, compensa y lo alerta", () => {
+    const fuera = datos(NIVELACION_VERJON, { sinVuelta: true, type: "link", end_bm_code: "D4", end_bm_elevation: 3315.2 });
+    expect(fuera.order).toBeNull();
+    expect(html(fuera)).toContain("No alcanza ningún orden.");
   });
 });

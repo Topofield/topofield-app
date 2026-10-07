@@ -61,15 +61,16 @@ describe("issuedFooterNote (Fase 34)", () => {
   });
 });
 
-describe("reopenedAfterIssue (Fase 35)", () => {
-  it("una poligonal no cuenta como reabierta: no se cierra", () => {
+describe("reopenedAfterIssue (Fases 35 y 36)", () => {
+  it("ni la poligonal ni la nivelación cuentan como reabiertas: no se cierran", () => {
     expect(
       reopenedAfterIssue([
         { kind: "polygonal", name: "Poligonal V10", closedAt: null },
         { kind: "leveling", name: "Línea BM", closedAt: null },
-        { kind: "site", name: "Torre", closedAt: "2026-10-01T00:00:00Z" },
+        { kind: "site", name: "Torre", closedAt: null },
+        { kind: "site", name: "Bodega", closedAt: "2026-10-01T00:00:00Z" },
         { kind: "missing", name: "Borrado", closedAt: null },
       ]),
-    ).toEqual(["Línea BM"]);
+    ).toEqual(["Torre"]);
   });
 });

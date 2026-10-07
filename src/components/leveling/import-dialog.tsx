@@ -14,7 +14,6 @@ import {
   type LibretaRow,
   type ReadResult,
 } from "@/lib/import/leveling";
-import type { LevelingConfigState } from "./leveling-config-fields";
 import {
   levelingTypeLabel,
   POINT_TYPES,
@@ -31,27 +30,6 @@ export interface LevelingImport {
   type: LevelingType;
 }
 
-/**
- * La configuración con lo que trae la importación: tipo, vuelta, BM de
- * partida y modo digital (el archivo es de un nivel digital). Una sola regla
- * para el editor y el formulario de creación.
- */
-export function configWithImport(
-  config: LevelingConfigState,
-  imported: LevelingImport,
-): LevelingConfigState {
-  return {
-    ...config,
-    type: imported.type,
-    hasReturnRun: imported.return != null,
-    startBm: {
-      code: imported.startBm.code,
-      elevation: imported.startBm.elevation != null ? String(imported.startBm.elevation) : "",
-    },
-    level: { ...config.level, levelType: "digital" },
-  };
-}
-
 interface ImportDialogProps {
   /** Tipo y BM de partida actuales del proceso (o del formulario). */
   currentType: LevelingType;
@@ -61,6 +39,8 @@ interface ImportDialogProps {
   hasReadings: boolean;
   onAccept: (result: LevelingImport) => void;
   disabled?: boolean;
+  /** El texto del botón que abre el diálogo. */
+  label?: string;
 }
 
 const TEMPLATE_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`;
@@ -151,6 +131,7 @@ export function ImportDialog({
   hasReadings,
   onAccept,
   disabled,
+  label = "Importar desde archivo",
 }: ImportDialogProps) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -237,7 +218,7 @@ export function ImportDialog({
           setOpen(true);
         }}
       >
-        Importar desde archivo
+        {label}
       </Button>
       <Modal
         open={open}

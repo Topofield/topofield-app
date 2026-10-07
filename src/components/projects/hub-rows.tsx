@@ -27,16 +27,11 @@ import {
   type Site,
 } from "@/types/site";
 
-export const PROCESS_CHIPS: StatusFilter[] = [
-  "todos",
-  "borradores",
-  "calculados",
-  "cerrados",
-  "rechazados",
-];
 export const SITE_CHIPS: StatusFilter[] = ["todos", "activos", "cerrados"];
 /** La poligonal no se cierra (Fase 35): ni cerrados ni rechazados. */
 export const POLYGONAL_CHIPS: StatusFilter[] = ["todos", "borradores", "calculados"];
+/** Ni la nivelación (Fase 36). */
+export const LEVELING_CHIPS: StatusFilter[] = ["todos", "borradores", "calculados"];
 
 export const POLYGONAL_TYPE_OPTIONS = POLYGONAL_TYPES.map((t) => ({
   value: t,
@@ -50,16 +45,6 @@ export const SITE_TYPE_OPTIONS = STRUCTURE_TYPES.map((t) => ({
   value: t,
   label: STRUCTURE_TYPE_LABELS[t],
 }));
-
-function closedOutOfTolerance(p: { status: string; meets_tolerance: boolean | null }): boolean {
-  return p.status === "closed" && p.meets_tolerance === false;
-}
-
-function processStatus(p: LevelingProcess) {
-  return closedOutOfTolerance(p)
-    ? { statusLabel: "Cerrado fuera de tolerancia", statusTone: "warning" as const }
-    : { statusLabel: PROCESS_STATUS_LABELS[p.status], statusTone: PROCESS_STATUS_TONE[p.status] };
-}
 
 export function polygonalRow(projectId: string, p: PolygonalProcess): ProcessRow {
   return {
@@ -97,7 +82,7 @@ export function levelingRow(projectId: string, p: LevelingProcess): ProcessRow {
       ? `${formatSignedMm(Number(p.closure_error_mm))} mm`
       : p.discrepancy_mm != null
         ? `Δ ${Number(p.discrepancy_mm).toFixed(1)} mm`
-        : p.type === "open"
+        : p.type === "open" && !p.has_return_run
           ? "Sin verificación"
           : "—";
   return {
@@ -106,11 +91,13 @@ export function levelingRow(projectId: string, p: LevelingProcess): ProcessRow {
     name: p.name,
     href: `/projects/${projectId}/leveling/${p.id}`,
     kindLabel: levelingKindLabel(p.type, p.has_return_run),
-    ...processStatus(p),
+    // La nivelación no se cierra (Fase 36): su estado es el del cálculo.
+    statusLabel: PROCESS_STATUS_LABELS[p.status],
+    statusTone: PROCESS_STATUS_TONE[p.status],
     result,
     meets: p.meets_tolerance,
     updatedAt: p.updated_at,
-    closed: p.status === "closed" || p.status === "rejected",
+    closed: false,
   };
 }
 

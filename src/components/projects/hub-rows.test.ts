@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { levelingKindLabel, levelingTypeLabel, type LevelingProcess } from "@/types/leveling";
 import type { PolygonalProcess } from "@/types/polygonal";
-import { levelingRow, POLYGONAL_CHIPS, polygonalRow, PROCESS_CHIPS } from "./hub-rows";
+import { LEVELING_CHIPS, levelingRow, POLYGONAL_CHIPS, polygonalRow } from "./hub-rows";
 
 // Fase 27 (PU12 y PU13): el tipo de un proceso, como frase y sin «sin control»
 // en una abierta con vuelta.
@@ -55,9 +55,41 @@ describe("las filas del hub", () => {
     expect(row.closed).toBe(false);
   });
 
-  it("los chips de las poligonales no tienen cerrados ni rechazados", () => {
+  it("los chips de las poligonales y las nivelaciones no tienen cerrados ni rechazados", () => {
     expect(POLYGONAL_CHIPS).toEqual(["todos", "borradores", "calculados"]);
-    expect(PROCESS_CHIPS).toContain("cerrados");
+    expect(LEVELING_CHIPS).toEqual(["todos", "borradores", "calculados"]);
+  });
+
+  // Fase 36: la nivelación tampoco se cierra.
+  it("una nivelación que no alcanza ningún orden sigue siendo «Calculado», con todas sus acciones", () => {
+    const row = levelingRow("p", {
+      id: "z",
+      name: "Fuera",
+      type: "closed",
+      status: "calculated",
+      has_return_run: false,
+      closure_error_mm: 30,
+      meets_tolerance: false,
+      updated_at: "2026-10-01T00:00:00Z",
+    } as unknown as LevelingProcess);
+    expect(row.statusLabel).toBe("Calculado");
+    expect(row.closed).toBe(false);
+    expect(row.result).toBe("+30.0 mm");
+  });
+
+  it("una abierta con la vuelta a medias no dice «Sin verificación»", () => {
+    const row = levelingRow("p", {
+      id: "w",
+      name: "A medias",
+      type: "open",
+      status: "in_progress",
+      has_return_run: true,
+      closure_error_mm: null,
+      discrepancy_mm: null,
+      meets_tolerance: null,
+      updated_at: "2026-10-01T00:00:00Z",
+    } as unknown as LevelingProcess);
+    expect(row.result).toBe("—");
   });
 
   it("y la fila de nivelación usa la misma etiqueta", () => {

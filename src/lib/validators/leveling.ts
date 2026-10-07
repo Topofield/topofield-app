@@ -8,11 +8,7 @@
 // (`issues.errors.backsight`) sin recorrer un array filtrando por `field`.
 
 import { resolveVisualDistances } from "@/lib/calculations/leveling";
-import {
-  MIDDLE_WIRE_TOLERANCE_M,
-  SECTION_BALANCE_LIMIT_M,
-  SIGHT_BALANCE_LIMIT_M,
-} from "@/lib/calculations/tolerances";
+import { MIDDLE_WIRE_TOLERANCE_M } from "@/lib/calculations/tolerances";
 import type {
   LevelingResult,
   LevelingType,
@@ -20,7 +16,6 @@ import type {
   ReadingInput,
   RunResult,
 } from "@/types/leveling";
-import type { PrecisionOrder } from "@/types/project";
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
 
@@ -40,21 +35,13 @@ export interface ReadingCaptureIssues {
     >
   >;
   warnings: Partial<
-    Record<"backsight" | "foresight" | "sightBalance" | "sectionBalance", string>
+    Record<"backsight" | "foresight", string>
   >;
 }
 
 /** Rango físico de una lectura de mira, en metros (§ 5.1). */
 const MIN_READING = 0;
 const MAX_READING = 4;
-
-// El equilibrado de visuales (|d_V+ − d_V−| ≤ límite por orden) SÍ se
-// valida desde la Fase 9: `backDistanceM` y `foreDistanceM` guardan una
-// distancia por visual, que es lo que la comparación necesita. La deuda que la
-// Fase 4 registró —una sola `distance_m` por fila no bastaba— queda pagada.
-// Avisa, no bloquea: es un juicio sobre la calidad de una medición correcta en
-// su forma. Ver `validateSightBalances`, más abajo: por armada desde la Fase 19,
-// y `validateSectionBalances`, el acumulado de la sección, desde la 32.
 
 /**
  * Tipos de punto que entran en la comprobación aritmética y en el acumulado
@@ -152,122 +139,6 @@ export function validateReadingCapture(
   return { errors, warnings };
 }
 
-/**
- * Equilibrado de visuales por armada (§ 5.1; deuda de la Fase 4 pagada en la
- * Fase 9, corregida en la 19).
- *
- * Equilibrar las visuales cancela el error de colimación: si la visual sale
- * inclinada, el mismo error entra con signo opuesto en las dos lecturas y se
- * anula al restarlas. Avisa, no bloquea — es un juicio sobre la calidad de una
- * medición correcta en su forma.
- *
- * Una ARMADA es la V+ de un punto y la V− del siguiente punto que no sea
- * intermedio: es lo que calcula la hoja de campo de El Verjón (`M4 = I3 + K6`).
- * Hasta la Fase 19 se comparaban la V+ y la V− de una misma fila, que en un
- * punto de cambio son de armadas distintas: callaba desequilibrios reales y
- * daba magnitudes de ninguna armada (N7). Las intermedias no abren ni cierran
- * armada.
- *
- * Devuelve el aviso por fila, en la fila cuya V− cierra la armada.
- *
- * `distancesReconstructed` viene de `leveling_processes`: en los procesos que
- * el backfill de la Fase 9 reconstruyó, las distancias salen de repartir por
- * mitades, así que el equilibrado no diría nada del campo. No se evalúa.
- */
-export function validateSightBalances(
-  readings: ReadingInput[],
-  order: PrecisionOrder,
-  distancesReconstructed: boolean,
-): (string | undefined)[] {
-  const warnings: (string | undefined)[] = readings.map(() => undefined);
-  if (distancesReconstructed) return warnings;
-
-  const limit = SIGHT_BALANCE_LIMIT_M[order];
-  let opener: { code: string; back: number | null } | null = null;
-  readings.forEach((reading, index) => {
-    if (reading.pointType === "intermediate") return;
-    const { back, fore } = resolveVisualDistances(reading);
-    if (opener && reading.foresight != null && opener.back != null && fore != null) {
-      const diff = Math.abs(opener.back - fore);
-      if (exceeds(diff, limit)) {
-        warnings[index] =
-          `Armada ${opener.code} → ${reading.pointCode.trim()}: visuales desequilibradas, ` +
-          `${diff.toFixed(1)} m de diferencia; el límite del orden es ${limit} m.`;
-      }
-    }
-    opener = reading.backsight != null ? { code: reading.pointCode.trim(), back } : null;
-  });
-  return warnings;
-}
-
-/**
- * ¿Pasa `value` de `limit`? Con un margen de coma flotante: 35.2 − 30.2 da
- * 5.0000000000000036, y una armada exactamente en el límite avisaría.
- */
-function exceeds(value: number, limit: number): boolean {
-  return value - limit > 1e-9;
-}
-
-/**
- * Equilibrado acumulado de cada sección (Fase 32, D-3): la suma de
- * d_V+ − d_V− de sus armadas, contra el límite acumulado del orden.
- *
- * Una SECCIÓN va de un BM al siguiente (NGS 3, § 3.1.1). Arranca con la
- * primera armada y se juzga en la fila BM cuya V− la cierra; ese BM, si tiene
- * V+, abre la siguiente. Sin BM de cierre —un recorrido abierto o a medias—,
- * se juzga en la última armada: así el aviso sale en cuanto el acumulado pasa
- * el límite, como pide NGS 3 (§ 3.5.2), para corregirlo en las armadas que
- * faltan.
- *
- * Las armadas son las de `validateSightBalances`, y solo suman las que tienen
- * las dos distancias. Con distancias reconstruidas no se evalúa.
- *
- * Devuelve el aviso por fila, en la fila que cierra la sección.
- */
-export function validateSectionBalances(
-  readings: ReadingInput[],
-  order: PrecisionOrder,
-  distancesReconstructed: boolean,
-): (string | undefined)[] {
-  const warnings: (string | undefined)[] = readings.map(() => undefined);
-  if (distancesReconstructed) return warnings;
-
-  const limit = SECTION_BALANCE_LIMIT_M[order];
-  let opener: { code: string; back: number | null } | null = null;
-  let section: { start: string; sum: number; lastClose: number } | null = null;
-
-  const judge = (index: number) => {
-    if (!section || !exceeds(Math.abs(section.sum), limit)) return;
-    const [longer, shorter] = section.sum > 0 ? ["atrás", "adelante"] : ["adelante", "atrás"];
-    warnings[index] =
-      `Sección ${section.start} → ${readings[index]!.pointCode.trim()}: las visuales de ` +
-      `${longer} suman ${Math.abs(section.sum).toFixed(1)} m más que las de ${shorter}; ` +
-      `el límite acumulado del orden es ${limit} m.`;
-  };
-
-  for (const [index, reading] of readings.entries()) {
-    if (reading.pointType === "intermediate") continue;
-    const { back, fore } = resolveVisualDistances(reading);
-    if (reading.foresight != null) {
-      if (opener) {
-        section ??= { start: opener.code, sum: 0, lastClose: index };
-        if (opener.back != null && fore != null) section.sum += opener.back - fore;
-        section.lastClose = index;
-      }
-      // Un BM con V− cierra la sección aunque su armada no exista —al punto
-      // anterior le falta la V+, en una captura a medias—: si no, la sección
-      // seguiría abierta y se sumaría con la siguiente.
-      if (reading.pointType === "bm" && section) {
-        judge(index);
-        section = null;
-      }
-    }
-    opener = reading.backsight != null ? { code: reading.pointCode.trim(), back } : null;
-  }
-  if (section) judge(section.lastClose);
-  return warnings;
-}
-
 /** ¿Tiene la lista de issues de captura algún error bloqueante? */
 export function hasReadingErrors(issues: ReadingCaptureIssues[]): boolean {
   return issues.some((i) => Object.keys(i.errors).length > 0);
@@ -358,24 +229,18 @@ export function turningPointBlocker(
  * formada: la decisión #7 del PRD da por hecho que la última fila de un
  * recorrido que cierra es su BM. Se bloquea aquí para que nunca se guarde.
  * En `open` NO se exige: un recorrido sin control puede terminar donde sea.
+ *
+ * `allowUnfinished` (Fase 36): la nivelación se captura por armada y guarda
+ * tras cada una, así que su libreta puede ir a medias; se guarda en curso y
+ * sin compensar (`pendingRun`). La visita conserva la regla.
  */
 export function validateRunCapture(
   readings: ReadingInput[],
   levelingType: LevelingType,
-  /**
-   * Orden de precisión del proceso y si sus distancias las reconstruyó el
-   * backfill. Gobiernan el equilibrado de visuales, que se evalúa aquí porque
-   * esta es la puerta por la que pasan las filas de verdad. Obligatorios desde
-   * la Fase 23: con valores por defecto, un llamador que los olvidara evaluaba
-   * contra tercer orden sin que el compilador lo señalara.
-   */
-  order: PrecisionOrder,
-  distancesReconstructed: boolean,
+  { allowUnfinished = false }: { allowUnfinished?: boolean } = {},
 ): ReadingCaptureIssues[] {
   const lastIndex = readings.length - 1;
-  const mustEndInBm = levelingType !== "open";
-  const balance = validateSightBalances(readings, order, distancesReconstructed);
-  const sectionBalance = validateSectionBalances(readings, order, distancesReconstructed);
+  const mustEndInBm = levelingType !== "open" && !allowUnfinished;
   return readings.map((reading, index) => {
     const issues = validateReadingCapture(reading);
     let errors = issues.errors;
@@ -426,129 +291,6 @@ export function validateRunCapture(
       };
     }
 
-    if (balance[index]) warnings = { ...warnings, sightBalance: balance[index] };
-    if (sectionBalance[index]) {
-      warnings = { ...warnings, sectionBalance: sectionBalance[index] };
-    }
     return { errors, warnings };
   });
-}
-
-// --- Capa 2: validación de cierre (§ 5.2) -------------------------------------
-
-export interface ClosureEvaluation {
-  /** Se puede cerrar el proceso (como `closed` o como `rejected`). */
-  canClose: boolean;
-  /** El proceso solo puede cerrarse como `rejected` (no cumple tolerancia). */
-  mustReject: boolean;
-  /** El proceso no puede cerrarse de ninguna forma. */
-  blocked: boolean;
-  /** Mensajes para el banner de cierre. */
-  messages: string[];
-}
-
-/**
- * Evalúa si un proceso de nivelación puede cerrarse, a partir de su
- * resultado de cálculo (§ 5.2).
- */
-export function evaluateLevelingClosure(
-  result: LevelingResult,
-  type: LevelingType,
-): ClosureEvaluation {
-  // Un punto de cambio incompleto rompe la cadena de la ida o de la vuelta.
-  // Va primero porque dice qué fila corregir (Fase 24), y porque la vuelta no
-  // pasa por la comprobación aritmética de abajo.
-  const turningPoint = turningPointBlocker(result);
-  if (turningPoint) {
-    return { canClose: false, mustReject: false, blocked: true, messages: [turningPoint] };
-  }
-
-  // La comprobación aritmética (ΣV+ − ΣV− == desnivel total) es
-  // un fallo estructural en los datos, no un problema de precisión: si no
-  // cuadra, ningún cierre es confiable y se bloquea sin más. Se revisan los
-  // dos recorridos y se dice cuál (Fase 26, C-12).
-  if (!result.arithmeticCheckOk) {
-    const which = !result.forward.arithmeticCheckOk ? "de la ida" : "de la vuelta";
-    return {
-      canClose: false,
-      mustReject: false,
-      blocked: true,
-      messages: [
-        `La comprobación aritmética ${result.return ? `${which} ` : ""}no cuadra: ΣV+ − ΣV− no coincide con el desnivel total.`,
-      ],
-    };
-  }
-
-  const messages: string[] = [];
-  let mustReject = false;
-
-  // Una abierta con vuelta se juzga por su discrepancia (Fase 23): sin
-  // tolerancia —falta la distancia de algún recorrido— no hay veredicto y no
-  // se cierra; fuera de tolerancia, solo como rechazada.
-  if (type === "open" && result.return) {
-    if (result.meetsDiscrepancy == null) {
-      return {
-        canClose: false,
-        mustReject: false,
-        blocked: true,
-        messages: [
-          "Faltan distancias por visual en la ida o en la vuelta para juzgar la discrepancia.",
-        ],
-      };
-    }
-    if (result.meetsDiscrepancy === false) {
-      return {
-        canClose: true,
-        mustReject: true,
-        blocked: false,
-        messages: [
-          `La discrepancia entre ida y vuelta (${result.discrepancyMm?.toFixed(1)} mm) supera T·√2 (${result.discrepancyToleranceMm?.toFixed(1)} mm); solo puede cerrarse como rechazado.`,
-        ],
-      };
-    }
-    return { canClose: true, mustReject: false, blocked: false, messages };
-  }
-
-  // Cerrada o de enlace: sin tolerancia de algún recorrido —le faltan
-  // distancias— no hay veredicto, y el servidor no cerraría (Fase 26).
-  const back = result.return;
-  if (
-    type !== "open" &&
-    (result.meetsTolerance === null || (back && back.meetsTolerance === null))
-  ) {
-    return {
-      canClose: false,
-      mustReject: false,
-      blocked: true,
-      messages: [
-        back && result.meetsTolerance !== null
-          ? "Faltan distancias por visual en la vuelta para juzgar su cierre."
-          : "Faltan distancias por visual para juzgar el cierre.",
-      ],
-    };
-  }
-
-  const label = back ? " de la ida" : "";
-  if (result.meetsTolerance === false) {
-    mustReject = true;
-    messages.push(
-      `El error de cierre${label} (${result.closureErrorMm?.toFixed(1)} mm) supera la tolerancia (${result.toleranceMm?.toFixed(1)} mm); solo puede cerrarse como rechazado.`,
-    );
-  }
-
-  // La vuelta, con su propia tolerancia (Fase 26, C-10).
-  if (back && back.meetsTolerance === false) {
-    mustReject = true;
-    messages.push(
-      `El error de cierre de la vuelta (${back.errorMm?.toFixed(1)} mm) supera su tolerancia (${back.toleranceMm?.toFixed(1)} mm); solo puede cerrarse como rechazado.`,
-    );
-  }
-
-  if (result.meetsDiscrepancy === false) {
-    messages.push(
-      `La discrepancia entre ida y vuelta (${result.discrepancyMm?.toFixed(1)} mm) supera T·√2 (${result.discrepancyToleranceMm?.toFixed(1)} mm).`,
-    );
-  }
-
-  return { canClose: true, mustReject, blocked: false, messages };
 }

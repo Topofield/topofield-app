@@ -44,7 +44,8 @@ export type LevelingProcess = Omit<
   correction_method: LevelingCorrectionMethod;
   status: import("./polygonal").ProcessStatus;
   level_type: LevelType | null;
-  precision_order: PrecisionOrder;
+  /** Detectado al compensar desde la Fase 36; `null` sin verificación o sin orden alcanzado. */
+  precision_order: PrecisionOrder | null;
 };
 
 export type LevelingReading = Omit<
@@ -111,6 +112,14 @@ export interface LevelingInput {
    * anterior del acumulado (ver `accumulateDistances`, Fase 19).
    */
   distancesReconstructed?: boolean;
+  /**
+   * Cuándo se compensa (Fase 36). «always»: siempre que haya contra qué
+   * cerrar, cumpla o no; es la regla de la nivelación, que avisa si no
+   * alcanza ningún orden. «within_tolerance» (por omisión): solo si cumple el
+   * orden declarado, como pide el marco teórico § 8.1; es la de la visita.
+   * «never»: no compensa; es la de una libreta a medias (`pendingRun`).
+   */
+  compensation?: "always" | "within_tolerance" | "never";
 }
 
 export interface ComputedReading extends ReadingInput {
@@ -171,6 +180,8 @@ export interface LevelingResult {
    * se reparte al compensar. Null sin vuelta o si no es abierta.
    */
   circuitClosureMm: number | null;
+  /** Las cotas corregidas están compensadas: ida y vuelta, o el circuito de la abierta. */
+  compensated: boolean;
 }
 
 /**

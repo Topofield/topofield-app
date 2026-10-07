@@ -32,7 +32,7 @@ function process(over: Partial<LevelingProcessRow> = {}): LevelingProcessRow {
   return {
     name: "Circuito BM-1",
     type: "closed",
-    status: "closed",
+    status: "calculated",
     start_bm_code: "BM-1",
     start_bm_elevation: "100.0000",
     end_bm_code: "BM-1",
@@ -47,8 +47,6 @@ function process(over: Partial<LevelingProcessRow> = {}): LevelingProcessRow {
     discrepancy_mm: null,
     discrepancy_tolerance_mm: null,
     meets_discrepancy: null,
-    closed_at: "2026-08-12T00:00:00Z",
-    closed_by: "user-1",
     notes: null,
     created_at: "2026-08-01T00:00:00Z",
     precision_order: "tercer_orden",
@@ -63,17 +61,17 @@ function process(over: Partial<LevelingProcessRow> = {}): LevelingProcessRow {
 }
 
 describe("buildLevelingWorkbook", () => {
-  it("crea las tres hojas del § 4.8 y la de cotas adoptadas (Fase 28)", () => {
+  it("crea las tres hojas del § 4.8 y la de cotas ajustadas (Fases 28 y 36)", () => {
     const wb = buildLevelingWorkbook(process(), [reading()]);
     expect(wb.worksheets.map((w) => w.name)).toEqual([
       "Datos Crudos",
       "Cálculos",
-      "Cotas adoptadas",
+      "Cotas ajustadas",
       "Resumen",
     ]);
   });
 
-  it("las cotas adoptadas: el BM de partida fijo y el promedio de un punto leído dos veces", () => {
+  it("las cotas ajustadas: el BM de partida fijo y el promedio de un punto leído dos veces", () => {
     const wb = buildLevelingWorkbook(process({ type: "open", has_return_run: true }), [
       reading({ point_code: "BM-1", elevation_corrected: "100.0000" }),
       reading({ reading_order: 2, point_code: "C1", point_type: "pc", elevation_corrected: "100.5004" }),
@@ -82,17 +80,32 @@ describe("buildLevelingWorkbook", () => {
       reading({ run_type: "return", reading_order: 2, point_code: "C1", point_type: "pc", elevation_corrected: "100.4996" }),
       reading({ run_type: "return", reading_order: 3, point_code: "BM-1", elevation_corrected: "100.0000" }),
     ]);
-    const s = wb.getWorksheet("Cotas adoptadas")!;
+    const s = wb.getWorksheet("Cotas ajustadas")!;
     const fila = (n: number) => [1, 2, 3, 4].map((c) => s.getRow(n).getCell(c).value);
     expect(fila(4)).toEqual(["BM-1", 100, 2, "BM de cota conocida"]);
     expect(fila(5)).toEqual(["C1", 100.5, 2, "Promedio de 2 cotas compensadas"]);
     expect(s.getRow(5).getCell(2).numFmt).toBe("0.0000");
   });
 
-  it("sin compensación no hay cotas adoptadas, y la hoja lo dice", () => {
-    const wb = buildLevelingWorkbook(process({ meets_tolerance: false }), [reading()]);
-    const s = wb.getWorksheet("Cotas adoptadas")!;
-    expect(s.getRow(3).getCell(1).value).toBe("Sin cotas adoptadas");
+  it("sin verificación no hay cotas ajustadas, y la hoja lo dice", () => {
+    const wb = buildLevelingWorkbook(process({ type: "open", meets_tolerance: null }), [reading()]);
+    const s = wb.getWorksheet("Cotas ajustadas")!;
+    expect(s.getRow(3).getCell(1).value).toBe("Sin cotas ajustadas");
+  });
+
+  // Fase 36: la nivelación compensa siempre; fuera de todo orden, también.
+  it("fuera de todo orden hay cotas ajustadas, y el resumen dice «Ninguno»", () => {
+    const wb = buildLevelingWorkbook(process({ meets_tolerance: false, precision_order: null }), [reading()]);
+    expect(wb.getWorksheet("Cotas ajustadas")!.getRow(3).getCell(1).value).toBe("Punto");
+    const res = wb.getWorksheet("Resumen")!;
+    const fila = res.getColumn(1).values.findIndex((v) => v === "Orden alcanzado");
+    expect(res.getCell(fila, 2).value).toBe("Ninguno");
+  });
+
+  it("sin registro de cierre: ni «Cerrado» ni «Cerrado por»", () => {
+    const etiquetas = buildLevelingWorkbook(process(), [reading()]).getWorksheet("Resumen")!.getColumn(1).values;
+    expect(etiquetas).not.toContain("Cerrado");
+    expect(etiquetas).not.toContain("Cerrado por");
   });
 
   it("aplica 4 decimales a las cotas y a las lecturas", () => {
@@ -183,15 +196,14 @@ describe("buildLevelingWorkbook", () => {
     expect(res.getCell(fila, 2).value).toBeNull();
   });
 
-  it("distingue «sin evaluar» de «no cumple»", () => {
-    const wb = buildLevelingWorkbook(process({ meets_tolerance: null }), [
-      reading(),
-    ]);
-    const valores = wb
-      .getWorksheet("Resumen")!
-      .getColumn(2)
-      .values.filter((v): v is string => typeof v === "string");
-    expect(valores).toContain("Sin evaluar");
+  it("distingue la abierta sin verificación de la libreta a medias", () => {
+    const orden = (over: Partial<LevelingProcessRow>) => {
+      const res = buildLevelingWorkbook(process(over), [reading()]).getWorksheet("Resumen")!;
+      const fila = res.getColumn(1).values.findIndex((v) => v === "Orden alcanzado");
+      return res.getCell(fila, 2).value;
+    };
+    expect(orden({ type: "open", meets_tolerance: null, precision_order: null })).toBe("Sin verificación");
+    expect(orden({ status: "in_progress", meets_tolerance: null, precision_order: null })).toBe("Libreta a medias");
   });
 
   it("exporta un proceso sin lecturas sin romperse", () => {
@@ -219,9 +231,7 @@ describe("buildLevelingWorkbook", () => {
     const fila = (label: string) => etiquetas.findIndex((v) => v === label);
 
     expect(res.getCell(fila("Equipo"), 2).value).toBe("Leica NA2 · s/n LC-7");
-    expect(res.getCell(fila("Orden de precisión"), 2).value).toBe(
-      "Primer orden",
-    );
+    expect(res.getCell(fila("Orden alcanzado"), 2).value).toBe("Primer orden");
     expect(res.getCell(fila("Tipo de nivel"), 2).value).toBe("Automático");
     expect(
       res.getCell(fila("Desviación típica (mm/km, doble nivelación)"), 2)

@@ -478,6 +478,28 @@
     color: var(--color-success);
   }
 
+  /* Fase 36: el orden que alcanza la nivelación, en el resumen del informe. */
+  .report-verdict {
+    background: var(--color-success-bg);
+    border-radius: 0.5rem;
+    color: var(--color-success);
+    margin: 0.5rem 0 0.75rem;
+    padding: 0.625rem 0.875rem;
+  }
+
+  /* Fase 36: la ida y la vuelta lado a lado. */
+  .report-columns {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media screen and (max-width: 640px) {
+    .report-columns {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   /* La poligonal no alcanza ningún orden: se alerta, también en el PDF. */
   .report-alert {
     border: 2px solid var(--color-warning);

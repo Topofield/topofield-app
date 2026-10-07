@@ -246,9 +246,8 @@ export function VisitEditor({
       validateVisitBook(
         bookInputs,
         { code: header.amarre.code, elevation: amarreElevation },
-        header.precisionOrder,
       ),
-    [bookInputs, header.amarre.code, amarreElevation, header.precisionOrder],
+    [bookInputs, header.amarre.code, amarreElevation],
   );
   const bookResult = useMemo(
     () =>

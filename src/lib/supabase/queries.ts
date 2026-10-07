@@ -637,8 +637,8 @@ export async function getSiteSummariesByProject(
 
 /**
  * Los trabajos que un informe puede incluir, en el formato que consume el
- * selector: las poligonales **calculadas** (Fase 35: no se cierran) y las
- * nivelaciones y los lugares **cerrados**.
+ * selector: las poligonales y las nivelaciones **calculadas** (Fases 35 y 36:
+ * no se cierran) y los lugares **cerrados**.
  *
  * Trae los tres tipos con el mismo `select` mínimo para poder ordenarlos y
  * mostrarlos juntos. El filtro por estado se aplica aquí además de en
@@ -660,10 +660,10 @@ export async function getClosedWorkForReports(
       .order("updated_at", { ascending: true }),
     supabase
       .from("leveling_processes")
-      .select("id, name, status, closed_at")
+      .select("id, name, status")
       .eq("project_id", projectId)
-      .eq("status", "closed")
-      .order("closed_at", { ascending: true }),
+      .eq("status", "calculated")
+      .order("updated_at", { ascending: true }),
     supabase
       .from("sites")
       .select("id, name, status, closed_at")
@@ -746,21 +746,16 @@ export async function getReport(
 }
 
 /**
- * Cuánto trabajo cerrado tiene un proyecto: nivelaciones cerradas o
- * rechazadas, lugares cerrados y visitas cerradas (Fase 22). Lo cerrado no se
- * borra —los triggers de inmutabilidad lo impiden—, así que un proyecto con
- * trabajo cerrado no se puede eliminar: se archiva. La poligonal no se cierra
- * (Fase 35) y no cuenta.
+ * Cuánto trabajo cerrado tiene un proyecto: lugares cerrados y visitas
+ * cerradas (Fase 22). Lo cerrado no se borra —los triggers de inmutabilidad lo
+ * impiden—, así que un proyecto con trabajo cerrado no se puede eliminar: se
+ * archiva. La poligonal (Fase 35) y la nivelación (Fase 36) no se cierran y no
+ * cuentan.
  */
 export async function getClosedWorkCount(supabase: Client, projectId: string): Promise<number> {
   if (!UUID_RE.test(projectId)) return 0;
-  const cerrados = ["closed", "rejected"];
-  const [leveling, sites, visits] = await Promise.all([
-    supabase
-      .from("leveling_processes")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .in("status", cerrados),
+  // La poligonal (Fase 35) y la nivelación (Fase 36) no se cierran.
+  const [sites, visits] = await Promise.all([
     supabase
       .from("sites")
       .select("id", { count: "exact", head: true })
@@ -772,8 +767,8 @@ export async function getClosedWorkCount(supabase: Client, projectId: string): P
       .eq("sites.project_id", projectId)
       .eq("status", "closed"),
   ]);
-  for (const r of [leveling, sites, visits]) {
+  for (const r of [sites, visits]) {
     if (r.error) throw r.error;
   }
-  return (leveling.count ?? 0) + (sites.count ?? 0) + (visits.count ?? 0);
+  return (sites.count ?? 0) + (visits.count ?? 0);
 }

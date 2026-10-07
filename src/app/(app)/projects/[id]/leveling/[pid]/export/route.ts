@@ -5,9 +5,9 @@ import {
   getLevelingReadings,
   getProjectById,
 } from "@/lib/supabase/queries";
+import { levelingDraftOf, levelingRecordOf } from "@/components/leveling/leveling-save";
 import { buildLevelingWorkbook } from "@/lib/export/leveling-workbook";
 import { safeFilename } from "@/lib/export/workbook";
-import { responsibleNames } from "@/lib/reports/responsible";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -38,10 +38,11 @@ export async function GET(
 
   const readings = await getLevelingReadings(supabase, process.id);
 
-  // «Cerrado por» con el nombre del responsable, no su id (Fase 22).
-  const names = await responsibleNames(supabase, [process.closed_by]);
-  const closedBy = process.closed_by ? (names.get(process.closed_by) ?? null) : null;
-  const workbook = buildLevelingWorkbook({ ...process, closed_by: closedBy }, readings, project);
+  // Lo que daría guardar ahora (Fase 36): el orden detectado y las cotas
+  // compensadas, también en una nivelación guardada antes de la fase, cuyas
+  // columnas dicen el orden que declaraba.
+  const record = levelingRecordOf(levelingDraftOf(process, readings));
+  const workbook = buildLevelingWorkbook({ ...process, ...record.header }, record.rows, project);
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

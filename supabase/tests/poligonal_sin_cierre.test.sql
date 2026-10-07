@@ -17,7 +17,9 @@ insert into public.projects (id, user_id, name, client, location) values
    'Sin cierre', 'Pruebas', 'Local');
 insert into public.sites (id, project_id, name, structure_type, kind) values
   ('00000000-0000-4000-8000-00000000c351', '00000000-0000-4000-8000-00000000b351',
-   'Agrupación', 'otro', 'grouping');
+   'Agrupación', 'otro', 'grouping'),
+  ('00000000-0000-4000-8000-00000000c352', '00000000-0000-4000-8000-00000000b351',
+   'Edificio', 'edificio', 'settlement');
 insert into public.polygonal_processes
   (id, project_id, site_id, name, type, start_point_code, start_north, start_east, status)
 values
@@ -25,11 +27,13 @@ values
    '00000000-0000-4000-8000-00000000c351', 'Poligonal', 'closed', 'E1', 1000, 1000, 'calculated');
 insert into public.polygonal_stations (id, process_id, station_order, point_code, north, east) values
   ('00000000-0000-4000-8000-00000000d352', '00000000-0000-4000-8000-00000000d351', 1, 'E1', 1000, 1000);
-insert into public.leveling_processes
-  (id, project_id, site_id, name, type, start_bm_code, start_bm_elevation, status)
-values
-  ('00000000-0000-4000-8000-00000000e351', '00000000-0000-4000-8000-00000000b351',
-   '00000000-0000-4000-8000-00000000c351', 'Nivelación', 'open', 'BM1', 2600, 'closed');
+-- Una visita cerrada: asentamientos conserva su cierre (la nivelación lo
+-- perdió en la Fase 36).
+insert into public.settlement_visits (id, site_id, visit_number, date) values
+  ('00000000-0000-4000-8000-0000000f3510', '00000000-0000-4000-8000-00000000c352', 0, '2026-01-10');
+update public.settlement_visits
+   set status = 'closed', closed_at = now(), closed_by = '00000000-0000-4000-8000-00000000a351'
+ where id = '00000000-0000-4000-8000-0000000f3510';
 
 -- --- El esquema --------------------------------------------------------------
 select has_column('public', 'polygonal_processes', 'location', 'la poligonal tiene ubicación');
@@ -43,8 +47,8 @@ select is_empty(
         and tgname like '%closed%' $$,
   'la poligonal ya no tiene triggers de cierre');
 select isnt_empty(
-  $$ select 1 from pg_trigger where tgname = 'leveling_processes_reject_update_on_closed' $$,
-  'la nivelación conserva el suyo');
+  $$ select 1 from pg_trigger where tgname = 'settlement_visits_reject_update_on_closed' $$,
+  'la visita conserva el suyo');
 
 -- --- Paso 2: sin registro de cierre ----------------------------------------
 select hasnt_column('public', 'polygonal_processes', 'closed_at', 'la poligonal no tiene fecha de cierre');
@@ -64,16 +68,16 @@ select lives_ok(
   $$ delete from polygonal_stations where process_id = '00000000-0000-4000-8000-00000000d351' $$,
   'y sus estaciones se borran');
 select is(
-  (select status from leveling_processes where id = '00000000-0000-4000-8000-00000000e351'),
-  'closed', 'la nivelación cerrada sigue cerrada');
+  (select status from settlement_visits where id = '00000000-0000-4000-8000-0000000f3510'),
+  'closed', 'la visita cerrada sigue cerrada');
 
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-4000-8000-00000000a351","role":"authenticated"}', true);
 
 select throws_ok(
-  $$ update leveling_processes set name = 'Otra' where id = '00000000-0000-4000-8000-00000000e351' $$,
-  '23001', null, 'la nivelación cerrada sigue siendo inmutable');
+  $$ update settlement_visits set operator = 'Otro' where id = '00000000-0000-4000-8000-0000000f3510' $$,
+  '23001', null, 'la visita cerrada sigue siendo inmutable');
 
 -- --- El guardado escribe lo que antes se perdía ------------------------------
 select lives_ok(

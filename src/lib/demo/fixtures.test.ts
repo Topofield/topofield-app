@@ -3,6 +3,7 @@ import {
   compareHomologousPoints,
   adoptedElevationsOf,
   computeLeveling,
+  computeLevelingDetected,
   totalDistanceFromReadings,
 } from "@/lib/calculations/leveling";
 import {
@@ -57,15 +58,16 @@ const lectura = (r: LecturaNivelacionDemo): ReadingInput => ({
   distanceAccumulatedKm: null,
 });
 
-const nivelar = (n: NivelacionDemo) =>
-  computeLeveling({
+// El orden se detecta y se compensa siempre (Fase 36).
+const detectar = (n: NivelacionDemo) =>
+  computeLevelingDetected({
     type: n.type,
     startElevation: n.startElevation,
     endElevation: n.endElevation ?? null,
-    order: n.precisionOrder,
     forward: n.forward.map(lectura),
     return: n.return ? n.return.map(lectura) : null,
   });
+const nivelar = (n: NivelacionDemo) => detectar(n).result;
 
 describe("poligonales de la demo — carteras reales", () => {
   it("tres procesos con nombres distintos", () => {
@@ -121,7 +123,7 @@ describe("nivelaciones de la demo — carteras reales", () => {
     expect(homologos).not.toBeNull();
     // AUX1 / AUX 1 y C 3 / «C 3 » se emparejan: los doce puntos, más la radiación.
     expect(homologos!.points.length).toBeGreaterThanOrEqual(11);
-    expect(NIVELACION_VERJON.status).toBe("calculated");
+    expect(detectar(NIVELACION_VERJON).order).toBe("segundo_orden");
   });
 
   it("el tramo 2 se lee del crudo con el importador y cierra en −0.4 mm sobre 1.397 km", () => {
@@ -132,7 +134,7 @@ describe("nivelaciones de la demo — carteras reales", () => {
     expect(r.closureErrorMm).toBeCloseTo(-0.4, 6);
     expect(totalDistanceFromReadings(tramo.forward.map(lectura))).toBeCloseTo(1.397288, 6);
     expect(r.meetsTolerance).toBe(true);
-    expect(tramo.status).toBe("closed");
+    expect(detectar(tramo).order).toBe("primer_orden");
   });
 
   it("el BM del tramo 2 está en el catálogo con su cota", () => {
@@ -239,11 +241,13 @@ describe("asentamientos de la demo — Torre Alameda", () => {
 });
 
 describe("material de los informes de la demo", () => {
-  it("la TT4 alimenta el informe de poligonal, una nivelación nace cerrada y Torre Alameda se cierra", () => {
+  it("la TT4 alimenta el informe de poligonal, el tramo 2 el de nivelación y Torre Alameda se cierra", () => {
     expect(PROCESOS_DEMO.filter((p) => p.informe).map((p) => p.name)).toEqual([
       "Poligonal V10 — cartera TT4",
     ]);
-    expect([NIVELACION_VERJON, nivelacionTramo2()].filter((n) => n.status === "closed")).toHaveLength(1);
+    expect([NIVELACION_VERJON, nivelacionTramo2()].filter((n) => n.informe).map((n) => n.name)).toEqual([
+      "Tramo 2 — crudo del nivel digital Leica",
+    ]);
   });
 });
 
@@ -304,9 +308,19 @@ describe("ida y vuelta compensadas — las carteras de la demo (Fase 28)", () =>
     expect(cota("C10")).toMatchObject({ elevation: 2541.7545, known: true, readings: 2 });
   });
 
-  it("sin cumplir no se compensa ni hay cota adoptada", () => {
+  // La regla de la visita (Fase 36, decisión 6): con el orden declarado,
+  // dentro de tolerancia.
+  it("con la regla de la visita, sin cumplir no se compensa ni hay cota adoptada", () => {
     // En primer orden, los 5.0 mm superan T·√2 = 2.63 mm.
-    const r = nivelar({ ...NIVELACION_VERJON, precisionOrder: "primer_orden" });
+    const n = NIVELACION_VERJON;
+    const r = computeLeveling({
+      type: n.type,
+      startElevation: n.startElevation,
+      endElevation: null,
+      order: "primer_orden",
+      forward: n.forward.map(lectura),
+      return: n.return!.map(lectura),
+    });
     expect(r.meetsDiscrepancy).toBe(false);
     expect(r.forward.readings.every((x) => x.elevationCorrected === x.elevationCalculated)).toBe(true);
     expect(

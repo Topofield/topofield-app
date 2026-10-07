@@ -16,7 +16,7 @@ import {
   polygonalRow,
   POLYGONAL_TYPE_OPTIONS,
   POLYGONAL_CHIPS,
-  PROCESS_CHIPS,
+  LEVELING_CHIPS,
   SITE_CHIPS,
   siteItem,
   siteMetric,
@@ -152,7 +152,7 @@ export default async function ProjectHubPage({
     asentamientos: SITE_TYPE_OPTIONS,
   }[modulo];
   const chips =
-    modulo === "asentamientos" ? SITE_CHIPS : modulo === "poligonales" ? POLYGONAL_CHIPS : PROCESS_CHIPS;
+    modulo === "asentamientos" ? SITE_CHIPS : modulo === "poligonales" ? POLYGONAL_CHIPS : LEVELING_CHIPS;
 
   const filters: ProcessFilters = {
     q: typeof sp.q === "string" ? sp.q : "",
@@ -302,7 +302,7 @@ export default async function ProjectHubPage({
           {reports.length === 0 ? (
             <EmptyState
               title="Aún no hay informes"
-              description="Un informe reúne poligonales calculadas y procesos cerrados de este proyecto, y produce un documento imprimible con su registro de trazabilidad."
+              description="Un informe reúne poligonales y nivelaciones calculadas y controles de asentamientos cerrados de este proyecto, y produce un documento imprimible con su registro de trazabilidad."
             />
           ) : (
             <ul className="flex flex-col gap-2">

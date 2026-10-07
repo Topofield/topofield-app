@@ -162,18 +162,20 @@ export interface TotalStationIdentityFields {
 }
 
 /**
- * Solo la identidad de la estación total, con «Tomar del catálogo» (Fase 35,
- * decisión 2): es lo que pide el alta de la poligonal. Las precisiones y la
- * calibración no entran en ningún cálculo, así que la poligonal ya no las pide.
+ * Solo la identidad del equipo, con «Tomar del catálogo» del tipo (Fases 35 y
+ * 36, decisión 2 y 3): es lo que piden el alta de la poligonal y la de la
+ * nivelación. Las precisiones y la calibración no entran en ningún cálculo.
  */
-export function TotalStationIdentity({
+export function EquipmentIdentity({
+  kind,
   value,
   onChange,
 }: {
+  kind: "total_station" | "level";
   value: TotalStationIdentityFields;
   onChange: (value: TotalStationIdentityFields) => void;
 }) {
-  const { items } = useItems("total_station");
+  const { items } = useItems(kind);
   return (
     <div className="flex flex-col gap-3">
       <CatalogSelect
@@ -201,6 +203,14 @@ export function TotalStationIdentity({
       </div>
     </div>
   );
+}
+
+/** La identidad de la estación total: el alta de la poligonal (Fase 35). */
+export function TotalStationIdentity(props: {
+  value: TotalStationIdentityFields;
+  onChange: (value: TotalStationIdentityFields) => void;
+}) {
+  return <EquipmentIdentity kind="total_station" {...props} />;
 }
 
 /** Equipo de nivel con el catálogo (Fase 25). Ver `TotalStationEquipment`. */

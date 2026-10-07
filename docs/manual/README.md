@@ -47,8 +47,8 @@ Tres ideas ordenan toda la aplicación:
 ubicación, el datum y la proyección. El equipo usado y el **orden de
 precisión** no viven aquí: van en cada proceso —poligonal, nivelación, visita
 de asentamiento—, porque pueden cambiar de un levantamiento a otro dentro de un
-mismo proyecto. El orden de una poligonal no se declara: se detecta al
-calcularla.
+mismo proyecto. El orden de una poligonal o de una nivelación no se declara:
+se detecta al calcularla.
 
 **Proceso.** Un levantamiento concreto dentro de un proyecto: una poligonal, una
 nivelación, un control de asentamientos. Cada proceso pasa por estados:
@@ -57,16 +57,16 @@ nivelación, un control de asentamientos. Cada proceso pasa por estados:
 |---|---|
 | **Borrador** | Creado, sin datos suficientes |
 | **En progreso** | Con datos de campo, aún sin cálculo completo |
-| **Calculado** | Cálculo resuelto; se puede revisar y, salvo una poligonal, cerrar |
+| **Calculado** | Cálculo resuelto; se puede revisar y, en asentamientos, cerrar |
 | **Cerrado** | Terminado y conforme. **Inmutable** mientras siga cerrado |
 | **Rechazado** | Terminado pero fuera de tolerancia. **Inmutable** mientras siga cerrado |
 
-**Cierre.** El acto de dar por terminada una nivelación, una visita o un lugar
-de asentamientos. Queda registrado con fecha, hora y autor, y **a partir de ese
+**Cierre.** El acto de dar por terminada una visita o un lugar de
+asentamientos. Queda registrado con fecha, hora y autor, y **a partir de ese
 momento las mediciones y el veredicto no se pueden modificar**. Es lo que da
-trazabilidad al trabajo. **La poligonal no se cierra**: queda calculada, se
-corrige cuando haga falta, y su informe dice qué orden de precisión alcanzó
-(§ 5).
+trazabilidad al trabajo. **La poligonal y la nivelación no se cierran**:
+quedan calculadas, se corrigen cuando haga falta, y su informe dice qué orden
+de precisión alcanzaron (§ 5 y § 6).
 
 > **Sobre la inmutabilidad**
 > Un proceso cerrado no se puede editar ni eliminar, ni desde la interfaz ni por
@@ -93,8 +93,9 @@ aplicación sin capturar nada:
   Vivero**, ajustada por mínimos cuadrados, y la misma en un sistema local,
   lista para **georreferenciar** con los vértices D1 y D3 del catálogo.
 - Dos nivelaciones: la de **El Verjón**, con ida y vuelta por los mismos puntos
-  —verá sus puntos homólogos y los avisos de equilibrado—, y el **tramo 2**,
-  leído del archivo de un nivel digital Leica.
+  —verá su discrepancia, la diferencia punto a punto entre ida y vuelta y la
+  compensación del circuito—, y el **tramo 2**, leído del archivo de un nivel
+  digital Leica.
 - **Torre Alameda**, un control de asentamientos simulado con catorce visitas
   y su libreta de nivelación en cada una.
 - Un informe consolidado por módulo.
@@ -130,8 +131,8 @@ Arriba, tres indicadores del estado general:
 - **Proyectos activos** — cuántos proyectos tiene en curso.
 - **Procesos calculados** — levantamientos resueltos, listos para revisar.
 - **Fuera de tolerancia** — procesos calculados que no cumplen su tolerancia
-  —una poligonal, si no alcanza ningún orden—, y lugares con algún punto en
-  alerta o alarma en una visita abierta. Requieren revisión.
+  —una poligonal o una nivelación, si no alcanza ningún orden—, y lugares con
+  algún punto en alerta o alarma en una visita abierta. Requieren revisión.
 
 Debajo, sus proyectos. El selector **Activos / Archivados** filtra la lista.
 Cada tarjeta indica cuántos procesos tiene el proyecto y cuántos están en
@@ -159,8 +160,8 @@ decimales— y el **sistema de referencia**: datum y proyección. El proyecto se
 crea al pulsar **Crear proyecto**.
 
 > **El equipo y el orden de precisión no se piden aquí.** Van en cada
-> proceso: cada nivelación y cada visita de asentamiento declara su orden y su
-> equipo, y cada poligonal su equipo —su orden se detecta al calcularla—. Un
+> proceso: cada visita de asentamiento declara su orden y su equipo, y cada
+> poligonal y cada nivelación su equipo —su orden se detecta al calcularla—. Un
 > mismo proyecto puede así tener trabajos de distinto orden, medidos con
 > instrumentos distintos y en fechas distintas.
 > Vea [§ 5.2](#52-crear-una-poligonal), [§ 6.4](#64-crear-una-nivelación) y
@@ -177,8 +178,9 @@ tres pestañas:
 **Procesos** — el listado de levantamientos del proyecto. Se detalla en
 [§ 4.3](#43-el-listado-de-procesos).
 
-**Informes** — los informes **consolidados**, que reúnen poligonales
-calculadas y procesos cerrados en un solo documento. Se detalla en [§ 10](#10-informes). Cada
+**Informes** — los informes **consolidados**, que reúnen poligonales y
+nivelaciones calculadas y controles de asentamientos cerrados en un solo
+documento. Se detalla en [§ 10](#10-informes). Cada
 proceso tiene además su propio informe, en su pantalla
 ([§ 4.4](#44-la-pantalla-de-un-proceso)).
 
@@ -194,9 +196,9 @@ BM de sus nivelaciones y como **BM de amarre** de las visitas de asentamiento.
 
 **Archivar o eliminar.** Archivar oculta el proyecto de la lista activa del
 dashboard; puede restaurarlo cuando quiera. Eliminarlo lo borra con todo lo
-que contiene, y solo es posible si no tiene nada cerrado: un proceso, un
-lugar o una visita cerrados son registros que no se borran. En ese caso la
-configuración dice cuántos tiene y propone archivarlo.
+que contiene, y solo es posible si no tiene nada cerrado: un lugar o una
+visita de asentamientos cerrados son registros que no se borran. En ese caso
+la configuración dice cuántos tiene y propone archivarlo.
 
 ### 4.3 El listado de procesos
 
@@ -209,8 +211,8 @@ acentos: «via» encuentra «Vía terciaria».
 
 **Filtrar por estado.** Los chips muestran cuántos hay en cada grupo, así que
 ve la distribución del proyecto sin desplegar nada. Pulse uno para ver solo
-ese grupo. En poligonales los estados son **Borradores** y **Calculados**: la
-poligonal no se cierra. En control de asentamientos, **Activos** y
+ese grupo. En poligonales y nivelaciones los estados son **Borradores** y
+**Calculados**: no se cierran. En control de asentamientos, **Activos** y
 **Cerrados**.
 
 **Filtrar por tipo.** El selector acota a un tipo de poligonal, de nivelación
@@ -228,9 +230,9 @@ todo de un clic.
 | Columna | Qué muestra |
 |---|---|
 | Nombre | Nombre y tipo (en asentamientos, el tipo de estructura y cuántas visitas tiene) |
-| Estado | Borrador, Calculado, Cerrado o Rechazado; Borrador o Calculado en una poligonal; Activo o Cerrado en un lugar |
+| Estado | Borrador, En progreso o Calculado en una poligonal o una nivelación; Activo o Cerrado en un lugar |
 | Resultado | La **precisión** relativa de una poligonal, el **cierre** de una nivelación (o su discrepancia, si es abierta con vuelta) o la **alerta** de un lugar |
-| Cumple | ✓ si cumple su tolerancia —una poligonal, si alcanza algún orden—, ✕ si no, — si no aplica. No aparece en asentamientos |
+| Cumple | ✓ si alcanza algún orden, ✕ si no, — si no aplica. No aparece en asentamientos |
 | Última actividad | Cuándo se modificó por última vez |
 
 La columna **Cumple** es la que evita abrir cada proceso para saber si el
@@ -251,20 +253,20 @@ actividad reciente, así que lo que está trabajando queda arriba.
   un informe consolidado —porque se reabrió después de emitirlo—, la
   confirmación lo avisa: el informe quedará sin esa sección.
 
-> **Lo cerrado solo se puede duplicar.** Una nivelación cerrada o rechazada, o
-> un lugar cerrado, no admite renombrarse ni eliminarse. Una poligonal siempre
-> admite las tres acciones: no se cierra. Si necesita rehacer un
-> levantamiento cerrado, duplíquelo: obtendrá una copia editable y el original
-> queda intacto como constancia. Para corregir el mismo proceso, reábralo desde
-> su pantalla (§ 8).
+> **Lo cerrado solo se puede duplicar.** Un lugar cerrado no admite
+> renombrarse ni eliminarse. Una poligonal o una nivelación siempre admite las
+> tres acciones: no se cierran. Si necesita rehacer un levantamiento cerrado,
+> duplíquelo: obtendrá una copia editable y el original queda intacto como
+> constancia. Para corregir el mismo lugar, reábralo desde su pantalla (§ 8).
 
 En el teléfono, la tabla se convierte en tarjetas, una por fila, con las
 mismas acciones.
 
 ### 4.4 La pantalla de un proceso
 
-Nivelaciones y controles de asentamientos se abren en la misma pantalla. La
-poligonal tiene la suya, por pasos ([§ 5.3](#53-la-pantalla-por-pasos)).
+Los controles de asentamientos se abren en la pantalla de siempre. La
+poligonal y la nivelación tienen la suya, por pasos
+([§ 5.3](#53-la-pantalla-por-pasos) y [§ 6.5](#65-la-pantalla-por-pasos)).
 
 **La cabecera.** El nombre, el estado y el tipo del proceso, y dos acciones:
 **Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y **Ver informe**. Si el
@@ -275,8 +277,9 @@ devuelve al listado del que vino.
 cálculo, gráfico y análisis, que se recalculan mientras escribe. **Informe**
 muestra el informe de ese proceso, listo para **Imprimir o guardar como PDF**
 ([§ 10](#10-informes)). El control de asentamientos tiene tres: **Panel**,
-**Puntos y lugar** e **Informe** ([§ 7](#7-control-de-asentamientos)), y la
-poligonal sus tres pasos: **Datos**, **Ajuste** e **Informe**.
+**Puntos y lugar** e **Informe** ([§ 7](#7-control-de-asentamientos)); la
+poligonal, sus tres pasos: **Datos**, **Ajuste** e **Informe**, y la
+nivelación los suyos: **Libreta**, **Compensación** e **Informe**.
 
 ![Informe de un proceso, en su pestaña](../../public/manual/30-informe-del-proceso.png)
 
@@ -284,15 +287,15 @@ Mientras el proceso no esté cerrado, su informe lleva la marca **«Borrador —
 el informe se emite al cerrar el proceso»**, también en el PDF: sirve para
 revisar antes de cerrar. Si se cerró como rechazado, lleva en cambio la marca
 **«Rechazado»**: queda como constancia y no entra en informes consolidados. El
-de una poligonal no lleva marca: no se cierra. Debajo, fuera de la impresión,
-aparecen los informes consolidados que ya lo incluyen y, si puede entrar en
-uno —cerrado conforme, o una poligonal calculada—, un botón para generar uno
-nuevo con él.
+de una poligonal o una nivelación no lleva marca: no se cierran. Debajo, fuera
+de la impresión, aparecen los informes consolidados que ya lo incluyen y, si
+puede entrar en uno —un lugar cerrado, o una poligonal o una nivelación
+calculadas—, un botón para generar uno nuevo con él.
 
 **La barra de acciones.** Mientras el proceso se puede editar, **Guardar** y
 **Cerrar proceso** van en una barra fija al pie de la pantalla, siempre a la
 vista. A su izquierda dice si hay **cambios sin guardar** o qué impide guardar.
-La poligonal no la tiene: cada popup guarda al confirmar.
+La poligonal y la nivelación no la tienen: cada popup guarda al confirmar.
 
 > **Salir sin guardar pregunta.** Si tiene cambios sin guardar y pulsa una
 > miga, otra pestaña o cualquier enlace de la aplicación, un diálogo pregunta
@@ -641,6 +644,13 @@ que tenga al abrirlo. Los ángulos salen en el formato elegido.
 
 ## 6. Nivelación
 
+La nivelación se trabaja como la mide el topógrafo, igual que la poligonal
+(§ 5): un alta corta y tres pasos en una sola pantalla —**1 · Libreta**,
+**2 · Compensación** y **3 · Informe**—. Cada armada se captura en un popup y
+**no hay botón Guardar**: cada popup guarda al confirmar. El **orden de
+precisión se detecta** al compensar, y **la nivelación no se cierra**: queda
+calculada y se corrige cuando haga falta; su informe dice qué orden alcanzó.
+
 ### 6.1 Tipos
 
 TopoField maneja tres tipos de nivelación geométrica:
@@ -649,14 +659,14 @@ TopoField maneja tres tipos de nivelación geométrica:
 |---|---|---|
 | **Cerrada** | Sale de un BM y vuelve a ese mismo BM | Error de cierre contra la cota de partida |
 | **De enlace** | Va de un BM conocido a otro BM conocido distinto | Error de cierre contra la cota de llegada |
-| **Abierta** | No cierra contra ningún BM | Sin vuelta, ninguno; con vuelta, la **discrepancia entre ida y vuelta** |
+| **Abierta** | Termina en un punto sin cota conocida | Sin vuelta, ninguna; con vuelta, la **discrepancia entre ida y vuelta** |
 
 Sin recorrido de vuelta, la nivelación abierta sirve solo para
 reconocimiento: calcula cotas, pero no hay forma de comprobar si son
-correctas, igual que la poligonal abierta sin control (§ 5.1). No se puede
-calcular error de cierre ni compensar, y la aplicación la rotula **Abierta
-sin control**. Con vuelta, su veredicto es la discrepancia entre ida y vuelta
-(§ 6.6), y se rotula **Abierta con ida y vuelta**.
+correctas, igual que la poligonal abierta sin control (§ 5.1). No tiene orden
+ni se compensa, y la aplicación la rotula **Abierta sin control**. Con vuelta,
+su veredicto es la discrepancia entre ida y vuelta (§ 6.8), y se rotula
+**Abierta con ida y vuelta**.
 
 ### 6.2 Cómo se llena la libreta
 
@@ -671,10 +681,11 @@ La libreta es una fila por punto. Cada fila puede llevar dos lecturas:
 Los nombres dicen qué hace cada número en la cuenta: la vista más se suma y la
 vista menos se resta. Son los de la cartera de campo.
 
-Por eso la columna **AI solo tiene valor en las filas que llevan V+**: la
-altura de instrumento es un dato de la armada, no de la fila. Una fila con
-solo V− (que cierra una armada sin abrir la siguiente) no muestra AI propia;
-usa la de la armada en curso.
+Una **armada** es una posición del nivel: la V+ a un punto que ya tiene cota y
+la V− al siguiente, con las vistas intermedias que se lean desde ahí. Por eso
+la columna **AI solo tiene valor en las filas que llevan V+**: la altura de
+instrumento es un dato de la armada, no de la fila. En la aplicación se
+captura armada por armada, y cada lectura va a la fila de su punto (§ 6.6).
 
 ### 6.3 Tipos de punto
 
@@ -692,106 +703,138 @@ error en su lectura no contamina el resto del recorrido. En la compensación
 recibe la corrección de su armada, la de la distancia acumulada hasta el
 instrumento.
 
-Si a un punto de cambio le falta la V+ o la V−, la celda lo avisa. Puede
-guardar la libreta a medias, pero el proceso no se cierra hasta completarla: el
-cierre dice qué fila, de la ida o de la vuelta, está incompleta. Lo mismo vale
-para la libreta de una visita de asentamientos.
-
 ### 6.4 Crear una nivelación
 
 ![Nueva nivelación](../../public/manual/11-nueva-nivelacion.png)
 
-Desde el proyecto, **+ Nuevo Proceso → Nivelación**. Indique el nombre, el
-tipo y el BM de partida: puede elegirlo del catálogo de puntos de referencia
-del proyecto (autocompleta código y cota) o teclearlo directamente si no lo
-tiene registrado. Indique también el **orden de precisión** y los datos del
-**nivel**: marca, modelo, número de serie, fecha de calibración, tipo
-(automático o digital) y desviación típica en mm por km de doble nivelación
-(ISO 17123-2).
+Desde el proyecto, **+ Nuevo Proceso → Nivelación** abre un popup:
 
-Si el tipo es *de enlace*, deberá indicar además el BM de llegada. Marque
-**Incluye recorrido de vuelta** si va a medir ida y vuelta.
+- **Título**, obligatorio.
+- **¿Cómo es el recorrido?**: cerrada, de enlace o abierta, cada una con su
+  recorrido dibujado.
+- **Con vuelta**, si va a volver por los mismos puntos.
+- El **BM de partida** y su **cota conocida**; en la de enlace, también el
+  **BM de llegada** y la suya. El BM se teclea.
+- Plegados y opcionales: **Ubicación**, **Responsable**, **Cargo del
+  responsable** y el **equipo**: marca, modelo y número de serie del nivel, o
+  **Tomar del catálogo** (§ 12).
 
-### 6.5 El editor
+**Crear y empezar** lleva a la libreta. Lo que no se pide: el **orden de
+precisión**, que se detecta al compensar (§ 6.7), y el tipo de nivel, que no
+entra en ningún cálculo.
 
-![Editor de nivelación](../../public/manual/12-editor-nivelacion.png)
+Estos datos se cambian después con **Editar datos**, en la cabecera. Cambiar
+el tipo o un BM recalcula la libreta, y quitar la vuelta borra su libreta: el
+popup avisa de los dos, y en el segundo dice cuántas armadas se borran.
 
-**El veredicto.** Arriba: el error de cierre frente a su
-tolerancia en una nivelación cerrada o de enlace, o la discrepancia entre ida
-y vuelta en una abierta con vuelta. Una abierta sin vuelta no cierra contra
-nada y lo dice.
+### 6.5 La pantalla por pasos
 
-**Configuración.** Plegada cuando el proceso ya está calculado. Ábrala para
-cambiar el nombre, el tipo, los BM o el orden de precisión y el equipo de
-nivel — los mismos campos del alta, editables mientras el proceso siga
-abierto.
+La **cabecera** lleva el tipo, el estado y el orden alcanzado; el título, la
+ubicación, el responsable, el equipo y cuándo se guardó por última vez; y las
+acciones **Editar datos**, **Exportar a Excel** (§ 11) y, bajo **⋯**,
+**Duplicar** y **Eliminar**. Debajo van los tres pasos y, a la derecha,
+**Importar .L o CSV** (§ 6.9).
 
-La libreta se captura por fila: punto, tipo, V+ y V−, y la **distancia a
-cada mira**. La distancia acumulada y la distancia total del
-recorrido **no se teclean**: la aplicación las suma sola y las muestra en solo
-lectura.
+### 6.6 Paso 1 · Libreta
+
+![Paso de Libreta de El Verjón](../../public/manual/12-libreta-nivelacion.png)
+
+Dos columnas: a la izquierda, el BM, la libreta y su comprobación aritmética;
+a la derecha, el perfil, que se queda fijo mientras baja la página.
+
+**El BM.** Una tarjeta con el código y la cota del BM de partida y hacia dónde
+va: el circuito de una cerrada, el BM de llegada de una de enlace o el final
+sin cota conocida de una abierta. **Editar** abre su popup: el código y la
+cota y, en la de enlace, los del BM de llegada. Cambiar la cota del BM
+recalcula todas las cotas de la libreta, y cambiar su código cambia también
+las filas de la libreta que lo llevan.
+
+**La tabla de la hoja.** Como la cartera: **Punto**, **V+** y su distancia,
+**AI**, **V−** y su distancia, **VI** —la lectura de una vista intermedia— y
+la **cota**, sin compensar. Los rótulos marcan el **BM**, las vistas
+**intermedias** y, en una abierta, el **fin de la ida**. Con vuelta, un
+selector **Ida | Vuelta** cambia de recorrido. Las lecturas van con tres
+decimales, o con cuatro si vienen de un nivel digital.
+
+La tabla es de solo lectura: el **lápiz** de cada fila abre la armada que esa
+fila cierra; el del BM de partida, la primera, y el de una vista intermedia,
+la suya. **+ Agregar armada** abre la siguiente. Cuando la ida llega a su fin
+y hay vuelta, **Seguir con la vuelta** abre la primera armada de la vuelta,
+que parte del BM de partida en una cerrada, del de llegada en una de enlace o
+del final de la ida en una abierta. Una libreta vacía muestra solo la fila
+del BM, con **+ Agregar la primera armada** e **Importar .L o CSV**.
+
+**El popup de armada.**
+
+![La armada 2 de la ida de El Verjón](../../public/manual/32-armada-nivelacion.png)
+
+- Arriba, dónde está el nivel: «El nivel entre C 1, ya con cota, y el punto
+  siguiente».
+- **Vista atrás · V+**: la lectura y la distancia.
+- **Vista adelante · V−**: el punto, su lectura y su distancia.
+- En cada visual, **+ Hilos superior e inferior (opcional)**. Con los dos, la
+  distancia sale de ellos —(superior − inferior) × 100— y el campo lo dice:
+  «de los hilos». La aplicación comprueba además que la lectura sea el
+  promedio de los dos hilos, a 2 mm. Sin hilos, la distancia se teclea.
+- **+ Vista intermedia**: el punto y la lectura de una radiación de esta
+  armada.
+- En la última armada, la **casilla de fin**: **Llega al BM** en la cerrada,
+  que fija el punto en el BM de partida; **Llega a** el BM de llegada en la de
+  enlace; **Fin de la ida** en la abierta; y en la vuelta, **Llega a** el BM
+  de partida.
+- Abajo, en vivo: la **altura del instrumento**, la **cota del punto
+  adelante** y las dos distancias.
+
+**Guardar y seguir desde C 2** guarda y abre la armada siguiente; **Guardar**
+guarda y cierra el popup. Con la casilla de fin marcada y vuelta por medir,
+**Guardar y seguir con la vuelta**. En la última armada, **Quitar la armada**
+la borra. Editar una armada del medio solo cambia sus filas: el punto de
+cambio que la cierra conserva su V+, que abre la siguiente.
+
+Los errores se detectan al confirmar y se quedan en el popup, sin perder lo
+tecleado: una lectura fuera de 0 a 4 m, una distancia que falta o es cero, un
+hilo superior que no es mayor que el inferior, un punto sin código, o llegar
+al BM sin marcar la casilla de fin.
 
 > **La distancia a cada mira es obligatoria en los BM y en los puntos de
 > cambio.** Sin ella el recorrido no acumula, la distancia total sale menor de
-> la real y el punto de cierre queda mal corregido — con el proceso informando
-> que cumple. Los puntos intermedios no la necesitan: no acumulan distancia.
-> Tiene que ser mayor que cero: una distancia de cero o negativa es un error
-> de captura.
+> la real y el punto de cierre queda mal corregido. Los puntos intermedios no
+> la necesitan: no acumulan distancia. La distancia acumulada y la total
+> **no se teclean**: la aplicación las suma sola.
 
-**Los tres hilos, con nivel automático.** Si el proceso declara un nivel
-automático, la libreta ofrece capturar los tres hilos estadimétricos de cada
-visual. Marque «Capturar los tres hilos» y aparecerán las casillas del hilo
-superior y el inferior; la aplicación calcula entonces la distancia por
-taquimetría, `D = (HS − HI) × 100`, y rellena la lectura de mira con el hilo
-medio si aún está vacía.
+> **La libreta a medias se guarda.** Cada armada se guarda al confirmar,
+> aunque el recorrido no haya llegado a su BM. Mientras tanto la nivelación
+> está *En progreso* y la compensación espera: se calcula cuando la ida —y la
+> vuelta, si la hay— llega a su fin.
 
-Son **opcionales**: si midió la distancia a cinta, teclee la distancia y deje
-los hilos en blanco. Y si ya anotó la lectura, teclear los hilos no la
-sobrescribe.
+**El perfil.** Lo medido, sin compensar: la cota de cada punto frente a la
+distancia y, por cada armada, la **mira atrás** (V+), la **visual** a la
+altura del instrumento con el nivel, y la **mira adelante** (V−). Con vuelta,
+las armadas del otro recorrido se dibujan **tenues**. El BM de partida va
+siempre a la izquierda; arriba, la exageración vertical. «Ver datos en tabla»
+da los mismos valores en texto.
 
-Cuando están los tres, la aplicación comprueba que el hilo medio sea el
-promedio de los otros dos. Si no cuadra, avisa: es un error de lectura o de
-transcripción.
+**Comprobación aritmética.** Bajo la tabla: ΣV+ − ΣV− frente a la cota final
+menos la inicial —**cuadra** si coinciden— y la distancia del recorrido. Es
+una verificación de gabinete: confirma que las sumas y traslados de la libreta
+son correctos, **no dice nada sobre la calidad de la medición** —cuadra igual
+con un nivel descolimado—. Los puntos intermedios quedan fuera de esta suma.
 
-**Equilibrado de visuales.** Una armada son las dos visuales de una misma
-puesta del nivel: **la V+ de un punto y la V− del siguiente**. Con sus dos
-distancias, la aplicación avisa si quedaron muy distintas. El aviso aparece en
-la distancia V− que cierra la armada y la nombra —«Armada C 1 → C 2»—; las
-vistas intermedias no abren ni cierran armada. Equilibrarlas cancela el error
-de colimación del nivel, así que es la regla de campo más importante de la
-nivelación de precisión. El límite depende del orden y es el de la norma
-(FGCS, 1984): 2 m en primer orden, 5 en segundo y 10 en tercero y en
-ordinario.
+En el teléfono, un selector **Tabla | Perfil** alterna entre las dos columnas,
+y la libreta se ve como una lista por armada (§ 9).
 
-**Equilibrado acumulado.** Armadas dentro de su límite pueden sumar un
-desequilibrio grande si se desequilibran siempre hacia el mismo lado, y el
-error de colimación crece con esa suma. La aplicación suma la diferencia de
-las armadas de cada **sección** —de un BM al siguiente— y avisa en la distancia
-V− que la cierra si pasa de 4 m en primer orden o de 10 m en los demás:
-«Sección D1 → D4: las visuales de atrás suman 53.3 m más que las de
-adelante». Mientras captura, el aviso sale en la última armada en cuanto la
-suma pasa el límite, para compensarla en las siguientes. Una ida y una vuelta
-que se desequilibran igual se sesgan igual, y la discrepancia entre las dos no
-lo ve; este aviso, sí.
+### 6.7 Paso 2 · Compensación
 
-> Con **nivel digital** el instrumento entrega la distancia y no se leen
-> hilos: se teclean la lectura y la distancia.
+![Paso de Compensación de El Verjón](../../public/manual/33-compensacion-nivelacion.png)
 
-**Perfil de la nivelación.** Bajo la libreta, la cota de cada punto frente a
-su distancia acumulada desde el origen: la ida con su cota corregida y, si hay
-vuelta, la vuelta con su cota calculada sobre el mismo eje. Las vistas
-intermedias van como anillos sueltos. «Ver datos en tabla» da los mismos
-valores en texto.
+**El método.** Corrección proporcional a la distancia, el único, con una
+frase que dice qué error se reparte según el tipo.
 
-**Comprobación aritmética.** ΣV+ − ΣV− debe coincidir con el
-desnivel total del recorrido. Es una verificación de gabinete: confirma que
-las sumas y traslados de la libreta son correctos, **no dice nada sobre la
-calidad de la medición** — cuadra igual con un nivel descolimado. Los puntos
-intermedios quedan fuera de esta suma.
-
-**Cierre.** El error de cierre se compara contra la tolerancia K·√D, donde D
-es la distancia del recorrido **en un solo sentido**, en kilómetros, y K
-depende del orden de precisión que declaró el proceso:
+**El orden alcanzado.** Cuatro cifras: el **error de cierre** —en una abierta
+con vuelta, la **discrepancia**—, la **distancia**, la **tolerancia** del
+orden alcanzado y el **orden alcanzado**: el más alto cuya tolerancia K·√D
+cumple el trabajo. D es la distancia del recorrido **en un solo sentido**, en
+kilómetros, y K depende del orden:
 
 | Orden | K (mm) |
 |---|---|
@@ -800,38 +843,71 @@ depende del orden de precisión que declaró el proceso:
 | Tercer orden | 12 |
 | Ordinario | 24 |
 
-**Corrección proporcional a la distancia.** Si el cierre cumple la
-tolerancia, la aplicación reparte el error entre los puntos según su
-distancia acumulada, que es el recorrido **desde el origen hasta el punto**:
-llega hasta su V− y no cuenta la V+ que sale de él hacia la armada siguiente.
-A mayor distancia del origen, mayor corrección. **El BM de partida no se
-corrige**: su cota es conocida. Y el **BM final cierra exacto** contra la suya,
-con corrección igual y de signo opuesto al error de cierre.
+**Por qué** despliega los cuatro órdenes con su tolerancia y si el trabajo la
+cumple. En una cerrada o de enlace con vuelta, cada recorrido se juzga con su
+propia distancia y tienen que cumplir los dos. En una abierta con vuelta se
+juzga la discrepancia contra K·√D·√2, con D el más corto de los dos
+recorridos. En El Verjón, la discrepancia de 5.0 mm cabe en segundo orden
+(5.3 mm) y no en primero (2.6 mm): **segundo orden**. El tramo 2 cierra en
+−0.4 mm frente a 3.5 mm: **primer orden**.
 
-### 6.6 Ida y vuelta
+> **El orden no se declara: se detecta.** Antes la nivelación declaraba su
+> orden y, si no lo cumplía, no se compensaba. Ahora se compensa y se dice qué
+> orden alcanzó, como en la poligonal.
 
-Al activar el recorrido de vuelta, la libreta muestra dos pestañas. Ida y
-vuelta son **mediciones independientes**. En campo se hace de dos maneras:
-con puntos de cambio propios en cada sentido, o **volviendo por los mismos
-puntos**. La aplicación admite las dos.
+**Se compensa siempre** que haya contra qué cerrar: la cerrada, la de enlace y
+la abierta con vuelta. Si el trabajo no alcanza ni el ordinario, se compensa
+igual y un aviso lo dice: «No alcanza ningún orden: la compensación se aplicó
+igual. En la práctica, un trabajo fuera de tolerancia se repite».
+
+**La tabla.** Sin vuelta: **Punto**, **Dist. acum.**, **Cota medida**,
+**Corrección (mm)** y **Cota ajustada**. Con vuelta: la **cota de la ida** y
+la de la **vuelta** de cada punto, su diferencia —**Vuelta − ida (mm)**—, la
+corrección de cada recorrido y la cota ajustada. Un punto que se lee dos
+veces —el BM de una cerrada— va en sus dos filas.
+
+La corrección es proporcional a la distancia acumulada, que es el recorrido
+**desde el origen hasta el punto**: llega hasta su V− y no cuenta la V+ que
+sale de él hacia la armada siguiente. A mayor distancia del origen, mayor
+corrección. **El BM de partida no se corrige**: su cota es conocida. Y el
+**punto de cierre cierra exacto** contra la suya.
+
+**La cota ajustada.** Una por punto: el promedio de sus cotas compensadas si
+se leyó dos veces —en la ida y en la vuelta, o al ir y al volver de un mismo
+recorrido—, su cota compensada si se leyó una, y la cota conocida en el BM de
+partida y, en la de enlace, en el de llegada.
+
+**El gráfico.** Uno solo: la **cota ajustada**, a escala, y lo **medido**
+—la ida y, si la hay, la vuelta— separado de ella con la diferencia
+**exagerada ×1000**: 1 mm se dibuja como 1 m. Las cifras de los extremos son
+esa diferencia, en mm. En El Verjón, la ida va 1.0 mm por encima en C 1, la
+vuelta 6.0 mm por debajo, y las dos llegan a D4 2.5 mm por debajo de su cota
+ajustada.
+
+Una **abierta sin vuelta** no se compensa: el paso dice **Sin compensación**
+y muestra la comprobación aritmética. Una libreta a medias dice qué recorrido
+falta terminar y qué casilla marcar. Una libreta que **no encadena** —un punto
+de cambio al que le falta la V+ o la V−, o una comprobación aritmética que no
+cuadra— tampoco se compensa: la libreta y este paso dicen qué fila revisar,
+porque sus cotas salen de una altura de instrumento equivocada.
+
+### 6.8 Ida y vuelta
+
+Ida y vuelta son **mediciones independientes**. En campo se hace de dos
+maneras: con puntos de cambio propios en cada sentido, o **volviendo por los
+mismos puntos**. La aplicación admite las dos.
 
 La aplicación compara los **desniveles totales** de ambos recorridos. La
 discrepancia entre ellos se contrasta contra **T·√2**, donde T es la misma
 tolerancia K·√D del cierre individual, con D la menor de las dos distancias.
 
-- En una **abierta**, la discrepancia es el veredicto del proceso: la muestran
-  la lista de procesos del proyecto, el dashboard y el informe, y si no
-  cumple el proceso solo puede cerrarse como **rechazado**. Si a la ida o a la
-  vuelta les falta la distancia a las miras, no se puede juzgar y el proceso
-  no se cierra.
+- En una **abierta**, la discrepancia es el veredicto: decide el orden
+  alcanzado, y la muestran la lista de procesos del proyecto y el informe.
 - En una **cerrada** o **de enlace**, el veredicto es el cierre de **cada
-  recorrido**: la ida y la vuelta tienen que cumplir cada una su tolerancia
-  K·√D, con su propia distancia. Si una no cumple, el proceso solo puede
-  cerrarse como **rechazado**, y el diálogo dice cuál. La discrepancia es un
-  control más, que el informe también imprime.
+  recorrido**, cada uno con su propia distancia. La discrepancia es un control
+  más.
 
-**Cómo se compensa con vuelta.** Si el trabajo cumple, las dos medidas entran
-en las cotas:
+**Cómo se compensa con vuelta.**
 
 - En una **abierta**, ida y vuelta forman un **circuito** que sale del BM de
   partida y vuelve a él. Lo que la vuelta llega de más o de menos al BM es el
@@ -844,42 +920,27 @@ en las cotas:
 **La cota del BM de partida no cambia nunca**, y tampoco la del BM de
 llegada en una de enlace: son datos, no mediciones.
 
-**Cotas adoptadas.** Si la vuelta pasa por los mismos puntos, cada uno queda
-en la libreta con dos cotas compensadas, una por pasada. Resultados, el
-informe y el Excel añaden una tabla, **Cotas adoptadas**, con una sola cota
-por punto: el promedio de las dos si se leyó dos veces, su cota compensada si
-se leyó una, y la cota conocida en el BM de partida.
-
 En El Verjón el circuito mide 781.9 m y cierra en −5.0 mm. D4 queda en
-3315.0855, el promedio de lo que dicen la ida (3315.083) y la vuelta
-(3315.088), y C1 en 3289.4400, entre sus dos cotas compensadas, 3289.4414 y
+3315.0855, entre lo que dicen la ida (3315.083) y la vuelta (3315.088), y C 1
+en 3289.4400, el promedio de sus dos cotas compensadas, 3289.4414 y
 3289.4386. Lo mismo vale para un recorrido único que vuelve por sus propios
 puntos, como el tramo 2.
 
-**Puntos homólogos.** Si la ida y la vuelta pasan por los mismos puntos,
-Resultados añade una tabla que compara la cota de cada punto en los dos
-recorridos: cota de la vuelta menos cota de la ida, con las cotas sin
-compensar. Los códigos se emparejan sin distinguir espacios ni mayúsculas
-(`AUX1` y `AUX 1` son el mismo punto).
+**Vuelta − ida, punto a punto.** Si la vuelta pasa por los mismos puntos, la
+tabla de la compensación compara la cota de cada punto en los dos recorridos,
+con las cotas sin compensar. Los códigos se emparejan sin distinguir espacios
+ni mayúsculas (`AUX1` y `AUX 1` son el mismo punto). Un único número de
+discrepancia esconde lo que la serie deja ver:
 
-![Puntos homólogos del crudo de nivel digital leído como ida y vuelta](../../public/manual/24-puntos-homologos.png)
-
-Un único número de discrepancia esconde lo que la serie deja ver:
-
-- si el residuo **crece a lo largo del recorrido**, hay un error sistemático
-  repartido;
+- si la diferencia **crece a lo largo del recorrido**, hay un error
+  sistemático repartido;
 - si **salta en un punto**, revise ese punto.
 
-En la imagen, la discrepancia es de 0.4 mm, pero a mitad del recorrido las dos
-mediciones difieren en 5 mm. La tabla es informativa: no cambia el veredicto.
-Un código que se repite dentro de un recorrido —el BM de partida de una
-cerrada— no se compara, porque no se sabe con cuál de sus cotas.
-
-### 6.7 Importar desde archivo
+### 6.9 Importar desde archivo
 
 Con un nivel digital, las lecturas y las distancias ya están en un archivo.
-**Importar desde archivo** —en la libreta de una nivelación sin cerrar, o al
-crear una nueva— las pasa a la libreta sin teclearlas.
+**Importar .L o CSV** —a la derecha de los pasos, o en la libreta vacía— las
+pasa a la libreta sin teclearlas.
 
 ![Importar el crudo de un nivel digital Leica](../../public/manual/23-importar-nivelacion.png)
 
@@ -907,17 +968,32 @@ El instrumento mide dos veces cada visual; se guarda el **promedio**,
 redondeado a 0.1 mm. El diálogo muestra la mayor diferencia entre las dos
 lecturas y la mayor desviación típica del instrumento, como control.
 
-Al aceptar, la libreta se reemplaza, el nivel pasa a **digital** y se propone
-el tipo de proceso: **cerrada** si el recorrido vuelve a su BM, **abierta con
-vuelta** si es ida y vuelta. En el editor **no se guarda nada hasta que pulse
-Guardar**; al crear, el proceso nace con sus lecturas.
+Al aceptar, la libreta se reemplaza y **se guarda**, y se propone el tipo de
+proceso: **cerrada** si el recorrido vuelve a su BM, **abierta con vuelta**
+si es ida y vuelta. Después, cada armada se corrige con su lápiz.
 
-### 6.8 Cierre
+### 6.10 Paso 3 · Informe
 
-Cerrar una nivelación la deja en solo lectura hasta que se reabra (§ 8). Un trabajo que no alcanza la tolerancia —en una cerrada o de enlace
-con vuelta, la de cualquiera de los dos recorridos; en una abierta con vuelta,
-la de su discrepancia— solo puede cerrarse como **rechazado**; no hay forma
-de cerrarlo como conforme si no cumple.
+El informe de la nivelación, listo para **Imprimir o guardar como PDF**
+(§ 10). Es la misma sección que lleva en un informe consolidado, y cambia
+según el tipo.
+
+Arriba, el **resumen**: el tipo, los BM, la distancia y el equipo; las cifras
+del orden alcanzado, y por qué lo alcanza —«La discrepancia cabe en la
+tolerancia de segundo orden, no en la de primer orden (2.6 mm)»—. Si no
+alcanza ninguno, una alerta lo dice. Después:
+
+1. **Datos iniciales**: la libreta —la ida y, si la hay, la vuelta— con sus
+   lecturas, su distancia acumulada y la cota medida.
+2. **Datos ajustados**: el método en una frase, con el error que se repartió,
+   y la cota ajustada de cada punto. Con vuelta, junto a la cota de la ida y
+   la de la vuelta; en una cerrada que vuelve por sus puntos, junto a sus dos
+   lecturas; en las demás, junto a la cota medida y su corrección.
+3. **El gráfico** de la compensación.
+
+Una abierta sin vuelta no tiene datos ajustados: el informe dice que no tiene
+verificación. No lleva marca de borrador: la nivelación no se cierra, y el
+informe muestra lo que tenga al abrirlo.
 
 ---
 
@@ -1017,9 +1093,9 @@ y la siguiente —pueden pasar meses—, así que cada visita lleva su propio
 equipo, no el lugar.
 
 **La libreta de nivelación.** En una visita con libreta, las cotas de los
-puntos de control **no se teclean: salen de la libreta**. Es la misma tabla
-de la nivelación (§ 6.2 a § 6.5) —V+, V−, distancia a cada mira, hilos con
-nivel automático— y forma un **circuito cerrado sobre el BM de amarre**: la
+puntos de control **no se teclean: salen de la libreta**. Es la libreta de la
+nivelación (§ 6.2 y § 6.3) —V+, V−, distancia a cada mira, hilos con nivel
+automático— y forma un **circuito cerrado sobre el BM de amarre**: la
 primera y la última fila son el amarre.
 
 ![Editor de la visita: cabecera, libreta de nivelación y cotas de los puntos de control](../../public/manual/16-editor-visita.png)
@@ -1040,8 +1116,10 @@ Debajo de la tabla, el resumen: ΣV+, ΣV−, el error de cierre y la tolerancia
 K·√D del orden de la visita.
 
 **De dónde sale la cota de cada punto.** De la fila de la libreta con su
-código y con **vista menos**. Si el cierre cumple la tolerancia, es la cota
-**compensada**, como en nivelación (§ 6.5); si no, la calculada. La tabla
+código y con **vista menos**. Si el cierre cumple la tolerancia del orden de
+la visita, es la cota **compensada** (§ 6.7); si no, la calculada: a
+diferencia de una nivelación, la visita no compensa un cierre fuera de
+tolerancia. La tabla
 **Cotas de los puntos de control**, bajo la libreta, las muestra en solo
 lectura, y el servidor las recalcula al pulsar **Guardar visita**.
 
@@ -1093,7 +1171,7 @@ comparó: si después se corrige el catálogo, una visita cerrada no cambia.
 
 **Importar la libreta.** Con un nivel digital, **Importar desde archivo** pasa
 a la libreta el archivo **.L de Leica** o la **plantilla CSV** de TopoField,
-como en nivelación (§ 6.7), con dos diferencias: el archivo se lee siempre
+como en nivelación (§ 6.9), con dos diferencias: el archivo se lee siempre
 como **un solo recorrido** —el circuito cerrado sobre el amarre, sin ida y
 vuelta— y **el amarre sale de su primera fila**: si la visita no tenía o
 tenía otro, se propone el del archivo. Si la visita ya tenía libreta, se
@@ -1348,35 +1426,24 @@ se exige en las visitas desde esa fecha y no en las anteriores.
 
 ## 8. Cerrar un proceso
 
-Se cierran las **nivelaciones** (§ 6.8) y, en control de asentamientos, las
-**visitas** y el **lugar** (§ 7.6). **La poligonal no se cierra**: queda
-calculada y se corrige cuando haga falta; su informe dice qué orden alcanzó y
-alerta si no alcanza ninguno (§ 5.7).
+En control de asentamientos se cierran las **visitas** y el **lugar** (§ 7.6).
+**La poligonal y la nivelación no se cierran**: quedan calculadas y se
+corrigen cuando haga falta; su informe dice qué orden alcanzaron y alerta si
+no alcanzan ninguno (§ 5.7 y § 6.10).
 
-Cerrar deja el trabajo en solo lectura. Antes de permitirlo, la aplicación
-comprueba la nivelación y decide entre tres desenlaces:
-
-| Situación | Qué ocurre |
-|---|---|
-| Cumple la tolerancia | Se cierra como **Cerrado** |
-| No alcanza la tolerancia | Solo se puede cerrar como **Rechazado** |
-| La comprobación aritmética no cuadra, o hay errores de captura | **No se puede cerrar.** Corrija la libreta |
-
-Un trabajo rechazado se hizo, pero no alcanza la calidad exigida: queda
-documentado como tal y no entra en informes consolidados.
-
-El diálogo de cierre resume el resultado y la fecha. Debe marcar la
-confirmación explícitamente. Cerrado, el proceso se abre en solo lectura: los
+Cerrar deja el trabajo en solo lectura. El diálogo de cierre resume el
+resultado y la fecha, y debe marcar la confirmación explícitamente. Si la
+comprobación aritmética de la libreta de una visita no cuadra, no se puede
+cerrar: corrija la libreta. Cerrado, el trabajo se abre en solo lectura: los
 campos están deshabilitados y no hay barra de acciones. Su pestaña
-**Informe** ya no lleva la marca de borrador: es el informe del proceso
+**Informe** ya no lleva la marca de borrador: es el informe del trabajo
 cerrado.
 
-**Reabrir.** Un proceso cerrado o rechazado se reabre con **Reabrir**, en la
-cabecera. Vuelve a *Calculado*: se edita, se guarda y se cierra otra vez con
-el diálogo de siempre. Se borra su registro de cierre —fecha y responsable—,
-y el nuevo cierre escribe el suyo. Si el proceso está en un informe
-consolidado, el diálogo lo avisa: el informe mostrará los datos nuevos
-(§ 10.1).
+**Reabrir.** Una visita o un lugar cerrados se reabren con **Reabrir**.
+Vuelven a editarse, y se cierran otra vez con el diálogo de siempre. Se borra
+su registro de cierre —fecha y responsable—, y el nuevo cierre escribe el
+suyo. Si el lugar está en un informe consolidado, el diálogo lo avisa: el
+informe mostrará los datos nuevos (§ 10.1).
 
 ---
 
@@ -1415,37 +1482,38 @@ Hay dos clases de informe:
 
 - **El informe de un proceso** está en su pestaña **Informe**
   ([§ 4.4](#44-la-pantalla-de-un-proceso)): no hay que generarlo. Mientras el
-  proceso no esté cerrado sale como borrador; el de una poligonal, que no se
-  cierra, sin marca.
+  proceso no esté cerrado sale como borrador; el de una poligonal o una
+  nivelación, que no se cierran, sin marca.
 - **Un informe consolidado** reúne varios trabajos ya terminados de un
   proyecto en un solo documento imprimible, con título, orden y observaciones
   propios. Se genera en la pestaña **Informes** del proyecto.
 
 Los dos llevan el registro de quién cerró cada cosa y cuándo, con el nombre
-de la persona. Las poligonales no tienen fila en él: no se cierran.
+de la persona. Las poligonales y las nivelaciones no tienen fila en él: no
+se cierran.
 
 ### 10.1 Qué puede incluirse
 
-**Poligonales calculadas y procesos cerrados**, en un informe consolidado. El
+**Poligonales y nivelaciones calculadas y lugares cerrados**, en un informe
+consolidado. El
 informe no guarda una copia de las mediciones: las vuelve a leer cada vez que
 se abre. Solo guarda su título, sus observaciones, la lista de procesos y la
 portada del día en que se emitió (§ 10.3).
 
-- Una nivelación o un lugar **cerrados** no pueden cambiar sus mediciones ni
-  su veredicto mientras sigan cerrados, así que su sección dice lo mismo hoy y
-  dentro de un año. Si se reabre (§ 8), el informe muestra sus datos actuales
-  y, mientras siga abierto, «—» en su registro de cierre, y el pie dice que se
-  reabrió después de emitirlo.
-- Una **poligonal** no se cierra: entra calculada, cumpla o no un orden, y su
-  sección muestra lo que tenga al abrir el informe. Si no alcanza ningún
-  orden, la sección lo alerta.
+- Un lugar **cerrado** no puede cambiar sus mediciones ni su veredicto
+  mientras siga cerrado, así que su sección dice lo mismo hoy y dentro de un
+  año. Si se reabre (§ 8), el informe muestra sus datos actuales y, mientras
+  siga abierto, «—» en su registro de cierre, y el pie dice que se reabrió
+  después de emitirlo.
+- Una **poligonal** o una **nivelación** no se cierran: entran calculadas,
+  cumplan o no un orden, y su sección muestra lo que tengan al abrir el
+  informe. Si no alcanzan ningún orden, la sección lo alerta. Una nivelación
+  con la libreta a medias no entra.
 
 Un PDF ya descargado no cambia.
 
-De ahí se siguen dos consecuencias:
+De ahí se sigue una consecuencia:
 
-- Un proceso **rechazado no se puede incluir**. Queda como constancia del
-  trabajo, pero no se informa.
 - En control de asentamientos, lo que se incluye es el **lugar cerrado**, no
   una visita suelta. Un lugar todavía activo admite visitas nuevas, así que su
   informe cambiaría solo.
@@ -1456,7 +1524,8 @@ ofrecer un formulario que no llevaría a ninguna parte.
 ### 10.2 Generar un informe consolidado
 
 En la pestaña **Informes** del proyecto, pulse **Generar Nuevo Informe**. Desde
-la pestaña **Informe** de un proceso cerrado o de una poligonal calculada,
+la pestaña **Informe** de un lugar cerrado o de una poligonal o una nivelación
+calculadas,
 **Generar un informe consolidado con este proceso** abre el mismo formulario
 con ese proceso ya marcado.
 
@@ -1467,7 +1536,7 @@ Se pide:
 | Campo | Para qué |
 |---|---|
 | Título | Encabeza la portada del documento |
-| Procesos a incluir | Marque los que quiera; aparecen las poligonales calculadas y los procesos cerrados |
+| Procesos a incluir | Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares cerrados |
 | Orden de las secciones | Con las flechas ↑ ↓ ordena cómo saldrán |
 | Observaciones | Texto libre que se imprime al final |
 
@@ -1505,13 +1574,18 @@ Cada proceso tiene un botón **Exportar a Excel** en la cabecera de su pantalla
 |---|---|
 | Datos Crudos | Las lecturas de campo tal como se capturaron, sin modificar |
 | Cálculos | Lo que la aplicación derivó: cotas, coordenadas, correcciones |
-| Resumen | Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados |
+| Resumen | Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados; en una nivelación, el orden alcanzado |
 
 Con **mínimos cuadrados**, «Cálculos» añade la corrección de cada ángulo y la
 distancia ajustada, y «Resumen» los pesos y σ₀. El informe imprimible también
 indica los pesos y σ₀ de cada poligonal ajustada así.
 Si la poligonal se georreferenció, «Resumen» lleva además la sección
 «Georreferenciación», con la última.
+
+En una nivelación, el libro lleva una cuarta hoja, **«Cotas ajustadas»**: una
+cota por punto, con cuántas lecturas la forman y de dónde sale (§ 6.7). El
+libro da lo que daría guardar la nivelación ahora: el orden detectado y las
+cotas compensadas, también en una guardada antes de que el orden se detectara.
 
 En control de asentamientos, «Datos Crudos» añade un bloque **«Visitas»**
 con el modo de captura, el BM de amarre, el cierre y la tolerancia de cada
@@ -1536,7 +1610,7 @@ serie, fecha de calibración y precisión: angular y de distancia en una
 estación total; tipo y desviación típica en un nivel. Cada sección tiene
 **Agregar**, y cada equipo **Editar** y **Eliminar**.
 
-En el formulario de equipo de cada nivelación y visita:
+En el formulario de equipo de cada visita:
 
 - **Tomar del catálogo** copia los datos del equipo elegido en los campos, que
   siguen editables.
@@ -1544,17 +1618,16 @@ En el formulario de equipo de cada nivelación y visita:
   —misma marca, modelo y serie— ya está, el botón dice «Ya está en el
   catálogo».
 
-En una poligonal, el equipo es solo su identidad —marca, modelo y número de
-serie—, y **Tomar del catálogo** la copia.
+En una poligonal y en una nivelación, el equipo es solo su identidad —marca,
+modelo y número de serie—, y **Tomar del catálogo** la copia.
 
 > **El catálogo es una plantilla.** Cada proceso guarda su propia copia del
 > equipo: corregir o eliminar un equipo del catálogo no cambia ningún
 > proceso, visita ni informe ya hecho.
 
 **Calibración de más de un año.** La lista y el formulario avisan cuando la
-fecha de calibración tiene más de 12 meses: a la fecha de la visita en
-asentamientos, a hoy en nivelación. Es un aviso; el proceso se
-guarda igual.
+fecha de calibración tiene más de 12 meses: en una visita, a la fecha de la
+visita. Es un aviso; la visita se guarda igual.
 
 ---
 
@@ -1565,15 +1638,15 @@ En el menú de cuenta —el círculo con su inicial, arriba a la derecha—:
 **Sistema**, **Claro** u **Oscuro** (§ 2). Con **Sistema**, sigue la
 configuración del teléfono o del computador.
 
-**Cerré un proceso por error. ¿Puedo reabrirlo?**
-Sí: con **Reabrir**, en la cabecera del proceso (§ 8). Vuelve a ser editable
-y se cierra otra vez cuando esté listo.
+**Cerré una visita o un lugar por error. ¿Puedo reabrirlo?**
+Sí: con **Reabrir** (§ 8). Vuelve a ser editable y se cierra otra vez cuando
+esté listo.
 
-**¿Cómo cierro una poligonal?**
-No se cierra: queda calculada y se corrige cuando haga falta. El paso de
-Ajuste y su informe dicen qué orden de precisión alcanzó (§ 5.5); si no
-alcanza ninguno, el informe lo alerta. Un informe consolidado la incluye
-calculada.
+**¿Cómo cierro una poligonal o una nivelación?**
+No se cierran: quedan calculadas y se corrigen cuando haga falta. El paso de
+Ajuste o de Compensación y su informe dicen qué orden de precisión alcanzaron
+(§ 5.5 y § 6.7); si no alcanzan ninguno, el informe lo alerta. Un informe
+consolidado las incluye calculadas.
 
 **¿Por qué una poligonal muestra «Sin verificación de cierre»?**
 Es de tipo *abierta sin control*: no regresa al punto de partida ni llega a un
@@ -1585,15 +1658,16 @@ Que el cierre fue exacto: el error lineal es cero o despreciable. Ocurre con
 datos teóricos o levantamientos muy precisos.
 
 **¿Dónde declaro el equipo y el orden de precisión que usé?**
-En cada proceso, no en el proyecto. Cada nivelación y cada visita de
-asentamiento declara su orden y su equipo en su propia configuración. Una
-poligonal declara su equipo en el alta, y su orden no se declara: se detecta
-al calcularla (§ 5.5). Si el equipo es el de siempre, tómelo del catálogo de
-equipos (§ 12).
+En cada proceso, no en el proyecto. Cada visita de asentamiento declara su
+orden y su equipo en su propia configuración. Una poligonal o una nivelación
+declara su equipo en el alta, y su orden no se declara: se detecta al
+calcularla (§ 5.5 y § 6.7). Si el equipo es el de siempre, tómelo del
+catálogo de equipos (§ 12).
 
-**Cambié el orden de precisión de una nivelación abierta. ¿Se recalcula?**
-Sí, al recalcularla. Una cerrada conserva su veredicto original, porque es
-inmutable.
+**Mi nivelación no alcanza ningún orden. ¿Por qué se compensó?**
+Porque la nivelación compensa siempre que haya contra qué cerrar, y avisa:
+en la práctica, un trabajo fuera de tolerancia se repite (§ 6.7). Una visita
+de asentamientos, en cambio, no compensa un cierre fuera de tolerancia.
 
 **Levanté una poligonal en un sistema local. ¿Puedo pasarla a coordenadas
 reales?**
@@ -1602,24 +1676,23 @@ o editando el amarre con las coordenadas reales de la partida y la referencia.
 El orden alcanzado no cambia.
 
 **¿Qué pasa si el equipo que declaro no alcanza el orden que elegí?**
-En una nivelación o una visita, la aplicación no lo juzga: registra el equipo
-para el informe, y lo que dice si el trabajo cumple es el cierre contra la
-tolerancia del orden. Si el equipo no da para el orden, lo más probable es que
-el cierre no cumpla. Una poligonal no elige orden: alcanza el que su cierre
-permite.
+En una visita, la aplicación no lo juzga: registra el equipo para el informe,
+y lo que dice si el trabajo cumple es el cierre contra la tolerancia del
+orden. Si el equipo no da para el orden, lo más probable es que el cierre no
+cumpla. Una poligonal o una nivelación no eligen orden: alcanzan el que su
+cierre permite.
 
 **Mi nivelación cuadra en la comprobación aritmética. ¿Ya sé que la medición
 está bien?**
 No. La comprobación aritmética (ΣV+ − ΣV− = desnivel total) solo
 valida que las cuentas de gabinete están bien hechas: cuadra igual con un
 nivel descolimado. La calidad de la medición la juzga el error de cierre
-contra la tolerancia K·√D.
+contra la tolerancia K·√D, en el paso de Compensación (§ 6.7).
 
-**¿Por qué una fila de mi libreta de nivelación no admite corrección?**
-Le falta la distancia a alguna de sus miras. Es obligatoria en los puntos BM y
-de cambio: sin ella el recorrido no acumula, la distancia total sale menor de
-la real y el punto de cierre queda mal corregido. La distancia acumulada no se
-teclea — la calcula la aplicación sumando las distancias por visual.
+**¿Por qué mi nivelación dice «Sin compensación todavía»?**
+Porque la libreta no ha llegado a su BM: falta marcar la casilla de fin en
+la última armada —«Llega al BM», «Llega a …» o «Fin de la ida»—, o terminar
+la vuelta. El paso de Compensación dice qué falta (§ 6.7).
 
 **Un punto quedó en alarma. ¿Puedo seguir guardando y cerrando la visita?**
 Sí. El semáforo es un diagnóstico, no un bloqueo: un punto en alerta o alarma
@@ -1643,15 +1716,15 @@ fijo. Un intervalo de 28 días y uno de 31 producen velocidades distintas
 aunque el asentamiento parcial fuera idéntico.
 
 **¿Puedo eliminar un proyecto?**
-Si no tiene nada cerrado, sí, desde **Configuración**. Si tiene algún proceso,
-lugar o visita cerrados, no: esos registros no se borran. Archívelo para
-ocultarlo de la lista activa (§ 4.2).
+Si no tiene nada cerrado, sí, desde **Configuración**. Si tiene algún lugar o
+visita de asentamientos cerrados, no: esos registros no se borran. Archívelo
+para ocultarlo de la lista activa (§ 4.2).
 
 **Salí de un editor y perdí lo que había tecleado.**
 Si pulsó un enlace de la aplicación o recargó la página, la aplicación o el
 navegador le preguntó antes. Los botones atrás y adelante del navegador no
-preguntan: guarde antes de usarlos (§ 4.4). En una poligonal no hay qué perder:
-cada popup guarda al confirmar.
+preguntan: guarde antes de usarlos (§ 4.4). En una poligonal o una nivelación
+no hay qué perder: cada popup guarda al confirmar.
 
 **¿Otros usuarios pueden ver mis proyectos?**
 No. Cada usuario accede solo a los suyos; la restricción se aplica en la base de

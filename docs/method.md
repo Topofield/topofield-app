@@ -45,6 +45,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 33 | Header compacto | [`prds/32-header-compacto.md`](./prds/32-header-compacto.md) | cerrada |
 | 34 | Reabrir procesos | [`prds/33-reabrir-procesos.md`](./prds/33-reabrir-procesos.md) | cerrada |
 | 35 | La poligonal como la mide el topógrafo | [`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md) | cerrada |
+| 36 | La nivelación como la mide el topógrafo | [`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -558,6 +559,34 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 36 — La nivelación como la mide el topógrafo (2026-10-07)
+
+Las divergencias están en el PRD-de-fase (`prds/35-ux-nivelacion.md`), como
+en la Fase 35.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Capturar en pantalla un tipo distinto del de la maqueta destapa lo que el
+  plan no vio.** El plan se probó con El Verjón, una abierta; al capturar una
+  cerrada armada por armada, la segunda armada no se guardaba: el servidor
+  exigía que la libreta terminara en el BM. De ahí `pendingRun` y la libreta
+  a medias. La verificación en pantalla tiene que recorrer cada tipo, no solo
+  el de la maqueta.
+- **`git rm` deja el borrado preparado, y el siguiente `git commit` sin rutas
+  se lo lleva.** Pasó dos veces en la fase: los borrados entraron en un commit
+  ajeno y hubo que rehacerlo. Antes de cada commit, `git diff --cached
+  --name-status`.
+- **Una exportación que lee columnas guardadas miente sobre lo guardado con
+  otra regla.** El orden detectado cambió el significado de `precision_order`
+  y `meets_tolerance`; el Excel seguía leyéndolos. Cuando una fase cambia una
+  regla de cálculo, todo lo que muestra resultados debe recalcular con la
+  misma función que guarda (`levelingRecordOf`), o la deuda tiene que decir
+  qué queda leyendo lo viejo.
+- **Una prueba de migración que copia la sentencia de la migración no prueba
+  la migración.** La de reabrir lo cerrado (paso 1) repetía el `UPDATE`; con
+  el paso 2 ya ni se puede simular. Probar una migración es aplicarla sobre
+  datos sembrados antes de ella.
 
 ### Cierre Fase 34 — Reabrir procesos (2026-10-03)
 

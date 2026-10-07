@@ -79,8 +79,8 @@ export async function faltaProyectoDemo(
  * Un proyecto con dos lugares que recorre los tres módulos con carteras de
  * campo reales (Fase 21): los levantamientos (poligonales TT4 y Sede Vivero,
  * nivelaciones de El Verjón y del tramo 2) y Torre Alameda, la simulación del
- * prototipo de asentamientos. Uno de cada módulo queda cerrado para emitir sus
- * tres informes.
+ * prototipo de asentamientos. Un trabajo de cada módulo alimenta su informe:
+ * la TT4 y el tramo 2, calculados, y Torre Alameda, cerrada.
  *
  * Devuelve `true` si lo creó, `false` si ya lo tenía. Quien la llama debe
  * envolverla en try/catch: un fallo aquí no puede dejar al usuario fuera de su
@@ -156,19 +156,11 @@ export async function crearProyectoDemo(
     }
   }
 
-  // --- Nivelaciones: El Verjón (calculada) y el tramo 2 (cerrada). ----------
-  let nivelacionCerrada: { id: string; name: string } | null = null;
+  // --- Nivelaciones: El Verjón y el tramo 2, calculadas (Fase 36). ---------
+  let nivelacionInforme: { id: string; name: string } | null = null;
   for (const nivelacion of [NIVELACION_VERJON, nivelacionTramo2()]) {
-    const id = await insertarNivelacion(
-      supabase,
-      proyecto.id,
-      lote.id,
-      userId,
-      nivelacion,
-    );
-    if (nivelacion.status === "closed") {
-      nivelacionCerrada = { id, name: nivelacion.name };
-    }
+    const id = await insertarNivelacion(supabase, proyecto.id, lote.id, nivelacion);
+    if (nivelacion.informe) nivelacionInforme = { id, name: nivelacion.name };
   }
 
   // --- Asentamientos: Torre Alameda, cerrada tras sus catorce visitas. ------
@@ -202,17 +194,17 @@ export async function crearProyectoDemo(
           },
         ]
       : []),
-    ...(nivelacionCerrada
+    ...(nivelacionInforme
       ? [
           {
             title: "Informe de cierre — Nivelación",
             observations:
-              "Tramo 2 medido con nivel digital, de C10 a C10, dentro de la tolerancia de tercer orden.",
+              "Tramo 2 medido con nivel digital, de C10 a C10: cierra en −0.4 mm y alcanza primer orden.",
             included: [
               {
                 type: "leveling" as const,
-                id: nivelacionCerrada.id,
-                name: nivelacionCerrada.name,
+                id: nivelacionInforme.id,
+                name: nivelacionInforme.name,
                 order: 0,
               },
             ],

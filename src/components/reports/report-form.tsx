@@ -27,8 +27,8 @@ function claveDe(c: { kind: string; id: string }): string {
 }
 
 /**
- * Alta de un informe (§ 4.7): elegir los procesos (poligonales calculadas y lo
- * demás cerrado, Fase 35), ordenarlos, poner
+ * Alta de un informe (§ 4.7): elegir los procesos (poligonales y nivelaciones
+ * calculadas y lugares cerrados, Fases 35 y 36), ordenarlos, poner
  * título y observaciones.
  *
  * El orden se maneja con botones «subir/bajar» y no con arrastrar y soltar,
@@ -108,7 +108,7 @@ export function ReportForm({ projectId, candidates, initialSelected = [] }: Repo
       <Card>
         <EmptyState
           title="Todavía no hay procesos para informar"
-          description="Un informe consolidado incluye poligonales calculadas y nivelaciones y controles de asentamientos cerrados. Calcula una poligonal, o cierra una nivelación o un control de asentamientos, para generarlo."
+          description="Un informe consolidado incluye poligonales y nivelaciones calculadas y controles de asentamientos cerrados. Calcula una poligonal o una nivelación, o cierra un control de asentamientos, para generarlo."
         />
       </Card>
     );

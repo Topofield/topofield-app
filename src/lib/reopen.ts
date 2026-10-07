@@ -2,12 +2,14 @@
 // `ReopenDialog` los aplican, y la base admite la transición
 // (`20261003000000_reabrir_procesos.sql`).
 
-/** Lo que se reabre: un proceso (poligonal o nivelación), una visita o un lugar. */
-export type ReopenTarget = "process" | "visit" | "site";
+/**
+ * Lo que se reabre: una visita o un lugar. La poligonal (Fase 35) y la
+ * nivelación (Fase 36) no se cierran.
+ */
+export type ReopenTarget = "visit" | "site";
 
 /** El estado al que vuelve cada uno (decisión 5 del PRD). */
 const REOPENED_STATUS = {
-  process: "calculated",
   visit: "calculated",
   site: "active",
 } as const satisfies Record<ReopenTarget, string>;
@@ -21,23 +23,21 @@ export function reopenPatch<T extends ReopenTarget>(target: T) {
 }
 
 const NOT_CLOSED: Record<ReopenTarget, string> = {
-  process: "El proceso no está cerrado.",
   visit: "La visita no está cerrada.",
   site: "El lugar no está cerrado.",
 };
 
 /**
- * Por qué no se puede reabrir, o null si se puede. Un proceso rechazado
- * también se reabre. Una visita de un lugar cerrado espera al lugar: el
- * trigger del lugar rechaza escribir sus visitas (decisión 6).
+ * Por qué no se puede reabrir, o null si se puede. Una visita de un lugar
+ * cerrado espera al lugar: el trigger del lugar rechaza escribir sus visitas
+ * (decisión 6).
  */
 export function reopenBlocker(
   target: ReopenTarget,
   status: string,
   siteStatus?: string,
 ): string | null {
-  const closed = status === "closed" || (target === "process" && status === "rejected");
-  if (!closed) return NOT_CLOSED[target];
+  if (status !== "closed") return NOT_CLOSED[target];
   if (target === "visit" && siteStatus === "closed") {
     return "El lugar está cerrado: reábrelo primero.";
   }
@@ -58,10 +58,6 @@ export function reportsNotice(titles: string[]): string | null {
 
 /** Título y explicación del diálogo de cada caso. */
 export const REOPEN_COPY: Record<ReopenTarget, { title: string; body: string }> = {
-  process: {
-    title: "Reabrir proceso",
-    body: "El proceso vuelve a ser editable y deja de contar como cerrado hasta que lo cierres otra vez. Se borra su registro de cierre: la fecha y el responsable.",
-  },
   visit: {
     title: "Reabrir visita",
     body: "La visita vuelve a ser editable y deja de contar como cerrada hasta que la cierres otra vez. Se borra su registro de cierre: la fecha y el responsable.",

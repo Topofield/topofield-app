@@ -46,8 +46,8 @@ export async function createProjectAction(
 
   // Todo proceso (poligonal, nivelación, asentamientos) pertenece a un lugar
   // desde la Fase 5 (`site_id` es NOT NULL en los tres). Un proyecto sin
-  // lugar sería un proyecto en el que no se puede trabajar: ni
-  // el alta de la poligonal ni `leveling/new` encontrarían dónde colgar el proceso.
+  // lugar sería un proyecto en el que no se puede trabajar: ni el alta de la
+  // poligonal ni la de la nivelación encontrarían dónde colgar el proceso.
   // Se crea aquí, junto con el proyecto, en vez de dejar que el usuario lo
   // cree a mano después. "Área principal" y no el nombre del proyecto: el
   // nombre del proyecto ya se ve en el hub que envuelve al lugar, así que

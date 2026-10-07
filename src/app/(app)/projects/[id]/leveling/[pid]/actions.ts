@@ -3,21 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logDbError } from "@/lib/errors/user-message";
-import {
-  computeLeveling,
-  levelingProcessVerdict,
-  totalDistanceFromReadings,
-} from "@/lib/calculations/leveling";
+import { draftOfPayload, levelingRecordOf } from "@/components/leveling/leveling-save";
 import { hasReadingErrors, validateRunCapture } from "@/lib/validators/leveling";
-import { deriveLevelingCloseStatus } from "./close-status";
-import { reopenProcess } from "@/lib/supabase/reopen-process";
-import type {
-  LevelingInput,
-  LevelingType,
-  PointType,
-  ReadingInput,
-} from "@/types/leveling";
-import type { LevelType, PrecisionOrder } from "@/types/project";
+import type { LevelingType, PointType } from "@/types/leveling";
 
 export interface ActionResult {
   ok: boolean;
@@ -51,59 +39,25 @@ export interface SaveLevelingPayload {
   notes: string | null;
   forward: ReadingDraft[];
   return: ReadingDraft[];
-  /** Orden de precisión y equipo (nivel, ISO 17123-2). */
-  precisionOrder: PrecisionOrder;
+  /** Los datos del alta (Fase 36). */
+  location: string | null;
+  responsibleName: string | null;
+  responsibleRole: string | null;
+  /**
+   * Identidad del nivel (Fase 36): marca, modelo y serie. La calibración, el
+   * tipo de nivel y la σ ya no se piden; el guardado no los toca y se
+   * conservan los de antes.
+   */
   equipmentBrand: string | null;
   equipmentModel: string | null;
   equipmentSerial: string | null;
-  equipmentCalibrationDate: string | null;
-  levelType: LevelType | null;
-  kmPrecisionMm: number | null;
-}
-
-export interface CloseLevelingPayload {
-  processId: string;
-  asRejected: boolean;
-}
-
-function toReadingInput(draft: ReadingDraft): ReadingInput {
-  return {
-    pointCode: draft.pointCode,
-    pointType: draft.pointType,
-    backsight: draft.backsight,
-    foresight: draft.foresight,
-    backUpperM: draft.backUpperM,
-    backLowerM: draft.backLowerM,
-    foreUpperM: draft.foreUpperM,
-    foreLowerM: draft.foreLowerM,
-    backDistanceM: draft.backDistanceM,
-    foreDistanceM: draft.foreDistanceM,
-    // Derivado por el motor a partir de las distancias por visual; lo que
-    // envíe el cliente no se usa.
-    distanceAccumulatedKm: null,
-  };
-}
-
-function buildInput(payload: SaveLevelingPayload): LevelingInput {
-  return {
-    type: payload.type,
-    startElevation: payload.startBmElevation,
-    endElevation: payload.type === "link" ? payload.endBmElevation : null,
-    order: payload.precisionOrder,
-    forward: payload.forward.map(toReadingInput),
-    return: payload.hasReturnRun ? payload.return.map(toReadingInput) : null,
-    // Guardar deja `distances_reconstructed = false` (las distancias pasan a
-    // ser las de la libreta), así que se calcula con la regla del acumulado
-    // desde el origen (Fase 19), la de un proceso no reconstruido.
-    distancesReconstructed: false,
-  };
 }
 
 /**
- * Guarda la configuración, las lecturas y los resultados de un proceso. El
- * servidor recalcula con computeLeveling para que los resultados persistidos
- * sean autoritativos: no se confía en lo que envía el cliente. Rechaza
- * procesos cerrados (inmutabilidad, § 4.6).
+ * Guarda la cabecera, las lecturas y los resultados de un proceso. El
+ * servidor recalcula con `computeLevelingDetected` para que los resultados
+ * persistidos sean autoritativos: no se confía en lo que envía el cliente. La
+ * nivelación no se cierra desde la Fase 36: siempre se puede guardar.
  */
 export async function saveLevelingProcessAction(
   payload: SaveLevelingPayload,
@@ -116,23 +70,20 @@ export async function saveLevelingProcessAction(
     .eq("id", payload.processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado; no admite cambios." };
-  }
 
-  const input = buildInput(payload);
+  // La entrada, el cálculo con el orden detectado y lo que se guarda salen de
+  // `levelingRecordOf`, el mismo que usa la exportación a Excel.
+  const record = levelingRecordOf(draftOfPayload(payload));
+  const { input } = record;
 
   // --- Revalidación en el servidor -----------------------------------------
   // La clave publicable de Supabase es pública por diseño: una llamada
   // directa a esta acción podría guardar una libreta que la interfaz habría
   // bloqueado. Antes solo se recalculaban los resultados, de modo que los
   // números eran del servidor pero los datos de campo no se comprobaban.
-  const forwardIssues = validateRunCapture(
-    input.forward,
-    input.type,
-    payload.precisionOrder,
-    false,
-  );
+  // La libreta puede ir a medias: se captura por armada y se guarda tras
+  // cada una (Fase 36).
+  const forwardIssues = validateRunCapture(input.forward, input.type, { allowUnfinished: true });
   if (hasReadingErrors(forwardIssues)) {
     return {
       ok: false,
@@ -140,12 +91,7 @@ export async function saveLevelingProcessAction(
     };
   }
   if (input.return) {
-    const returnIssues = validateRunCapture(
-      input.return,
-      input.type,
-      payload.precisionOrder,
-      false,
-    );
+    const returnIssues = validateRunCapture(input.return, input.type, { allowUnfinished: true });
     if (hasReadingErrors(returnIssues)) {
       return {
         ok: false,
@@ -153,61 +99,6 @@ export async function saveLevelingProcessAction(
       };
     }
   }
-
-  const result = computeLeveling(input);
-
-  // El total se deriva en el servidor, igual que el resto de resultados. Que
-  // el cliente lo mandara no lo haría autoritativo: la clave publicable de
-  // Supabase es pública por diseño y una llamada directa podría enviar
-  // cualquier número. De ese número depende la tolerancia K·√D.
-  const totalDistanceKm = totalDistanceFromReadings(input.forward);
-
-  const computed = result.forward.readings.length > 0;
-  const status = computed
-    ? "calculated"
-    : payload.forward.length > 0
-      ? "in_progress"
-      : "draft";
-
-  function runRows(
-    runType: "forward" | "return",
-    drafts: ReadingDraft[],
-    computedReadings: typeof result.forward.readings,
-  ) {
-    return drafts.map((draft, i) => {
-      const r = computedReadings[i];
-      return {
-        run_type: runType,
-        reading_order: i + 1,
-        point_code: draft.pointCode,
-        point_type: draft.pointType,
-        backsight: draft.backsight,
-        foresight: draft.foresight,
-        back_upper_m: draft.backUpperM,
-        back_lower_m: draft.backLowerM,
-        fore_upper_m: draft.foreUpperM,
-        fore_lower_m: draft.foreLowerM,
-        // Resueltas por el motor: derivadas de los hilos cuando los hay.
-        // Persistir la tecleada sola dejaría la celda vacía en un proceso
-        // capturado por taquimetría, y el informe lee la fila sin recalcular.
-        back_distance_m: r?.backDistanceResolvedM ?? null,
-        fore_distance_m: r?.foreDistanceResolvedM ?? null,
-        // Derivado: lo escribe el motor, no el borrador del cliente.
-        distance_accumulated_km: r?.distanceAccumulatedKm ?? null,
-        instrument_height: r?.instrumentHeight ?? null,
-        elevation_calculated: r?.elevationCalculated ?? null,
-        elevation_corrected: r?.elevationCorrected ?? null,
-        correction_applied: r?.correctionApplied ?? null,
-      };
-    });
-  }
-
-  const rows = [
-    ...runRows("forward", payload.forward, result.forward.readings),
-    ...(payload.hasReturnRun && result.return != null
-      ? runRows("return", payload.return, result.return.readings)
-      : []),
-  ];
 
   // Cabecera y lecturas en una sola transacción (Fase 23): si falla un paso no
   // queda nada a medias. Las lecturas se reemplazan por completo.
@@ -221,39 +112,18 @@ export async function saveLevelingProcessAction(
       end_bm_code: payload.endBmCode,
       end_bm_elevation: payload.type === "link" ? payload.endBmElevation : null,
       has_return_run: payload.hasReturnRun,
-      total_distance_km: totalDistanceKm,
-      // Guardar reemplaza la libreta entera, así que las distancias dejan de
-      // ser las que inventó el backfill de la Fase 9 repartiendo por mitades.
-      // Sin esto el proceso quedaba marcado para siempre: el banner seguiría
-      // afirmando que sus distancias son reconstruidas —falso sobre datos ya
-      // medidos en campo, en una aplicación cuyo tema es la trazabilidad— y el
-      // equilibrado quedaría suprimido justo sobre las distancias reales que
-      // sí permiten evaluarlo.
-      distances_reconstructed: false,
-      precision_order: payload.precisionOrder,
       equipment_brand: payload.equipmentBrand,
       equipment_model: payload.equipmentModel,
       equipment_serial: payload.equipmentSerial,
-      equipment_calibration_date: payload.equipmentCalibrationDate,
-      level_type: payload.levelType,
-      km_precision_mm: payload.kmPrecisionMm,
-      closure_error_mm: result.closureErrorMm,
-      tolerance_mm: result.toleranceMm,
-      // El veredicto guardado: el cierre, o la discrepancia en una abierta
-      // con vuelta (Fase 23).
-      meets_tolerance: levelingProcessVerdict(result, payload.type),
-      forward_error_mm: result.forward.errorMm,
-      return_error_mm: result.return?.errorMm ?? null,
-      discrepancy_mm: result.discrepancyMm,
-      discrepancy_tolerance_mm:
-        result.discrepancyToleranceMm == null
-          ? null
-          : Number(result.discrepancyToleranceMm.toFixed(1)),
-      meets_discrepancy: result.meetsDiscrepancy,
+      location: payload.location,
+      responsible_name: payload.responsibleName,
+      responsible_role: payload.responsibleRole,
       notes: payload.notes,
-      status,
+      // Los resultados, el orden detectado y el estado (Fase 36): el total se
+      // deriva en el servidor, porque de él depende la tolerancia K·√D.
+      ...record.header,
     },
-    p_readings: rows,
+    p_readings: record.rows,
   });
   if (saveError) {
     return { ok: false, error: logDbError(saveError, "No se pudo guardar el proceso.") };
@@ -262,57 +132,6 @@ export async function saveLevelingProcessAction(
   revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);
   revalidatePath(`/projects/${process.project_id}`);
   return { ok: true };
-}
-
-/**
- * Cierra un proceso (como `closed` o `rejected`) registrando la trazabilidad.
- *
- * El `status` final lo decide el servidor (`deriveLevelingCloseStatus`), no
- * el `asRejected` que manda el cliente: ver el comentario de esa función
- * para el porqué. El diálogo de cierre (`close-process-dialog.tsx`) sigue
- * evaluando `evaluateLevelingClosure` para la experiencia normal — esto es
- * defensa en profundidad detrás de la UI, no un reemplazo.
- */
-export async function closeLevelingProcessAction(
-  payload: CloseLevelingPayload,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Sesión no válida." };
-
-  const { data: process } = await supabase
-    .from("leveling_processes")
-    .select("id, status, project_id, type, has_return_run, meets_tolerance")
-    .eq("id", payload.processId)
-    .maybeSingle();
-  if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso ya está cerrado." };
-  }
-
-  const derived = deriveLevelingCloseStatus(process, payload.asRejected);
-  if (!derived.ok) return { ok: false, error: derived.error };
-
-  const { error } = await supabase
-    .from("leveling_processes")
-    .update({
-      status: derived.status,
-      closed_at: new Date().toISOString(),
-      closed_by: user.id,
-    })
-    .eq("id", payload.processId);
-  if (error) return { ok: false, error: "No se pudo cerrar el proceso." };
-
-  revalidatePath(`/projects/${process.project_id}/leveling/${payload.processId}`);
-  revalidatePath(`/projects/${process.project_id}`);
-  return { ok: true };
-}
-
-/** Reabre una nivelación cerrada o rechazada (Fase 34): ver `reopenProcess`. */
-export async function reopenLevelingProcessAction(processId: string): Promise<ActionResult> {
-  return reopenProcess("leveling", processId);
 }
 
 /**
@@ -341,6 +160,9 @@ export async function duplicateLevelingProcessAction(
     end_bm_code: original.end_bm_code,
     end_bm_elevation: original.end_bm_elevation,
     has_return_run: original.has_return_run,
+    location: original.location,
+    responsible_name: original.responsible_name,
+    responsible_role: original.responsible_role,
     correction_method: original.correction_method,
     precision_order: original.precision_order,
     equipment_brand: original.equipment_brand,
@@ -358,7 +180,7 @@ export async function duplicateLevelingProcessAction(
   return { ok: true };
 }
 
-/** Renombra una nivelación (Fase 22). Rechaza las cerradas: son inmutables. */
+/** Renombra una nivelación (Fase 22). */
 export async function renameLevelingProcessAction(
   processId: string,
   name: string,
@@ -373,9 +195,6 @@ export async function renameLevelingProcessAction(
     .eq("id", processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado y no puede modificarse." };
-  }
 
   const { error } = await supabase
     .from("leveling_processes")
@@ -387,10 +206,7 @@ export async function renameLevelingProcessAction(
   return { ok: true };
 }
 
-/**
- * Elimina una nivelación con sus lecturas (Fase 22). Rechaza las cerradas:
- * son inmutables, y la base también lo impide.
- */
+/** Elimina una nivelación con sus lecturas (Fase 22). */
 export async function deleteLevelingProcessAction(
   processId: string,
 ): Promise<ActionResult> {
@@ -401,9 +217,6 @@ export async function deleteLevelingProcessAction(
     .eq("id", processId)
     .maybeSingle();
   if (!process) return { ok: false, error: "Proceso no encontrado." };
-  if (process.status === "closed" || process.status === "rejected") {
-    return { ok: false, error: "El proceso está cerrado y no puede eliminarse." };
-  }
 
   const { error } = await supabase.from("leveling_processes").delete().eq("id", processId);
   if (error) return { ok: false, error: logDbError(error, "No se pudo eliminar el proceso.") };
