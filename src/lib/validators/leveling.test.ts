@@ -10,7 +10,6 @@
 
 import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
-import { nivelacionTramo2 } from "@/lib/demo/fixtures";
 import {
   evaluateLevelingClosure,
   findIncompleteTurningPoint,
@@ -18,11 +17,8 @@ import {
   turningPointBlocker,
   validateReadingCapture,
   validateRunCapture,
-  validateSectionBalances,
-  validateSightBalances,
 } from "./leveling";
 import type { LevelingResult, ReadingInput } from "@/types/leveling";
-import type { PrecisionOrder } from "@/types/project";
 
 // --- Ayudantes ---------------------------------------------------------------
 
@@ -137,284 +133,19 @@ describe("validación de distancia por visual", () => {
   });
 });
 
-describe("el equilibrado se evalúa en la ruta REAL de captura", () => {
-  // En la Fase 9 la función del equilibrado existía, estaba probada y NO la
-  // llamaba nadie: el criterio de aceptación 8 de la fase no se cumplía. Estos tests van por
-  // validateRunCapture, que es la puerta por la que pasan las filas de verdad
-  // (la usan el editor y el Server Action).
-  const armada = (over: Partial<ReadingInput> = {}) => [
-    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: 30 }),
-    bare({
-      pointCode: "PC-1", pointType: "pc",
-      foresight: 1.2, backsight: 2.0,
-      foreDistanceM: 30, backDistanceM: 30,
-      ...over,
-    }),
-    bare({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, foreDistanceM: 30 }),
-  ];
-
-  it("avisa del desequilibrio desde validateRunCapture", () => {
-    // tercer_orden admite 10 m; aquí las dos armadas difieren 15.
-    const issues = validateRunCapture(
-      armada({ backDistanceM: 45, foreDistanceM: 15 }),
-      "closed",
-      "tercer_orden",
-      false,
-    );
-    expect(issues[1]?.warnings.sightBalance).toBeDefined();
-  });
-
-  it("no avisa cuando las visuales están equilibradas", () => {
-    const issues = validateRunCapture(armada(), "closed", "tercer_orden", false);
-    expect(issues[1]?.warnings.sightBalance).toBeUndefined();
-  });
-
-  it("no lo evalúa en un proceso reconstruido por el backfill", () => {
-    const issues = validateRunCapture(
-      armada({ backDistanceM: 45, foreDistanceM: 15 }),
-      "closed",
-      "tercer_orden",
-      true,
-    );
-    expect(issues[1]?.warnings.sightBalance).toBeUndefined();
-  });
-
-  it("el aviso NO bloquea el guardado", () => {
-    const issues = validateRunCapture(
-      armada({ backDistanceM: 45, foreDistanceM: 15 }),
-      "closed",
-      "tercer_orden",
-      false,
-    );
-    expect(hasReadingErrors(issues)).toBe(false);
-  });
-});
-
-describe("equilibrado de visuales, por armada (Fase 19, N7)", () => {
-  // Una armada es la V+ de un punto y la V− del siguiente punto que no sea
-  // intermedio. Hasta la Fase 19 se comparaban la V+ y la V− de UNA MISMA fila,
-  // que en un punto de cambio son de armadas distintas.
-  const armada = (back: number, fore: number) => [
-    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: back }),
-    bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: fore }),
-  ];
-
-  it("avisa en la V− que cierra la armada, y la nombra", () => {
-    // tercer_orden admite 10 m; aquí hay 20.
-    const w = validateSightBalances(armada(40, 20), "tercer_orden", false);
-    expect(w[0]).toBeUndefined();
-    expect(w[1]).toBe(
-      "Armada BM-1 → BM-2: visuales desequilibradas, 20.0 m de diferencia; el límite del orden es 10 m.",
-    );
-  });
-
-  it("no avisa dentro del límite", () => {
-    expect(validateSightBalances(armada(31.5, 28.5), "tercer_orden", false)).toEqual([undefined, undefined]);
-  });
-
-  it("NO evalúa en un proceso reconstruido por el backfill", () => {
-    // Allí las distancias se repartieron por mitades: el equilibrado saldría
-    // de un reparto inventado, un aviso (o un silencio) sin fundamento.
-    expect(validateSightBalances(armada(40, 20), "tercer_orden", true)).toEqual([undefined, undefined]);
-  });
-
-  it("una intermedia no abre ni cierra armada", () => {
+describe("validateRunCapture — sin equilibrado de visuales (Fase 36)", () => {
+  it("una armada de 31.5 m atrás y 8.4 m adelante no avisa", () => {
     const rows = [
-      bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: 30 }),
-      bare({ pointCode: "RAD", pointType: "intermediate", foresight: 1.0, foreDistanceM: 5 }),
-      bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: 29 }),
+      bare({ pointCode: "D1", pointType: "bm", backsight: 1.209, backDistanceM: 31.5 }),
+      bare({ pointCode: "C 1", pointType: "pc", foresight: 0.268, foreDistanceM: 8.4 }),
     ];
-    expect(validateSightBalances(rows, "tercer_orden", false)).toEqual([undefined, undefined, undefined]);
+    const issues = validateRunCapture(rows, "open");
+    expect(issues.every((i) => Object.keys(i.warnings).length === 0)).toBe(true);
   });
 
-  it("sin la distancia de una de las dos visuales no se evalúa", () => {
-    const rows = [
-      bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5 }),
-      bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: 29 }),
-    ];
-    expect(validateSightBalances(rows, "tercer_orden", false)).toEqual([undefined, undefined]);
-  });
-
-  it("la ida de El Verjón: avisa en C 2, C 3, C 4 y D3, no en C 7 ni C 8", () => {
-    // docs/carteras/TRABAJO NIVELACION EL VERJON-corregido.xlsx: la hoja de
-    // campo calcula cada armada como V+ del punto i + V− del punto i+1
-    // (M4 = I3 + K6…). La fila C 1 compara 28.1 con 28.5 y parecía equilibrada;
-    // su armada con C 2 difiere 10.8 m. Con el límite de tercer orden de la
-    // FGCS (10 m, Fase 32), C 6 → C 7 (8.2 m) y D3 → C 8 (7.1 m) ya no avisan.
-    const rows = deCartera(CARTERA_VERJON.ida);
-    const w = validateSightBalances(rows, "tercer_orden", false);
-    const flagged = rows.filter((_, i) => w[i]).map((r) => r.pointCode);
-    expect(flagged).toEqual(["C 2", "C 3", "C 4", "D3"]);
-    expect(w[2]).toContain("Armada C 1 → C 2");
-    expect(w[2]).toContain("10.8 m");
-    expect(w[5]).toContain("Armada C 3 → C 4");
-    expect(w[9]).toContain("Armada C 7 → D3");
-    expect(w[9]).toContain("15.8 m");
-  });
-
-  it("la vuelta de El Verjón: solo avisa C 1 → D1, con 19.7 m", () => {
-    const rows = deCartera(CARTERA_VERJON.vuelta);
-    const w = validateSightBalances(rows, "tercer_orden", false);
-    const flagged = rows.filter((_, i) => w[i]).map((r) => r.pointCode);
-    expect(flagged).toEqual(["D1"]);
-    expect(w.at(-1)).toContain("Armada C 1 → D1");
-    expect(w.at(-1)).toContain("19.7 m");
-  });
-});
-
-describe("límites del equilibrado por armada: los de la FGCS 1984 (Fase 32, D-3)", () => {
-  // FGCS 1984, § 3.5, p. 3-7 (y NGS 3, tabla 3-1): 2 m en 1.º I, 5 m en 2.º I
-  // y 10 m en 3.º. Ordinario no está en la norma y toma el del tercero. La
-  // diferencia igual al límite no avisa; 0.1 m más, sí. Las distancias son de
-  // las que en coma flotante no restan exacto (35.2 − 30.2 = 5.0000000000000036).
-  const armada = (back: number, fore: number) => [
-    bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.5, backDistanceM: back }),
-    bare({ pointCode: "BM-2", pointType: "bm", foresight: 1.2, foreDistanceM: fore }),
-  ];
-  const cases: { order: PrecisionOrder; back: number; atLimit: number; over: number; limit: string }[] = [
-    { order: "primer_orden", back: 30.2, atLimit: 32.2, over: 32.3, limit: "2 m" },
-    { order: "segundo_orden", back: 30.2, atLimit: 35.2, over: 35.3, limit: "5 m" },
-    { order: "tercer_orden", back: 30.2, atLimit: 40.2, over: 40.3, limit: "10 m" },
-    // La V− más larga que la V+: el límite vale en los dos sentidos.
-    { order: "ordinario", back: 40.2, atLimit: 30.2, over: 30.1, limit: "10 m" },
-  ];
-
-  for (const c of cases) {
-    it(`${c.order}: avisa por encima de ${c.limit}, no en el límite`, () => {
-      expect(validateSightBalances(armada(c.back, c.atLimit), c.order, false)[1]).toBeUndefined();
-      expect(validateSightBalances(armada(c.back, c.over), c.order, false)[1]).toContain(
-        `el límite del orden es ${c.limit}.`,
-      );
-    });
-  }
-});
-
-describe("acumulado del equilibrado por sección (Fase 32, D-3)", () => {
-  // FGCS 1984, § 3.5, p. 3-7: la diferencia acumulada por sección no pasa de
-  // 4 m en 1.º I y de 10 m en los demás órdenes. NGS 3 (§ 5.5.2): el error de
-  // colimación de una sección es −C·ΣΔs, y depende del acumulado.
-  const bm = (code: string, back: number | null, fore: number | null, bd: number | null, fd: number | null) =>
-    bare({ pointCode: code, pointType: "bm", backsight: back, foresight: fore, backDistanceM: bd, foreDistanceM: fd });
-  const pc = (code: string, bd: number, fd: number) =>
-    bare({ pointCode: code, pointType: "pc", backsight: 1.5, foresight: 1.2, backDistanceM: bd, foreDistanceM: fd });
-
-  it("la ida de El Verjón: +53.3 m, avisa en D4 y nombra la sección", () => {
-    const rows = deCartera(CARTERA_VERJON.ida);
-    const w = validateSectionBalances(rows, "tercer_orden", false);
-    expect(w.slice(0, -1).every((x) => x === undefined)).toBe(true);
-    expect(w.at(-1)).toBe(
-      "Sección D1 → D4: las visuales de atrás suman 53.3 m más que las de adelante; el límite acumulado del orden es 10 m.",
-    );
-  });
-
-  it("la vuelta de El Verjón: −52.2 m, avisa en D1 con el signo contrario", () => {
-    const rows = deCartera(CARTERA_VERJON.vuelta);
-    const w = validateSectionBalances(rows, "tercer_orden", false);
-    expect(w.slice(0, -1).every((x) => x === undefined)).toBe(true);
-    expect(w.at(-1)).toBe(
-      "Sección D4 → D1: las visuales de adelante suman 52.2 m más que las de atrás; el límite acumulado del orden es 10 m.",
-    );
-  });
-
-  it("el tramo 2 acumula 1.4 m: no avisa", () => {
-    const rows = nivelacionTramo2().forward.map((r) =>
-      bare({
-        pointCode: r.code,
-        pointType: r.type,
-        backsight: r.back ?? null,
-        foresight: r.fore ?? null,
-        backDistanceM: r.backDistanceM ?? null,
-        foreDistanceM: r.foreDistanceM ?? null,
-      }),
-    );
-    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
-  });
-
-  it("primer orden: avisa por encima de 4 m, no en el límite", () => {
-    // Dos armadas de +2 m: cada una en el límite por armada, 4 m acumulados.
-    const enLimite = [bm("BM-1", 1.5, null, 32.2, null), pc("PC-1", 32.2, 30.2), bm("BM-2", null, 1.2, null, 30.2)];
-    expect(validateSectionBalances(enLimite, "primer_orden", false).at(-1)).toBeUndefined();
-    const pasa = [bm("BM-1", 1.5, null, 32.3, null), pc("PC-1", 32.2, 30.2), bm("BM-2", null, 1.2, null, 30.2)];
-    expect(validateSectionBalances(pasa, "primer_orden", false).at(-1)).toContain(
-      "el límite acumulado del orden es 4 m.",
-    );
-  });
-
-  it("exactamente en el límite no avisa, aunque la suma en coma flotante no dé 10", () => {
-    // 3.3 + 3.3 + 3.4 = 10.0 m, que en coma flotante suma 9.999999999999993 o
-    // 10.000000000000002 según el orden.
-    const rows = [
-      bm("BM-1", 1.5, null, 33.3, null),
-      pc("PC-1", 33.3, 30.0),
-      pc("PC-2", 33.4, 30.0),
-      bm("BM-2", null, 1.2, null, 30.0),
-    ];
-    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
-  });
-
-  it("un BM intermedio cierra una sección y abre otra", () => {
-    // +8 m en cada sección: 16 m en el recorrido, pero ninguna sección pasa de 10.
-    const rows = [
-      bm("BM-1", 1.5, null, 38, null),
-      bm("BM-2", 1.4, 1.3, 38, 30),
-      bm("BM-3", null, 1.2, null, 30),
-    ];
-    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
-  });
-
-  it("un BM cierra su sección aunque al punto anterior le falte la V+", () => {
-    // Captura a medias: PC-1 no tiene V+, así que la V− de BM-2 no cierra
-    // armada. BM-2 cierra igual la sección: +8 m en cada una, nunca 16.
-    const rows = [
-      bm("BM-1", 1.5, null, 38, null),
-      bare({ pointCode: "PC-1", pointType: "pc", foresight: 1.2, foreDistanceM: 30 }),
-      bm("BM-2", 1.4, 1.3, 38, 30),
-      bm("BM-3", null, 1.2, null, 30),
-    ];
-    expect(validateSectionBalances(rows, "tercer_orden", false).every((x) => x === undefined)).toBe(true);
-  });
-
-  it("la segunda sección avisa con su BM de arranque", () => {
-    const rows = [
-      bm("BM-1", 1.5, null, 30, null),
-      bm("BM-2", 1.4, 1.3, 42, 30),
-      bm("BM-3", null, 1.2, null, 30),
-    ];
-    const w = validateSectionBalances(rows, "tercer_orden", false);
-    expect(w[1]).toBeUndefined();
-    expect(w[2]).toBe(
-      "Sección BM-2 → BM-3: las visuales de atrás suman 12.0 m más que las de adelante; el límite acumulado del orden es 10 m.",
-    );
-  });
-
-  it("un recorrido a medias avisa en su última armada", () => {
-    // Sin BM de cierre todavía: el acumulado se juzga en la última V−, para
-    // corregirlo en las armadas siguientes (NGS 3, § 3.5.2).
-    const rows = [bm("BM-1", 1.5, null, 40, null), pc("PC-1", 40, 30), pc("PC-2", 40, 30)];
-    const w = validateSectionBalances(rows, "tercer_orden", false);
-    expect(w[1]).toBeUndefined();
-    expect(w[2]).toContain("Sección BM-1 → PC-2: las visuales de atrás suman 20.0 m");
-  });
-
-  it("una armada sin una de sus distancias no suma", () => {
-    const rows = [
-      bm("BM-1", 1.5, null, 45, null),
-      pc("PC-1", 45, 30),
-      bm("BM-2", null, 1.2, null, null),
-    ];
-    // Solo cuenta BM-1 → PC-1 (+15 m); PC-1 → BM-2 no tiene la V−.
-    expect(validateSectionBalances(rows, "tercer_orden", false).at(-1)).toContain("suman 15.0 m");
-  });
-
-  it("NO evalúa en un proceso reconstruido por el backfill", () => {
-    const rows = deCartera(CARTERA_VERJON.ida);
-    expect(validateSectionBalances(rows, "tercer_orden", true).every((x) => x === undefined)).toBe(true);
-  });
-
-  it("llega a la captura por validateRunCapture, sin bloquear", () => {
-    const issues = validateRunCapture(deCartera(CARTERA_VERJON.ida), "open", "tercer_orden", false);
-    expect(issues.at(-1)?.warnings.sectionBalance).toContain("Sección D1 → D4");
-    expect(issues.slice(0, -1).every((i) => i.warnings.sectionBalance === undefined)).toBe(true);
+  it("la ida de El Verjón, con 53.3 m más atrás que adelante, no avisa", () => {
+    const issues = validateRunCapture(deCartera(CARTERA_VERJON.ida), "open");
+    expect(issues.every((i) => Object.keys(i.warnings).length === 0)).toBe(true);
     expect(hasReadingErrors(issues)).toBe(false);
   });
 });
@@ -530,7 +261,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "PC-1", pointType: "pc" }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "closed");
     expect(issues.at(0)?.errors.backsight).toBeDefined();
   });
 
@@ -540,7 +271,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "PC-1", pointType: "pc" }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "closed");
     expect(issues.at(2)?.errors.backsight).toBeUndefined();
   });
 
@@ -550,7 +281,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "PC-1", pointType: "pc" }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "closed");
     expect(issues.at(0)?.errors.backsight).toBeUndefined();
   });
 
@@ -559,7 +290,7 @@ describe("validateRunCapture — error posicional del BM inicial (§ 5.1)", () =
       reading({ pointCode: "", pointType: "bm", backsight: null, distanceAccumulatedKm: 0 }),
       reading({ pointCode: "BM-2", pointType: "bm", foresight: 0.8, backsight: null, distanceAccumulatedKm: 0.5 }),
     ];
-    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "closed");
     expect(issues.at(0)?.errors.pointCode).toBeDefined();
     expect(issues.at(0)?.errors.backsight).toBeDefined();
   });
@@ -572,7 +303,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.8, backsight: 1.5, distanceAccumulatedKm: 0.9 }),
       reading({ pointCode: "RAD-1", pointType: "intermediate", foresight: 0.805, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "closed");
     expect(issues.at(2)?.errors.pointType).toBeDefined();
   });
 
@@ -582,7 +313,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "BM-B", pointType: "bm", foresight: 2.815, backsight: null, distanceAccumulatedKm: 2.2 }),
       reading({ pointCode: "RAD-1", pointType: "intermediate", foresight: 0.5, backsight: null, distanceAccumulatedKm: 2.2 }),
     ];
-    const issues = validateRunCapture(readings, "link", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "link");
     expect(issues.at(2)?.errors.pointType).toBeDefined();
   });
 
@@ -592,7 +323,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "PC-1", pointType: "pc", foresight: 0.876, backsight: 0.654, distanceAccumulatedKm: 0.08 }),
       reading({ pointCode: "PC-2", pointType: "intermediate", foresight: 1.987, backsight: null, distanceAccumulatedKm: 0.16 }),
     ];
-    const issues = validateRunCapture(readings, "open", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "open");
     expect(issues.at(2)?.errors.pointType).toBeUndefined();
   });
 
@@ -601,7 +332,7 @@ describe("validateRunCapture — la última fila de un recorrido que cierra debe
       reading({ pointCode: "BM-1", pointType: "bm", foresight: null, backsight: 1.5, distanceAccumulatedKm: 0 }),
       reading({ pointCode: "BM-1", pointType: "bm", foresight: 0.808, backsight: null, distanceAccumulatedKm: 0.9 }),
     ];
-    const issues = validateRunCapture(readings, "closed", "tercer_orden", false);
+    const issues = validateRunCapture(readings, "closed");
     expect(issues.at(1)?.errors.pointType).toBeUndefined();
   });
 });
@@ -752,15 +483,15 @@ describe("punto de cambio incompleto (Fase 24)", () => {
   });
 
   it("la celda avisa, sin bloquear el guardado", () => {
-    const issues = validateRunCapture([bmStart, pcSinFore, bmEnd], "closed", "tercer_orden", false);
+    const issues = validateRunCapture([bmStart, pcSinFore, bmEnd], "closed");
     expect(issues[1]!.warnings.foresight).toBe("Falta la V−: el punto de cambio no cierra su armada.");
     expect(hasReadingErrors(issues)).toBe(false);
-    const otra = validateRunCapture([bmStart, pcSinBack, bmEnd], "closed", "tercer_orden", false);
+    const otra = validateRunCapture([bmStart, pcSinBack, bmEnd], "closed");
     expect(otra[1]!.warnings.backsight).toBe("Falta la V+: el punto de cambio no abre la armada siguiente.");
   });
 
   it("sin aviso en una fila recién agregada", () => {
-    const issues = validateRunCapture([bmStart, bare(), bmEnd], "closed", "tercer_orden", false);
+    const issues = validateRunCapture([bmStart, bare(), bmEnd], "closed");
     expect(issues[1]!.warnings.foresight).toBeUndefined();
     expect(issues[1]!.warnings.backsight).toBeUndefined();
   });

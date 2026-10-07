@@ -225,20 +225,16 @@ export function LevelingEditor({
       validateRunCapture(
         forward.map(draftToReadingInput),
         config.type,
-        config.precisionOrder,
-        process.distances_reconstructed,
       ),
-    [forward, config.type, config.precisionOrder, process.distances_reconstructed],
+    [forward, config.type],
   );
   const backIssues = useMemo<ReadingCaptureIssues[]>(
     () =>
       validateRunCapture(
         back.map(draftToReadingInput),
         config.type,
-        config.precisionOrder,
-        process.distances_reconstructed,
       ),
-    [back, config.type, config.precisionOrder, process.distances_reconstructed],
+    [back, config.type],
   );
 
   // Importar (Fase 16) llena el borrador y la configuración; se guarda como

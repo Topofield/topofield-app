@@ -322,7 +322,6 @@ export async function saveVisitAction(
     const check = validateVisitBook(
       bookInputs,
       payload.referenceBm,
-      payload.precisionOrder,
     );
     if (check.errors.length > 0) return { ok: false, error: check.errors[0] };
     const rowIndex = check.rowIssues.findIndex(

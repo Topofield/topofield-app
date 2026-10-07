@@ -130,8 +130,6 @@ export async function saveLevelingProcessAction(
   const forwardIssues = validateRunCapture(
     input.forward,
     input.type,
-    payload.precisionOrder,
-    false,
   );
   if (hasReadingErrors(forwardIssues)) {
     return {
@@ -143,8 +141,6 @@ export async function saveLevelingProcessAction(
     const returnIssues = validateRunCapture(
       input.return,
       input.type,
-      payload.precisionOrder,
-      false,
     );
     if (hasReadingErrors(returnIssues)) {
       return {
