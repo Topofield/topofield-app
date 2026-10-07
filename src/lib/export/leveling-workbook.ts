@@ -71,11 +71,9 @@ export interface LevelingProcessRow {
   /** Fase 23: la tolerancia y el veredicto de la discrepancia ida/vuelta. */
   discrepancy_tolerance_mm: number | string | null;
   meets_discrepancy: boolean | null;
-  closed_at: string | null;
-  closed_by: string | null;
   notes: string | null;
   created_at: string | null;
-  /** Orden de precisión y equipo de nivel, propios del proceso (§ Fase 8). */
+  /** El orden alcanzado, detectado al guardar (Fase 36), y el equipo del proceso. */
   precision_order: PrecisionOrder | null;
   equipment_brand: string | null;
   equipment_model: string | null;
@@ -208,26 +206,27 @@ function sheetCalculations(
 }
 
 /**
- * Una cota por punto (Fase 28): el promedio de las cotas compensadas de un
- * punto leído dos veces, y la cota conocida para los BM de partida y llegada.
+ * Una cota por punto (Fases 28 y 36): el promedio de las cotas compensadas de
+ * un punto leído dos veces, y la cota conocida para los BM de partida y
+ * llegada.
  */
-function sheetAdopted(
+function sheetAdjusted(
   wb: ExcelJS.Workbook,
   process: LevelingProcessRow,
   readings: LevelingReadingRow[],
 ): void {
-  const s = wb.addWorksheet("Cotas adoptadas");
+  const s = wb.addWorksheet("Cotas ajustadas");
   s.columns = [{ width: 14 }, { width: 18 }, { width: 10 }, { width: 34 }];
-  setSheetTitle(s, `${process.name} — cotas adoptadas`);
-  const adopted = storedAdoptedElevations(process, readings);
-  if (adopted === null) {
+  setSheetTitle(s, `${process.name} — cotas ajustadas`);
+  const adjusted = storedAdoptedElevations(process, readings);
+  if (adjusted === null) {
     writePairs(s, 3, [
-      ["Sin cotas adoptadas", "El trabajo no se compensó: no cumple, o es una abierta sin vuelta."],
+      ["Sin cotas ajustadas", "El trabajo no se compensó: es una abierta sin vuelta, o la libreta está a medias."],
     ]);
     return;
   }
-  setHeaders(s, 3, ["Punto", "Cota adoptada (m)", "Lecturas", "Origen"]);
-  adopted.forEach((a, i) => {
+  setHeaders(s, 3, ["Punto", "Cota ajustada (m)", "Lecturas", "Origen"]);
+  adjusted.forEach((a, i) => {
     writeRow(
       s,
       4 + i,
@@ -235,6 +234,16 @@ function sheetAdopted(
       [null, DECIMALS.elevation, null, null],
     );
   });
+}
+
+/**
+ * El orden alcanzado, detectado al guardar (Fase 36): la nivelación no lo
+ * declara. Sin veredicto guardado, por qué.
+ */
+function reachedOrder(process: LevelingProcessRow): string {
+  if (process.status !== "calculated") return "Libreta a medias";
+  if (process.meets_tolerance === null) return "Sin verificación";
+  return process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "Ninguno";
 }
 
 function sheetSummary(
@@ -270,7 +279,6 @@ function sheetSummary(
   row += 1;
   writeSection(s, row, "Equipo: nivel");
   row = writePairs(s, row + 1, [
-    ["Orden de precisión", process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "—"],
     [
       "Equipo",
       equipmentLine(
@@ -293,16 +301,9 @@ function sheetSummary(
   row += 1;
   writeSection(s, row, "Precisión");
   row = writePairs(s, row + 1, [
+    ["Orden alcanzado", reachedOrder(process)],
     ["Error de cierre (mm)", num(process.closure_error_mm)],
-    ["Tolerancia (mm)", num(process.tolerance_mm)],
-    [
-      "¿Cumple tolerancia?",
-      process.meets_tolerance === null
-        ? "Sin evaluar"
-        : process.meets_tolerance
-          ? "Sí"
-          : "No",
-    ],
+    ["Tolerancia del orden alcanzado (mm)", num(process.tolerance_mm)],
     // Solo tienen sentido con doble recorrido; sin vuelta quedan vacías en vez
     // de mostrar 0, que se leería como «no hubo discrepancia».
     ["Error de ida (mm)", num(process.forward_error_mm)],
@@ -325,8 +326,6 @@ function sheetSummary(
   writeSection(s, row, "Trazabilidad");
   writePairs(s, row + 1, [
     ["Creado", process.created_at],
-    ["Cerrado", process.closed_at],
-    ["Cerrado por", process.closed_by],
     ["Notas", process.notes],
   ]);
 }
@@ -345,7 +344,7 @@ export function buildLevelingWorkbook(
   });
   sheetRawData(wb, process, ordered);
   sheetCalculations(wb, process, ordered);
-  sheetAdopted(wb, process, ordered);
+  sheetAdjusted(wb, process, ordered);
   sheetSummary(wb, process, ordered, project);
   return wb;
 }

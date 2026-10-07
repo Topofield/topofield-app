@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeLeveling } from "@/lib/calculations/leveling";
+import { computeLeveling, computeLevelingDetected } from "@/lib/calculations/leveling";
 import { NIVELACION_VERJON, nivelacionTramo2, type LecturaNivelacionDemo, type NivelacionDemo } from "@/lib/demo/fixtures";
 import type { ReadingInput } from "@/types/leveling";
 import { levelingProfile } from "./profile-data";
@@ -21,14 +21,13 @@ const lectura = (r: LecturaNivelacionDemo): ReadingInput => ({
 });
 
 const nivelar = (n: NivelacionDemo) =>
-  computeLeveling({
+  computeLevelingDetected({
     type: n.type,
     startElevation: n.startElevation,
     endElevation: n.endElevation ?? null,
-    order: n.precisionOrder,
     forward: n.forward.map(lectura),
     return: n.return ? n.return.map(lectura) : null,
-  });
+  }).result;
 
 describe("levelingProfile (Fase 36: miras, visuales y la contraparte)", () => {
   const verjon = nivelar(NIVELACION_VERJON);

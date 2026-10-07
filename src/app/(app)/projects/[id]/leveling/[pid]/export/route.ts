@@ -7,7 +7,6 @@ import {
 } from "@/lib/supabase/queries";
 import { buildLevelingWorkbook } from "@/lib/export/leveling-workbook";
 import { safeFilename } from "@/lib/export/workbook";
-import { responsibleNames } from "@/lib/reports/responsible";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -38,10 +37,7 @@ export async function GET(
 
   const readings = await getLevelingReadings(supabase, process.id);
 
-  // «Cerrado por» con el nombre del responsable, no su id (Fase 22).
-  const names = await responsibleNames(supabase, [process.closed_by]);
-  const closedBy = process.closed_by ? (names.get(process.closed_by) ?? null) : null;
-  const workbook = buildLevelingWorkbook({ ...process, closed_by: closedBy }, readings, project);
+  const workbook = buildLevelingWorkbook(process, readings, project);
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

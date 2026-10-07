@@ -14,7 +14,7 @@ export function DeleteProjectDialog({
   closedWork,
 }: {
   project: Project;
-  /** Procesos, lugares y visitas cerrados: con alguno, no se puede eliminar. */
+  /** Lugares y visitas cerrados: con alguno, no se puede eliminar. */
   closedWork: number;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -59,7 +59,7 @@ export function DeleteProjectDialog({
           </p>
           <p className="text-xs text-ink-2">
             {closedWork > 0
-              ? `Tiene ${closedWork} ${closedWork === 1 ? "registro cerrado" : "registros cerrados"} (procesos, lugares o visitas), que no se pueden borrar. Si ya no lo usas, archívalo.`
+              ? `Tiene ${closedWork} ${closedWork === 1 ? "registro cerrado" : "registros cerrados"} (lugares o visitas de asentamientos), que no se pueden borrar. Si ya no lo usas, archívalo.`
               : "Borra el proyecto con sus procesos, lugares y puntos de referencia, de forma permanente."}
           </p>
         </div>

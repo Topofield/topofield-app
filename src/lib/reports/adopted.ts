@@ -1,5 +1,5 @@
-// Las cotas adoptadas de una nivelación guardada (Fase 28), para el informe y
-// el Excel: se derivan de las filas guardadas, sin recalcular.
+// Las cotas ajustadas de una nivelación guardada (Fases 28 y 36), para el
+// Excel: se derivan de las filas guardadas, sin recalcular.
 
 import { adoptedElevations, knownBmsOf } from "@/lib/calculations/leveling";
 import type { AdoptedElevation, LevelingType } from "@/types/leveling";
@@ -20,14 +20,15 @@ interface StoredLevelingReading {
 
 /**
  * Una cota por punto a partir de las filas guardadas, o `null` si el trabajo
- * no se compensó: el veredicto guardado no es «cumple» (no cumple, o es una
- * abierta sin vuelta, que no tiene contra qué cerrar).
+ * no se compensó: no tiene veredicto guardado (una abierta sin vuelta, que no
+ * tiene contra qué cerrar, o una libreta a medias). Desde la Fase 36 la
+ * nivelación compensa siempre, alcance o no un orden.
  */
 export function storedAdoptedElevations(
   process: StoredLevelingProcess,
   readings: readonly StoredLevelingReading[],
 ): AdoptedElevation[] | null {
-  if (process.meets_tolerance !== true || process.start_bm_elevation == null) return null;
+  if (process.meets_tolerance === null || process.start_bm_elevation == null) return null;
   const run = (runType: string) =>
     readings
       .filter((r) => r.run_type === runType)

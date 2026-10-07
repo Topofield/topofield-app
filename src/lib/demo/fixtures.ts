@@ -267,8 +267,8 @@ export interface NivelacionDemo {
   startElevation: number;
   endBmCode?: string;
   endElevation?: number;
-  status: "calculated" | "closed";
-  precisionOrder: PrecisionOrder;
+  /** Alimenta el informe de nivelación de la demo. El orden se detecta (Fase 36). */
+  informe?: boolean;
   /** Las carteras no siempre declaran su equipo: lo que no dicen va vacío. */
   equipmentBrand: string | null;
   equipmentModel: string | null;
@@ -292,18 +292,16 @@ const deCartera = (r: LecturaCartera): LecturaNivelacionDemo => ({
 });
 
 /**
- * El Verjón: abierta de D1 a D4, con ida y vuelta por los mismos puntos. Queda
- * calculada: una abierta no cierra contra nada, y lo que enseña es la
- * discrepancia de la sección, los puntos homólogos y los avisos de equilibrado.
- * La hoja no declara el nivel; los tres hilos dicen que es automático.
+ * El Verjón: abierta de D1 a D4, con ida y vuelta por los mismos puntos. Lo
+ * que enseña es la discrepancia de la sección (5.0 mm, segundo orden), los
+ * puntos homólogos y la compensación del circuito. La hoja no declara el
+ * nivel; los tres hilos dicen que es automático.
  */
 export const NIVELACION_VERJON: NivelacionDemo = {
   name: CARTERA_VERJON.name,
   type: "open",
   startBmCode: CARTERA_VERJON.startCode,
   startElevation: CARTERA_VERJON.startElevation,
-  status: "calculated",
-  precisionOrder: "tercer_orden",
   equipmentBrand: null,
   equipmentModel: null,
   equipmentSerial: null,
@@ -319,8 +317,8 @@ export const NIVELACION_VERJON: NivelacionDemo = {
 /**
  * El tramo 2, leído del crudo del nivel digital Leica con el importador de la
  * Fase 16, como un solo recorrido: sale de C10 y vuelve a C10. Cierra en
- * −0.4 mm sobre 1.397 km y nace cerrada, para el informe de nivelación. El
- * archivo no declara el modelo del nivel: solo que es un digital Leica.
+ * −0.4 mm sobre 1.397 km —primer orden— y alimenta el informe de nivelación.
+ * El archivo no declara el modelo del nivel: solo que es un digital Leica.
  */
 export function nivelacionTramo2(): NivelacionDemo {
   const leido = readLevelingFile(CRUDO_TRAMO2);
@@ -336,8 +334,7 @@ export function nivelacionTramo2(): NivelacionDemo {
     type: "closed",
     startBmCode: inicio.code,
     startElevation: inicio.elevation,
-    status: "closed",
-    precisionOrder: "tercer_orden",
+    informe: true,
     equipmentBrand: "Leica",
     equipmentModel: null,
     equipmentSerial: null,

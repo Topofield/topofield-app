@@ -564,28 +564,6 @@ function normalizedCode(code: string): string {
 }
 
 /**
- * El veredicto que se guarda de un proceso de nivelación (Fase 23). En una
- * cerrada o de enlace es el cierre contra la cota conocida, de la ida y, si la
- * hay, de la vuelta (Fase 26); la discrepancia es ahí control de calidad. En una **abierta** no
- * hay cierre: si tiene vuelta, el emparejamiento por sección es su veredicto
- * (§ 6.9 del PRD principal); sin vuelta, no hay ninguno. Función pura.
- */
-export function levelingProcessVerdict(
-  result: LevelingResult,
-  type: LevelingType,
-): boolean | null {
-  if (type === "open") return result.return ? result.meetsDiscrepancy : null;
-  // Con vuelta, cumplen los dos recorridos (Fase 26, C-10). Un recorrido sin
-  // tolerancia —le faltan distancias— deja el veredicto en blanco aunque el
-  // otro no cumpla: así el servidor no cierra lo que el diálogo bloquea
-  // (`evaluateLevelingClosure`), y quien lo cierre como rechazado lo hará con
-  // los dos recorridos juzgados. Sin eso, uno que no cumple decide.
-  const runs = [result.meetsTolerance, result.return ? result.return.meetsTolerance : true];
-  if (runs.includes(null)) return null;
-  return !runs.includes(false);
-}
-
-/**
  * El orden más alto que cumple el trabajo (Fase 36): en la cerrada y la de
  * enlace, |e| ≤ K·√D en la ida y, si la hay, en la vuelta con su distancia; en
  * la abierta con vuelta, la discrepancia contra K·√D·√2 sobre el recorrido más
@@ -807,8 +785,8 @@ export function adoptedElevations(
 
 /**
  * Las cotas adoptadas de un cálculo, o `null` si el trabajo no se compensó:
- * no cumple, o es una abierta sin vuelta, que no tiene contra qué cerrar. Es
- * el mismo criterio del veredicto guardado (`levelingProcessVerdict`).
+ * una abierta sin vuelta, que no tiene contra qué cerrar, una libreta a medias
+ * o, con la regla de la visita, un trabajo que no cumple.
  */
 export function adoptedElevationsOf(
   result: LevelingResult,

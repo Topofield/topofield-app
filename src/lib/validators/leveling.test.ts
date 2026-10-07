@@ -11,14 +11,13 @@
 import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
 import {
-  evaluateLevelingClosure,
   findIncompleteTurningPoint,
   hasReadingErrors,
   turningPointBlocker,
   validateReadingCapture,
   validateRunCapture,
 } from "./leveling";
-import type { LevelingResult, ReadingInput } from "@/types/leveling";
+import type { ReadingInput } from "@/types/leveling";
 
 // --- Ayudantes ---------------------------------------------------------------
 
@@ -162,27 +161,6 @@ function deCartera(lecturas: LecturaCartera[]): ReadingInput[] {
       foreDistanceM: r.foreDistanceM,
     }),
   );
-}
-
-/** Resultado de cierre; por defecto todo cumple, cada caso altera lo que prueba. */
-function resultWith(over: Partial<LevelingResult> = {}): LevelingResult {
-  return {
-    forward: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true },
-    return: null,
-    arithmeticCheckOk: true,
-    sumBacksights: 0,
-    sumForesights: 0,
-    closureErrorMm: 5,
-    toleranceMm: 11.4,
-    meetsTolerance: true,
-    discrepancyMm: null,
-    discrepancyToleranceMm: null,
-    meetsDiscrepancy: null,
-    adoptedHeightDifference: null,
-    circuitClosureMm: null,
-    compensated: true,
-    ...over,
-  };
 }
 
 // --- Capa 1: validación en captura (§ 5.1) ------------------------------------
@@ -373,87 +351,6 @@ describe("hasReadingErrors", () => {
 
 // --- Capa 2: validación de cierre (§ 5.2) -------------------------------------
 
-describe("evaluateLevelingClosure — capa de cierre (§ 5.2)", () => {
-  it("no reporta nada cuando todo cumple", () => {
-    const evaluation = evaluateLevelingClosure(resultWith(), "closed");
-    expect(evaluation.messages).toHaveLength(0);
-    expect(evaluation.blocked).toBe(false);
-    expect(evaluation.mustReject).toBe(false);
-  });
-
-  it("marca error crítico si la comprobación aritmética no cuadra", () => {
-    const evaluation = evaluateLevelingClosure(
-      resultWith({ arithmeticCheckOk: false }),
-      "closed",
-    );
-    expect(evaluation.blocked).toBe(true);
-    expect(evaluation.messages.length).toBeGreaterThan(0);
-  });
-
-  it("permite cerrar como rechazado si el cierre excede la tolerancia", () => {
-    const evaluation = evaluateLevelingClosure(
-      resultWith({ closureErrorMm: 20, meetsTolerance: false }),
-      "closed",
-    );
-    expect(evaluation.blocked).toBe(false);
-    expect(evaluation.canClose).toBe(true);
-    expect(evaluation.mustReject).toBe(true);
-  });
-
-  it("advierte (no bloquea) si la discrepancia ida/vuelta excede T·√2", () => {
-    const evaluation = evaluateLevelingClosure(
-      resultWith({
-        discrepancyMm: 22,
-        discrepancyToleranceMm: 16.1,
-        meetsDiscrepancy: false,
-      }),
-      "closed",
-    );
-    expect(evaluation.canClose).toBe(true);
-    expect(evaluation.blocked).toBe(false);
-    expect(evaluation.mustReject).toBe(false);
-    expect(evaluation.messages.length).toBeGreaterThan(0);
-  });
-
-  // Fase 23: en una abierta con vuelta, la discrepancia es el veredicto.
-  const conVuelta = { return: { readings: [], heightDifference: 0, distanceKm: 0, errorMm: null, toleranceMm: null, meetsTolerance: null, arithmeticCheckOk: true } };
-  const abierta = { closureErrorMm: null, toleranceMm: null, meetsTolerance: null };
-
-  it("abierta con vuelta fuera de tolerancia: solo se cierra como rechazada", () => {
-    const evaluation = evaluateLevelingClosure(
-      resultWith({ ...abierta, ...conVuelta, discrepancyMm: 22, discrepancyToleranceMm: 16.1, meetsDiscrepancy: false }),
-      "open",
-    );
-    expect(evaluation.canClose).toBe(true);
-    expect(evaluation.mustReject).toBe(true);
-    expect(evaluation.messages.join(" ")).toMatch(/rechazad/);
-  });
-
-  it("abierta con vuelta que cumple: se cierra", () => {
-    const evaluation = evaluateLevelingClosure(
-      resultWith({ ...abierta, ...conVuelta, discrepancyMm: 5, discrepancyToleranceMm: 10.5, meetsDiscrepancy: true }),
-      "open",
-    );
-    expect(evaluation.canClose).toBe(true);
-    expect(evaluation.mustReject).toBe(false);
-  });
-
-  it("abierta con vuelta sin tolerancia de discrepancia: no se puede cerrar", () => {
-    const evaluation = evaluateLevelingClosure(
-      resultWith({ ...abierta, ...conVuelta, discrepancyMm: 5 }),
-      "open",
-    );
-    expect(evaluation.canClose).toBe(false);
-    expect(evaluation.blocked).toBe(true);
-  });
-
-  it("abierta sin vuelta: se cierra como hoy, sin veredicto", () => {
-    const evaluation = evaluateLevelingClosure(resultWith(abierta), "open");
-    expect(evaluation.canClose).toBe(true);
-    expect(evaluation.mustReject).toBe(false);
-  });
-});
-
 describe("punto de cambio incompleto (Fase 24)", () => {
   const bmStart = bare({ pointCode: "BM-1", pointType: "bm", backsight: 1.4, backDistanceM: 30 });
   const bmEnd = bare({ pointCode: "BM-1", pointType: "bm", foresight: 1.3, foreDistanceM: 30 });
@@ -505,29 +402,16 @@ describe("punto de cambio incompleto (Fase 24)", () => {
     expect(issues[1]!.warnings.backsight).toBeUndefined();
   });
 
-  it("el cierre nombra la fila, antes que la comprobación aritmética", () => {
-    const e = evaluateLevelingClosure(
-      resultWith({ forward: run([bmStart, pcSinFore, bmEnd]), arithmeticCheckOk: false }),
-      "closed",
-    );
-    expect(e.blocked).toBe(true);
-    expect(e.messages).toEqual([
+  it("nombra la fila del punto de cambio incompleto", () => {
+    expect(turningPointBlocker({ forward: run([bmStart, pcSinFore, bmEnd]), return: null })).toBe(
       "El punto de cambio de la fila 2 no tiene V−: sin ella la libreta no encadena y no se puede cerrar.",
-    ]);
+    );
   });
 
   it("revisa también la vuelta, que no pasa por la comprobación aritmética", () => {
-    const e = evaluateLevelingClosure(
-      resultWith({
-        forward: run([bmStart, pcCompleto, bmEnd]),
-        return: run([bmStart, pcSinBack, bmEnd]),
-        arithmeticCheckOk: true,
-        meetsDiscrepancy: true,
-      }),
-      "open",
-    );
-    expect(e.blocked).toBe(true);
-    expect(e.messages[0]).toBe(
+    expect(
+      turningPointBlocker({ forward: run([bmStart, pcCompleto, bmEnd]), return: run([bmStart, pcSinBack, bmEnd]) }),
+    ).toBe(
       "El punto de cambio de la fila 2 de la vuelta no tiene V+: sin ella la libreta no encadena y no se puede cerrar.",
     );
   });
@@ -551,50 +435,5 @@ describe("validateReadingCapture — distancias por visual (Fase 26, C-11)", () 
       bare({ pointType: "pc", backsight: 1.2, backDistanceM: 30, foresight: 1.1, foreDistanceM: 0 }),
     );
     expect(cero.errors.foreDistanceM).toBe("La distancia debe ser mayor que cero.");
-  });
-});
-
-describe("evaluateLevelingClosure — la vuelta de una cerrada (Fase 26)", () => {
-  const vuelta = (over: Partial<LevelingResult["forward"]> = {}) => ({
-    readings: [],
-    heightDifference: 0,
-    distanceKm: 0.9,
-    errorMm: 12,
-    toleranceMm: 5.7,
-    meetsTolerance: false,
-    arithmeticCheckOk: true,
-    ...over,
-  });
-
-  it("una vuelta fuera de su tolerancia obliga a rechazar y lo dice (C-10)", () => {
-    const r = evaluateLevelingClosure(
-      resultWith({ return: vuelta(), meetsDiscrepancy: true }),
-      "closed",
-    );
-    expect(r.mustReject).toBe(true);
-    expect(r.messages.some((m) => m.startsWith("El error de cierre de la vuelta (12.0 mm)"))).toBe(true);
-  });
-
-  it("sin tolerancia de la vuelta no se cierra", () => {
-    const r = evaluateLevelingClosure(
-      resultWith({ return: vuelta({ toleranceMm: null, meetsTolerance: null }) }),
-      "link",
-    );
-    expect(r.blocked).toBe(true);
-    expect(r.messages[0]).toContain("en la vuelta");
-  });
-
-  it("sin tolerancia de la ida tampoco, como en el servidor", () => {
-    const r = evaluateLevelingClosure(resultWith({ meetsTolerance: null, toleranceMm: null }), "closed");
-    expect(r.blocked).toBe(true);
-  });
-
-  it("dice qué recorrido no pasa la comprobación aritmética (C-12)", () => {
-    const r = evaluateLevelingClosure(
-      resultWith({ arithmeticCheckOk: false, return: vuelta({ arithmeticCheckOk: false, meetsTolerance: true }) }),
-      "closed",
-    );
-    expect(r.blocked).toBe(true);
-    expect(r.messages[0]).toContain("de la vuelta");
   });
 });

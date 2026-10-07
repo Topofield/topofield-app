@@ -52,8 +52,7 @@ import {
   CARTERA_VIVERO,
 } from "../src/lib/demo/carteras.ts";
 import {
-  computeLeveling,
-  levelingProcessVerdict,
+  computeLevelingDetected,
   totalDistanceFromReadings,
 } from "../src/lib/calculations/leveling.ts";
 import { computeHistory } from "../src/lib/calculations/settlement.ts";
@@ -233,7 +232,8 @@ function decimalToDmsTuple(decimal) {
 /**
  * Inserta un informe (§ 4.7) con la misma forma que arma `createReportAction`.
  * `included` es la lista `[{ type, id, name, order }]`, con type 'polygonal' |
- * 'leveling' | 'site'. Solo debe apuntar a trabajos ya cerrados.
+ * 'leveling' | 'site'. Solo debe apuntar a trabajos que un informe admite:
+ * poligonales y nivelaciones calculadas, lugares cerrados.
  */
 async function insertReport(projectId, userId, { title, observations, included }) {
   // La portada se congela al emitir (Fase 23), con los datos del proyecto.
@@ -430,22 +430,18 @@ async function insertPolygonal(projectId, siteId, spec) {
 }
 
 /**
- * Inserta un proceso de nivelación con `computeLeveling` como fuente de la
- * verdad de los resultados persistidos, igual que `insertPolygonal` con
+ * Inserta un proceso de nivelación con `computeLevelingDetected` como fuente
+ * de la verdad de los resultados persistidos, igual que `insertPolygonal` con
  * `computePolygonal`: el seed nunca queda desincronizado con lo que
- * produciría `saveLevelingProcessAction` en un guardado real.
+ * produciría `saveLevelingProcessAction` en un guardado real. La nivelación no
+ * se cierra (Fase 36): nace calculada, con el orden detectado.
  */
-// `userId` no hace falta: `leveling_processes` no lo lleva y el cierre de
-// estos fixtures no pasa por `closed_by`.
-async function insertLeveling(projectId, siteId, spec, userId) {
+async function insertLeveling(projectId, siteId, spec) {
   const equipo = equipmentOf(spec);
   const input = {
     type: spec.type,
     startElevation: spec.startElevation,
     endElevation: spec.endElevation ?? null,
-    // Mismo criterio que insertPolygonal: el orden que evalúa el motor es el
-    // que declara el equipo del proceso.
-    order: equipo.precision_order,
     forward: spec.forward.map((r) => ({
       pointCode: r.code,
       pointType: r.type,
@@ -475,7 +471,7 @@ async function insertLeveling(projectId, siteId, spec, userId) {
         }))
       : null,
   };
-  const result = computeLeveling(input);
+  const { result, order, verifiable } = computeLevelingDetected(input);
 
   const { data: proc, error } = await admin
     .from("leveling_processes")
@@ -491,14 +487,13 @@ async function insertLeveling(projectId, siteId, spec, userId) {
       has_return_run: spec.return != null,
       // Derivada de las distancias por visual, como en el editor real.
       total_distance_km: totalDistanceFromReadings(input.forward),
-      // Nace calculado aunque el fixture lo quiera cerrado: los triggers de
-      // inmutabilidad rechazan escribir lecturas bajo un proceso ya cerrado
-      // (mismo motivo que en insertPolygonal). El cierre se aplica al final.
       status: "calculated",
       ...equipo,
+      // El orden alcanzado, detectado: la nivelación no lo declara (Fase 36).
+      precision_order: order,
       closure_error_mm: result.closureErrorMm,
       tolerance_mm: result.toleranceMm,
-      meets_tolerance: levelingProcessVerdict(result, spec.type),
+      meets_tolerance: verifiable ? order !== null : null,
       forward_error_mm: result.forward.errorMm,
       return_error_mm: result.return?.errorMm ?? null,
       discrepancy_mm: result.discrepancyMm,
@@ -550,19 +545,6 @@ async function insertLeveling(projectId, siteId, spec, userId) {
       .from("leveling_readings")
       .insert(rows);
     if (readingsErr) throw readingsErr;
-  }
-
-  // Cierre diferido, una vez cargadas las lecturas (igual que insertPolygonal).
-  if (spec.status === "closed") {
-    const { error: closeErr } = await admin
-      .from("leveling_processes")
-      .update({
-        status: "closed",
-        closed_at: new Date().toISOString(),
-        closed_by: userId,
-      })
-      .eq("id", proc.id);
-    if (closeErr) throw closeErr;
   }
 
   return proc.id;
@@ -933,15 +915,14 @@ const LEVELING_PROCESSES = [
     notes:
       "Circuito cerrado de verificación: sale y vuelve a BM-1. Error de cierre −8.0 mm contra tolerancia 11.4 mm (K=12 · √0.9 km). Cumple tercer orden.",
   },
-  // Segunda nivelación, cerrada oficialmente: es la que alimenta el informe de
-  // nivelación. La de arriba se deja calculada (editable) para la captura del
-  // editor de nivelación del manual. Mismos números verificados que BM-1.
+  // Segunda nivelación: es la que alimenta el informe de nivelación. Mismos
+  // números verificados que BM-1.
   {
-    name: "Circuito BM-2 (cerrado oficialmente)",
+    name: "Circuito BM-2",
     type: "closed",
     startBmCode: "BM-2",
     startElevation: 100.0,
-    status: "closed",
+    informe: true,
     equipment_brand: "Leica",
     equipment_model: "NA2",
     equipment_serial: "LNA2-2025-003",
@@ -973,7 +954,7 @@ const LEVELING_PROCESSES = [
       { code: "BM-2", type: "bm", fore: 0.808, foreUpperM: 1.558, foreLowerM: 0.058 },
     ],
     notes:
-      "Mismo circuito de verificación, cerrado oficialmente para el informe de nivelación. El editor lo abre en solo lectura.",
+      "Mismo circuito de verificación, para el informe de nivelación.",
   },
 ];
 
@@ -1519,18 +1500,11 @@ async function main() {
     console.log(`  ✓ Cartera real: ${spec.name}`);
   }
 
-  let nivelacionCerrada = null;
+  let nivelacionInforme = null;
   for (const spec of LEVELING_PROCESSES) {
-    const id = await insertLeveling(
-      catastral,
-      catastralSite,
-      { ...LEVEL_DIGITAL_TERCER_ORDEN, ...spec },
-      userId,
-    );
-    if (spec.status === "closed") nivelacionCerrada = { id, name: spec.name };
-    console.log(
-      `  ✓ Proceso de nivelación: ${spec.name}${spec.status === "closed" ? " (cerrado)" : ""}`,
-    );
+    const id = await insertLeveling(catastral, catastralSite, { ...LEVEL_DIGITAL_TERCER_ORDEN, ...spec });
+    if (spec.informe) nivelacionInforme = { id, name: spec.name };
+    console.log(`  ✓ Proceso de nivelación: ${spec.name}`);
   }
 
   // "Red geodésica": el cuadrado de primer orden con estación de 1″. Cada
@@ -1593,7 +1567,7 @@ async function main() {
 
   // --- Informes por proceso (§ 4.7): uno de poligonal y uno de nivelación en
   // el lote, y uno de asentamientos en el proyecto de monitoreo. Un informe
-  // incluye poligonales calculadas y lo demás cerrado. -----------------------
+  // incluye poligonales y nivelaciones calculadas y lugares cerrados. --------
   if (poligonalInforme) {
     await insertReport(catastral, userId, {
       title: "Informe de cierre — Poligonal",
@@ -1604,13 +1578,12 @@ async function main() {
     });
     console.log('  ✓ Informe de poligonal en "Lote catastral"');
   }
-  if (nivelacionCerrada) {
+  if (nivelacionInforme) {
     await insertReport(catastral, userId, {
       title: "Informe de cierre — Nivelación",
-      observations:
-        "Nivelación en circuito cerrado dentro de la tolerancia de tercer orden.",
+      observations: "Nivelación en circuito cerrado: alcanza tercer orden.",
       included: [
-        { type: "leveling", id: nivelacionCerrada.id, name: nivelacionCerrada.name, order: 0 },
+        { type: "leveling", id: nivelacionInforme.id, name: nivelacionInforme.name, order: 0 },
       ],
     });
     console.log('  ✓ Informe de nivelación en "Lote catastral"');
