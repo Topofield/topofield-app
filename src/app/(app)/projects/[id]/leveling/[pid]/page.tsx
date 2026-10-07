@@ -1,10 +1,10 @@
-import { processReportState } from "@/lib/reports/state";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/design-system";
 import { LevelingEditor } from "@/components/leveling/leveling-editor";
+import { LevelingHeader } from "@/components/leveling/leveling-header";
+import { LevelingSteps, type LevelingStep } from "@/components/leveling/leveling-steps";
 import { ProcessReport } from "@/components/process/process-report";
-import { ProcessShell } from "@/components/process/process-shell";
-import { PROCESS_STATUS_TONE } from "@/lib/process-status";
+import { reportsIncluding } from "@/lib/reports/including";
+import { processReportState } from "@/lib/reports/state";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLevelingProcess,
@@ -13,82 +13,66 @@ import {
   getReferencePoints,
   getReports,
 } from "@/lib/supabase/queries";
-import { levelingKindLabel, type LevelingType } from "@/types/leveling";
-import { PROCESS_STATUS_LABELS } from "@/types/polygonal";
-import { PRECISION_ORDER_LABELS } from "@/types/project";
 
 interface LevelingPageProps {
   params: Promise<{ id: string; pid: string }>;
   searchParams: Promise<{ tab?: string }>;
 }
 
-const TABS = [
-  { id: "proceso", label: "Proceso" },
-  { id: "informe", label: "Informe" },
-];
+function stepOf(tab: string | undefined): LevelingStep {
+  return tab === "compensacion" || tab === "informe" ? tab : "libreta";
+}
 
 /**
- * Pantalla de una nivelación (Fase 22): pestaña Proceso —libreta, perfil y
- * cierre, en vivo— y pestaña Informe.
+ * Pantalla de una nivelación (Fase 36): la cabecera con los datos del alta y
+ * tres pasos —1 · Libreta, 2 · Compensación, 3 · Informe—. `?tab=proceso`, de
+ * los enlaces de antes, lleva a la libreta.
  */
 export default async function LevelingPage({ params, searchParams }: LevelingPageProps) {
   const { id, pid } = await params;
   const { tab } = await searchParams;
-  const activeTab = tab === "informe" ? "informe" : "proceso";
+  const step = stepOf(tab);
 
   const supabase = await createClient();
   const process = await getLevelingProcess(supabase, pid);
-  if (!process || process.project_id !== id) {
-    notFound();
-  }
+  if (!process || process.project_id !== id) notFound();
 
-  const [readings, project, points] = await Promise.all([
+  const [readings, project, points, reports] = await Promise.all([
     getLevelingReadings(supabase, pid),
     getProjectById(supabase, id),
     getReferencePoints(supabase, id),
+    getReports(supabase, id),
   ]);
-  if (!project) {
-    notFound();
-  }
+  if (!project) notFound();
 
   const basePath = `/projects/${id}/leveling/${pid}`;
-
-  // Los informes los usa la pestaña Informe (la nivelación no se reabre desde
-  // la Fase 36: ya no se cierra).
-  const state = processReportState(process.status);
-  const reports = activeTab === "informe" ? await getReports(supabase, id) : [];
+  const reportTitles = reportsIncluding(reports, "leveling", process.id).map((r) => r.title);
 
   return (
-    <ProcessShell
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: project.name, href: `/projects/${id}?tab=processes&modulo=nivelaciones` },
-        { label: process.name },
-      ]}
-      title={process.name}
-      badge={
-        <Badge tone={PROCESS_STATUS_TONE[process.status]}>
-          {PROCESS_STATUS_LABELS[process.status]}
-        </Badge>
-      }
-      subtitle={`${levelingKindLabel(process.type as LevelingType, process.has_return_run)} · ${process.precision_order ? PRECISION_ORDER_LABELS[process.precision_order] : "—"}`}
-      basePath={basePath}
-      tabs={TABS}
-      activeTab={activeTab}
-      reportTab="informe"
-      exportHref={`${basePath}/export`}
-    >
-      {activeTab === "proceso" ? (
-        <LevelingEditor process={process} readings={readings} points={points} />
-      ) : (
+    <div className="flex flex-col gap-5">
+      <LevelingHeader
+        projectId={id}
+        projectName={project.name}
+        process={process}
+        readings={readings}
+        exportHref={`${basePath}/export`}
+        reportTitles={reportTitles}
+        printable={step === "informe"}
+      />
+      <LevelingSteps basePath={basePath} active={step} process={process} readings={readings} />
+      {step === "informe" ? (
         <ProcessReport
           project={project}
           process={{ type: "leveling", id: process.id, name: process.name }}
-          state={state}
-          reports={reports}
+          state={processReportState(process.status)}
           notes={process.notes}
+          reports={reports}
         />
+      ) : (
+        // Hasta las Tareas 9 y 10 de la Fase 36, la libreta y la compensación
+        // muestran el editor de antes.
+        <LevelingEditor process={process} readings={readings} points={points} />
       )}
-    </ProcessShell>
+    </div>
   );
 }

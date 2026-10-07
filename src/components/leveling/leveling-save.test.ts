@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
 import type { LevelingProcess, LevelingReading } from "@/types/leveling";
-import { levelingDraftOf, levelingPayloadOf } from "./leveling-save";
+import { computeLevelingDetected } from "@/lib/calculations/leveling";
+import { draftWithImport, levelingDraftOf, levelingInputOf, levelingPayloadOf } from "./leveling-save";
 
 const process = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -73,5 +74,26 @@ describe("leveling-save", () => {
     expect(payload.responsibleName).toBe("Andrea Rojas");
     expect(payload.responsibleRole).toBe("Topógrafa de campo");
     expect("precisionOrder" in payload).toBe(false);
+  });
+
+  it("la entrada del motor desde el borrador detecta segundo orden en El Verjón", () => {
+    const { order } = computeLevelingDetected(levelingInputOf(levelingDraftOf(process, stored)));
+    expect(order).toBe("segundo_orden");
+  });
+
+  it("una importación reemplaza la libreta, el tipo, la vuelta y el BM de partida", () => {
+    const imported = {
+      type: "closed" as const,
+      startBm: { code: "C10", elevation: 2541.7545 },
+      forward: [{ pointCode: "C10", pointType: "bm" as const, backsight: 1.649, foresight: null, backDistanceM: 48.843, foreDistanceM: null }],
+      return: null,
+    };
+    const next = draftWithImport(levelingDraftOf(process, stored), imported);
+    expect(next.details.type).toBe("closed");
+    expect(next.details.hasReturnRun).toBe(false);
+    expect(next.bm).toMatchObject({ startCode: "C10", startElevation: 2541.7545 });
+    expect(next.forward).toHaveLength(1);
+    expect(next.forward[0]).toMatchObject({ pointCode: "C10", backsight: 1.649, backUpperM: null });
+    expect(next.return).toEqual([]);
   });
 });

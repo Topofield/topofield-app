@@ -3,7 +3,14 @@
 // en una transacción, y recalcula en el servidor. Sin «use client»: lo usan la
 // pantalla, la acción de crear y las pruebas.
 import type { ReadingDraft, SaveLevelingPayload } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
-import type { LevelingProcess, LevelingReading, LevelingType } from "@/types/leveling";
+import type { LibretaRow } from "@/lib/import/leveling";
+import type {
+  LevelingInput,
+  LevelingProcess,
+  LevelingReading,
+  LevelingType,
+  ReadingInput,
+} from "@/types/leveling";
 
 export interface LevelingDetails {
   name: string;
@@ -108,5 +115,58 @@ export function levelingPayloadOf(processId: string, draft: LevelingDraft): Save
     notes: d.notes,
     forward: draft.forward,
     return: d.hasReturnRun ? draft.return : [],
+  };
+}
+
+function inputOfRow(d: ReadingDraft): ReadingInput {
+  return { ...d, distanceAccumulatedKm: null };
+}
+
+/**
+ * La entrada del cálculo desde el borrador: la que usan la pantalla en vivo y
+ * la cabecera. El orden no viaja: lo detecta `computeLevelingDetected`.
+ */
+export function levelingInputOf(draft: LevelingDraft): Omit<LevelingInput, "order" | "compensation"> {
+  const { details: d, bm } = draft;
+  return {
+    type: d.type,
+    startElevation: bm.startElevation,
+    endElevation: d.type === "link" ? bm.endElevation : null,
+    forward: draft.forward.map(inputOfRow),
+    return: d.hasReturnRun ? draft.return.map(inputOfRow) : null,
+  };
+}
+
+/** Lo que trae una importación del `.L` o del CSV (ver `LevelingImport`). */
+export interface ImportedLibreta {
+  type: LevelingType;
+  startBm: { code: string; elevation: number | null };
+  forward: LibretaRow[];
+  return: LibretaRow[] | null;
+}
+
+const fromLibreta = (r: LibretaRow): ReadingDraft => ({
+  ...r,
+  backUpperM: null,
+  backLowerM: null,
+  foreUpperM: null,
+  foreLowerM: null,
+});
+
+/**
+ * El borrador con una importación: la libreta, el tipo, la vuelta y el BM de
+ * partida que trae el archivo. Si el archivo no trae la cota del BM, se
+ * conserva la que había.
+ */
+export function draftWithImport(draft: LevelingDraft, imported: ImportedLibreta): LevelingDraft {
+  return {
+    details: { ...draft.details, type: imported.type, hasReturnRun: imported.return != null },
+    bm: {
+      ...draft.bm,
+      startCode: imported.startBm.code,
+      startElevation: imported.startBm.elevation ?? draft.bm.startElevation,
+    },
+    forward: imported.forward.map(fromLibreta),
+    return: (imported.return ?? []).map(fromLibreta),
   };
 }
