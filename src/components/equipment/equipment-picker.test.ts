@@ -9,7 +9,9 @@ import type { Equipment } from "@/types/equipment";
 vi.mock("@/app/(app)/equipos/actions", () => ({ createEquipmentAction: vi.fn() }));
 
 const { EquipmentCatalogProvider } = await import("./catalog-context");
-const { LevelEquipment, TotalStationEquipment } = await import("./equipment-picker");
+const { EquipmentIdentity, LevelEquipment, TotalStationEquipment, TotalStationIdentity } = await import(
+  "./equipment-picker"
+);
 
 // Fase 25: los formularios de equipo ofrecen el catálogo del tipo, avisan de
 // una calibración de más de un año y no duplican lo que ya está guardado.
@@ -96,5 +98,24 @@ describe("selector del catálogo en los formularios de equipo", () => {
     );
     expect(html).not.toContain("Tomar del catálogo");
     expect(html).not.toContain("Guardar en el catálogo");
+  });
+});
+
+// Correcciones de la Fase 35: el alta de la poligonal pide el equipo escribiendo.
+// El selector, con solo el equipo de la demo, parecía la única forma de darlo.
+describe("identidad del equipo en el alta", () => {
+  const value = { brand: "", model: "", serial: "" };
+
+  it("la poligonal no ofrece el catálogo: marca, modelo y serie se escriben", () => {
+    const html = render(createElement(TotalStationIdentity, { value, onChange: () => {} }));
+    expect(html).not.toContain("Tomar del catálogo");
+    expect(html).not.toContain("Leica TS06 Plus");
+    for (const label of ["Marca", "Modelo", "N.º de serie"]) expect(html).toContain(label);
+  });
+
+  it("la nivelación lo sigue ofreciendo", () => {
+    const html = render(createElement(EquipmentIdentity, { kind: "level", value, onChange: () => {} }));
+    expect(html).toContain("Tomar del catálogo");
+    expect(html).toContain("Trimble DiNi 12");
   });
 });
