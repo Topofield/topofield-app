@@ -3358,11 +3358,11 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-06):** la nube tiene aplicadas las **treinta y cinco**
-migraciones, hasta `20261006000000_poligonal_sin_cierre` (Fase 35, paso 2).
-Todas se empujaron antes del merge de su PR, salvo las dos que borran
-columnas, que fueron después: la de la Fase 29 y el paso 2 de la Fase 35 (ver
-abajo). Las dos de la Fase 26 —el CHECK de distancias por
+**Estado actual (2026-10-07):** la nube tiene aplicadas las **treinta y siete**
+migraciones, hasta `20261007000000_nivelacion_sin_cierre` (Fase 36, paso 2).
+Todas se empujaron antes del merge a `main`, salvo las tres que borran
+columnas, que fueron después: la de la Fase 29 y el paso 2 de las Fases 35 y
+36 (ver abajo). Las dos de la Fase 26 —el CHECK de distancias por
 visual positivas en `leveling_readings` y `settlement_book_readings`, y el
 índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
 filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
@@ -3388,19 +3388,48 @@ tres calculadas y una en curso. El paso 2 se aplicó después del merge del PR
 `in_progress` y `calculated`, y en la tabla queda solo el trigger de
 `updated_at`.
 
-**La Fase 36 repite el esquema en dos pasos.** El paso 1
+**La Fase 36 repitió el esquema en dos pasos** (2026-10-07). El paso 1
 (`20261006010000_ux_nivelacion`: las columnas del alta, `precision_order`
 nulable, `save_leveling_process` ampliado, las cerradas y rechazadas a
-`calculated` y fuera sus triggers de cierre) va **antes** del merge, empujado
-desde una copia del repositorio sin el paso 2: el código viejo funciona con
-él, porque sin triggers su cierre solo cambia el estado. El paso 2
-(`20261007000000_nivelacion_sin_cierre`: fuera `closed_at` y `closed_by`, y el
-CHECK de `status` sin `closed` ni `rejected`) va **después** del merge y del
-despliegue. Cada `db push`, con el visto bueno del usuario. Antes del paso 1,
-una consulta de solo lectura cuenta cuántas nivelaciones cambian de cotas con
-la regla nueva (las que no cumplían su orden declarado, que ahora se
-compensan); después, El Verjón y el tramo 2 de producción se comparan con la
-hoja y con el análisis del crudo.
+`calculated` y fuera sus triggers de cierre) se empujó **antes** de subir
+`main`, desde una copia del repositorio en `09196f0`, sin el paso 2 —`db push`
+aplica todas las pendientes—: el código viejo funciona con él, porque sin
+triggers su cierre solo cambia el estado. Después se subió `main` (el merge
+`29891d6`; Vercel terminó de desplegar a las 15:22:57 UTC) y se aplicó el
+paso 2 (`20261007000000_nivelacion_sin_cierre`: fuera `closed_at` y
+`closed_by`, y el CHECK de `status` sin `closed` ni `rejected`). Los dos
+`db push` y el `git push` los ejecutó el usuario: el modo automático del
+agente los bloquea como despliegue a producción.
+
+La consulta de solo lectura previa contó **dos** nivelaciones, las de la demo,
+y las dos cumplían su orden declarado y estaban compensadas: **ninguna cota
+guardada cambia** con la regla nueva, solo el orden, que se detecta. El
+paso 1 pasó a `calculated` el tramo 2, la única cerrada. Verificado después:
+
+- las columnas del alta existen, `closed_at` y `closed_by` no, y
+  `precision_order` es nulable;
+- el CHECK de `status` admite solo `draft`, `in_progress` y `calculated`, y
+  las dos nivelaciones están `calculated`;
+- en `leveling_processes` y `leveling_readings` queda solo el trigger de
+  `updated_at`; `reject_write_on_closed_process_reading` no existe, y la
+  visita conserva su trigger de cierre;
+- `save_leveling_process` sigue `SECURITY INVOKER`, sin `EXECUTE` para `anon`,
+  y escribe las columnas del alta y el orden.
+
+Las dos nivelaciones de producción se leyeron en solo lectura y se calcularon
+con el motor de la app (`levelingRecordOf`), contra la hoja de El Verjón y el
+crudo del tramo 2:
+
+| Nivelación | Contra | Resultado |
+|---|---|---|
+| El Verjón, abierta con vuelta | la hoja (24 filas iguales) | discrepancia 5.0 mm, **segundo orden** (5.3 mm); ajustadas C 1 3289.4400, C 7 3309.0535, D4 3315.0855 |
+| Tramo 2, cerrada | el crudo (17 filas iguales) | cierre −0.4 mm, **primer orden** (3.5 mm); ajustadas C14 2542.2271, C18 2542.9183, C10 2541.7545 |
+
+Lo guardado coincide con lo recalculado en cotas, alturas de instrumento y
+acumulados (diferencia 0). Las dos conservan en `precision_order` el tercer
+orden que declaraban hasta su próximo guardado; su «Cumple» guardado es el
+mismo, así que el hub no difiere, y la cabecera, el informe y el Excel dicen
+el detectado.
 
 Con las dos aplicadas, las poligonales de producción se leyeron en solo lectura
 y se calcularon con el motor de la app (`polygonalInputOf`), contra las hojas
