@@ -185,3 +185,70 @@ export function sigma0Reading(sigma0: number, r: Redundancy): Sigma0Reading {
   if (sigma0 < lo) return "pessimistic";
   return "consistent";
 }
+
+// ----------------------------------------------------------------------------
+// La precisión de lo ajustado (Fase 39)
+// ----------------------------------------------------------------------------
+
+/**
+ * Cofactor de las observaciones ajustadas, Q_l̂ = Q − Q·Aᵀ·N⁻¹·A·Q, con las
+ * matrices de la última iteración (N = A·Q·Aᵀ). Multiplicado por σ₀², es su
+ * covarianza; propagado con el jacobiano de las coordenadas, la de cada punto.
+ */
+export function adjustedCofactor({ A, q, N }: { A: number[][]; q: number[]; N: number[][] }): number[][] {
+  const m = q.length;
+  // B = A·Q; Q·Aᵀ·N⁻¹·A·Q = Bᵀ·(N⁻¹·B).
+  const B = A.map((row) => row.map((a, x) => a * q[x]!));
+  const columns = Array.from({ length: m }, (_, y) => solveScaled(N, B.map((row) => row[y]!)));
+  return Array.from({ length: m }, (_, x) =>
+    Array.from({ length: m }, (_, y) => {
+      const reduction = B.reduce((acc, row, i) => acc + row[x]! * columns[y]![i]!, 0);
+      return (x === y ? q[x]! : 0) - reduction;
+    }),
+  );
+}
+
+/**
+ * F(α, 2, r): el cuantil 1 − α de la F de Fisher con 2 grados de libertad en
+ * el numerador y r en el denominador. Con 2 en el numerador tiene forma
+ * cerrada, F = (r/2)·(α^(−2/r) − 1), que reproduce la tabla 19.2 de Ghilani.
+ */
+export function fQuantile2(alpha: number, r: number): number {
+  return (r / 2) * (Math.pow(alpha, -2 / r) - 1);
+}
+
+/**
+ * Factor que lleva la elipse estándar al nivel de confianza 1 − α:
+ * c = √(2·F(α, 2, r)) (Ghilani, ec. 19.22). Va con el σ₀ del propio ajuste:
+ * con la poca redundancia de una poligonal (r = 3, o 2), c = 4.37 o 6.16 al
+ * 95 %, no el 2.45 de un σ conocido.
+ */
+export function ellipseScale(r: number, alpha = 0.05): number {
+  return Math.sqrt(2 * fQuantile2(alpha, r));
+}
+
+/** Una elipse de error: semiejes en las unidades de la covarianza y azimut del mayor, en grados. */
+export interface ErrorEllipse {
+  semiMajor: number;
+  semiMinor: number;
+  /** Azimut del semieje mayor, desde el Norte y en sentido horario, en [0°, 180°). */
+  majorAzimuth: number;
+}
+
+/**
+ * La elipse estándar de una covarianza Norte–Este: los semiejes son las raíces
+ * de sus autovalores, y el mayor apunta al azimut ½·atan2(2σNE, σN² − σE²)
+ * (Ghilani, § 19.2, con x = Este e y = Norte).
+ */
+export function errorEllipse(cov: { nn: number; ee: number; ne: number }): ErrorEllipse {
+  const mean = (cov.nn + cov.ee) / 2;
+  const root = Math.hypot((cov.nn - cov.ee) / 2, cov.ne);
+  const major = mean + root;
+  if (!(major > 0)) return { semiMajor: 0, semiMinor: 0, majorAzimuth: 0 };
+  const azimuth = (Math.atan2(2 * cov.ne, cov.nn - cov.ee) / 2) * (180 / Math.PI);
+  return {
+    semiMajor: Math.sqrt(major),
+    semiMinor: Math.sqrt(Math.max(mean - root, 0)),
+    majorAzimuth: ((azimuth % 180) + 180) % 180,
+  };
+}

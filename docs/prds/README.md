@@ -44,6 +44,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 36 | La nivelación como la mide el topógrafo | `35-ux-nivelacion.md` | cerrada |
 | 37 | Los asentamientos como los mide el topógrafo | `36-ux-asentamientos.md` | cerrada |
 | 38 | El informe de cada proceso | `37-informe-por-proceso.md` | cerrada |
+| 39 | Mínimos cuadrados: requisitos y precisión de cada punto | `38-precision-minimos-cuadrados.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

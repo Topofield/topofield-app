@@ -231,7 +231,33 @@ export type LeastSquaresAdjustment =
        * ajustables, después las distancias.
        */
       matrices: { A: number[][]; q: number[]; w: number[]; N: number[][]; k: number[]; observations: number[] };
+      /** La precisión de cada punto ajustado (Fase 39). */
+      precision: AdjustedPrecision;
     };
+
+/**
+ * La precisión de los puntos ajustados (Fase 39): la covarianza de sus
+ * coordenadas, propagada desde las observaciones ajustadas con el σ₀ del
+ * ajuste, y su elipse de error a un nivel de confianza (Ghilani, cap. 19).
+ */
+export interface AdjustedPrecision {
+  /** Nivel de confianza de las elipses: 0.95. */
+  confidence: number;
+  /** Factor c = √(2·F(1 − confidence, 2, r)) que lleva la elipse estándar a ese nivel. */
+  scale: number;
+  /** Por estación; `null` en un punto fijo: la partida, la vuelta a ella o la llegada conocida. */
+  stations: (PointPrecision | null)[];
+}
+
+export interface PointPrecision {
+  /** Desviación típica (1σ) del Norte y del Este, en metros. */
+  sigmaNorth: number;
+  sigmaEast: number;
+  /** Covarianza Norte–Este, en m². */
+  covarianceNE: number;
+  /** Elipse de error al nivel de `AdjustedPrecision.confidence`: semiejes en metros, azimut en grados. */
+  ellipse: { semiMajor: number; semiMinor: number; majorAzimuth: number };
+}
 
 /** Resultados por estación (columnas calculadas de polygonal_stations). */
 export interface StationResult {

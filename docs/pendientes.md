@@ -795,3 +795,15 @@ informe que reúna procesos, quitamos las demás páginas o restos que queden».
 Sobre el Excel: «la idea es casi imitar pero mejorando diseño los excel que
 tenemos de casos de ejemplo» —las carteras de `docs/carteras/`—, con fórmulas
 vivas. Eligió el PDF del navegador y una sola fase.
+
+## Mínimos cuadrados: requisitos y precisión de cada punto (Fase 39)
+
+El 2026-10-08 un usuario de la app preguntó por qué «para la de mínimos no
+salen resultados», creyendo que «necesitaría más lecturas por puntos». No es
+así: faltaban los tres pesos, y «Mediciones por distancia» se confunde con las
+lecturas. El usuario respondió: «sí, esas consideraciones debemos tenerlas en
+cuenta, parecen esenciales», y trajo un texto sobre el ajuste de Gauss-Markov
+con pesos por la precisión del instrumento y elipses de error. Eligió
+**aclarar los requisitos del método y añadir la precisión de cada punto**
+(σ N, σ E y elipses, en tabla y dibujadas). Es la **Fase 39**
+([`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md)).

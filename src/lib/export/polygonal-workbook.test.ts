@@ -95,6 +95,36 @@ describe("Excel de la poligonal — fórmulas contra el motor", () => {
     expect(textos).toEqual(expect.arrayContaining(["Matriz A", "N = A·Q·Aᵀ", "k", "v"]));
   });
 
+  // Fase 39: la precisión de cada punto, como valores de la app, igual que las matrices.
+  it("la Vivero por mínimos cuadrados lleva la precisión de cada punto, en mm y con la elipse al 95 %", () => {
+    const vivero = PROCESOS_DEMO.find((p) => p.name === "Poligonal Famarena — Sede Vivero")!;
+    const wb = libro(vivero, "least_squares");
+    const ws = wb.worksheets[0]!;
+    let header = 0;
+    ws.eachRow((row, r) => row.eachCell((c) => { if (c.value === "Semieje mayor (mm)") header = r; }));
+    expect(header).toBeGreaterThan(0);
+    const fila = (code: string) => {
+      for (let r = header + 1; r <= header + 8; r++) if (ws.getCell(r, 1).value === code) return r;
+      return 0;
+    };
+    const { resultado } = resultadosDe({ ...vivero, correctionMethod: "least_squares" });
+    if (resultado.adjustment?.status !== "adjusted") throw new Error("sin ajuste");
+    const d3 = resultado.adjustment.precision.stations[3]!;
+    const r = fila("D3");
+    expect(ws.getCell(r, 2).value).toBeCloseTo(d3.sigmaNorth * 1000, 9);
+    expect(ws.getCell(r, 3).value).toBeCloseTo(d3.sigmaEast * 1000, 9);
+    expect(ws.getCell(r, 4).value).toBeCloseTo(d3.ellipse.semiMajor * 1000, 9);
+    expect(ws.getCell(r, 5).value).toBeCloseTo(d3.ellipse.semiMinor * 1000, 9);
+    // El azimut, en grados, minutos y segundos, como los demás ángulos del libro.
+    const g = ws.getCell(r, 6).value as number;
+    const m = ws.getCell(r, 7).value as number;
+    const sec = ws.getCell(r, 8).value as number;
+    expect(Number.isInteger(g) && Number.isInteger(m)).toBe(true);
+    expect(g + m / 60 + sec / 3600).toBeCloseTo(d3.ellipse.majorAzimuth, 9);
+    expect(ws.getCell(fila("Famarena_5"), 2).value).toBe("Punto fijo");
+    expect(formulaMismatches(wb)).toEqual([]);
+  });
+
   it("mínimos cuadrados sin pesos: la hoja dice por qué no hay ajuste", () => {
     const vivero = PROCESOS_DEMO.find((p) => p.name === "Poligonal Famarena — Sede Vivero")!;
     const wb = libro({ ...vivero, leastSquares: undefined }, "least_squares");

@@ -1,6 +1,7 @@
 import { Alert, NumberInput } from "@/components/design-system";
 import { sigma0Interval, sigma0Reading } from "@/lib/calculations/least-squares";
-import type { PolygonalResult } from "@/types/polygonal";
+import type { AngleInputFormat, PolygonalResult } from "@/types/polygonal";
+import { FIXED_POINT_TEXT, firstPointFlat, PRECISION_HEADERS, precisionCells } from "./precision-format";
 import type { LeastSquaresWeightsDraft } from "./polygonal-draft";
 
 const SIGMA0_TEXT = {
@@ -16,7 +17,11 @@ const UNADJUSTABLE_TEXT = {
   not_converged: "El ajuste no convergió. Revise la cartera en busca de un error grueso, o elija otro método.",
 } as const;
 
-/** Los pesos del ajuste por mínimos cuadrados (Fase 14): se guardan al salir del campo. */
+/**
+ * Los pesos del ajuste por mínimos cuadrados (Fase 14): se guardan al salir del
+ * campo. Desde la Fase 39 dicen qué pide el método: un usuario creía que le
+ * faltaban lecturas por punto, cuando le faltaban los pesos.
+ */
 export function LeastSquaresWeightsFields({
   weights,
   error,
@@ -31,6 +36,23 @@ export function LeastSquaresWeightsFields({
 }) {
   return (
     <div className="flex flex-col gap-3">
+      <div className="text-sm text-ink-2">
+        <p>Mínimos cuadrados reparte el error según la precisión de cada observación, así que pide tres valores:</p>
+        <ul className="mt-1 list-disc pl-5">
+          <li>
+            <span className="font-medium text-ink">σ angular</span>: la precisión de un ángulo, de la ficha de la
+            estación total (por ejemplo, 2″).
+          </li>
+          <li>
+            <span className="font-medium text-ink">σ de distancia</span>: la de una medición de distancia, también de
+            la ficha (por ejemplo, 0.002 m).
+          </li>
+          <li>
+            <span className="font-medium text-ink">Veces que se midió cada distancia</span>: 1 si la cartera anota una
+            sola. Cada lado pesa como σ/√veces.
+          </li>
+        </ul>
+      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <NumberInput
           label="σ angular (″)"
@@ -46,15 +68,15 @@ export function LeastSquaresWeightsFields({
         />
         <NumberInput
           integer
-          label="Mediciones por distancia"
+          label="Veces que se midió cada distancia"
           value={weights.distanceMeasurements}
           onChange={(e) => onChange({ ...weights, distanceMeasurements: e.target.value })}
           onBlur={onCommit}
         />
       </div>
       <p className="text-sm text-ink-2">
-        La desviación típica que se supone para cada ángulo y cada distancia. Una distancia medida n veces pesa como
-        σ/√n. Se guardan al salir del campo, cuando están los tres.
+        No hacen falta más lecturas por punto: la comprobación la da el cierre, con 3 condiciones (2 si la abierta no
+        tiene azimut de llegada). Los valores se guardan al salir del campo, cuando están los tres.
       </p>
       {error && <Alert variant="warning">{error}</Alert>}
     </div>
@@ -131,6 +153,80 @@ export function LeastSquaresPanel({ result }: { result: PolygonalResult }) {
           σ₀ compara lo medido con los pesos supuestos. Con r = {adjustment.conditions} condiciones, la prueba χ² al 95 %
           espera σ₀ entre {bounds[0]} y {bounds[1]}.
         </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * La precisión de cada punto ajustado (Fase 39): σ Norte y σ Este (1σ) y la
+ * elipse de error al 95 %, con el c y la r que la escalan (Ghilani, ec.
+ * 19.22). Los puntos fijos —la partida, la vuelta a ella o la llegada
+ * conocida— no tienen elipse.
+ */
+export function PointPrecisionTable({
+  result,
+  angleFormat,
+}: {
+  result: PolygonalResult;
+  angleFormat: AngleInputFormat;
+}) {
+  const adjustment = result.adjustment;
+  if (adjustment?.status !== "adjusted") return null;
+  const { precision } = adjustment;
+  const level = Math.round(precision.confidence * 100);
+  const flat = firstPointFlat(precision);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-rule text-right text-xs text-ink-2">
+              <th scope="col" className="py-2 pr-3 text-left font-medium">
+                Punto
+              </th>
+              {PRECISION_HEADERS.map((h, c) => (
+                <th key={h} scope="col" className={c < PRECISION_HEADERS.length - 1 ? "py-2 pr-3 font-medium" : "py-2 font-medium"}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {result.stations.map((s, i) => {
+              const p = precision.stations[i];
+              const code = s.pointCode || `E${i + 1}`;
+              return (
+                <tr key={i} className="border-b border-rule text-right tabular-nums">
+                  <td className="py-2 pr-3 text-left font-semibold">{code}</td>
+                  {p ? (
+                    precisionCells(p, angleFormat).map((cell, c) => (
+                      <td key={c} className={c < PRECISION_HEADERS.length - 1 ? "py-2 pr-3" : "py-2"}>
+                        {cell}
+                      </td>
+                    ))
+                  ) : (
+                    <td colSpan={PRECISION_HEADERS.length} className="py-2 text-left text-ink-2">
+                      {FIXED_POINT_TEXT}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="max-w-xl text-xs text-ink-2">
+        <p>
+          σ N y σ E son desviaciones típicas (1σ), con el σ₀ del ajuste. Las elipses son al {level} %: la estándar por c ={" "}
+          {precision.scale.toFixed(2)}, con r = {adjustment.conditions} condiciones (Ghilani y Wolf, ec. 19.22). Con tan
+          pocas condiciones, c es grande: una poligonal simple se comprueba solo con su cierre.
+        </p>
+        {flat && (
+          <p className="mt-1">
+            Un semieje menor de 0 es un punto que solo se mueve a lo largo del primer lado: el azimut de ese lado es fijo.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -281,16 +281,23 @@ export function validateLeastSquaresWeights(
     return "El σ de distancia debe estar entre 0.0001 m y 9999.9999 m, con cuatro decimales como mucho.";
   }
   if (m != null && !(Number.isInteger(m) && m >= 1 && m <= 1000)) {
-    return "El número de mediciones debe ser un entero entre 1 y 1000.";
+    return "Las veces que se midió cada distancia deben ser un entero entre 1 y 1000.";
   }
   if (method !== "least_squares") return null;
   if (type === "open_uncontrolled") {
     return "La abierta sin control no tiene nada que ajustar: elija otro método.";
   }
-  if (a == null || d == null || m == null) {
-    return "Faltan los pesos del ajuste: σ angular, σ de distancia y número de mediciones.";
-  }
-  return null;
+  // Cuáles faltan, con el nombre de su campo (Fase 39): «faltan los pesos» no
+  // decía qué teclear.
+  const missing = [
+    a == null && "el σ angular",
+    d == null && "el σ de distancia",
+    m == null && "las veces que se midió cada distancia",
+  ].filter((x): x is string => x !== false);
+  if (missing.length === 0) return null;
+  const list =
+    missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} y ${missing[missing.length - 1]}`;
+  return `${missing.length === 1 ? "Falta" : "Faltan"} ${list}.`;
 }
 
 /**

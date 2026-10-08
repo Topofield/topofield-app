@@ -4,6 +4,9 @@ import { azimuthFromCoordinates, dmsToDecimal } from "@/lib/calculations/angles"
 import { CARTERA_TT4, CARTERA_VIVERO, type Cartera } from "@/lib/demo/carteras";
 import type { PolygonalInput, StationInput } from "@/types/polygonal";
 import {
+  ellipseExtremes,
+  ellipseFactor,
+  ellipseRotation,
   exaggeratedPoints,
   exaggerationFactor,
   niceFloor,
@@ -155,5 +158,87 @@ describe("plotFrame", () => {
 describe("scaleBarMeters", () => {
   it("da una longitud redonda cercana al ancho pedido", () => {
     expect(scaleBarMeters(0.07, 100)).toBe(5);
+  });
+});
+
+// Fase 39: las elipses de error se dibujan exageradas, como lo sin compensar.
+describe("ellipseFactor", () => {
+  const vivero = {
+    ...fromCartera(CARTERA_VIVERO),
+    method: "least_squares" as const,
+    leastSquares: { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 },
+  };
+  const r = computePolygonal(vivero);
+  const precision = r.adjustment?.status === "adjusted" ? r.adjustment.precision : null;
+
+  it("cartera Vivero con los pesos de la hoja: ×500 —la mayor, de 21 mm, queda en unos 10 m—", () => {
+    expect(ellipseFactor(polygonalTraces(vivero, r)!, precision!)).toBe(500);
+  });
+
+  it("lleva la mayor elipse al 15 % de la extensión, con un número redondo", () => {
+    const traces = polygonalTraces(vivero, r)!;
+    const k = ellipseFactor(traces, precision!)!;
+    const largest = Math.max(...precision!.stations.map((p) => p?.ellipse.semiMajor ?? 0));
+    const norths = traces.map((t) => t.adjusted.north);
+    const easts = traces.map((t) => t.adjusted.east);
+    const extent = Math.max(Math.max(...norths) - Math.min(...norths), Math.max(...easts) - Math.min(...easts));
+    expect(k * largest).toBeLessThanOrEqual(0.15 * extent);
+    expect(niceFloor(k)).toBe(k);
+  });
+
+  it("nunca encoge una elipse que ya se ve", () => {
+    const enorme = {
+      ...precision!,
+      stations: precision!.stations.map((p) => (p ? { ...p, ellipse: { ...p.ellipse, semiMajor: 50 } } : null)),
+    };
+    expect(ellipseFactor(polygonalTraces(vivero, r)!, enorme)).toBe(1);
+  });
+
+  it("sin elipses —un ajuste perfecto, con σ₀ = 0— no hay factor", () => {
+    const nulas = {
+      ...precision!,
+      stations: precision!.stations.map((p) => (p ? { ...p, ellipse: { semiMajor: 0, semiMinor: 0, majorAzimuth: 0 } } : null)),
+    };
+    expect(ellipseFactor(polygonalTraces(vivero, r)!, nulas)).toBeNull();
+  });
+});
+
+describe("ellipseRotation: el giro del SVG para el eje mayor", () => {
+  // En pantalla, el Este es +x y el Norte es −y. Girar (1, 0) por φ da
+  // (cos φ, sen φ), que debe apuntar al azimut: (sen az, −cos az).
+  it.each([0, 30, 45, 90, 132.78, 179])("con azimut %s°, el eje x girado apunta al azimut", (az) => {
+    const phi = (ellipseRotation(az) * Math.PI) / 180;
+    const rad = (az * Math.PI) / 180;
+    expect(Math.cos(phi)).toBeCloseTo(Math.sin(rad), 12);
+    expect(Math.sin(phi)).toBeCloseTo(-Math.cos(rad), 12);
+  });
+});
+
+describe("ellipseExtremes: los extremos de cada elipse exagerada, para el encuadre", () => {
+  const traces = [
+    { code: "A", adjusted: { north: 0, east: 0 }, unadjusted: { north: 0, east: 0 } },
+    { code: "B", adjusted: { north: 100, east: 0 }, unadjusted: { north: 100, east: 0 } },
+  ];
+  const precision = {
+    confidence: 0.95,
+    scale: 4.37,
+    stations: [
+      null,
+      { sigmaNorth: 0, sigmaEast: 0, covarianceNE: 0, ellipse: { semiMajor: 0.02, semiMinor: 0.01, majorAzimuth: 0 } },
+    ],
+  };
+
+  it("da los dos extremos de cada semieje, ×k, alrededor del vértice", () => {
+    const pts = ellipseExtremes(traces, precision, 500);
+    const near = (n: number, e: number) => pts.some((p) => Math.abs(p.north - n) < 1e-9 && Math.abs(p.east - e) < 1e-9);
+    expect(pts).toHaveLength(4);
+    expect(near(110, 0)).toBe(true);
+    expect(near(90, 0)).toBe(true);
+    expect(near(100, 5)).toBe(true);
+    expect(near(100, -5)).toBe(true);
+  });
+
+  it("los puntos fijos no aportan nada", () => {
+    expect(ellipseExtremes(traces.slice(0, 1), precision, 500)).toEqual([]);
   });
 });

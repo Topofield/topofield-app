@@ -300,13 +300,29 @@ describe("validateLeastSquaresWeights (Fase 14)", () => {
   it("exige los tres pesos, positivos, y un número entero de mediciones", () => {
     expect(
       validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaDistanceM: null }),
-    ).toMatch(/Faltan los pesos/);
+    ).toMatch(/Falta el σ de distancia/);
     expect(
       validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaAngleSeconds: 0 }),
     ).toMatch(/entre 0.01″/);
     expect(
       validateLeastSquaresWeights("least_squares", "closed", { ...hoja, distanceMeasurements: 1.5 }),
     ).toMatch(/entero/);
+  });
+
+  // Fase 39: el aviso dice cuáles faltan, con los nombres de los campos.
+  it("dice cuáles pesos faltan", () => {
+    expect(validateLeastSquaresWeights("least_squares", "closed", vacios)).toBe(
+      "Faltan el σ angular, el σ de distancia y las veces que se midió cada distancia.",
+    );
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...vacios, distanceMeasurements: 1 }),
+    ).toBe("Faltan el σ angular y el σ de distancia.");
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, sigmaAngleSeconds: null }),
+    ).toBe("Falta el σ angular.");
+    expect(
+      validateLeastSquaresWeights("least_squares", "closed", { ...hoja, distanceMeasurements: 0 }),
+    ).toBe("Las veces que se midió cada distancia deben ser un entero entre 1 y 1000.");
   });
 
   it("valida los pesos que vengan aunque el método sea otro", () => {

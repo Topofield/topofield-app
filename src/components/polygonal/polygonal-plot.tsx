@@ -7,6 +7,9 @@
 
 import { niceTicks } from "@/lib/design/chart-scale";
 import {
+  ellipseExtremes,
+  ellipseFactor,
+  ellipseRotation,
   exaggeratedPoints,
   exaggerationFactor,
   plotFrame,
@@ -59,6 +62,9 @@ function coord(value: number): string {
   return value.toLocaleString("es-CO", { maximumFractionDigits: 2, useGrouping: false });
 }
 
+/** Una medida del dibujo a la centésima de píxel. */
+const px = (v: number) => Math.round(v * 100) / 100;
+
 function factorLabel(k: number): string {
   return `×${k.toLocaleString("es-CO")}`;
 }
@@ -98,11 +104,21 @@ export function PolygonalPlot({
   const k = input.type === "open_uncontrolled" || field ? null : exaggerationFactor(traces);
   const exaggerated = k ? exaggeratedPoints(traces, k) : null;
   const adjusted: PlanePoint[] = traces.map((t) => t.adjusted);
+  // Las elipses de error al 95 % (Fase 39), exageradas ×ek: solo con un ajuste
+  // por mínimos cuadrados. El índice de la traza es el de la estación; la
+  // vuelta de una cerrada sin amarre no tiene estación y no lleva elipse.
+  const precision = !field && result.adjustment?.status === "adjusted" ? result.adjustment.precision : null;
+  const ek = precision ? ellipseFactor(traces, precision) : null;
 
   // El encuadre es la poligonal, no el amarre: un amarre en un punto de red
   // a 800 m reduciría un lote de 40 m a unos píxeles. Si el amarre queda
   // fuera, su línea de orientación sale hasta el borde y el <svg> la recorta.
-  const all: PlanePoint[] = [...adjusted, ...(exaggerated ?? [])];
+  // Con las elipses dentro: una en un vértice del borde salía cortada.
+  const all: PlanePoint[] = [
+    ...adjusted,
+    ...(exaggerated ?? []),
+    ...(precision && ek ? ellipseExtremes(traces, precision, ek) : []),
+  ];
 
   const base = plotFrame(all, W, H, PADDING);
   const baseCenter = {
@@ -156,7 +172,10 @@ export function PolygonalPlot({
     (result.linearError !== null
       ? `, error de cierre ${result.linearError.toFixed(3)} m`
       : "") +
-    (k ? `. La poligonal sin compensar se dibuja con los desplazamientos exagerados ${factorLabel(k)}.` : ".");
+    (k ? `. La poligonal sin compensar se dibuja con los desplazamientos exagerados ${factorLabel(k)}.` : ".") +
+    (ek && precision
+      ? ` Las elipses de error al ${Math.round(precision.confidence * 100)} % se dibujan ${factorLabel(ek)}.`
+      : "");
 
   return (
     <figure className="flex flex-col gap-2">
@@ -267,6 +286,37 @@ export function PolygonalPlot({
             </g>
           )}
 
+          {/* Elipses de error, centradas en cada vértice ajustado. Un punto que
+              solo se mueve a lo largo de un lado da una elipse plana: se
+              dibuja como un trazo. */}
+          {precision && ek && (
+            <g>
+              {traces.map((t, i) => {
+                const p = precision.stations[i];
+                if (!p || p.ellipse.semiMajor <= 0) return null;
+                // A la centésima de píxel: el servidor y el navegador difieren en
+                // el decimal 13 de la covarianza, y React avisaría de que el HTML
+                // no coincide al hidratar.
+                const cx = px(frame.toX(t.adjusted.east));
+                const cy = px(frame.toY(t.adjusted.north));
+                return (
+                  <ellipse
+                    key={`elipse-${i}`}
+                    cx={cx}
+                    cy={cy}
+                    rx={px((p.ellipse.semiMajor * ek) / frame.metersPerPixel)}
+                    ry={px(Math.max((p.ellipse.semiMinor * ek) / frame.metersPerPixel, 0.75))}
+                    transform={`rotate(${px(ellipseRotation(p.ellipse.majorAzimuth))} ${cx} ${cy})`}
+                    fill="var(--color-success)"
+                    fillOpacity={0.12}
+                    stroke="var(--color-success)"
+                    strokeWidth={1.5}
+                  />
+                );
+              })}
+            </g>
+          )}
+
           {/* Ajustada: continua, con vértices rotulados. En tinta, como la
               serie principal del prototipo: en mira quedaba en el mismo tono
               que la sin compensar (warning) y solo las separaba el trazo. */}
@@ -333,6 +383,23 @@ export function PolygonalPlot({
             {input.type === "open_uncontrolled"
               ? "Abierta sin control: no se compensa."
               : "Sin correcciones: la poligonal cierra exacta."}
+          </span>
+        )}
+        {precision && ek && (
+          <span className="inline-flex items-center gap-2">
+            <svg width={24} height={12} aria-hidden>
+              <ellipse
+                cx={12}
+                cy={6}
+                rx={10}
+                ry={4}
+                fill="var(--color-success)"
+                fillOpacity={0.12}
+                stroke="var(--color-success)"
+                strokeWidth={1.5}
+              />
+            </svg>
+            Elipses de error al {Math.round(precision.confidence * 100)} % ({factorLabel(ek)})
           </span>
         )}
         {referenceOutside && reference && (

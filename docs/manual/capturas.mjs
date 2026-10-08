@@ -230,6 +230,20 @@ await page
   .screenshot({ path: join(OUT, "21-minimos-cuadrados.png") });
 console.log("✓", "21-minimos-cuadrados");
 
+// Fase 39 — la precisión de cada punto de la misma Vivero, y su dibujo con las
+// elipses de error al 95 %.
+await page
+  .getByRole("heading", { name: "Precisión de cada punto" })
+  .locator("xpath=ancestor::section[1]")
+  .screenshot({ path: join(OUT, "36-precision-de-cada-punto.png") });
+console.log("✓", "36-precision-de-cada-punto");
+await page
+  .locator("figure")
+  .filter({ has: page.locator("svg[role=img] ellipse") })
+  .first()
+  .screenshot({ path: join(OUT, "37-elipses-de-error.png") });
+console.log("✓", "37-elipses-de-error");
+
 // Fase 15 — georreferenciar la cartera Vivero sembrada en sistema local, con
 // D1 y D3, desde el paso de Ajuste. Se captura el diálogo con la vista previa,
 // sin confirmar: el seed queda como estaba.

@@ -5,6 +5,12 @@
 
 import type { ReactNode } from "react";
 import { formatAngle } from "@/components/polygonal/angle-format";
+import {
+  FIXED_POINT_TEXT,
+  firstPointFlat,
+  PRECISION_HEADERS,
+  precisionCells,
+} from "@/components/polygonal/precision-format";
 import type { CaptureRow } from "@/components/polygonal/capture-rows";
 import { sigma0Interval, sigma0Reading } from "@/lib/calculations/least-squares";
 import type { AngularStep, CorrectionBreakdown } from "@/lib/calculations/correction-breakdown";
@@ -14,7 +20,7 @@ import {
   type PolygonalInput,
   type PolygonalResult,
 } from "@/types/polygonal";
-import { Formula, Frac, Gap, MathLine, Matrix, Mi, Mn, Mo, Mtext, Num, Row, Sqrt, Sub, SubSup, Sum, Sup, Thin } from "../math";
+import { Formula, Frac, Gap, Hat, MathLine, Matrix, Mi, Mn, Mo, Mtext, Num, Row, Sqrt, Sub, SubSup, Sum, Sup, Thin } from "../math";
 
 interface CorrectionProps {
   input: PolygonalInput;
@@ -652,7 +658,114 @@ function LeastSquares({ b, ...p }: CorrectionProps & { b: Extract<CorrectionBrea
             ]}
           />
           <p className="report-text">{reading!.text}</p>
+          <PointPrecision adj={adj} result={p.result} angleFormat={angleFormat} />
         </>
+      )}
+    </>
+  );
+}
+
+/**
+ * La precisión de cada punto ajustado (Fase 39): la covarianza propagada desde
+ * las observaciones ajustadas y la elipse de error al 95 %, como en Ajuste.
+ */
+function PointPrecision({
+  adj,
+  result,
+  angleFormat,
+}: {
+  adj: Extract<NonNullable<PolygonalResult["adjustment"]>, { status: "adjusted" }>;
+  result: PolygonalResult;
+  angleFormat: AngleInputFormat;
+}) {
+  const pr = adj.precision;
+  const level = Math.round(pr.confidence * 100);
+  return (
+    <>
+      <h4>Precisión de cada punto</h4>
+      <p className="report-text">
+        La covarianza de cada punto sale de propagar la de las observaciones ajustadas, con el σ₀ del ajuste. La elipse
+        de error al {level} % es la estándar multiplicada por c, que depende de la redundancia r (Ghilani y Wolf,{" "}
+        <em>Adjustment Computations</em>, ec. 19.22). Con las pocas condiciones de una poligonal simple, c es grande.
+      </p>
+      <Formula>
+        <MathLine>
+          <Sub base={<Mi>Q</Mi>} sub={<Hat><Mi>l</Mi></Hat>} />
+          <Mo>=</Mo>
+          <Mi>Q</Mi>
+          <Mo>−</Mo>
+          <Mi>Q</Mi>
+          <Sup base={<Mi>A</Mi>} sup={<Mi>T</Mi>} />
+          <Sup base={<Row><Mo>(</Mo><Mi>A</Mi><Mi>Q</Mi><Sup base={<Mi>A</Mi>} sup={<Mi>T</Mi>} /><Mo>)</Mo></Row>} sup={<><Mo>−</Mo><Mn>1</Mn></>} />
+          <Mi>A</Mi>
+          <Mi>Q</Mi>
+          <Gap />
+          <Sub base={<Mi>Σ</Mi>} sub={<><Mi>N</Mi><Mi>E</Mi></>} />
+          <Mo>=</Mo>
+          <SubSup base={<Mi>σ</Mi>} sub={<Mn>0</Mn>} sup={<Mn>2</Mn>} />
+          <Mi>J</Mi>
+          <Sub base={<Mi>Q</Mi>} sub={<Hat><Mi>l</Mi></Hat>} />
+          <Sup base={<Mi>J</Mi>} sup={<Mi>T</Mi>} />
+        </MathLine>
+        <MathLine>
+          <Mi>c</Mi>
+          <Mo>=</Mo>
+          <Sqrt>
+            <Mn>2</Mn>
+            <Mi>F</Mi>
+            <Row>
+              <Mo>(</Mo>
+              <Mn>0.05</Mn>
+              <Mo>,</Mo>
+              <Mn>2</Mn>
+              <Mo>,</Mo>
+              <Mi>r</Mi>
+              <Mo>)</Mo>
+            </Row>
+          </Sqrt>
+          <Mo>=</Mo>
+          <Mn>{pr.scale.toFixed(2)}</Mn>
+          <Gap />
+          <Mi>r</Mi>
+          <Mo>=</Mo>
+          <Mn>{adj.conditions}</Mn>
+        </MathLine>
+      </Formula>
+      <table className="report-table">
+        <thead>
+          <tr>
+            <th>Punto</th>
+            {PRECISION_HEADERS.map((h) => (
+              <th key={h} className="num">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {result.stations.map((s, i) => {
+            const pt = pr.stations[i];
+            return (
+              <tr key={i}>
+                <td>{s.pointCode}</td>
+                {pt ? (
+                  precisionCells(pt, angleFormat).map((cell, c) => (
+                    <td key={c} className="num">
+                      {cell}
+                    </td>
+                  ))
+                ) : (
+                  <td colSpan={PRECISION_HEADERS.length}>{FIXED_POINT_TEXT}</td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {firstPointFlat(pr) && (
+        <p className="report-text">
+          Un semieje menor de 0 es un punto que solo se mueve a lo largo del primer lado: el azimut de ese lado es fijo.
+        </p>
       )}
     </>
   );

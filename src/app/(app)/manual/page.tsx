@@ -844,32 +844,36 @@ export default function ManualPage() {
           <strong>Mínimos cuadrados.</strong> Los otros tres métodos reparten el
           error con una regla fija; este busca las correcciones más pequeñas
           —pesadas por la precisión de cada observación— que hacen cerrar la
-          poligonal. Al elegirlo aparecen tres campos:
+          poligonal. Al elegirlo, el panel explica qué necesita y aparecen tres
+          campos:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong>σ angular (″)</strong>: la desviación típica que supone
-            para cada ángulo.
+            <strong>σ angular (″)</strong>: la precisión de un ángulo, de la
+            ficha de la estación total.
           </li>
           <li>
             <strong>σ de distancia (m)</strong>: la de una medición de
-            distancia.
+            distancia, también de la ficha.
           </li>
           <li>
-            <strong>Mediciones por distancia</strong>: cuántas veces midió cada
-            lado. Una distancia medida <em>n</em> veces pesa como σ/√
+            <strong>Veces que se midió cada distancia</strong>: 1 si la cartera
+            anota una sola. Una distancia medida <em>n</em> veces pesa como σ/√
             <em>n</em>.
           </li>
         </ul>
 
         <p>
-          Todas las observaciones pesan igual. Los campos{" "}
-          <strong>salen vacíos</strong>: la aplicación no supone pesos por
-          usted. La hoja de la universidad usa, por ejemplo, 2″, 0.011 m y 2
-          mediciones. Se guardan al salir del campo, cuando están los tres;
-          mientras tanto el ajuste dice que faltan. Si cambia de método, los
-          pesos se conservan para cuando vuelva.
+          <strong>No hacen falta más lecturas por punto</strong>: la
+          comprobación la da el cierre, con 3 condiciones (2 si la abierta no
+          tiene azimut de llegada). Todas las observaciones pesan igual. Los dos
+          σ <strong>salen vacíos</strong>, porque dependen de su equipo: la
+          aplicación no los supone por usted. «Veces que se midió cada
+          distancia» empieza en 1. La hoja de la universidad usa, por ejemplo,
+          2″, 0.011 m y 2 mediciones. Se guardan al salir del campo, cuando
+          están los tres; mientras tanto, el ajuste dice cuáles faltan. Si
+          cambia de método, los pesos se conservan para cuando vuelva.
         </p>
 
         <Captura {...CAPTURAS.minimosCuadrados} />
@@ -911,6 +915,44 @@ export default function ManualPage() {
         </p>
 
         <p>
+          <strong>La precisión de cada punto.</strong> Con mínimos cuadrados,
+          la tarjeta «Precisión de cada punto» dice cuánto se puede confiar en
+          cada coordenada ajustada:
+        </p>
+
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>σ N y σ E</strong>: la desviación típica (1σ) del Norte y
+            del Este, en milímetros.
+          </li>
+          <li>
+            <strong>La elipse de error al 95 %</strong>: sus semiejes mayor y
+            menor, en milímetros, y el azimut del mayor. El punto está dentro de
+            ella con un 95 % de probabilidad.
+          </li>
+        </ul>
+
+        <p>
+          La elipse al 95 % es la estándar multiplicada por un factor c que
+          depende del número de condiciones (Ghilani y Wolf, ec. 19.22):{" "}
+          <strong>4.37</strong> con r = 3 y <strong>6.16</strong> con r = 2. Es
+          grande porque una poligonal simple solo se comprueba con su cierre.
+          La partida, la vuelta a ella y el punto de llegada son fijos y no
+          tienen elipse. Un semieje menor de 0 es un punto que solo puede
+          moverse a lo largo del primer lado, porque el azimut de ese lado es
+          fijo: en Vivero, D1.
+        </p>
+
+        <Captura {...CAPTURAS.precisionDeCadaPunto} />
+
+        <p>
+          El dibujo las traza en verde, exageradas: son milímetros sobre lados
+          de decenas de metros.
+        </p>
+
+        <Captura {...CAPTURAS.elipsesDeError} />
+
+        <p>
           <strong>El dibujo ajustado.</strong> La poligonal a escala sobre una
           grilla de coordenadas, con flecha de norte, barra de escala y el
           amarre si lo tiene.
@@ -929,6 +971,13 @@ export default function ManualPage() {
             <strong>exagerados</strong> por el factor que indica la leyenda
             (×100 en la imagen). En una cerrada no llega a cerrar: el hueco del
             último vértice es el error de cierre.
+          </li>
+          <li>
+            Con <strong>mínimos cuadrados</strong>, en verde, la{" "}
+            <strong>elipse de error al 95 %</strong> de cada vértice, exagerada
+            por el factor que indica la leyenda (×500 en Vivero): son
+            milímetros sobre lados de decenas de metros. El factor se elige solo
+            para que la mayor ocupe alrededor del 15 % del dibujo.
           </li>
         </ul>
 
@@ -2954,8 +3003,10 @@ export default function ManualPage() {
             las coordenadas ajustados son fórmulas. El cierre de antes del
             ajuste —con el que se juzga el orden— y las matrices de la última
             iteración —observaciones l₀, Matriz A, Q, w, N = A·Q·Aᵀ, k y v— van
-            como valores, porque la aplicación itera hasta converger. Sin
-            pesos, la hoja dice por qué no hay ajuste.
+            como valores, porque la aplicación itera hasta converger. Debajo de
+            ellas va la <strong>precisión de cada punto</strong> —σ N, σ E y la
+            elipse al 95 %—, también como valores. Sin pesos, la hoja dice por
+            qué no hay ajuste.
           </li>
         </ul>
 

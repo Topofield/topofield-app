@@ -18,10 +18,19 @@ import {
   readingSpreadSeconds,
   sinDeg,
 } from "./angles";
-import { adjustByConditions, SingularSystemError } from "./least-squares";
+import {
+  adjustByConditions,
+  adjustedCofactor,
+  ellipseScale,
+  errorEllipse,
+  SingularSystemError,
+  type ConditionAdjustment,
+  type Redundancy,
+} from "./least-squares";
 import { angularTolerance, detectPrecisionOrder, minRelativePrecision } from "./tolerances";
 import type { PrecisionOrder } from "@/types/project";
 import type {
+  AdjustedPrecision,
   AngleType,
   CorrectionMethod,
   LeastSquaresAdjustment,
@@ -29,6 +38,7 @@ import type {
   LeastSquaresWeights,
   ReadingInput,
   PolygonalInput,
+  PointPrecision,
   PolygonalResult,
   StationInput,
   StationResult,
@@ -896,6 +906,71 @@ function weightsValid(w: LeastSquaresWeights | null | undefined): w is LeastSqua
   );
 }
 
+/** Nivel de confianza de las elipses de error (Fase 39, decisión 5). */
+const ELLIPSE_CONFIDENCE = 0.95;
+
+/**
+ * La precisión de cada punto ajustado (Fase 39). El punto de la estación i es
+ * la partida más los lados 0..i−1, así que su jacobiano es la suma parcial de
+ * las filas de cierre: el ángulo de una estación j ≥ 1 arrastra los lados
+ * k ≥ j (−ΔE en Norte y +ΔN en Este, por radián) y la distancia k entra con su
+ * coseno y su seno. Con el cofactor de las observaciones ajustadas, la
+ * covarianza es Σ = σ₀²·J·Q_l̂·Jᵀ, y la elipse estándar se lleva al 95 % con
+ * c = √(2·F(0.05, 2, r)) (Ghilani, ec. 19.22).
+ */
+function pointPrecision(
+  adjustment: ConditionAdjustment,
+  angleStations: number[],
+  g: { azimuths: number[]; deltaN: number[]; deltaE: number[] },
+  sideCount: number,
+  stationCount: number,
+  fixed: (station: number) => boolean,
+  redundancy: Redundancy,
+): AdjustedPrecision {
+  const Q = adjustedCofactor(adjustment.last);
+  const s02 = adjustment.sigma0 ** 2;
+  const scale = ellipseScale(redundancy, 1 - ELLIPSE_CONFIDENCE);
+  const quad = (a: number[], b: number[]) =>
+    a.reduce((acc, ax, x) => acc + ax * b.reduce((t, by, y) => t + Q[x]![y]! * by, 0), 0);
+  const stations = Array.from({ length: stationCount }, (_, i): PointPrecision | null => {
+    if (fixed(i)) return null;
+    const last = Math.min(i, sideCount);
+    const jn: number[] = [];
+    const je: number[] = [];
+    for (const j of angleStations) {
+      let sN = 0;
+      let sE = 0;
+      if (j >= 1) {
+        for (let k = j; k < last; k++) {
+          sN -= g.deltaE[k] ?? 0;
+          sE += g.deltaN[k] ?? 0;
+        }
+      }
+      jn.push(sN);
+      je.push(sE);
+    }
+    for (let k = 0; k < sideCount; k++) {
+      jn.push(k < last ? cosDeg(g.azimuths[k] ?? 0) : 0);
+      je.push(k < last ? sinDeg(g.azimuths[k] ?? 0) : 0);
+    }
+    const nn = s02 * quad(jn, jn);
+    const ee = s02 * quad(je, je);
+    const ne = s02 * quad(jn, je);
+    const standard = errorEllipse({ nn, ee, ne });
+    return {
+      sigmaNorth: Math.sqrt(Math.max(nn, 0)),
+      sigmaEast: Math.sqrt(Math.max(ee, 0)),
+      covarianceNE: ne,
+      ellipse: {
+        semiMajor: standard.semiMajor * scale,
+        semiMinor: standard.semiMinor * scale,
+        majorAzimuth: standard.majorAzimuth,
+      },
+    };
+  });
+  return { confidence: ELLIPSE_CONFIDENCE, scale, stations };
+}
+
 /** Correcciones por estación a partir de las del ajuste. */
 function perStation<T>(n: number, pairs: [number, T][]): (T | null)[] {
   const out: (T | null)[] = Array.from({ length: n }, () => null);
@@ -999,6 +1074,16 @@ function leastSquaresClosed(
       conditions: 3,
       iterations: result.iterations,
       matrices: { ...result.last, observations },
+      // Fijos: la partida y, con amarre, la vuelta a ella.
+      precision: pointPrecision(
+        result,
+        adjustable,
+        g,
+        sideCount,
+        n,
+        (i) => i === 0 || (input.hasOrientation && i === n - 1),
+        3,
+      ),
     },
     converged: result.converged,
   };
@@ -1101,6 +1186,16 @@ function leastSquaresOpenControlled(
       conditions: doAngularClosure ? 3 : 2,
       iterations: result.iterations,
       matrices: { ...result.last, observations },
+      // Fijos: la partida y la llegada, que es un punto conocido.
+      precision: pointPrecision(
+        result,
+        deflIdx,
+        g,
+        sideCount,
+        n,
+        (i) => i === 0 || i === n - 1,
+        doAngularClosure ? 3 : 2,
+      ),
     },
     converged: result.converged,
   };

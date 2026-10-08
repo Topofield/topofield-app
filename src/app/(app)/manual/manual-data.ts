@@ -179,6 +179,18 @@ export const CAPTURAS = {
     width: 1216,
     height: 998,
   },
+  precisionDeCadaPunto: {
+    src: "/manual/36-precision-de-cada-punto.png",
+    alt: "Precisión de cada punto de la cartera Vivero por mínimos cuadrados: σ N, σ E, los semiejes de la elipse al 95 % y el azimut del mayor de D1 a D4 —D1 con semieje menor 0, a lo largo del primer lado—, Famarena_5 fijo, y la nota con c = 4.37 y r = 3.",
+    width: 1216,
+    height: 862,
+  },
+  elipsesDeError: {
+    src: "/manual/37-elipses-de-error.png",
+    alt: "Dibujo de la cartera Vivero ajustada por mínimos cuadrados, con las elipses de error al 95 % en verde, exageradas ×500: plana en D1, a lo largo del primer lado, y mayor en D3.",
+    width: 630,
+    height: 768,
+  },
   editorVisita: {
     src: "/manual/16-editor-visita.png",
     alt: "Paso 1 · Libreta de la visita 12 de Torre Alameda: la cabecera con 2 armadas, Segundo orden y Calculada; la tabla de la hoja con los rótulos BM del lugar, BM leído de paso, punto de cambio y cierra; y a la derecha las armadas, el tramo desde BM-1 que vuelve a BM-1 con su cierre y su orden, la comprobación de BM-2 y el movimiento de cada punto desde la visita anterior.",

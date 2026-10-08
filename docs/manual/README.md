@@ -486,19 +486,24 @@ de orientación— y sus cifras propias:
 
 **Mínimos cuadrados.** Los otros tres métodos reparten el error con una regla
 fija; este busca las correcciones más pequeñas —pesadas por la precisión de
-cada observación— que hacen cerrar la poligonal. Al elegirlo aparecen tres
-campos:
+cada observación— que hacen cerrar la poligonal. Al elegirlo, el panel explica
+qué necesita y aparecen tres campos:
 
-- **σ angular (″)**: la desviación típica que supone para cada ángulo.
-- **σ de distancia (m)**: la de una medición de distancia.
-- **Mediciones por distancia**: cuántas veces midió cada lado. Una distancia
-  medida *n* veces pesa como σ/√*n*.
+- **σ angular (″)**: la precisión de un ángulo, de la ficha de la estación
+  total.
+- **σ de distancia (m)**: la de una medición de distancia, también de la
+  ficha.
+- **Veces que se midió cada distancia**: 1 si la cartera anota una sola. Una
+  distancia medida *n* veces pesa como σ/√*n*.
 
-Todas las observaciones pesan igual. Los campos **salen vacíos**: la
-aplicación no supone pesos por usted. La hoja de la universidad usa, por
-ejemplo, 2″, 0.011 m y 2 mediciones. Se guardan al salir del campo, cuando
-están los tres; mientras tanto el ajuste dice que faltan. Si cambia de método,
-los pesos se conservan para cuando vuelva.
+**No hacen falta más lecturas por punto**: la comprobación la da el cierre,
+con 3 condiciones (2 si la abierta no tiene azimut de llegada). Todas las
+observaciones pesan igual. Los dos σ **salen vacíos**, porque dependen de su
+equipo: la aplicación no los supone por usted. «Veces que se midió cada
+distancia» empieza en 1. La hoja de la universidad usa, por ejemplo, 2″,
+0.011 m y 2 mediciones. Se guardan al salir del campo, cuando están los tres;
+mientras tanto, el ajuste dice cuáles faltan. Si cambia de método, los pesos
+se conservan para cuando vuelva.
 
 ![Corrección por mínimos cuadrados de la cartera Vivero](../../public/manual/21-minimos-cuadrados.png)
 
@@ -521,6 +526,30 @@ solo lado, por ejemplo, las condiciones de llegada dependen de una sola
 distancia y no hay nada que ajustar. σ₀ es información, no un criterio: el
 orden alcanzado no depende del método.
 
+**La precisión de cada punto.** Con mínimos cuadrados, la tarjeta
+«Precisión de cada punto» dice cuánto se puede confiar en cada coordenada
+ajustada:
+
+- **σ N y σ E**: la desviación típica (1σ) del Norte y del Este, en
+  milímetros.
+- **La elipse de error al 95 %**: sus semiejes mayor y menor, en milímetros,
+  y el azimut del mayor. El punto está dentro de ella con un 95 % de
+  probabilidad.
+
+La elipse al 95 % es la estándar multiplicada por un factor c que depende del
+número de condiciones (Ghilani y Wolf, ec. 19.22): **4.37** con r = 3 y
+**6.16** con r = 2. Es grande porque una poligonal simple solo se comprueba con
+su cierre. La partida, la vuelta a ella y el punto de llegada son fijos y no
+tienen elipse. Un semieje menor de 0 es un punto que solo puede moverse a lo
+largo del primer lado, porque el azimut de ese lado es fijo: en Vivero, D1.
+
+![Precisión de cada punto de la cartera Vivero](../../public/manual/36-precision-de-cada-punto.png)
+
+El dibujo las traza en verde, exageradas: son milímetros sobre lados de
+decenas de metros.
+
+![Elipses de error al 95 % de la cartera Vivero](../../public/manual/37-elipses-de-error.png)
+
 **El dibujo ajustado.** La poligonal a escala sobre una grilla de
 coordenadas, con flecha de norte, barra de escala y el amarre si lo tiene.
 
@@ -531,6 +560,10 @@ coordenadas, con flecha de norte, barra de escala y el amarre si lo tiene.
   desplazamientos **exagerados** por el factor que indica la leyenda (×100 en
   la imagen). En una cerrada no llega a cerrar: el hueco del último vértice
   es el error de cierre.
+- Con **mínimos cuadrados**, en verde, la **elipse de error al 95 %** de cada
+  vértice, exagerada por el factor que indica la leyenda (×500 en Vivero):
+  son milímetros sobre lados de decenas de metros. El factor se elige solo
+  para que la mayor ocupe alrededor del 15 % del dibujo.
 
 > **Por qué se exagera.** En un buen levantamiento el error de cierre es de
 > centímetros sobre cientos de metros: dibujado a escala real, ocupa menos de
@@ -1665,7 +1698,9 @@ Tiene la forma de la cartera de poligonales (`poligonales.xlsx`):
   fórmulas. El cierre de antes del ajuste —con el que se juzga el orden— y
   las matrices de la última iteración —observaciones l₀, Matriz A, Q, w,
   N = A·Q·Aᵀ, k y v— van como valores, porque la aplicación itera hasta
-  converger. Sin pesos, la hoja dice por qué no hay ajuste.
+  converger. Debajo de ellas va la **precisión de cada punto** —σ N, σ E y
+  la elipse al 95 %—, también como valores. Sin pesos, la hoja dice por qué
+  no hay ajuste.
 
 ### 11.3 Control de asentamientos
 
