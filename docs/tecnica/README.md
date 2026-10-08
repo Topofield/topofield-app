@@ -4,9 +4,9 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-08 · Fase 38 en `main`, con su migración
-**pendiente**: va después del merge (§ 13) · Fase 39 cerrada en su rama, sin
-migración · 1183 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-08 · Fases 38 y 39 en `main` y en
+producción, con la migración de la 38 aplicada (§ 13) · 1183 tests y 137
+pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -4124,13 +4124,12 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-08):** el repositorio tiene **cuarenta y dos**
-migraciones y la nube tiene aplicadas **cuarenta y una**, hasta
-`20261009000000_asentamientos_sin_cierre` (Fase 37). Falta
-`20261010000000_sin_informes_consolidados` (Fase 38), que va después del
-merge (abajo). Todas se empujaron antes del merge a `main`, salvo las cuatro
-que borran columnas, que fueron después: la de la Fase 29 y el último paso de
-las Fases 35, 36 y 37 (ver abajo). Las dos de la Fase 26 —el CHECK de
+**Estado actual (2026-10-08):** la nube tiene aplicadas las **cuarenta y
+dos** migraciones del repositorio, hasta
+`20261010000000_sin_informes_consolidados` (Fase 38). Todas se empujaron antes
+del merge a `main`, salvo las cinco que borran, que fueron después: la de la
+Fase 29, el último paso de las Fases 35, 36 y 37, y la de la Fase 38 (ver
+abajo). Las dos de la Fase 26 —el CHECK de
 distancias por visual positivas en `leveling_readings` y `settlement_book_readings`, y el
 índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
 filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
@@ -4351,8 +4350,8 @@ El primer `db push` lo ejecutó el usuario: el modo automático del agente lo
 bloquea. El `git push` de `main`, el `db push` del paso 3 y el borrado de la
 demo los ejecutó el agente con el visto bueno explícito del usuario.
 
-**La Fase 38 es un solo paso, después del merge** (preparado el 2026-10-08;
-**sin aplicar**). Antes del merge no hace falta nada. Después:
+**La Fase 38 es un solo paso, después del merge** (aplicado el 2026-10-08).
+Antes del merge no hace falta nada. Después:
 
 1. Merge a `main`. Vercel despliega el código, que ya no lee `reports`.
 2. `npx supabase db push` aplica `20261010000000_sin_informes_consolidados`:
@@ -4375,6 +4374,14 @@ código viejo llama a `getReports`.
 **La Fase 39 no tiene migración**: su despliegue es el merge. Su rama sale de
 la de la Fase 38, así que entra a `main` con ella o después de ella; el paso
 de la 38 —su `db push` después del merge— no cambia.
+
+**Cómo se desplegaron las Fases 38 y 39** (2026-10-08): el PR #31 (la 38) se
+fusionó primero, y después el #32 (la 39), con `main` integrado en su rama
+—el único conflicto fue la cifra de pruebas de esta doc—. Con Vercel ya
+desplegado, el usuario ejecutó el `db push` de la 38 (el modo automático del
+agente lo bloquea). Verificado después en solo lectura: `migration list` al día
+hasta `20261010000000`, y en un `db dump` del esquema no queda `reports` ni
+`reject_update_on_report()`; quedan las 15 tablas de la app.
 
 La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
 Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo
