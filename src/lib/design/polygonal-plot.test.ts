@@ -4,7 +4,9 @@ import { azimuthFromCoordinates, dmsToDecimal } from "@/lib/calculations/angles"
 import { CARTERA_TT4, CARTERA_VIVERO, type Cartera } from "@/lib/demo/carteras";
 import type { PolygonalInput, StationInput } from "@/types/polygonal";
 import {
+  ellipseExtremes,
   ellipseFactor,
+  ellipseRotation,
   exaggeratedPoints,
   exaggerationFactor,
   niceFloor,
@@ -198,5 +200,45 @@ describe("ellipseFactor", () => {
       stations: precision!.stations.map((p) => (p ? { ...p, ellipse: { semiMajor: 0, semiMinor: 0, majorAzimuth: 0 } } : null)),
     };
     expect(ellipseFactor(polygonalTraces(vivero, r)!, nulas)).toBeNull();
+  });
+});
+
+describe("ellipseRotation: el giro del SVG para el eje mayor", () => {
+  // En pantalla, el Este es +x y el Norte es −y. Girar (1, 0) por φ da
+  // (cos φ, sen φ), que debe apuntar al azimut: (sen az, −cos az).
+  it.each([0, 30, 45, 90, 132.78, 179])("con azimut %s°, el eje x girado apunta al azimut", (az) => {
+    const phi = (ellipseRotation(az) * Math.PI) / 180;
+    const rad = (az * Math.PI) / 180;
+    expect(Math.cos(phi)).toBeCloseTo(Math.sin(rad), 12);
+    expect(Math.sin(phi)).toBeCloseTo(-Math.cos(rad), 12);
+  });
+});
+
+describe("ellipseExtremes: los extremos de cada elipse exagerada, para el encuadre", () => {
+  const traces = [
+    { code: "A", adjusted: { north: 0, east: 0 }, unadjusted: { north: 0, east: 0 } },
+    { code: "B", adjusted: { north: 100, east: 0 }, unadjusted: { north: 100, east: 0 } },
+  ];
+  const precision = {
+    confidence: 0.95,
+    scale: 4.37,
+    stations: [
+      null,
+      { sigmaNorth: 0, sigmaEast: 0, covarianceNE: 0, ellipse: { semiMajor: 0.02, semiMinor: 0.01, majorAzimuth: 0 } },
+    ],
+  };
+
+  it("da los dos extremos de cada semieje, ×k, alrededor del vértice", () => {
+    const pts = ellipseExtremes(traces, precision, 500);
+    const near = (n: number, e: number) => pts.some((p) => Math.abs(p.north - n) < 1e-9 && Math.abs(p.east - e) < 1e-9);
+    expect(pts).toHaveLength(4);
+    expect(near(110, 0)).toBe(true);
+    expect(near(90, 0)).toBe(true);
+    expect(near(100, 5)).toBe(true);
+    expect(near(100, -5)).toBe(true);
+  });
+
+  it("los puntos fijos no aportan nada", () => {
+    expect(ellipseExtremes(traces.slice(0, 1), precision, 500)).toEqual([]);
   });
 });

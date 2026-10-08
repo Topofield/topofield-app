@@ -5,6 +5,12 @@
 
 import type { ReactNode } from "react";
 import { formatAngle } from "@/components/polygonal/angle-format";
+import {
+  FIXED_POINT_TEXT,
+  firstPointFlat,
+  PRECISION_HEADERS,
+  precisionCells,
+} from "@/components/polygonal/precision-format";
 import type { CaptureRow } from "@/components/polygonal/capture-rows";
 import { sigma0Interval, sigma0Reading } from "@/lib/calculations/least-squares";
 import type { AngularStep, CorrectionBreakdown } from "@/lib/calculations/correction-breakdown";
@@ -674,7 +680,6 @@ function PointPrecision({
 }) {
   const pr = adj.precision;
   const level = Math.round(pr.confidence * 100);
-  const mmOf = (m: number) => (m * 1000).toFixed(1);
   return (
     <>
       <h4>Precisión de cada punto</h4>
@@ -730,11 +735,11 @@ function PointPrecision({
         <thead>
           <tr>
             <th>Punto</th>
-            <th className="num">σ N (mm)</th>
-            <th className="num">σ E (mm)</th>
-            <th className="num">Semieje mayor (mm)</th>
-            <th className="num">Semieje menor (mm)</th>
-            <th className="num">Azimut del mayor</th>
+            {PRECISION_HEADERS.map((h) => (
+              <th key={h} className="num">
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -744,21 +749,24 @@ function PointPrecision({
               <tr key={i}>
                 <td>{s.pointCode}</td>
                 {pt ? (
-                  <>
-                    <td className="num">{mmOf(pt.sigmaNorth)}</td>
-                    <td className="num">{mmOf(pt.sigmaEast)}</td>
-                    <td className="num">{mmOf(pt.ellipse.semiMajor)}</td>
-                    <td className="num">{mmOf(pt.ellipse.semiMinor)}</td>
-                    <td className="num">{formatAngle(pt.ellipse.majorAzimuth, angleFormat)}</td>
-                  </>
+                  precisionCells(pt, angleFormat).map((cell, c) => (
+                    <td key={c} className="num">
+                      {cell}
+                    </td>
+                  ))
                 ) : (
-                  <td colSpan={5}>Punto fijo: sin elipse.</td>
+                  <td colSpan={PRECISION_HEADERS.length}>{FIXED_POINT_TEXT}</td>
                 )}
               </tr>
             );
           })}
         </tbody>
       </table>
+      {firstPointFlat(pr) && (
+        <p className="report-text">
+          Un semieje menor de 0 es un punto que solo se mueve a lo largo del primer lado: el azimut de ese lado es fijo.
+        </p>
+      )}
     </>
   );
 }

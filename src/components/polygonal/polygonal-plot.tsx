@@ -7,7 +7,9 @@
 
 import { niceTicks } from "@/lib/design/chart-scale";
 import {
+  ellipseExtremes,
   ellipseFactor,
+  ellipseRotation,
   exaggeratedPoints,
   exaggerationFactor,
   plotFrame,
@@ -111,7 +113,12 @@ export function PolygonalPlot({
   // El encuadre es la poligonal, no el amarre: un amarre en un punto de red
   // a 800 m reduciría un lote de 40 m a unos píxeles. Si el amarre queda
   // fuera, su línea de orientación sale hasta el borde y el <svg> la recorta.
-  const all: PlanePoint[] = [...adjusted, ...(exaggerated ?? [])];
+  // Con las elipses dentro: una en un vértice del borde salía cortada.
+  const all: PlanePoint[] = [
+    ...adjusted,
+    ...(exaggerated ?? []),
+    ...(precision && ek ? ellipseExtremes(traces, precision, ek) : []),
+  ];
 
   const base = plotFrame(all, W, H, PADDING);
   const baseCenter = {
@@ -281,8 +288,7 @@ export function PolygonalPlot({
 
           {/* Elipses de error, centradas en cada vértice ajustado. Un punto que
               solo se mueve a lo largo de un lado da una elipse plana: se
-              dibuja como un trazo. El azimut se cuenta desde el norte; el
-              giro del SVG, desde el eje x hacia abajo: φ = azimut − 90°. */}
+              dibuja como un trazo. */}
           {precision && ek && (
             <g>
               {traces.map((t, i) => {
@@ -300,7 +306,7 @@ export function PolygonalPlot({
                     cy={cy}
                     rx={px((p.ellipse.semiMajor * ek) / frame.metersPerPixel)}
                     ry={px(Math.max((p.ellipse.semiMinor * ek) / frame.metersPerPixel, 0.75))}
-                    transform={`rotate(${px(p.ellipse.majorAzimuth - 90)} ${cx} ${cy})`}
+                    transform={`rotate(${px(ellipseRotation(p.ellipse.majorAzimuth))} ${cx} ${cy})`}
                     fill="var(--color-success)"
                     fillOpacity={0.12}
                     stroke="var(--color-success)"

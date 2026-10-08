@@ -115,7 +115,12 @@ describe("Excel de la poligonal — fórmulas contra el motor", () => {
     expect(ws.getCell(r, 3).value).toBeCloseTo(d3.sigmaEast * 1000, 9);
     expect(ws.getCell(r, 4).value).toBeCloseTo(d3.ellipse.semiMajor * 1000, 9);
     expect(ws.getCell(r, 5).value).toBeCloseTo(d3.ellipse.semiMinor * 1000, 9);
-    expect(ws.getCell(r, 6).value).toBeCloseTo(d3.ellipse.majorAzimuth, 9);
+    // El azimut, en grados, minutos y segundos, como los demás ángulos del libro.
+    const g = ws.getCell(r, 6).value as number;
+    const m = ws.getCell(r, 7).value as number;
+    const sec = ws.getCell(r, 8).value as number;
+    expect(Number.isInteger(g) && Number.isInteger(m)).toBe(true);
+    expect(g + m / 60 + sec / 3600).toBeCloseTo(d3.ellipse.majorAzimuth, 9);
     expect(ws.getCell(fila("Famarena_5"), 2).value).toBe("Punto fijo");
     expect(formulaMismatches(wb)).toEqual([]);
   });

@@ -1,7 +1,7 @@
 import { Alert, NumberInput } from "@/components/design-system";
 import { sigma0Interval, sigma0Reading } from "@/lib/calculations/least-squares";
 import type { AngleInputFormat, PolygonalResult } from "@/types/polygonal";
-import { formatAngle } from "./angle-format";
+import { FIXED_POINT_TEXT, firstPointFlat, PRECISION_HEADERS, precisionCells } from "./precision-format";
 import type { LeastSquaresWeightsDraft } from "./polygonal-draft";
 
 const SIGMA0_TEXT = {
@@ -158,8 +158,6 @@ export function LeastSquaresPanel({ result }: { result: PolygonalResult }) {
   );
 }
 
-const mmText = (meters: number) => (meters * 1000).toFixed(1);
-
 /**
  * La precisión de cada punto ajustado (Fase 39): σ Norte y σ Este (1σ) y la
  * elipse de error al 95 %, con el c y la r que la escalan (Ghilani, ec.
@@ -177,9 +175,7 @@ export function PointPrecisionTable({
   if (adjustment?.status !== "adjusted") return null;
   const { precision } = adjustment;
   const level = Math.round(precision.confidence * 100);
-  // Un semieje menor nulo: el punto solo se mueve a lo largo del primer lado,
-  // cuyo azimut es datum.
-  const flat = precision.stations.some((p) => p !== null && p.ellipse.semiMajor > 0 && p.ellipse.semiMinor < 1e-6);
+  const flat = firstPointFlat(precision);
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto">
@@ -189,21 +185,11 @@ export function PointPrecisionTable({
               <th scope="col" className="py-2 pr-3 text-left font-medium">
                 Punto
               </th>
-              <th scope="col" className="py-2 pr-3 font-medium">
-                σ N (mm)
-              </th>
-              <th scope="col" className="py-2 pr-3 font-medium">
-                σ E (mm)
-              </th>
-              <th scope="col" className="py-2 pr-3 font-medium">
-                Semieje mayor (mm)
-              </th>
-              <th scope="col" className="py-2 pr-3 font-medium">
-                Semieje menor (mm)
-              </th>
-              <th scope="col" className="py-2 font-medium">
-                Azimut del mayor
-              </th>
+              {PRECISION_HEADERS.map((h, c) => (
+                <th key={h} scope="col" className={c < PRECISION_HEADERS.length - 1 ? "py-2 pr-3 font-medium" : "py-2 font-medium"}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -214,16 +200,14 @@ export function PointPrecisionTable({
                 <tr key={i} className="border-b border-rule text-right tabular-nums">
                   <td className="py-2 pr-3 text-left font-semibold">{code}</td>
                   {p ? (
-                    <>
-                      <td className="py-2 pr-3">{mmText(p.sigmaNorth)}</td>
-                      <td className="py-2 pr-3">{mmText(p.sigmaEast)}</td>
-                      <td className="py-2 pr-3">{mmText(p.ellipse.semiMajor)}</td>
-                      <td className="py-2 pr-3">{mmText(p.ellipse.semiMinor)}</td>
-                      <td className="py-2">{formatAngle(p.ellipse.majorAzimuth, angleFormat)}</td>
-                    </>
+                    precisionCells(p, angleFormat).map((cell, c) => (
+                      <td key={c} className={c < PRECISION_HEADERS.length - 1 ? "py-2 pr-3" : "py-2"}>
+                        {cell}
+                      </td>
+                    ))
                   ) : (
-                    <td colSpan={5} className="py-2 text-left text-ink-2">
-                      Punto fijo: sin elipse.
+                    <td colSpan={PRECISION_HEADERS.length} className="py-2 text-left text-ink-2">
+                      {FIXED_POINT_TEXT}
                     </td>
                   )}
                 </tr>

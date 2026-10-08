@@ -623,8 +623,9 @@ function writeLeastSquares(
       `estándar × c = ${pr.scale.toFixed(3)} con r = ${adj.conditions} (Ghilani y Wolf, ec. 19.22)`,
     "section",
   );
-  ["Punto", "σ N (mm)", "σ E (mm)", "Semieje mayor (mm)", "Semieje menor (mm)", "Azimut del mayor (°)"].forEach((h, c) =>
-    putLabel(ws, 1 + c, r, h, "header"),
+  // El azimut, en grados, minutos y segundos, como los demás ángulos del libro.
+  ["Punto", "σ N (mm)", "σ E (mm)", "Semieje mayor (mm)", "Semieje menor (mm)", "Az. mayor G", "M", "S"].forEach(
+    (h, c) => putLabel(ws, 1 + c, r, h, "header"),
   );
   r += 1;
   st.forEach((s, i) => {
@@ -637,7 +638,10 @@ function writeLeastSquares(
       putValue(ws, 3, r, p.sigmaEast * 1000, FMT.mm);
       putValue(ws, 4, r, p.ellipse.semiMajor * 1000, FMT.mm);
       putValue(ws, 5, r, p.ellipse.semiMinor * 1000, FMT.mm);
-      putValue(ws, 6, r, p.ellipse.majorAzimuth, FMT.dec);
+      const [g, m, sec] = dmsData(p.ellipse.majorAzimuth);
+      putValue(ws, 6, r, g, FMT.deg);
+      putValue(ws, 7, r, m, FMT.min);
+      putValue(ws, 8, r, sec, FMT.sec);
     }
     r += 1;
   });
