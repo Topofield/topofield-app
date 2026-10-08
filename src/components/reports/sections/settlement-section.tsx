@@ -4,7 +4,6 @@ import type { SiteSectionData } from "@/lib/reports/sections";
 import { formatDateOnly, formatDateShort, formatElevation, formatEquipmentLine, formatSignedMm } from "@/lib/utils/format";
 import { ALERT_LEVEL_LABELS } from "@/types/settlement";
 import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
-import { Formula, Frac, MathLine, Mi, Mn, Mo, Mtext, Row, Sub, Sup } from "../math";
 
 const signed = (v: { code: string; value: number } | null) => (v ? `${formatSignedMm(v.value)} ${v.code}` : "—");
 
@@ -75,79 +74,16 @@ export function SettlementReportSection({ data }: { data: SiteSectionData }) {
         </p>
       )}
 
+      {/* Sin fórmulas (Fase 40): es la aritmética de la nivelación
+          geométrica. Se dicen las convenciones que no son obvias. */}
       <h3>Cómo se calcula</h3>
-      <p>La altura del instrumento, desde el BM</p>
-      <Formula>
-        <MathLine label="AI igual a la cota del BM más la vista atrás">
-          <Mi>AI</Mi>
-          <Mo>=</Mo>
-          <Sub base={<Mi>C</Mi>} sub={<Mtext>BM</Mtext>} />
-          <Mo>+</Mo>
-          <Sup base={<Mi>V</Mi>} sup={<Mo>+</Mo>} />
-        </MathLine>
-      </Formula>
-      <p>La cota de cada punto, con su lectura</p>
-      <Formula>
-        <MathLine label="La cota del punto igual a AI menos su lectura">
-          <Sub base={<Mi>C</Mi>} sub={<Mi>i</Mi>} />
-          <Mo>=</Mo>
-          <Mi>AI</Mi>
-          <Mo>−</Mo>
-          <Sub base={<Mi>L</Mi>} sub={<Mi>i</Mi>} />
-        </MathLine>
-      </Formula>
-      <p>El acumulado, contra la cota inicial del punto</p>
-      <Formula>
-        <MathLine label="El acumulado igual a la cota menos la inicial, por mil">
-          <Sub base={<Mi>S</Mi>} sub={<Mi>i</Mi>} />
-          <Mo>=</Mo>
-          <Row>
-            <Mo>(</Mo>
-            <Sub base={<Mi>C</Mi>} sub={<Mi>i</Mi>} />
-            <Mo>−</Mo>
-            <Sub base={<Mi>C</Mi>} sub={<Mn>0</Mn>} />
-            <Mo>)</Mo>
-          </Row>
-          <Mo>·</Mo>
-          <Mn>1000</Mn>
-        </MathLine>
-      </Formula>
-      <p>La velocidad, con un mes de 30.4375 días</p>
-      <Formula>
-        <MathLine label="La velocidad igual al cambio del acumulado entre los días sobre 30.4375">
-          <Mi>v</Mi>
-          <Mo>=</Mo>
-          <Frac
-            num={
-              <>
-                <Sub base={<Mi>S</Mi>} sub={<Mi>i</Mi>} />
-                <Mo>−</Mo>
-                <Sub
-                  base={<Mi>S</Mi>}
-                  sub={
-                    <>
-                      <Mi>i</Mi>
-                      <Mo>−</Mo>
-                      <Mn>1</Mn>
-                    </>
-                  }
-                />
-              </>
-            }
-            den={
-              <>
-                <Mtext>días</Mtext>
-                <Mo>/</Mo>
-                <Mn>30.4375</Mn>
-              </>
-            }
-          />
-        </MathLine>
-      </Formula>
       <p>
-        Las cotas son las de la medida: el cierre de cada tramo comprueba, no se reparte. Cada punto toma el peor de sus
-        dos semáforos, por acumulado ({t.accumulatedCaution} · {t.accumulatedAlert} · {t.accumulatedAlarm} mm) y por
-        velocidad ({t.velocityCaution} · {t.velocityAlert} · {t.velocityAlarm} mm/mes).
+        La cota de cada punto es la altura del instrumento, desde el BM del tramo, menos su lectura. Las cotas son las
+        de la medida: el cierre de cada tramo comprueba, no se reparte. El acumulado, en milímetros, es la diferencia
+        con la cota inicial del punto, y la velocidad, en mm/mes, el cambio del acumulado entre dos visitas, con un mes
+        de 30.4375 días. Cada punto toma el peor de sus dos semáforos, por acumulado ({t.accumulatedCaution} ·{" "}
+        {t.accumulatedAlert} · {t.accumulatedAlarm} mm) y por velocidad ({t.velocityCaution} · {t.velocityAlert} ·{" "}
+        {t.velocityAlarm} mm/mes).
       </p>
 
       <h3>Evolución</h3>
