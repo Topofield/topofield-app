@@ -29,6 +29,12 @@ export interface ConditionAdjustment {
   sigma0: number;
   iterations: number;
   converged: boolean;
+  /**
+   * Las matrices de la última iteración (Fase 38): A, la diagonal de Q, w,
+   * N = A·Q·Aᵀ y los correlatos k, con N·k = −w y v = Q·Aᵀ·k. El Excel las
+   * muestra como los bloques de la hoja de la universidad.
+   */
+  last: { A: number[][]; q: number[]; w: number[]; N: number[][]; k: number[] };
 }
 
 export class SingularSystemError extends Error {
@@ -102,6 +108,7 @@ export function adjustByConditions(
   let corrections = l0.map(() => 0);
   let iterations = 0;
   let converged = false;
+  let last: ConditionAdjustment["last"] = { A: [], q, w: [], N: [], k: [] };
 
   while (iterations < maxIterations) {
     iterations += 1;
@@ -115,6 +122,7 @@ export function adjustByConditions(
       ),
     );
     const k = solveScaled(N, w.map((x) => -x));
+    last = { A, q, w, N, k };
     const v = l0.map((_, x) => q[x]! * A.reduce((acc, row, i) => acc + row[x]! * k[i]!, 0));
 
     // Cambio relativo a cada σ, para comparar ángulos y distancias en la misma escala.
@@ -138,6 +146,7 @@ export function adjustByConditions(
     sigma0: f.length > 0 ? Math.sqrt(vPv / f.length) : 0,
     iterations,
     converged,
+    last,
   };
 }
 

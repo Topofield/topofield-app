@@ -85,6 +85,19 @@ describe("mínimos cuadrados — cartera Vivero con los pesos de la hoja", () =>
   const r = computePolygonal(input);
   const a = adjusted(r);
 
+  // Fase 38: el Excel muestra las matrices de la última iteración, como los
+  // bloques de la hoja de Vivero.
+  it("expone las matrices de la última iteración: N = A·Q·Aᵀ y N·k = −w", () => {
+    const { A, q, w, N, k, observations } = a.matrices;
+    expect(observations).toHaveLength(q.length);
+    for (let i = 0; i < N.length; i++) {
+      for (let j = 0; j < N.length; j++) {
+        expect(N[i]![j]!).toBeCloseTo(A[i]!.reduce((s, x, c) => s + x * q[c]! * A[j]![c]!, 0), 12);
+      }
+      expect(N[i]!.reduce((s, x, j) => s + x * k[j]!, 0)).toBeCloseTo(-w[i]!, 9);
+    }
+  });
+
   // Valores del cálculo independiente del PRD (docs/prds/13-minimos-cuadrados.md,
   // «Pruebas»). NO los del análisis de la cartera: ese partió de azimuts con
   // el defecto de conversión de la hoja (hallazgo 2).

@@ -945,8 +945,9 @@ function leastSquaresClosed(
     return { angles, distances, azimuths, deltaN, deltaE };
   };
 
+  const observations = [...adjustable.map((i) => angles0[i]! * D2R), ...distances0];
   const result = adjustByConditions({
-    observations: [...adjustable.map((i) => angles0[i]! * D2R), ...distances0],
+    observations,
     sigmas: [...adjustable.map(() => sig.angle), ...distances0.map(() => sig.distance)],
     evaluate: (l) => {
       const g = geometry(l);
@@ -997,6 +998,7 @@ function leastSquaresClosed(
       sigma0: result.sigma0,
       conditions: 3,
       iterations: result.iterations,
+      matrices: { ...result.last, observations },
     },
     converged: result.converged,
   };
@@ -1038,8 +1040,9 @@ function leastSquaresOpenControlled(
     return { signed, distances, azimuths, deltaN, deltaE };
   };
 
+  const observations = [...signed0.map((s) => s * D2R), ...distances0];
   const result = adjustByConditions({
-    observations: [...signed0.map((s) => s * D2R), ...distances0],
+    observations,
     sigmas: [...signed0.map(() => sig.angle), ...distances0.map(() => sig.distance)],
     evaluate: (l) => {
       const g = geometry(l);
@@ -1097,6 +1100,7 @@ function leastSquaresOpenControlled(
       sigma0: result.sigma0,
       conditions: doAngularClosure ? 3 : 2,
       iterations: result.iterations,
+      matrices: { ...result.last, observations },
     },
     converged: result.converged,
   };
