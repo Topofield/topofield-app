@@ -4,10 +4,9 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-07 · Fase 37 cerrada en su rama, con el
-despliegue en tres pasos preparado y sin aplicar (§ 13) · 1174 tests y 141
-pruebas de base (pgTAP) · **desplegado en producción** hasta la Fase 36 y las
-correcciones de la 35 ([topofield-app.vercel.app](https://topofield-app.vercel.app)).
+**Última actualización:** 2026-10-07 · Fase 37 cerrada y **desplegada en
+producción** (§ 13) · 1174 tests y 141 pruebas de base (pgTAP) ·
+[topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
 - [Manual de usuario](../manual/README.md) — cómo se usa la aplicación
@@ -3858,12 +3857,11 @@ npx supabase db push
 `npx supabase migration list` compara local contra remoto antes de empujar.
 **Nunca `db reset` contra la nube**: borra y recrea la base.
 
-**Estado actual (2026-10-07):** la nube tiene aplicadas las **treinta y ocho**
-migraciones, hasta `20261007010000_amarre_atomico` (correcciones de la Fase 35).
-Todas se empujaron antes del merge a `main`, salvo las tres que borran
-columnas, que fueron después: la de la Fase 29 y el paso 2 de las Fases 35 y
-36 (ver abajo). Las dos de la Fase 37, que llevan el repositorio a cuarenta,
-están preparadas y sin aplicar (abajo). Las dos de la Fase 26 —el CHECK de
+**Estado actual (2026-10-07):** la nube tiene aplicadas las **cuarenta y una**
+migraciones, hasta `20261009000000_asentamientos_sin_cierre` (Fase 37).
+Todas se empujaron antes del merge a `main`, salvo las cuatro que borran
+columnas, que fueron después: la de la Fase 29 y el último paso de las Fases
+35, 36 y 37 (ver abajo). Las dos de la Fase 26 —el CHECK de
 distancias por visual positivas en `leveling_readings` y `settlement_book_readings`, y el
 índice único `(site_id, date)` de `settlement_visits`— se aplicaron con 0
 filas que las incumplieran, contadas antes y después. La de la Fase 25 dejó
@@ -3963,8 +3961,8 @@ menos de 0.05 mm. El orden detectado es tercero en la TT4 y segundo en la
 Vivero, que guarda el tercero que se declaró antes de la fase; las pantallas
 muestran el detectado.
 
-**La Fase 37 lleva el esquema en tres pasos** (preparado el 2026-10-07, **sin
-aplicar**: cada paso de producción lo ejecuta el usuario). Dos migraciones y,
+**La Fase 37 llevó el esquema en tres pasos** (preparados y aplicados el
+2026-10-07; cómo se aplicaron, al final de este apartado). Dos migraciones y,
 entre ellas, dos scripts:
 
 | Paso | Qué | Cuándo | Código viejo con ello | Código nuevo sin ello |
@@ -4051,6 +4049,38 @@ que las columnas y las tres funciones no existen y que el `CHECK` de `status`
 admite solo los tres estados. Y, con todo aplicado, Torre Alameda de
 producción comparada con el motor y la cartera de la demo con las celdas de la
 hoja.
+
+**Cómo se aplicó la Fase 37** (2026-10-07):
+
+- **Antes**, en solo lectura: ninguna visita con `capture_mode = 'direct'`; un
+  solo lugar de asentamientos, Torre Alameda de la demo, con 14 visitas y 154
+  filas de libreta; ninguna visita con un BM de amarre distinto del catálogo.
+- **Paso 1**: el usuario empujó las dos migraciones desde una copia de
+  `supabase/` sin la del paso 3 (`db push --workdir`; la simulación con
+  `--dry-run` listaba solo esas dos). Verificado: en las cinco tablas quedan
+  los mismos triggers que en la base local —los de vigencia y `updated_at`—;
+  `site_benchmarks` con RLS, sus cuatro políticas y BM-1 = 100.0000 y BM-2 =
+  100.8450; `precision_order` nulable; `origin_visit_id` y `starts_section`;
+  `save_visit` `SECURITY INVOKER` y sin `EXECUTE` para `anon`.
+- **Merge**: `main` en `6cc64e9` (PR #30), con el despliegue de Vercel en
+  verde.
+- **Paso 2**: en vez de los scripts, el usuario eligió **regenerar la demo**:
+  la única cuenta tenía la demo y dos proyectos sin asentamientos. Se borró el
+  «Proyecto de ejemplo» —con una guarda que exigía exactamente uno— y se vació
+  `profiles.demo_seeded_at`; la app lo recreó al abrir el dashboard. Los dos
+  scripts siguen en `scripts/` para una base con datos fuera de la demo.
+- **Paso 3**: `db push` desde `main`, después del despliegue. Verificado: las
+  columnas y las tres funciones no existen y el `CHECK` de `status` admite solo
+  `draft`, `in_progress` y `calculated`.
+- **La demo nueva** coincide con la que crea el mismo código en local: Torre
+  Alameda (8 puntos, BM-1 y BM-2, 14 visitas calculadas, 168 filas de libreta y
+  112 lecturas) y «Control de asentamiento estructural», la cartera real (16
+  puntos, PISCINA/BM = 156.2990, 7 visitas, 119 filas y 112 lecturas), además
+  de 3 poligonales, 2 nivelaciones, 3 informes y 5 puntos de referencia.
+
+El primer `db push` lo ejecutó el usuario: el modo automático del agente lo
+bloquea. El `git push` de `main`, el `db push` del paso 3 y el borrado de la
+demo los ejecutó el agente con el visto bueno explícito del usuario.
 
 La de la Fase 29 se aplicó después del merge del PR #17, con el despliegue de
 Vercel ya en producción. Una consulta de solo lectura previa confirmó que solo
