@@ -1098,8 +1098,10 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Corrección por método …</strong>: cómo corrigió el método
-            elegido, paso a paso, con sus fórmulas en notación matemática y las
-            cifras de esta poligonal.
+            elegido, paso a paso, con las cifras de esta poligonal. El reparto
+            del error angular se dice con su valor por ángulo; el método de
+            ajuste —y, en mínimos cuadrados, la elipse de error— lleva su
+            fórmula en notación matemática.
           </li>
           <li>
             <strong>Poligonal ajustada</strong>, con la fila Σ.
@@ -2674,9 +2676,9 @@ export default function ManualPage() {
             las visitas se verifican (§ 7.9).
           </li>
           <li>
-            <strong>Cómo se calcula</strong>: cuatro fórmulas —la altura del
-            instrumento, la cota de cada punto, el acumulado y la velocidad— y
-            los umbrales del semáforo.
+            <strong>Cómo se calcula</strong>: en un párrafo, cómo salen la cota
+            de cada punto, el acumulado y la velocidad —con un mes de 30.4375
+            días—, y los umbrales del semáforo.
           </li>
           <li>
             <strong>Evolución</strong>: el acumulado de cada punto en el
@@ -2698,7 +2700,8 @@ export default function ManualPage() {
 
         <p>
           Informa las visitas <strong>calculadas</strong>: las que están en
-          medición se nombran aparte y entran cuando se terminan. Una visita no
+          medición se nombran aparte, con su fecha, como no incluidas, y entran
+          cuando se terminan. Una visita no
           tiene informe propio: sus resultados van en el del lugar.
         </p>
 
@@ -2880,23 +2883,31 @@ export default function ManualPage() {
             <strong>Observaciones</strong>: las notas del proceso —en un lugar,
             su descripción—, si las tiene.
           </li>
-          <li>
-            El <strong>pie</strong>, con la fecha en que se generó.
-          </li>
         </ul>
+        <p>
+          Es un documento para entregar: no nombra la aplicación ni habla de
+          sus pantallas. Un proceso sin terminar se informa como tal
+          —«Nivelación incompleta», «Poligonal incompleta»— con lo medido hasta
+          ahí.
+        </p>
         <p>
           <strong>Exportar PDF.</strong> Es el primer botón de la cabecera del
           informe. Abre el diálogo de impresión del navegador con el informe ya
           maquetado en A4: elija «Guardar como PDF» como destino. Lo impreso es
-          solo el informe: la cabecera, los pasos y los botones no salen.
+          solo el informe: la cabecera, los pasos y los botones no salen. Desde
+          la segunda página, cada una lleva al pie el proyecto y el proceso, y
+          «Página X de Y». El archivo se propone con el nombre del proceso y
+          del proyecto.
         </p>
         <p>
           <strong>Exportar Excel</strong>, a su lado, descarga el libro del
           proceso (§ 11).
         </p>
         <Nota>
-          El PDF lo genera su navegador, no la aplicación. Los márgenes y los
-          encabezados de página dependen de lo que usted elija en ese diálogo.
+          El PDF lo genera su navegador, no la aplicación. La portada va sin
+          márgenes para que el navegador no añada su propio encabezado ni su
+          pie —la dirección de la página y la fecha—. Si aun así aparecen,
+          desmarque «Encabezados y pies de página» en ese diálogo.
         </Nota>
       </Seccion>
 
