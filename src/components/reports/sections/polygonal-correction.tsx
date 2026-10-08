@@ -92,10 +92,14 @@ function angularClause(input: PolygonalInput, step: AngularStep, reference: stri
   if (step.includesOrientation) {
     return `entre los ${step.count} ángulos de la condición, incluido el de orientación en ${start} y el cierre contra ${reference ?? "la referencia"}`;
   }
-  if (input.hasOrientation) {
-    return `entre los ${step.count} ángulos de la condición. El de orientación en ${start} no entra en ella: fija el datum`;
-  }
   return `entre los ${step.count} ángulos de la condición`;
+}
+
+/** Segundos con signo, a la centésima: la corrección de cada ángulo. */
+function sec2(v: number): string {
+  const r = Number(v.toFixed(2));
+  if (r === 0) return "0.00″";
+  return `${r < 0 ? "−" : "+"}${Math.abs(r).toFixed(2)}″`;
 }
 
 /** Paso 1 de los métodos proporcionales: el reparto del error angular. */
@@ -120,45 +124,21 @@ function AngularStepBlock({
       </>
     );
   }
-  const e = step.errorSec;
+  // La corrección por ángulo es −e/n: se dice con su valor, sin fórmula
+  // (Fase 40). El de orientación, si no entra en la condición, se nombra.
+  const orientation =
+    input.type !== "open_controlled" && !step.includesOrientation && input.hasOrientation
+      ? ` El de orientación en ${input.stations[0]?.pointCode ?? ""} no entra en ella: fija el datum.`
+      : "";
   return (
     <>
       <h4>Paso 1 · Ángulos</h4>
       <p className="report-text">
         {lead}
-        {lead ? "el" : "El"} error angular se repartió por igual {angularClause(input, step, reference)}.{tail ? ` ${tail}` : ""}
+        {lead ? "el" : "El"} error angular, de {sec(step.errorSec)}, se repartió por igual{" "}
+        {angularClause(input, step, reference)}: {sec2(step.perAngleSec)} por ángulo.{orientation}
+        {tail ? ` ${tail}` : ""}
       </p>
-      <Formula caption={`por ángulo, en los ${step.count} de la condición`}>
-        <MathLine>
-          <Mi>c</Mi>
-          <Mo>=</Mo>
-          <Mo>−</Mo>
-          <Frac num={<Sub base={<Mi>e</Mi>} sub={<Mi>α</Mi>} />} den={<Mi>n</Mi>} />
-          <Mo>=</Mo>
-          <Mo>−</Mo>
-          <Frac
-            num={
-              e < 0 ? (
-                <>
-                  <Mo>(</Mo>
-                  <Num value={e} decimals={1} />
-                  <Mo>″</Mo>
-                  <Mo>)</Mo>
-                </>
-              ) : (
-                <>
-                  <Num value={e} decimals={1} />
-                  <Mo>″</Mo>
-                </>
-              )
-            }
-            den={<Mn>{step.count}</Mn>}
-          />
-          <Mo>=</Mo>
-          <Num value={step.perAngleSec} decimals={2} />
-          <Mo>″</Mo>
-        </MathLine>
-      </Formula>
     </>
   );
 }

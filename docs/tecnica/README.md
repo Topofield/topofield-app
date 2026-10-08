@@ -5,8 +5,8 @@ está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
 **Última actualización:** 2026-10-08 · Fases 38 y 39 en `main` y en
-producción, con la migración de la 38 aplicada (§ 13) · 1183 tests y 137
-pruebas de base (pgTAP) ·
+producción, con la migración de la 38 aplicada (§ 13); Fase 40 en curso en su
+rama · 1187 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -93,6 +93,8 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 36 | La nivelación como la mide el topógrafo | cerrada |
 | 37 | Los asentamientos como los mide el topógrafo | cerrada |
 | 38 | El informe de cada proceso | cerrada |
+| 39 | Mínimos cuadrados: requisitos y precisión de cada punto | cerrada |
+| 40 | Informes entregables | en curso |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -101,7 +103,8 @@ y les quitaron el cierre: desde la 37 ningún proceso se cierra, y la visita de
 asentamientos se mide por armadas, sin compensar, desde los BM de su lugar. La
 38 dejó un solo informe por proceso, en su página, con el PDF del navegador y
 un Excel de fórmulas vivas con la forma de las carteras, y quitó los informes
-consolidados.
+consolidados. La 40 hizo del informe un entregable: sin la marca de la app,
+con pie y paginación propios, y solo con las fórmulas del ajuste.
 
 ---
 
@@ -334,7 +337,7 @@ atajo al informe: se llega entrando al proceso.
 **El informe no se guarda: se reconstruye.** Es función de los datos del
 proceso (`components/process/process-report.tsx`): cada vez que se abre los
 vuelve a leer y compone el documento —portada, «Datos y resultados», resumen
-de precisión, observaciones (las notas del proceso) y un pie con la fecha—.
+de precisión y observaciones (las notas del proceso)—.
 **Desde la Fase 37 nada se cierra**: la poligonal (Fase 35), la nivelación
 (Fase 36) y el lugar de asentamientos se informan calculados en vivo, cumplan
 o no un orden (el orden detectado; en la poligonal, también el tipo de
@@ -345,6 +348,30 @@ que tenga entonces. Ninguno lleva marca ni registro de cierre: todos dicen
 `lib/reports/cover.ts`). Si la poligonal se georreferencia, el informe
 muestra las coordenadas nuevas con una nota de fecha y puntos (Fase 15,
 decisión del usuario).
+
+**Un entregable, sin rastro de la app (Fase 40).** El informe —y su PDF y su
+Excel— no nombra TopoField ni habla de sus pantallas: la portada dice
+«Informe técnico»; no hay pie «generado desde»; un proceso sin terminar se
+informa como tal («Nivelación incompleta», «Poligonal incompleta», «La visita
+N (fecha) no se incluye»), y `libretaBlocker(result, "report")` da el error de
+la libreta sin dirigirse al usuario. En el PDF:
+
+- **El pie propio** son las cajas de margen de `@page` (Chrome 131+), en la
+  hoja de impresión de `globals.css`: «Página X de Y» a la derecha y, a la
+  izquierda, «proyecto · proceso», que cada informe inyecta en un `<style>`
+  con `pageFooterCss` (`lib/reports/page-footer.ts`, que escapa la cadena
+  CSS y no deja cerrar el `<style>`).
+- **Chrome imprime su encabezado y su pie** (URL, título, fecha) aun con cajas
+  de margen; no los imprime en ninguna página si la primera no tiene sitio
+  para ellos. Por eso `@page :first` va sin margen arriba ni abajo, y la
+  portada —sola en la primera página— lleva el suyo como relleno. La portada
+  no lleva pie.
+- **El título del PDF** y el nombre que el navegador propone al archivo son
+  «proceso — proyecto»: `PrintButton` cambia `document.title` mientras
+  imprime y lo devuelve en `afterprint`.
+
+El Excel dice solo «Exportado · fecha» en la cabecera de cada hoja y no lleva
+autor en sus metadatos.
 
 **Sin informes consolidados (Fase 38, decisión 3).** Hasta entonces convivían
 con el informe de cada proceso los **consolidados**: una pestaña Informes en
@@ -378,7 +405,10 @@ Resultado (cifras, orden alcanzado y por qué, o la alerta), 2. Datos de campo
 `correctionBreakdown` y el ajuste por mínimos cuadrados), 4. Poligonal ajustada
 (`adjustedRows`) y 5. Coordenadas y dibujo. Las fórmulas son **MathML nativo**
 (`components/reports/math.tsx`, decisión 16): el navegador las compone en
-pantalla y en el PDF, sin librerías; `src/types/mathml.d.ts` declara los
+pantalla y en el PDF, sin librerías. Desde la Fase 40 el informe solo lleva
+las del ajuste —la del método (Brújula, Tránsito, Crandall o mínimos
+cuadrados) y la de la elipse de error—; el reparto angular se dice en el
+texto con su valor por ángulo; `src/types/mathml.d.ts` declara los
 elementos, que `@types/react` 19 aún no trae. Una letra griega sola va con
 `mathvariant="normal"`: Chrome la pasaría a la cursiva matemática (U+1D6FC…),
 que muchas fuentes no tienen.
@@ -395,8 +425,9 @@ el informe ya no lee las cifras de cierre guardadas.
 **La sección del lugar (Fase 37, decisión 21)** es el informe sencillo del
 lienzo (`settlement-section.tsx`): el veredicto sobre la última visita —la
 peor alerta y lo que le falta al mayor acumulado para el umbral siguiente— y
-si las visitas se verifican; «Cómo se calcula», con cuatro fórmulas en MathML
-(AI, cota, acumulado y velocidad); la evolución; la tabla de visitas con la
+si las visitas se verifican; «Cómo se calcula», en un párrafo y sin fórmulas
+desde la Fase 40 (la cota, el acumulado y la velocidad, con el mes de 30.4375
+días, y los umbrales); la evolución; la tabla de visitas con la
 verificación de cada una —el orden de su tramo peor o «Sin verificación»— y la
 primera como base; los puntos de la última visita, las notas de las visitas y
 los avisos de tendencia. Los datos salen de un `siteReportOf` puro
@@ -2695,7 +2726,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1183 tests en 94 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1187 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2723,7 +2754,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `components/polygonal/order-verdict.test.ts` | 4 | El «Por qué» del orden alcanzado, orden por orden, con y sin condición angular (Fase 35) |
 | `components/polygonal/adjusted-table.test.ts` | 2 | La poligonal ajustada al estilo de la hoja: las coordenadas del punto de llegada y la fila Σ (Fase 35) |
 | `lib/polygonal-amarre.test.ts` | 22 | Los puntos del amarre al catálogo: reutilizar, completar, crear o mover el que tiene otras coordenadas; `catalogMoves`, los que cambian con sus coordenadas de antes y las otras poligonales que los usan; `repeatedPointName` con el medio milímetro, y `catalogPointOf`; `planCatalogWrites` —insertar, actualizar por id, un punto nuevo repetido una sola vez, el id propuesto para la referencia— y `catalogPointsProblem`: puntos sin nombre o con coordenadas no finitas, que no son los del amarre o que repiten nombre (Fase 35 y sus correcciones) |
-| `components/reports/sections/polygonal-correction.test.tsx` | 5 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35) |
+| `components/reports/sections/polygonal-correction.test.tsx` | 5 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35); el reparto angular en el texto, con su valor por ángulo (Fase 40) |
 | `components/reports/math.test.tsx` | 2 | Una letra griega sola va recta en MathML (Fase 35) |
 | `lib/errors/action-call.test.ts` | 3 | Un rechazo de red de una acción vuelve como error, sin lanzar, y las señales de navegación de Next pasan (Fase 35) |
 | `lib/calculations/least-squares.test.ts` | 28 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal; las matrices de la última iteración que usa el Excel, con N = A·Q·Aᵀ y N·k = −w (Fase 38) |
@@ -2764,15 +2795,16 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/supabase/paginate.test.ts` | 3 | **Leer todas las filas** (revisión final de la Fase 37): `allRows` trae las 2500 filas de una tabla que PostgREST corta en 1000, no salta filas con un corte menor que la página y devuelve el error de cualquier página |
 | `lib/supabase/settlement-sync.test.ts` | 5 | **`recomputeSite`** con un cliente simulado que corta en 1000 filas (revisión final): un error al leer los BM no pasa por «al día»; sin visitas, al día; 70 visitas de la cartera (1190 filas de libreta, 1120 lecturas) sin cambios; la simulación cuenta las lecturas que se purgarían; una visita de cotas tecleadas guarda sus lecturas sin tocar su cabecera ni su libreta |
 | `lib/import/benchmarks.test.ts` | 4 | Importar BM al lugar (Fase 37): de una nivelación con su origen, de un CSV con coma decimal y punto y coma, y los errores de cota y de código repetido con su línea |
-| `lib/reports/leveling-report.test.ts` | 10 | El informe sencillo de la nivelación, por tipo (Fase 36): el resumen con el orden detectado —Δ en la abierta con vuelta, el cierre en la cerrada, «Sin verificación» y «Libreta a medias»—; la sección de la abierta con vuelta, la cerrada con las dos lecturas de cada punto, la de enlace con su corrección, la abierta sin vuelta sin datos ajustados y la alerta fuera de todo orden; una libreta que no encadena: «Libreta con errores» y la alerta (revisión final) |
+| `lib/reports/leveling-report.test.ts` | 10 | El informe sencillo de la nivelación, por tipo (Fase 36): el resumen con el orden detectado —Δ en la abierta con vuelta, el cierre en la cerrada, «Sin verificación» e «Incompleta», con la «Nivelación incompleta» de la sección (Fase 40)—; la sección de la abierta con vuelta, la cerrada con las dos lecturas de cada punto, la de enlace con su corrección, la abierta sin vuelta sin datos ajustados y la alerta fuera de todo orden; una libreta que no encadena: «Cartera con errores» y la alerta (revisión final; Fase 40) |
 | `lib/reports/site-data.test.ts` | 8 | **El informe sencillo del lugar** (`siteReportOf`, Fase 37): solo las visitas calculadas y las que están en medición aparte; la verificación de cada visita y la base; las notas; el veredicto y los puntos sobre un umbral; si las visitas se verifican; los avisos de tendencia; los puntos de la última visita |
 | `lib/reports/cover.test.ts` | 2 | `coverOf` toma del proyecto solo lo que muestra la portada, y `ReportCover` la pinta en vivo, sin separador si falta la proyección (Fase 38; hasta entonces, la portada congelada en `cover` de la Fase 23) |
+| `lib/reports/page-footer.test.ts` | 4 | El pie del PDF (Fase 40): `cssString` escapa comillas y barras invertidas, cambia los saltos de línea por espacios y no deja cerrar el `<style>`; `pageFooterCss` une el proyecto y el proceso en `@bottom-left` |
 | `lib/process-counts.test.ts` | 2 | El conteo de la tarjeta del proyecto: el total, en singular y en plural, y sin procesos (Fase 24; desde la Fase 37, sin desglose por estado) |
 | `components/projects/new-project-form.test.ts` | 2 | El alta de proyecto: un solo botón, de envío, y los datos básicos con el sistema de referencia (Fase 27) |
 | `components/projects/hub-rows.test.ts` | 9 | El tipo de un proceso: «Abierta con ida y vuelta», y como frase en las filas del hub (Fase 27); la poligonal siempre «Calculado» y con sus tres acciones, y sus chips sin cerrados ni rechazados (Fase 35); la nivelación tampoco se cierra —«Calculado» aunque no alcance ningún orden, sus chips— y una abierta con la vuelta a medias no dice «Sin verificación» (Fase 36) |
 | `lib/export/workbook-colors.test.ts` | 8 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24); también los cuatro de la Fase 38: el fondo y la tinta de los datos (`miraBg`, `miraInk`), «CUMPLE» y «NO CUMPLE» |
 | `lib/export/formula-check.test.ts` | 5 | **El ayudante que evalúa las fórmulas de un libro** (Fase 38): fórmulas encadenadas, de otra hoja, con texto y con fechas; un libro coherente no tiene diferencias y uno con un resultado guardado falso sí; evalúa desde los datos crudos, así que cambiar un dato recalcula toda la cadena; sigue cadenas largas con funciones —el intérprete no es reentrante— y evalúa `MIN` |
-| `lib/export/cells.test.ts` | 5 | Las primitivas de celda (Fase 38): columnas y celdas con el nombre de Excel; una fórmula lleva su resultado guardado y un dato su estilo; `roundHalfUp` redondea los medios como `Math.round`, también los negativos; los bloques de tolerancias copian `tolerances.ts`; el encabezado de cada hoja dice cuándo se exportó y que lo generó TopoField |
+| `lib/export/cells.test.ts` | 5 | Las primitivas de celda (Fase 38): columnas y celdas con el nombre de Excel; una fórmula lleva su resultado guardado y un dato su estilo; `roundHalfUp` redondea los medios como `Math.round`, también los negativos; los bloques de tolerancias copian `tolerances.ts`; el encabezado de cada hoja dice cuándo se exportó, sin la marca de la app (Fase 40) |
 | `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
 | `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
 | `components/equipment/equipment-picker.test.ts` | 7 | El selector ofrece solo los equipos de su tipo, no duplica lo guardado, avisa de la calibración y no aparece en un cerrado (Fase 25); el alta de la poligonal no ofrece el catálogo y la de la nivelación sí (correcciones de la Fase 35) |
@@ -2915,6 +2947,19 @@ Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 ## 11. Deuda técnica conocida
 
 Registrada durante el desarrollo, ninguna bloqueante:
+
+**El encabezado del navegador en el PDF no tiene prueba automática (Fase
+40).** Que Chrome no imprima la URL ni el título depende de que la primera
+página no tenga margen arriba ni abajo, como documenta Chrome para su diálogo
+de impresión. `page.pdf` de Playwright no lo prueba: con
+`displayHeaderFooter` dibuja sus plantillas igual, y sin él no dibuja nada. Se
+verificó que las cajas de margen salen en el PDF y que la portada no las
+lleva; lo del diálogo se comprueba a mano en Chrome. Si otro navegador las imprime, el
+manual dice cómo quitarlas en el diálogo.
+
+**La nota de la demo ya creada.** La de «Sede Vivero — sistema local» dejó de
+nombrar el catálogo en `fixtures.ts` (Fase 40), pero las demos que ya existen
+—la de producción incluida— conservan la nota de antes: es dato del usuario.
 
 **Los límites del Excel de la Fase 38.** Decisiones del plan, anotadas en el
 registro de la fase, y lo que la prueba no cubre:
@@ -4370,6 +4415,8 @@ otra sesión que corra en local el código de `main` sin esta fase fallaría al
 leer `reports`. Por lo mismo, **una vez aplicada, volver en Vercel a un
 despliegue anterior a la Fase 38 rompe todas las páginas de proceso**: el
 código viejo llama a `getReports`.
+
+**La Fase 40 no tiene migración**: su despliegue es el merge.
 
 **La Fase 39 no tiene migración**: su despliegue es el merge. Su rama sale de
 la de la Fase 38, así que entra a `main` con ella o después de ella; el paso

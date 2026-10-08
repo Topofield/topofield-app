@@ -94,11 +94,11 @@ describe("el resumen de precisión de una nivelación (Fase 36)", () => {
     const roto = datos(nivelacionTramo2(), { ida: ida.map((x, i) => (i === 3 ? { ...x, back: undefined, backDistanceM: undefined } : x)) });
     expect(roto.broken).toBe(true);
     const [row] = precisionSummaryRows([seccion(roto)]);
-    expect(row).toMatchObject({ precision: "Libreta con errores", cumple: null });
-    expect(html(roto)).toContain("La libreta no encadena.");
+    expect(row).toMatchObject({ precision: "Cartera con errores", cumple: null });
+    expect(html(roto)).toContain("<strong>Cartera con errores.</strong> El punto de cambio de la fila 4 no tiene V+");
   });
 
-  it("una libreta a medias lo dice", () => {
+  it("una libreta a medias lo dice como informe: nivelación incompleta (Fase 40)", () => {
     // Como la deja la captura por armada: el último punto, sin V+ colgada.
     const ida = nivelacionTramo2()
       .forward.slice(0, 5)
@@ -106,7 +106,8 @@ describe("el resumen de precisión de una nivelación (Fase 36)", () => {
     const aMedias = datos(nivelacionTramo2(), { ida });
     expect(aMedias.pending).toBe("forward");
     const [row] = precisionSummaryRows([seccion(aMedias)]);
-    expect(row).toMatchObject({ precision: "Libreta a medias", cumple: null });
+    expect(row).toMatchObject({ precision: "Incompleta", cumple: null });
+    expect(html(aMedias)).toContain("<strong>Nivelación incompleta.</strong> El recorrido no llega a su BM de cierre");
   });
 });
 

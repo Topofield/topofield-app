@@ -2,10 +2,10 @@ import { PrecisionSummary } from "@/components/reports/sections/precision-summar
 import { ReportProcessSection } from "@/components/reports/sections/process-section";
 import { ReportCover } from "@/components/reports/sections/report-cover";
 import { coverOf } from "@/lib/reports/cover";
+import { pageFooterCss } from "@/lib/reports/page-footer";
 import { loadReportSections } from "@/lib/reports/sections";
 import { precisionSummaryRows } from "@/lib/reports/summary";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/utils/format";
 import type { Project } from "@/types/project";
 import type { IncludedProcess } from "@/types/report";
 
@@ -33,6 +33,7 @@ export async function ProcessReport({ project, process, notes }: ProcessReportPr
 
   return (
     <div className="report">
+      <style>{pageFooterCss(project.name, process.name)}</style>
       <ReportCover title={process.name} cover={coverOf(project)} dateLabel="Fecha del informe" date={now} />
 
       <ReportProcessSection section={section} title="Datos y resultados" />
@@ -45,8 +46,6 @@ export async function ProcessReport({ project, process, notes }: ProcessReportPr
           <p className="report-observations">{notes}</p>
         </section>
       )}
-
-      <p className="report-footer">Informe generado desde TopoField el {formatDate(now)}.</p>
 
     </div>
   );

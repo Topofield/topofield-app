@@ -48,15 +48,15 @@ function Verdict({ data }: { data: LevelingSectionData }) {
   if (broken) {
     return (
       <p className="report-alert">
-        La libreta no encadena. {libretaBlocker(result)}
+        <strong>Cartera con errores.</strong> {libretaBlocker(result, "report")}
       </p>
     );
   }
   if (pending) {
     return (
       <p className="report-text">
-        <strong>Libreta a medias.</strong> La compensación se calcula cuando la libreta llega a su BM: el informe
-        muestra lo medido.
+        <strong>Nivelación incompleta.</strong> El recorrido no llega a su BM de cierre: se presentan las cotas medidas,
+        sin compensar.
       </p>
     );
   }

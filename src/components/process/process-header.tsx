@@ -103,7 +103,7 @@ export function ProcessHeader({
         <div className="flex flex-wrap items-center gap-2">
           {printable && (
             <>
-              <PrintButton size="sm" />
+              <PrintButton size="sm" documentTitle={`${title} — ${projectName}`} />
               <a href={exportHref} className={buttonClasses({ variant: "secondary", size: "sm" })} download>
                 Exportar Excel
               </a>

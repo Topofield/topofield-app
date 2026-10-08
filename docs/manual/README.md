@@ -631,7 +631,9 @@ El informe de la poligonal (§ 10), con **Exportar PDF** y **Exportar Excel**
 2. **Datos de campo**: el amarre, las mediciones «desde → hacia» y el cierre
    angular, con su tolerancia.
 3. **Corrección por método …**: cómo corrigió el método elegido, paso a paso,
-   con sus fórmulas en notación matemática y las cifras de esta poligonal.
+   con las cifras de esta poligonal. El reparto del error angular se dice con
+   su valor por ángulo; el método de ajuste —y, en mínimos cuadrados, la
+   elipse de error— lleva su fórmula en notación matemática.
 4. **Poligonal ajustada**, con la fila Σ.
 5. **Coordenadas** y el dibujo.
 
@@ -1499,8 +1501,9 @@ PDF** y **Exportar Excel** (§ 11) en la cabecera. Sus datos y resultados son:
 2. **Veredicto**: la peor alerta de la última visita y el mayor acumulado, con
    lo que le falta para el umbral siguiente, y si las visitas se verifican
    (§ 7.9).
-3. **Cómo se calcula**: cuatro fórmulas —la altura del instrumento, la cota de
-   cada punto, el acumulado y la velocidad— y los umbrales del semáforo.
+3. **Cómo se calcula**: en un párrafo, cómo salen la cota de cada punto, el
+   acumulado y la velocidad —con un mes de 30.4375 días—, y los umbrales del
+   semáforo.
 4. **Evolución**: el acumulado de cada punto en el tiempo.
 5. **Visitas**: el promedio, el máximo, el mayor Δ, la verificación y la peor
    alerta de cada una.
@@ -1508,7 +1511,7 @@ PDF** y **Exportar Excel** (§ 11) en la cabecera. Sus datos y resultados son:
 7. **Notas de las visitas** y **avisos** de lecturas fuera de tendencia.
 
 Informa las visitas **calculadas**: las que están en medición se nombran
-aparte y entran cuando se terminan. Una visita no tiene informe propio: sus
+aparte, con su fecha, como no incluidas, y entran cuando se terminan. Una visita no tiene informe propio: sus
 resultados van en el del lugar.
 
 ### 7.13 Dar de baja y de alta un punto
@@ -1619,17 +1622,24 @@ y no lleva marca de borrador, porque ningún proceso se cierra (§ 8). Lleva:
   cumple.
 - **Observaciones**: las notas del proceso —en un lugar, su descripción—, si
   las tiene.
-- El **pie**, con la fecha en que se generó.
+
+Es un documento para entregar: no nombra la aplicación ni habla de sus
+pantallas. Un proceso sin terminar se informa como tal —«Nivelación
+incompleta», «Poligonal incompleta»— con lo medido hasta ahí.
 
 **Exportar PDF.** Es el primer botón de la cabecera del informe. Abre el
 diálogo de impresión del navegador con el informe ya maquetado en A4: elija
 «Guardar como PDF» como destino. Lo impreso es solo el informe: la cabecera,
-los pasos y los botones no salen.
+los pasos y los botones no salen. Desde la segunda página, cada una lleva al
+pie el proyecto y el proceso, y «Página X de Y». El archivo se propone con el
+nombre del proceso y del proyecto.
 
 **Exportar Excel**, a su lado, descarga el libro del proceso (§ 11).
 
-> El PDF lo genera su navegador, no la aplicación. Los márgenes y los
-> encabezados de página dependen de lo que usted elija en ese diálogo.
+> El PDF lo genera su navegador, no la aplicación. La portada va sin márgenes
+> para que el navegador no añada su propio encabezado ni su pie —la dirección
+> de la página y la fecha—. Si aun así aparecen, desmarque «Encabezados y pies
+> de página» en ese diálogo.
 
 ---
 

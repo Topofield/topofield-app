@@ -52,11 +52,12 @@ function html(method: CorrectionMethod, over: Partial<PolygonalInput> = {}) {
 }
 
 describe("PolygonalCorrection", () => {
-  it("Brújula: los 7 ángulos con la orientación, y el reparto por la longitud de los lados", () => {
+  it("Brújula: los 7 ángulos con la orientación y su corrección en el texto, y el reparto por la longitud de los lados", () => {
     const h = html("bowditch");
     expect(h).toContain("3. Corrección por método Brújula (Bowditch)");
     expect(h).toContain("entre los 7 ángulos de la condición, incluido el de orientación en V10 y el cierre contra TT4");
-    expect(h).toContain("<mn>1.71</mn>");
+    // El reparto angular va en el texto, sin fórmula (Fase 40).
+    expect(h).toMatch(/: [+−]1\.71″ por ángulo\./);
     expect(h).toContain("<math");
     expect(h).toContain("<mn>115.712</mn>");
     expect(h).toContain("los lados largos absorben más corrección");
