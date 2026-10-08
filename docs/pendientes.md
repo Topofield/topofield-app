@@ -96,7 +96,7 @@ El 2026-10-08 pidió dejar el informe de cada proceso en su propia página,
 con el PDF y un Excel con fórmulas allí mismo, y quitar los informes
 consolidados: «Informe de cada proceso», al final. Es la **Fase 38**
 ([`prds/37-informe-por-proceso.md`](./prds/37-informe-por-proceso.md)),
-abierta ese mismo día.
+abierta y **cerrada** ese mismo día.
 
 El 2026-10-07, al probar la poligonal rediseñada, el usuario reportó tres
 fallos, corregidos sin fase en la rama `fase-35-correcciones`, y pidió dejar

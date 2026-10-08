@@ -1,7 +1,8 @@
 # PRD-de-fase 38 — El informe de cada proceso
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-08
+**Fecha de cierre:** 2026-10-08
 
 **Rama:** `fase-38-informe-por-proceso`
 **Petición:** del usuario, 2026-10-08: «planees como dejar el acceso al
@@ -20,6 +21,38 @@ la documentación.
 | Poligonal | `poligonales.xlsx` (Brújula, Tránsito, Crandall) |
 | Mínimos cuadrados | `Ajuste_Poligonal_Minimos_Cuadrados.xlsx` (Vivero) |
 | Asentamientos | `Control_asentamiento_estructural_ REAL.xlsx` |
+
+> **Divergencias de la implementación:**
+>
+> - **El intérprete de fórmulas no es reentrante y no trae `MIN` ni `MAX`.**
+>   El ayudante de pruebas usa un intérprete por nivel de profundidad y los
+>   agrega; compara a una parte en mil millones (con una en diez millones,
+>   una coordenada de 100 000 m admitía 1 cm).
+> - **La georreferenciación guarda fecha, puntos, rotación y escala**, no la
+>   traslación: el bloque del Excel muestra lo que hay.
+> - **Poligonal:** las columnas se llaman ESTACIÓN y VISADO; la dirección
+>   D/I y el azimut sin corregir de la abierta con control, y las columnas
+>   auxiliares de Tránsito (|N-S|, |E-W|) y Crandall (d·cos², d·cos·sin,
+>   d·sin², δd) van a la derecha, como las de la propia cartera, en vez de
+>   `SUMPRODUCT` sobre expresiones de rango; los bloques de cierre, debajo de
+>   la tabla.
+> - **Mínimos cuadrados:** el cierre de antes del ajuste —con el que el motor
+>   juzga el orden— va como valores de la app; el orden sí es fórmula sobre
+>   ellos. Las matrices llevan además l₀ y v.
+> - **Nivelación:** la corrección y las cotas ajustadas aparecen solo cuando
+>   se compensaron la ida y la vuelta (`result.compensated`).
+> - **Asentamientos:** «Libretas» no dibuja los hilos en tres filas (las
+>   visitas casi nunca los llevan); la primera lectura de un punto se juzga
+>   en el semáforo solo por el acumulado, y los avisos de tendencia los da
+>   `siteReportOf`.
+> - **Restos del consolidado**, además de lo listado: el número de sección
+>   del índice, el título «Resumen consolidado de precisiones» y los
+>   comentarios que lo nombraban. Se conserva la rama `missing` de
+>   `sections.ts`, que el informe de un proceso nunca usa.
+> - **Verificado en pantalla:** los dos botones en el informe de los tres
+>   módulos y ninguno en los demás pasos; el hub sin Informes; `/reports/new`
+>   da 404; los seis libros de la demo, descargados de la app, sin una sola
+>   fórmula que difiera del motor.
 
 ## Propósito
 
