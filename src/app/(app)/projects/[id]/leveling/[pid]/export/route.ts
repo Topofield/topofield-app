@@ -52,6 +52,8 @@ export async function GET(
       startBmCode: process.start_bm_code,
       endBmCode: process.end_bm_code,
       equipment: equipmentLine(process.equipment_brand, process.equipment_model, process.equipment_serial),
+      location: process.location,
+      responsible: [process.responsible_name, process.responsible_role].filter(Boolean).join(" · ") || null,
       levelType: process.level_type ? LEVEL_TYPE_LABELS[process.level_type] : null,
       notes: process.notes,
     },

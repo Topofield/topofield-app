@@ -43,6 +43,9 @@ export interface LevelingSheetProcess {
   startBmCode: string;
   endBmCode: string | null;
   equipment: string | null;
+  /** Del alta (Fase 36): la ubicación y «Responsable · Cargo». */
+  location?: string | null;
+  responsible?: string | null;
   levelType: string | null;
   notes: string | null;
 }
@@ -245,6 +248,8 @@ export function buildLevelingWorkbook({
     ["Proceso", process.name],
     ["Tipo", levelingTypeLabel(input.type, back != null)],
     ["Recorrido", run],
+    ["Ubicación", process.location ?? null],
+    ["Responsable", process.responsible ?? null],
     ["Equipo", process.equipment],
     ["Tipo de nivel", process.levelType],
     ["BM de partida", `${process.startBmCode} · ${input.startElevation.toFixed(4)}`],

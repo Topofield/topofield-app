@@ -10,6 +10,7 @@ import {
   MIN_RELATIVE_PRECISION,
 } from "@/lib/calculations/tolerances";
 import { PRECISION_ORDERS, PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
+import { formatDateOnly, todayInBogota } from "@/lib/utils/format";
 import { WORKBOOK_COLORS } from "./workbook";
 
 export const FMT = {
@@ -94,7 +95,11 @@ export function roundHalfUp(expr: string, decimals: number): string {
   return `INT((${expr})*${f}+0.5)/${f}`;
 }
 
-/** Título en A1 y los pares etiqueta/valor debajo; devuelve la primera fila libre. */
+/**
+ * Título en A1 y los pares etiqueta/valor debajo, con la fecha de exportación
+ * y «Generado por TopoField» al final (PRD de la Fase 38, § F); devuelve la
+ * primera fila libre.
+ */
 export function writeSheetHeader(
   ws: ExcelJS.Worksheet,
   title: string,
@@ -102,7 +107,7 @@ export function writeSheetHeader(
 ): number {
   putLabel(ws, 1, 1, title, "title");
   let r = 2;
-  for (const [label, value] of pairs) {
+  for (const [label, value] of [...pairs, ["Exportado", `${formatDateOnly(todayInBogota())} · Generado por TopoField`]] as const) {
     if (value === null || value === "") continue;
     putLabel(ws, 1, r, label);
     ws.getCell(r, 3).value = value;

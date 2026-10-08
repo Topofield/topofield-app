@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
 import { ANGULAR_TOLERANCE_K, LEVELING_TOLERANCE_K, MIN_RELATIVE_PRECISION } from "@/lib/calculations/tolerances";
 import { PRECISION_ORDERS } from "@/types/project";
-import { at, col, putData, putFormula, ref, roundHalfUp, writeLevelingTolerances, writePolygonalTolerances } from "./cells";
+import { at, col, putData, putFormula, ref, roundHalfUp, writeLevelingTolerances, writePolygonalTolerances, writeSheetHeader } from "./cells";
 import { evaluateWorkbook, formulaMismatches } from "./formula-check";
 
 describe("primitivas de celda", () => {
@@ -43,5 +43,14 @@ describe("primitivas de celda", () => {
       expect(ws.getCell(pol[o].angularK).value).toBe(ANGULAR_TOLERANCE_K[o]);
       expect(ws.getCell(pol[o].minPrecision).value).toBe(MIN_RELATIVE_PRECISION[o]);
     }
+  });
+
+  it("el encabezado de cada hoja dice cuándo se exportó y que lo generó TopoField (PRD § F)", () => {
+    const ws = new ExcelJS.Workbook().addWorksheet("H");
+    writeSheetHeader(ws, "Título", [["Proyecto", "Edificio"]]);
+    const textos: string[] = [];
+    ws.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
+    expect(textos).toContain("Exportado");
+    expect(textos.some((t) => t.endsWith("· Generado por TopoField"))).toBe(true);
   });
 });

@@ -62,6 +62,8 @@ export async function GET(
       method: input.method,
       startPointCode: process.start_point_code,
       equipment: equipmentLine(process.equipment_brand, process.equipment_model, process.equipment_serial),
+      location: process.location,
+      responsible: [process.responsible_name, process.responsible_role].filter(Boolean).join(" · ") || null,
       georeference:
         process.georef_at && process.georef_rotation_deg != null
           ? {

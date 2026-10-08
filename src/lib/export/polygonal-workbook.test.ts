@@ -102,4 +102,19 @@ describe("Excel de la poligonal — fórmulas contra el motor", () => {
     wb.worksheets[0]!.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
     expect(textos.some((t) => t.startsWith("Sin pesos del ajuste"))).toBe(true);
   });
+
+  it("el encabezado lleva la ubicación y el responsable del alta", () => {
+    const input = abierta("open_uncontrolled");
+    const detected = computePolygonalDetected(input);
+    const wb = buildPolygonalWorkbook({
+      process: { name: "Con alta", type: input.type, method: input.method, startPointCode: "A", equipment: null,
+        georeference: null, notes: null, location: "Calle 26 # 13-50", responsible: "Ana Ruiz · Topógrafa" },
+      project: null,
+      input: { ...input, order: "ordinario", angleType: detected.angleType },
+      detected,
+    });
+    const textos: string[] = [];
+    wb.worksheets[0]!.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
+    expect(textos).toEqual(expect.arrayContaining(["Calle 26 # 13-50", "Ana Ruiz · Topógrafa"]));
+  });
 });

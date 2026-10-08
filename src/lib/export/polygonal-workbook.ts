@@ -39,6 +39,9 @@ export interface PolygonalSheetProcess {
   method: CorrectionMethod;
   startPointCode: string;
   equipment: string | null;
+  /** Del alta (Fase 35): la ubicación y «Responsable · Cargo». */
+  location?: string | null;
+  responsible?: string | null;
   /** La última georreferenciación (Fase 15), tal como la guarda el proceso. */
   georeference: { date: string | null; points: string | null; rotationDeg: number; scale: number } | null;
   notes: string | null;
@@ -119,6 +122,8 @@ export function buildPolygonalWorkbook({
     ["Tipo", POLYGONAL_TYPE_LABELS[input.type]],
     ["Método", input.type === "open_uncontrolled" ? "Sin corrección: la abierta sin control no cierra" : CORRECTION_METHOD_LABELS[input.method]],
     ["Tipo de ángulo", ANGLE_TYPE_LABELS[detected.angleType]],
+    ["Ubicación", process.location ?? null],
+    ["Responsable", process.responsible ?? null],
     ["Equipo", process.equipment],
     ["Punto de partida", process.startPointCode],
   ]);
