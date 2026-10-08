@@ -48,4 +48,13 @@ describe("formula-check", () => {
     expect(values.get("'Datos'!A3")).toBeCloseTo(12.25, 12);
     expect(values.get("'Cotas ajustadas'!A1")).toBeCloseTo(24.5, 12);
   });
+
+  it("sigue cadenas largas de fórmulas con funciones (el intérprete no es reentrante) y evalúa MIN", () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Cadena");
+    ws.getCell("A1").value = 1;
+    for (let r = 2; r <= 40; r++) ws.getCell(`A${r}`).value = { formula: `ABS(A${r - 1})+1`, result: r };
+    ws.getCell("B1").value = { formula: "MIN(A40,A3)*2", result: 6 };
+    expect(formulaMismatches(wb)).toEqual([]);
+  });
 });

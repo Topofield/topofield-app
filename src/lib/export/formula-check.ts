@@ -31,10 +31,20 @@ function rawValue(cell: ExcelJS.Cell): CellValue {
 const EXTRA_FUNCTIONS = {
   SUBSTITUTE: (text: unknown, from: unknown, to: unknown) =>
     String(valueOf(text)).split(String(valueOf(from))).join(String(valueOf(to))),
+  MIN: (...args: unknown[]) => Math.min(...numbers(args)),
+  MAX: (...args: unknown[]) => Math.max(...numbers(args)),
 };
 
 function valueOf(arg: unknown): unknown {
   return typeof arg === "object" && arg !== null && "value" in arg ? (arg as { value: unknown }).value : arg;
+}
+
+/** Los números de los argumentos, aplanando rangos; las celdas vacías no cuentan. */
+function numbers(args: unknown[]): number[] {
+  return args.flatMap((a) => {
+    const v = valueOf(a);
+    return (Array.isArray(v) ? v.flat(2) : [v]).filter((x): x is number => typeof x === "number");
+  });
 }
 
 export function evaluateWorkbook(
@@ -43,6 +53,11 @@ export function evaluateWorkbook(
 ): Map<string, CellValue> {
   const cache = new Map<string, CellValue>();
   const visiting = new Set<string>();
+  // fast-formula-parser no es reentrante: evaluar una fórmula dentro de otra
+  // con el mismo intérprete le corrompe el estado. Un intérprete por nivel de
+  // profundidad: en cada nivel hay a lo sumo una evaluación en curso.
+  const parsers: FormulaParser[] = [];
+  let depth = 0;
 
   const cellAt = (sheet: string, row: number, col: number): CellValue => {
     const k = key(sheet, row, col);
@@ -54,14 +69,22 @@ export function evaluateWorkbook(
     if (!cell.formula) return rawValue(cell);
     if (visiting.has(k)) throw new Error(`Referencia circular en ${k}`);
     visiting.add(k);
-    const out = parser.parse(cell.formula, { sheet, row, col });
+    let out: unknown;
+    depth += 1;
+    try {
+      out = (parsers[depth] ??= new FormulaParser(options)).parse(cell.formula, { sheet, row, col });
+    } catch (e) {
+      throw new Error(`${k} = ${cell.formula}: ${e instanceof Error ? e.message : JSON.stringify(e)}`);
+    } finally {
+      depth -= 1;
+    }
     visiting.delete(k);
     const value = normalize(out, k);
     cache.set(k, value);
     return value;
   };
 
-  const parser = new FormulaParser({
+  const options: ConstructorParameters<typeof FormulaParser>[0] = {
     onCell: ({ sheet, row, col }) => cellAt(sheet, row, col),
     onRange: ({ sheet, from, to }) => {
       const rows: unknown[][] = [];
@@ -73,7 +96,7 @@ export function evaluateWorkbook(
       return rows;
     },
     functions: EXTRA_FUNCTIONS,
-  });
+  };
 
   for (const ws of wb.worksheets) {
     ws.eachRow({ includeEmpty: false }, (row, r) =>
