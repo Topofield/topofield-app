@@ -4,7 +4,6 @@ import { DatosTab } from "@/components/polygonal/datos-tab";
 import { PolygonalHeader } from "@/components/polygonal/polygonal-header";
 import { PolygonalSteps, type PolygonalStep } from "@/components/polygonal/polygonal-steps";
 import { ProcessReport } from "@/components/process/process-report";
-import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
   getPolygonalAmarres,
@@ -12,7 +11,6 @@ import {
   getPolygonalStations,
   getProjectById,
   getReferencePoints,
-  getReports,
 } from "@/lib/supabase/queries";
 
 interface PolygonalPageProps {
@@ -38,18 +36,16 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
   const process = await getPolygonalProcess(supabase, pid);
   if (!process || process.project_id !== id) notFound();
 
-  const [stations, project, referencePoints, reports, processes] = await Promise.all([
+  const [stations, project, referencePoints, processes] = await Promise.all([
     getPolygonalStations(supabase, pid),
     getProjectById(supabase, id),
     getReferencePoints(supabase, id),
-    getReports(supabase, id),
     // Para el aviso del amarre: qué otras poligonales usan un punto que se corrige.
     step === "datos" ? getPolygonalAmarres(supabase, id) : Promise.resolve([]),
   ]);
   if (!project) notFound();
 
   const basePath = `/projects/${id}/polygonal/${pid}`;
-  const reportTitles = reportsIncluding(reports, "polygonal", process.id).map((r) => r.title);
 
   return (
     <div className="flex flex-col gap-5">
@@ -59,7 +55,6 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
         process={process}
         stations={stations}
         exportHref={`${basePath}/export`}
-        reportTitles={reportTitles}
         printable={step === "informe"}
       />
       <PolygonalSteps
@@ -73,8 +68,6 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
           project={project}
           process={{ type: "polygonal", id: process.id, name: process.name }}
           notes={process.notes}
-          reports={reports}
-          includable={process.status === "calculated"}
         />
       ) : step === "ajuste" ? (
         <AjusteTab

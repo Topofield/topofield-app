@@ -28,8 +28,6 @@ interface PolygonalHeaderProps {
   process: PolygonalProcess;
   stations: PolygonalStationWithReadings[];
   exportHref: string;
-  /** Informes consolidados que incluyen la poligonal: borrarla los deja sin su sección. */
-  reportTitles: string[];
   /** En el paso de Informe, la primera acción es imprimirlo. */
   printable?: boolean;
 }
@@ -48,7 +46,6 @@ export function PolygonalHeader({
   process,
   stations,
   exportHref,
-  reportTitles,
   printable = false,
 }: PolygonalHeaderProps) {
   const [editing, setEditing] = useState(false);
@@ -107,7 +104,6 @@ export function PolygonalHeader({
       subject="la poligonal"
       deleteTitle="Eliminar poligonal"
       deleteWhat="con sus mediciones"
-      reportTitles={reportTitles}
     >
       {editing && (
         <PolygonalDetailsDialog

@@ -7,11 +7,9 @@ import { templateNote } from "@/components/settlement/visit-dialog-form";
 import { SiteHeader } from "@/components/settlement/site-header";
 import { isPointActiveOn, pointInputOf } from "@/lib/calculations/settlement";
 import { bookRowOf, bookTemplate } from "@/lib/calculations/settlement-book";
-import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
   getProjectById,
-  getReports,
   getSettlementReadingsBySite,
   getSite,
   getSiteBenchmarks,
@@ -55,12 +53,11 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
   const site = await getSite(supabase, siteId);
   if (!site || site.project_id !== project.id || site.kind !== "settlement") notFound();
 
-  const [sitePoints, visits, benchmarks, booksByVisit, reports] = await Promise.all([
+  const [sitePoints, visits, benchmarks, booksByVisit] = await Promise.all([
     getSitePoints(supabase, site.id),
     getVisits(supabase, site.id),
     getSiteBenchmarks(supabase, site.id),
     getSiteBooks(supabase, site.id),
-    getReports(supabase, project.id),
   ]);
 
   const hoy = todayInBogota();
@@ -97,7 +94,6 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         projectName={project.name}
         site={site}
         summary={summary}
-        reportTitles={reportsIncluding(reports, "site", site.id).map((r) => r.title)}
         printable={activeTab === "informe"}
         newVisit={<NewVisitButton projectId={project.id} siteId={site.id} note={note} />}
       />
@@ -129,8 +125,6 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
         <ProcessReport
           project={project}
           process={{ type: "site", id: site.id, name: site.name }}
-          includable={visits.some((v) => v.status === "calculated")}
-          reports={reports}
           notes={site.description}
         />
       )}

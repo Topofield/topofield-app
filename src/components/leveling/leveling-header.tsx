@@ -26,8 +26,6 @@ interface LevelingHeaderProps {
   process: LevelingProcess;
   readings: LevelingReading[];
   exportHref: string;
-  /** Informes consolidados que incluyen la nivelación: borrarla los deja sin su sección. */
-  reportTitles: string[];
   printable?: boolean;
 }
 
@@ -62,7 +60,6 @@ export function LevelingHeader({
   process,
   readings,
   exportHref,
-  reportTitles,
   printable = false,
 }: LevelingHeaderProps) {
   const [editing, setEditing] = useState(false);
@@ -128,7 +125,6 @@ export function LevelingHeader({
       subject="la nivelación"
       deleteTitle="Eliminar nivelación"
       deleteWhat="con su libreta"
-      reportTitles={reportTitles}
     >
       {editing && (
         <LevelingDetailsDialog

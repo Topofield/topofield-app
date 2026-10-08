@@ -5,7 +5,6 @@ import { useState, useTransition, type ReactNode } from "react";
 import { Alert, Breadcrumbs, Button, buttonClasses, Modal } from "@/components/design-system";
 import { PrintButton } from "@/components/reports/print-button";
 import { callAction } from "@/lib/errors/action-call";
-import { deletionReportsNotice } from "@/lib/reports/including";
 import { formatSavedAt } from "@/lib/utils/format";
 import type { DraftSaveResult } from "./use-process-draft";
 
@@ -22,7 +21,7 @@ interface ProcessHeaderProps {
   equipment: string | null;
   updatedAt: string;
   exportHref: string;
-  /** En el paso de Informe, la primera acción es imprimirlo. */
+  /** En el paso de Informe, las primeras acciones: Exportar PDF y Exportar Excel (Fase 38). */
   printable?: boolean;
   /** Una acción propia del módulo, la primera: «+ Nueva visita» del lugar (Fase 37). */
   primaryAction?: ReactNode;
@@ -35,8 +34,6 @@ interface ProcessHeaderProps {
   deleteTitle: string;
   /** Qué se pierde: «con sus mediciones», «con su libreta». */
   deleteWhat: string;
-  /** Informes consolidados que incluyen el proceso: borrarlo los deja sin su sección. */
-  reportTitles: string[];
   /** Los diálogos propios del módulo, como «Editar datos». */
   children?: ReactNode;
 }
@@ -44,8 +41,9 @@ interface ProcessHeaderProps {
 /**
  * La cabecera de un proceso por pasos (Fases 35 y 36): badges, título,
  * ubicación, responsable, equipo y «Guardado …», y las acciones Editar datos,
- * Exportar a Excel, Duplicar y Eliminar. Sin cerrar ni reabrir. Es un
- * `<header>`: no se imprime.
+ * Duplicar y Eliminar. En la página de informe, primero Exportar PDF y
+ * Exportar Excel: se exporta solo desde ahí (Fase 38). Sin cerrar ni reabrir.
+ * Es un `<header>`: no se imprime.
  */
 export function ProcessHeader({
   projectName,
@@ -65,7 +63,6 @@ export function ProcessHeader({
   subject,
   deleteTitle,
   deleteWhat,
-  reportTitles,
   children,
 }: ProcessHeaderProps) {
   const router = useRouter();
@@ -104,14 +101,18 @@ export function ProcessHeader({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {printable && <PrintButton size="sm" />}
+          {printable && (
+            <>
+              <PrintButton size="sm" />
+              <a href={exportHref} className={buttonClasses({ variant: "secondary", size: "sm" })} download>
+                Exportar Excel
+              </a>
+            </>
+          )}
           {primaryAction}
           <Button variant="secondary" size="sm" onClick={onEdit}>
             Editar datos
           </Button>
-          <a href={exportHref} className={buttonClasses({ variant: "secondary", size: "sm" })} download>
-            Exportar a Excel
-          </a>
           <details className="relative">
             <summary
               aria-label="Más acciones"
@@ -160,11 +161,6 @@ export function ProcessHeader({
         <p className="text-sm text-ink-2">
           Se eliminará «{title}» {deleteWhat}. Esta acción no se puede deshacer.
         </p>
-        {deletionReportsNotice(reportTitles) && (
-          <Alert variant="warning" className="mt-2 py-2">
-            {deletionReportsNotice(reportTitles)}
-          </Alert>
-        )}
       </Modal>
     </header>
   );
