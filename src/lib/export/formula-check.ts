@@ -116,7 +116,7 @@ function normalize(out: unknown, where: string): CellValue {
 
 export function formulaMismatches(
   wb: ExcelJS.Workbook,
-  { tolerance = 1e-7 }: { tolerance?: number } = {},
+  { tolerance = 1e-9 }: { tolerance?: number } = {},
 ): { cell: string; formula: string; expected: CellValue; actual: CellValue }[] {
   const values = evaluateWorkbook(wb);
   const diffs: { cell: string; formula: string; expected: CellValue; actual: CellValue }[] = [];

@@ -1,427 +1,87 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildPolygonalWorkbook,
-  type PolygonalProcessRow,
-  type StationRow,
-} from "./polygonal-workbook";
-import { safeFilename } from "./workbook";
+import { computePolygonalDetected } from "@/lib/calculations/polygonal";
+import { PROCESOS_DEMO, type ProcesoDemo } from "@/lib/demo/fixtures";
+import { resultadosDe } from "@/lib/demo/insertar-poligonal";
+import type { CorrectionMethod, PolygonalInput } from "@/types/polygonal";
+import { evaluateWorkbook, formulaMismatches } from "./formula-check";
+import { buildPolygonalWorkbook } from "./polygonal-workbook";
 
-function station(over: Partial<StationRow> = {}): StationRow {
-  return {
-    station_order: 1,
-    point_code: "E-1",
-    angle_deg: 90,
-    angle_min: 0,
-    angle_sec: 0,
-    deflection_direction: null,
-    horizontal_distance: "100.000",
-    corrected_angle_deg: 90,
-    corrected_angle_min: 0,
-    corrected_angle_sec: 12,
-    azimuth_deg: 45,
-    azimuth_min: 30,
-    azimuth_sec: 0,
-    delta_north: "70.711",
-    delta_east: "70.711",
-    corrected_delta_north: "70.710",
-    corrected_delta_east: "70.712",
-    north: "1070.710",
-    east: "1070.712",
-    ...over,
-  };
+const TT4 = PROCESOS_DEMO.find((p) => p.name.startsWith("Poligonal V10"))!;
+
+function libro(p: ProcesoDemo, method: CorrectionMethod = p.correctionMethod ?? "bowditch") {
+  const { resultado, input, order, angleType } = resultadosDe({ ...p, correctionMethod: method });
+  return buildPolygonalWorkbook({
+    process: { name: p.name, type: p.type, method, startPointCode: p.startPointCode, equipment: null,
+      georeference: null, notes: null },
+    project: null,
+    input: { ...input, order: order ?? "ordinario", angleType },
+    detected: { result: resultado, order, angleType },
+  });
 }
 
-function process(over: Partial<PolygonalProcessRow> = {}): PolygonalProcessRow {
-  return {
-    name: "Cuadrado de prueba",
-    type: "closed",
-    status: "calculated",
-    correction_method: "bowditch",
-    start_point_code: "E-1",
-    start_north: "1000.000",
-    start_east: "1000.000",
-    end_point_code: null,
-    angular_error_seconds: "12",
-    linear_error: "0.400",
-    perimeter: "400.000",
-    relative_precision: "1:1001",
-    meets_tolerance: false,
-    notes: null,
-    location: null,
-    responsible_name: null,
-    responsible_role: null,
-    angle_type: "interior",
-    created_at: "2026-08-26T00:00:00Z",
-    precision_order: "tercer_orden",
-    equipment_brand: null,
-    equipment_model: null,
-    equipment_serial: null,
-    equipment_calibration_date: null,
-    angular_precision_seconds: null,
-    distance_precision_mm: null,
-    distance_precision_ppm: null,
-    ...over,
-  };
+const abierta = (type: "open_controlled" | "open_uncontrolled"): Omit<PolygonalInput, "order" | "angleType"> => ({
+  type, method: "bowditch", startNorth: 1000, startEast: 2000, startAzimuth: 45,
+  endNorth: 1061.204, endEast: 2133.578, endAzimuth: 120.0042,
+  hasOrientation: false, hasClosingRow: false, leastSquares: null,
+  stations: [
+    { pointCode: "A", angle: 0, deflectionDirection: null, distance: 50.123, readings: [] },
+    { pointCode: "B", angle: type === "open_controlled" ? 30.5 : 210.5, deflectionDirection: "right", distance: 60.456, readings: [] },
+    { pointCode: "C", angle: type === "open_controlled" ? 15.25 : 164.75, deflectionDirection: "left", distance: 40.789, readings: [] },
+    { pointCode: "D", angle: 59.7539, deflectionDirection: "right", distance: null, readings: [] },
+  ],
+});
+
+function libroDe(input: Omit<PolygonalInput, "order" | "angleType">) {
+  const detected = computePolygonalDetected(input);
+  return buildPolygonalWorkbook({
+    process: { name: "Sintética", type: input.type, method: input.method, startPointCode: "A", equipment: null,
+      georeference: { date: "2026-10-08", points: "A y D", rotationDeg: 1.25, scale: 1.0001 }, notes: null },
+    project: null,
+    input: { ...input, order: detected.order ?? "ordinario", angleType: detected.angleType },
+    detected,
+  });
 }
 
-describe("buildPolygonalWorkbook", () => {
-  it("crea las tres hojas que pide el § 4.8, en orden", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()]);
-    expect(wb.worksheets.map((w) => w.name)).toEqual([
-      "Datos Crudos",
-      "Cálculos",
-      "Resumen",
-    ]);
+describe("Excel de la poligonal — fórmulas contra el motor", () => {
+  it.each(["bowditch", "transit", "crandall"] as const)("la TT4 por %s", (m) => {
+    expect(formulaMismatches(libro(TT4, m))).toEqual([]);
   });
 
-  // Un DECIMAL de Postgres llega como cadena. Si se escribiera tal cual, Excel
-  // guardaría texto y la celda no podría sumarse ni promediarse — lo primero
-  // que alguien hace en una hoja de cálculo.
-  it("escribe los números como número, no como texto", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()]);
-    const calc = wb.getWorksheet("Cálculos")!;
-    expect(typeof calc.getCell("I4").value).toBe("number");
-    expect(calc.getCell("I4").value).toBe(1070.71);
-    expect(calc.getCell("I4").numFmt).toBe("0.000");
+  it.each(["open_controlled", "open_uncontrolled"] as const)("la abierta %s", (t) => {
+    expect(formulaMismatches(libroDe(abierta(t)))).toEqual([]);
   });
 
-  it("aplica 3 decimales a coordenadas y distancias", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()]);
-    expect(wb.getWorksheet("Datos Crudos")!.getCell("F4").numFmt).toBe("0.000");
+  it("la abierta con control con Crandall y Tránsito", () => {
+    expect(formulaMismatches(libroDe({ ...abierta("open_controlled"), method: "crandall" }))).toEqual([]);
+    expect(formulaMismatches(libroDe({ ...abierta("open_controlled"), method: "transit" }))).toEqual([]);
   });
 
-  it("compone el ángulo y el azimut en DMS, no en decimal", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()]);
-    const calc = wb.getWorksheet("Cálculos")!;
-    expect(calc.getCell("C4").value).toBe("90° 0' 12\"");
-    expect(calc.getCell("D4").value).toBe("45° 30' 0\"");
+  it("la hoja lleva el nombre del método", () => {
+    expect(libro(TT4, "crandall").worksheets[0]!.name).toBe("CRANDALL");
+    expect(libroDe(abierta("open_uncontrolled")).worksheets[0]!.name).toBe("ABIERTA SIN CONTROL");
   });
 
-  // Un borrador se exporta igual (§ 4.8: «cualquier estado»), y sus celdas sin
-  // calcular quedan VACÍAS. Escribir 0 sería inventar un dato: en topografía
-  // un 0.000 de coordenada es una posición, no una ausencia.
-  it("deja vacías las celdas sin calcular de un borrador", () => {
-    const wb = buildPolygonalWorkbook(
-      process({ status: "draft", relative_precision: null }),
-      [
-        station({
-          corrected_angle_deg: null,
-          corrected_angle_min: null,
-          corrected_angle_sec: null,
-          north: null,
-          east: null,
-        }),
-      ],
-    );
-    const calc = wb.getWorksheet("Cálculos")!;
-    expect(calc.getCell("C4").value).toBeNull();
-    expect(calc.getCell("I4").value).toBeNull();
+  it("el orden alcanzado de la TT4 es el que detecta la app", () => {
+    const { order } = resultadosDe(TT4);
+    const values = [...evaluateWorkbook(libro(TT4)).values()];
+    expect(order).toBe("tercer_orden");
+    expect(values).toContain("Tercer orden");
   });
 
-  it("ordena las estaciones por station_order aunque lleguen desordenadas", () => {
-    const wb = buildPolygonalWorkbook(process(), [
-      station({ station_order: 3, point_code: "E-3" }),
-      station({ station_order: 1, point_code: "E-1" }),
-      station({ station_order: 2, point_code: "E-2" }),
-    ]);
-    const raw = wb.getWorksheet("Datos Crudos")!;
-    expect([
-      raw.getCell("B4").value,
-      raw.getCell("B5").value,
-      raw.getCell("B6").value,
-    ]).toEqual(["E-1", "E-2", "E-3"]);
+  it("cambiar una distancia recalcula las coordenadas", () => {
+    const wb = libro(TT4, "bowditch");
+    const ws = wb.worksheets[0]!;
+    let fila = 0;
+    ws.eachRow((row, r) => { if (!fila && typeof row.getCell(16).value === "number") fila = r; });
+    const antes = evaluateWorkbook(wb);
+    const despues = evaluateWorkbook(wb, { [`'BRÚJULA'!P${fila}`]: (ws.getCell(`P${fila}`).value as number) + 0.5 });
+    expect(despues.get(`'BRÚJULA'!W${fila + 1}`)).not.toBeCloseTo(antes.get(`'BRÚJULA'!W${fila + 1}`) as number, 6);
   });
 
-  // La columna de deflexión solo tiene sentido en la abierta con control; en
-  // los otros dos tipos sería una columna siempre vacía.
-  it("incluye la columna de deflexión solo en la abierta con control", () => {
-    const conControl = buildPolygonalWorkbook(
-      process({ type: "open_controlled" }),
-      [station({ deflection_direction: "right" })],
-    );
-    expect(conControl.getWorksheet("Datos Crudos")!.getCell("F3").value).toBe(
-      "Deflexión",
-    );
-    expect(conControl.getWorksheet("Datos Crudos")!.getCell("F4").value).toBe(
-      "Derecha",
-    );
-
-    const cerrada = buildPolygonalWorkbook(process({ type: "closed" }), [
-      station(),
-    ]);
-    expect(cerrada.getWorksheet("Datos Crudos")!.getCell("F3").value).toBe(
-      "Distancia (m)",
-    );
-  });
-
-  // El libro no debe introducir una tercera representación de la precisión:
-  // usa el mismo formateador que el listado y el editor.
-  it("formatea la precisión como el resto de la aplicación", () => {
-    const wb = buildPolygonalWorkbook(
-      process({ relative_precision: "1:1001" }),
-      [station()],
-    );
-    const resumen = wb.getWorksheet("Resumen")!;
-    const valores = resumen
-      .getColumn(2)
-      .values.filter((v): v is string => typeof v === "string");
-    expect(valores).toContain("1:1.001");
-  });
-
-  // Fase 35: el orden se detecta. El libro dice el alcanzado, o que no
-  // alcanza ninguno, o que no hay cierre que juzgar.
-  it("el orden alcanzado: detectado, «No alcanza ningún orden» o «Sin verificación»", () => {
-    const valor = (wb: ReturnType<typeof buildPolygonalWorkbook>) => {
-      const res = wb.getWorksheet("Resumen")!;
-      const fila = res.getColumn(1).values.findIndex((v) => v === "Orden alcanzado");
-      expect(fila).toBeGreaterThan(0);
-      return res.getCell(fila, 2).value;
-    };
-    expect(valor(buildPolygonalWorkbook(process(), [station()], null, null, { order: "tercer_orden", angleType: "interior" }))).toBe("Tercer orden");
-    expect(valor(buildPolygonalWorkbook(process(), [station()], null, null, { order: null, angleType: "interior" }))).toBe("No alcanza ningún orden");
-    expect(
-      valor(buildPolygonalWorkbook(process({ type: "open_uncontrolled", relative_precision: null }), [station()], null, null, { order: null, angleType: "interior" })),
-    ).toBe("Sin verificación");
-  });
-
-  it("el resumen lleva los datos del alta, el tipo de ángulo detectado y el método, sin cierre", () => {
-    const wb = buildPolygonalWorkbook(
-      process({ location: "Sede Vivero", responsible_name: "Andrea Rojas", responsible_role: "Topógrafa" }),
-      [station()],
-      null,
-      null,
-      { order: "tercer_orden", angleType: "exterior" },
-    );
-    const res = wb.getWorksheet("Resumen")!;
-    const etiquetas = res.getColumn(1).values;
-    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
-    expect(res.getCell(fila("Ubicación"), 2).value).toBe("Sede Vivero");
-    expect(res.getCell(fila("Responsable"), 2).value).toBe("Andrea Rojas");
-    expect(res.getCell(fila("Cargo"), 2).value).toBe("Topógrafa");
-    expect(res.getCell(fila("Tipo de ángulo (detectado)"), 2).value).toBe("Exteriores");
-    expect(res.getCell(fila("Método de corrección"), 2).value).toBe("Brújula (Bowditch)");
-    expect(fila("Cerrado")).toBe(-1);
-    expect(fila("Cerrado por")).toBe(-1);
-    expect(fila("Fecha de calibración")).toBe(-1);
-    expect(fila('Precisión angular (")')).toBe(-1);
-  });
-
-  it("exporta un proceso sin estaciones sin romperse", () => {
-    const wb = buildPolygonalWorkbook(process(), []);
-    expect(wb.worksheets).toHaveLength(3);
-  });
-
-  // Un .xlsx viaja suelto: se adjunta a un correo y se abre meses después,
-  // fuera de la aplicación. Sin datum, «N=1000.000» no identifica el sistema
-  // de referencia y las coordenadas son ambiguas.
-  it("incluye los metadatos geodésicos del proyecto en el resumen", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()], {
-      name: "Lote catastral",
-      client: "Cliente Demo",
-      location: "Bogotá",
-      datum: "MAGNA-SIRGAS",
-      projection: "Origen Bogotá",
-    });
-    const res = wb.getWorksheet("Resumen")!;
-    const etiquetas = res
-      .getColumn(1)
-      .values.filter((v): v is string => typeof v === "string");
-    const valores = res
-      .getColumn(2)
-      .values.filter((v): v is string => typeof v === "string");
-
-    expect(etiquetas).toContain("Datum");
-    expect(etiquetas).toContain("Proyección");
-    expect(valores).toContain("MAGNA-SIRGAS");
-  });
-
-  // El agujero que abrió la Fase 8: `reports` solo guarda ids y la impresión
-  // leía `project.*` en vivo, así que reeditar el equipo del proyecto
-  // reescribía el Excel de un proceso ya cerrado e inmutable. El orden y el
-  // equipo viven ahora en el PROCESO, no en el proyecto — el libro debe
-  // leerlos de ahí aunque el proyecto pasado no los tenga (ya no puede
-  // tenerlos: `projects` perdió esas columnas).
-  it("el resumen lleva el equipo y el orden del proceso, no los del proyecto", () => {
-    const wb = buildPolygonalWorkbook(
-      process({
-        precision_order: "primer_orden",
-        equipment_brand: "Sokkia",
-        equipment_model: "CX-52",
-        equipment_serial: "SK-9",
-        equipment_calibration_date: "2026-01-15",
-        angular_precision_seconds: 2,
-        distance_precision_mm: 3,
-        distance_precision_ppm: 2,
-      }),
-      [station()],
-      {
-        name: "Lote catastral",
-        client: "Cliente Demo",
-        location: "Bogotá",
-        datum: "MAGNA-SIRGAS",
-        projection: "Origen Bogotá",
-      },
-    );
-    const res = wb.getWorksheet("Resumen")!;
-    const etiquetas = res.getColumn(1).values;
-    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
-
-    expect(res.getCell(fila("Equipo"), 2).value).toBe("Sokkia CX-52 · s/n SK-9");
-    // Sin detección, el orden guardado.
-    expect(res.getCell(fila("Orden alcanzado"), 2).value).toBe("Primer orden");
-    expect(res.getCell(fila('Precisión angular (")'), 2).value).toBe(2);
-    expect(
-      res.getCell(fila("Precisión de distancia — término constante (mm)"), 2)
-        .value,
-    ).toBe(3);
-    expect(
-      res.getCell(
-        fila("Precisión de distancia — término proporcional (ppm)"),
-        2,
-      ).value,
-    ).toBe(2);
-  });
-
-  // Un proceso sin equipo capturado deja la celda vacía: un guion ahí sería un
-  // dato inventado, y un 0 se leería como una precisión real de cero.
-  it("deja vacío el equipo si el proceso no lo capturó", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()]);
-    const res = wb.getWorksheet("Resumen")!;
-    const etiquetas = res.getColumn(1).values;
-    const fila = etiquetas.findIndex((v) => v === "Equipo");
-    // Sin esto el test no probaría nada: `findIndex` devuelve -1 si la
-    // etiqueta no está, y `getCell(-1, 2).value` de ExcelJS devuelve null,
-    // que es justo lo que se afirma abajo. Renombrar «Equipo» dejaría el
-    // test en verde.
-    expect(fila).toBeGreaterThan(0);
-    expect(res.getCell(fila, 2).value).toBeNull();
-  });
-
-  // `formatDistancePrecision` devuelve "—" ante un par a medias, porque una
-  // precisión de distancia con un solo término no es un dato usable. El libro
-  // escribía los dos términos como filas independientes, así que el mismo
-  // proceso se leía "—" en el informe y como un número suelto en el Excel.
-  it("omite los dos términos de distancia si solo se capturó uno", () => {
-    const wb = buildPolygonalWorkbook(
-      process({ distance_precision_mm: 3, distance_precision_ppm: null }),
-      [station()],
-    );
-    const res = wb.getWorksheet("Resumen")!;
-    const etiquetas = res.getColumn(1).values;
-    const fila = (label: string) => etiquetas.findIndex((v) => v === label);
-
-    // Fase 35: un par a medias cuenta como vacío, y lo vacío no se escribe.
-    expect(fila("Precisión de distancia — término constante (mm)")).toBe(-1);
-    expect(fila("Precisión de distancia — término proporcional (ppm)")).toBe(-1);
-  });
-
-  // Sin proyecto el libro sigue siendo válido: la sección simplemente no sale.
-  it("omite la sección de proyecto si no se pasa", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()]);
-    const etiquetas = wb
-      .getWorksheet("Resumen")!
-      .getColumn(1)
-      .values.filter((v): v is string => typeof v === "string");
-    expect(etiquetas).not.toContain("Datum");
-    expect(etiquetas).toContain("Nombre");
-  });
-});
-
-describe("safeFilename", () => {
-  it("transcribe acentos y espacios", () => {
-    expect(safeFilename("Pentágono — Caso 1", "poligonal")).toBe(
-      "Pentagono-Caso-1-poligonal.xlsx",
-    );
-  });
-
-  it("no deja comillas ni caracteres que rompan Content-Disposition", () => {
-    expect(safeFilename('Proceso "raro"/con\\barras', "poligonal")).toBe(
-      "Proceso-raro-con-barras-poligonal.xlsx",
-    );
-  });
-
-  it("cae a un nombre por defecto si no queda nada utilizable", () => {
-    expect(safeFilename("///", "poligonal")).toBe("proceso-poligonal.xlsx");
-  });
-});
-describe("buildPolygonalWorkbook — mínimos cuadrados (Fase 14)", () => {
-  const adjustment = {
-    status: "adjusted" as const,
-    angleCorrectionsSec: [0.757],
-    distanceCorrectionsM: [-0.00393],
-    adjustedDistances: [32.953],
-    sigma0: 0.6981,
-    conditions: 3 as const,
-    iterations: 3,
-  };
-  const ls = process({
-    correction_method: "least_squares",
-    ls_sigma_angle_seconds: "2.00",
-    ls_sigma_distance_m: "0.0110",
-    ls_distance_measurements: 2,
-  });
-
-  function summaryValue(wb: ReturnType<typeof buildPolygonalWorkbook>, label: string) {
-    const s = wb.getWorksheet("Resumen")!;
-    for (let r = 1; r <= s.rowCount; r++) {
-      if (s.getCell(r, 1).value === label) return s.getCell(r, 2).value;
-    }
-    return undefined;
-  }
-
-  it("añade a «Cálculos» la corrección angular y la distancia ajustada", () => {
-    const calc = buildPolygonalWorkbook(ls, [station()], null, adjustment).getWorksheet(
-      "Cálculos",
-    )!;
-    expect(calc.getCell("K3").value).toBe("Corrección angular (″)");
-    expect(calc.getCell("L3").value).toBe("Distancia ajustada (m)");
-    expect(calc.getCell("K4").value).toBe(0.757);
-    expect(calc.getCell("L4").value).toBe(32.953);
-  });
-
-  it("muestra en «Resumen» los pesos y σ₀", () => {
-    const wb = buildPolygonalWorkbook(ls, [station()], null, adjustment);
-    expect(summaryValue(wb, "σ angular (\")")).toBe(2);
-    expect(summaryValue(wb, "σ de distancia (m)")).toBe(0.011);
-    expect(summaryValue(wb, "Mediciones por distancia")).toBe(2);
-    expect(summaryValue(wb, "σ₀")).toBe(0.698);
-  });
-
-  it("no añade nada con otro método", () => {
-    const wb = buildPolygonalWorkbook(process(), [station()], null, adjustment);
-    expect(wb.getWorksheet("Cálculos")!.getCell("K3").value).toBeNull();
-    expect(summaryValue(wb, "σ₀")).toBeUndefined();
-  });
-});
-
-describe("buildPolygonalWorkbook — georreferenciación (Fase 15)", () => {
-  function summaryValue(wb: ReturnType<typeof buildPolygonalWorkbook>, label: string) {
-    const s = wb.getWorksheet("Resumen")!;
-    for (let r = 1; r <= s.rowCount; r++) {
-      if (s.getCell(r, 1).value === label) return s.getCell(r, 2).value;
-    }
-    return undefined;
-  }
-
-  it("muestra en «Resumen» la última georreferenciación", () => {
-    const wb = buildPolygonalWorkbook(
-      process({
-        georef_at: "2026-09-24T15:00:00Z",
-        georef_point_a_code: "D1",
-        georef_point_b_code: "D3",
-        georef_rotation_deg: 35,
-        georef_rotation_min: 0,
-        georef_rotation_sec: "7.8",
-        georef_scale_factor: "1.000000274",
-      }),
-      [station()],
-    );
-    expect(summaryValue(wb, "Puntos de control")).toBe("D1 y D3");
-    expect(summaryValue(wb, "Rotación")).toBe("35° 0' 7.8\"");
-    expect(summaryValue(wb, "Factor de escala")).toBe(1.000000274);
-  });
-
-  it("sin georreferenciar, no hay sección", () => {
-    expect(summaryValue(buildPolygonalWorkbook(process(), [station()]), "Puntos de control")).toBeUndefined();
+  it("la georreferenciada lleva su bloque con la rotación y la escala como datos", () => {
+    const ws = libroDe(abierta("open_controlled")).worksheets[0]!;
+    const textos: string[] = [];
+    ws.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
+    expect(textos).toEqual(expect.arrayContaining(["Georreferenciación", "Rotación (°)", "Escala"]));
   });
 });

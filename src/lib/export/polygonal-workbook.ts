@@ -1,455 +1,565 @@
-// Libro de Excel de un proceso poligonal (§ 4.8).
+// Libro de Excel de una poligonal (Fase 38): la forma de `poligonales.xlsx`
+// —una hoja por método, con el ángulo en G-M-S-DEC, la corrección, el ángulo
+// corregido, el azimut, las proyecciones, sus correcciones y las coordenadas—
+// con fórmulas vivas. Cada celda calculada lleva su fórmula y, como resultado
+// guardado, el valor del motor.
+//
+// Las reglas son las del motor (`computePolygonal`): las hojas Tránsito y
+// Crandall de la TT4 tienen defectos conocidos (§ 6 de la doc técnica) y aquí
+// no se repiten.
 
 import type ExcelJS from "exceljs";
-import {
-  DECIMALS,
-  distancePrecisionPair,
-  equipmentLine,
-  newWorkbook,
-  projectPairs,
-  type ProjectMetadata,
-  setHeaders,
-  setSheetTitle,
-  writePairs,
-  writeRow,
-  writeSection,
-} from "./workbook";
+import { observedAzimuths, type computePolygonalDetected } from "@/lib/calculations/polygonal";
+import { angularTolerance } from "@/lib/calculations/tolerances";
+import { PRECISION_ORDERS, PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
 import {
   ANGLE_TYPE_LABELS,
   CORRECTION_METHOD_LABELS,
   POLYGONAL_TYPE_LABELS,
-  PROCESS_STATUS_LABELS,
-  type AngleType,
   type CorrectionMethod,
-  type LeastSquaresAdjustment,
+  type PolygonalInput,
   type PolygonalType,
-  type ProcessStatus,
 } from "@/types/polygonal";
-import { formatDate, formatPrecision } from "@/lib/utils/format";
-import { PRECISION_ORDER_LABELS, type PrecisionOrder } from "@/types/project";
+import {
+  FMT,
+  at,
+  putData,
+  putFormula,
+  putLabel,
+  setLayout,
+  verdictFormatting,
+  writePolygonalTolerances,
+  writeSheetHeader,
+} from "./cells";
+import { newWorkbook, projectPairs, type ProjectMetadata } from "./workbook";
 
-/** Fila de `polygonal_stations`, tal como llega de la base. */
-export interface StationRow {
-  station_order: number;
-  point_code: string;
-  angle_deg: number | null;
-  angle_min: number | null;
-  angle_sec: number | null;
-  deflection_direction: string | null;
-  horizontal_distance: number | string | null;
-  corrected_angle_deg: number | null;
-  corrected_angle_min: number | null;
-  corrected_angle_sec: number | null;
-  azimuth_deg: number | null;
-  azimuth_min: number | null;
-  azimuth_sec: number | null;
-  delta_north: number | string | null;
-  delta_east: number | string | null;
-  corrected_delta_north: number | string | null;
-  corrected_delta_east: number | string | null;
-  /** Lecturas del ángulo, si el proceso las capturó. */
-  polygonal_angle_readings?: {
-    reading_order: number;
-    angle_deg: number;
-    angle_min: number;
-    angle_sec: number | string;
-  }[];
-  north: number | string | null;
-  east: number | string | null;
-}
-
-/** Cabecera de `polygonal_processes`, tal como llega de la base. */
-export interface PolygonalProcessRow {
+export interface PolygonalSheetProcess {
   name: string;
   type: PolygonalType;
-  status: ProcessStatus;
-  correction_method: CorrectionMethod | null;
-  start_point_code: string;
-  start_north: number | string | null;
-  start_east: number | string | null;
-  end_point_code: string | null;
-  angular_error_seconds: number | string | null;
-  linear_error: number | string | null;
-  perimeter: number | string | null;
-  relative_precision: string | null;
-  meets_tolerance: boolean | null;
-  has_closing_row?: boolean | null;
+  method: CorrectionMethod;
+  startPointCode: string;
+  equipment: string | null;
+  /** La última georreferenciación (Fase 15), tal como la guarda el proceso. */
+  georeference: { date: string | null; points: string | null; rotationDeg: number; scale: number } | null;
   notes: string | null;
-  /** Datos del alta (Fase 35). */
-  location?: string | null;
-  responsible_name?: string | null;
-  responsible_role?: string | null;
-  /** El tipo de ángulo guardado; el detectado llega aparte. */
-  angle_type?: AngleType | null;
-  created_at: string | null;
-  /** Orden de precisión y equipo de estación total, propios del proceso (§ Fase 8). */
-  precision_order: PrecisionOrder | null;
-  equipment_brand: string | null;
-  equipment_model: string | null;
-  equipment_serial: string | null;
-  equipment_calibration_date: string | null;
-  /** ISO 17123-3, en segundos. */
-  angular_precision_seconds: number | string | null;
-  /** ISO 17123-4: término constante (mm) y proporcional (ppm) de la distancia. */
-  distance_precision_mm: number | string | null;
-  distance_precision_ppm: number | string | null;
-  /** Pesos del ajuste por mínimos cuadrados (Fase 14). */
-  ls_sigma_angle_seconds?: number | string | null;
-  ls_sigma_distance_m?: number | string | null;
-  ls_distance_measurements?: number | null;
-  /** Última georreferenciación (Fase 15). */
-  georef_at?: string | null;
-  georef_point_a_code?: string | null;
-  georef_point_b_code?: string | null;
-  georef_rotation_deg?: number | null;
-  georef_rotation_min?: number | null;
-  georef_rotation_sec?: number | string | null;
-  georef_scale_factor?: number | string | null;
 }
 
-/** El ajuste por mínimos cuadrados, solo si hay uno hecho. */
-type Adjusted = Extract<LeastSquaresAdjustment, { status: "adjusted" }>;
+type Detected = ReturnType<typeof computePolygonalDetected>;
 
-/** El orden alcanzado y el tipo de ángulo, detectados como en la pantalla (Fase 35). */
-export interface DetectedPolygonal {
-  order: PrecisionOrder | null;
-  angleType: AngleType;
+const SHEET_NAMES: Record<CorrectionMethod, string> = {
+  bowditch: "BRÚJULA",
+  transit: "TRÁNSITO",
+  crandall: "CRANDALL",
+  least_squares: "MÍNIMOS CUADRADOS",
+};
+
+// Columnas de la tabla, como la cartera.
+export const P = {
+  station: 1, sighted: 2,
+  aG: 3, aM: 4, aS: 5, aDec: 6,
+  corr: 7,
+  cG: 8, cM: 9, cS: 10, cDec: 11,
+  zG: 12, zM: 13, zS: 14, zDec: 15,
+  dist: 16,
+  pN: 17, pE: 18,
+  kN: 19, kE: 20,
+  uN: 21, uE: 22,
+  north: 23, east: 24,
+} as const;
+
+/** Grados, minutos y segundos SIN redondear: el decimal que dan reproduce el ángulo del motor. */
+function dmsExact(decimal: number): [number, number, number] {
+  const deg = Math.floor(decimal);
+  const min = Math.floor((decimal - deg) * 60);
+  return [deg, min, ((decimal - deg) * 60 - min) * 60];
 }
 
 /**
- * `DECIMAL` de Postgres llega como cadena vía PostgREST. Excel debe recibir un
- * número: una cadena se guarda como texto y deja la celda sin poder sumarse,
- * que es justo lo que un usuario espera hacer en una hoja de cálculo.
+ * G, M y S de un dato: los segundos a la millonésima, para que la celda no
+ * muestre el ruido de la coma flotante (57.19999999985248). El decimal que
+ * dan difiere del ángulo en menos de 1e-9″.
  */
-function num(value: number | string | null | undefined): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
+function dmsData(decimal: number): [number, number, number] {
+  const [g, m, s] = dmsExact(decimal);
+  return [g, m, Math.round(s * 1e6) / 1e6];
 }
 
-/** «12° 34' 56"», o null si el ángulo está incompleto. */
-function dms(
-  deg: number | null,
-  min: number | null,
-  sec: number | null,
-): string | null {
-  if (deg === null || min === null || sec === null) return null;
-  return `${deg}° ${min}' ${sec}"`;
+/** G, M y S de un decimal como fórmulas sobre la celda del decimal. */
+function writeDmsOf(ws: ExcelJS.Worksheet, r: number, cols: [number, number, number], decCell: string, value: number) {
+  const [g, m, s] = dmsExact(value);
+  const G = at(cols[0], r);
+  const M = at(cols[1], r);
+  putFormula(ws, cols[0], r, `INT(${decCell})`, g, FMT.deg);
+  putFormula(ws, cols[1], r, `INT((${decCell}-${G})*60)`, m, FMT.min);
+  putFormula(ws, cols[2], r, `((${decCell}-${G})*60-${M})*60`, s, FMT.sec);
 }
 
-function sheetRawData(
-  wb: ExcelJS.Workbook,
-  process: PolygonalProcessRow,
-  stations: StationRow[],
-): void {
-  const s = wb.addWorksheet("Datos Crudos");
-  s.columns = [
-    { width: 8 }, { width: 14 }, { width: 8 }, { width: 8 }, { width: 8 },
-    { width: 12 }, { width: 16 },
-  ];
+const finite = (x: number | null | undefined): x is number => x != null && Number.isFinite(x);
 
-  setSheetTitle(s, `${process.name} — datos de campo sin modificar`);
-
-  const showDeflection = process.type === "open_controlled";
-  // Las lecturas van a la derecha del promedio, una columna por lectura: el
-  // Excel exportado conserva el dato de campo crudo, no solo su promedio.
-  const maxReadings = stations.reduce(
-    (max, st) => Math.max(max, st.polygonal_angle_readings?.length ?? 0),
-    0,
-  );
-  const headers = [
-    "Orden",
-    "Punto",
-    "Áng. °",
-    "Áng. '",
-    'Áng. "',
-    ...(showDeflection ? ["Deflexión"] : []),
-    "Distancia (m)",
-    ...Array.from({ length: maxReadings }, (_, i) => `Lectura ${i + 1}`),
-  ];
-  setHeaders(s, 3, headers);
-
-  stations.forEach((st, i) => {
-    const values: (string | number | null)[] = [
-      st.station_order,
-      st.point_code,
-      st.angle_deg,
-      st.angle_min,
-      st.angle_sec,
-    ];
-    if (showDeflection) {
-      values.push(
-        st.deflection_direction === "right"
-          ? "Derecha"
-          : st.deflection_direction === "left"
-            ? "Izquierda"
-            : null,
-      );
-    }
-    values.push(num(st.horizontal_distance));
-    for (let r = 0; r < maxReadings; r++) {
-      const reading = st.polygonal_angle_readings?.[r];
-      values.push(
-        reading
-          ? `${reading.angle_deg}°${reading.angle_min}'${reading.angle_sec}"`
-          : null,
-      );
-    }
-
-    const formats: (number | null)[] = [null, null, null, null, null];
-    if (showDeflection) formats.push(null);
-    formats.push(DECIMALS.coordinate);
-    for (let r = 0; r < maxReadings; r++) formats.push(null);
-
-    writeRow(s, 4 + i, values, formats);
-  });
-}
-
-function sheetCalculations(
-  wb: ExcelJS.Workbook,
-  process: PolygonalProcessRow,
-  stations: StationRow[],
-  adjustment: Adjusted | null,
-): void {
-  const s = wb.addWorksheet("Cálculos");
-  s.columns = [
-    { width: 8 }, { width: 14 }, { width: 16 }, { width: 16 },
-    { width: 13 }, { width: 13 }, { width: 13 }, { width: 13 },
-    { width: 14 }, { width: 14 },
-    ...(adjustment ? [{ width: 18 }, { width: 18 }] : []),
-  ];
-
-  setSheetTitle(s, `${process.name} — cálculos y coordenadas`);
-
-  setHeaders(s, 3, [
-    "Orden",
-    "Punto",
-    "Ángulo corregido",
-    "Azimut",
-    "ΔN (m)",
-    "ΔE (m)",
-    "ΔN corr. (m)",
-    "ΔE corr. (m)",
-    "Norte (m)",
-    "Este (m)",
-    // Fase 14: lo propio del ajuste. No se persiste; llega recalculado.
-    ...(adjustment ? ["Corrección angular (″)", "Distancia ajustada (m)"] : []),
-  ]);
-
-  const formats = [
-    null, null, null, null,
-    DECIMALS.coordinate, DECIMALS.coordinate,
-    DECIMALS.coordinate, DECIMALS.coordinate,
-    DECIMALS.coordinate, DECIMALS.coordinate,
-    // Segundos de corrección a tres decimales: son décimas de segundo.
-    ...(adjustment ? [3, DECIMALS.coordinate] : []),
-  ];
-
-  stations.forEach((st, i) => {
-    writeRow(
-      s,
-      4 + i,
-      [
-        st.station_order,
-        st.point_code,
-        dms(st.corrected_angle_deg, st.corrected_angle_min, st.corrected_angle_sec),
-        dms(st.azimuth_deg, st.azimuth_min, st.azimuth_sec),
-        num(st.delta_north),
-        num(st.delta_east),
-        num(st.corrected_delta_north),
-        num(st.corrected_delta_east),
-        num(st.north),
-        num(st.east),
-        ...(adjustment
-          ? [
-              adjustment.angleCorrectionsSec[i] ?? null,
-              adjustment.adjustedDistances[i] ?? null,
-            ]
-          : []),
-      ],
-      formats,
-    );
-  });
-
-  const after = 4 + stations.length + 1;
-  writeSection(s, after, "Punto de partida");
-  writePairs(s, after + 1, [
-    ["Código", process.start_point_code],
-    ["Norte (m)", num(process.start_north)],
-    ["Este (m)", num(process.start_east)],
-  ]);
-}
-
-/** El orden alcanzado, en palabras: sin detección, el guardado. */
-function orderLabel(process: PolygonalProcessRow, detected: DetectedPolygonal | null): string {
-  if (process.type === "open_uncontrolled" || process.relative_precision == null) return "Sin verificación";
-  const order = detected ? detected.order : process.precision_order;
-  return order ? PRECISION_ORDER_LABELS[order] : "No alcanza ningún orden";
-}
-
-function sheetSummary(
-  wb: ExcelJS.Workbook,
-  process: PolygonalProcessRow,
-  stations: StationRow[],
-  project: ProjectMetadata | null,
-  adjustment: Adjusted | null,
-  detected: DetectedPolygonal | null,
-): void {
-  const s = wb.addWorksheet("Resumen");
-  s.columns = [{ width: 30 }, { width: 34 }];
-
-  setSheetTitle(s, `${process.name} — resumen`);
-
-  let row0 = 3;
-  const pares = projectPairs(project);
-  if (pares.length > 0) {
-    writeSection(s, row0, "Proyecto");
-    row0 = writePairs(s, row0 + 1, pares) + 1;
-  }
-
-  writeSection(s, row0, "Proceso");
-  const angleType = detected?.angleType ?? process.angle_type ?? null;
-  let row = writePairs(s, row0 + 1, [
-    ["Nombre", process.name],
-    ["Ubicación", process.location ?? null],
-    ["Responsable", process.responsible_name ?? null],
-    ["Cargo", process.responsible_role ?? null],
-    ["Tipo", POLYGONAL_TYPE_LABELS[process.type]],
-    ["Tipo de ángulo (detectado)", angleType ? ANGLE_TYPE_LABELS[angleType] : null],
-    ["Estado", PROCESS_STATUS_LABELS[process.status]],
-    [
-      "Método de corrección",
-      process.correction_method
-        ? CORRECTION_METHOD_LABELS[process.correction_method]
-        : null,
-    ],
-    // Vértices, no filas: con fila de cierre la última no abre lado y no es un
-    // vértice del polígono.
-    [
-      "Estaciones",
-      process.has_closing_row ? stations.length - 1 : stations.length,
-    ],
-    ["Punto inicial", process.start_point_code],
-    ["Punto final", process.end_point_code],
-  ]);
-
-  // El equipo es del PROCESO, no del proyecto: dos poligonales del mismo
-  // proyecto pueden llevar estaciones totales distintas (§ Fase 8).
-  row += 1;
-  writeSection(s, row, "Equipo: estación total");
-  // Los dos términos de la precisión de distancia van juntos o no van: un
-  // par a medias se lee "—" en el informe impreso (`formatDistancePrecision`)
-  // y no puede leerse como un número suelto aquí. Desde la Fase 35 el alta solo
-  // pide la identidad del equipo: la calibración y las precisiones salen si un
-  // proceso anterior las tiene.
-  const [distMm, distPpm] = distancePrecisionPair(
-    process.distance_precision_mm,
-    process.distance_precision_ppm,
-  );
-  const angular = num(process.angular_precision_seconds);
-  row = writePairs(s, row + 1, [
-    [
-      "Equipo",
-      equipmentLine(
-        process.equipment_brand,
-        process.equipment_model,
-        process.equipment_serial,
-      ),
-    ],
-    ...(process.equipment_calibration_date
-      ? ([["Fecha de calibración", process.equipment_calibration_date]] as [string, string][])
-      : []),
-    ...(angular !== null ? ([["Precisión angular (\")", angular]] as [string, number][]) : []),
-    ...(distMm !== null && distPpm !== null
-      ? ([
-          ["Precisión de distancia — término constante (mm)", distMm],
-          ["Precisión de distancia — término proporcional (ppm)", distPpm],
-        ] as [string, number][])
-      : []),
-  ]);
-
-  row += 1;
-  writeSection(s, row, "Precisión");
-  row = writePairs(s, row + 1, [
-    ["Error angular (\")", num(process.angular_error_seconds)],
-    ["Error lineal (m)", num(process.linear_error)],
-    ["Perímetro (m)", num(process.perimeter)],
-    // Se usa el formateador único del proyecto para que el libro no introduzca
-    // una representación distinta de la que muestran el listado y el editor.
-    ["Precisión relativa", formatPrecision(process.relative_precision)],
-    ["Orden alcanzado", orderLabel(process, detected)],
-  ]);
-
-  if (process.correction_method === "least_squares") {
-    row += 1;
-    writeSection(s, row, "Ajuste por mínimos cuadrados");
-    row = writePairs(s, row + 1, [
-      ["σ angular (\")", num(process.ls_sigma_angle_seconds)],
-      ["σ de distancia (m)", num(process.ls_sigma_distance_m)],
-      ["Mediciones por distancia", process.ls_distance_measurements ?? null],
-      ["σ₀", adjustment ? Number(adjustment.sigma0.toFixed(3)) : null],
-      ["Condiciones", adjustment?.conditions ?? null],
-      ["Iteraciones", adjustment?.iterations ?? null],
-    ]);
-  }
-
-  if (process.georef_at) {
-    row += 1;
-    writeSection(s, row, "Georreferenciación");
-    row = writePairs(s, row + 1, [
-      // La fecha de Bogotá, como en el editor y el informe: el ISO en UTC
-      // puede caer al día siguiente.
-      ["Fecha", formatDate(process.georef_at)],
-      ["Puntos de control", `${process.georef_point_a_code} y ${process.georef_point_b_code}`],
-      [
-        "Rotación",
-        process.georef_rotation_deg != null
-          ? dms(
-              process.georef_rotation_deg,
-              process.georef_rotation_min ?? 0,
-              num(process.georef_rotation_sec) ?? 0,
-            )
-          : null,
-      ],
-      ["Factor de escala", num(process.georef_scale_factor)],
-    ]);
-  }
-
-  row += 1;
-  writeSection(s, row, "Trazabilidad");
-  // La poligonal no se cierra (Fase 35): sin fecha ni responsable de cierre.
-  writePairs(s, row + 1, [
-    ["Creado", process.created_at],
-    ["Notas", process.notes],
-  ]);
-}
-
-/**
- * Libro completo de un proceso poligonal: tres hojas de la § 4.8.
- *
- * `adjustment` es el del motor, recalculado sobre las mismas estaciones en
- * orden (Fase 14): las correcciones y σ₀ no se guardan en la base. `detected`,
- * el orden y el tipo de ángulo detectados como en la pantalla (Fase 35); sin
- * él, los guardados.
- */
-export function buildPolygonalWorkbook(
-  process: PolygonalProcessRow,
-  stations: StationRow[],
-  project: ProjectMetadata | null = null,
-  adjustment: LeastSquaresAdjustment | null = null,
-  detected: DetectedPolygonal | null = null,
-): ExcelJS.Workbook {
+/** Libro completo de una poligonal. */
+export function buildPolygonalWorkbook({
+  process,
+  project,
+  input,
+  detected,
+}: {
+  process: PolygonalSheetProcess;
+  project: ProjectMetadata | null;
+  input: PolygonalInput;
+  detected: Detected;
+}): ExcelJS.Workbook {
   const wb = newWorkbook();
-  const ordered = [...stations].sort(
-    (a, b) => a.station_order - b.station_order,
-  );
-  const adjusted =
-    process.correction_method === "least_squares" &&
-    adjustment?.status === "adjusted"
-      ? adjustment
-      : null;
-  sheetRawData(wb, process, ordered);
-  sheetCalculations(wb, process, ordered, adjusted);
-  sheetSummary(wb, process, ordered, project, adjusted, detected);
+  const { result } = detected;
+  const name = input.type === "open_uncontrolled" ? "ABIERTA SIN CONTROL" : SHEET_NAMES[input.method];
+  const ws = wb.addWorksheet(name);
+
+  const labelRow = writeSheetHeader(ws, `${process.name} — ${CORRECTION_METHOD_LABELS[input.method].toLowerCase()}`, [
+    ["Proyecto", project?.name ?? null],
+    ["Proceso", process.name],
+    ["Tipo", POLYGONAL_TYPE_LABELS[input.type]],
+    ["Método", input.type === "open_uncontrolled" ? "Sin corrección: la abierta sin control no cierra" : CORRECTION_METHOD_LABELS[input.method]],
+    ["Tipo de ángulo", ANGLE_TYPE_LABELS[detected.angleType]],
+    ["Equipo", process.equipment],
+    ["Punto de partida", process.startPointCode],
+  ]);
+  writeTableHeaders(ws, labelRow, input.type);
+
+  const n = input.stations.length;
+  const isClosed = input.type === "closed";
+  const isOpenControlled = input.type === "open_controlled";
+  const sideCount = isClosed ? (input.hasOrientation ? n - 1 : n) : n - 1;
+  const partida = labelRow + 2;
+  const row = (i: number) => labelRow + 3 + i;
+  const computed = result.stations.some((s) => finite(s.north)) && input.method !== "least_squares";
+
+  // Columnas auxiliares, a la derecha de las coordenadas.
+  let next = P.east + 1;
+  const dirCol = isOpenControlled ? next++ : 0;
+  const observed = isOpenControlled ? observedAzimuths(input) : [];
+  const doAngular = isOpenControlled && finite(input.endAzimuth) && finite(input.stations[n - 1]?.angle);
+  const rawCol = doAngular ? next++ : 0;
+
+  // --- Partida: el azimut del amarre o del primer lado -------------------------
+  putLabel(ws, P.station, partida, input.hasOrientation ? "Amarre" : "Partida");
+  const [sg, sm, ss] = dmsData(input.startAzimuth);
+  putData(ws, P.zG, partida, sg, FMT.deg);
+  putData(ws, P.zM, partida, sm, FMT.min);
+  putData(ws, P.zS, partida, ss, FMT.sec);
+  const startAz = putFormula(ws, P.zDec, partida, `${at(P.zG, partida)}+${at(P.zM, partida)}/60+${at(P.zS, partida)}/3600`, input.startAzimuth, FMT.dec);
+
+  // --- Las estaciones: datos ------------------------------------------------------
+  input.stations.forEach((s, i) => {
+    const r = row(i);
+    putData(ws, P.station, r, s.pointCode);
+    const sighted = i < sideCount ? (input.stations[i + 1] ?? input.stations[0])?.pointCode ?? null : null;
+    if (sighted) ws.getCell(r, P.sighted).value = sighted;
+    if (finite(s.angle)) {
+      const [g, m, sec] = dmsData(s.angle);
+      putData(ws, P.aG, r, g, FMT.deg);
+      putData(ws, P.aM, r, m, FMT.min);
+      putData(ws, P.aS, r, sec, FMT.sec);
+      putFormula(ws, P.aDec, r, `${at(P.aG, r)}+${at(P.aM, r)}/60+${at(P.aS, r)}/3600`, s.angle, FMT.dec);
+    }
+    if (i < sideCount && finite(s.distance)) putData(ws, P.dist, r, s.distance, FMT.coord);
+    if (dirCol && i > 0) ws.getCell(r, dirCol).value = s.deflectionDirection === "left" ? "I" : "D";
+  });
+  if (dirCol) putLabel(ws, dirCol, labelRow, "DIR.", "header");
+  putData(ws, P.north, row(0), input.startNorth, FMT.coord);
+  putData(ws, P.east, row(0), input.startEast, FMT.coord);
+
+  const sumRow = row(n);
+  const blockRow = sumRow + 2;
+
+  let end = blockRow + 1;
+  if (computed) {
+    end = writeComputation(ws, { input, detected, row, sideCount, startAz, sumRow, blockRow, next, dirCol, rawCol, observed, doAngular });
+  } else {
+    putLabel(ws, P.station, blockRow, "Datos incompletos: el cálculo aparece al completar la poligonal.", "section");
+  }
+
+  if (process.georeference) writeGeoreference(ws, end + 2, process.georeference);
+  setLayout(ws, {
+    frozenRows: labelRow + 1,
+    widths: [10, 10, 6, 5, 7, 12, 11, 6, 5, 7, 12, 6, 5, 7, 12, 11, 12, 12, 10, 10, 12, 12, 14, 14, 8, 12, 12, 12, 12],
+  });
+  sheetSummary(wb, process, project);
   return wb;
+}
+
+function writeTableHeaders(ws: ExcelJS.Worksheet, r: number, type: PolygonalType): void {
+  const groups: [number, string][] = [
+    [P.station, "ESTACIÓN"], [P.sighted, "VISADO"],
+    [P.aG, type === "open_controlled" ? "DEFLEXIÓN" : "ÁNG. HORIZONTAL"],
+    [P.corr, "CORR."], [P.cG, "ÁNG. CORREGIDO"], [P.zG, "AZIMUT"],
+    [P.dist, "DIST."], [P.pN, "PROYECCIONES"], [P.kN, "CORRECCIÓN"],
+    [P.uN, "PROY. CORREGIDAS"], [P.north, "COORDENADAS"],
+  ];
+  for (let c = P.station; c <= P.east; c++) putLabel(ws, c, r, "", "header");
+  for (const [c, label] of groups) putLabel(ws, c, r, label, "header");
+  const units: [number, string][] = [
+    [P.aG, "G"], [P.aM, "M"], [P.aS, "S"], [P.aDec, "DEC"], [P.corr, "DEC"],
+    [P.cG, "G"], [P.cM, "M"], [P.cS, "S"], [P.cDec, "DEC"],
+    [P.zG, "G"], [P.zM, "M"], [P.zS, "S"], [P.zDec, "DEC"], [P.dist, "m"],
+    [P.pN, "N-S"], [P.pE, "E-W"], [P.kN, "N"], [P.kE, "E"], [P.uN, "N"], [P.uE, "E"], [P.north, "N"], [P.east, "E"],
+  ];
+  for (let c = P.station; c <= P.east; c++) putLabel(ws, c, r + 1, "", "header");
+  for (const [c, label] of units) putLabel(ws, c, r + 1, label, "header");
+}
+
+interface ComputationArgs {
+  input: PolygonalInput;
+  detected: Detected;
+  row: (i: number) => number;
+  sideCount: number;
+  startAz: string;
+  sumRow: number;
+  blockRow: number;
+  next: number;
+  dirCol: number;
+  rawCol: number;
+  observed: (number | null)[];
+  doAngular: boolean;
+}
+
+/** La celda con referencia absoluta: `D30` → `$D$30`. */
+const absolute = (cell: string) => cell.replace(/^([A-Z]+)(\d+)$/, "$$$1$$$2");
+
+/** Bowditch, Tránsito y Crandall, en las tres poligonales. Devuelve la última fila usada. */
+function writeComputation(ws: ExcelJS.Worksheet, a: ComputationArgs): number {
+  const { input, detected, row, sideCount, startAz, sumRow, blockRow } = a;
+  const { result } = detected;
+  const st = result.stations;
+  const n = input.stations.length;
+  const isClosed = input.type === "closed";
+  const isOC = input.type === "open_controlled";
+  const isOU = input.type === "open_uncontrolled";
+  const first = row(0);
+  const lastSide = row(sideCount - 1);
+  const block = new Block(ws, blockRow);
+
+  // --- Cierre angular --------------------------------------------------------------
+  let corrCell: string | null = null;
+  let angularErr: string | null = null;
+  let angularN: string | null = null;
+  const firstParticipating = isClosed && input.hasOrientation && !input.hasClosingRow ? 1 : 0;
+  if (isClosed && finite(result.angleSum) && finite(result.theoreticalSum) && finite(result.angularError)) {
+    const count = n - firstParticipating;
+    const vertexCount = input.hasOrientation ? n - 1 : n;
+    block.section("Cierre angular");
+    angularN = block.data("Ángulos en la condición", count);
+    const sum = block.formula("Σ ángulos observados (°)", `SUM(${at(P.aDec, row(firstParticipating))}:${at(P.aDec, row(n - 1))})`, result.angleSum, FMT.dec);
+    const v = block.data("Vértices", vertexCount);
+    const base = detected.angleType === "exterior" ? `(${v}+2)*180` : `(${v}-2)*180`;
+    const two = input.hasOrientation && input.hasClosingRow;
+    const theo = block.formula(
+      "Suma teórica (°)",
+      two ? `${base}+360*IF(ROUND((${sum}-${base})/360,0)=0,0,1)` : base,
+      result.theoreticalSum,
+      FMT.dec,
+    );
+    angularErr = block.formula("Error angular (″)", `(${sum}-${theo})*3600`, result.angularError, FMT.sec);
+    corrCell = block.formula("Corrección por ángulo (°)", `-(${sum}-${theo})/${angularN}`, -result.angularError / 3600 / count, FMT.dec);
+  }
+  if (isOC && a.doAngular && finite(result.angularError)) {
+    block.section("Cierre angular");
+    angularN = block.data("Deflexiones en la condición", n - 1);
+    const calc = block.formula("Azimut calculado de llegada (°)", at(a.rawCol, row(n - 1)), a.observed[n - 1] ?? null, FMT.dec);
+    const known = block.data("Azimut de llegada conocido (°)", input.endAzimuth!, FMT.dec);
+    const errDeg = block.formula("Error angular (°)", `MOD(${calc}-${known}+540,360)-180`, result.angularError / 3600, FMT.dec);
+    angularErr = block.formula("Error angular (″)", `${errDeg}*3600`, result.angularError, FMT.sec);
+    corrCell = block.formula("Corrección por deflexión (°)", `-${errDeg}/${angularN}`, -result.angularError / 3600 / (n - 1), FMT.dec);
+  }
+
+  // --- Ángulos corregidos y azimuts -------------------------------------------------
+  const dirOf = (r: number) => (a.dirCol ? `IF(${at(a.dirCol, r)}="I",-1,1)` : "1");
+  input.stations.forEach((s, i) => {
+    const r = row(i);
+    const az = st[i]?.azimuth;
+    if (isClosed && finite(s.angle)) {
+      const corrected = st[i]?.correctedAngle ?? s.angle;
+      const participates = i >= firstParticipating && corrCell;
+      if (participates) putFormula(ws, P.corr, r, absolute(corrCell!), -result.angularError! / 3600 / (n - firstParticipating), FMT.dec);
+      const dec = putFormula(ws, P.cDec, r, participates ? `${at(P.aDec, r)}+${at(P.corr, r)}` : at(P.aDec, r), corrected, FMT.dec);
+      writeDmsOf(ws, r, [P.cG, P.cM, P.cS], dec, corrected);
+    }
+    if (isOC && i > 0 && i < sideCount && finite(s.angle)) {
+      const sign = s.deflectionDirection === "left" ? -1 : 1;
+      const corr = corrCell ? -result.angularError! / 3600 / (n - 1) : 0;
+      if (corrCell) putFormula(ws, P.corr, r, absolute(corrCell), corr, FMT.dec);
+      putFormula(ws, P.cDec, r, corrCell ? `${dirOf(r)}*${at(P.aDec, r)}+${at(P.corr, r)}` : `${dirOf(r)}*${at(P.aDec, r)}`, sign * s.angle + corr, FMT.dec);
+    }
+    if (a.rawCol && i > 0 && finite(s.angle)) {
+      const prev = i === 1 ? at(P.zDec, row(0)) : at(a.rawCol, row(i - 1));
+      putFormula(ws, a.rawCol, r, `MOD(${prev}+${dirOf(r)}*${at(P.aDec, r)},360)`, a.observed[i] ?? null, FMT.dec);
+    }
+    if (!finite(az)) return;
+    let formula: string;
+    if (i === 0) {
+      formula = input.hasOrientation
+        ? `MOD(${startAz}+${isClosed ? at(P.cDec, r) : at(P.aDec, r)},360)`
+        : startAz;
+    } else if (isOC) {
+      formula = `MOD(${at(P.zDec, row(i - 1))}+${at(P.cDec, r)},360)`;
+    } else {
+      formula = `MOD(${at(P.zDec, row(i - 1))}+180+${isClosed ? at(P.cDec, r) : at(P.aDec, r)},360)`;
+    }
+    const dec = putFormula(ws, P.zDec, r, formula, az, FMT.dec);
+    writeDmsOf(ws, r, [P.zG, P.zM, P.zS], dec, az);
+  });
+  if (a.rawCol) putLabel(ws, a.rawCol, row(-2), "AZ. SIN CORREGIR", "header");
+
+  // --- Proyecciones --------------------------------------------------------------------
+  for (let i = 0; i < sideCount; i++) {
+    const r = row(i);
+    putFormula(ws, P.pN, r, `${at(P.dist, r)}*COS(RADIANS(${at(P.zDec, r)}))`, st[i]!.deltaNorth, FMT.coord);
+    putFormula(ws, P.pE, r, `${at(P.dist, r)}*SIN(RADIANS(${at(P.zDec, r)}))`, st[i]!.deltaEast, FMT.coord);
+  }
+  putLabel(ws, P.station, sumRow, "SUMATORIA", "section");
+  const sum = (c: number, value: number | null, fmt: string) =>
+    putFormula(ws, c, sumRow, `SUM(${at(c, first)}:${at(c, lastSide)})`, value, fmt);
+  const sides = st.slice(0, sideCount);
+  const total = (f: (x: (typeof sides)[number]) => number | null) => sides.reduce((acc, x) => acc + (f(x) ?? 0), 0);
+  const perimeter = sum(P.dist, result.perimeter, FMT.coord);
+  const sumN = sum(P.pN, total((x) => x.deltaNorth), FMT.coord);
+  const sumE = sum(P.pE, total((x) => x.deltaEast), FMT.coord);
+
+  // --- Cierre lineal -------------------------------------------------------------------
+  let eN: string | null = null;
+  let eE: string | null = null;
+  let precision: string | null = null;
+  if (!isOU && finite(result.linearError)) {
+    block.section("Cierre lineal");
+    if (isClosed) {
+      eN = block.formula("Error N (m)", sumN, result.errorNorth, FMT.coord);
+      eE = block.formula("Error E (m)", sumE, result.errorEast, FMT.coord);
+    } else {
+      const endN = block.data("Llegada conocida N (m)", input.endNorth!, FMT.coord);
+      const endE = block.data("Llegada conocida E (m)", input.endEast!, FMT.coord);
+      eN = block.formula("Error N (m)", `${at(P.north, first)}+${sumN}-${endN}`, result.errorNorth, FMT.coord);
+      eE = block.formula("Error E (m)", `${at(P.east, first)}+${sumE}-${endE}`, result.errorEast, FMT.coord);
+    }
+    const le = block.formula("Error lineal (m)", `SQRT(${eN}^2+${eE}^2)`, result.linearError, FMT.coord);
+    const per = block.formula("Perímetro (m)", perimeter, result.perimeter, FMT.coord);
+    const threshold = isClosed ? "1E-9" : "0";
+    const rel = result.relativePrecision;
+    precision = block.formula("Precisión (1:X)", `IF(${le}>${threshold},${per}/${le},"∞")`, rel === Infinity ? "∞" : rel, FMT.ratio);
+  }
+
+  // --- Correcciones y coordenadas --------------------------------------------------------
+  const correction = (i: number): [number, number] => [
+    (st[i]!.correctedDeltaNorth ?? 0) - (st[i]!.deltaNorth ?? 0),
+    (st[i]!.correctedDeltaEast ?? 0) - (st[i]!.deltaEast ?? 0),
+  ];
+  if (eN && eE) {
+    if (input.method === "bowditch") {
+      for (let i = 0; i < sideCount; i++) {
+        const r = row(i);
+        const [cN, cE] = correction(i);
+        putFormula(ws, P.kN, r, `-${eN}*${at(P.dist, r)}/${perimeter}`, cN, FMT.coord);
+        putFormula(ws, P.kE, r, `-${eE}*${at(P.dist, r)}/${perimeter}`, cE, FMT.coord);
+      }
+    } else if (input.method === "transit") {
+      const absN = a.next;
+      const absE = a.next + 1;
+      putLabel(ws, absN, row(-2), "|N-S|", "header");
+      putLabel(ws, absE, row(-2), "|E-W|", "header");
+      for (let i = 0; i < sideCount; i++) {
+        const r = row(i);
+        putFormula(ws, absN, r, `ABS(${at(P.pN, r)})`, Math.abs(st[i]!.deltaNorth ?? 0), FMT.coord);
+        putFormula(ws, absE, r, `ABS(${at(P.pE, r)})`, Math.abs(st[i]!.deltaEast ?? 0), FMT.coord);
+      }
+      const sAbsN = putFormula(ws, absN, sumRow, `SUM(${at(absN, first)}:${at(absN, lastSide)})`, total((x) => Math.abs(x.deltaNorth ?? 0)), FMT.coord);
+      const sAbsE = putFormula(ws, absE, sumRow, `SUM(${at(absE, first)}:${at(absE, lastSide)})`, total((x) => Math.abs(x.deltaEast ?? 0)), FMT.coord);
+      for (let i = 0; i < sideCount; i++) {
+        const r = row(i);
+        const [cN, cE] = correction(i);
+        putFormula(ws, P.kN, r, `-${eN}*${at(absN, r)}/${sAbsN}`, cN, FMT.coord);
+        putFormula(ws, P.kE, r, `-${eE}*${at(absE, r)}/${sAbsE}`, cE, FMT.coord);
+      }
+    } else if (input.method === "crandall") {
+      writeCrandall(ws, { ...a, eN, eE, first, lastSide, correction, block });
+    }
+  }
+  for (let i = 0; i < sideCount; i++) {
+    const r = row(i);
+    const corrected = !isOU && eN;
+    putFormula(ws, P.uN, r, corrected ? `${at(P.pN, r)}+${at(P.kN, r)}` : at(P.pN, r), st[i]!.correctedDeltaNorth, FMT.coord);
+    putFormula(ws, P.uE, r, corrected ? `${at(P.pE, r)}+${at(P.kE, r)}` : at(P.pE, r), st[i]!.correctedDeltaEast, FMT.coord);
+  }
+  for (let i = 1; i <= Math.min(sideCount, n - 1); i++) {
+    const r = row(i);
+    putFormula(ws, P.north, r, `${at(P.north, row(i - 1))}+${at(P.uN, row(i - 1))}`, st[i]!.north, FMT.coord);
+    putFormula(ws, P.east, r, `${at(P.east, row(i - 1))}+${at(P.uE, row(i - 1))}`, st[i]!.east, FMT.coord);
+  }
+
+  // --- Tolerancias y orden ---------------------------------------------------------------
+  const orderEnd = writeOrder(ws, { input, detected, blockRow, angularErr, angularN, precision });
+  return Math.max(block.row, orderEnd);
+}
+
+/** Crandall (de `correctDeltas`): ángulos fijos, distancias por mínimos cuadrados con peso 1/d. */
+function writeCrandall(
+  ws: ExcelJS.Worksheet,
+  a: ComputationArgs & {
+    eN: string;
+    eE: string;
+    first: number;
+    lastSide: number;
+    correction: (i: number) => [number, number];
+    block: Block;
+  },
+): void {
+  const { row, sideCount, detected, next, first, lastSide, eN, eE, block } = a;
+  const st = detected.result.stations;
+  const [cc, cs, ss, dd] = [next, next + 1, next + 2, next + 3];
+  putLabel(ws, cc, row(-2), "d·cos²", "header");
+  putLabel(ws, cs, row(-2), "d·cos·sin", "header");
+  putLabel(ws, ss, row(-2), "d·sin²", "header");
+  putLabel(ws, dd, row(-2), "δd", "header");
+  let a11 = 0;
+  let a12 = 0;
+  let a22 = 0;
+  const parts: { r: number; q: number; e: number; d: number }[] = [];
+  for (let i = 0; i < sideCount; i++) {
+    const r = row(i);
+    const q = st[i]!.deltaNorth ?? 0;
+    const e = st[i]!.deltaEast ?? 0;
+    const d = a.input.stations[i]!.distance ?? 0;
+    parts.push({ r, q, e, d });
+    putFormula(ws, cc, r, `${at(P.pN, r)}^2/${at(P.dist, r)}`, (q * q) / d, FMT.coord);
+    putFormula(ws, cs, r, `${at(P.pN, r)}*${at(P.pE, r)}/${at(P.dist, r)}`, (q * e) / d, FMT.coord);
+    putFormula(ws, ss, r, `${at(P.pE, r)}^2/${at(P.dist, r)}`, (e * e) / d, FMT.coord);
+    a11 += (q * q) / d;
+    a12 += (q * e) / d;
+    a22 += (e * e) / d;
+  }
+  block.section("Crandall: sistema 2×2");
+  const A11 = block.formula("a11 = Σ d·cos²", `SUM(${at(cc, first)}:${at(cc, lastSide)})`, a11, FMT.coord);
+  const A12 = block.formula("a12 = Σ d·cos·sin", `SUM(${at(cs, first)}:${at(cs, lastSide)})`, a12, FMT.coord);
+  const A22 = block.formula("a22 = Σ d·sin²", `SUM(${at(ss, first)}:${at(ss, lastSide)})`, a22, FMT.coord);
+  const det = a11 * a22 - a12 * a12;
+  const D = block.formula("det", `${A11}*${A22}-${A12}^2`, det, FMT.coord);
+  const errN = detected.result.errorNorth ?? 0;
+  const errE = detected.result.errorEast ?? 0;
+  const l1 = (a22 * -errN - a12 * -errE) / det;
+  const l2 = (-a12 * -errN + a11 * -errE) / det;
+  const L1 = block.formula("λ1", `(${A22}*-${eN}-${A12}*-${eE})/${D}`, l1, FMT.dec);
+  const L2 = block.formula("λ2", `(-${A12}*-${eN}+${A11}*-${eE})/${D}`, l2, FMT.dec);
+  for (const { r, q, e, d } of parts) {
+    const deltaD = l1 * q + l2 * e;
+    putFormula(ws, dd, r, `${L1}*${at(P.pN, r)}+${L2}*${at(P.pE, r)}`, deltaD, FMT.coord);
+    putFormula(ws, P.kN, r, `${at(dd, r)}*${at(P.pN, r)}/${at(P.dist, r)}`, (deltaD * q) / d, FMT.coord);
+    putFormula(ws, P.kE, r, `${at(dd, r)}*${at(P.pE, r)}/${at(P.dist, r)}`, (deltaD * e) / d, FMT.coord);
+  }
+}
+
+/** Las tolerancias por orden y el orden alcanzado, con la regla de `detectPrecisionOrder`. */
+export function writeOrder(
+  ws: ExcelJS.Worksheet,
+  {
+    input,
+    detected,
+    blockRow,
+    angularErr,
+    angularN,
+    precision,
+  }: {
+    input: PolygonalInput;
+    detected: Detected;
+    blockRow: number;
+    angularErr: string | null;
+    angularN: string | null;
+    precision: string | null;
+  },
+): number {
+  const col = 8;
+  const tol = writePolygonalTolerances(ws, col, blockRow);
+  const r0 = blockRow + 2 + PRECISION_ORDERS.length + 1;
+  if (input.type === "open_uncontrolled" || !precision) {
+    putLabel(ws, col, r0, "Orden alcanzado");
+    putData(ws, col + 3, r0, "Sin verificación");
+    return r0;
+  }
+  const count = detected.result.angularConditionCount;
+  const angularOk = (o: PrecisionOrder, i: number) => {
+    if (!angularErr || !angularN || count == null) return "TRUE";
+    putLabel(ws, col, r0 + 1 + i, `Tolerancia angular · ${PRECISION_ORDER_LABELS[o]} (″)`);
+    const cell = putFormula(ws, col + 3, r0 + 1 + i, `${tol[o].angularK}*SQRT(${angularN})`, angularTolerance(o, count), FMT.sec);
+    return `ABS(${angularErr})<=${cell}+1E-9`;
+  };
+  const conds = PRECISION_ORDERS.map((o, i) => `AND(${angularOk(o, i)},IF(ISNUMBER(${precision}),${precision}>=${tol[o].minPrecision},TRUE))`);
+  const reached = detected.order ? PRECISION_ORDER_LABELS[detected.order] : "Ninguno";
+  const formula = PRECISION_ORDERS.reduceRight(
+    (rest, o, i) => `IF(${conds[i]},"${PRECISION_ORDER_LABELS[o]}",${rest})`,
+    `"Ninguno"`,
+  );
+  const orderRow = r0 + PRECISION_ORDERS.length + 2;
+  putLabel(ws, col, orderRow, "Orden alcanzado", "section");
+  const order = putFormula(ws, col + 3, orderRow, formula, reached);
+  putLabel(ws, col, orderRow + 1, "Veredicto", "section");
+  const verdict = putFormula(ws, col + 3, orderRow + 1, `IF(${order}="Ninguno","NO CUMPLE","CUMPLE")`, detected.order ? "CUMPLE" : "NO CUMPLE");
+  verdictFormatting(ws, verdict);
+  return orderRow + 1;
+}
+
+/** Un bloque de pares rótulo/valor debajo de la tabla: rótulo en A, valor en D. */
+export class Block {
+  private started = false;
+  constructor(
+    private readonly ws: ExcelJS.Worksheet,
+    private r: number,
+  ) {}
+  /** La última fila usada. */
+  get row(): number {
+    return this.r - 1;
+  }
+  section(label: string): void {
+    if (this.started) this.r += 1;
+    this.started = true;
+    putLabel(this.ws, 1, this.r, label, "section");
+    this.r += 1;
+  }
+  data(label: string, value: number | string, fmt?: string): string {
+    putLabel(this.ws, 1, this.r, label);
+    const cell = putData(this.ws, 4, this.r, value, fmt);
+    this.r += 1;
+    return cell;
+  }
+  formula(label: string, formula: string, result: number | string | null, fmt?: string): string {
+    putLabel(this.ws, 1, this.r, label);
+    const cell = putFormula(this.ws, 4, this.r, formula, result, fmt);
+    this.r += 1;
+    return cell;
+  }
+}
+
+function writeGeoreference(
+  ws: ExcelJS.Worksheet,
+  r: number,
+  g: NonNullable<PolygonalSheetProcess["georeference"]>,
+): void {
+  putLabel(ws, 1, r, "Georreferenciación", "section");
+  const pairs: [string, string | number | null, string?][] = [
+    ["Fecha", g.date],
+    ["Puntos de control", g.points],
+    ["Rotación (°)", g.rotationDeg, FMT.dec],
+    ["Escala", g.scale, "0.0000000"],
+  ];
+  pairs.forEach(([label, value, fmt], i) => {
+    putLabel(ws, 1, r + 1 + i, label);
+    if (value !== null) putData(ws, 4, r + 1 + i, value, fmt);
+  });
+  putLabel(ws, 1, r + 6, "La poligonal ya está en el sistema georreferenciado: sus datos son los transformados.");
+}
+
+function sheetSummary(wb: ExcelJS.Workbook, process: PolygonalSheetProcess, project: ProjectMetadata | null): void {
+  const ws = wb.addWorksheet("Resumen");
+  writeSheetHeader(ws, `${process.name} — resumen`, [
+    ...projectPairs(project),
+    ["Proceso", process.name],
+    ["Equipo", process.equipment],
+    ["Notas", process.notes],
+    ["Cómo leer el libro", "Las celdas con fondo amarillo son datos medidos o tecleados; el resto se calcula con fórmulas y se recalcula si cambia un dato."],
+  ]);
+  ws.columns = [{ width: 22 }, { width: 2 }, { width: 70 }];
 }

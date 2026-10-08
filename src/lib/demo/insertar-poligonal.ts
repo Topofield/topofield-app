@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { decimalToDms, dmsToDecimal } from "@/lib/calculations/angles";
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import type { Database } from "@/types/database";
+import type { PolygonalInput } from "@/types/polygonal";
 import type { ProcesoDemo } from "./fixtures";
 
 type Client = SupabaseClient<Database>;
@@ -25,7 +26,32 @@ type Client = SupabaseClient<Database>;
  * Excel —que leen lo persistido— mostraban guiones.
  */
 export function resultadosDe(proceso: ProcesoDemo) {
-  const { result: r, order, angleType } = computePolygonalDetected({
+  const input = entradaDe(proceso);
+  const { result: r, order, angleType } = computePolygonalDetected(input);
+  const rel = r.relativePrecision;
+  return {
+    input,
+    order,
+    angleType,
+    resultado: r,
+    campos: {
+      angular_error_seconds: r.angularError,
+      linear_error: r.linearError,
+      perimeter: r.perimeter,
+      relative_precision:
+        rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
+      // La misma regla que `savePolygonalProcessAction`: cumple si alcanza
+      // algún orden; sin verificación, no se sabe.
+      meets_tolerance: proceso.type === "open_uncontrolled" || rel == null ? null : order !== null,
+      precision_order: order,
+      angle_type: angleType,
+    },
+  };
+}
+
+/** La entrada del motor de una poligonal de la demo, como la arma la aplicación. */
+export function entradaDe(proceso: ProcesoDemo): Omit<PolygonalInput, "order" | "angleType"> {
+  return {
     type: proceso.type,
     startNorth: proceso.startNorth,
     startEast: proceso.startEast,
@@ -49,23 +75,6 @@ export function resultadosDe(proceso: ProcesoDemo) {
         ? [{ order: 1, angle: dmsToDecimal(...st.angle) }]
         : [],
     })),
-  });
-
-  const rel = r.relativePrecision;
-  return {
-    resultado: r,
-    campos: {
-      angular_error_seconds: r.angularError,
-      linear_error: r.linearError,
-      perimeter: r.perimeter,
-      relative_precision:
-        rel == null ? null : rel === Infinity ? "1:∞" : `1:${Math.round(rel)}`,
-      // La misma regla que `savePolygonalProcessAction`: cumple si alcanza
-      // algún orden; sin verificación, no se sabe.
-      meets_tolerance: proceso.type === "open_uncontrolled" || rel == null ? null : order !== null,
-      precision_order: order,
-      angle_type: angleType,
-    },
   };
 }
 
