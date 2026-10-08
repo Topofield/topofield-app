@@ -475,11 +475,10 @@
 }
 
 @media print {
-  /* El papel y el pie propio (Fase 40). Con las cajas de margen definidas,
-     Chrome no imprime su encabezado ni su pie (la URL, el título y la fecha):
-     el informe es un entregable sin rastro de la app. El pie izquierdo
-     —proyecto y proceso— lo inyecta cada informe (`lib/reports/page-footer`).
-     Las cajas no heredan los tokens: van con valores literales. */
+  /* El papel y el pie propio (Fase 40): el informe es un entregable sin
+     rastro de la app. El pie izquierdo —proyecto y proceso— lo inyecta cada
+     informe (`lib/reports/page-footer`). Las cajas no heredan los tokens: van
+     con valores literales. */
   @page {
     size: A4;
     margin: 18mm 16mm 20mm;
@@ -496,6 +495,19 @@
       font-size: 8pt;
       color: #56636a;
     }
+  }
+
+  /* Chrome imprime su encabezado y su pie (la URL, el título, la fecha) aun
+     con cajas de margen, salvo que la primera página no tenga sitio para
+     ellos: entonces no los pone en ninguna. La portada, que va sola en la
+     primera, va sin margen arriba ni abajo y lleva el suyo como relleno. */
+  @page :first {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .report-cover {
+    padding-top: 18mm;
   }
 
   /* La navegación de la aplicación no va en el PDF. */
