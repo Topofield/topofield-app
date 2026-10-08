@@ -48,7 +48,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 36 | La nivelación como la mide el topógrafo | [`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md) | cerrada |
 | 37 | Los asentamientos como los mide el topógrafo | [`prds/36-ux-asentamientos.md`](./prds/36-ux-asentamientos.md) | cerrada |
 | 38 | El informe de cada proceso | [`prds/37-informe-por-proceso.md`](./prds/37-informe-por-proceso.md) | cerrada |
-| 39 | Mínimos cuadrados: requisitos y precisión de cada punto | [`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md) | en curso |
+| 39 | Mínimos cuadrados: requisitos y precisión de cada punto | [`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -562,6 +562,32 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 39 — Mínimos cuadrados: requisitos y precisión de cada punto (2026-10-08)
+
+Las divergencias están en el PRD-de-fase (`prds/38-precision-minimos-cuadrados.md`).
+Ajuste dice qué pide mínimos cuadrados, y el ajuste da la precisión de cada
+punto —σ N, σ E y la elipse al 95 % (Ghilani, ec. 19.22)—, en tabla y
+dibujada, en Ajuste, en el informe y en el Excel. Sin cambios en la base.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una propagación se verifica con otro método, no consigo misma.** La
+  covarianza por ecuaciones de condición se comparó con un ajuste paramétrico
+  escrito en la prueba —las coordenadas como incógnitas— y con diferencias
+  finitas a través de todo el motor. Que el σ₀ de los dos ajustes coincidiera
+  a 8 decimales antes de implementar nada confirmó que la prueba modelaba lo
+  mismo que el motor.
+- **El servidor y el navegador no calculan igual hasta el último bit.** Un
+  atributo SVG con la covarianza sin redondear difería en el decimal 13 y
+  React avisaba al hidratar. Todo número que se pinta se redondea a lo que se
+  ve.
+- **Un factor «redondo» acaba por debajo de su objetivo.** El 1-2-5 que baja
+  al número redondo puede dejar el resultado en menos de la mitad de lo
+  pedido (un 10 % quedó en 4.6 %): el objetivo se fija mirando el dibujo.
+- **Antes de cambiar un modelo, se mide cuánto cambia.** El ppm cambiaba el σ
+  de las distancias de las carteras menos de un 1 %: medirlo redujo la fase a
+  lo que sí aportaba.
 
 ### Cierre Fase 38 — El informe de cada proceso (2026-10-08)
 

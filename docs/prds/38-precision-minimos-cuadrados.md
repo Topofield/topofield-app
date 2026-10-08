@@ -1,7 +1,8 @@
 # PRD-de-fase 39 — Mínimos cuadrados: requisitos y precisión de cada punto
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-08
+**Fecha de cierre:** 2026-10-08
 
 **Rama:** `fase-39-minimos-cuadrados`, desde `fase-38-informe-por-proceso`
 (la 38 está cerrada pero aún no ha entrado a `main`, y esta fase toca su
@@ -24,6 +25,25 @@ Excel de la poligonal, la demo y la documentación. **Sin cambios en la base.**
 
 **Fuente normativa:** Ghilani y Wolf, *Adjustment Computations*, 4.ª ed.
 (2006), cap. 19 (elipses de error, ec. 19.22 y tabla 19.2).
+
+> **Divergencias de la implementación:**
+>
+> - **σ N y σ E van a 1σ**; los semiejes, al 95 %. La tabla y el informe lo
+>   dicen junto al c y la r.
+> - **El dibujo:** la mayor elipse se lleva al **15 %** de la extensión (con
+>   un 10 %, el redondeo a 1-2-5 la dejaba en un 4.6 %, del tamaño de un
+>   vértice): ×500 en Vivero. Van en verde (`--color-success`), porque el
+>   ocre de mira se confundía con lo sin compensar. El encuadre las contiene,
+>   y sus medidas van a la centésima de píxel: el servidor y el navegador
+>   difieren en el decimal 13 y React avisaba al hidratar.
+> - **El informe** lleva, además de la tabla, la propagación y el c en
+>   MathML; para escribir l̂ se suma `Hat` (`mover`). La nota de la elipse
+>   plana se decide por el primer punto tras la partida.
+> - **El Excel** da el azimut del semieje mayor en grados, minutos y
+>   segundos, como los demás ángulos del libro.
+> - **Verificado en pantalla:** los requisitos y el aviso que nombra los
+>   pesos que faltan (TT4), la tabla y las elipses en Ajuste y en el informe
+>   de Vivero, sin avisos de hidratación.
 
 ## Propósito
 
