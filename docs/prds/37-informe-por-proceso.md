@@ -49,6 +49,13 @@ la documentación.
 >   del índice, el título «Resumen consolidado de precisiones» y los
 >   comentarios que lo nombraban. Se conserva la rama `missing` de
 >   `sections.ts`, que el informe de un proceso nunca usa.
+> - **La revisión final corrigió tres cosas**, cada una con su prueba:
+>   exportar una nivelación sin lecturas daba un error 500; una libreta a
+>   medias mostraba como «Error de cierre» la diferencia con el BM que aún no
+>   alcanzaba; y los ángulos de minutos enteros de la poligonal salían con
+>   60″ en los datos y 41′60″ al recalcular. El encabezado de cada hoja, que
+>   no llevaba la fecha de exportación (§ F), la lleva, y la poligonal y la
+>   nivelación recuperan la ubicación y el responsable del alta.
 > - **Verificado en pantalla:** los dos botones en el informe de los tres
 >   módulos y ninguno en los demás pasos; el hub sin Informes; `/reports/new`
 >   da 404; los seis libros de la demo, descargados de la app, sin una sola

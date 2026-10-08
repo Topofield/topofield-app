@@ -4,9 +4,9 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-08 · Fase 38 cerrada en su rama, con el
-despliegue **preparado y sin aplicar**: una migración, después del merge
-(§ 13) · Fase 39 cerrada en su rama, sin migración · 1180 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-08 · Fase 38 en `main`, con su migración
+**pendiente**: va después del merge (§ 13) · Fase 39 cerrada en su rama, sin
+migración · 1183 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -2695,7 +2695,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1180 tests en 94 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1183 tests en 94 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2713,7 +2713,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/process-list.test.ts` | 27 | Filtrado, orden y conteo del listado (Fase 22); sin los filtros de cerrados ni de lugares activos y cerrados desde la Fase 37 |
 | `lib/utils/format.test.ts` | 34 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26); la hora del «Guardado», en Bogotá y 24 h (Fase 35) |
 | `lib/calculations/tolerances.test.ts` | 12 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
-| `lib/export/polygonal-workbook.test.ts` | 14 | **El Excel de la poligonal con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor (`formulaMismatches`) con la TT4 por Brújula, Tránsito y Crandall, la abierta con control y la sin control, y la abierta con control por Tránsito y Crandall; la hoja lleva el nombre del método; el orden alcanzado de la TT4 es el detectado; cambiar una distancia recalcula las coordenadas; la georreferenciada con la rotación y la escala como datos; la Vivero por mínimos cuadrados, con fórmulas sobre los ángulos y distancias ajustados, y sin pesos, la hoja dice por qué; el encabezado lleva la ubicación y el responsable del alta; la precisión de cada punto de la Vivero bajo las matrices, con los valores del motor (Fase 39) |
+| `lib/export/polygonal-workbook.test.ts` | 15 | **El Excel de la poligonal con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor (`formulaMismatches`) con la TT4 por Brújula, Tránsito y Crandall, la abierta con control y la sin control, y la abierta con control por Tránsito y Crandall; la hoja lleva el nombre del método; el orden alcanzado de la TT4 es el detectado; cambiar una distancia recalcula las coordenadas; la georreferenciada con la rotación y la escala como datos; la Vivero por mínimos cuadrados, con fórmulas sobre los ángulos y distancias ajustados, y sin pesos, la hoja dice por qué; el encabezado lleva la ubicación y el responsable del alta; los ángulos de minutos enteros no salen con 60″ (revisión final); la precisión de cada punto de la Vivero bajo las matrices, con los valores del motor (Fase 39) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
 | `components/polygonal/capture-rows.test.ts` | 12 | Las filas «desde → hacia» (Fase 35): la TT4 con su 0 atrás, el cierre y el cierre angular contra TT4; la Vivero; sin referencia; la abierta con control con su deflexión y su punto de llegada; el punto pendiente; la cerrada local; `fieldTraverse`, lo medido sin ajustar para el dibujo |
@@ -2788,7 +2788,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `components/navigation/app-bar-link.test.ts` | 2 | Qué sección de la barra está activa: su ruta y las que cuelgan de ella, no otra que empiece igual (Fase 33) |
 | `lib/design/tokens-retirados.test.ts` | 2 | **Ninguna clase ni `var()` usa un token retirado** ni la paleta de Tailwind en todo `src/`, ni un color literal en `fill` o `stroke` (Fase 20) |
 | `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
-| `lib/export/leveling-workbook.test.ts` | 8 | **El Excel de la nivelación con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor con El Verjón (abierta con vuelta), el tramo 2 (cerrada), El Verjón sin vuelta (sin verificación) y una cerrada con hilos, tres filas por punto; las hojas de El Verjón —ida, vuelta, cotas ajustadas y resumen—; su orden alcanzado es el detectado; cambiar una V− recalcula las cotas que siguen; con hilos, la distancia sale de ellos por fórmula, (superior − inferior) × 100 |
+| `lib/export/leveling-workbook.test.ts` | 10 | **El Excel de la nivelación con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor con El Verjón (abierta con vuelta), el tramo 2 (cerrada), El Verjón sin vuelta (sin verificación) y una cerrada con hilos, tres filas por punto; las hojas de El Verjón —ida, vuelta, cotas ajustadas y resumen—; su orden alcanzado es el detectado; cambiar una V− recalcula las cotas que siguen; con hilos, la distancia sale de ellos por fórmula, (superior − inferior) × 100; una libreta vacía se exporta y lo dice, y una a medias no muestra error de cierre (revisión final) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
@@ -4368,7 +4368,9 @@ lectura: que `reports` y `reject_update_on_report()` no existen
 (`migration list` y una consulta con `--linked`). Localmente la migración se
 aplicó con `migration up --local`, sin `db reset`, como en las Fases 35 a 37:
 otra sesión que corra en local el código de `main` sin esta fase fallaría al
-leer `reports`.
+leer `reports`. Por lo mismo, **una vez aplicada, volver en Vercel a un
+despliegue anterior a la Fase 38 rompe todas las páginas de proceso**: el
+código viejo llama a `getReports`.
 
 **La Fase 39 no tiene migración**: su despliegue es el merge. Su rama sale de
 la de la Fase 38, así que entra a `main` con ella o después de ella; el paso

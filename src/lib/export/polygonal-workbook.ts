@@ -79,22 +79,35 @@ function dmsExact(decimal: number): [number, number, number] {
 
 /**
  * G, M y S de un dato: los segundos a la millonésima, para que la celda no
- * muestre el ruido de la coma flotante (57.19999999985248). El decimal que
- * dan difiere del ángulo en menos de 1e-9″.
+ * muestre el ruido de la coma flotante (57.19999999985248), con su acarreo:
+ * 87.3° da 87°17′59.9999…″ al separarlo y debe verse 87°18′00″ (revisión
+ * final). El decimal que dan difiere del ángulo en menos de 1e-6″.
  */
 function dmsData(decimal: number): [number, number, number] {
-  const [g, m, s] = dmsExact(decimal);
-  return [g, m, Math.round(s * 1e6) / 1e6];
+  let [g, m, s] = dmsExact(decimal);
+  s = Math.round(s * 1e6) / 1e6;
+  if (s >= 60) {
+    s -= 60;
+    m += 1;
+  }
+  if (m >= 60) {
+    m -= 60;
+    g += 1;
+  }
+  return [g, m, s];
 }
 
-/** G, M y S de un decimal como fórmulas sobre la celda del decimal. */
+/**
+ * G, M y S de un decimal como fórmulas sobre la celda del decimal, en décimas
+ * de segundo enteras —como `decimalToDms`—, para que un ángulo de minutos
+ * enteros no se vea 41′60″ al recalcular (revisión final).
+ */
 function writeDmsOf(ws: ExcelJS.Worksheet, r: number, cols: [number, number, number], decCell: string, value: number) {
-  const [g, m, s] = dmsExact(value);
-  const G = at(cols[0], r);
-  const M = at(cols[1], r);
-  putFormula(ws, cols[0], r, `INT(${decCell})`, g, FMT.deg);
-  putFormula(ws, cols[1], r, `INT((${decCell}-${G})*60)`, m, FMT.min);
-  putFormula(ws, cols[2], r, `((${decCell}-${G})*60-${M})*60`, s, FMT.sec);
+  const t = Math.round(value * 36000);
+  const T = `ROUND(${decCell}*36000,0)`;
+  putFormula(ws, cols[0], r, `INT(${T}/36000)`, Math.floor(t / 36000), FMT.deg);
+  putFormula(ws, cols[1], r, `INT(MOD(${T},36000)/600)`, Math.floor((t % 36000) / 600), FMT.min);
+  putFormula(ws, cols[2], r, `MOD(${T},600)/10`, (t % 600) / 10, FMT.sec);
 }
 
 const finite = (x: number | null | undefined): x is number => x != null && Number.isFinite(x);
