@@ -1,7 +1,8 @@
 # PRD-de-fase 40 — Informes entregables
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-08
+**Fecha de cierre:** 2026-10-08
 
 **Rama:** `fase-40-informes-entregables`, desde `main`.
 **Petición:** del usuario, 2026-10-08: «quiero que los informes sean
@@ -24,7 +25,8 @@ de la demo y la documentación. **Sin cambios en la base ni en el motor.**
 >   sitio para ellos. `@page :first` va sin margen arriba ni abajo y la
 >   portada, sola en esa página, lleva su relleno: la portada no lleva pie, y
 >   el pie propio empieza en la página 2. Playwright no puede probar el
->   diálogo (`page.pdf` dibuja sus plantillas igual): se comprueba a mano.
+>   diálogo (`page.pdf` dibuja sus plantillas igual): el usuario lo comprobó
+>   a mano en producción, en Chrome.
 > - **El título del PDF.** Todas las páginas se titulan «TopoField», que el
 >   navegador ponía como título del PDF y como nombre del archivo.
 >   `PrintButton` toma «proceso — proyecto» mientras imprime.

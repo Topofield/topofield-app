@@ -817,4 +817,5 @@ presentar, «como la de mínimos cuadrados en poligonales, no las de cómo
 calcular cotas en control de asentamientos». Eligió un pie propio en el PDF,
 quitar el reparto angular y las fórmulas de asentamientos, y reescribir las
 frases con el estado del proceso en la app. Es la **Fase 40**
-([`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md)).
+([`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md)),
+**cerrada** y en producción el 2026-10-08.

@@ -563,6 +563,30 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
 
+### Cierre Fase 40 — Informes entregables (2026-10-08)
+
+Las divergencias están en el PRD-de-fase (`prds/39-informes-entregables.md`).
+El informe de cada proceso, su PDF y su Excel ya no nombran la app ni hablan
+de sus pantallas; el PDF lleva pie y paginación propios y un título con el
+nombre del proceso, y solo quedan las fórmulas del ajuste. Sin cambios en la
+base ni en el motor.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un comportamiento del navegador se comprueba en su fuente antes de
+  prometerlo.** El PRD dio por hecho que las cajas de margen quitaban el
+  encabezado de Chrome; el blog de Chrome decía lo contrario, y el arreglo
+  real —la primera página sin margen— salió de ese mismo texto.
+- **Lo que Playwright no ve, lo verifica el usuario.** `page.pdf` no pasa por
+  el diálogo de impresión: la prueba automática cubrió las cajas de margen y
+  la portada, y el diálogo quedó como paso explícito del cierre.
+- **La marca se cuela por los metadatos.** El `<title>` de la página era el
+  título del PDF y el nombre del archivo, y `creator` el autor del Excel:
+  buscar la marca solo en el texto visible no basta.
+- **El `next dev` de larga duración se saltó otra escritura de
+  `globals.css`**: la variable testigo de la memoria del entorno lo destapó
+  antes de culpar a la regla.
+
 ### Cierre Fase 39 — Mínimos cuadrados: requisitos y precisión de cada punto (2026-10-08)
 
 Las divergencias están en el PRD-de-fase (`prds/38-precision-minimos-cuadrados.md`).

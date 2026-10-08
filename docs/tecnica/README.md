@@ -4,9 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-08 · Fases 38 y 39 en `main` y en
-producción, con la migración de la 38 aplicada (§ 13); Fase 40 en curso en su
-rama · 1187 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-08 · Fases 38 a 40 en `main` y en
+producción, con la migración de la 38 aplicada (§ 13) · 1187 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -94,7 +93,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 37 | Los asentamientos como los mide el topógrafo | cerrada |
 | 38 | El informe de cada proceso | cerrada |
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | cerrada |
-| 40 | Informes entregables | en curso |
+| 40 | Informes entregables | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -2954,7 +2953,8 @@ página no tenga margen arriba ni abajo, como documenta Chrome para su diálogo
 de impresión. `page.pdf` de Playwright no lo prueba: con
 `displayHeaderFooter` dibuja sus plantillas igual, y sin él no dibuja nada. Se
 verificó que las cajas de margen salen en el PDF y que la portada no las
-lleva; lo del diálogo se comprueba a mano en Chrome. Si otro navegador las imprime, el
+lleva; lo del diálogo lo comprobó el usuario a mano, en Chrome y en
+producción (2026-10-08). Si otro navegador las imprime, el
 manual dice cómo quitarlas en el diálogo.
 
 **La nota de la demo ya creada.** La de «Sede Vivero — sistema local» dejó de
@@ -4416,7 +4416,9 @@ leer `reports`. Por lo mismo, **una vez aplicada, volver en Vercel a un
 despliegue anterior a la Fase 38 rompe todas las páginas de proceso**: el
 código viejo llama a `getReports`.
 
-**La Fase 40 no tiene migración**: su despliegue es el merge.
+**La Fase 40 no tiene migración**: su despliegue es el merge. Se fusionó
+directo en `main` el 2026-10-08, sin PR (petición del usuario), y el usuario
+verificó el PDF en producción.
 
 **La Fase 39 no tiene migración**: su despliegue es el merge. Su rama sale de
 la de la Fase 38, así que entra a `main` con ella o después de ella; el paso
