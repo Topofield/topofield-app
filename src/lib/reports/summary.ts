@@ -1,5 +1,5 @@
-// Filas del resumen consolidado de precisiones (Fase 22: salió de la página de
-// impresión para compartirse con el informe de cada proceso). Función pura.
+// Filas del resumen de precisión del informe de un proceso (Fase 22). Función
+// pura.
 
 import { formatEquipmentLine, formatPrecision, formatSignedMm } from "@/lib/utils/format";
 import { PRECISION_ORDER_LABELS } from "@/types/project";

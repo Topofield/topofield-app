@@ -14,8 +14,8 @@ describe("tabHref", () => {
   });
 
   it("funciona sin parámetros previos", () => {
-    expect(tabHref("/projects/1", "reports", undefined)).toBe(
-      "/projects/1?tab=reports",
+    expect(tabHref("/projects/1", "config", undefined)).toBe(
+      "/projects/1?tab=config",
     );
   });
 

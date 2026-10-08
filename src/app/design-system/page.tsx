@@ -428,7 +428,6 @@ export default async function DesignSystemPage() {
               <Tabs
                 items={[
                   { id: "processes", label: "Procesos" },
-                  { id: "reports", label: "Informes" },
                   { id: "config", label: "Configuración" },
                 ]}
                 activeId="processes"

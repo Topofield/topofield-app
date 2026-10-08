@@ -225,6 +225,12 @@ export type LeastSquaresAdjustment =
       /** Número de condiciones, la redundancia r (3, o 2 sin azimut de llegada). */
       conditions: 2 | 3;
       iterations: number;
+      /**
+       * Las matrices de la última iteración (Fase 38), en radianes y metros,
+       * en el orden de las observaciones del modelo: primero los ángulos
+       * ajustables, después las distancias.
+       */
+      matrices: { A: number[][]; q: number[]; w: number[]; N: number[][]; k: number[]; observations: number[] };
     };
 
 /** Resultados por estación (columnas calculadas de polygonal_stations). */

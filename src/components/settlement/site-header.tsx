@@ -17,7 +17,6 @@ export function SiteHeader({
   projectName,
   site,
   summary,
-  reportTitles,
   printable,
   newVisit,
 }: {
@@ -26,7 +25,6 @@ export function SiteHeader({
   site: Site;
   /** «16 puntos de control · 1 BM · base el 24 de marzo de 2022». */
   summary: string;
-  reportTitles: string[];
   printable: boolean;
   newVisit: ReactNode;
 }) {
@@ -50,7 +48,6 @@ export function SiteHeader({
       subject="el lugar"
       deleteTitle="Eliminar lugar"
       deleteWhat="con sus puntos, sus BM y sus visitas"
-      reportTitles={reportTitles}
     >
       {editing && (
         <SiteDialog mode="edit" projectId={projectId} site={site} open={editing} onClose={() => setEditing(false)} />

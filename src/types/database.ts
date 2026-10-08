@@ -754,47 +754,6 @@ export type Database = {
           },
         ]
       }
-      reports: {
-        Row: {
-          cover: Json
-          generated_at: string | null
-          generated_by: string
-          id: string
-          included_processes: Json
-          observations: string | null
-          project_id: string
-          title: string
-        }
-        Insert: {
-          cover: Json
-          generated_at?: string | null
-          generated_by: string
-          id?: string
-          included_processes: Json
-          observations?: string | null
-          project_id: string
-          title: string
-        }
-        Update: {
-          cover?: Json
-          generated_at?: string | null
-          generated_by?: string
-          id?: string
-          included_processes?: Json
-          observations?: string | null
-          project_id?: string
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reports_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       settlement_book_readings: {
         Row: {
           back_distance_m: number | null

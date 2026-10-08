@@ -142,11 +142,6 @@ export interface ProcesoDemo {
     sigmaDistanceM: number;
     distanceMeasurements: number;
   };
-  /**
-   * La poligonal del informe de la demo. Desde la Fase 35 ninguna se cierra:
-   * todas se guardan calculadas, con el orden y el tipo de ángulo detectados.
-   */
-  informe?: boolean;
   stations: EstacionDemo[];
   notes: string;
   // El equipo, solo su identidad (Fase 35, decisión 2).
@@ -198,13 +193,12 @@ function desdeCartera(cartera: Cartera): Omit<ProcesoDemo, "name" | "notes"> {
 
 /**
  * Tres procesos con las dos carteras de poligonal. La TT4 cumple —12″ de error
- * angular, 1:7045: tercer orden— y alimenta el informe de poligonal.
+ * angular, 1:7045: tercer orden—.
  */
 export const PROCESOS_DEMO: ProcesoDemo[] = [
   {
     ...desdeCartera(CARTERA_TT4),
     name: "Poligonal V10 — cartera TT4",
-    informe: true,
     notes:
       "Cartera de campo real: seis vértices amarrados a TT4, con la fila de cierre de vuelta al amarre. Compensada por Bowditch.",
   },
@@ -261,8 +255,6 @@ export interface NivelacionDemo {
   startElevation: number;
   endBmCode?: string;
   endElevation?: number;
-  /** Alimenta el informe de nivelación de la demo. El orden se detecta (Fase 36). */
-  informe?: boolean;
   /** Las carteras no siempre declaran su equipo: lo que no dicen va vacío. */
   equipmentBrand: string | null;
   equipmentModel: string | null;
@@ -311,7 +303,7 @@ export const NIVELACION_VERJON: NivelacionDemo = {
 /**
  * El tramo 2, leído del crudo del nivel digital Leica con el importador de la
  * Fase 16, como un solo recorrido: sale de C10 y vuelve a C10. Cierra en
- * −0.4 mm sobre 1.397 km —primer orden— y alimenta el informe de nivelación.
+ * −0.4 mm sobre 1.397 km —primer orden—.
  * El archivo no declara el modelo del nivel: solo que es un digital Leica.
  */
 export function nivelacionTramo2(): NivelacionDemo {
@@ -328,7 +320,6 @@ export function nivelacionTramo2(): NivelacionDemo {
     type: "closed",
     startBmCode: inicio.code,
     startElevation: inicio.elevation,
-    informe: true,
     equipmentBrand: "Leica",
     equipmentModel: null,
     equipmentSerial: null,
@@ -370,7 +361,7 @@ export interface AsentamientoDemo {
 /**
  * Torre Alameda, la simulación del prototipo: ocho puntos, catorce visitas con
  * libreta, BM-1 y BM-2 alternados y la visita 9 fuera de todos los órdenes. El
- * mismo nivel digital que el seed le asigna. Entra al informe de la demo.
+ * mismo nivel digital que el seed le asigna.
  */
 export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
   name: "Torre Alameda",

@@ -9,7 +9,7 @@ import type { ReportSection } from "./sections";
 import { precisionSummaryRows } from "./summary";
 
 // Fase 36: el informe sencillo de la nivelación, por tipo, con el orden
-// detectado; la sección es la misma en la pestaña y en el consolidado.
+// detectado.
 
 function filas(run: "forward" | "return", rows: LecturaNivelacionDemo[]): LevelingReading[] {
   return rows.map(

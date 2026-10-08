@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON, type LecturaCartera } from "@/lib/demo/carteras";
 import type { LevelingProcess, LevelingReading } from "@/types/leveling";
 import { computeLevelingDetected } from "@/lib/calculations/leveling";
-import { buildLevelingWorkbook, type LevelingProcessRow } from "@/lib/export/leveling-workbook";
+import { buildLevelingWorkbook } from "@/lib/export/leveling-workbook";
 import {
   draftWithBm,
   draftWithImport,
@@ -187,13 +187,19 @@ describe("lo que se guarda y se exporta (revisión final)", () => {
   it("el Excel de una nivelación guardada antes de la fase dice el orden detectado y las cotas compensadas", () => {
     // Guardada antes de la fase: declaraba primer orden, no lo cumplía y quedó sin compensar.
     const viejo = { ...process, precision_order: "primer_orden", meets_tolerance: false } as unknown as LevelingProcess;
-    const rec = levelingRecordOf(levelingDraftOf(viejo, stored));
-    const wb = buildLevelingWorkbook({ ...(viejo as unknown as LevelingProcessRow), ...rec.header }, rec.rows);
-    const resumen = wb.getWorksheet("Resumen")!;
-    const fila = resumen.getColumn(1).values.findIndex((v) => v === "Orden alcanzado");
-    expect(resumen.getCell(fila, 2).value).toBe("Segundo orden");
+    const input = levelingInputOf(levelingDraftOf(viejo, stored));
+    const wb = buildLevelingWorkbook({
+      process: { name: viejo.name, type: viejo.type, startBmCode: viejo.start_bm_code, endBmCode: viejo.end_bm_code,
+        equipment: null, levelType: null, notes: null },
+      project: null,
+      input,
+      detected: computeLevelingDetected(input),
+    });
+    const ida = wb.getWorksheet("Nivelación")!;
+    const fila = ida.getColumn(1).values.findIndex((v) => v === "Orden alcanzado");
+    expect(ida.getCell(fila, 4).result).toBe("Segundo orden");
     const ajustadas = wb.getWorksheet("Cotas ajustadas")!;
-    const c1 = [4, 5, 6, 7].find((n) => String(ajustadas.getRow(n).getCell(1).value).replace(/\s/g, "") === "C1")!;
-    expect(Number(ajustadas.getRow(c1).getCell(2).value)).toBeCloseTo(3289.44, 4);
+    const c1 = ajustadas.getColumn(1).values.findIndex((v) => String(v).replace(/\s/g, "") === "C1");
+    expect(Number(ajustadas.getCell(c1, 4).result)).toBeCloseTo(3289.44, 4);
   });
 });

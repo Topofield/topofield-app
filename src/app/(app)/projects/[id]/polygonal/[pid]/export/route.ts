@@ -8,7 +8,9 @@ import {
 import { buildPolygonalWorkbook } from "@/lib/export/polygonal-workbook";
 import { computePolygonalDetected } from "@/lib/calculations/polygonal";
 import { draftOf, inputOf } from "@/components/polygonal/polygonal-save";
-import { safeFilename } from "@/lib/export/workbook";
+import { equipmentLine, safeFilename } from "@/lib/export/workbook";
+import { dmsToDecimal } from "@/lib/calculations/angles";
+import { formatDate } from "@/lib/utils/format";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -49,9 +51,38 @@ export async function GET(
   // Las correcciones y σ₀ del ajuste por mínimos cuadrados no se guardan: se
   // recalculan con la misma entrada que la pantalla y el informe (Fase 14). El
   // orden y el tipo de ángulo, detectados como allí (Fase 35).
-  const { result, order, angleType } = computePolygonalDetected(inputOf(draftOf(process, stations), null));
-  const adjustment = process.correction_method === "least_squares" ? (result.adjustment ?? null) : null;
-  const workbook = buildPolygonalWorkbook(process, stations, project, adjustment, { order, angleType });
+  // El libro escribe las fórmulas y guarda en cada celda el valor del motor
+  // (Fase 38), con el orden y el tipo de ángulo detectados (Fase 35).
+  const input = inputOf(draftOf(process, stations), null);
+  const detected = computePolygonalDetected(input);
+  const workbook = buildPolygonalWorkbook({
+    process: {
+      name: process.name,
+      type: process.type,
+      method: input.method,
+      startPointCode: process.start_point_code,
+      equipment: equipmentLine(process.equipment_brand, process.equipment_model, process.equipment_serial),
+      location: process.location,
+      responsible: [process.responsible_name, process.responsible_role].filter(Boolean).join(" · ") || null,
+      georeference:
+        process.georef_at && process.georef_rotation_deg != null
+          ? {
+              date: formatDate(process.georef_at),
+              points: `${process.georef_point_a_code} y ${process.georef_point_b_code}`,
+              rotationDeg: dmsToDecimal(
+                process.georef_rotation_deg,
+                process.georef_rotation_min ?? 0,
+                Number(process.georef_rotation_sec ?? 0),
+              ),
+              scale: Number(process.georef_scale_factor ?? 1),
+            }
+          : null,
+      notes: process.notes,
+    },
+    project,
+    input: { ...input, order: detected.order ?? "ordinario", angleType: detected.angleType },
+    detected,
+  });
   const buffer = await workbook.xlsx.writeBuffer();
 
   return new NextResponse(buffer as ArrayBuffer, {

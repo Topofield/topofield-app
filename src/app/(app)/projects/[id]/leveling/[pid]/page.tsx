@@ -4,13 +4,11 @@ import { LevelingHeader } from "@/components/leveling/leveling-header";
 import { LibretaTab } from "@/components/leveling/libreta-tab";
 import { LevelingSteps, type LevelingStep } from "@/components/leveling/leveling-steps";
 import { ProcessReport } from "@/components/process/process-report";
-import { reportsIncluding } from "@/lib/reports/including";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLevelingProcess,
   getLevelingReadings,
   getProjectById,
-  getReports,
 } from "@/lib/supabase/queries";
 
 interface LevelingPageProps {
@@ -36,15 +34,13 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
   const process = await getLevelingProcess(supabase, pid);
   if (!process || process.project_id !== id) notFound();
 
-  const [readings, project, reports] = await Promise.all([
+  const [readings, project] = await Promise.all([
     getLevelingReadings(supabase, pid),
     getProjectById(supabase, id),
-    getReports(supabase, id),
   ]);
   if (!project) notFound();
 
   const basePath = `/projects/${id}/leveling/${pid}`;
-  const reportTitles = reportsIncluding(reports, "leveling", process.id).map((r) => r.title);
 
   return (
     <div className="flex flex-col gap-5">
@@ -54,7 +50,6 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
         process={process}
         readings={readings}
         exportHref={`${basePath}/export`}
-        reportTitles={reportTitles}
         printable={step === "informe"}
       />
       <LevelingSteps basePath={basePath} active={step} process={process} readings={readings} />
@@ -62,9 +57,7 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
         <ProcessReport
           project={project}
           process={{ type: "leveling", id: process.id, name: process.name }}
-          includable={process.status === "calculated"}
           notes={process.notes}
-          reports={reports}
         />
       ) : step === "compensacion" ? (
         <CompensacionTab process={process} readings={readings} />

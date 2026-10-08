@@ -271,8 +271,7 @@ function headerPairs(data: LevelingSectionData): [string, ReactNode][] {
  * La sección de una nivelación en el informe (Fase 36, decisión 13): el
  * resumen con el veredicto, 1. Datos iniciales (la libreta), 2. Datos ajustados
  * —el método en una frase— y 3. el gráfico comparado. Una versión por tipo; la
- * abierta sin vuelta y la libreta a medias no tienen datos ajustados. Es la
- * misma en la pestaña Informe y en el consolidado.
+ * abierta sin vuelta y la libreta a medias no tienen datos ajustados.
  */
 export function LevelingReportSection({ data }: { data: LevelingSectionData }) {
   const { input, result, pending, broken } = data;

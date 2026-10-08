@@ -561,6 +561,32 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
 
+### Cierre Fase 38 — El informe de cada proceso (2026-10-08)
+
+Las divergencias están en el PRD-de-fase (`prds/37-informe-por-proceso.md`).
+Cada proceso exporta desde su página de informe el PDF del navegador y un
+Excel con la forma de su cartera y fórmulas vivas; los informes consolidados
+salen con su tabla, que se borra después del merge (doc técnica § 13).
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un libro con fórmulas se prueba con un intérprete, celda por celda.**
+  Guardar en cada celda el valor del motor y exigir que su fórmula lo dé
+  convierte el Excel en una segunda implementación verificada: si mañana
+  cambia una regla del motor y no la del libro, la prueba falla. Las pruebas
+  de forma no lo habrían visto.
+- **Un intérprete de terceros trae sus propias reglas.** fast-formula-parser
+  no es reentrante, no trae `MIN` ni `MAX` y evalúa las dos ramas de un `IF`;
+  la primera cadena larga lo destapó. Hay que probar el ayudante con cadenas
+  largas antes de confiar en él.
+- **Una tolerancia relativa necesita la escala de la magnitud.** Con 1e-7
+  relativo una coordenada de 100 000 m admitía 1 cm: se ajustó a 1e-9.
+- **El `git rm` adelantado vuelve a colarse.** Por tercera fase, un borrado ya
+  en el índice entró en el commit de otro cambio; un `git add` con la ruta de
+  un archivo borrado falla y deja el commit a medias. Revisar
+  `git diff --cached --name-status` antes de cada commit ya es regla: falta
+  no encadenar el commit con el registro de avance en la misma línea.
+
 ### Cierre Fase 37 — Los asentamientos como los mide el topógrafo (2026-10-07)
 
 Las divergencias están en el PRD-de-fase (`prds/36-ux-asentamientos.md`), como

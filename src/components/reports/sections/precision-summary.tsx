@@ -1,9 +1,9 @@
 import type { PrecisionSummaryRow } from "@/lib/reports/summary";
 
-/** Resumen consolidado de precisiones. */
+/** El resumen de precisión del informe. */
 export function PrecisionSummary({
   rows,
-  title = "Resumen consolidado de precisiones",
+  title = "Resumen de precisión",
 }: {
   rows: PrecisionSummaryRow[];
   title?: string;

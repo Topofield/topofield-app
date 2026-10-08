@@ -185,18 +185,6 @@ export const CAPTURAS = {
     width: 2560,
     height: 2472,
   },
-  nuevoInforme: {
-    src: "/manual/18-nuevo-informe.png",
-    alt: "Formulario Nuevo informe: el título, los procesos a incluir —las poligonales y las nivelaciones calculadas del proyecto— y las observaciones generales.",
-    width: 2560,
-    height: 2140,
-  },
-  informeImprimible: {
-    src: "/manual/19-informe-imprimible.png",
-    alt: "Informe consolidado de una nivelación de circuito cerrado, maquetado para imprimir: portada con los datos del proyecto, índice, sección del proceso con su tipo, su equipo, el error de cierre, la tolerancia y el orden alcanzado, sus datos iniciales y ajustados y el gráfico de lo medido y lo ajustado, resumen consolidado de precisiones, observaciones y pie de emisión.",
-    width: 2560,
-    height: 4752,
-  },
   temaOscuro: {
     src: "/manual/29-tema-oscuro.png",
     alt: "El panel de Torre Alameda en un teléfono con el tema oscuro: papel y tarjetas oscuras, y el menú de cuenta abierto, con Oscuro elegido entre Sistema, Claro y Oscuro.",
@@ -221,9 +209,9 @@ export const CAPTURAS = {
   },
   informeDelProceso: {
     src: "/manual/30-informe-del-proceso.png",
-    alt: "Paso 3 · Informe de la poligonal V10, cartera TT4: portada; resultado con el orden alcanzado, datos de campo, corrección por método Brújula (Bowditch), poligonal ajustada y coordenadas con el dibujo; resumen de precisión y observaciones, y debajo el botón para generar un informe consolidado con ella.",
+    alt: "Paso 3 · Informe de la poligonal V10, cartera TT4: la cabecera con Exportar PDF y Exportar Excel; portada; resultado con el orden alcanzado, datos de campo, corrección por método Brújula (Bowditch), poligonal ajustada y coordenadas con el dibujo; resumen de precisión y observaciones.",
     width: 2560,
-    height: 8776,
+    height: 8412,
   },
 } as const satisfies Record<string, Captura>;
 
@@ -245,7 +233,7 @@ export const SECCIONES: SeccionManual[] = [
   { id: "asentamientos", titulo: "Control de Asentamientos" },
   { id: "cierre", titulo: "Sin cierre" },
   { id: "campo", titulo: "Trabajo en campo" },
-  { id: "informes", titulo: "Informes" },
+  { id: "informes", titulo: "El informe de cada proceso" },
   { id: "export", titulo: "Exportar a Excel" },
   { id: "equipos", titulo: "El catálogo de equipos" },
   { id: "faq", titulo: "Preguntas frecuentes" },
@@ -490,39 +478,64 @@ export const NIVELES_SEMAFORO = [
   },
 ];
 
-// --- § 10 Informes y § 11 Exportar a Excel ---
+// --- § 11 Exportar a Excel ---
 
-/** Campos del formulario de alta de informe. */
-export const CAMPOS_INFORME = [
-  { campo: "Título", para: "Encabeza la portada del documento" },
-  {
-    campo: "Procesos a incluir",
-    para:
-      "Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares con alguna visita calculada",
-  },
-  {
-    campo: "Orden de las secciones",
-    para: "Con las flechas ↑ ↓ ordena cómo saldrán",
-  },
-  { campo: "Observaciones", para: "Texto libre que se imprime al final" },
-];
+/** Una hoja del libro de Excel de un módulo. */
+export interface HojaExcel {
+  hoja: string;
+  contiene: string;
+}
 
-/** Las tres hojas del libro de Excel. */
-export const HOJAS_EXCEL = [
-  {
-    hoja: "Datos Crudos",
-    contiene: "Las lecturas de campo tal como se capturaron, sin modificar",
-  },
-  {
-    hoja: "Cálculos",
-    contiene: "Lo que la aplicación derivó: cotas, coordenadas, correcciones",
-  },
-  {
-    hoja: "Resumen",
-    contiene:
-      "Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados; en una nivelación, el orden alcanzado",
-  },
-];
+/** Las hojas del libro de Excel de cada módulo (Fase 38). */
+export const HOJAS_EXCEL: Record<"nivelacion" | "poligonal" | "asentamientos", HojaExcel[]> = {
+  nivelacion: [
+    {
+      hoja: "Nivelación",
+      contiene:
+        "La ida: PUNTO · TIPO · V+ · AI · V− · VI · COTA · DIST. V+ (m) · DIST. V− (m) · ACUM. (km) · CORRECCIÓN (m) · COTA AJUSTADA · CLAVE, y debajo el bloque «Cierre»",
+    },
+    {
+      hoja: "Contranivelación",
+      contiene: "La vuelta, si la hay, con la misma forma",
+    },
+    {
+      hoja: "Cotas ajustadas",
+      contiene:
+        "Solo si la nivelación se compensó: una fila por punto, con la cota conocida en los BM y, en los demás, el promedio de sus cotas ajustadas en la ida y en la vuelta",
+    },
+    {
+      hoja: "Resumen",
+      contiene: "Los datos del proyecto y del proceso, el equipo y las notas",
+    },
+  ],
+  poligonal: [
+    {
+      hoja: "BRÚJULA, TRÁNSITO, CRANDALL o MÍNIMOS CUADRADOS",
+      contiene:
+        "Una sola, con el nombre del método —ABIERTA SIN CONTROL en una abierta sin control—: la tabla de la poligonal, con su fila SUMATORIA, y debajo los bloques de cierre",
+    },
+    {
+      hoja: "Resumen",
+      contiene: "Los datos del proyecto y del proceso, el equipo y las notas",
+    },
+  ],
+  asentamientos: [
+    {
+      hoja: "Libretas",
+      contiene:
+        "Un bloque por visita, con su título —«Visita N · fecha»—, el nivelador, el equipo y la nota, y las columnas PUNTO · V+ · AI · V− · VI · COTA · DIST. V+ (m) · DIST. V− (m)",
+    },
+    {
+      hoja: "Comparación",
+      contiene:
+        "La «Diferencia observada» de la cartera: arriba, los umbrales del lugar; una fila por punto de control —PUNTO, UBICACIÓN y C0— y, por cada visita, COTA · ACUM. (mm) · PARCIAL (mm) · VEL. (mm/mes) · SEMÁFORO; al pie, «Avisos de tendencia»",
+    },
+    {
+      hoja: "Resumen",
+      contiene: "Los datos del proyecto, el lugar y sus BM",
+    },
+  ],
+};
 
 // --- § 13 Preguntas frecuentes ---
 
@@ -540,7 +553,12 @@ export const PREGUNTAS: Pregunta[] = [
   {
     pregunta: "¿Cómo cierro un proceso?",
     respuesta:
-      "No se cierra (§ 8): ni la poligonal, ni la nivelación, ni el lugar o la visita de asentamientos. Quedan calculados y se corrigen cuando haga falta. El paso de Ajuste o de Compensación, la verificación de cada visita y su informe dicen qué orden de precisión alcanzaron (§ 5.5, § 6.7 y § 7.9); si no alcanzan ninguno, el informe lo alerta. Un informe consolidado los incluye calculados.",
+      "No se cierra (§ 8): ni la poligonal, ni la nivelación, ni el lugar o la visita de asentamientos. Quedan calculados y se corrigen cuando haga falta. El paso de Ajuste o de Compensación, la verificación de cada visita y su informe dicen qué orden de precisión alcanzaron (§ 5.5, § 6.7 y § 7.9); si no alcanzan ninguno, el informe lo alerta.",
+  },
+  {
+    pregunta: "¿Dónde exporto el PDF o el Excel de un proceso?",
+    respuesta:
+      "En su página de informe: el paso Informe de la poligonal o de la nivelación, o la pestaña Informe del lugar de asentamientos. Allí la cabecera trae Exportar PDF y Exportar Excel (§ 10 y § 11); los demás pasos y pestañas no exportan.",
   },
   {
     pregunta: "¿Por qué una poligonal muestra «Sin verificación de cierre»?",

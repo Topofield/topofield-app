@@ -6,14 +6,12 @@
 // `SUPABASE_SECRET_KEY` solo vive en el seed.
 //
 // Este archivo solo ORQUESTA: reclama la marca, crea el proyecto y sus lugares,
-// delega cada módulo en su `insertar-*.ts`, y arma los informes. Los resultados
+// y delega cada módulo en su `insertar-*.ts`. Los resultados
 // que se persisten los calcula el motor real, nunca se escriben a mano — misma
 // estrategia que `scripts/seed.mjs`.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import type { IncludedProcess } from "@/types/report";
-import { coverOf } from "@/lib/reports/cover";
 import {
   ASENTAMIENTO_DEMO,
   EQUIPOS_DEMO,
@@ -26,7 +24,6 @@ import {
 import { insertarAsentamiento } from "./insertar-asentamiento";
 import { insertarCartera } from "./insertar-cartera";
 import { insertarEquipos } from "./insertar-equipos";
-import { insertarInforme } from "./insertar-informe";
 import { insertarNivelacion } from "./insertar-nivelacion";
 import { insertarPoligonal } from "./insertar-poligonal";
 
@@ -80,8 +77,7 @@ export async function faltaProyectoDemo(
  * Un proyecto con dos lugares que recorre los tres módulos con carteras de
  * campo reales (Fase 21): los levantamientos (poligonales TT4 y Sede Vivero,
  * nivelaciones de El Verjón y del tramo 2) y Torre Alameda, la simulación del
- * prototipo de asentamientos. Un trabajo de cada módulo alimenta su informe:
- * la TT4 y el tramo 2, calculados, y Torre Alameda, cerrada.
+ * prototipo de asentamientos, y la cartera real de asentamientos (Fase 37).
  *
  * Devuelve `true` si lo creó, `false` si ya lo tenía. Quien la llama debe
  * envolverla en try/catch: un fallo aquí no puede dejar al usuario fuera de su
@@ -147,88 +143,19 @@ export async function crearProyectoDemo(
 
   if (errLote) throw errLote;
 
-  // --- Poligonales. En serie: el orden del listado es el de creación. Se
-  // captura la que alimenta su informe (Fase 35: ninguna se cierra). ---------
-  let poligonalInforme: { id: string; name: string } | null = null;
+  // --- Poligonales. En serie: el orden del listado es el de creación. -------
   for (const proceso of PROCESOS_DEMO) {
-    const id = await insertarPoligonal(supabase, proyecto.id, lote.id, proceso, idReferencia);
-    if (proceso.informe) {
-      poligonalInforme = { id, name: proceso.name };
-    }
+    await insertarPoligonal(supabase, proyecto.id, lote.id, proceso, idReferencia);
   }
 
   // --- Nivelaciones: El Verjón y el tramo 2, calculadas (Fase 36). ---------
-  let nivelacionInforme: { id: string; name: string } | null = null;
   for (const nivelacion of [NIVELACION_VERJON, nivelacionTramo2()]) {
-    const id = await insertarNivelacion(supabase, proyecto.id, lote.id, nivelacion);
-    if (nivelacion.informe) nivelacionInforme = { id, name: nivelacion.name };
+    await insertarNivelacion(supabase, proyecto.id, lote.id, nivelacion);
   }
 
   // --- Asentamientos: Torre Alameda, simulada, y la cartera real (Fase 37). --
-  const { siteId, siteName } = await insertarAsentamiento(supabase, proyecto.id, ASENTAMIENTO_DEMO);
+  await insertarAsentamiento(supabase, proyecto.id, ASENTAMIENTO_DEMO);
   await insertarCartera(supabase, proyecto.id);
-
-  // --- Un informe por módulo (§ 4.7): los informes se emiten por proceso. ---
-  const informes: {
-    title: string;
-    observations: string | null;
-    included: IncludedProcess[];
-  }[] = [
-    ...(poligonalInforme
-      ? [
-          {
-            title: "Informe — Poligonal",
-            observations:
-              "Poligonal V10 amarrada a TT4, conforme a las tolerancias de tercer orden.",
-            included: [
-              {
-                type: "polygonal" as const,
-                id: poligonalInforme.id,
-                name: poligonalInforme.name,
-                order: 0,
-              },
-            ],
-          },
-        ]
-      : []),
-    ...(nivelacionInforme
-      ? [
-          {
-            title: "Informe — Nivelación",
-            observations:
-              "Tramo 2 medido con nivel digital, de C10 a C10: cierra en −0.4 mm y alcanza primer orden.",
-            included: [
-              {
-                type: "leveling" as const,
-                id: nivelacionInforme.id,
-                name: nivelacionInforme.name,
-                order: 0,
-              },
-            ],
-          },
-        ]
-      : []),
-    {
-      title: "Informe — Control de asentamientos",
-      observations:
-        "Seguimiento de asentamientos de Torre Alameda tras catorce visitas.",
-      included: [
-        { type: "site" as const, id: siteId, name: siteName, order: 0 },
-      ],
-    },
-  ];
-
-  for (const informe of informes) {
-    await insertarInforme(
-      supabase,
-      proyecto.id,
-      userId,
-      coverOf(PROYECTO_DEMO),
-      informe.title,
-      informe.observations,
-      informe.included,
-    );
-  }
 
   // El catálogo de equipos, al final y sin que nada de la demo dependa de él
   // (Fase 25): si fallara, el proyecto ya está creado.

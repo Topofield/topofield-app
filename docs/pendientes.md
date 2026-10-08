@@ -92,6 +92,12 @@ mismo día ([`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md)) y se
 cartera, se abrió y se **cerró** el 2026-10-07: con ella ningún proceso se
 cierra.
 
+El 2026-10-08 pidió dejar el informe de cada proceso en su propia página,
+con el PDF y un Excel con fórmulas allí mismo, y quitar los informes
+consolidados: «Informe de cada proceso», al final. Es la **Fase 38**
+([`prds/37-informe-por-proceso.md`](./prds/37-informe-por-proceso.md)),
+abierta y **cerrada** ese mismo día.
+
 El 2026-10-07, al probar la poligonal rediseñada, el usuario reportó tres
 fallos, corregidos sin fase en la rama `fase-35-correcciones`, y pidió dejar
 anotado lo mismo para la nivelación: «Catálogos en la nivelación», al final,
@@ -779,3 +785,13 @@ Al abrir la fase, confirmar el alcance: quitar el selector del equipo del alta
 de la nivelación, como en la poligonal; y para los BMs del catálogo de puntos,
 probablemente lo mismo que en el amarre —crearlos y corregirlos desde el
 formulario— en vez de quitarlos.
+
+## Informe de cada proceso (Fase 38)
+
+El 2026-10-08, con la Fase 37 ya en producción, el usuario pidió: «planees
+como dejar el acceso al informe de cada proceso en su página de informe, y
+allí mismo exportar el pdf y el excel formulado. No a nivel de proyecto ni
+informe que reúna procesos, quitamos las demás páginas o restos que queden».
+Sobre el Excel: «la idea es casi imitar pero mejorando diseño los excel que
+tenemos de casos de ejemplo» —las carteras de `docs/carteras/`—, con fórmulas
+vivas. Eligió el PDF del navegador y una sola fase.

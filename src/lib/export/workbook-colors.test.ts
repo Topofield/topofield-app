@@ -19,6 +19,10 @@ describe("colores del Excel", () => {
     ["ink2", "ink-2"],
     ["sel", "sel"],
     ["ruleStrong", "rule-strong"],
+    ["miraBg", "mira-bg"],
+    ["miraInk", "mira-ink"],
+    ["success", "success"],
+    ["danger", "danger"],
   ] as const)("%s es --color-%s del tema claro", (clave, token) => {
     expect(claro[token]).toBeDefined();
     expect(WORKBOOK_COLORS[clave]).toBe(argb(claro[token]!));

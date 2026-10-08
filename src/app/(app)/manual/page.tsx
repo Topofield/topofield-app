@@ -6,7 +6,6 @@ import {
   COLUMNAS_LISTADO,
   ESTADOS_PROCESO,
   METODOS_CORRECCION,
-  CAMPOS_INFORME,
   HOJAS_EXCEL,
   INDICADORES_LUGAR,
   NIVELES_SEMAFORO,
@@ -44,8 +43,8 @@ export default function ManualPage() {
         <p className="mt-2 max-w-2xl text-ink">
           Cómo registrar los datos de campo, calcularlos con validación en vivo
           e informarlos. Cubre lo que la aplicación permite hacer hoy, que es
-          el alcance completo del proyecto: los tres módulos de proceso, los
-          informes y la exportación a Excel.
+          el alcance completo del proyecto: los tres módulos de proceso, el
+          informe de cada uno y su exportación a PDF y a Excel.
         </p>
       </header>
 
@@ -105,9 +104,8 @@ export default function ManualPage() {
           que se captura se guarda al confirmarlo y todo se recalcula al
           momento. Corregir una lectura, la cota de un BM o la C0 de un punto
           cambia lo que depende de ellos, y la aplicación avisa antes cuánto
-          cambia. Lo que queda fijo es el{" "}
-          <strong>informe consolidado</strong> ya emitido: para corregirlo, se
-          elimina y se genera de nuevo (§ 10).
+          cambia. El informe de cada proceso también se recalcula: muestra lo
+          que tenga al abrirlo (§ 10).
         </p>
       </Seccion>
 
@@ -153,7 +151,6 @@ export default function ManualPage() {
             puntos y siete visitas de una armada desde el BM de la piscina, de
             marzo a junio de 2022.
           </li>
-          <li>Un informe consolidado por módulo.</li>
         </ul>
         <p>Puede modificarlo o archivarlo cuando quiera.</p>
         <p>Cada usuario ve únicamente sus propios proyectos.</p>
@@ -216,10 +213,9 @@ export default function ManualPage() {
         <Nota titulo="Empieza con un proyecto de ejemplo">
           La primera vez que entra, su cuenta ya trae un{" "}
           <strong>«Proyecto de ejemplo»</strong> con carteras de campo reales
-          —poligonales, nivelaciones y un control de asentamientos—, otro
-          control de asentamientos simulado y sus informes, para que explore la
-          aplicación con datos reales (§ 2). Puede modificarlo o archivarlo
-          cuando quiera.
+          —poligonales, nivelaciones y un control de asentamientos— y otro
+          control de asentamientos simulado, para que explore la aplicación con
+          datos reales (§ 2). Puede modificarlo o archivarlo cuando quiera.
         </Nota>
       </Seccion>
 
@@ -266,21 +262,14 @@ export default function ManualPage() {
         <p>
           La cabecera muestra el nombre y el estado del proyecto, su cliente,
           su ubicación y su sistema de referencia, y el botón{" "}
-          <strong>+ Nuevo Proceso</strong>. Debajo, tres pestañas:
+          <strong>+ Nuevo Proceso</strong>. Debajo, dos pestañas:
         </p>
 
         <ul className="ml-5 list-disc space-y-1">
           <li>
             <strong>Procesos</strong> — el listado de levantamientos del
-            proyecto. Se detalla en el apartado siguiente.
-          </li>
-          <li>
-            <strong>Informes</strong> — los informes{" "}
-            <strong>consolidados</strong>, que reúnen poligonales y
-            nivelaciones calculadas y controles de asentamientos con alguna
-            visita calculada en un solo documento. Se detalla en «10.
-            Informes». Cada proceso tiene además su propio informe, en su
-            pantalla (4.4).
+            proyecto. Se detalla en el apartado siguiente. Cada proceso lleva
+            su informe en su propia pantalla (4.4).
           </li>
           <li>
             <strong>Configuración</strong> — los datos del proyecto (también la
@@ -385,9 +374,7 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Eliminar</strong> — lo borra con lo que contiene, con
-            confirmación previa. Si lo que borra está en un informe
-            consolidado, la confirmación lo avisa: el informe quedará sin esa
-            sección.
+            confirmación previa.
           </li>
         </ul>
 
@@ -403,8 +390,7 @@ export default function ManualPage() {
         <p>
           Los tres módulos comparten la cabecera. Lleva sus rótulos —el tipo
           y, si lo tiene, el estado—, el nombre, sus datos y cuándo se guardó
-          por última vez, y las acciones <strong>Editar datos</strong>,{" "}
-          <strong>Exportar a Excel</strong> (§ 11) y, bajo{" "}
+          por última vez, y las acciones <strong>Editar datos</strong> y, bajo{" "}
           <strong>⋯</strong>, <strong>Duplicar</strong> y{" "}
           <strong>Eliminar</strong>. La ruta de la barra devuelve al listado
           del que vino.
@@ -443,20 +429,23 @@ export default function ManualPage() {
 
         <p>
           <strong>El informe.</strong> El paso o la pestaña{" "}
-          <strong>Informe</strong> muestra el informe de ese proceso, listo
-          para <strong>Imprimir o guardar como PDF</strong> (§ 10), que pasa a
-          ser la primera acción de la cabecera.
+          <strong>Informe</strong> muestra el informe de ese proceso (
+          <a href="#informes" className="underline">
+            § 10
+          </a>
+          ). Solo allí la cabecera empieza con dos botones,{" "}
+          <strong>Exportar PDF</strong> y <strong>Exportar Excel</strong> (
+          <a href="#export" className="underline">
+            § 11
+          </a>
+          ): los demás pasos y pestañas no exportan.
         </p>
 
         <Captura {...CAPTURAS.informeDelProceso} />
 
         <p>
           No lleva marca de borrador ni registro de cierre: ningún proceso se
-          cierra, y el informe muestra lo que tenga al abrirlo. Debajo, fuera
-          de la impresión, aparecen los informes consolidados que ya lo
-          incluyen y, si puede entrar en uno —una poligonal o una nivelación
-          calculadas, o un lugar con alguna visita calculada—, un botón para
-          generar uno nuevo con él.
+          cierra, y el informe muestra lo que tenga al abrirlo.
         </p>
 
         <VolverArriba />
@@ -512,8 +501,8 @@ export default function ManualPage() {
           </li>
           <li>
             <strong>Ubicación</strong>, <strong>Responsable</strong> y{" "}
-            <strong>Cargo del responsable</strong>: salen en el informe y en el
-            Excel.
+            <strong>Cargo del responsable</strong>: salen en el informe y en
+            el Excel.
           </li>
           <li>
             <strong>Tipo de poligonal</strong>, con una línea que explica cómo
@@ -549,9 +538,10 @@ export default function ManualPage() {
           La <strong>cabecera</strong> lleva el tipo, el estado y el orden
           alcanzado; el título, la ubicación, el responsable, el equipo y
           cuándo se guardó por última vez; y las acciones{" "}
-          <strong>Editar datos</strong>, <strong>Exportar a Excel</strong>{" "}
-          (§ 11) y, bajo <strong>⋯</strong>, <strong>Duplicar</strong> y{" "}
-          <strong>Eliminar</strong>.
+          <strong>Editar datos</strong> y, bajo <strong>⋯</strong>,{" "}
+          <strong>Duplicar</strong> y <strong>Eliminar</strong>. En el paso
+          Informe se suman, delante, <strong>Exportar PDF</strong> y{" "}
+          <strong>Exportar Excel</strong> (§ 5.7).
         </p>
 
         <p>
@@ -1042,9 +1032,9 @@ export default function ManualPage() {
         </h3>
 
         <p>
-          El informe de la poligonal, listo para{" "}
-          <strong>Imprimir o guardar como PDF</strong> (§ 10). Es la misma
-          sección que lleva en un informe consolidado:
+          El informe de la poligonal (§ 10), con{" "}
+          <strong>Exportar PDF</strong> y <strong>Exportar Excel</strong>{" "}
+          (§ 11) en la cabecera. Sus datos y resultados son:
         </p>
 
         <ol className="ml-5 list-decimal space-y-1">
@@ -1239,10 +1229,11 @@ export default function ManualPage() {
           La <strong>cabecera</strong> lleva el tipo, el estado y el orden
           alcanzado; el título, la ubicación, el responsable, el equipo y
           cuándo se guardó por última vez; y las acciones{" "}
-          <strong>Editar datos</strong>, <strong>Exportar a Excel</strong>{" "}
-          (§ 11) y, bajo <strong>⋯</strong>, <strong>Duplicar</strong> y{" "}
-          <strong>Eliminar</strong>. Debajo van los tres pasos y, a la
-          derecha, <strong>Importar .L o CSV</strong> (§ 6.9).
+          <strong>Editar datos</strong> y, bajo <strong>⋯</strong>,{" "}
+          <strong>Duplicar</strong> y <strong>Eliminar</strong>. En el paso
+          Informe se suman, delante, <strong>Exportar PDF</strong> y{" "}
+          <strong>Exportar Excel</strong> (§ 6.10). Debajo van los tres pasos
+          y, a la derecha, <strong>Importar .L o CSV</strong> (§ 6.9).
         </p>
 
         <h3
@@ -1669,9 +1660,9 @@ export default function ManualPage() {
         </h3>
 
         <p>
-          El informe de la nivelación, listo para{" "}
-          <strong>Imprimir o guardar como PDF</strong> (§ 10). Es la misma
-          sección que lleva en un informe consolidado, y cambia según el tipo.
+          El informe de la nivelación (§ 10), con{" "}
+          <strong>Exportar PDF</strong> y <strong>Exportar Excel</strong>{" "}
+          (§ 11) en la cabecera. Sus datos y resultados cambian según el tipo.
         </p>
 
         <p>
@@ -1783,9 +1774,10 @@ export default function ManualPage() {
           estructura, el nombre, cuántos puntos de control y BM tiene, la
           fecha de la lectura base y cuándo se guardó por última vez; y las
           acciones <strong>+ Nueva visita</strong> (§ 7.4),{" "}
-          <strong>Editar datos</strong>, <strong>Exportar a Excel</strong>{" "}
-          (§ 11) y, bajo <strong>⋯</strong>, <strong>Duplicar</strong> y{" "}
-          <strong>Eliminar</strong>. Debajo, las pestañas{" "}
+          <strong>Editar datos</strong> y, bajo <strong>⋯</strong>,{" "}
+          <strong>Duplicar</strong> y <strong>Eliminar</strong>. En la pestaña
+          Informe se suman, delante, <strong>Exportar PDF</strong> y{" "}
+          <strong>Exportar Excel</strong> (§ 7.12). Debajo, las pestañas{" "}
           <strong>Panel</strong> (§ 7.11), <strong>Puntos</strong> (§ 7.2),{" "}
           <strong>BMs</strong> (§ 7.3) e <strong>Informe</strong> (§ 7.12).
         </p>
@@ -2615,9 +2607,10 @@ export default function ManualPage() {
         </h3>
 
         <p>
-          La pestaña <strong>Informe</strong> muestra el informe del lugar,
-          listo para <strong>Imprimir o guardar como PDF</strong> (§ 10). Es la
-          misma sección que lleva en un informe consolidado:
+          La pestaña <strong>Informe</strong> muestra el informe del lugar
+          (§ 10), con <strong>Exportar PDF</strong> y{" "}
+          <strong>Exportar Excel</strong> (§ 11) en la cabecera. Sus datos y
+          resultados son:
         </p>
 
         <ol className="ml-5 list-decimal space-y-1">
@@ -2656,8 +2649,8 @@ export default function ManualPage() {
 
         <p>
           Informa las visitas <strong>calculadas</strong>: las que están en
-          medición se nombran aparte y entran cuando se terminan. Un informe
-          consolidado admite el lugar con alguna visita calculada (§ 10).
+          medición se nombran aparte y entran cuando se terminan. Una visita no
+          tiene informe propio: sus resultados van en el del lugar.
         </p>
 
         <h3 id="baja-alta" className="mt-4 scroll-mt-6 text-lg font-semibold">
@@ -2747,10 +2740,9 @@ export default function ManualPage() {
             § 6.7 y § 7.9).
           </li>
           <li>
-            <strong>El informe consolidado queda fijo.</strong> Guarda la
-            portada del día en que se emitió y no se edita: para corregirlo, se
-            elimina y se genera de nuevo (§ 10). Sus secciones muestran los
-            datos actuales de cada proceso; un PDF ya descargado no cambia.
+            <strong>El PDF guarda el momento.</strong> El informe de cada
+            proceso muestra lo que tenga al abrirlo; el PDF que exporte de él
+            (§ 10) queda como estaba ese día.
           </li>
         </ul>
       </Seccion>
@@ -2807,165 +2799,193 @@ export default function ManualPage() {
         <Captura {...CAPTURAS.temaOscuro} />
       </Seccion>
 
-      {/* ── 10. Informes ───────────────────────────────────────────────── */}
-      <Seccion id="informes" titulo="10. Informes">
-        <p>Hay dos clases de informe:</p>
-        <ul className="ml-5 list-disc space-y-1">
-          <li>
-            <strong>El informe de un proceso</strong> está en su paso o
-            pestaña <strong>Informe</strong> (4.4): no hay que generarlo, y no
-            lleva marca de borrador, porque ningún proceso se cierra.
-          </li>
-          <li>
-            <strong>Un informe consolidado</strong> reúne varios trabajos
-            calculados de un proyecto en un solo documento imprimible, con
-            título, orden y observaciones propios. Se genera en la pestaña{" "}
-            <strong>Informes</strong> del proyecto.
-          </li>
-        </ul>
-
-        <h3 className="text-lg font-semibold text-ink">
-          Qué puede incluirse
-        </h3>
+      {/* ── 10. El informe de cada proceso ──────────────────────────────── */}
+      <Seccion id="informes" titulo="10. El informe de cada proceso">
         <p>
-          <strong>
-            Poligonales y nivelaciones calculadas y lugares con alguna visita
-            calculada
-          </strong>
-          , en un informe consolidado. El informe no guarda una copia de las
-          mediciones: las vuelve a leer cada vez que se abre. Solo guarda su
-          título, sus observaciones, la lista de procesos y la portada del día
-          en que se emitió.
+          Cada proceso tiene su informe en su propia pantalla: el paso{" "}
+          <strong>Informe</strong> de la poligonal (§ 5.7) y de la nivelación
+          (§ 6.10), y la pestaña <strong>Informe</strong> del lugar de
+          asentamientos (§ 7.12). Una visita no tiene informe propio: sus
+          resultados van en el del lugar.
+        </p>
+        <p>
+          No hay que generarlo: se arma con los datos del proceso cada vez que
+          se abre, y no lleva marca de borrador, porque ningún proceso se
+          cierra (§ 8). Lleva:
         </p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            Una <strong>poligonal</strong> o una <strong>nivelación</strong>{" "}
-            entran calculadas, cumplan o no un orden, y su sección muestra lo
-            que tengan al abrir el informe. Si no alcanzan ningún orden, la
-            sección lo alerta. Una nivelación con la libreta a medias no entra.
+            <strong>Portada</strong>, con el nombre del proceso, los datos del
+            proyecto —nombre, cliente, ubicación, datum y proyección, como estén
+            al abrir el informe— y la fecha del informe.
           </li>
           <li>
-            Un <strong>lugar</strong> entra con sus visitas calculadas, y su
-            sección muestra lo que tenga al abrir el informe: una visita nueva
-            aparece sola. Las que están en medición se nombran aparte y entran
-            cuando se terminan (§ 7.12).
+            <strong>Datos y resultados</strong> del proceso, con su equipo
+            (§ 5.7, § 6.10 y § 7.12).
+          </li>
+          <li>
+            <strong>Resumen de precisión</strong>: el tipo, la precisión o el
+            cierre, el equipo y si cumple.
+          </li>
+          <li>
+            <strong>Observaciones</strong>: las notas del proceso —en un lugar,
+            su descripción—, si las tiene.
+          </li>
+          <li>
+            El <strong>pie</strong>, con la fecha en que se generó.
           </li>
         </ul>
-        <p>Un PDF ya descargado no cambia.</p>
         <p>
-          Si el proyecto no tiene nada que incluir, la pantalla se lo dice en
-          vez de ofrecer un formulario que no llevaría a ninguna parte.
+          <strong>Exportar PDF.</strong> Es el primer botón de la cabecera del
+          informe. Abre el diálogo de impresión del navegador con el informe ya
+          maquetado en A4: elija «Guardar como PDF» como destino. Lo impreso es
+          solo el informe: la cabecera, los pasos y los botones no salen.
         </p>
-
-        <h3 className="text-lg font-semibold text-ink">
-          Generar un informe consolidado
-        </h3>
         <p>
-          En la pestaña <strong>Informes</strong> del proyecto, pulse{" "}
-          <strong>Generar Nuevo Informe</strong>. Desde el{" "}
-          <strong>Informe</strong> de una poligonal o una nivelación
-          calculadas, o de un lugar con alguna visita calculada,{" "}
-          <strong>Generar un informe consolidado con este proceso</strong> abre
-          el mismo formulario con ese proceso ya marcado.
+          <strong>Exportar Excel</strong>, a su lado, descarga el libro del
+          proceso (§ 11).
         </p>
-
-        <Captura {...CAPTURAS.nuevoInforme} />
-
-        <Tabla
-          caption="Campos del formulario de informe"
-          columnas={["Campo", "Para qué"]}
-        >
-          {CAMPOS_INFORME.map((c) => (
-            <Fila key={c.campo} celdas={[c.campo, c.para]} />
-          ))}
-        </Tabla>
-
-        <h3 className="text-lg font-semibold text-ink">
-          Imprimir o guardar como PDF
-        </h3>
-        <p>
-          Al generar, la aplicación abre el documento maquetado —también al
-          pulsar un informe de la lista de la pestaña{" "}
-          <strong>Informes</strong>—, y allí{" "}
-          <strong>Imprimir o guardar como PDF</strong> abre el diálogo del
-          navegador: elija «Guardar como PDF» como destino. La ruta de la barra
-          vuelve al proyecto, y <strong>Eliminar informe</strong> lo borra: los
-          procesos que incluye no cambian, y puede volver a generarlo. Un
-          informe emitido no se edita: para corregirlo, elimínelo y genérelo
-          de nuevo.
-        </p>
-
-        <Captura {...CAPTURAS.informeImprimible} />
-
-        <p>
-          El documento lleva portada con los datos del proyecto{" "}
-          <strong>al emitirlo</strong> —si después cambian el nombre o el
-          cliente del proyecto, la portada no—, índice, una sección por proceso
-          con sus resultados <strong>y su equipo</strong> —en las poligonales,
-          con la corrección por método y su dibujo (§ 5.7)—, el resumen
-          consolidado de precisiones —con una columna de equipo y, en las
-          poligonales, el orden alcanzado— y sus observaciones. El equipo ya no
-          es un dato del proyecto: cada sección imprime el que declaró su
-          propio proceso (en asentamientos, el de la visita más reciente).
-        </p>
-        <p className="text-sm text-ink-2">
+        <Nota>
           El PDF lo genera su navegador, no la aplicación. Los márgenes y los
           encabezados de página dependen de lo que usted elija en ese diálogo.
-        </p>
+        </Nota>
       </Seccion>
 
       {/* ── 11. Exportar a Excel ───────────────────────────────────────── */}
       <Seccion id="export" titulo="11. Exportar a Excel">
         <p>
-          Cada proceso tiene un botón <strong>Exportar a Excel</strong> en la
-          cabecera de su pantalla —también el control de asentamientos—.
-          Descarga un <code>.xlsx</code> con tres hojas:
+          <strong>Exportar Excel</strong>, en la cabecera de la página de
+          informe de cada proceso (§ 10), descarga un <code>.xlsx</code> con la
+          forma de las carteras de campo de su módulo, con mejor diseño y{" "}
+          <strong>fórmulas vivas</strong>. Los demás pasos y pestañas no
+          exportan.
         </p>
 
+        <p>
+          <strong>Datos en amarillo, cálculos con fórmulas.</strong>
+        </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            Las celdas con <strong>fondo amarillo</strong> son datos medidos o
+            tecleados.
+          </li>
+          <li>
+            El resto se calcula con fórmulas de Excel que dan el mismo valor
+            que la aplicación: siguen sus reglas, no las de la cartera de
+            campo. Cada celda guarda además el valor de la aplicación, así que
+            el libro se ve completo en cualquier visor.
+          </li>
+          <li>Si cambia un dato, Excel recalcula lo que depende de él.</li>
+          <li>
+            Las tolerancias de cada orden son un bloque de celdas del libro, y
+            las fórmulas se refieren a él.
+          </li>
+        </ul>
+
+        <h3 className="mt-4 text-lg font-semibold">11.1 Nivelación</h3>
+        <p>Tiene la forma de la cartera de El Verjón:</p>
         <Tabla
-          caption="Hojas del libro de Excel"
+          caption="Hojas del libro de una nivelación"
           columnas={["Hoja", "Contiene"]}
         >
-          {HOJAS_EXCEL.map((h) => (
+          {HOJAS_EXCEL.nivelacion.map((h) => (
             <Fila key={h.hoja} celdas={[h.hoja, h.contiene]} />
           ))}
         </Tabla>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Con hilos</strong>, cada lectura ocupa tres filas
+            —superior, medio e inferior—, y la distancia es (superior −
+            inferior) × 100.
+          </li>
+          <li>
+            <strong>CORRECCIÓN y COTA AJUSTADA</strong> solo aparecen si la
+            nivelación se compensó.
+          </li>
+          <li>
+            <strong>El bloque «Cierre»</strong> da la distancia (km), la cota
+            calculada de llegada, la cota conocida y el error de cierre (mm).
+            En una abierta con vuelta, también el desnivel de cada recorrido,
+            la discrepancia, el cierre del circuito y la distancia del par.
+            Después, la tolerancia K·√km de cada orden, el{" "}
+            <strong>Orden alcanzado</strong> y el <strong>Veredicto</strong>:
+            CUMPLE o NO CUMPLE.
+          </li>
+        </ul>
 
+        <h3 className="mt-4 text-lg font-semibold">11.2 Poligonal</h3>
         <p>
-          Con <strong>mínimos cuadrados</strong>, «Cálculos» añade la
-          corrección de cada ángulo y la distancia ajustada, y «Resumen» los
-          pesos y σ₀. El informe imprimible también indica los pesos y σ₀ de
-          cada poligonal ajustada así. Si la poligonal se georreferenció,
-          «Resumen» lleva además la sección «Georreferenciación», con la
-          última.
+          Tiene la forma de la cartera de poligonales (
+          <code>poligonales.xlsx</code>):
         </p>
+        <Tabla
+          caption="Hojas del libro de una poligonal"
+          columnas={["Hoja", "Contiene"]}
+        >
+          {HOJAS_EXCEL.poligonal.map((h) => (
+            <Fila key={h.hoja} celdas={[h.hoja, h.contiene]} />
+          ))}
+        </Tabla>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Las columnas</strong>: ESTACIÓN · VISADO · ÁNG. HORIZONTAL
+            (G · M · S · DEC) —DEFLEXIÓN en la abierta con control— · CORR. ·
+            ÁNG. CORREGIDO (G · M · S · DEC) · AZIMUT (G · M · S · DEC) · DIST.
+            · PROYECCIONES (N-S · E-W) · CORRECCIÓN (N · E) · PROY. CORREGIDAS
+            · COORDENADAS (N · E).
+          </li>
+          <li>
+            <strong>A la derecha</strong>, las columnas auxiliares: DIR. y AZ.
+            SIN CORREGIR en la abierta con control; |N-S| y |E-W| en Tránsito;
+            d·cos², d·cos·sin, d·sin² y δd en Crandall.
+          </li>
+          <li>
+            <strong>Debajo de la tabla</strong>, los bloques «Cierre angular» y
+            «Cierre lineal» —error N, error E, error lineal, perímetro y
+            precisión 1:X—, en Crandall «Crandall: sistema 2×2», las
+            tolerancias de cada orden, el <strong>Orden alcanzado</strong> y el{" "}
+            <strong>Veredicto</strong>. Si la poligonal se georreferenció, el
+            bloque «Georreferenciación» lleva como datos la fecha, los puntos
+            de control, la rotación y la escala.
+          </li>
+          <li>
+            <strong>Con mínimos cuadrados</strong>, las correcciones v salen de
+            la aplicación, y las distancias, los azimuts, las proyecciones y
+            las coordenadas ajustados son fórmulas. El cierre de antes del
+            ajuste —con el que se juzga el orden— y las matrices de la última
+            iteración —observaciones l₀, Matriz A, Q, w, N = A·Q·Aᵀ, k y v— van
+            como valores, porque la aplicación itera hasta converger. Sin
+            pesos, la hoja dice por qué no hay ajuste.
+          </li>
+        </ul>
 
-        <p>
-          En una nivelación, el libro lleva una cuarta hoja,{" "}
-          <strong>«Cotas ajustadas»</strong>: una cota por punto, con cuántas
-          lecturas la forman y de dónde sale (§ 6.7). El libro da lo que daría
-          guardar la nivelación ahora: el orden detectado y las cotas
-          compensadas, también en una guardada antes de que el orden se
-          detectara.
-        </p>
-
-        <p>
-          En control de asentamientos, «Datos Crudos» añade un bloque{" "}
-          <strong>«Visitas»</strong> con el estado, el BM de arranque, la
-          verificación, el cierre, la tolerancia y la nota de cada una, y el
-          libro lleva una cuarta hoja, <strong>«Libretas»</strong>: la libreta
-          de cada visita, fila por fila con su <strong>tramo</strong>, la cota
-          de la medida —sin compensar— y la de los BM del lugar leídos de paso
-          (§ 7.9).
-        </p>
-
-        <p>
-          A diferencia del informe, la exportación funciona{" "}
-          <strong>en cualquier estado</strong>: también sobre un borrador. Las
-          celdas que aún no se han calculado salen vacías, no en cero — en
-          topografía un <code>0.000</code> es una posición, no un dato que
-          falta.
-        </p>
+        <h3 className="mt-4 text-lg font-semibold">
+          11.3 Control de asentamientos
+        </h3>
+        <p>Tiene la forma de la cartera real, ordenada:</p>
+        <Tabla
+          caption="Hojas del libro de un lugar de asentamientos"
+          columnas={["Hoja", "Contiene"]}
+        >
+          {HOJAS_EXCEL.asentamientos.map((h) => (
+            <Fila key={h.hoja} celdas={[h.hoja, h.contiene]} />
+          ))}
+        </Tabla>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>En «Libretas»</strong>, cada tramo sale de un BM del lugar
+            y no se compensa, como en la aplicación (§ 7.9). Cada tramo lleva
+            una línea de verificación: Cierre (mm), km y Orden, o «Sin
+            verificación», «Sin distancias» o «A medias».
+          </li>
+          <li>
+            <strong>En «Comparación»</strong>, la COTA apunta a su celda de
+            «Libretas», y el SEMÁFORO dice Normal, Precaución, Alerta o
+            Alarma, con su color. Un punto que no se midió en una visita deja
+            sus celdas vacías, y su parcial siguiente se mide contra la última
+            visita en que se midió.
+          </li>
+        </ul>
       </Seccion>
 
       <Seccion id="equipos" titulo="12. El catálogo de equipos">
