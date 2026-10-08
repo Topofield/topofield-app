@@ -91,3 +91,74 @@ botones es `zoomAt` con `(0, 0)`.
 5. Encuadrar solo aparece con la vista movida y la devuelve al inicio.
 6. Se ve bien en claro y oscuro, a 1280 y 390 px.
 7. `npm run typecheck`, `npm run lint` y `npm test` pasan.
+
+## Sumado: las variables de las fórmulas del informe
+
+**Petición:** del usuario, 2026-10-08, tras cerrar la Fase 40: «creo que
+podemos agregar un texto pequeño para la convención de las variables de las
+fórmulas en los informes». Aprobó una leyenda «donde:» bajo cada fórmula y,
+de paso, corregir una frase de la app que la Fase 40 dejó. Eligió sumarlo a
+esta fase. Va en su propia rama, `fase-41-leyendas`, desde la de la fase, y
+se fusiona en ella. Toca `components/reports/math.tsx`,
+`polygonal-correction.tsx`, `.report-formula-caption` y la documentación; no
+toca el dibujo.
+
+### Hoy
+
+Desde la Fase 40 el informe solo lleva las fórmulas del ajuste, todas en la
+poligonal, y casi ningún símbolo se explica:
+
+| Fórmula | Símbolos | Se explican hoy |
+|---|---|---|
+| Brújula | C_N,i, C_E,i, e_N, e_E, d_i, P | e_N y e_E, en el texto |
+| Tránsito | C_N,i, C_E,i, e_N, e_E, \|ΔN_i\|, \|ΔE_i\|, k_N, k_E | k, en el pie de la fórmula |
+| Crandall | δd_i, d_i, Az_i, λ₁, λ₂, e_N, e_E | e_N y e_E, en el texto |
+| Mínimos cuadrados | v, Q, A, w, σ_j, σ_d,ef, σ_d, n, σ₀, P, r | σ y n, en la tabla de pesos |
+| Precisión de cada punto | Q_l̂, Q, A, Σ_NE, σ₀, J, c, F, r | c y r, en el texto |
+
+La P vale dos cosas: el perímetro en la Brújula y la matriz de pesos en
+mínimos cuadrados. Con una leyenda por fórmula no se confunden. Y la sección
+de mínimos cuadrados todavía dice «Sin ajuste: … faltan los pesos del
+ajuste.», que se dirige al usuario de la app.
+
+### Qué cambia
+
+- `Formula` recibe `legend?: [ReactNode, string][]`, pares de símbolo y
+  significado, y pinta debajo de la fórmula —antes del `caption`— una línea
+  «donde: símbolo — significado · …», en texto con `<sub>` y en el gris
+  pequeño del `caption`, alineada a la izquierda. El `caption` de Tránsito
+  («k: corrección unitaria de cada eje») pasa a la leyenda.
+- Las leyendas:
+
+| Fórmula | Leyenda |
+|---|---|
+| Brújula | C_N,i, C_E,i — corrección a las proyecciones norte y este del lado i · e_N, e_E — error de cierre en norte y este · d_i — longitud del lado i · P — perímetro, la suma de las longitudes |
+| Tránsito | C_N,i, C_E,i — corrección a las proyecciones norte y este del lado i · e_N, e_E — error de cierre en norte y este · \|ΔN_i\|, \|ΔE_i\| — proyección absoluta del lado i en cada eje · k_N, k_E — corrección unitaria de cada eje |
+| Crandall | δd_i — corrección a la longitud del lado i · d_i — longitud del lado i · Az_i — azimut del lado i, ya corregido · e_N, e_E — error de cierre en norte y este · λ₁, λ₂ — multiplicadores de Lagrange de las dos condiciones |
+| Mínimos cuadrados | v — correcciones a las observaciones · Q — matriz cofactor de las observaciones · A — derivadas de las condiciones respecto a las observaciones · w — lo que falta para cumplir cada condición · σ_j — precisión a priori de la observación j · σ_d — precisión de una medición de distancia · n — veces que se midió cada distancia · P — matriz de pesos, Q⁻¹ · r — redundancia, el número de condiciones · σ₀ — error estándar de la unidad de peso |
+| Precisión de cada punto | Q_l̂ — cofactor de las observaciones ajustadas · Σ_NE — covarianza de las coordenadas norte y este del punto · J — derivadas de las coordenadas del punto respecto a las observaciones · c — factor de la elipse al nivel de confianza · F — cuantil de la distribución F de Fisher · r — redundancia |
+
+  En «Precisión de cada punto», Q, A y σ₀ ya se explicaron en la fórmula de
+  mínimos cuadrados, justo arriba: no se repiten.
+- «Sin ajuste: faltan los pesos del ajuste.» pasa a «Sin ajuste: no se
+  declararon las precisiones a priori de los ángulos y las distancias.», como
+  en la sección de resultado (Fase 40).
+- Fuera: el Excel (no muestra fórmulas en notación) y `docs/math/` (ya
+  define sus símbolos).
+
+### Pruebas y documentación
+
+- `math.test.tsx`: `Formula` con `legend` pinta «donde:» y cada par; sin
+  `legend`, nada. `polygonal-correction.test.tsx`: la Brújula lleva
+  «P — perímetro» y Tránsito «k<sub>N</sub>, k<sub>E</sub> — corrección
+  unitaria»; mínimos cuadrados sin pesos no dice «faltan los pesos».
+- En pantalla: el informe de la TT4 y el de Vivero.
+- Manual (las dos copias, § 5.7): cada fórmula dice qué es cada símbolo.
+  Capturas 10 y 21 si cambian. Doc técnica: la tabla de pruebas.
+
+### Criterios de aceptación
+
+8. Las cinco fórmulas del informe de la poligonal llevan su línea «donde:»
+   con las leyendas de la tabla, en pantalla y en el PDF; Tránsito ya no
+   lleva aparte el pie de k.
+9. La sección de mínimos cuadrados sin pesos no dice «faltan los pesos».
