@@ -506,8 +506,8 @@
     padding: 0;
   }
 
-  /* Cada proceso empieza en página nueva: un informe con varios procesos se
-     lee mucho mejor así, y evita tablas partidas por la mitad. */
+  /* «Datos y resultados» empieza en página nueva, después de la portada:
+     evita tablas partidas por la mitad. */
   .report-break {
     break-before: page;
   }

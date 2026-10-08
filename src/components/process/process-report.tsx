@@ -11,7 +11,7 @@ import type { IncludedProcess } from "@/types/report";
 
 interface ProcessReportProps {
   project: Project;
-  /** El proceso, como lo referenciaría un informe consolidado. */
+  /** El proceso: su tipo, su id y su nombre. */
   process: Pick<IncludedProcess, "type" | "id" | "name">;
   /** Notas del proceso, como observaciones. */
   notes?: string | null;
