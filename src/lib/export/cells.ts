@@ -97,7 +97,7 @@ export function roundHalfUp(expr: string, decimals: number): string {
 
 /**
  * Título en A1 y los pares etiqueta/valor debajo, con la fecha de exportación
- * y «Generado por TopoField» al final (PRD de la Fase 38, § F); devuelve la
+ * al final (PRD de la Fase 38, § F; sin la marca desde la Fase 40); devuelve la
  * primera fila libre.
  */
 export function writeSheetHeader(
@@ -107,7 +107,7 @@ export function writeSheetHeader(
 ): number {
   putLabel(ws, 1, 1, title, "title");
   let r = 2;
-  for (const [label, value] of [...pairs, ["Exportado", `${formatDateOnly(todayInBogota())} · Generado por TopoField`]] as const) {
+  for (const [label, value] of [...pairs, ["Exportado", formatDateOnly(todayInBogota())]] as const) {
     if (value === null || value === "") continue;
     putLabel(ws, 1, r, label);
     ws.getCell(r, 3).value = value;

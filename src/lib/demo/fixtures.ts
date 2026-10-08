@@ -223,7 +223,7 @@ export const PROCESOS_DEMO: ProcesoDemo[] = [
     startAz: [0, 0, 0],
     referenceFromCatalog: false,
     notes:
-      "La cartera Vivero en sistema local, para georreferenciar con los vértices D1 y D3 del catálogo (Georreferenciar, junto al dibujo).",
+      "La cartera Vivero en sistema local, para georreferenciar con los vértices D1 y D3.",
   },
 ];
 

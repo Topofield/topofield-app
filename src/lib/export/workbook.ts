@@ -31,10 +31,12 @@ export const WORKBOOK_COLORS = {
   danger: "FFC0392B",
 } as const;
 
-/** Libro nuevo con los metadatos del producto. */
+/**
+ * Libro nuevo. Sin autor: el libro es un entregable del topógrafo, no lleva
+ * el nombre de la herramienta (Fase 40).
+ */
 export function newWorkbook(): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "TopoField";
   wb.created = new Date();
   // Excel recalcula al abrir: las celdas guardan el valor de la app, pero un
   // dato cambiado a mano debe propagarse (Fase 38).

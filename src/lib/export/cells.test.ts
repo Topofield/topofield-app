@@ -45,12 +45,12 @@ describe("primitivas de celda", () => {
     }
   });
 
-  it("el encabezado de cada hoja dice cuándo se exportó y que lo generó TopoField (PRD § F)", () => {
+  it("el encabezado de cada hoja dice cuándo se exportó, sin la marca de la app (Fase 40)", () => {
     const ws = new ExcelJS.Workbook().addWorksheet("H");
     writeSheetHeader(ws, "Título", [["Proyecto", "Edificio"]]);
     const textos: string[] = [];
     ws.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
     expect(textos).toContain("Exportado");
-    expect(textos.some((t) => t.endsWith("· Generado por TopoField"))).toBe(true);
+    expect(textos.some((t) => t.includes("TopoField"))).toBe(false);
   });
 });

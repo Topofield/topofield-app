@@ -18,7 +18,7 @@ export function ReportCover({
 }: ReportCoverProps) {
   return (
     <section className="report-cover">
-      <p className="report-kicker">TopoField — Informe técnico</p>
+      <p className="report-kicker">Informe técnico</p>
       <h1 className="report-title">{title}</h1>
       <dl className="report-cover-grid">
         <dt>Proyecto</dt>
