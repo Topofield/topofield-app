@@ -15,6 +15,26 @@ control de asentamientos por ejemplo».
 de `globals.css`, la cabecera de los libros de Excel (`lib/export/`), una nota
 de la demo y la documentación. **Sin cambios en la base ni en el motor.**
 
+> **Divergencias de la implementación:**
+>
+> - **El supuesto de la decisión 1 era falso.** Chrome imprime su encabezado
+>   y su pie *aun con* cajas de margen («It will do this even if you have
+>   added content», blog de Chrome sobre los márgenes de impresión). Lo que
+>   los quita en todo el documento es que **la primera página** no tenga
+>   sitio para ellos. `@page :first` va sin margen arriba ni abajo y la
+>   portada, sola en esa página, lleva su relleno: la portada no lleva pie, y
+>   el pie propio empieza en la página 2. Playwright no puede probar el
+>   diálogo (`page.pdf` dibuja sus plantillas igual): se comprueba a mano.
+> - **El título del PDF.** Todas las páginas se titulan «TopoField», que el
+>   navegador ponía como título del PDF y como nombre del archivo.
+>   `PrintButton` toma «proceso — proyecto» mientras imprime.
+> - **Más frases de la app** halladas en el repaso: la poligonal sin pesos
+>   («faltan los pesos») y sin terminar («el informe muestra lo capturado»),
+>   y el error aritmético de la libreta («Revisa la libreta; mientras tanto…»,
+>   ahora `libretaBlocker(result, "report")`). La alerta de la libreta rota
+>   dice «Cartera con errores.», como el resumen.
+> - **Las capturas** que cambian son la 10 y la 30 (el informe de la TT4).
+
 ## Propósito
 
 El informe es lo que el topógrafo entrega a su cliente o a su interventoría.
