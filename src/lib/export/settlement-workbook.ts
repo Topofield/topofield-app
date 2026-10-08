@@ -1,555 +1,339 @@
-// Libro de Excel de un lugar de control de asentamientos (§ 4.8).
+// Libro de Excel de un lugar de asentamientos (Fase 38): la forma de la
+// cartera real —la libreta de cada visita y, por punto, la «diferencia
+// observada» contra la primera visita y contra la anterior— con fórmulas
+// vivas. Cada celda calculada lleva su fórmula y, como resultado guardado, el
+// valor del motor.
 //
-// A diferencia de poligonal y nivelación, la unidad no es un proceso con una
-// tabla de filas, sino un LUGAR con un catálogo de puntos y una serie de
-// visitas en el tiempo. Las hojas se organizan en consecuencia: las lecturas
-// crudas por visita y punto, los valores derivados con su alerta, el resumen
-// con los umbrales vigentes y, desde la Fase 18, la libreta de nivelación de
-// cada visita. Desde la Fase 37 nada se cierra y toda visita se mide con
-// libreta, por tramos y sin compensar.
+// La cartera pone las visitas lado a lado porque cada una es una sola armada
+// desde el BM; una visita de la app puede tener varias armadas y puntos de
+// cambio, así que cada libreta va en su bloque, una debajo de otra, y la
+// comparación apunta a sus celdas.
 
 import type ExcelJS from "exceljs";
-import { computeTrends } from "@/lib/calculations/settlement";
-import {
-  DECIMALS,
-  equipmentLine,
-  newWorkbook,
-  projectPairs,
-  type ProjectMetadata,
-  setHeaders,
-  setSheetTitle,
-  writePairs,
-  writeRow,
-  writeSection,
-} from "./workbook";
+import { bookElevations, bookRowInputOf, computeBook } from "@/lib/calculations/settlement-book";
+import { DAYS_PER_MONTH } from "@/lib/calculations/tolerances";
+import { samePointCode } from "@/lib/calculations/leveling";
+import type { computeHistory } from "@/lib/calculations/settlement";
+import { PRECISION_ORDERS, PRECISION_ORDER_LABELS } from "@/types/project";
 import {
   ALERT_LEVEL_LABELS,
-  VISIT_STATUS_LABELS,
-  type AlertLevel,
-  type SettlementHistory,
-  type VisitStatus,
+  type BenchmarkInput,
+  type BookRowPayload,
+  type PointInput,
+  type Thresholds,
+  type VisitInput,
 } from "@/types/settlement";
-import { POINT_TYPE_LABELS, type PointType } from "@/types/leveling";
-import { STRUCTURE_TYPE_LABELS, type StructureType } from "@/types/site";
 import {
-  LEVEL_TYPE_LABELS,
-  PRECISION_ORDER_LABELS,
-  type LevelType,
-  type PrecisionOrder,
-} from "@/types/project";
-import type { Thresholds } from "@/types/settlement";
+  FMT,
+  at,
+  putData,
+  putFormula,
+  putLabel,
+  ref,
+  roundHalfUp,
+  setLayout,
+  writeLevelingTolerances,
+  writeSheetHeader,
+} from "./cells";
+import { WORKBOOK_COLORS, newWorkbook, projectPairs, type ProjectMetadata } from "./workbook";
 
-/**
- * Punto del catálogo tal como llega de la base.
- *
- * No se reutiliza `PointInput` porque ese tipo es la entrada del MOTOR de
- * cálculo y omite deliberadamente lo que el cálculo no necesita, como la
- * descripción de la ubicación — que el informe sí quiere mostrar.
- */
-export interface PointRow {
+export interface SettlementSheetVisit {
   id: string;
-  code: string;
-  location_description: string | null;
-  initial_elevation: number | string | null;
-  /** Vigencia del punto (Fase 11): fecha de alta, de baja y motivo. */
-  active_from: string | null;
-  retired_on: string | null;
-  retirement_reason: string | null;
-}
-
-export interface SiteRow {
-  name: string;
-  description: string | null;
-  structure_type: string;
-  notes: string | null;
-  created_at: string | null;
-}
-
-export interface VisitRow {
-  id: string;
-  visit_number: number;
+  number: number;
   date: string;
-  status: string;
-  operator: string | null;
-  /** La nota de la visita (Fase 37, decisión 19). */
+  leveler: string | null;
+  equipment: string | null;
   notes: string | null;
-  /**
-   * El orden que alcanza su tramo peor; null si alguno no se verifica (Fase
-   * 37, decisión 15). El equipo de nivel es de la visita (§ Fase 8).
-   */
-  precision_order: PrecisionOrder | null;
-  equipment_brand: string | null;
-  equipment_model: string | null;
-  equipment_serial: string | null;
-  equipment_calibration_date: string | null;
-  level_type: LevelType | null;
-  /** ISO 17123-2: desviación típica en mm por km de doble nivelación. */
-  km_precision_mm: number | string | null;
-  /** El BM del lugar del primer tramo y el cierre del tramo peor (Fase 37). */
-  reference_bm_code: string | null;
-  reference_bm_elevation: number | string | null;
-  closure_error_mm: number | string | null;
-  tolerance_mm: number | string | null;
-  meets_tolerance: boolean | null;
-  /** Longitud del circuito de la libreta, para el margen de la tendencia (Fase 32). */
-  total_distance_km: number | string | null;
+  /** Su libreta; [] en una visita de cotas tecleadas. */
+  rows: BookRowPayload[];
+}
+
+type History = ReturnType<typeof computeHistory>;
+
+const BOOKS = "Libretas";
+const COMPARISON = "Comparación";
+// Columnas de la libreta.
+const L = { point: 1, back: 2, hi: 3, fore: 4, inter: 5, elev: 6, dBack: 7, dFore: 8 };
+const MARGIN = "0.000001";
+
+const isoDate = (date: string) => new Date(`${date}T00:00:00Z`);
+const finite = (x: number | null | undefined): x is number => x != null && Number.isFinite(x);
+
+/** Libro completo de un lugar de asentamientos. */
+export function buildSettlementWorkbook(args: {
+  site: { name: string; location: string | null; structure: string | null };
+  project: ProjectMetadata | null;
+  points: (PointInput & { location: string | null })[];
+  benchmarks: BenchmarkInput[];
+  visits: SettlementSheetVisit[];
+  visitInputs: VisitInput[];
+  thresholds: Thresholds;
+  history: History;
+  /** Los avisos de tendencia, con el texto del informe (`siteReportOf`). */
+  warnings: string[];
+}): ExcelJS.Workbook {
+  const wb = newWorkbook();
+  const cells = sheetBooks(wb, args);
+  sheetComparison(wb, args, cells);
+  sheetSummary(wb, args);
+  return wb;
+}
+
+/** La fila de la libreta de cada lectura de cada visita: visita → punto → celda de COTA. */
+type BookCells = Map<string, Map<string, string>>;
+
+function sheetBooks(wb: ExcelJS.Workbook, a: Parameters<typeof buildSettlementWorkbook>[0]): BookCells {
+  const ws = wb.addWorksheet(BOOKS);
+  let r = writeSheetHeader(ws, `${a.site.name} — libretas de las visitas`, [
+    ["Proyecto", a.project?.name ?? null],
+    ["Lugar", a.site.name],
+    ["Regla", "La cota es AI − lectura, sin compensar; el cierre de cada tramo solo comprueba."],
+  ]);
+  const k = writeLevelingTolerances(ws, 11, 2);
+  const out: BookCells = new Map();
+
+  for (const v of a.visits) {
+    const byPoint = new Map<string, string>();
+    out.set(v.id, byPoint);
+    putLabel(ws, 1, r, `Visita ${v.number} · ${v.date.split("-").reverse().join("/")}`, "section");
+    const meta = [v.leveler && `Nivelador: ${v.leveler}`, v.equipment && `Equipo: ${v.equipment}`, v.notes && `Nota: ${v.notes}`]
+      .filter(Boolean)
+      .join(" · ");
+    if (meta) putLabel(ws, 3, r, meta);
+    r += 1;
+    if (v.rows.length === 0) {
+      putLabel(ws, 1, r, "Visita de cotas tecleadas: sin libreta.");
+      r += 2;
+      continue;
+    }
+    ["PUNTO", "V+", "AI", "V−", "VI", "COTA", "DIST. V+ (m)", "DIST. V− (m)"].forEach((label, i) =>
+      putLabel(ws, i + 1, r, label, "header"),
+    );
+    r += 1;
+
+    const inputs = v.rows.map(bookRowInputOf);
+    const book = computeBook(inputs, a.benchmarks, v.id);
+    const first = r;
+    const sheetRow = (i: number) => first + i;
+
+    // Las filas: datos, y las fórmulas tramo por tramo.
+    v.rows.forEach((row, i) => {
+      const s = sheetRow(i);
+      const intermediate = row.pointType === "intermediate";
+      putData(ws, L.point, s, row.pointCode);
+      if (row.backsight != null) putData(ws, L.back, s, row.backsight, FMT.elev);
+      if (row.foresight != null) putData(ws, intermediate ? L.inter : L.fore, s, row.foresight, FMT.elev);
+      if (!intermediate) {
+        if (row.backDistanceM != null) putData(ws, L.dBack, s, row.backDistanceM, FMT.coord);
+        if (row.foreDistanceM != null) putData(ws, L.dFore, s, row.foreDistanceM, FMT.coord);
+      }
+    });
+
+    for (const t of book.tramos) {
+      let hiRow: number | null = null;
+      for (let i = t.start; i <= t.end; i++) {
+        const s = sheetRow(i);
+        const row = v.rows[i]!;
+        const out = book.readings[i]!;
+        const intermediate = row.pointType === "intermediate";
+        if (i === t.start) {
+          if (finite(t.startElevation)) putData(ws, L.elev, s, t.startElevation, FMT.elev);
+        } else if (finite(out.elevationCalculated) && hiRow != null) {
+          putFormula(ws, L.elev, s, `${at(L.hi, hiRow)}-${at(intermediate ? L.inter : L.fore, s)}`, out.elevationCalculated, FMT.elev);
+        }
+        if (!intermediate && row.backsight != null && finite(out.instrumentHeight) && (i === t.start ? finite(t.startElevation) : finite(out.elevationCalculated))) {
+          putFormula(ws, L.hi, s, `${at(L.elev, s)}+${at(L.back, s)}`, out.instrumentHeight, FMT.elev);
+          hiRow = s;
+        }
+      }
+    }
+    r = first + v.rows.length;
+
+    // Por tramo, su verificación.
+    for (const t of book.tramos) {
+      putLabel(ws, 1, r, `Tramo desde ${t.startCode}`);
+      if (!t.complete) {
+        putData(ws, 3, r, "A medias: falta leer parte de la cadena.");
+      } else if (t.kind === "open") {
+        putData(ws, 3, r, "Sin verificación: no termina en un BM del lugar.");
+      } else {
+        const knownValue =
+          t.kind === "closed"
+            ? t.startElevation!
+            : (a.benchmarks.find((b) => samePointCode(b.code, t.endCode ?? ""))?.elevation ?? Number.NaN);
+        const known = t.kind === "closed" ? at(L.elev, sheetRow(t.start)) : putData(ws, 9, r, knownValue, FMT.elev);
+        const end = at(L.elev, sheetRow(t.end));
+        const closure = (book.readings[t.end]!.elevationCalculated - knownValue) * 1000;
+        putLabel(ws, 2, r, "Cierre (mm)");
+        const c = putFormula(ws, 3, r, `(${end}-${known})*1000`, closure, FMT.mm);
+        if (t.distanceKm == null) {
+          putData(ws, 5, r, "Sin distancias: el cierre no da orden.");
+        } else {
+          const rows = `${at(L.dBack, sheetRow(t.start))}:${at(L.dFore, sheetRow(t.end))}`;
+          putLabel(ws, 4, r, "km");
+          const km = putFormula(ws, 5, r, `SUM(${rows})/1000`, t.distanceKm, FMT.km);
+          const formula = PRECISION_ORDERS.reduceRight(
+            (rest, o) => `IF(ABS(${c})<=${k[o]}*SQRT(${km})+${MARGIN},"${PRECISION_ORDER_LABELS[o]}",${rest})`,
+            `"Ninguno"`,
+          );
+          putLabel(ws, 6, r, "Orden");
+          putFormula(ws, 7, r, formula, t.order ? PRECISION_ORDER_LABELS[t.order] : "Ninguno");
+        }
+      }
+      r += 1;
+    }
+
+    // La celda de cada punto de control, para la comparación.
+    const { readings } = bookElevations(book, inputs, a.points, v.date);
+    for (const reading of readings) byPoint.set(reading.pointId, ref(BOOKS, at(L.elev, sheetRow(reading.rowIndex))));
+    r += 2;
+  }
+  setLayout(ws, { frozenRows: 0, widths: [14, 10, 11, 10, 10, 11, 11, 11, 11, 2, 16, 12] });
+  return out;
 }
 
 /**
- * Fila de `settlement_book_readings`, tal como llega de la base. Los
- * calculados (AI, cota, cota compensada) se leen persistidos, sin recalcular,
- * como hace la vista de la visita.
+ * El peor nivel de velocidad y acumulado, con la regla de `classifyAlert`. La
+ * primera lectura de un punto no tiene velocidad (`vel` null) y se juzga solo
+ * por el acumulado.
  */
-export interface BookReadingRow {
-  reading_order: number;
-  point_code: string;
-  point_type: string;
-  /** La fila arranca un tramo desde un BM del lugar (Fase 37). */
-  starts_section: boolean | null;
-  backsight: number | string | null;
-  foresight: number | string | null;
-  back_distance_m: number | string | null;
-  fore_distance_m: number | string | null;
-  instrument_height: number | string | null;
-  elevation_calculated: number | string | null;
-  elevation_corrected: number | string | null;
-  /** La cota de catálogo de un BM de control (Fase 30); null en las demás filas. */
-  catalog_elevation: number | string | null;
+function alertFormula(vel: string | null, acc: string, t: Record<keyof Thresholds, string>): string {
+  const level = (x: string, c: string, al: string, am: string) =>
+    `IF(ABS(${x})>=${am},3,IF(ABS(${x})>=${al},2,IF(ABS(${x})>=${c},1,0)))`;
+  const byAcc = level(acc, t.accumulatedCaution, t.accumulatedAlert, t.accumulatedAlarm);
+  const m = vel ? `MAX(${level(vel, t.velocityCaution, t.velocityAlert, t.velocityAlarm)},${byAcc})` : byAcc;
+  return `IF(${m}=3,"${ALERT_LEVEL_LABELS.alarm}",IF(${m}=2,"${ALERT_LEVEL_LABELS.alert}",IF(${m}=1,"${ALERT_LEVEL_LABELS.caution}","${ALERT_LEVEL_LABELS.normal}")))`;
 }
 
-/** «Calculada», «En medición», «Borrador». */
-function statusLabel(status: string): string {
-  return VISIT_STATUS_LABELS[status as VisitStatus] ?? status;
-}
-
-/** El orden que alcanza la visita, o «Sin verificación». */
-function verificationLabel(order: PrecisionOrder | null): string {
-  return order ? PRECISION_ORDER_LABELS[order] : "Sin verificación";
-}
-
-function num(value: number | string | null | undefined): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Milímetros a un decimal con signo explícito: `+1.2`, `-0.8`, `0.0`. */
-function signedMm(value: number): string {
-  const r = Math.round(value * 10) / 10;
-  if (r === 0) return "0.0";
-  return `${r > 0 ? "+" : ""}${r.toFixed(1)}`;
-}
-
-function sheetRawData(
-  wb: ExcelJS.Workbook,
-  site: SiteRow,
-  points: PointRow[],
-  visits: VisitRow[],
-  history: SettlementHistory,
-): void {
-  const s = wb.addWorksheet("Datos Crudos");
-  s.columns = [
-    { width: 9 }, { width: 13 }, { width: 22 }, { width: 14 },
-    { width: 13 }, { width: 22 }, { width: 14 }, { width: 18 },
-  ];
-
-  setSheetTitle(s, `${site.name} — catálogo y cotas medidas`);
-
-  writeSection(s, 3, "Catálogo de puntos");
-  setHeaders(s, 4, [
-    "Código",
-    "Ubicación",
-    "Cota C0 (m)",
-    "Alta",
-    "Baja",
-    "Motivo de baja",
+function sheetComparison(wb: ExcelJS.Workbook, a: Parameters<typeof buildSettlementWorkbook>[0], books: BookCells): void {
+  const ws = wb.addWorksheet(COMPARISON);
+  let r = writeSheetHeader(ws, `${a.site.name} — diferencia observada`, [
+    ["Proyecto", a.project?.name ?? null],
+    ["Lugar", a.site.name],
+    ["Regla", "Acumulado contra la C0; parcial y velocidad contra la última visita en que se midió el punto (mes = 30.4375 días)."],
   ]);
-  points.forEach((p, i) => {
-    writeRow(
-      s,
-      5 + i,
-      [
-        p.code,
-        p.location_description,
-        num(p.initial_elevation),
-        p.active_from,
-        p.retired_on,
-        p.retirement_reason,
-      ],
-      [
-        null, null, DECIMALS.elevation, null, null, null,
-      ],
-    );
+
+  // Los umbrales del lugar.
+  putLabel(ws, 1, r, "Umbrales del lugar", "section");
+  const keys: [keyof Thresholds, string][] = [
+    ["velocityCaution", "Velocidad · precaución (mm/mes)"],
+    ["velocityAlert", "Velocidad · alerta (mm/mes)"],
+    ["velocityAlarm", "Velocidad · alarma (mm/mes)"],
+    ["accumulatedCaution", "Acumulado · precaución (mm)"],
+    ["accumulatedAlert", "Acumulado · alerta (mm)"],
+    ["accumulatedAlarm", "Acumulado · alarma (mm)"],
+  ];
+  const t = {} as Record<keyof Thresholds, string>;
+  keys.forEach(([key, label], i) => {
+    putLabel(ws, 1, r + 1 + i, label);
+    t[key] = putData(ws, 3, r + 1 + i, a.thresholds[key], FMT.rate);
+  });
+  r += keys.length + 2;
+
+  // Rótulos: «Visita N», su fecha y las cinco columnas.
+  const visitRow = r;
+  const dateRow = r + 1;
+  const unitRow = r + 2;
+  ["PUNTO", "UBICACIÓN", "C0"].forEach((l, i) => putLabel(ws, i + 1, unitRow, l, "header"));
+  const ordered = a.history.visits;
+  const meta = new Map(a.visits.map((v) => [v.id, v]));
+  const groupCol = (j: number) => 4 + j * 5;
+  const dateCells = new Map<string, string>();
+  ordered.forEach((hv, j) => {
+    const c = groupCol(j);
+    putLabel(ws, c, visitRow, `Visita ${hv.visitNumber}`, "section");
+    dateCells.set(hv.visitId, putData(ws, c, dateRow, isoDate(hv.date), "dd/mm/yyyy"));
+    ["COTA", "ACUM. (mm)", "PARCIAL (mm)", "VEL. (mm/mes)", "SEMÁFORO"].forEach((l, i) => putLabel(ws, c + i, unitRow, l, "header"));
   });
 
-  let row = 5 + points.length + 1;
-  // Una fila por visita con su estado, su BM de arranque, su verificación y
-  // su nota (Fases 18 y 37). Va en un bloque propio y no como columnas de la
-  // tabla de cotas, que es de una fila por lectura: ahí se repetiría en cada
-  // punto, y una visita sin cotas todavía no tendría fila donde mostrarlos.
-  writeSection(s, row, "Visitas");
-  row += 1;
-  setHeaders(s, row, [
-    "Visita",
-    "Fecha",
-    "Estado",
-    "BM de arranque",
-    "Cota BM (m)",
-    "Verificación",
-    "Cierre (mm)",
-    "Tolerancia (mm)",
-    "Nota",
-  ]);
-  row += 1;
-  for (const visit of visits) {
-    writeRow(
-      s,
-      row,
-      [
-        visit.visit_number,
-        visit.date,
-        statusLabel(visit.status),
-        visit.reference_bm_code,
-        num(visit.reference_bm_elevation),
-        verificationLabel(visit.precision_order),
-        num(visit.closure_error_mm),
-        num(visit.tolerance_mm),
-        visit.notes?.trim() || null,
-      ],
-      [null, null, null, null, DECIMALS.elevation, null, 1, 1, null],
-    );
-    row += 1;
+  // Un punto por fila.
+  const points = [...a.points].sort((x, y) => x.code.localeCompare(y.code, "es", { numeric: true }));
+  points.forEach((p, i) => {
+    const row = unitRow + 1 + i;
+    putData(ws, 1, row, p.code);
+    if (p.location) ws.getCell(row, 2).value = p.location;
+    const c0 = at(3, row);
+    let previous: { cota: string; date: string } | null = null;
+    let baselineWritten = false;
+    ordered.forEach((hv, j) => {
+      const reading = hv.readings.find((x) => x.pointId === p.id);
+      if (!reading) return;
+      const c = groupCol(j);
+      const visit = meta.get(hv.visitId);
+      const bookCell = books.get(hv.visitId)?.get(p.id);
+      const cota =
+        visit && visit.rows.length > 0 && bookCell
+          ? putFormula(ws, c, row, roundHalfUp(bookCell, 4), reading.elevation, FMT.elev)
+          : putData(ws, c, row, reading.elevation, FMT.elev);
+      if (!baselineWritten) {
+        if (p.initialElevation != null) putData(ws, 3, row, p.initialElevation, FMT.elev);
+        else putFormula(ws, 3, row, cota, reading.baselineElevation, FMT.elev);
+        baselineWritten = true;
+      }
+      putFormula(ws, c + 1, row, roundHalfUp(`(${cota}-${c0})*1000`, 1), reading.accumulatedSettlement, FMT.mm);
+      if (previous) {
+        const partial = putFormula(ws, c + 2, row, roundHalfUp(`(${cota}-${previous.cota})*1000`, 1), reading.partialSettlement, FMT.mm);
+        const date = dateCells.get(hv.visitId)!;
+        putFormula(
+          ws,
+          c + 3,
+          row,
+          `IF(DAYS(${date},${previous.date})=0,"",${partial}/(DAYS(${date},${previous.date})/${DAYS_PER_MONTH}))`,
+          reading.velocity ?? "",
+          FMT.rate,
+        );
+      }
+      putFormula(ws, c + 4, row, alertFormula(previous ? at(c + 3, row) : null, at(c + 1, row), t), ALERT_LEVEL_LABELS[reading.alertStatus]);
+      previous = { cota, date: dateCells.get(hv.visitId)! };
+    });
+  });
+
+  // El semáforo con sus colores.
+  const lastRow = unitRow + points.length;
+  const lastCol = groupCol(ordered.length - 1) + 4;
+  if (points.length > 0 && ordered.length > 0) {
+    const colors: [string, string][] = [
+      [ALERT_LEVEL_LABELS.alarm, WORKBOOK_COLORS.danger],
+      [ALERT_LEVEL_LABELS.alert, WORKBOOK_COLORS.danger],
+      [ALERT_LEVEL_LABELS.caution, WORKBOOK_COLORS.miraInk],
+      [ALERT_LEVEL_LABELS.normal, WORKBOOK_COLORS.success],
+    ];
+    ws.addConditionalFormatting({
+      ref: `${at(4, unitRow + 1)}:${at(lastCol, lastRow)}`,
+      rules: colors.map(([text, color], i) => ({
+        type: "containsText",
+        operator: "containsText",
+        text,
+        priority: i + 1,
+        style: { font: { bold: true, color: { argb: color } } },
+      })),
+    });
   }
 
-  row += 1;
-  writeSection(s, row, "Cotas medidas por visita");
-  row += 1;
-  // El equipo va en ESTA tabla, a su propio grano (una fila por lectura,
-  // repetido como ya se repite Visita/Fecha/Estado), y no se colapsa a la
-  // visita más reciente como en el Resumen: el instrumento puede cambiar
-  // entre campañas, y este es el único artefacto que conserva sin pérdida
-  // qué equipo midió cada visita, incluidas las que ya no son la
-  // última (§ Fase 8 — es justo la pérdida de trazabilidad que la fase existe
-  // para cerrar).
-  setHeaders(s, row, [
-    "Visita",
-    "Fecha",
-    "Estado",
-    "Punto",
-    "Cota (m)",
-    "Equipo",
-    "Tipo de nivel",
-    "Desv. típica (mm/km)",
-  ]);
-  row += 1;
+  // Los avisos de tendencia, como texto de la app.
+  let w = lastRow + 3;
+  putLabel(ws, 1, w++, "Avisos de tendencia", "section");
+  if (a.warnings.length === 0) putLabel(ws, 1, w, "Ninguna lectura se aparta de la tendencia de su punto.");
+  for (const text of a.warnings) putLabel(ws, 1, w++, text);
 
-  const codeById = new Map(points.map((p) => [p.id, p.code]));
-  for (const visit of visits) {
-    const computed = history.visits.find((v) => v.visitId === visit.id);
-    const equipoVisita = equipmentLine(
-      visit.equipment_brand,
-      visit.equipment_model,
-      visit.equipment_serial,
-    );
-    const tipoNivelVisita = visit.level_type
-      ? LEVEL_TYPE_LABELS[visit.level_type]
-      : null;
-    for (const reading of computed?.readings ?? []) {
-      writeRow(
-        s,
-        row,
-        [
-          visit.visit_number,
-          visit.date,
-          statusLabel(visit.status),
-          codeById.get(reading.pointId) ?? reading.pointId,
-          reading.elevation,
-          equipoVisita,
-          tipoNivelVisita,
-          num(visit.km_precision_mm),
-        ],
-        [null, null, null, null, DECIMALS.elevation, null, null, DECIMALS.mm],
-      );
-      row += 1;
-    }
-  }
+  ws.views = [{ state: "frozen", xSplit: 1, ySplit: unitRow }];
+  ws.columns = [{ width: 14 }, { width: 18 }, { width: 11 }, ...ordered.flatMap(() => [{ width: 11 }, { width: 9 }, { width: 9 }, { width: 10 }, { width: 11 }])];
+  ws.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
 }
 
-function sheetCalculations(
-  wb: ExcelJS.Workbook,
-  site: SiteRow,
-  points: PointRow[],
-  visits: VisitRow[],
-  history: SettlementHistory,
-): void {
-  const s = wb.addWorksheet("Cálculos");
-  s.columns = [
-    { width: 9 }, { width: 12 }, { width: 12 }, { width: 15 },
-    { width: 17 }, { width: 15 }, { width: 13 },
-  ];
-
-  setSheetTitle(s, `${site.name} — asentamientos, velocidades y alertas`);
-  setHeaders(s, 3, [
-    "Visita",
-    "Fecha",
-    "Punto",
-    "Parcial (mm)",
-    "Acumulado (mm)",
-    "Velocidad (mm/mes)",
-    "Alerta",
+function sheetSummary(wb: ExcelJS.Workbook, a: Parameters<typeof buildSettlementWorkbook>[0]): void {
+  const ws = wb.addWorksheet("Resumen");
+  let r = writeSheetHeader(ws, `${a.site.name} — resumen`, [
+    ...projectPairs(a.project),
+    ["Lugar", a.site.name],
+    ["Ubicación", a.site.location],
+    ["Tipo de estructura", a.site.structure],
+    ["Cómo leer el libro", "Las celdas con fondo amarillo son datos medidos o tecleados; el resto se calcula con fórmulas y se recalcula si cambia un dato."],
   ]);
-
-  const codeById = new Map(points.map((p) => [p.id, p.code]));
-  const dateById = new Map(visits.map((v) => [v.id, v.date]));
-  const numberById = new Map(visits.map((v) => [v.id, v.visit_number]));
-
-  let row = 4;
-  for (const visit of history.visits) {
-    for (const reading of visit.readings) {
-      writeRow(
-        s,
-        row,
-        [
-          numberById.get(visit.visitId) ?? visit.visitNumber,
-          dateById.get(visit.visitId) ?? visit.date,
-          codeById.get(reading.pointId) ?? reading.pointId,
-          reading.partialSettlement,
-          reading.accumulatedSettlement,
-          reading.velocity,
-          ALERT_LEVEL_LABELS[reading.alertStatus],
-        ],
-        [null, null, null, 1, 1, DECIMALS.mm, null],
-      );
-      row += 1;
-    }
+  putLabel(ws, 1, r++, "BM del lugar", "section");
+  for (const b of a.benchmarks) {
+    putLabel(ws, 1, r, b.code);
+    putData(ws, 3, r++, b.elevation, FMT.elev);
   }
-}
-
-function sheetSummary(
-  wb: ExcelJS.Workbook,
-  site: SiteRow,
-  points: PointRow[],
-  visits: VisitRow[],
-  history: SettlementHistory,
-  thresholds: Thresholds,
-  project: ProjectMetadata | null,
-): void {
-  const s = wb.addWorksheet("Resumen");
-  s.columns = [{ width: 34 }, { width: 34 }];
-
-  setSheetTitle(s, `${site.name} — resumen`);
-
-  const worst = history.visits[history.visits.length - 1]?.worstAlert ?? null;
-  // La tendencia necesita el orden y el circuito de cada visita para su
-  // margen de ruido (Fase 31, D-10; Fase 32, D-7).
-  const trends = computeTrends(history.visits);
-  const acelerando = Object.values(trends).filter((t) => t === "accelerating").length;
-
-  let row0 = 3;
-  const pares = projectPairs(project);
-  if (pares.length > 0) {
-    writeSection(s, row0, "Proyecto");
-    row0 = writePairs(s, row0 + 1, pares) + 1;
-  }
-
-  writeSection(s, row0, "Lugar");
-  let row = writePairs(s, row0 + 1, [
-    ["Nombre", site.name],
-    ["Descripción", site.description],
-    [
-      "Tipo de estructura",
-      STRUCTURE_TYPE_LABELS[site.structure_type as StructureType] ??
-        site.structure_type,
-    ],
-    ["Puntos del catálogo", points.length],
-    ["Visitas registradas", visits.length],
-  ]);
-
-  // El equipo es de la VISITA, no del lugar ni del proyecto: el instrumento
-  // puede cambiar entre campañas (§ Fase 8). Se muestra el de la más
-  // reciente, la misma que informa «peor alerta» más abajo.
-  const lastVisit = visits[visits.length - 1];
-  if (lastVisit) {
-    row += 1;
-    writeSection(s, row, "Equipo: nivel (última visita)");
-    row = writePairs(s, row + 1, [
-      ["Verificación", verificationLabel(lastVisit.precision_order)],
-      [
-        "Equipo",
-        equipmentLine(
-          lastVisit.equipment_brand,
-          lastVisit.equipment_model,
-          lastVisit.equipment_serial,
-        ),
-      ],
-      ["Fecha de calibración", lastVisit.equipment_calibration_date],
-      [
-        "Tipo de nivel",
-        lastVisit.level_type ? LEVEL_TYPE_LABELS[lastVisit.level_type] : null,
-      ],
-      [
-        "Desviación típica (mm/km, doble nivelación)",
-        num(lastVisit.km_precision_mm),
-      ],
-    ]);
-  }
-
-  row += 1;
-  writeSection(s, row, "Umbrales vigentes");
-  row = writePairs(s, row + 1, [
-    ["Velocidad — precaución (mm/mes)", thresholds.velocityCaution],
-    ["Velocidad — alerta (mm/mes)", thresholds.velocityAlert],
-    ["Velocidad — alarma (mm/mes)", thresholds.velocityAlarm],
-    ["Acumulado — precaución (mm)", thresholds.accumulatedCaution],
-    ["Acumulado — alerta (mm)", thresholds.accumulatedAlert],
-    ["Acumulado — alarma (mm)", thresholds.accumulatedAlarm],
-  ]);
-
-  row += 1;
-  writeSection(s, row, "Estado del monitoreo");
-  row = writePairs(s, row + 1, [
-    [
-      "Peor alerta (última visita)",
-      worst ? ALERT_LEVEL_LABELS[worst as AlertLevel] : null,
-    ],
-    ["Puntos con tendencia creciente", acelerando],
-  ]);
-
-  row += 1;
-  writeSection(s, row, "Trazabilidad");
-  writePairs(s, row + 1, [
-    ["Creado", site.created_at],
-    ["Notas", site.notes],
-  ]);
-}
-
-/**
- * Cabecera de la libreta de una visita, en una línea: visita, fecha, el BM de
- * su primer tramo y el cierre de su tramo peor con el orden que alcanza, o
- * «sin verificación» (Fase 37, decisión 15).
- */
-function bookTitle(visit: VisitRow): string {
-  const cota = num(visit.reference_bm_elevation);
-  const desde = visit.reference_bm_code
-    ? `Desde ${visit.reference_bm_code}` + (cota === null ? "" : ` (${cota.toFixed(DECIMALS.elevation)})`)
-    : "Sin BM de arranque";
-
-  const cierre = num(visit.closure_error_mm);
-  const tolerancia = num(visit.tolerance_mm);
-  const cierreTexto = [
-    cierre === null ? "Sin cierre" : `Cierre ${signedMm(cierre)} mm`,
-    tolerancia === null ? null : `tolerancia ${tolerancia.toFixed(1)} mm`,
-    verificationLabel(visit.precision_order).toLowerCase(),
-  ]
-    .filter((t): t is string => t !== null)
-    .join(" · ");
-
-  return [`Visita ${visit.visit_number}`, visit.date, desde, cierreTexto].join(" — ");
-}
-
-/**
- * La libreta de nivelación de cada visita (Fase 18, decisión 21): es el dato
- * crudo del que salen sus cotas. Cada fila lleva su tramo (Fase 37); la cota
- * es la de la medida, sin compensar. La hoja existe siempre, con un aviso si
- * ninguna visita tiene libreta, para que el libro no cambie de forma.
- */
-function sheetBooks(
-  wb: ExcelJS.Workbook,
-  site: SiteRow,
-  visits: VisitRow[],
-  bookByVisit: Record<string, BookReadingRow[]>,
-): void {
-  const s = wb.addWorksheet("Libretas");
-  s.columns = [
-    { width: 8 }, { width: 14 }, { width: 16 }, { width: 11 }, { width: 12 },
-    { width: 11 }, { width: 11 }, { width: 12 }, { width: 12 }, { width: 17 },
-  ];
-
-  setSheetTitle(s, `${site.name} — libretas de nivelación de las visitas`);
-
-  const conLibreta = visits.filter((v) => (bookByVisit[v.id]?.length ?? 0) > 0);
-  if (conLibreta.length === 0) {
-    s.getCell(3, 1).value =
-      "Ninguna visita de este lugar tiene libreta de nivelación.";
-    return;
-  }
-
-  const formats = [
-    null, null, null,
-    DECIMALS.elevation, DECIMALS.coordinate, DECIMALS.elevation,
-    DECIMALS.elevation, DECIMALS.coordinate,
-    DECIMALS.elevation, DECIMALS.elevation,
-  ];
-
-  let row = 3;
-  for (const visit of conLibreta) {
-    writeSection(s, row, bookTitle(visit));
-    row += 1;
-    setHeaders(s, row, [
-      "Tramo",
-      "Punto",
-      "Tipo",
-      "V+ (m)",
-      "Dist. V+ (m)",
-      "AI (m)",
-      "V− (m)",
-      "Dist. V− (m)",
-      "Cota (m)",
-      "Cota de catálogo (m)",
-    ]);
-    row += 1;
-
-    const filas = [...bookByVisit[visit.id]!].sort(
-      (a, b) => a.reading_order - b.reading_order,
-    );
-    let tramo = 0;
-    for (const [i, r] of filas.entries()) {
-      if (i === 0 || r.starts_section) tramo += 1;
-      writeRow(
-        s,
-        row,
-        [
-          tramo,
-          r.point_code,
-          POINT_TYPE_LABELS[r.point_type as PointType] ?? r.point_type,
-          num(r.backsight),
-          num(r.back_distance_m),
-          num(r.instrument_height),
-          num(r.foresight),
-          num(r.fore_distance_m),
-          num(r.elevation_calculated),
-          num(r.catalog_elevation),
-        ],
-        formats,
-      );
-      row += 1;
-    }
-    // Fila en blanco entre una visita y la siguiente.
-    row += 1;
-  }
-}
-
-/**
- * Libro completo de un lugar de control de asentamientos.
- *
- * `bookByVisit` son las filas de libreta indexadas por `visit_id`. Es opcional
- * porque un lugar sin visitas no tiene ninguna; la hoja «Libretas» sale
- * igual, con su aviso.
- */
-export function buildSettlementWorkbook(
-  site: SiteRow,
-  points: PointRow[],
-  visits: VisitRow[],
-  history: SettlementHistory,
-  thresholds: Thresholds,
-  project: ProjectMetadata | null = null,
-  bookByVisit: Record<string, BookReadingRow[]> = {},
-): ExcelJS.Workbook {
-  const wb = newWorkbook();
-  const ordered = [...visits].sort((a, b) => a.date.localeCompare(b.date));
-  sheetRawData(wb, site, points, ordered, history);
-  sheetCalculations(wb, site, points, ordered, history);
-  sheetSummary(wb, site, points, ordered, history, thresholds, project);
-  sheetBooks(wb, site, ordered, bookByVisit);
-  return wb;
+  ws.columns = [{ width: 22 }, { width: 2 }, { width: 70 }];
 }
