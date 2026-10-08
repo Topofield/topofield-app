@@ -807,3 +807,14 @@ con pesos por la precisión del instrumento y elipses de error. Eligió
 **aclarar los requisitos del método y añadir la precisión de cada punto**
 (σ N, σ E y elipses, en tabla y dibujadas). Es la **Fase 39**
 ([`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md)).
+
+## Informes entregables (Fase 40)
+
+El 2026-10-08 el usuario pidió que los informes «sean entregables que
+funcionen agnósticamente a lo que tenemos en la plataforma» —sin «catálogo»
+ni el enlace en el pie— y que solo lleven las fórmulas que sí es necesario
+presentar, «como la de mínimos cuadrados en poligonales, no las de cómo
+calcular cotas en control de asentamientos». Eligió un pie propio en el PDF,
+quitar el reparto angular y las fórmulas de asentamientos, y reescribir las
+frases con el estado del proceso en la app. Es la **Fase 40**
+([`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md)).
