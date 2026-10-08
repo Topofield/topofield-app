@@ -61,6 +61,9 @@ describe("PolygonalCorrection", () => {
     expect(h).toContain("<math");
     expect(h).toContain("<mn>115.712</mn>");
     expect(h).toContain("los lados largos absorben más corrección");
+    // La leyenda de la fórmula (Fase 41).
+    expect(h).toContain('<p class="report-formula-legend">donde: ');
+    expect(h).toContain("P — perímetro, la suma de las longitudes");
     expect(h).toMatch(/e<sub>N<\/sub> = \+0\.008\d m/);
   });
 
@@ -70,7 +73,8 @@ describe("PolygonalCorrection", () => {
     expect(h).toContain("Igual que en la Brújula: el error angular");
     expect(h).toContain("<mn>83.850</mn>");
     expect(h).toContain("<mn>52.085</mn>");
-    expect(h).toContain("k: corrección unitaria de cada eje");
+    expect(h).toContain("k<sub>N</sub>, k<sub>E</sub> — corrección unitaria de cada eje");
+    expect(h).not.toContain("k: corrección unitaria");
   });
 
   it("Crandall: solo las distancias, con λ₁ y λ₂", () => {
@@ -80,6 +84,7 @@ describe("PolygonalCorrection", () => {
     expect(h).toContain("<mo>×</mo>");
     expect(h).toContain("d ajustada (m)");
     expect(h).toContain("Desde aquí, los azimuts ya no cambian.");
+    expect(h).toContain("multiplicadores de Lagrange de las dos condiciones");
   });
 
   it("Mínimos cuadrados: la orientación es el datum, con σ₀ y su lectura", () => {
@@ -91,6 +96,14 @@ describe("PolygonalCorrection", () => {
     expect(h).toContain("Los métodos Brújula, Tránsito y Crandall, en cambio, sí lo corrigen");
     expect(h).toContain("σ₀, desviación de la unidad de peso");
     expect(h).toContain("tres condiciones: la suma angular");
+    expect(h).toContain("P — matriz de pesos, Q⁻¹");
+    expect(h).toContain("cuantil de la distribución F de Fisher");
+  });
+
+  it("Mínimos cuadrados sin pesos lo dice como informe (Fase 41)", () => {
+    const h = html("least_squares", { leastSquares: undefined });
+    expect(h).toContain("no se declararon las precisiones a priori");
+    expect(h).not.toContain("faltan los pesos");
   });
 
   it("la abierta sin control no tiene corrección", () => {

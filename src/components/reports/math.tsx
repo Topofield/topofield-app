@@ -2,15 +2,34 @@
 // el navegador las compone con notación matemática, en pantalla y en el PDF,
 // sin librerías ni JavaScript. Sirven en Server Components.
 
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 type Children = { children?: ReactNode };
 
-/** Un bloque de fórmulas, cada hijo en su línea, con una leyenda opcional. */
-export function Formula({ children, caption }: Children & { caption?: string }) {
+/**
+ * Un bloque de fórmulas, cada hijo en su línea. `legend` dice qué es cada
+ * símbolo —«donde: símbolo — significado · …»— (Fase 41); `caption`, una nota
+ * más, debajo.
+ */
+export function Formula({
+  children,
+  caption,
+  legend,
+}: Children & { caption?: string; legend?: [ReactNode, string][] }) {
   return (
     <div className="report-formula">
       {children}
+      {legend && legend.length > 0 && (
+        <p className="report-formula-legend">
+          donde:{" "}
+          {legend.map(([symbol, meaning], i) => (
+            <Fragment key={i}>
+              {i > 0 && " · "}
+              {symbol} — {meaning}
+            </Fragment>
+          ))}
+        </p>
+      )}
       {caption && <p className="report-formula-caption">{caption}</p>}
     </div>
   );
