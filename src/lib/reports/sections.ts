@@ -1,11 +1,5 @@
-// Carga de las secciones del informe (Fase 22).
-//
-// Estaba dentro de la página de impresión del informe consolidado. Salió para
-// que la pestaña Informe de cada proceso arme su sección con el mismo código:
-// el informe de un proceso y el consolidado no pueden diferir.
-//
-// El contenido se reconstruye en cada visita a partir de los procesos que el
-// informe referencia (ver la página de impresión).
+// Carga de las secciones del informe de un proceso (Fases 22 y 38). El
+// contenido se reconstruye en cada visita a partir de los datos del proceso.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";

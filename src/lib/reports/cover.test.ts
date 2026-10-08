@@ -29,13 +29,13 @@ describe("coverOf", () => {
 });
 
 describe("ReportCover", () => {
-  it("muestra la portada congelada", () => {
+  it("muestra los datos del proyecto, y el datum sin proyección no lleva separador", () => {
     const html = renderToStaticMarkup(
       createElement(ReportCover, {
         title: "Informe de cierre",
         cover: {
-          name: "Nombre al emitir",
-          client: "Cliente al emitir",
+          name: "Edificio en monitoreo",
+          client: "Constructora Andina",
           location: "Bogotá",
           datum: "MAGNA-SIRGAS",
           projection: null,
@@ -43,8 +43,8 @@ describe("ReportCover", () => {
         date: "2026-09-30T15:00:00Z",
       }),
     );
-    expect(html).toContain("Nombre al emitir");
-    expect(html).toContain("Cliente al emitir");
+    expect(html).toContain("Edificio en monitoreo");
+    expect(html).toContain("Constructora Andina");
     expect(html).toContain("MAGNA-SIRGAS");
     expect(html).not.toContain(" · ");
   });

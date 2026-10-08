@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   Badge,
-  buttonClasses,
   EmptyState,
   PageHeader,
   Tabs,
@@ -26,10 +25,8 @@ import {
 import { NewProcessSelector } from "@/components/projects/new-process-selector";
 import { ProcessListToolbar } from "@/components/projects/process-list-toolbar";
 import { ProcessTable, type ProcessRow } from "@/components/projects/process-table";
-import { reportsIncluding } from "@/lib/reports/including";
 import { ProjectConfigTab } from "@/components/projects/project-config-tab";
 import { cn } from "@/lib/utils/cn";
-import { formatDate } from "@/lib/utils/format";
 import {
   countByStatus,
   filterProcesses,
@@ -44,7 +41,6 @@ import {
   getPolygonalProcesses,
   getProjectById,
   getReferencePoints,
-  getReports,
   getSiteSummariesByProject,
   getSites,
 } from "@/lib/supabase/queries";
@@ -53,7 +49,6 @@ import type { AlertLevel } from "@/types/settlement";
 
 const TABS: TabItem[] = [
   { id: "processes", label: "Procesos" },
-  { id: "reports", label: "Informes" },
   { id: "config", label: "Configuración" },
 ];
 
@@ -115,7 +110,7 @@ export default async function ProjectHubPage({
   const sp = await searchParams;
   const tab = sp.tab;
   const activeTab =
-    tab === "reports" || tab === "config" ? tab : "processes";
+    tab === "config" ? tab : "processes";
   const modulo: Modulo =
     sp.modulo === "nivelaciones" || sp.modulo === "asentamientos"
       ? sp.modulo
@@ -129,13 +124,10 @@ export default async function ProjectHubPage({
 
   // Solo se carga la lista del módulo visible.
   const enProcesos = activeTab === "processes";
-  // Los informes, en Informes y en Procesos: borrar algo reabierto que está en
-  // un informe lo avisa (Fase 34).
-  const [processes, levelingProcesses, sites, reports] = await Promise.all([
+  const [processes, levelingProcesses, sites] = await Promise.all([
     enProcesos ? getPolygonalProcesses(supabase, project.id) : Promise.resolve([]),
     enProcesos ? getLevelingProcesses(supabase, project.id) : Promise.resolve([]),
     enProcesos ? getSites(supabase, project.id) : Promise.resolve([]),
-    enProcesos || activeTab === "reports" ? getReports(supabase, project.id) : Promise.resolve([]),
   ]);
   const referencePoints = activeTab === "config" ? await getReferencePoints(supabase, project.id) : [];
 
@@ -184,10 +176,6 @@ export default async function ProjectHubPage({
     counts = countByStatus(items);
     rows = filterProcesses(items, filters, siteMetric).map((s) => siteRow(project.id, s));
   }
-  rows = rows.map((r) => ({
-    ...r,
-    reportTitles: reportsIncluding(reports, r.kind, r.id).map((x) => x.title),
-  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -278,45 +266,6 @@ export default async function ProjectHubPage({
                 />
               )}
             </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "reports" && (
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-end">
-            <Link
-              href={`/projects/${project.id}/reports/new`}
-              className={buttonClasses({ variant: "primary" })}
-            >
-              Generar Nuevo Informe
-            </Link>
-          </div>
-          {reports.length === 0 ? (
-            <EmptyState
-              title="Aún no hay informes"
-              description="Un informe reúne poligonales y nivelaciones calculadas y controles de asentamientos con alguna visita calculada de este proyecto, y produce un documento imprimible."
-            />
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {reports.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href={`/projects/${project.id}/reports/${r.id}/print`}
-                    className="flex items-center justify-between gap-4 rounded-lg border border-rule px-4 py-3 transition-colors hover:bg-paper"
-                  >
-                    <span className="font-medium">{r.title}</span>
-                    <span className="text-sm text-ink-2">
-                      {r.included_processes.length}{" "}
-                      {r.included_processes.length === 1
-                        ? "proceso"
-                        : "procesos"}
-                      {r.generated_at ? ` · ${formatDate(r.generated_at)}` : ""}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
           )}
         </div>
       )}

@@ -3,9 +3,8 @@ import type { ReportCoverData } from "@/types/report";
 
 interface ReportCoverProps {
   title: string;
-  /** En un informe emitido, la portada congelada al emitir (`reports.cover`). */
+  /** Los datos del proyecto, en vivo (`coverOf`). */
   cover: ReportCoverData;
-  /** Etiqueta de la fecha: «Fecha de emisión» en un informe emitido. */
   dateLabel?: string;
   date: string | null;
 }
@@ -14,7 +13,7 @@ interface ReportCoverProps {
 export function ReportCover({
   title,
   cover,
-  dateLabel = "Fecha de emisión",
+  dateLabel = "Fecha del informe",
   date,
 }: ReportCoverProps) {
   return (

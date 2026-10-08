@@ -27,11 +27,6 @@ export interface ProcessRow {
   /** ¿Cumple la tolerancia? `undefined` si el módulo no tiene esa columna. */
   meets?: boolean | null;
   updatedAt: string;
-  /**
-   * Informes consolidados que lo incluyen (Fase 34): el diálogo de eliminar
-   * avisa de que esos informes perderán la sección.
-   */
-  reportTitles?: string[];
 }
 
 /** Destino de una columna ordenable, conservando filtros y módulo. */
@@ -190,7 +185,6 @@ export function ProcessTable({
                     kind={r.kind}
                     id={r.id}
                     name={r.name}
-                    reportTitles={r.reportTitles}
                   />
                 </td>
               </tr>
@@ -226,7 +220,6 @@ export function ProcessTable({
                 kind={r.kind}
                 id={r.id}
                 name={r.name}
-                reportTitles={r.reportTitles}
               />
             </div>
           </li>
