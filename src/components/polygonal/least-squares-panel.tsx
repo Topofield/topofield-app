@@ -16,7 +16,11 @@ const UNADJUSTABLE_TEXT = {
   not_converged: "El ajuste no convergió. Revise la cartera en busca de un error grueso, o elija otro método.",
 } as const;
 
-/** Los pesos del ajuste por mínimos cuadrados (Fase 14): se guardan al salir del campo. */
+/**
+ * Los pesos del ajuste por mínimos cuadrados (Fase 14): se guardan al salir del
+ * campo. Desde la Fase 39 dicen qué pide el método: un usuario creía que le
+ * faltaban lecturas por punto, cuando le faltaban los pesos.
+ */
 export function LeastSquaresWeightsFields({
   weights,
   error,
@@ -31,6 +35,23 @@ export function LeastSquaresWeightsFields({
 }) {
   return (
     <div className="flex flex-col gap-3">
+      <div className="text-sm text-ink-2">
+        <p>Mínimos cuadrados reparte el error según la precisión de cada observación, así que pide tres valores:</p>
+        <ul className="mt-1 list-disc pl-5">
+          <li>
+            <span className="font-medium text-ink">σ angular</span>: la precisión de un ángulo, de la ficha de la
+            estación total (por ejemplo, 2″).
+          </li>
+          <li>
+            <span className="font-medium text-ink">σ de distancia</span>: la de una medición de distancia, también de
+            la ficha (por ejemplo, 0.002 m).
+          </li>
+          <li>
+            <span className="font-medium text-ink">Veces que se midió cada distancia</span>: 1 si la cartera anota una
+            sola. Cada lado pesa como σ/√veces.
+          </li>
+        </ul>
+      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <NumberInput
           label="σ angular (″)"
@@ -46,15 +67,15 @@ export function LeastSquaresWeightsFields({
         />
         <NumberInput
           integer
-          label="Mediciones por distancia"
+          label="Veces que se midió cada distancia"
           value={weights.distanceMeasurements}
           onChange={(e) => onChange({ ...weights, distanceMeasurements: e.target.value })}
           onBlur={onCommit}
         />
       </div>
       <p className="text-sm text-ink-2">
-        La desviación típica que se supone para cada ángulo y cada distancia. Una distancia medida n veces pesa como
-        σ/√n. Se guardan al salir del campo, cuando están los tres.
+        No hacen falta más lecturas por punto: la comprobación la da el cierre, con 3 condiciones (2 si la abierta no
+        tiene azimut de llegada). Los valores se guardan al salir del campo, cuando están los tres.
       </p>
       {error && <Alert variant="warning">{error}</Alert>}
     </div>

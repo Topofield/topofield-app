@@ -23,14 +23,25 @@ export interface LeastSquaresWeightsDraft {
   distanceMeasurements: string;
 }
 
+/** Cada peso tecleado, o `null` el que falta: así el aviso dice cuáles faltan (Fase 39). */
+export function typedWeights(draft: LeastSquaresWeightsDraft): {
+  sigmaAngleSeconds: number | null;
+  sigmaDistanceM: number | null;
+  distanceMeasurements: number | null;
+} {
+  return {
+    sigmaAngleSeconds: parseNumber(draft.sigmaAngleSeconds),
+    sigmaDistanceM: parseNumber(draft.sigmaDistanceM),
+    distanceMeasurements: parseNumber(draft.distanceMeasurements),
+  };
+}
+
 /**
  * Los pesos del borrador, o `null` si falta alguno. Sin validar el signo: eso
  * lo decide el motor (que no ajusta con pesos no positivos) y el guardado.
  */
 export function weightsFromDraft(draft: LeastSquaresWeightsDraft): LeastSquaresWeights | null {
-  const sigmaAngleSeconds = parseNumber(draft.sigmaAngleSeconds);
-  const sigmaDistanceM = parseNumber(draft.sigmaDistanceM);
-  const distanceMeasurements = parseNumber(draft.distanceMeasurements);
+  const { sigmaAngleSeconds, sigmaDistanceM, distanceMeasurements } = typedWeights(draft);
   return sigmaAngleSeconds != null && sigmaDistanceM != null && distanceMeasurements != null
     ? { sigmaAngleSeconds, sigmaDistanceM, distanceMeasurements }
     : null;

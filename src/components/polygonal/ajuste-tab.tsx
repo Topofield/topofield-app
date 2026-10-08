@@ -22,7 +22,7 @@ import { georeferenceSummary } from "./georeference-plan";
 import { LeastSquaresPanel, LeastSquaresWeightsFields } from "./least-squares-panel";
 import { OrderVerdict } from "./order-verdict";
 import { PolygonalPlotViewer } from "./polygonal-plot-viewer";
-import { weightsFromDraft, type LeastSquaresWeightsDraft } from "./polygonal-draft";
+import { typedWeights, weightsFromDraft, type LeastSquaresWeightsDraft } from "./polygonal-draft";
 import type { PolygonalDraft } from "./polygonal-save";
 import { usePolygonalComputation, usePolygonalDraft } from "./use-polygonal-draft";
 
@@ -123,7 +123,9 @@ export function AjusteTab({ process, stations, referencePoints, angleFormat, bas
   const [weights, setWeights] = useState<LeastSquaresWeightsDraft>({
     sigmaAngleSeconds: text(draft.lsSigmaAngleSeconds),
     sigmaDistanceM: text(draft.lsSigmaDistanceM),
-    distanceMeasurements: text(draft.lsDistanceMeasurements),
+    // 1, el valor de una cartera que anota una distancia por lado (Fase 39,
+    // decisión 7). Los σ no tienen valor por defecto: dependen del equipo.
+    distanceMeasurements: text(draft.lsDistanceMeasurements ?? 1),
   });
   const [weightsError, setWeightsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -172,13 +174,13 @@ export function AjusteTab({ process, stations, referencePoints, angleFormat, bas
       draft.lsSigmaAngleSeconds != null && draft.lsSigmaDistanceM != null && draft.lsDistanceMeasurements != null;
     if (complete) return commit({ ...draft, method: next });
     setPendingMethod(next);
-    setWeightsError(validateLeastSquaresWeights("least_squares", type, weightsFromDraft(weights) ?? EMPTY_WEIGHTS));
+    setWeightsError(validateLeastSquaresWeights("least_squares", type, typedWeights(weights)));
   }
 
   function commitWeights() {
     if (method !== "least_squares") return;
     const typed = weightsFromDraft(weights);
-    const problem = validateLeastSquaresWeights("least_squares", type, typed ?? EMPTY_WEIGHTS);
+    const problem = validateLeastSquaresWeights("least_squares", type, typedWeights(weights));
     setWeightsError(problem);
     if (problem || !typed) return;
     const same =
@@ -260,7 +262,10 @@ export function AjusteTab({ process, stations, referencePoints, angleFormat, bas
       {!hasCoordinates ? (
         <Card>
           {result.adjustment?.status === "missing_weights" ? (
-            <p className="text-sm text-ink-2">El ajuste por mínimos cuadrados aparece con sus tres pesos.</p>
+            <p className="text-sm text-ink-2">
+              El ajuste por mínimos cuadrados aparece cuando estén sus pesos.{" "}
+              {validateLeastSquaresWeights("least_squares", type, typedWeights(weights))}
+            </p>
           ) : result.adjustment?.status === "unadjustable" ? (
             <LeastSquaresPanel result={result} />
           ) : (
@@ -323,5 +328,3 @@ export function AjusteTab({ process, stations, referencePoints, angleFormat, bas
     </div>
   );
 }
-
-const EMPTY_WEIGHTS = { sigmaAngleSeconds: null, sigmaDistanceM: null, distanceMeasurements: null };
