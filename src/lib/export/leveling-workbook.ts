@@ -261,6 +261,20 @@ export function buildLevelingWorkbook({
     ],
   ];
 
+  // Una libreta vacía (revisión final de la Fase 38): el paso Informe siempre
+  // se alcanza, y sin filas no hay tabla ni cierre que escribir.
+  if (input.forward.length === 0) {
+    const ws = wb.addWorksheet(FORWARD);
+    const r = writeSheetHeader(ws, `${process.name} — nivelación`, pairs("Ida"));
+    putLabel(ws, 1, r, "Libreta vacía: todavía no tiene lecturas.", "section");
+    setLayout(ws, { frozenRows: 0, widths: [40] });
+    sheetSummary(wb, process, project);
+    return wb;
+  }
+  // Una libreta a medias o que no encadena no tiene cierre que juzgar: la
+  // diferencia con el BM que aún no se alcanza no es un error de cierre.
+  const unfinished = detected.pending != null || detected.broken;
+
   // --- La ida ---------------------------------------------------------------
   const fwd = runSheet(
     wb,
@@ -303,7 +317,7 @@ export function buildLevelingWorkbook({
   const fFinal = closureRow(fwd.ws, fwdBlock + 2, "Cota calculada de llegada", { formula: at(C.elev, fwd.layout.chainEnd), result: fwdChainElevation(result.forward.readings, input.forward) }, FMT.elev);
   let fError: string | null = null;
   let r = fwdBlock + 3;
-  if (known != null) {
+  if (known != null && !unfinished) {
     const k = closureRow(fwd.ws, r++, "Cota conocida", { data: known }, FMT.elev);
     fError = closureRow(fwd.ws, r++, "Error de cierre (mm)", { formula: `(${fFinal}-${k})*1000`, result: result.closureErrorMm }, FMT.mm);
   }
@@ -315,7 +329,7 @@ export function buildLevelingWorkbook({
     putLabel(rev.ws, 1, rb, "Cierre", "section");
     rDist = closureRow(rev.ws, rb + 1, "Distancia (km)", { formula: at(C.acc, rev.layout.last), result: result.return.distanceKm }, FMT.km);
     const rFinal = closureRow(rev.ws, rb + 2, "Cota calculada de llegada", { formula: at(C.elev, rev.layout.chainEnd), result: fwdChainElevation(result.return.readings, back!) }, FMT.elev);
-    if (known != null) {
+    if (known != null && !unfinished) {
       const k = closureRow(rev.ws, rb + 3, "Cota conocida (partida)", { data: input.startElevation }, FMT.elev);
       rError = closureRow(rev.ws, rb + 4, "Error de cierre (mm)", { formula: `(${rFinal}-${k})*1000`, result: result.return.errorMm }, FMT.mm);
     }
@@ -325,7 +339,7 @@ export function buildLevelingWorkbook({
   let circuit: string | null = null;
   let pairKm: string | null = null;
   let discrepancy: string | null = null;
-  if (known == null && rev && result.return) {
+  if (known == null && rev && result.return && !unfinished) {
     const fStart = at(C.elev, fwd.layout.start);
     const dF = closureRow(fwd.ws, r++, "Desnivel de la ida (m)", { formula: `${fFinal}-${fStart}`, result: result.forward.heightDifference }, FMT.elev);
     const rStart = ref(RETURN, at(C.elev, rev.layout.start));
@@ -377,7 +391,13 @@ export function buildLevelingWorkbook({
     };
     orderCell = closureRow(fwd.ws, orderRow, "Orden alcanzado", { formula: orderFormula(cond), result: reached });
   } else {
-    closureRow(fwd.ws, orderRow, "Orden alcanzado", { data: "Sin verificación" });
+    closureRow(fwd.ws, orderRow, "Orden alcanzado", {
+      data: detected.pending
+        ? `Libreta a medias: falta terminar la ${detected.pending === "forward" ? "ida" : "vuelta"}.`
+        : detected.broken
+          ? "La libreta no encadena: no hay cierre que juzgar."
+          : "Sin verificación",
+    });
   }
   if (orderCell) {
     const verdict = closureRow(fwd.ws, orderRow + 1, "Veredicto", {

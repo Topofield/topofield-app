@@ -85,4 +85,26 @@ describe("Excel de la nivelación — fórmulas contra el motor", () => {
     ws.getColumn(8).eachCell((c) => { if (c.formula) formulas.push(c.formula); });
     expect(formulas[0]).toMatch(/^\(C\d+-C\d+\)\*100$/);
   });
+
+  const textos = (wb: ReturnType<typeof libro>["wb"]) => {
+    const out: string[] = [];
+    wb.eachSheet((ws) => ws.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") out.push(c.value); })));
+    return out;
+  };
+
+  it("una nivelación sin lecturas se exporta sin romperse y lo dice (revisión final)", () => {
+    const tramo = nivelacionTramo2();
+    const { wb } = libro({ ...tramo, forward: [] });
+    expect(textos(wb).some((t) => t.startsWith("Libreta vacía"))).toBe(true);
+    expect(formulaMismatches(wb)).toEqual([]);
+  });
+
+  it("una libreta a medias no muestra un error de cierre (revisión final)", () => {
+    const tramo = nivelacionTramo2();
+    const { wb, detected } = libro({ ...tramo, forward: tramo.forward.slice(0, 5) });
+    expect(detected.pending).toBe("forward");
+    expect(textos(wb)).not.toContain("Error de cierre (mm)");
+    expect(textos(wb).some((t) => t.startsWith("Libreta a medias"))).toBe(true);
+    expect(formulaMismatches(wb)).toEqual([]);
+  });
 });
