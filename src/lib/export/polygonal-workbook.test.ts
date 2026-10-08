@@ -117,4 +117,20 @@ describe("Excel de la poligonal — fórmulas contra el motor", () => {
     wb.worksheets[0]!.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
     expect(textos).toEqual(expect.arrayContaining(["Calle 26 # 13-50", "Ana Ruiz · Topógrafa"]));
   });
+
+  it("ángulos de minutos enteros: los datos no salen con 60″ y las fórmulas G-M-S dan lo de la app (revisión final)", () => {
+    const st = (pointCode: string, angle: number) => ({ pointCode, angle, deflectionDirection: null, distance: 100, readings: [] });
+    const input: Omit<PolygonalInput, "order" | "angleType"> = {
+      type: "closed", method: "bowditch", startNorth: 1000, startEast: 1000, startAzimuth: 45 + 1 / 60,
+      endNorth: null, endEast: null, endAzimuth: null, hasOrientation: false, hasClosingRow: false, leastSquares: null,
+      stations: [st("A", 87.3), st("B", 92.7), st("C", 87.3), st("D", 92.7)],
+    };
+    const wb = libroDe(input);
+    expect(formulaMismatches(wb)).toEqual([]);
+    const ws = wb.worksheets[0]!;
+    let fila = 0;
+    ws.eachRow((row, r) => { if (!fila && row.getCell(1).value === "A") fila = r; });
+    expect([ws.getCell(fila, 3).value, ws.getCell(fila, 4).value, ws.getCell(fila, 5).value]).toEqual([87, 18, 0]);
+    expect([ws.getCell(fila - 1, 12).value, ws.getCell(fila - 1, 13).value, ws.getCell(fila - 1, 14).value]).toEqual([45, 1, 0]);
+  });
 });
