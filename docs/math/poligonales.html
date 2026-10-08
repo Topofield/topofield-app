@@ -77,7 +77,7 @@ objeto con los datos de campo y devuelven otro con los resultados.</p>
 <tr><td><code>angles.ts</code></td><td>Convierte ángulos entre grados-minutos-segundos y decimal (con acarreo de desbordamiento), normaliza azimuts al rango [0°, 360°) y expone trigonometría en grados (<code>cosDeg</code>, <code>sinDeg</code>).</td></tr>
 <tr><td><code>tolerances.ts</code></td><td>Constantes de tolerancia angular y precisión relativa mínima por orden de precisión (PRD § 5.4).</td></tr>
 <tr><td><code>polygonal.ts</code></td><td>El cálculo principal: los tres tipos de poligonal y los cuatro métodos de corrección. Es una función pura <code>computePolygonal(input)</code> que nunca lanza; con datos incompletos devuelve campos en <code>null</code>. <code>computePolygonalDetected(input)</code> detecta además el orden alcanzado y el tipo de ángulo (§ 2.3 y § 3.1).</td></tr>
-<tr><td><code>least-squares.ts</code></td><td>El ajuste por mínimos cuadrados por ecuaciones de condición (§ 4.4), sin saber de topografía.</td></tr>
+<tr><td><code>least-squares.ts</code></td><td>El ajuste por mínimos cuadrados por ecuaciones de condición (§ 4.4), sin saber de topografía; el cofactor de lo ajustado, la F de Fisher y la elipse de error (§ 4.5).</td></tr>
 <tr><td><code>correction-breakdown.ts</code></td><td>Cómo corrigió cada método, en sus términos: el reparto angular y el factor de cada uno (§ 4). Lo usan el paso de Ajuste y el informe.</td></tr>
 </table>
 
@@ -270,6 +270,48 @@ suyo rota la poligonal entera sin afectar al cierre, así que las condiciones no
 lo determinan. Por eso el azimut V10 → D1 de la TT4 sale 181°51′02.5″ con
 Brújula —que reparte −1.71″ también a la orientación— y 181°51′04.2″ con
 mínimos cuadrados. Las dos cosas son correctas.</p>
+
+<h3>4.5. La precisión de cada punto (Fase 39)</h3>
+<p>El ajuste dice también cuánto se puede confiar en cada coordenada. El
+cofactor de las observaciones ajustadas sale de las matrices de la última
+iteración:
+<code>Q<sub>l̂</sub> = Q − Q·Aᵀ·(A·Q·Aᵀ)⁻¹·A·Q</code>. El punto de la estación
+i es la partida más los lados 0…i−1, así que su jacobiano
+<code>J = ∂(N, E)/∂l</code> es la suma parcial de las filas de cierre: un
+ángulo de la estación j ≥ 1 arrastra los lados k ≥ j, con
+<code>∂N/∂α<sub>j</sub> = −Σ ΔE<sub>k</sub></code> y
+<code>∂E/∂α<sub>j</sub> = +Σ ΔN<sub>k</sub></code> (k de j a i−1, por radián),
+y la distancia k &lt; i entra con <code>cos Az<sub>k</sub></code> y
+<code>sen Az<sub>k</sub></code>. La covarianza del punto es
+<code>Σ<sub>NE</sub> = σ₀²·J·Q<sub>l̂</sub>·Jᵀ</code>, con el σ₀ del ajuste.</p>
+<p><strong>La elipse.</strong> Sus semiejes son las raíces de los autovalores de
+Σ<sub>NE</sub>, y el mayor apunta al azimut
+<code>½·atan2(2σ<sub>NE</sub>, σ<sub>N</sub>² − σ<sub>E</sub>²)</code>
+(Ghilani y Wolf, <em>Adjustment Computations</em>, 4.ª ed., § 19.2). La
+estándar se lleva al 95 % multiplicándola por
+<code>c = √(2·F(0.05, 2, r))</code> (ec. 19.22). Con dos grados de libertad en
+el numerador, F tiene forma cerrada, <code>F = (r/2)·(α<sup>−2/r</sup> − 1)</code>,
+que reproduce la tabla 19.2: con r = 3, F = 9.55 y c = 4.371; con r = 2,
+F = 19 y c = 6.164. Es grande porque una poligonal simple solo se comprueba con
+su cierre. La partida, la vuelta a ella y la llegada conocida son fijas y no
+tienen elipse.</p>
+<p><strong>Ejemplo: Vivero</strong>, con los pesos de la hoja (2″, 0.011 m, 2
+mediciones), σ₀ = 0.698 y r = 3:</p>
+<table>
+<tr><th>Punto</th><th class="num">σ N (mm)</th><th class="num">σ E (mm)</th><th class="num">Semieje mayor 95 % (mm)</th><th class="num">Semieje menor 95 % (mm)</th><th class="num">Azimut del mayor</th></tr>
+<tr><td>D1</td><td class="num">2.9</td><td class="num">3.1</td><td class="num">18.6</td><td class="num">0.0</td><td class="num">132°46′39.8″</td></tr>
+<tr><td>D2</td><td class="num">2.5</td><td class="num">3.9</td><td class="num">19.3</td><td class="num">7.0</td><td class="num">118°52′29″</td></tr>
+<tr><td>D3</td><td class="num">3.4</td><td class="num">4.8</td><td class="num">20.9</td><td class="num">14.9</td><td class="num">92°51′06.4″</td></tr>
+<tr><td>D4</td><td class="num">2.5</td><td class="num">3.2</td><td class="num">17.6</td><td class="num">2.3</td><td class="num">51°25′04.6″</td></tr>
+</table>
+<p>D1 tiene semieje menor 0: el azimut del primer lado es el datum, así que D1
+solo se mueve a lo largo de él, y su elipse es un segmento en esa dirección
+(132°46′39.8″). <strong>Verificación:</strong> la prueba
+<code>least-squares-precision.test.ts</code> rehace Vivero con un ajuste
+paramétrico independiente —las coordenadas como incógnitas— y coincide a la
+millonésima de milímetro; en una abierta con control, con r = 3 y r = 2,
+coincide con la propagación por diferencias finitas a través de todo el
+motor.</p>
 
 <h2 id="ejemplo">5. Ejemplo trabajado — cuadrado con un lado largo</h2>
 <p>Es uno de los fixtures de los tests automáticos. Con números concretos se ve

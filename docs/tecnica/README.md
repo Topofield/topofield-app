@@ -6,7 +6,7 @@ extenderlo.
 
 **Última actualización:** 2026-10-08 · Fase 38 cerrada en su rama, con el
 despliegue **preparado y sin aplicar**: una migración, después del merge
-(§ 13) · 1143 tests y 137 pruebas de base (pgTAP) ·
+(§ 13) · Fase 39 en curso · 1172 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -1251,7 +1251,7 @@ testear los algoritmos de forma aislada y es lo que sostiene la monografía.
 | `angles.ts` | `dmsToDecimal`, `decimalToDms`, `normalizeAzimuth`, `degreesToSeconds`, `cosDeg`, `sinDeg` |
 | `polygonal.ts` | `computePolygonal` — el motor completo |
 | `georeference.ts` | `fitTwoPoints`, `georeferenceInput`, `applyTransform`, `scaleWithinOrder` — georreferenciación rígida desde dos puntos (Fase 15) |
-| `least-squares.ts` | `adjustByConditions` — ajuste por ecuaciones de condición, genérico; `solveLinear`; `sigma0Reading` (Fase 14). Desde la Fase 38 devuelve también `last`, las matrices de su última iteración (A, la diagonal de Q, w, N = A·Q·Aᵀ y k, con N·k = −w), que el ajuste de la poligonal publica en `matrices` con sus observaciones l₀ para el Excel; ningún resultado cambia |
+| `least-squares.ts` | `adjustByConditions` — ajuste por ecuaciones de condición, genérico; `solveLinear`; `sigma0Reading` (Fase 14). Desde la Fase 38 devuelve también `last`, las matrices de su última iteración (A, la diagonal de Q, w, N = A·Q·Aᵀ y k, con N·k = −w), que el ajuste de la poligonal publica en `matrices` con sus observaciones l₀ para el Excel; ningún resultado cambia. Desde la Fase 39, `adjustedCofactor`, `fQuantile2`, `ellipseScale` y `errorEllipse`: la precisión de lo ajustado |
 | `leveling.ts` | `computeLeveling` — libreta, corrección proporcional, cierre, ida y vuelta; `computeLevelingDetected`, `detectLevelingOrder` y `pendingRun` (Fase 36) |
 | `settlement.ts` | `computeSettlements`, `classifyAlert`, `computeTrends`, `detectTrendDeviations`, `computeHistory` |
 | `settlement-book.ts` | La libreta de la visita por tramos, sin compensar (Fase 37): `computeBook`, `tramoStarts`, `bookVerification`, `bookElevations`, `bookTemplate`, `bookPending`, `visitStatusOf`, `auxiliaryPoints`, `bookBenchmarkChecks` |
@@ -1521,6 +1521,13 @@ porque a escala real 1.6 cm sobre 42 m (cartera TT4) ocupan 0.2 px.
 - `exaggerationFactor`: el mayor 1, 2 o 5 × 10ⁿ que lleva el mayor
   desplazamiento al 5 % (`EXAGGERATION_TARGET_FRACTION`) de la extensión,
   nunca menor que 1. Da TT4 ×100, Vivero ×200 y Pentágono ×1.
+- `ellipseFactor` (Fase 39): con mínimos cuadrados, el mismo criterio para las
+  elipses de error al 95 %, con el mayor semieje al 15 %
+  (`ELLIPSE_TARGET_FRACTION`) de la extensión: Vivero ×500. El dibujo las
+  traza en verde (`--color-success`), con el eje mayor girado φ = azimut − 90°
+  porque el SVG gira desde el eje x, y sus medidas a la centésima de píxel: el
+  servidor y el navegador difieren en el decimal 13 de la covarianza y React
+  avisaba al hidratar. El informe usa el mismo componente.
 - `plotFrame`: proporción **1:1** entre Norte y Este (es un plano; escalar los
   ejes aparte deformaría los ángulos), Norte hacia arriba, zoom alrededor de un
   centro.
@@ -1584,6 +1591,22 @@ control, dos lineales más la angular si hay azimut de llegada. El sistema es de
   `SIGMA0_CHI2_95` solo tiene esas dos r, las únicas que da una poligonal
   (`conditions: 2 | 3`). Solo cambia el texto que acompaña a σ₀, que dice r y
   el intervalo con tres decimales, como σ₀; no decide nada.
+- **La precisión de cada punto** (Fase 39): `adjustedCofactor` da el cofactor
+  de las observaciones ajustadas, `Q − Q·Aᵀ·N⁻¹·A·Q`, con las matrices de la
+  última iteración, y `pointPrecision` (en `polygonal.ts`) lo propaga a cada
+  vértice: el punto de la estación i es la partida más los lados 0…i−1, así
+  que su jacobiano es la suma parcial de las mismas filas analíticas de A. La
+  covarianza es `σ₀²·J·Q_l̂·Jᵀ`; `errorEllipse` da los semiejes y el azimut del
+  mayor, y `ellipseScale(r)` el factor `c = √(2·F(0.05, 2, r))` que la lleva al
+  95 % (Ghilani y Wolf, ec. 19.22; `fQuantile2` en forma cerrada, que
+  reproduce su tabla 19.2): 4.37 con r = 3 y 6.16 con r = 2. Va en
+  `adjustment.precision` —`confidence`, `scale` y, por estación, σ N, σ E, la
+  covarianza y la elipse—, con `null` en los puntos fijos: la partida, la
+  vuelta a ella y la llegada conocida. No se persiste, como las correcciones.
+  Se verifica contra un **ajuste paramétrico independiente** escrito en la
+  prueba (Vivero, a la millonésima de milímetro) y contra la propagación por
+  diferencias finitas a través de todo el motor (abierta con control, r = 3 y
+  r = 2).
 
 Sobre la cartera Vivero con los pesos de la hoja (2″, 0.011 m, 2 mediciones)
 reproduce el cálculo independiente del PRD, y no los valores del análisis de
@@ -2671,7 +2694,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1143 tests en 93 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1172 tests en 94 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2680,7 +2703,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/calculations/leveling.test.ts` | 90 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa (Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26); la vuelta compensada en cerrada y de enlace, la cota adoptada y el ejemplo 1 de `docs/math/nivelacion.html` (Fase 28) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
-| `lib/validators/polygonal.test.ts` | 63 | Captura de poligonal, `expectStationCapture`, código de punto obligatorio; pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la captura parcial de una cerrada y `stationCaptureIssues`, que valida el promedio de las lecturas, y la cabecera de un guardado hecho a mano (Fase 35) |
+| `lib/validators/polygonal.test.ts` | 64 | Captura de poligonal, `expectStationCapture`, código de punto obligatorio; pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la captura parcial de una cerrada y `stationCaptureIssues`, que valida el promedio de las lecturas, y la cabecera de un guardado hecho a mano (Fase 35); el aviso de pesos nombra los que faltan, y «las veces que se midió cada distancia» (Fase 39) |
 | `lib/validators/settlement.test.ts` | 33 | Captura de asentamientos; vigencia, regla de la línea base abierta, baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); la fecha entre sus vecinas (Fase 26); el alta en cualquier fecha de calendario (Fase 37, que retiró el cierre, deshacer la baja con visitas cerradas y la alarma que no bloqueaba el cierre); un BM que repite el código de otro del lugar salvo mayúsculas o espacios, y el que se edita no choca consigo mismo (revisión final de la Fase 37) |
 | `lib/validators/leveling.test.ts` | 39 | Captura de nivelación: hilos y su hilo medio, distancias por visual —obligatorias en BM y puntos de cambio, en cero o negativas un error (Fase 26)—, rango de las lecturas; la V+ del BM inicial y la última fila de un recorrido que cierra, salvo con `allowUnfinished`, la libreta a medias de la nivelación (Fase 36); sin avisos de equilibrado, tampoco con la ida de El Verjón (Fase 36); el punto de cambio incompleto: aviso en la celda, y `turningPointBlocker` con su fila, también en la vuelta (Fase 24) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
@@ -2689,7 +2712,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/process-list.test.ts` | 27 | Filtrado, orden y conteo del listado (Fase 22); sin los filtros de cerrados ni de lugares activos y cerrados desde la Fase 37 |
 | `lib/utils/format.test.ts` | 34 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26); la hora del «Guardado», en Bogotá y 24 h (Fase 35) |
 | `lib/calculations/tolerances.test.ts` | 12 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
-| `lib/export/polygonal-workbook.test.ts` | 13 | **El Excel de la poligonal con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor (`formulaMismatches`) con la TT4 por Brújula, Tránsito y Crandall, la abierta con control y la sin control, y la abierta con control por Tránsito y Crandall; la hoja lleva el nombre del método; el orden alcanzado de la TT4 es el detectado; cambiar una distancia recalcula las coordenadas; la georreferenciada con la rotación y la escala como datos; la Vivero por mínimos cuadrados, con fórmulas sobre los ángulos y distancias ajustados, y sin pesos, la hoja dice por qué; el encabezado lleva la ubicación y el responsable del alta |
+| `lib/export/polygonal-workbook.test.ts` | 14 | **El Excel de la poligonal con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor (`formulaMismatches`) con la TT4 por Brújula, Tránsito y Crandall, la abierta con control y la sin control, y la abierta con control por Tránsito y Crandall; la hoja lleva el nombre del método; el orden alcanzado de la TT4 es el detectado; cambiar una distancia recalcula las coordenadas; la georreferenciada con la rotación y la escala como datos; la Vivero por mínimos cuadrados, con fórmulas sobre los ángulos y distancias ajustados, y sin pesos, la hoja dice por qué; el encabezado lleva la ubicación y el responsable del alta; la precisión de cada punto de la Vivero bajo las matrices, con los valores del motor (Fase 39) |
 | `lib/calculations/georeference.test.ts` | 18 | Georreferenciación: la Vivero local llevada al real con D1 y D3 contra el PRD (rotación 35°00′07.8″, coordenadas a 0.1 mm); el veredicto igual con los cuatro métodos; rígido con Bowditch, Crandall y mínimos cuadrados, y Tránsito acotado a 2.66 mm; ajuste exacto y con residuo; redondeos; abierta con control; factor de escala por orden (Fase 15) |
 | `components/polygonal/georeference-plan.test.ts` | 9 | **Ruta** de la georreferenciación desde las filas: columnas de cabecera y estaciones, residuos, amarre a manual, sin columnas de cierre, rechazos, factor de escala de unidades equivocadas, aviso de escala (Fase 15) |
 | `components/polygonal/capture-rows.test.ts` | 12 | Las filas «desde → hacia» (Fase 35): la TT4 con su 0 atrás, el cierre y el cierre angular contra TT4; la Vivero; sin referencia; la abierta con control con su deflexión y su punto de llegada; el punto pendiente; la cerrada local; `fieldTraverse`, lo medido sin ajustar para el dibujo |
@@ -2712,7 +2735,8 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/demo/fixtures.test.ts` | 19 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045) en tercer orden detectado, y la Vivero alcanza segundo orden (Fase 35); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos, en segundo orden detectado, y el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km en primer orden (Fase 36); desde la Fase 38, sin los informes de la demo; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo, y con la regla «dentro de tolerancia» sin compensar cuando no cumple (Fase 28); Torre Alameda sin compensar ni cerrar (Fase 37): ocho puntos, catorce visitas y sus dos BM del lugar, todas calculadas y solo la 9 sin verificación, cada cota a menos del cierre de su visita de la serie, el otro BM que nivela salvo en la visita 13 (Fase 30) y, con el margen fijo, ni avisos de tendencia ni «Acelerando» |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
-| `lib/design/polygonal-plot.test.ts` | 12 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13) |
+| `lib/design/polygonal-plot.test.ts` | 16 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13); el factor de las elipses de error: ×500 en la Vivero, la mayor al 15 % de la extensión, nunca menor que 1 y sin elipses, sin factor (Fase 39) |
+| `lib/calculations/least-squares-precision.test.ts` | 23 | La precisión de cada punto (Fase 39): `fQuantile2` contra la tabla 19.2 de Ghilani al 90, 95 y 99 % y c con r = 1, 2 y 3; `errorEllipse` sin correlación, girada y en [0°, 180°); `adjustedCofactor` con A·Q_l̂·Aᵀ = 0; la Vivero contra un **ajuste paramétrico independiente** (mismo σ₀, σ N, σ E y covarianza a la millonésima de milímetro), los puntos fijos, la elipse al 95 % y la misma Vivero modelada sin amarre; una abierta con control, con r = 3 y r = 2, contra la propagación por diferencias finitas a través del motor |
 | `lib/export/settlement-workbook.test.ts` | 6 | **El Excel de asentamientos con fórmulas vivas** (Fase 38, reescrita, con los casos de `settlement-workbook.fixtures.ts`): toda fórmula da el valor del motor con Torre Alameda, la cartera real y un punto que se salta una visita; ese punto compara contra la última visita en que se midió; cambiar una lectura de la libreta recalcula su cota en la comparación; las hojas Libretas, Comparación y Resumen |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
 | `lib/validators/settlement-book.test.ts` | 10 | Los mensajes de la derivación, con las filas desde 1 (Fase 18); el de la comprobación de un BM, que no culpa a ninguno (Fase 30); `validateBook` (Fase 37): la libreta vacía, cada tramo desde un BM del lugar, las lecturas por leer no son error, la distancia opcional y una tecleada que no puede ser cero, y un valor que no es número |
