@@ -170,10 +170,10 @@ export function PolygonalReportSection({ data }: { data: PolygonalSectionData })
       ) : !calculated ? (
         <p className="report-text">
           {result.adjustment?.status === "missing_weights"
-            ? "Sin ajuste: faltan los pesos de mínimos cuadrados."
+            ? "Sin ajuste: no se declararon las precisiones a priori de los ángulos y las distancias, que pesan el ajuste por mínimos cuadrados."
             : result.adjustment?.status === "unadjustable"
               ? "Sin ajuste: la geometría de la poligonal no permite el ajuste por mínimos cuadrados."
-              : "La poligonal no está completa: el informe muestra lo capturado."}
+              : "Poligonal incompleta: se presentan los datos de campo, sin ajustar."}
         </p>
       ) : verifiable && !order ? (
         <p className="report-alert">

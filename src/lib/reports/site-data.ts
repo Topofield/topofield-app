@@ -58,7 +58,7 @@ export interface SiteReport {
   notes: { visitNumber: number; date: string; text: string }[];
   warnings: string[];
   /** Las visitas en medición, que no entran hasta terminarse. */
-  inProgress: number[];
+  inProgress: { visitNumber: number; date: string }[];
 }
 
 const LEVEL_NAMES: Record<Exclude<AlertLevel, "normal">, string> = {
@@ -87,7 +87,8 @@ export function siteReportOf({
 }): SiteReport {
   const ordered = [...visits].sort((a, b) => a.date.localeCompare(b.date) || a.visitNumber - b.visitNumber);
   const calculated = ordered.filter((v) => v.status === "calculated");
-  const inProgress = ordered.filter((v) => v.status === "in_progress").map((v) => v.visitNumber);
+  const inProgress = ordered.filter((v) => v.status === "in_progress")
+    .map((v) => ({ visitNumber: v.visitNumber, date: v.date }));
   const history = computeHistory(
     points,
     calculated.map((v) => ({ id: v.id, visitNumber: v.visitNumber, date: v.date, readings: v.readings })),

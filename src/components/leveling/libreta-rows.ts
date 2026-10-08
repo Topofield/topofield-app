@@ -163,9 +163,13 @@ export function formatReading(value: number | null, decimals?: 3 | 4): string {
  * Por qué la libreta no encadena, o `null` (revisión final de la Fase 36): un
  * punto de cambio sin una de sus lecturas —con su fila y su recorrido— o una
  * comprobación aritmética que no cuadra. Con ella no hay orden ni
- * compensación (`computeLevelingDetected`).
+ * compensación (`computeLevelingDetected`). Para el informe (`"report"`), sin
+ * dirigirse al usuario (Fase 40).
  */
-export function libretaBlocker(result: Pick<LevelingResult, "forward" | "return" | "arithmeticCheckOk">): string | null {
+export function libretaBlocker(
+  result: Pick<LevelingResult, "forward" | "return" | "arithmeticCheckOk">,
+  audience: "app" | "report" = "app",
+): string | null {
   const runs: [string, RunResult][] = result.return
     ? [
         [" de la ida", result.forward],
@@ -180,7 +184,10 @@ export function libretaBlocker(result: Pick<LevelingResult, "forward" | "return"
   }
   if (!result.arithmeticCheckOk) {
     const where = result.return ? (result.forward.arithmeticCheckOk ? " de la vuelta" : " de la ida") : "";
-    return `La comprobación aritmética${where} no cuadra: Σ V+ − Σ V− no da el desnivel. Revisa la libreta; mientras tanto no se compensa.`;
+    const head = `La comprobación aritmética${where} no cuadra: Σ V+ − Σ V− no da el desnivel`;
+    return audience === "report"
+      ? `${head}, y la nivelación no se compensa.`
+      : `${head}. Revisa la libreta; mientras tanto no se compensa.`;
   }
   return null;
 }

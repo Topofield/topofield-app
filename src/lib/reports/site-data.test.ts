@@ -33,7 +33,7 @@ describe("siteReportOf (Fase 37, decisión 21)", () => {
   it("solo entran las visitas calculadas; las que están en medición se nombran aparte", () => {
     const r = report([visit(1, "2025-01-01", 100), visit(2, "2025-01-31", 99.997, { status: "in_progress" })]);
     expect(r.rows.map((x) => x.visitNumber)).toEqual([1]);
-    expect(r.inProgress).toEqual([2]);
+    expect(r.inProgress.map((v) => v.visitNumber)).toEqual([2]);
   });
 
   it("cada visita lleva su verificación y la primera es la base", () => {

@@ -46,9 +46,9 @@ export function precisionSummaryRows(sections: ReportSection[]): PrecisionSummar
           ? `Δ ${fixed(result.discrepancyMm, 1)} mm`
           : `${formatSignedMm(result.closureErrorMm)} mm`;
       precision = broken
-        ? "Libreta con errores"
+        ? "Cartera con errores"
         : pending
-          ? "Libreta a medias"
+          ? "Incompleta"
           : verifiable
           ? `${error} · ${order ? PRECISION_ORDER_LABELS[order] : "ningún orden"}`
           : "Sin verificación";

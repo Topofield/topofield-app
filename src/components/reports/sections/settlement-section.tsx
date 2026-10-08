@@ -11,7 +11,7 @@ const signed = (v: { code: string; value: number } | null) => (v ? `${formatSign
  * Cuerpo de la sección de un lugar (Fase 37, lienzo «Informe del lugar»): el
  * veredicto, cómo se calcula, la evolución, las visitas, los puntos de la
  * última, las notas y los avisos. Informa las visitas calculadas; las que
- * están en medición se nombran aparte.
+ * están en medición se nombran aparte, como no incluidas.
  */
 export function SettlementReportSection({ data }: { data: SiteSectionData }) {
   const { site, points, pointInputs, visits, report } = data;
@@ -28,6 +28,8 @@ export function SettlementReportSection({ data }: { data: SiteSectionData }) {
       : `${points.length} (${bajas.length} de baja: ${bajas
           .map((p) => `${p.code}, desde el ${formatDateOnly(p.retired_on!)}`)
           .join("; ")})`;
+  // Las visitas sin terminar no entran: se nombran con su fecha (Fase 40).
+  const visitLabels = report.inProgress.map((v) => `${v.visitNumber} (${formatDateOnly(v.date)})`);
   const first = report.rows[0];
   const last = report.rows.at(-1);
 
@@ -69,8 +71,8 @@ export function SettlementReportSection({ data }: { data: SiteSectionData }) {
       {report.inProgress.length > 0 && (
         <p className="report-footnote">
           {report.inProgress.length === 1
-            ? `La visita ${report.inProgress[0]} está en medición: entra al informe cuando se termine.`
-            : `Las visitas ${report.inProgress.join(", ")} están en medición: entran al informe cuando se terminen.`}
+            ? `La visita ${visitLabels[0]} no se incluye: su medición está incompleta.`
+            : `Las visitas ${new Intl.ListFormat("es", { type: "conjunction" }).format(visitLabels)} no se incluyen: su medición está incompleta.`}
         </p>
       )}
 
