@@ -47,6 +47,8 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 35 | La poligonal como la mide el topógrafo | [`prds/34-ux-poligonal.md`](./prds/34-ux-poligonal.md) | cerrada |
 | 36 | La nivelación como la mide el topógrafo | [`prds/35-ux-nivelacion.md`](./prds/35-ux-nivelacion.md) | cerrada |
 | 37 | Los asentamientos como los mide el topógrafo | [`prds/36-ux-asentamientos.md`](./prds/36-ux-asentamientos.md) | cerrada |
+| 38 | El informe de cada proceso | [`prds/37-informe-por-proceso.md`](./prds/37-informe-por-proceso.md) | cerrada |
+| 39 | Mínimos cuadrados: requisitos y precisión de cada punto | [`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md) | en curso |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
