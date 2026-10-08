@@ -8,6 +8,8 @@ type MathMLProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HT
   mathvariant?: string;
   width?: string;
   stretchy?: "true" | "false";
+  /** `mover`: el elemento de encima es un acento (Fase 39, «l̂»). */
+  accent?: "true" | "false";
 };
 
 declare module "react" {
@@ -25,6 +27,7 @@ declare module "react" {
       msubsup: MathMLProps;
       msqrt: MathMLProps;
       munder: MathMLProps;
+      mover: MathMLProps;
       mspace: MathMLProps;
       mtable: MathMLProps;
       mtr: MathMLProps;

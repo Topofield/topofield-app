@@ -611,6 +611,36 @@ function writeLeastSquares(
   matrix("N = A·Q·Aᵀ", m.N);
   matrix("k", m.k.map((x) => [x]));
   matrix("v", [v]);
+
+  // --- La precisión de cada punto (Fase 39): valores de la app, como las matrices ------
+  const pr = adj.precision;
+  r += 1;
+  putLabel(
+    ws,
+    1,
+    r++,
+    `Precisión de cada punto: σ (1σ) con el σ₀ del ajuste, y elipse de error al ${Math.round(pr.confidence * 100)} %, ` +
+      `estándar × c = ${pr.scale.toFixed(3)} con r = ${adj.conditions} (Ghilani y Wolf, ec. 19.22)`,
+    "section",
+  );
+  ["Punto", "σ N (mm)", "σ E (mm)", "Semieje mayor (mm)", "Semieje menor (mm)", "Azimut del mayor (°)"].forEach((h, c) =>
+    putLabel(ws, 1 + c, r, h, "header"),
+  );
+  r += 1;
+  st.forEach((s, i) => {
+    const p = pr.stations[i];
+    putValue(ws, 1, r, s.pointCode);
+    if (!p) {
+      putValue(ws, 2, r, "Punto fijo");
+    } else {
+      putValue(ws, 2, r, p.sigmaNorth * 1000, FMT.mm);
+      putValue(ws, 3, r, p.sigmaEast * 1000, FMT.mm);
+      putValue(ws, 4, r, p.ellipse.semiMajor * 1000, FMT.mm);
+      putValue(ws, 5, r, p.ellipse.semiMinor * 1000, FMT.mm);
+      putValue(ws, 6, r, p.ellipse.majorAzimuth, FMT.dec);
+    }
+    r += 1;
+  });
   return r;
 }
 

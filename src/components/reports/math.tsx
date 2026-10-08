@@ -43,6 +43,15 @@ export const Row = ({ children }: Children) => <mrow>{children}</mrow>;
 export const Gap = () => <mspace width="1.2em" />;
 /** Espacio fino, entre una función y su argumento: «cos Az». */
 export const Thin = () => <mspace width="0.17em" />;
+/** Un acento circunflejo encima: «l̂», lo ajustado (Fase 39). */
+export function Hat({ children }: Children) {
+  return (
+    <mover accent="true">
+      {children}
+      <mo>^</mo>
+    </mover>
+  );
+}
 
 export function Frac({ num, den }: { num: ReactNode; den: ReactNode }) {
   return (

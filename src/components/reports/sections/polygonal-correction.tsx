@@ -14,7 +14,7 @@ import {
   type PolygonalInput,
   type PolygonalResult,
 } from "@/types/polygonal";
-import { Formula, Frac, Gap, MathLine, Matrix, Mi, Mn, Mo, Mtext, Num, Row, Sqrt, Sub, SubSup, Sum, Sup, Thin } from "../math";
+import { Formula, Frac, Gap, Hat, MathLine, Matrix, Mi, Mn, Mo, Mtext, Num, Row, Sqrt, Sub, SubSup, Sum, Sup, Thin } from "../math";
 
 interface CorrectionProps {
   input: PolygonalInput;
@@ -652,8 +652,113 @@ function LeastSquares({ b, ...p }: CorrectionProps & { b: Extract<CorrectionBrea
             ]}
           />
           <p className="report-text">{reading!.text}</p>
+          <PointPrecision adj={adj} result={p.result} angleFormat={angleFormat} />
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * La precisión de cada punto ajustado (Fase 39): la covarianza propagada desde
+ * las observaciones ajustadas y la elipse de error al 95 %, como en Ajuste.
+ */
+function PointPrecision({
+  adj,
+  result,
+  angleFormat,
+}: {
+  adj: Extract<NonNullable<PolygonalResult["adjustment"]>, { status: "adjusted" }>;
+  result: PolygonalResult;
+  angleFormat: AngleInputFormat;
+}) {
+  const pr = adj.precision;
+  const level = Math.round(pr.confidence * 100);
+  const mmOf = (m: number) => (m * 1000).toFixed(1);
+  return (
+    <>
+      <h4>Precisión de cada punto</h4>
+      <p className="report-text">
+        La covarianza de cada punto sale de propagar la de las observaciones ajustadas, con el σ₀ del ajuste. La elipse
+        de error al {level} % es la estándar multiplicada por c, que depende de la redundancia r (Ghilani y Wolf,{" "}
+        <em>Adjustment Computations</em>, ec. 19.22). Con las pocas condiciones de una poligonal simple, c es grande.
+      </p>
+      <Formula>
+        <MathLine>
+          <Sub base={<Mi>Q</Mi>} sub={<Hat><Mi>l</Mi></Hat>} />
+          <Mo>=</Mo>
+          <Mi>Q</Mi>
+          <Mo>−</Mo>
+          <Mi>Q</Mi>
+          <Sup base={<Mi>A</Mi>} sup={<Mi>T</Mi>} />
+          <Sup base={<Row><Mo>(</Mo><Mi>A</Mi><Mi>Q</Mi><Sup base={<Mi>A</Mi>} sup={<Mi>T</Mi>} /><Mo>)</Mo></Row>} sup={<><Mo>−</Mo><Mn>1</Mn></>} />
+          <Mi>A</Mi>
+          <Mi>Q</Mi>
+          <Gap />
+          <Sub base={<Mi>Σ</Mi>} sub={<><Mi>N</Mi><Mi>E</Mi></>} />
+          <Mo>=</Mo>
+          <SubSup base={<Mi>σ</Mi>} sub={<Mn>0</Mn>} sup={<Mn>2</Mn>} />
+          <Mi>J</Mi>
+          <Sub base={<Mi>Q</Mi>} sub={<Hat><Mi>l</Mi></Hat>} />
+          <Sup base={<Mi>J</Mi>} sup={<Mi>T</Mi>} />
+        </MathLine>
+        <MathLine>
+          <Mi>c</Mi>
+          <Mo>=</Mo>
+          <Sqrt>
+            <Mn>2</Mn>
+            <Mi>F</Mi>
+            <Row>
+              <Mo>(</Mo>
+              <Mn>0.05</Mn>
+              <Mo>,</Mo>
+              <Mn>2</Mn>
+              <Mo>,</Mo>
+              <Mi>r</Mi>
+              <Mo>)</Mo>
+            </Row>
+          </Sqrt>
+          <Mo>=</Mo>
+          <Mn>{pr.scale.toFixed(2)}</Mn>
+          <Gap />
+          <Mi>r</Mi>
+          <Mo>=</Mo>
+          <Mn>{adj.conditions}</Mn>
+        </MathLine>
+      </Formula>
+      <table className="report-table">
+        <thead>
+          <tr>
+            <th>Punto</th>
+            <th className="num">σ N (mm)</th>
+            <th className="num">σ E (mm)</th>
+            <th className="num">Semieje mayor (mm)</th>
+            <th className="num">Semieje menor (mm)</th>
+            <th className="num">Azimut del mayor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {result.stations.map((s, i) => {
+            const pt = pr.stations[i];
+            return (
+              <tr key={i}>
+                <td>{s.pointCode}</td>
+                {pt ? (
+                  <>
+                    <td className="num">{mmOf(pt.sigmaNorth)}</td>
+                    <td className="num">{mmOf(pt.sigmaEast)}</td>
+                    <td className="num">{mmOf(pt.ellipse.semiMajor)}</td>
+                    <td className="num">{mmOf(pt.ellipse.semiMinor)}</td>
+                    <td className="num">{formatAngle(pt.ellipse.majorAzimuth, angleFormat)}</td>
+                  </>
+                ) : (
+                  <td colSpan={5}>Punto fijo: sin elipse.</td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </>
   );
 }
