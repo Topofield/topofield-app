@@ -171,7 +171,14 @@ export function buildPolygonalWorkbook({
   const blockRow = sumRow + 2;
 
   let end = blockRow + 1;
-  if (computed) {
+  const adjustment = result.adjustment;
+  if (input.method === "least_squares") {
+    if (adjustment?.status === "adjusted" && result.stations.some((s) => finite(s.north))) {
+      end = writeLeastSquares(ws, { input, detected, row, sideCount, startAz, sumRow, blockRow, next, dirCol, adjustment });
+    } else {
+      putLabel(ws, P.station, blockRow, leastSquaresReason(adjustment), "section");
+    }
+  } else if (computed) {
     end = writeComputation(ws, { input, detected, row, sideCount, startAz, sumRow, blockRow, next, dirCol, rawCol, observed, doAngular });
   } else {
     putLabel(ws, P.station, blockRow, "Datos incompletos: el cálculo aparece al completar la poligonal.", "section");
@@ -451,6 +458,155 @@ function writeCrandall(
     putFormula(ws, P.kN, r, `${at(dd, r)}*${at(P.pN, r)}/${at(P.dist, r)}`, (deltaD * q) / d, FMT.coord);
     putFormula(ws, P.kE, r, `${at(dd, r)}*${at(P.pE, r)}/${at(P.dist, r)}`, (deltaD * e) / d, FMT.coord);
   }
+}
+
+type Adjusted = Extract<NonNullable<Detected["result"]["adjustment"]>, { status: "adjusted" }>;
+
+function leastSquaresReason(adjustment: Detected["result"]["adjustment"]): string {
+  if (!adjustment || adjustment.status === "missing_weights") {
+    return "Sin pesos del ajuste: se teclean en los datos de la poligonal (σ angular, σ de distancia y mediciones).";
+  }
+  if (adjustment.status === "unadjustable") {
+    const why = {
+      one_side: "una abierta de un solo lado no tiene redundancia",
+      singular: "el sistema es singular",
+      not_converged: "no convergió",
+    }[adjustment.reason];
+    return `El ajuste no se pudo hacer: ${why}.`;
+  }
+  return "Datos incompletos: el cálculo aparece al completar la poligonal.";
+}
+
+/** Un valor de la app que no es dato medido ni fórmula: sin el fondo de los datos. */
+function putValue(ws: ExcelJS.Worksheet, c: number, r: number, value: number | string, fmt?: string): string {
+  const cell = ws.getCell(r, c);
+  cell.value = value;
+  if (fmt) cell.numFmt = fmt;
+  return at(c, r);
+}
+
+/**
+ * Mínimos cuadrados (Fase 14): los ángulos y distancias ajustados son las
+ * observaciones más sus correcciones v, que son de la app; los azimuts, las
+ * proyecciones y las coordenadas salen de ellos con fórmulas. Las matrices de
+ * la última iteración van como valores, como los bloques de la hoja de la
+ * universidad: la app itera hasta converger y una pasada de Excel no lo hace.
+ */
+function writeLeastSquares(
+  ws: ExcelJS.Worksheet,
+  a: {
+    input: PolygonalInput;
+    detected: Detected;
+    row: (i: number) => number;
+    sideCount: number;
+    startAz: string;
+    sumRow: number;
+    blockRow: number;
+    next: number;
+    dirCol: number;
+    adjustment: Adjusted;
+  },
+): number {
+  const { input, detected, row, sideCount, startAz, sumRow, blockRow, adjustment: adj } = a;
+  const { result } = detected;
+  const st = result.stations;
+  const n = input.stations.length;
+  const isClosed = input.type === "closed";
+  const vCol = a.next;
+  const dAdjCol = a.next + 1;
+  const dirOf = (r: number) => (a.dirCol ? `IF(${at(a.dirCol, r)}="I",-1,1)` : "1");
+  putLabel(ws, vCol, row(-2), "v DIST. (m)", "header");
+  putLabel(ws, dAdjCol, row(-2), "DIST. AJUSTADA", "header");
+
+  // --- Ángulos ajustados y azimuts ----------------------------------------------------
+  input.stations.forEach((s, i) => {
+    const r = row(i);
+    const corrSec = adj.angleCorrectionsSec[i];
+    if (finite(s.angle)) {
+      if (isClosed) {
+        const adjusted = st[i]?.correctedAngle ?? s.angle;
+        if (corrSec != null) putValue(ws, P.corr, r, corrSec / 3600, FMT.dec);
+        const dec = putFormula(ws, P.cDec, r, corrSec != null ? `${at(P.aDec, r)}+${at(P.corr, r)}` : at(P.aDec, r), adjusted, FMT.dec);
+        writeDmsOf(ws, r, [P.cG, P.cM, P.cS], dec, adjusted);
+      } else if (i > 0 && corrSec != null) {
+        const sign = s.deflectionDirection === "left" ? -1 : 1;
+        putValue(ws, P.corr, r, corrSec / 3600, FMT.dec);
+        putFormula(ws, P.cDec, r, `${dirOf(r)}*(${at(P.aDec, r)}+${at(P.corr, r)})`, sign * (s.angle + corrSec / 3600), FMT.dec);
+      }
+    }
+    const az = st[i]?.azimuth;
+    if (!finite(az)) return;
+    let formula: string;
+    if (i === 0) {
+      formula = input.hasOrientation ? `MOD(${startAz}+${isClosed ? at(P.cDec, r) : at(P.aDec, r)},360)` : startAz;
+    } else if (isClosed) {
+      formula = `MOD(${at(P.zDec, row(i - 1))}+180+${at(P.cDec, r)},360)`;
+    } else {
+      formula = `MOD(${at(P.zDec, row(i - 1))}+${at(P.cDec, r)},360)`;
+    }
+    const dec = putFormula(ws, P.zDec, r, formula, az, FMT.dec);
+    writeDmsOf(ws, r, [P.zG, P.zM, P.zS], dec, az);
+  });
+
+  // --- Distancias ajustadas, proyecciones y coordenadas -----------------------------------
+  for (let i = 0; i < sideCount; i++) {
+    const r = row(i);
+    putValue(ws, vCol, r, adj.distanceCorrectionsM[i] ?? 0, FMT.coord);
+    putFormula(ws, dAdjCol, r, `${at(P.dist, r)}+${at(vCol, r)}`, adj.adjustedDistances[i] ?? null, FMT.coord);
+    putFormula(ws, P.pN, r, `${at(dAdjCol, r)}*COS(RADIANS(${at(P.zDec, r)}))`, st[i]!.correctedDeltaNorth, FMT.coord);
+    putFormula(ws, P.pE, r, `${at(dAdjCol, r)}*SIN(RADIANS(${at(P.zDec, r)}))`, st[i]!.correctedDeltaEast, FMT.coord);
+    putFormula(ws, P.uN, r, at(P.pN, r), st[i]!.correctedDeltaNorth, FMT.coord);
+    putFormula(ws, P.uE, r, at(P.pE, r), st[i]!.correctedDeltaEast, FMT.coord);
+  }
+  for (let i = 1; i <= Math.min(sideCount, n - 1); i++) {
+    const r = row(i);
+    putFormula(ws, P.north, r, `${at(P.north, row(i - 1))}+${at(P.uN, row(i - 1))}`, st[i]!.north, FMT.coord);
+    putFormula(ws, P.east, r, `${at(P.east, row(i - 1))}+${at(P.uE, row(i - 1))}`, st[i]!.east, FMT.coord);
+  }
+  putLabel(ws, P.station, sumRow, "SUMATORIA", "section");
+  const first = row(0);
+  const lastSide = row(sideCount - 1);
+  putFormula(ws, P.dist, sumRow, `SUM(${at(P.dist, first)}:${at(P.dist, lastSide)})`, result.perimeter, FMT.coord);
+
+  // --- El cierre antes del ajuste, con el que se juzga (valores de la app) ----------------
+  let r = blockRow;
+  putLabel(ws, 1, r++, "Cierre antes del ajuste (valores de la app: con él se juzga el orden)", "section");
+  let angularErr: string | null = null;
+  let angularN: string | null = null;
+  if (finite(result.angularError) && result.angularConditionCount != null) {
+    putLabel(ws, 1, r, "Ángulos en la condición");
+    angularN = putValue(ws, 4, r++, result.angularConditionCount);
+    putLabel(ws, 1, r, "Error angular (″)");
+    angularErr = putValue(ws, 4, r++, result.angularError, FMT.sec);
+  }
+  putLabel(ws, 1, r, "Error lineal (m)");
+  putValue(ws, 4, r++, result.linearError ?? "", FMT.coord);
+  putLabel(ws, 1, r, "Precisión (1:X)");
+  const rel = result.relativePrecision;
+  const precision = putValue(ws, 4, r++, rel === Infinity ? "∞" : (rel ?? ""), FMT.ratio);
+  const orderEnd = writeOrder(ws, { input, detected, blockRow, angularErr, angularN, precision });
+
+  // --- Las matrices de la última iteración --------------------------------------------------
+  r = Math.max(r, orderEnd) + 2;
+  const m = adj.matrices;
+  putLabel(ws, 1, r++, `Matrices de la última iteración del ajuste (${adj.iterations} iteraciones; σ₀ = ${adj.sigma0.toFixed(3)})`, "section");
+  putLabel(ws, 1, r++, "Observaciones en radianes (ángulos) y metros (distancias), en el orden del modelo.");
+  const matrix = (title: string, rows: number[][]) => {
+    putLabel(ws, 1, r++, title, "section");
+    for (const line of rows) {
+      line.forEach((x, c) => putValue(ws, 1 + c, r, x, "0.000000000"));
+      r += 1;
+    }
+  };
+  const v = m.q.map((qx, x) => qx * m.A.reduce((acc, line, i) => acc + line[x]! * m.k[i]!, 0));
+  matrix("Observaciones l₀", [m.observations]);
+  matrix("Matriz A", m.A);
+  matrix("Q (diagonal)", [m.q]);
+  matrix("w", m.w.map((x) => [x]));
+  matrix("N = A·Q·Aᵀ", m.N);
+  matrix("k", m.k.map((x) => [x]));
+  matrix("v", [v]);
+  return r;
 }
 
 /** Las tolerancias por orden y el orden alcanzado, con la regla de `detectPrecisionOrder`. */

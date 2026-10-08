@@ -84,4 +84,22 @@ describe("Excel de la poligonal — fórmulas contra el motor", () => {
     ws.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
     expect(textos).toEqual(expect.arrayContaining(["Georreferenciación", "Rotación (°)", "Escala"]));
   });
+
+  it("la Vivero por mínimos cuadrados: fórmulas sobre los ángulos y distancias ajustados", () => {
+    const vivero = PROCESOS_DEMO.find((p) => p.name === "Poligonal Famarena — Sede Vivero")!;
+    const wb = libro(vivero, "least_squares");
+    expect(wb.worksheets[0]!.name).toBe("MÍNIMOS CUADRADOS");
+    expect(formulaMismatches(wb)).toEqual([]);
+    const textos: string[] = [];
+    wb.worksheets[0]!.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
+    expect(textos).toEqual(expect.arrayContaining(["Matriz A", "N = A·Q·Aᵀ", "k", "v"]));
+  });
+
+  it("mínimos cuadrados sin pesos: la hoja dice por qué no hay ajuste", () => {
+    const vivero = PROCESOS_DEMO.find((p) => p.name === "Poligonal Famarena — Sede Vivero")!;
+    const wb = libro({ ...vivero, leastSquares: undefined }, "least_squares");
+    const textos: string[] = [];
+    wb.worksheets[0]!.eachRow((row) => row.eachCell((c) => { if (typeof c.value === "string") textos.push(c.value); }));
+    expect(textos.some((t) => t.startsWith("Sin pesos del ajuste"))).toBe(true);
+  });
 });
