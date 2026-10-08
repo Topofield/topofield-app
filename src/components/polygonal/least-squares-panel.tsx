@@ -1,6 +1,7 @@
 import { Alert, NumberInput } from "@/components/design-system";
 import { sigma0Interval, sigma0Reading } from "@/lib/calculations/least-squares";
-import type { PolygonalResult } from "@/types/polygonal";
+import type { AngleInputFormat, PolygonalResult } from "@/types/polygonal";
+import { formatAngle } from "./angle-format";
 import type { LeastSquaresWeightsDraft } from "./polygonal-draft";
 
 const SIGMA0_TEXT = {
@@ -152,6 +153,96 @@ export function LeastSquaresPanel({ result }: { result: PolygonalResult }) {
           σ₀ compara lo medido con los pesos supuestos. Con r = {adjustment.conditions} condiciones, la prueba χ² al 95 %
           espera σ₀ entre {bounds[0]} y {bounds[1]}.
         </p>
+      </div>
+    </div>
+  );
+}
+
+const mmText = (meters: number) => (meters * 1000).toFixed(1);
+
+/**
+ * La precisión de cada punto ajustado (Fase 39): σ Norte y σ Este (1σ) y la
+ * elipse de error al 95 %, con el c y la r que la escalan (Ghilani, ec.
+ * 19.22). Los puntos fijos —la partida, la vuelta a ella o la llegada
+ * conocida— no tienen elipse.
+ */
+export function PointPrecisionTable({
+  result,
+  angleFormat,
+}: {
+  result: PolygonalResult;
+  angleFormat: AngleInputFormat;
+}) {
+  const adjustment = result.adjustment;
+  if (adjustment?.status !== "adjusted") return null;
+  const { precision } = adjustment;
+  const level = Math.round(precision.confidence * 100);
+  // Un semieje menor nulo: el punto solo se mueve a lo largo del primer lado,
+  // cuyo azimut es datum.
+  const flat = precision.stations.some((p) => p !== null && p.ellipse.semiMajor > 0 && p.ellipse.semiMinor < 1e-6);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-rule text-right text-xs text-ink-2">
+              <th scope="col" className="py-2 pr-3 text-left font-medium">
+                Punto
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                σ N (mm)
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                σ E (mm)
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                Semieje mayor (mm)
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                Semieje menor (mm)
+              </th>
+              <th scope="col" className="py-2 font-medium">
+                Azimut del mayor
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.stations.map((s, i) => {
+              const p = precision.stations[i];
+              const code = s.pointCode || `E${i + 1}`;
+              return (
+                <tr key={i} className="border-b border-rule text-right tabular-nums">
+                  <td className="py-2 pr-3 text-left font-semibold">{code}</td>
+                  {p ? (
+                    <>
+                      <td className="py-2 pr-3">{mmText(p.sigmaNorth)}</td>
+                      <td className="py-2 pr-3">{mmText(p.sigmaEast)}</td>
+                      <td className="py-2 pr-3">{mmText(p.ellipse.semiMajor)}</td>
+                      <td className="py-2 pr-3">{mmText(p.ellipse.semiMinor)}</td>
+                      <td className="py-2">{formatAngle(p.ellipse.majorAzimuth, angleFormat)}</td>
+                    </>
+                  ) : (
+                    <td colSpan={5} className="py-2 text-left text-ink-2">
+                      Punto fijo: sin elipse.
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="max-w-xl text-xs text-ink-2">
+        <p>
+          σ N y σ E son desviaciones típicas (1σ), con el σ₀ del ajuste. Las elipses son al {level} %: la estándar por c ={" "}
+          {precision.scale.toFixed(2)}, con r = {adjustment.conditions} condiciones (Ghilani y Wolf, ec. 19.22). Con tan
+          pocas condiciones, c es grande: una poligonal simple se comprueba solo con su cierre.
+        </p>
+        {flat && (
+          <p className="mt-1">
+            Un semieje menor de 0 es un punto que solo se mueve a lo largo del primer lado: el azimut de ese lado es fijo.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { azimuthFromCoordinates, dmsToDecimal } from "@/lib/calculations/angles"
 import { CARTERA_TT4, CARTERA_VIVERO, type Cartera } from "@/lib/demo/carteras";
 import type { PolygonalInput, StationInput } from "@/types/polygonal";
 import {
+  ellipseFactor,
   exaggeratedPoints,
   exaggerationFactor,
   niceFloor,
@@ -155,5 +156,47 @@ describe("plotFrame", () => {
 describe("scaleBarMeters", () => {
   it("da una longitud redonda cercana al ancho pedido", () => {
     expect(scaleBarMeters(0.07, 100)).toBe(5);
+  });
+});
+
+// Fase 39: las elipses de error se dibujan exageradas, como lo sin compensar.
+describe("ellipseFactor", () => {
+  const vivero = {
+    ...fromCartera(CARTERA_VIVERO),
+    method: "least_squares" as const,
+    leastSquares: { sigmaAngleSeconds: 2, sigmaDistanceM: 0.011, distanceMeasurements: 2 },
+  };
+  const r = computePolygonal(vivero);
+  const precision = r.adjustment?.status === "adjusted" ? r.adjustment.precision : null;
+
+  it("cartera Vivero con los pesos de la hoja: ×500 —la mayor, de 21 mm, queda en unos 10 m—", () => {
+    expect(ellipseFactor(polygonalTraces(vivero, r)!, precision!)).toBe(500);
+  });
+
+  it("lleva la mayor elipse al 15 % de la extensión, con un número redondo", () => {
+    const traces = polygonalTraces(vivero, r)!;
+    const k = ellipseFactor(traces, precision!)!;
+    const largest = Math.max(...precision!.stations.map((p) => p?.ellipse.semiMajor ?? 0));
+    const norths = traces.map((t) => t.adjusted.north);
+    const easts = traces.map((t) => t.adjusted.east);
+    const extent = Math.max(Math.max(...norths) - Math.min(...norths), Math.max(...easts) - Math.min(...easts));
+    expect(k * largest).toBeLessThanOrEqual(0.15 * extent);
+    expect(niceFloor(k)).toBe(k);
+  });
+
+  it("nunca encoge una elipse que ya se ve", () => {
+    const enorme = {
+      ...precision!,
+      stations: precision!.stations.map((p) => (p ? { ...p, ellipse: { ...p.ellipse, semiMajor: 50 } } : null)),
+    };
+    expect(ellipseFactor(polygonalTraces(vivero, r)!, enorme)).toBe(1);
+  });
+
+  it("sin elipses —un ajuste perfecto, con σ₀ = 0— no hay factor", () => {
+    const nulas = {
+      ...precision!,
+      stations: precision!.stations.map((p) => (p ? { ...p, ellipse: { semiMajor: 0, semiMinor: 0, majorAzimuth: 0 } } : null)),
+    };
+    expect(ellipseFactor(polygonalTraces(vivero, r)!, nulas)).toBeNull();
   });
 });

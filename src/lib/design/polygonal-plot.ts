@@ -6,6 +6,7 @@
 // renderizar.
 
 import type { TracePoint } from "@/lib/calculations/polygonal";
+import type { AdjustedPrecision } from "@/types/polygonal";
 
 /**
  * Qué fracción de la extensión del dibujo ocupa el mayor desplazamiento una vez
@@ -55,6 +56,35 @@ export function exaggerationFactor(traces: TracePoint[]): number | null {
     Math.max(...easts) - Math.min(...easts),
   );
   const raw = (EXAGGERATION_TARGET_FRACTION * extent) / maxShift;
+  return raw < 1 ? 1 : niceFloor(raw);
+}
+
+/**
+ * Qué fracción de la extensión del dibujo ocupa el semieje mayor de la mayor
+ * elipse de error, una vez exagerada (Fase 39, decisión 6). Tres veces lo sin
+ * compensar: una elipse se lee por su forma, y como el factor baja al número
+ * redondo, con un 10 % la de Vivero quedaba en un 4.6 % de la extensión,
+ * del tamaño de un vértice.
+ */
+export const ELLIPSE_TARGET_FRACTION = 0.15;
+
+/**
+ * Factor ×k con que se dibujan las elipses de error: el mayor número redondo
+ * que lleva el mayor semieje al 15 % de la extensión de la poligonal, nunca
+ * menor que 1. `null` si no hay elipse que dibujar: sin mínimos cuadrados, o un
+ * ajuste perfecto (σ₀ = 0).
+ */
+export function ellipseFactor(traces: TracePoint[], precision: AdjustedPrecision): number | null {
+  const largest = Math.max(0, ...precision.stations.map((p) => p?.ellipse.semiMajor ?? 0));
+  // 1 µm, como en lo sin compensar: por debajo es residuo de coma flotante.
+  if (largest < 1e-6) return null;
+  const norths = traces.map((t) => t.adjusted.north);
+  const easts = traces.map((t) => t.adjusted.east);
+  const extent = Math.max(
+    Math.max(...norths) - Math.min(...norths),
+    Math.max(...easts) - Math.min(...easts),
+  );
+  const raw = (ELLIPSE_TARGET_FRACTION * extent) / largest;
   return raw < 1 ? 1 : niceFloor(raw);
 }
 

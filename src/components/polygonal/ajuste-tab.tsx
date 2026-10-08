@@ -19,7 +19,7 @@ import { AdjustedTable } from "./adjusted-table";
 import { formatSeconds } from "./angle-format";
 import { GeoreferenceDialog } from "./georeference-dialog";
 import { georeferenceSummary } from "./georeference-plan";
-import { LeastSquaresPanel, LeastSquaresWeightsFields } from "./least-squares-panel";
+import { LeastSquaresPanel, LeastSquaresWeightsFields, PointPrecisionTable } from "./least-squares-panel";
 import { OrderVerdict } from "./order-verdict";
 import { PolygonalPlotViewer } from "./polygonal-plot-viewer";
 import { typedWeights, weightsFromDraft, type LeastSquaresWeightsDraft } from "./polygonal-draft";
@@ -300,6 +300,11 @@ export function AjusteTab({ process, stations, referencePoints, angleFormat, bas
                   <MethodFactors breakdown={breakdown} />
                   {method === "least_squares" && <LeastSquaresPanel result={result} />}
                 </div>
+              </Card>
+            )}
+            {method === "least_squares" && result.adjustment?.status === "adjusted" && (
+              <Card title="Precisión de cada punto">
+                <PointPrecisionTable result={result} angleFormat={angleFormat} />
               </Card>
             )}
           </div>
