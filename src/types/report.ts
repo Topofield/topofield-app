@@ -7,8 +7,6 @@ export interface IncludedProcess {
   id: string;
   name: string;
   order: number;
-  /** Firma de índice para el JSON de los informes de la demo; sale con ellos (Tarea 9). */
-  [key: string]: string | number;
 }
 
 /**
@@ -21,8 +19,6 @@ export interface ReportCoverData {
   location: string | null;
   datum: string | null;
   projection: string | null;
-  /** Firma de índice para el JSON de los informes de la demo; sale con ellos (Tarea 9). */
-  [key: string]: string | null;
 }
 
 /** Etiqueta de cada tipo de proceso en el informe. */

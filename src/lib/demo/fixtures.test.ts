@@ -66,7 +66,7 @@ describe("poligonales de la demo — carteras reales", () => {
   });
 
   // Fase 35: la poligonal no se cierra. La TT4 se guarda calculada, con el
-  // orden y el tipo de ángulo detectados, y alimenta el informe.
+  // orden y el tipo de ángulo detectados.
   it("la TT4 cumple —12″ de error angular, 1:7045— en tercer orden detectado", () => {
     const tt4 = porNombre("TT4");
     const { resultado, campos } = resultadosDe(tt4);
@@ -75,7 +75,6 @@ describe("poligonales de la demo — carteras reales", () => {
     expect(campos.meets_tolerance).toBe(true);
     expect(campos.precision_order).toBe("tercer_orden");
     expect(campos.angle_type).toBe("interior");
-    expect(tt4.informe).toBe(true);
     expect(tt4.hasClosingRow).toBe(true);
   });
 
@@ -205,16 +204,6 @@ describe("asentamientos de la demo — Torre Alameda (Fase 37: sin compensar ni 
   });
 });
 
-describe("material de los informes de la demo", () => {
-  it("la TT4 alimenta el informe de poligonal y el tramo 2 el de nivelación", () => {
-    expect(PROCESOS_DEMO.filter((p) => p.informe).map((p) => p.name)).toEqual([
-      "Poligonal V10 — cartera TT4",
-    ]);
-    expect([NIVELACION_VERJON, nivelacionTramo2()].filter((n) => n.informe).map((n) => n.name)).toEqual([
-      "Tramo 2 — crudo del nivel digital Leica",
-    ]);
-  });
-});
 
 // Fase 28: ida y vuelta en la compensación, con las carteras reales. Los
 // valores esperados salen de compensar El Verjón como un solo circuito

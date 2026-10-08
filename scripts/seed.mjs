@@ -13,14 +13,12 @@
 //    la poligonal no se cierra, y guarda el orden y el tipo de ángulo
 //    detectados.
 //  - 2 procesos de nivelación: uno calculado (editable, para la captura del
-//    editor del manual) y uno cerrado (alimenta el informe de nivelación).
+//    editor del manual) y otro de verificación.
 //  - 4 lugares de monitoreo en "Edificio en monitoreo", cada visita con su
 //    libreta y nada cerrado (Fase 37): "Edificio Torre Central" (7 puntos × 6
 //    visitas, con un alta y una baja), "Torre Alameda" (8 × 14, dos BM),
-//    "Edificio Norte" (4 × 3, para el informe de asentamientos) y la cartera
+//    "Edificio Norte" (4 × 3, compacto) y la cartera
 //    real «Control de asentamiento estructural» (16 × 7, una armada).
-//  - 3 informes: poligonal y nivelación en "Lote catastral", asentamientos en
-//    "Edificio en monitoreo".
 //  - Algunos reference_points para probar el CRUD de la tab Configuración.
 //  - El catálogo de equipos del usuario (Fase 25): los siete aparatos que usan
 //    sus procesos.
@@ -223,31 +221,6 @@ function equipmentOf(spec) {
 function decimalToDmsTuple(decimal) {
   const { deg, min, sec } = decimalToDms(decimal);
   return [deg, min, sec];
-}
-
-/**
- * Inserta un informe (§ 4.7) con la misma forma que arma `createReportAction`.
- * `included` es la lista `[{ type, id, name, order }]`, con type 'polygonal' |
- * 'leveling' | 'site'. Solo debe apuntar a trabajos que un informe admite:
- * poligonales y nivelaciones calculadas, lugares cerrados.
- */
-async function insertReport(projectId, userId, { title, observations, included }) {
-  // La portada se congela al emitir (Fase 23), con los datos del proyecto.
-  const { data: project, error: projectError } = await admin
-    .from("projects")
-    .select("name, client, location, datum, projection")
-    .eq("id", projectId)
-    .single();
-  if (projectError) throw projectError;
-  const { error } = await admin.from("reports").insert({
-    project_id: projectId,
-    title,
-    included_processes: included,
-    observations: observations ?? null,
-    generated_by: userId,
-    cover: project,
-  });
-  if (error) throw error;
 }
 
 /**
@@ -794,7 +767,6 @@ const PROCESSES = [
     startAz: [0, 0, 0],
     correctionMethod: "bowditch",
     status: "calculated",
-    informe: true,
     stations: [
       { code: "A", angle: [90, 0, 0], distance: 100 },
       { code: "B", angle: [90, 0, 0], distance: 100 },
@@ -802,7 +774,7 @@ const PROCESSES = [
       { code: "D", angle: [90, 0, 0], distance: 100 },
     ],
     notes:
-      "Cuadrado que cierra exacto: primer orden. Alimenta el informe de poligonal del lote.",
+      "Cuadrado que cierra exacto: primer orden.",
   },
   {
     name: "Cuadrado marginal (no cumple)",
@@ -911,14 +883,12 @@ const LEVELING_PROCESSES = [
     notes:
       "Circuito cerrado de verificación: sale y vuelve a BM-1. Error de cierre −8.0 mm contra tolerancia 11.4 mm (K=12 · √0.9 km). Cumple tercer orden.",
   },
-  // Segunda nivelación: es la que alimenta el informe de nivelación. Mismos
-  // números verificados que BM-1.
+  // Segunda nivelación: los mismos números verificados que BM-1.
   {
     name: "Circuito BM-2",
     type: "closed",
     startBmCode: "BM-2",
     startElevation: 100.0,
-    informe: true,
     equipment_brand: "Leica",
     equipment_model: "NA2",
     equipment_serial: "LNA2-2025-003",
@@ -950,7 +920,7 @@ const LEVELING_PROCESSES = [
       { code: "BM-2", type: "bm", fore: 0.808, foreUpperM: 1.558, foreLowerM: 0.058 },
     ],
     notes:
-      "Mismo circuito de verificación, para el informe de nivelación.",
+      "Mismo circuito de verificación, desde BM-2.",
   },
 ];
 
@@ -1066,10 +1036,9 @@ const VISIT_SPECS = [
   { date: "2025-06-15", ...LEVEL_DIGITAL_MONITOREO },
 ];
 
-// Segundo lugar de monitoreo, compacto (4 puntos × 3 visitas) y cerrado, cuyo
-// único fin es alimentar el informe de asentamientos. Se deja aparte de "Torre
-// Central" —que queda ABIERTO y editable para las capturas del editor de lugar
-// y de visita del manual— para no volver esas capturas de solo lectura.
+// Segundo lugar de monitoreo, compacto (4 puntos × 3 visitas). Se deja aparte
+// de "Torre Central", que sirve a las capturas del editor de lugar y de visita
+// del manual.
 const NORTE_POINTS = [
   { code: "N-01", location_description: "Esquina NW", initial_elevation: 100.0 },
   { code: "N-02", location_description: "Esquina NE", initial_elevation: 100.0 },
@@ -1295,15 +1264,13 @@ async function main() {
   // estación de 5″ que le corresponde. El equipo se esparce sobre el spec, no
   // se pasa aparte: los siete comparten instrumento, así que se aplica de una
   // vez, y un spec podría sobrescribirlo declarando el suyo (`...spec` va
-  // después). Se captura la que alimenta el informe de poligonal.
-  let poligonalInforme = null;
+  // después).
   for (const spec of PROCESSES) {
-    const id = await insertPolygonal(
+    await insertPolygonal(
       catastral,
       catastralSite,
       { ...TOTAL_STATION_TERCER_ORDEN, ...spec },
     );
-    if (spec.informe) poligonalInforme = { id, name: spec.name };
     console.log(`  ✓ Proceso: ${spec.name} (${spec.status})`);
   }
 
@@ -1352,10 +1319,8 @@ async function main() {
     console.log(`  ✓ Cartera real: ${spec.name}`);
   }
 
-  let nivelacionInforme = null;
   for (const spec of LEVELING_PROCESSES) {
-    const id = await insertLeveling(catastral, catastralSite, { ...LEVEL_DIGITAL_TERCER_ORDEN, ...spec });
-    if (spec.informe) nivelacionInforme = { id, name: spec.name };
+    await insertLeveling(catastral, catastralSite, { ...LEVEL_DIGITAL_TERCER_ORDEN, ...spec });
     console.log(`  ✓ Proceso de nivelación: ${spec.name}`);
   }
 
@@ -1413,7 +1378,7 @@ async function main() {
     `  ✓ Lugar "Torre Alameda" con ${ALAMEDA_POINTS.length} puntos y ${alamedaVisitsData.length} visitas, la ${ALAMEDA_OUT_OF_TOLERANCE} sin verificación — ${alamedaId}`,
   );
 
-  // El lugar del informe de asentamientos.
+  // Edificio Norte, compacto.
   const norteCfg = {
     points: NORTE_POINTS,
     partialsMm: NORTE_PARTIALS_MM,
@@ -1421,7 +1386,7 @@ async function main() {
   };
   const norteId = await insertMonitoringSite(monitoreo, {
     name: "Edificio Norte",
-    description: "Edificio de monitoreo con 3 visitas: alimenta el informe de asentamientos.",
+    description: "Edificio de monitoreo con 3 visitas.",
     points: NORTE_POINTS,
     benchmarks: [norteCfg.benchmark],
     visits: NORTE_VISIT_DATES.map((date, i) => ({
@@ -1435,38 +1400,6 @@ async function main() {
   // La cartera real (Fase 37, decisión 23), con la misma función que la demo.
   const carteraId = await insertarCartera(admin, monitoreo);
   console.log(`  ✓ Lugar "Control de asentamiento estructural" (cartera real) — ${carteraId}`);
-
-  // --- Informes por proceso (§ 4.7): uno de poligonal y uno de nivelación en
-  // el lote, y uno de asentamientos en el proyecto de monitoreo. Un informe
-  // incluye poligonales y nivelaciones calculadas y lugares con alguna visita
-  // calculada. ----------------------------------------------------------------
-  if (poligonalInforme) {
-    await insertReport(catastral, userId, {
-      title: "Informe — Poligonal",
-      observations: "Levantamiento poligonal con cierre exacto: primer orden.",
-      included: [
-        { type: "polygonal", id: poligonalInforme.id, name: poligonalInforme.name, order: 0 },
-      ],
-    });
-    console.log('  ✓ Informe de poligonal en "Lote catastral"');
-  }
-  if (nivelacionInforme) {
-    await insertReport(catastral, userId, {
-      title: "Informe — Nivelación",
-      observations: "Nivelación en circuito cerrado: alcanza tercer orden.",
-      included: [
-        { type: "leveling", id: nivelacionInforme.id, name: nivelacionInforme.name, order: 0 },
-      ],
-    });
-    console.log('  ✓ Informe de nivelación en "Lote catastral"');
-  }
-  await insertReport(monitoreo, userId, {
-    title: "Informe — Control de asentamientos",
-    observations:
-      "Seguimiento de asentamientos del edificio tras las visitas mensuales.",
-    included: [{ type: "site", id: norteId, name: "Edificio Norte", order: 0 }],
-  });
-  console.log('  ✓ Informe de asentamientos en "Edificio en monitoreo"');
 
   console.log("");
   console.log("Seed listo. Para verificar:");

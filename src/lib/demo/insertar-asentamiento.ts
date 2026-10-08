@@ -17,7 +17,7 @@ import { alamedaBook, ALAMEDA_AMARRES } from "./torre-alameda";
 
 type Client = SupabaseClient<Database>;
 
-/** Crea el lugar completo. Devuelve su `id` y su nombre, para el informe de la demo. */
+/** Crea el lugar completo. Devuelve su `id` y su nombre. */
 export async function insertarAsentamiento(
   supabase: Client,
   projectId: string,
