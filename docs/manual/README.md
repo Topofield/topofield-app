@@ -4,8 +4,8 @@ TopoField es una plataforma web para gestionar procesos topográficos: registrar
 los datos de campo, calcularlos con validación en tiempo real e informarlos.
 
 Este manual cubre lo que la aplicación permite hacer **hoy**, que es el
-alcance completo del proyecto: los tres módulos de proceso, los informes y la
-exportación a Excel.
+alcance completo del proyecto: los tres módulos de proceso, el informe de cada
+uno y su exportación a PDF y a Excel.
 
 > **Este documento es la fuente de la redacción.** La página `/manual` de la
 > aplicación (`src/app/(app)/manual/`) es una maquetación de este mismo texto
@@ -13,7 +13,7 @@ exportación a Excel.
 > automática entre los dos: al cambiar la redacción aquí, refléjela allí en el
 > mismo commit — y viceversa.
 
-**Última actualización:** 2026-10-07 · Fase 37 (Los asentamientos como los mide el topógrafo).
+**Última actualización:** 2026-10-08 · Fase 38 (El informe de cada proceso).
 
 La aplicación está publicada en
 **[topofield-app.vercel.app](https://topofield-app.vercel.app)**.
@@ -31,7 +31,7 @@ La aplicación está publicada en
 7. [Control de Asentamientos](#7-control-de-asentamientos)
 8. [Sin cierre](#8-sin-cierre)
 9. [Trabajo en campo](#9-trabajo-en-campo)
-10. [Informes](#10-informes)
+10. [El informe de cada proceso](#10-el-informe-de-cada-proceso)
 11. [Exportar a Excel](#11-exportar-a-excel)
 12. [El catálogo de equipos](#12-el-catálogo-de-equipos)
 13. [Preguntas frecuentes](#13-preguntas-frecuentes)
@@ -63,9 +63,8 @@ El lugar de asentamientos no tiene estado: agrupa sus visitas.
 **Cálculo en vivo.** Ningún proceso se cierra (§ 8): lo que se captura se
 guarda al confirmarlo y todo se recalcula al momento. Corregir una lectura, la
 cota de un BM o la C0 de un punto cambia lo que depende de ellos, y la
-aplicación avisa antes cuánto cambia. Lo que queda fijo es el **informe
-consolidado** ya emitido: para corregirlo, se elimina y se genera de nuevo
-(§ 10.3).
+aplicación avisa antes cuánto cambia. El informe de cada proceso también se
+recalcula: muestra lo que tenga al abrirlo (§ 10).
 
 ---
 
@@ -95,7 +94,6 @@ aplicación sin capturar nada:
   con BM-2 desplazado; y la cartera real **Control de asentamiento
   estructural**: dieciséis puntos y siete visitas de una armada desde el BM de
   la piscina, de marzo a junio de 2022.
-- Un informe consolidado por módulo.
 
 Puede modificarlo o archivarlo cuando quiera.
 
@@ -138,9 +136,9 @@ Use **+ Nuevo Proyecto** para crear uno.
 
 > **Empieza con un proyecto de ejemplo.** La primera vez que entra, su cuenta ya
 > trae un **«Proyecto de ejemplo»** con carteras de campo reales —poligonales,
-> nivelaciones y un control de asentamientos—, otro control de asentamientos
-> simulado y sus informes, para que explore la aplicación con datos reales
-> (§ 2). Puede modificarlo o archivarlo cuando quiera.
+> nivelaciones y un control de asentamientos— y otro control de asentamientos
+> simulado, para que explore la aplicación con datos reales (§ 2). Puede
+> modificarlo o archivarlo cuando quiera.
 
 ---
 
@@ -168,16 +166,11 @@ crea al pulsar **Crear proyecto**.
 
 La cabecera muestra el nombre y el estado del proyecto, su cliente, su
 ubicación y su sistema de referencia, y el botón **+ Nuevo Proceso**. Debajo,
-tres pestañas:
+dos pestañas:
 
 **Procesos** — el listado de levantamientos del proyecto. Se detalla en
-[§ 4.3](#43-el-listado-de-procesos).
-
-**Informes** — los informes **consolidados**, que reúnen poligonales y
-nivelaciones calculadas y controles de asentamientos con alguna visita
-calculada en un solo documento. Se detalla en [§ 10](#10-informes). Cada
-proceso tiene además su propio informe, en su pantalla
-([§ 4.4](#44-la-pantalla-de-un-proceso)).
+[§ 4.3](#43-el-listado-de-procesos). Cada proceso lleva su informe en su
+propia pantalla ([§ 4.4](#44-la-pantalla-de-un-proceso)).
 
 **Configuración** — los datos del proyecto (también la descripción), los
 puntos de referencia, y archivar o eliminar el proyecto.
@@ -241,9 +234,7 @@ proceso se cierra:
   estaciones, una nivelación sin lecturas, un lugar con sus umbrales, su
   catálogo de puntos y sus BM pero sin visitas.
 - **Renombrar** — cambia el nombre sin abrirlo.
-- **Eliminar** — lo borra con lo que contiene, con confirmación previa. Si lo
-  que borra está en un informe consolidado, la confirmación lo avisa: el
-  informe quedará sin esa sección.
+- **Eliminar** — lo borra con lo que contiene, con confirmación previa.
 
 En el teléfono, la tabla se convierte en tarjetas, una por fila, con las
 mismas acciones.
@@ -252,10 +243,8 @@ mismas acciones.
 
 Los tres módulos comparten la cabecera. Lleva sus rótulos —el tipo y, si lo
 tiene, el estado—, el nombre, sus datos y cuándo se guardó por última vez, y
-las acciones
-**Editar datos**, **Exportar a Excel** ([§ 11](#11-exportar-a-excel)) y, bajo
-**⋯**, **Duplicar** y **Eliminar**. La ruta de la barra devuelve al listado
-del que vino.
+las acciones **Editar datos** y, bajo **⋯**, **Duplicar** y **Eliminar**. La
+ruta de la barra devuelve al listado del que vino.
 
 Debajo van los pasos de la poligonal —**Datos**, **Ajuste** e **Informe**— y
 de la nivelación —**Libreta**, **Compensación** e **Informe**—
@@ -268,16 +257,14 @@ las pestañas del lugar de asentamientos —**Panel**, **Puntos**, **BMs** e
 visita, lectura por lectura (§ 7.7).
 
 **El informe.** El paso o la pestaña **Informe** muestra el informe de ese
-proceso, listo para **Imprimir o guardar como PDF** ([§ 10](#10-informes)),
-que pasa a ser la primera acción de la cabecera.
+proceso ([§ 10](#10-el-informe-de-cada-proceso)). Solo allí la cabecera
+empieza con dos botones, **Exportar PDF** y **Exportar Excel**
+([§ 11](#11-exportar-a-excel)): los demás pasos y pestañas no exportan.
 
 ![Informe de un proceso, en su pestaña](../../public/manual/30-informe-del-proceso.png)
 
 No lleva marca de borrador ni registro de cierre: ningún proceso se cierra, y
-el informe muestra lo que tenga al abrirlo. Debajo, fuera de la impresión,
-aparecen los informes consolidados que ya lo incluyen y, si puede entrar en
-uno —una poligonal o una nivelación calculadas, o un lugar con alguna visita
-calculada—, un botón para generar uno nuevo con él.
+el informe muestra lo que tenga al abrirlo.
 
 ---
 
@@ -328,8 +315,8 @@ avisa.
 
 La **cabecera** lleva el tipo, el estado y el orden alcanzado; el título, la
 ubicación, el responsable, el equipo y cuándo se guardó por última vez; y las
-acciones **Editar datos**, **Exportar a Excel** (§ 11) y, bajo **⋯**,
-**Duplicar** y **Eliminar**.
+acciones **Editar datos** y, bajo **⋯**, **Duplicar** y **Eliminar**. En el
+paso Informe se suman, delante, **Exportar PDF** y **Exportar Excel** (§ 5.7).
 
 Debajo van los tres pasos y, a la derecha, **Ángulos en**: **DMS (° ′ ″)** o
 **Grados decimales**. El formato rige la tabla, el ajuste, el informe y los
@@ -603,8 +590,8 @@ El diálogo avisa, sin impedirlo, en tres casos:
 
 ### 5.7 Paso 3 · Informe
 
-El informe de la poligonal, listo para **Imprimir o guardar como PDF** (§ 10).
-Es la misma sección que lleva en un informe consolidado:
+El informe de la poligonal (§ 10), con **Exportar PDF** y **Exportar Excel**
+(§ 11) en la cabecera. Sus datos y resultados son:
 
 1. **Resultado**: las cuatro cifras y por qué alcanza su orden. Si no alcanza
    ninguno, una alerta lo dice: «No alcanza la precisión de ningún orden».
@@ -711,9 +698,10 @@ popup avisa de los dos, y en el segundo dice cuántas armadas se borran.
 
 La **cabecera** lleva el tipo, el estado y el orden alcanzado; el título, la
 ubicación, el responsable, el equipo y cuándo se guardó por última vez; y las
-acciones **Editar datos**, **Exportar a Excel** (§ 11) y, bajo **⋯**,
-**Duplicar** y **Eliminar**. Debajo van los tres pasos y, a la derecha,
-**Importar .L o CSV** (§ 6.9).
+acciones **Editar datos** y, bajo **⋯**, **Duplicar** y **Eliminar**. En el
+paso Informe se suman, delante, **Exportar PDF** y **Exportar Excel**
+(§ 6.10). Debajo van los tres pasos y, a la derecha, **Importar .L o CSV**
+(§ 6.9).
 
 ### 6.6 Paso 1 · Libreta
 
@@ -954,9 +942,8 @@ si es ida y vuelta. Después, cada armada se corrige con su lápiz.
 
 ### 6.10 Paso 3 · Informe
 
-El informe de la nivelación, listo para **Imprimir o guardar como PDF**
-(§ 10). Es la misma sección que lleva en un informe consolidado, y cambia
-según el tipo.
+El informe de la nivelación (§ 10), con **Exportar PDF** y **Exportar Excel**
+(§ 11) en la cabecera. Sus datos y resultados cambian según el tipo.
 
 Arriba, el **resumen**: el tipo, los BM, la distancia y el equipo; las cifras
 del orden alcanzado, y por qué lo alcanza —«La discrepancia cabe en la
@@ -1018,9 +1005,10 @@ la cabecera, que abre el mismo popup.
 **La pantalla del lugar.** La cabecera lleva el tipo de estructura, el
 nombre, cuántos puntos de control y BM tiene, la fecha de la lectura base y
 cuándo se guardó por última vez; y las acciones **+ Nueva visita** (§ 7.4),
-**Editar datos**, **Exportar a Excel** (§ 11) y, bajo **⋯**, **Duplicar** y
-**Eliminar**. Debajo, las pestañas **Panel** (§ 7.11), **Puntos** (§ 7.2),
-**BMs** (§ 7.3) e **Informe** (§ 7.12).
+**Editar datos** y, bajo **⋯**, **Duplicar** y **Eliminar**. En la pestaña
+Informe se suman, delante, **Exportar PDF** y **Exportar Excel** (§ 7.12).
+Debajo, las pestañas **Panel** (§ 7.11), **Puntos** (§ 7.2), **BMs** (§ 7.3)
+e **Informe** (§ 7.12).
 
 El lugar **no tiene estado**: ni activo ni cerrado. Admite visitas siempre.
 
@@ -1470,9 +1458,8 @@ bloquearlo ocultaría el dato que más importa.
 
 ### 7.12 El informe del lugar
 
-La pestaña **Informe** muestra el informe del lugar, listo para **Imprimir o
-guardar como PDF** (§ 10). Es la misma sección que lleva en un informe
-consolidado:
+La pestaña **Informe** muestra el informe del lugar (§ 10), con **Exportar
+PDF** y **Exportar Excel** (§ 11) en la cabecera. Sus datos y resultados son:
 
 1. Los datos del lugar: tipo de estructura, puntos de control —y cuáles están
    de baja—, visitas, y el BM de arranque y el equipo de la última.
@@ -1488,8 +1475,8 @@ consolidado:
 7. **Notas de las visitas** y **avisos** de lecturas fuera de tendencia.
 
 Informa las visitas **calculadas**: las que están en medición se nombran
-aparte y entran cuando se terminan. Un informe consolidado admite el lugar con
-alguna visita calculada (§ 10.1).
+aparte y entran cuando se terminan. Una visita no tiene informe propio: sus
+resultados van en el del lugar.
 
 ### 7.13 Dar de baja y de alta un punto
 
@@ -1540,10 +1527,9 @@ Lo que daba el cierre lo dan ahora tres cosas:
 - **El orden se detecta.** La poligonal, la nivelación y cada tramo de una
   visita dicen qué orden de precisión alcanzaron, y su informe alerta si no
   alcanzan ninguno (§ 5.5, § 6.7 y § 7.9).
-- **El informe consolidado queda fijo.** Guarda la portada del día en que se
-  emitió y no se edita: para corregirlo, se elimina y se genera de nuevo
-  (§ 10.3). Sus secciones muestran los datos actuales de cada proceso; un PDF
-  ya descargado no cambia.
+- **El PDF guarda el momento.** El informe de cada proceso muestra lo que
+  tenga al abrirlo; el PDF que exporte de él (§ 10) queda como estaba ese
+  día.
 
 ---
 
@@ -1582,76 +1568,32 @@ cansa menos. Se cambia en el menú de cuenta (§ 2).
 
 ---
 
-## 10. Informes
+## 10. El informe de cada proceso
 
-Hay dos clases de informe:
+Cada proceso tiene su informe en su propia pantalla: el paso **Informe** de la
+poligonal (§ 5.7) y de la nivelación (§ 6.10), y la pestaña **Informe** del
+lugar de asentamientos (§ 7.12). Una visita no tiene informe propio: sus
+resultados van en el del lugar.
 
-- **El informe de un proceso** está en su paso o pestaña **Informe**
-  ([§ 4.4](#44-la-pantalla-de-un-proceso)): no hay que generarlo, y no lleva
-  marca de borrador, porque ningún proceso se cierra.
-- **Un informe consolidado** reúne varios trabajos calculados de un proyecto
-  en un solo documento imprimible, con título, orden y observaciones propios.
-  Se genera en la pestaña **Informes** del proyecto.
+No hay que generarlo: se arma con los datos del proceso cada vez que se abre,
+y no lleva marca de borrador, porque ningún proceso se cierra (§ 8). Lleva:
 
-### 10.1 Qué puede incluirse
+- **Portada**, con el nombre del proceso, los datos del proyecto —nombre,
+  cliente, ubicación, datum y proyección, como estén al abrir el informe— y
+  la fecha del informe.
+- **Datos y resultados** del proceso, con su equipo (§ 5.7, § 6.10 y § 7.12).
+- **Resumen de precisión**: el tipo, la precisión o el cierre, el equipo y si
+  cumple.
+- **Observaciones**: las notas del proceso —en un lugar, su descripción—, si
+  las tiene.
+- El **pie**, con la fecha en que se generó.
 
-**Poligonales y nivelaciones calculadas y lugares con alguna visita
-calculada**, en un informe consolidado. El informe no guarda una copia de las
-mediciones: las vuelve a leer cada vez que se abre. Solo guarda su título, sus
-observaciones, la lista de procesos y la portada del día en que se emitió
-(§ 10.3).
+**Exportar PDF.** Es el primer botón de la cabecera del informe. Abre el
+diálogo de impresión del navegador con el informe ya maquetado en A4: elija
+«Guardar como PDF» como destino. Lo impreso es solo el informe: la cabecera,
+los pasos y los botones no salen.
 
-- Una **poligonal** o una **nivelación** entran calculadas, cumplan o no un
-  orden, y su sección muestra lo que tengan al abrir el informe. Si no
-  alcanzan ningún orden, la sección lo alerta. Una nivelación con la libreta a
-  medias no entra.
-- Un **lugar** entra con sus visitas calculadas, y su sección muestra lo que
-  tenga al abrir el informe: una visita nueva aparece sola. Las que están en
-  medición se nombran aparte y entran cuando se terminan (§ 7.12).
-
-Un PDF ya descargado no cambia.
-
-Si el proyecto no tiene nada que incluir, la pantalla se lo dice en vez de
-ofrecer un formulario que no llevaría a ninguna parte.
-
-### 10.2 Generar un informe consolidado
-
-En la pestaña **Informes** del proyecto, pulse **Generar Nuevo Informe**. Desde
-el **Informe** de una poligonal o una nivelación calculadas, o de un lugar con
-alguna visita calculada, **Generar un informe consolidado con este proceso**
-abre el mismo formulario con ese proceso ya marcado.
-
-![Nuevo informe](../../public/manual/18-nuevo-informe.png)
-
-Se pide:
-
-| Campo | Para qué |
-|---|---|
-| Título | Encabeza la portada del documento |
-| Procesos a incluir | Marque los que quiera; aparecen las poligonales y las nivelaciones calculadas y los lugares con alguna visita calculada |
-| Orden de las secciones | Con las flechas ↑ ↓ ordena cómo saldrán |
-| Observaciones | Texto libre que se imprime al final |
-
-### 10.3 Imprimir o guardar como PDF
-
-Al generar, la aplicación abre el documento maquetado —también al pulsar un
-informe de la lista de la pestaña **Informes**—, y allí **Imprimir o guardar
-como PDF** abre el diálogo del navegador: elija «Guardar como PDF» como
-destino. La ruta de la barra vuelve al proyecto, y **Eliminar informe** lo borra: los
-procesos que incluye no cambian, y puede volver a generarlo. Un informe
-emitido no se edita: para corregirlo, elimínelo y genérelo de nuevo.
-
-![Informe imprimible](../../public/manual/19-informe-imprimible.png)
-
-El documento lleva portada con los datos del proyecto **al emitirlo** —si
-después cambian el nombre o el cliente del proyecto, la portada no—, índice,
-una sección
-por proceso con sus resultados **y su equipo** —en las poligonales, con la
-corrección por método y su dibujo (§ 5.7)—, el resumen consolidado de
-precisiones —con una columna de equipo y, en las poligonales, el orden
-alcanzado— y sus observaciones. El equipo ya no es un dato del proyecto: cada
-sección imprime el que declaró su propio proceso (en asentamientos, el de la
-visita más reciente).
+**Exportar Excel**, a su lado, descarga el libro del proceso (§ 11).
 
 > El PDF lo genera su navegador, no la aplicación. Los márgenes y los
 > encabezados de página dependen de lo que usted elija en ese diálogo.
@@ -1660,36 +1602,89 @@ visita más reciente).
 
 ## 11. Exportar a Excel
 
-Cada proceso tiene un botón **Exportar a Excel** en la cabecera de su pantalla
-—también el control de asentamientos—. Descarga un `.xlsx` con tres hojas:
+**Exportar Excel**, en la cabecera de la página de informe de cada proceso
+(§ 10), descarga un `.xlsx` con la forma de las carteras de campo de su
+módulo, con mejor diseño y **fórmulas vivas**. Los demás pasos y pestañas no
+exportan.
+
+**Datos en amarillo, cálculos con fórmulas.**
+
+- Las celdas con **fondo amarillo** son datos medidos o tecleados.
+- El resto se calcula con fórmulas de Excel que dan el mismo valor que la
+  aplicación: siguen sus reglas, no las de la cartera de campo. Cada celda
+  guarda además el valor de la aplicación, así que el libro se ve completo en
+  cualquier visor.
+- Si cambia un dato, Excel recalcula lo que depende de él.
+- Las tolerancias de cada orden son un bloque de celdas del libro, y las
+  fórmulas se refieren a él.
+
+### 11.1 Nivelación
+
+Tiene la forma de la cartera de El Verjón:
 
 | Hoja | Contiene |
 |---|---|
-| Datos Crudos | Las lecturas de campo tal como se capturaron, sin modificar |
-| Cálculos | Lo que la aplicación derivó: cotas, coordenadas, correcciones |
-| Resumen | Equipo, método, precisión, tolerancia, estado y trazabilidad. En una poligonal, la ubicación, el responsable, y el orden alcanzado y el tipo de ángulo detectados; en una nivelación, el orden alcanzado |
+| Nivelación | La ida: PUNTO · TIPO · V+ · AI · V− · VI · COTA · DIST. V+ (m) · DIST. V− (m) · ACUM. (km) · CORRECCIÓN (m) · COTA AJUSTADA · CLAVE, y debajo el bloque «Cierre» |
+| Contranivelación | La vuelta, si la hay, con la misma forma |
+| Cotas ajustadas | Solo si la nivelación se compensó: una fila por punto, con la cota conocida en los BM y, en los demás, el promedio de sus cotas ajustadas en la ida y en la vuelta |
+| Resumen | Los datos del proyecto y del proceso, el equipo y las notas |
 
-Con **mínimos cuadrados**, «Cálculos» añade la corrección de cada ángulo y la
-distancia ajustada, y «Resumen» los pesos y σ₀. El informe imprimible también
-indica los pesos y σ₀ de cada poligonal ajustada así.
-Si la poligonal se georreferenció, «Resumen» lleva además la sección
-«Georreferenciación», con la última.
+- **Con hilos**, cada lectura ocupa tres filas —superior, medio e inferior—,
+  y la distancia es (superior − inferior) × 100.
+- **CORRECCIÓN y COTA AJUSTADA** solo aparecen si la nivelación se compensó.
+- **El bloque «Cierre»** da la distancia (km), la cota calculada de llegada,
+  la cota conocida y el error de cierre (mm). En una abierta con vuelta,
+  también el desnivel de cada recorrido, la discrepancia, el cierre del
+  circuito y la distancia del par. Después, la tolerancia K·√km de cada
+  orden, el **Orden alcanzado** y el **Veredicto**: CUMPLE o NO CUMPLE.
 
-En una nivelación, el libro lleva una cuarta hoja, **«Cotas ajustadas»**: una
-cota por punto, con cuántas lecturas la forman y de dónde sale (§ 6.7). El
-libro da lo que daría guardar la nivelación ahora: el orden detectado y las
-cotas compensadas, también en una guardada antes de que el orden se detectara.
+### 11.2 Poligonal
 
-En control de asentamientos, «Datos Crudos» añade un bloque **«Visitas»**
-con el estado, el BM de arranque, la verificación, el cierre, la tolerancia y
-la nota de cada una, y el libro lleva una cuarta hoja, **«Libretas»**: la
-libreta de cada visita, fila por fila con su **tramo**, la cota de la medida
-—sin compensar— y la de los BM del lugar leídos de paso (§ 7.9).
+Tiene la forma de la cartera de poligonales (`poligonales.xlsx`):
 
-A diferencia del informe, la exportación funciona **en cualquier estado**:
-también sobre un borrador. Las celdas que aún no se han calculado salen
-vacías, no en cero — en topografía un `0.000` es una posición, no un dato que
-falta.
+| Hoja | Contiene |
+|---|---|
+| BRÚJULA, TRÁNSITO, CRANDALL o MÍNIMOS CUADRADOS | Una sola, con el nombre del método —ABIERTA SIN CONTROL en una abierta sin control—: la tabla de la poligonal, con su fila SUMATORIA, y debajo los bloques de cierre |
+| Resumen | Los datos del proyecto y del proceso, el equipo y las notas |
+
+- **Las columnas**: ESTACIÓN · VISADO · ÁNG. HORIZONTAL (G · M · S · DEC)
+  —DEFLEXIÓN en la abierta con control— · CORR. · ÁNG. CORREGIDO
+  (G · M · S · DEC) · AZIMUT (G · M · S · DEC) · DIST. · PROYECCIONES
+  (N-S · E-W) · CORRECCIÓN (N · E) · PROY. CORREGIDAS · COORDENADAS (N · E).
+- **A la derecha**, las columnas auxiliares: DIR. y AZ. SIN CORREGIR en la
+  abierta con control; |N-S| y |E-W| en Tránsito; d·cos², d·cos·sin, d·sin²
+  y δd en Crandall.
+- **Debajo de la tabla**, los bloques «Cierre angular» y «Cierre lineal»
+  —error N, error E, error lineal, perímetro y precisión 1:X—, en Crandall
+  «Crandall: sistema 2×2», las tolerancias de cada orden, el **Orden
+  alcanzado** y el **Veredicto**. Si la poligonal se georreferenció, el
+  bloque «Georreferenciación» lleva como datos la fecha, los puntos de
+  control, la rotación y la escala.
+- **Con mínimos cuadrados**, las correcciones v salen de la aplicación, y las
+  distancias, los azimuts, las proyecciones y las coordenadas ajustados son
+  fórmulas. El cierre de antes del ajuste —con el que se juzga el orden— y
+  las matrices de la última iteración —observaciones l₀, Matriz A, Q, w,
+  N = A·Q·Aᵀ, k y v— van como valores, porque la aplicación itera hasta
+  converger. Sin pesos, la hoja dice por qué no hay ajuste.
+
+### 11.3 Control de asentamientos
+
+Tiene la forma de la cartera real, ordenada:
+
+| Hoja | Contiene |
+|---|---|
+| Libretas | Un bloque por visita, con su título —«Visita N · fecha»—, el nivelador, el equipo y la nota, y las columnas PUNTO · V+ · AI · V− · VI · COTA · DIST. V+ (m) · DIST. V− (m) |
+| Comparación | La «Diferencia observada» de la cartera: arriba, los umbrales del lugar; una fila por punto de control —PUNTO, UBICACIÓN y C0— y, por cada visita, COTA · ACUM. (mm) · PARCIAL (mm) · VEL. (mm/mes) · SEMÁFORO; al pie, «Avisos de tendencia» |
+| Resumen | Los datos del proyecto, el lugar y sus BM |
+
+- **En «Libretas»**, cada tramo sale de un BM del lugar y no se compensa, como
+  en la aplicación (§ 7.9). Cada tramo lleva una línea de verificación:
+  Cierre (mm), km y Orden, o «Sin verificación», «Sin distancias» o «A
+  medias».
+- **En «Comparación»**, la COTA apunta a su celda de «Libretas», y el
+  SEMÁFORO dice Normal, Precaución, Alerta o Alarma, con su color. Un punto
+  que no se midió en una visita deja sus celdas vacías, y su parcial
+  siguiente se mide contra la última visita en que se midió.
 
 ---
 
@@ -1729,7 +1724,13 @@ No se cierra (§ 8): ni la poligonal, ni la nivelación, ni el lugar o la visita
 de asentamientos. Quedan calculados y se corrigen cuando haga falta. El paso
 de Ajuste o de Compensación, la verificación de cada visita y su informe dicen
 qué orden de precisión alcanzaron (§ 5.5, § 6.7 y § 7.9); si no alcanzan
-ninguno, el informe lo alerta. Un informe consolidado los incluye calculados.
+ninguno, el informe lo alerta.
+
+**¿Dónde exporto el PDF o el Excel de un proceso?**
+En su página de informe: el paso **Informe** de la poligonal o de la
+nivelación, o la pestaña **Informe** del lugar de asentamientos. Allí la
+cabecera trae **Exportar PDF** y **Exportar Excel** (§ 10 y § 11); los demás
+pasos y pestañas no exportan.
 
 **¿Por qué una poligonal muestra «Sin verificación de cierre»?**
 Es de tipo *abierta sin control*: no regresa al punto de partida ni llega a un
