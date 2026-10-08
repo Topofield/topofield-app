@@ -28,6 +28,14 @@ export const WORKBOOK_COLORS = {
   sel: "FFEEF3F2",
   /** `--color-rule-strong`: borde de las cabeceras. */
   ruleStrong: "FF838B8C",
+  /** `--color-mira-bg`: relleno de los datos medidos o tecleados. */
+  miraBg: "FFFBF1D3",
+  /** `--color-mira-ink`: tinta de los datos medidos o tecleados. */
+  miraInk: "FF6B5100",
+  /** `--color-success`: «CUMPLE». */
+  success: "FF2C7866",
+  /** `--color-danger`: «NO CUMPLE». */
+  danger: "FFC0392B",
 } as const;
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -140,6 +148,9 @@ export function newWorkbook(): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
   wb.creator = "TopoField";
   wb.created = new Date();
+  // Excel recalcula al abrir: las celdas guardan el valor de la app, pero un
+  // dato cambiado a mano debe propagarse (Fase 38).
+  wb.calcProperties.fullCalcOnLoad = true;
   return wb;
 }
 
