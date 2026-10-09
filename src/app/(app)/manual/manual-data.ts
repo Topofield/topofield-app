@@ -79,9 +79,9 @@ export const CAPTURAS = {
   },
   correccionInforme: {
     src: "/manual/10-correccion-informe.png",
-    alt: "Sección «3. Corrección por método Brújula (Bowditch)» del informe de la cartera TT4: el paso 1 reparte el error angular de +12.0″ entre los 7 ángulos, −1.71″ cada uno, dicho en el texto; el paso 2 reparte el error de cierre lineal en proporción a la longitud de cada lado, con la fórmula de la Brújula y la tabla de correcciones ΔN y ΔE por lado.",
+    alt: "Sección «3. Corrección por método Brújula (Bowditch)» del informe de la cartera TT4: el paso 1 reparte el error angular de +12.0″ entre los 7 ángulos, −1.71″ cada uno, dicho en el texto; el paso 2 reparte el error de cierre lineal en proporción a la longitud de cada lado, con la fórmula de la Brújula, la leyenda de sus símbolos y la tabla de correcciones ΔN y ΔE por lado.",
     width: 1664,
-    height: 1422,
+    height: 1504,
   },
   nuevaNivelacion: {
     src: "/manual/11-nueva-nivelacion.png",
@@ -223,7 +223,7 @@ export const CAPTURAS = {
     src: "/manual/30-informe-del-proceso.png",
     alt: "Paso 3 · Informe de la poligonal V10, cartera TT4: la cabecera con Exportar PDF y Exportar Excel; portada; resultado con el orden alcanzado, datos de campo, corrección por método Brújula (Bowditch), poligonal ajustada y coordenadas con el dibujo; resumen de precisión y observaciones.",
     width: 2560,
-    height: 8242,
+    height: 8324,
   },
 } as const satisfies Record<string, Captura>;
 

@@ -633,7 +633,8 @@ El informe de la poligonal (§ 10), con **Exportar PDF** y **Exportar Excel**
 3. **Corrección por método …**: cómo corrigió el método elegido, paso a paso,
    con las cifras de esta poligonal. El reparto del error angular se dice con
    su valor por ángulo; el método de ajuste —y, en mínimos cuadrados, la
-   elipse de error— lleva su fórmula en notación matemática.
+   elipse de error— lleva su fórmula en notación matemática, con una línea
+   «donde:» que dice qué es cada símbolo.
 4. **Poligonal ajustada**, con la fila Σ.
 5. **Coordenadas** y el dibujo.
 
