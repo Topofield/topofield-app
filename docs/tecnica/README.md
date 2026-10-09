@@ -4,8 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-08 · Fases 38 a 40 en `main` y en
-producción, con la migración de la 38 aplicada (§ 13); la 41 en su rama · 1193 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-08 · Fases 38 a 41 en `main` y en
+producción, con la migración de la 38 aplicada (§ 13) · 1193 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -4429,6 +4429,9 @@ otra sesión que corra en local el código de `main` sin esta fase fallaría al
 leer `reports`. Por lo mismo, **una vez aplicada, volver en Vercel a un
 despliegue anterior a la Fase 38 rompe todas las páginas de proceso**: el
 código viejo llama a `getReports`.
+
+**La Fase 41 no tiene migración**: su despliegue es el merge, por el PR #34
+el 2026-10-08, con la leyenda de las fórmulas del informe sumada.
 
 **La Fase 40 no tiene migración**: su despliegue es el merge. Se fusionó
 directo en `main` el 2026-10-08, sin PR (petición del usuario), y el usuario
