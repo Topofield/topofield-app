@@ -8,6 +8,63 @@
 
 ---
 
+## Estado frente al producto final (2026-10-08)
+
+Este es el **requisito inicial** del proyecto. Se conserva como línea de base y
+como el porqué de muchas reglas. El producto terminado (41 fases, índice en
+[`docs/prds/README.md`](docs/prds/README.md)) se aparta de él en lo que recoge
+la tabla. **Para saber cómo funciona hoy la aplicación, la referencia es
+[`docs/tecnica/README.md`](docs/tecnica/README.md)**, no este documento.
+
+Las enmiendas en línea que siguen en el texto, de las Fases 4 a 36, registran
+cada cambio cuando ocurrió. Algunas quedaron viejas después, por ejemplo las
+que aún hablan de visitas cerradas o de informes consolidados. Donde choquen
+con esta tabla, manda la tabla.
+
+| PRD § | Lo que pedía el PRD | El producto final | Desde la fase | Dónde está hoy (doc técnica) |
+|---|---|---|---|---|
+| §1.1, §4.6 | Cada proceso se cierra y se bloquea: `closed_at`/`closed_by`, estados `closed` y `rejected`, inmutabilidad por trigger | **Ningún proceso se cierra**: ni la poligonal, ni la nivelación, ni la visita, ni el lugar. Todo se recalcula en vivo y se propaga. No quedan esos estados, ni las columnas, ni los triggers. Reabrir (Fase 34) existió y se retiró | 35 · 36 · 37 | § 5 «Inmutabilidad: de los procesos cerrados al informe emitido» |
+| §1.1, §3.2 `projects`, §4.2 | El proyecto comparte el equipo y el orden de precisión; alta en un asistente de dos pasos | El equipo va en cada poligonal, nivelación y visita. `projects` guarda solo sus datos y el sistema de referencia, y su alta es un solo formulario | 8 (formulario: 27) | § 4 «Precisión y equipo, por proceso» |
+| §4.4, §5.2, §6.2 | Orden de precisión declarado y tipo de ángulo elegido | **Se detectan al calcular**. Poligonal: el orden más alto que cumple a la vez K·√n y la precisión relativa, más el tipo interior o exterior. Nivelación: el orden más alto cuyo K·√D cumple. Visita: el de su tramo peor. Se ajusta siempre y se avisa si no alcanza ningún orden | 35 · 36 · 37 | § 6 «Orden y tipo de ángulo detectados» |
+| §3.1, §4.9 | Equipos guardados en `/settings` | Catálogo de equipos por usuario en `/equipos` (tabla `equipment`). Es una plantilla: elegir un equipo copia su identidad en el proceso, y ningún proceso lo referencia | 25 | § 4, § 7 «El equipo del catálogo» |
+| §4.9, §4.7 | `/settings` con perfil y destinatarios; envío por correo | No hay `/settings`, ni destinatarios, ni envío | 6 | § 11, § 13 |
+| §4.7, §3.2 `reports` | Informes consolidados de procesos cerrados, guardados en `reports`, con registro de cierre | **Un solo informe por proceso**, en su paso o pestaña Informe, compuesto en vivo y sin guardarse. Se sacan «Exportar PDF» (el navegador) y «Exportar Excel». No hay consolidados ni tabla `reports` | 38 | § 3 «Informes y exportación» |
+| §4.7 (el PDF) | Portada con la marca de la app y registro de cierre | Un informe entregable: portada «Informe técnico» sin la marca de la app, pie propio con «Página X de Y», y solo las fórmulas del ajuste, cada una con su leyenda «donde:» | 40 · 41 | § 3 «Un entregable, sin rastro de la app» |
+| §4.8 | Excel de tres hojas de valores | Un libro con la forma de la cartera de cada módulo y **fórmulas vivas**: cada celda calculada lleva su fórmula y el valor del motor, y las pruebas lo comprueban | 38 | § 3 «El Excel tiene fórmulas vivas» |
+| §3.1, §3.2 | El proceso cuelga del proyecto | Todo proceso pertenece a un lugar (`sites`); el lugar de agrupación no se ve en la interfaz | 5 · 22 | § 4 «`sites`» |
+| §3.2 (las tablas) | 13 tablas, entre ellas `reports` y `recipients` | 15 tablas. Nuevas: `polygonal_angle_readings` (7), `settlement_book_readings` (18), `equipment` (25) y `site_benchmarks` (37). `reports` se creó en la 6 y se borró en la 38; `recipients` nunca se creó. Los guardados de varias tablas van por cuatro funciones atómicas de Postgres | 7–38 | § 4 «Modelo de datos», § 3 «Guardados en una transacción» |
+| §4.3, §10 | Un editor en una pantalla, tipo hoja de cálculo, con autoguardado | Pantalla por pasos (Datos · Ajuste · Informe). El alta, el amarre y cada medición son popups que guardan al aceptar. Cada ángulo admite varias lecturas, que se promedian | 7 · 22 · 35 | § 8 «La pantalla de un proceso» |
+| §4.3, §6.2 | Azimut de partida tecleado; ángulos solo en DMS | Amarre a un punto conocido con el azimut calculado, cierre contra el amarre, y captura opcional en grados decimales (se guarda en DMS) | 7 · 13 · 26 | § 6 «Amarre y esquemas de cierre», «Captura en grados decimales» |
+| §1.3, §6 | Mínimos cuadrados fuera de alcance | Cuarto método de compensación, con pesos e iterativo; σ₀ con prueba χ², y la precisión de cada punto con su elipse de error al 95 % | 14 · 32 · 39 | § 6 «Métodos de corrección» |
+| §4.3 | «Asignar coordenadas reales» | «Georreferenciar» desde dos estaciones de coordenadas conocidas (transformación rígida, sin escala) | 15 · 35 | § 6 «Georreferenciación» |
+| §1.3, §4.3 | Sin dibujo | Dibujo de la poligonal ajustada y sin compensar, con sus elipses, que se mueve como un mapa. Sigue fuera de alcance la vista geoespacial | 13 · 39 · 41 | § 6 «Trazas y dibujo» |
+| §4.4 | Tabla de lecturas por punto con pestañas Ida y Vuelta | Pasos Libreta · Compensación · Informe; la libreta se captura **por armada** en popups, y la libreta a medias se guarda sin compensar | 36 | § 6, nivelación |
+| §1.3 | Ingreso manual o CSV | Se importan libretas de nivel digital: el `.L` de Leica y una plantilla CSV propia, en la nivelación y en la visita | 16 · 37 | § 6 «Importación de libretas de nivelación» |
+| §6.8, §6.9 | Se compensa solo si cumple; la vuelta solo controla | **Se compensa siempre** que haya contra qué cerrar. Con vuelta, entra en la compensación. El BM de partida no se corrige, y cada punto tiene una sola «cota ajustada» | 19 · 26 · 28 · 36 | § 6, nivelación |
+| §5.1, §5.4 | Aviso de equilibrado de visuales | Retirado: era un aviso de campo y no cambia ninguna cota | 36 | § 6 «Tolerancias» |
+| §4.5, §3.2 | Visita en modo libreta compensada o de cotas directas; visita y lugar cerrados | **Toda visita se mide con libreta**, por armadas, desde los BM del lugar (`site_benchmarks`, copias que no se sincronizan), y **no se compensa**: la cota es AI − lectura y el cierre solo verifica. Cada lectura se guarda al escribirla. El lugar tiene pestañas Panel · Puntos · BMs · Informe | 18 · 37 | § 4 «La libreta de la visita», § 6 |
+| §6.10, §3.2 | Asentamiento diferencial y distorsión angular, con coordenadas | Quitados: los puntos de control no tienen posición | 29 | § 6 «Sin posición» |
+| §4.5, §6.10 | Catálogo fijo de puntos | Puntos que se dan de alta y de baja a mitad de la serie; la línea base es la C0 o, si no hay, la primera lectura | 11 | § 4 «`settlement_points` — vigencia» |
+| §5.3, §6.10 | Tendencia = velocidad creciente | Aviso de lectura fuera de tendencia, con un margen de ruido fijo de 6 mm | 12 · 31 · 37 | § 6 «`computeSettlements` y `classifyAlert`» |
+| §5.2 | Capa de cierre que bloquea o deja cerrar como rechazado | No hay capa de cierre: lo dicen el orden detectado y los avisos | 35 · 36 · 37 | § 7 «Capa 2 — cierre» |
+| §4.1 | KPIs de pendientes de cierre; actividad reciente | KPIs «Proyectos activos», «Procesos calculados» y «Fuera de tolerancia»; sin registro de actividad | 2 | § 3 «Estructura» |
+| §4.1, §8 | Correo y contraseña, magic link, Google opcional | Solo correo y contraseña, con código de invitación y confirmación de correo; proyecto de ejemplo con carteras reales al primer inicio | 1 · 21 | § 5 «Registro por invitación» |
+| §4.2 | Hub con pestañas Procesos · Informes · Configuración | Pestañas Procesos · Configuración; un listado por módulo con buscador, filtros, duplicar, renombrar y eliminar | 22 · 35–38 | § 3 «Estructura» |
+| §8, §2.1 | Rutas `…/new`, `reports/…`, `visits/[id]/editar`, `/settings`; `middleware.ts` | Las altas son popups y no hay consolidados ni editor aparte de la visita. Rutas nuevas: `/equipos` y `/manual`. `src/proxy.ts` sustituye a `middleware` (Next 16) | 25 · 35–38 | § 3 «Estructura» |
+| §2, §2.2, §10 | Next.js 14+; escritorio primero | Next.js 16 con React 19; sistema de diseño propio con tema claro y oscuro, coma o punto decimal, barra superior fija y captura en campo desde el teléfono | 20 · 33 | § 1, § 8 |
+| §7 | Cinco casos en un Excel de prueba | El motor se valida contra las carteras reales de `docs/carteras/`, que también forman el «Proyecto de ejemplo» | 7 · 21 · 37 | § 9, `docs/auditoria-calculo.md` |
+
+**Sigue vigente tal como está escrito:**
+- **Alcance (§ 1.1, § 1.3).** Los tres procesos, organizados por proyecto. Siguen fuera: el replanteo, las secciones, los volúmenes, el GPS diferencial, la importación desde la estación total, la firma digital, los varios roles, el modo offline y el mapa.
+- **Stack (§ 2).** Supabase (PostgreSQL y Auth), Tailwind, el sistema de diseño propio y Vercel.
+- **Datos (§ 3).** Los ángulos en tres columnas, RLS por usuario, `reference_points`, los tipos de poligonal, de nivelación y de punto, y los umbrales del lugar.
+- **Validación (§ 5).** Las reglas de captura de § 5.1 y las tolerancias de § 5.4, todas en `tolerances.ts`.
+- **Algoritmos (§ 6).** Bowditch, Tránsito, Crandall (como lo corrigió la Fase 26), la altura de instrumento, la comprobación aritmética, la corrección proporcional y el asentamiento parcial, acumulado y con su velocidad.
+- **Interfaz (§ 10).** Los decimales y el idioma.
+
+---
+
+
 ## 1. Visión y Alcance
 
 ### 1.1 Qué es TopoField
@@ -1370,7 +1427,7 @@ Alineado con el Gantt de 13 semanas:
 5. **Módulo Asentamientos** (S8-S9): Campañas, cálculos, alertas semáforo, gráficas.
 6. **Cierre, Informes, Export** (S9-S10): Flujo de cierre, generador PDF, export Excel, destinatarios.
 
-Las seis fases se cerraron entre abril y agosto de 2026. Las fases 7 a 23 no
+Las seis fases se cerraron entre abril y agosto de 2026. Las fases 7 a 41 no
 estaban en este plan: nacieron del contraste del motor contra carteras de
 campo reales y de peticiones del usuario. Su índice y su estado están en
 [`docs/prds/README.md`](docs/prds/README.md).
