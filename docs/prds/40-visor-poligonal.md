@@ -1,7 +1,8 @@
 # PRD-de-fase 41 — El dibujo de la poligonal como un mapa
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-10-08
+**Fecha de cierre:** 2026-10-08
 
 **Rama:** `fase-41-visor-poligonal`
 **Petición:** del usuario, 2026-10-08: «quiero una mejora de UI/UX a la
@@ -12,6 +13,44 @@ sigue bajando la página) y el **teclado sobre el dibujo** en lugar de las
 flechas.
 **Módulo:** `PolygonalPlotViewer`, el dibujo de los pasos Datos y Ajuste de la
 poligonal. El informe (`PolygonalPlot` estático) no cambia.
+
+> **Divergencias de la implementación:**
+>
+> - **El aviso de la rueda es una pastilla sobre un velo.** El PRD solo decía
+>   «un aviso centrado». El velo es `bg-black/40` (el token del velo de
+>   `Modal`) y el texto va en una pastilla `bg-ink`/`text-paper`, que contrasta
+>   en los dos temas: con `ink` como velo, en oscuro el dibujo se aclaraba, y
+>   `text-white` lo prohíbe el test de tokens retirados.
+> - **La rueda se engancha con un ref de callback**, no con un efecto al
+>   montar. La verificación lo destapó: en el paso Datos el dibujo puede no
+>   existir en el primer render, el efecto se quedaba sin elemento y ni Ctrl +
+>   rueda ni el aviso respondían.
+> - **Los gestos van en el contenedor del `<svg>`**, por una prop `viewport`
+>   de `PolygonalPlot`: antes el arrastre se registraba también sobre la
+>   leyenda.
+> - **Los botones miden 40 px**, el + / − en un grupo con borde y sombra, y
+>   encuadrar aparte; iconos SVG en línea. El teclado acepta también `=` y `_`
+>   (las mismas teclas sin mayúscula).
+> - **La captura 20 se regeneró** con el mismo tamaño (630 × 728): los tamaños
+>   de `manual-data.ts` no cambian. Se actualizó también el paso del dibujo en
+>   `docs/testing/manual-e2e-poligonal.md`.
+> - **Sumado a la fase** (sección al final): las leyendas «donde:» de las
+>   fórmulas del informe, hechas por otra sesión en `fase-41-leyendas` y
+>   fusionadas aquí. Con las dos partes: 1193 tests.
+> - **Verificación en pantalla** en local, con Playwright, en Datos y Ajuste:
+>   sin la fila de botones ni flechas; + / − dentro del dibujo; Ctrl + rueda
+>   acerca y el vértice bajo el cursor se desplaza menos de 2 px (redondeo);
+>   la rueda sola baja la página y muestra el aviso, en claro y oscuro; doble
+>   clic acerca hacia el punto; arrastrar desplaza; encuadrar aparece solo con
+>   la vista movida y la devuelve; flechas, + / − y 0 con el foco; a 390 px,
+>   el pellizco (eventos táctiles por CDP) pasa la escala de 20 m a 5 m, un
+>   dedo desplaza y no hay desborde. Sin mutaciones del DOM en reposo (sin
+>   bucles de render). De la parte sumada: en los informes de la TT4 (cuatro
+>   métodos) y de la Vivero, cada fórmula lleva su «donde:» y ya no aparece
+>   «faltan los pesos».
+> - **El entorno se quedó sin memoria** a mitad de la verificación (dos stacks
+>   de Supabase, swap llena, carga de 240) y la máquina se reinició; la
+>   verificación se repitió después.
 
 ## Hoy
 

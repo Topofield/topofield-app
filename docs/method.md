@@ -50,7 +50,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 38 | El informe de cada proceso | [`prds/37-informe-por-proceso.md`](./prds/37-informe-por-proceso.md) | cerrada |
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | [`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md) | cerrada |
 | 40 | Informes entregables | [`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md) | cerrada |
-| 41 | El dibujo de la poligonal como un mapa | [`prds/40-visor-poligonal.md`](./prds/40-visor-poligonal.md) | en curso |
+| 41 | El dibujo de la poligonal como un mapa | [`prds/40-visor-poligonal.md`](./prds/40-visor-poligonal.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -564,6 +564,26 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 41 — El dibujo de la poligonal como un mapa (2026-10-08)
+
+Las divergencias están en el PRD-de-fase (`prds/40-visor-poligonal.md`). El
+dibujo de la poligonal se mueve como un mapa: + / − y encuadrar flotan sobre
+él, Ctrl + rueda, doble clic y pellizcar acercan hacia el punto, y el teclado
+sustituye a las flechas. Se le sumó la leyenda «donde:» de las fórmulas del
+informe, hecha en otra sesión. Sin cambios en la base ni en el motor.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Un listener nativo se engancha con un ref de callback** cuando el elemento
+  puede aparecer después del primer render: un efecto con `[]` lo pierde sin
+  error ni aviso, y solo se nota en la pantalla que monta sin datos.
+- **La matemática de un gesto va a una función pura con su invariante.**
+  `zoomAt` se prueba contra el mismo `plotFrame` que dibuja: «el punto bajo el
+  cursor no se mueve» se comprueba sin navegador.
+- **Una carga del sistema anómala se diagnostica antes de reintentar.** Los
+  tiempos de espera de Playwright no eran del código: memoria agotada por otro
+  proyecto. Mirar `uptime`, `free` y `ps` ahorra rondas.
 
 ### Cierre Fase 40 — Informes entregables (2026-10-08)
 

@@ -94,6 +94,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 38 | El informe de cada proceso | cerrada |
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | cerrada |
 | 40 | Informes entregables | cerrada |
+| 41 | El dibujo de la poligonal como un mapa | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
