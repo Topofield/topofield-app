@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Project
-TopoField — plataforma web para gestión de procesos topográficos (poligonales, nivelación, asentamientos) con validación en tiempo real, cierre con trazabilidad y generación de informes. Monografía de grado, Universidad Distrital.
+TopoField — plataforma web para gestión de procesos topográficos (poligonales, nivelación, asentamientos) con validación en tiempo real, cálculo en vivo que se propaga y un informe por proceso (PDF y Excel con fórmulas). Monografía de grado, Universidad Distrital.
 
 ## Stack
 Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth) · Tailwind CSS v4 · Vercel
@@ -51,7 +51,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `scripts/seed.mjs` → datos de prueba locales
 - `src/types/` → tipos TypeScript e interfaces, incluye database.ts autogenerado
 - `src/proxy.ts` → protección de rutas con Supabase Auth (Next 16 renombró `middleware` → `proxy`)
-- `PRD-TopoField.md` → PRD completo con modelo de datos, algoritmos y reglas
+- `PRD-TopoField.md` → el requisito inicial (v1.0, febrero de 2026), con modelo de datos, algoritmos y reglas; su sección «Estado frente al producto final» dice dónde diverge
 
 ## Rules
 - IMPORTANT: los archivos en `src/lib/calculations/` son funciones puras de TypeScript. Sin imports de React, sin hooks, sin Supabase. Solo math.
@@ -68,11 +68,11 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - **Cada proceso tiene un solo informe, en su página** (Fase 38): el paso o la pestaña Informe, con «Exportar PDF» (el navegador) y «Exportar Excel»; ningún otro paso exporta. No hay informes consolidados ni tabla `reports`: el informe no se guarda, se compone en vivo.
 - El Excel de cada proceso tiene fórmulas vivas que siguen al motor: cada celda calculada lleva su fórmula y el valor del motor; si cambia una regla del cálculo, cambia la fórmula del libro (`formula-check.ts` lo comprueba en las pruebas).
 - Los guardados que escriben varias tablas van por una función de Postgres (`supabase.rpc`: `save_polygonal_process`, `save_leveling_process`, `save_visit`, `georeference_polygonal`) para que sean atómicos. Son `SECURITY INVOKER`, con columnas explícitas, y solo escriben: el cálculo sigue en TypeScript, en la Server Action.
-- El catálogo de equipos (`equipment`) es una **plantilla**: elegir un equipo copia sus datos en las columnas `equipment_*` y de precisión del proceso o de la visita. Ningún proceso lo referencia, así que editar o borrar un equipo nunca cambia lo ya medido ni informado.
+- El catálogo de equipos (`equipment`) es una **plantilla**: elegir un equipo («Tomar del catálogo», en la nivelación y la visita) copia su marca, modelo y serie en las columnas `equipment_*` del proceso o de la visita; la poligonal teclea su equipo. Ningún proceso lo referencia, así que editar o borrar un equipo nunca cambia lo ya medido ni informado.
 - Cada tabla tiene Row Level Security (RLS) en Supabase. El user solo ve sus propios proyectos.
 - Las tolerancias están definidas como constantes en `src/lib/calculations/tolerances.ts`, no hardcodeadas en componentes.
 - Idioma de la interfaz: español (Colombia). Zona horaria: America/Bogota.
-- Consultar `PRD-TopoField.md` por sección según la tarea: `§3` modelo de datos y SQL · `§4.6` cierre y bloqueo · `§5` reglas de validación (`§5.4` tolerancias por orden) · `§6` algoritmos de cálculo · `§9` orden de implementación.
+- El comportamiento **actual** está en `docs/tecnica/README.md`. `PRD-TopoField.md` es el requisito inicial: sirve para el porqué de una regla (`§5` reglas de validación, `§5.4` tolerancias por orden, `§6` algoritmos de cálculo), no para lo que hace hoy la app; su cierre y bloqueo (`§4.6`) ya no existen.
 
 ## Método de planificación
 - El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 41, todas cerradas.
@@ -91,7 +91,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - IMPORTANT: ambos se actualizan **al cerrar cada fase**, no al final del proyecto. Al cambiar algo visible: documentarlo en el manual (dos copias), regenerar capturas con `node docs/manual/capturas.mjs` —y commitear solo las que cambian por la fase—, y actualizar en la doc técnica el estado de fases, la tabla de pruebas y la deuda técnica (§ 11, entrada por entrada).
 
 ## Workflow
-- Antes de tareas complejas, leer las secciones relevantes de `PRD-TopoField.md` y el PRD de la fase actual en `docs/prds/`.
+- Antes de tareas complejas, leer las secciones relevantes de `docs/tecnica/README.md` y el PRD de la fase actual en `docs/prds/`.
 - Cambios mínimos: no refactorizar código que no esté relacionado con la tarea.
 - Ejecutar `npm run typecheck` después de cada cambio de código.
 - Cuando se modifique el schema de Supabase, regenerar tipos con el comando de gen types.
@@ -102,7 +102,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 ## Out of scope
 - Modo offline / PWA
 - Importación directa desde estación total
-- Firma digital criptográfica (solo cierre con timestamp)
+- Firma digital criptográfica
 - Múltiples roles de usuario (solo hay 1 rol)
 - Visualización geoespacial en mapa
 - Posición de los puntos de control de asentamientos: ni coordenadas, ni distancias entre puntos, ni distorsión angular (Fase 29)
