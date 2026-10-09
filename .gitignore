@@ -57,3 +57,7 @@ next-env.d.ts
 
 # Claude Code local config
 .claude/
+
+# Monografía de grado: fuera del repo público (texto sin entregar); tiene su
+# propio git local. Ver docs/monografia/README.md
+/docs/monografia/
