@@ -1,6 +1,6 @@
 # PRD-de-fase 42 — El manual por capítulos
 
-**Estado:** en curso (aprobado el 2026-10-08)
+**Estado:** cerrada (aprobado el 2026-10-08, cerrada el 2026-10-09)
 **Fecha de apertura:** 2026-10-08
 **Rama:** `fase-42-manual`
 **Petición:** del usuario, 2026-10-08: «El manual quiero rediseñarlo además su
@@ -201,3 +201,20 @@ corriendo.
   - la regla de cierre pasa a «su capítulo y su recorrido».
 - **`docs/method.md` § 3:** una viñeta para el cierre de cada fase. Si cambió algo visible, se actualizan su capítulo y su recorrido; `npm test` vigila los enlaces, las capturas y las tablas.
 - **Los índices:** `docs/prds/README.md` y la tabla de `docs/method.md`.
+
+## Divergencias
+
+- **La mira de 5 m** (corrección aparte, `fix:`). El recorrido se detuvo en la
+  tercera visita de la cartera de asentamientos: la app rechazaba lecturas de
+  más de 4 m. El usuario eligió que avisen y no bloqueen; el aviso se ve en
+  vivo en los dos popups de armada.
+- **El navegador del recorrido** es el Chromium completo, en español: el
+  headless de Playwright no trae idiomas y pintaba «Choose File».
+- **La importación CSV de la visita** no tiene captura propia: el capítulo
+  remite a la de la nivelación, que es el mismo diálogo.
+- **La baja de un punto** se muestra con la ventana llena y sin confirmar: la
+  cartera real no tiene bajas.
+- **Hallazgos sin arreglar**, anotados en `docs/pendientes.md`: la numeración
+  de las visitas de la demo, la columna cortada del panel y el texto del
+  diálogo de importación.
+

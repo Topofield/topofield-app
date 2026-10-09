@@ -4,7 +4,7 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-08 · Fases 38 a 41 en `main` y en
+**Última actualización:** 2026-10-09 · Fase 42 cerrada; fases 38 a 41 en
 producción, con la migración de la 38 aplicada (§ 13) · 1228 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
@@ -95,7 +95,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | cerrada |
 | 40 | Informes entregables | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | cerrada |
-| 42 | El manual por capítulos | en curso |
+| 42 | El manual por capítulos | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron

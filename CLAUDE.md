@@ -76,7 +76,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - El comportamiento **actual** está en `docs/tecnica/README.md`. `PRD-TopoField.md` es el requisito inicial: sirve para el porqué de una regla (`§5` reglas de validación, `§5.4` tolerancias por orden, `§6` algoritmos de cálculo), no para lo que hace hoy la app; su cierre y bloqueo (`§4.6`) ya no existen.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 41, todas cerradas.
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 42, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.

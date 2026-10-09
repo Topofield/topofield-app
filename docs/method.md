@@ -51,7 +51,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | [`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md) | cerrada |
 | 40 | Informes entregables | [`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md) | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | [`prds/40-visor-poligonal.md`](./prds/40-visor-poligonal.md) | cerrada |
-| 42 | El manual por capítulos | [`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md) | en curso |
+| 42 | El manual por capítulos | [`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -571,6 +571,29 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 42 — El manual por capítulos (2026-10-09)
+
+Las divergencias están en el PRD-de-fase (`prds/41-manual-por-capitulos.md`).
+El manual tiene una sola fuente, un Markdown por capítulo que la app pinta, y
+sus capturas salen de recorrer la aplicación de verdad con las carteras reales.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Recorrer la app como un usuario destapa lo que el seed esconde.** La demo
+  y el seed insertan directo en la base y se saltan el validador: la mira de
+  5 m solo falló al teclear la cartera en el popup. Un dato real cargado por
+  la interfaz es una prueba que ningún fixture da.
+- **En un recorrido, esperar el estado, no el tiempo.** Tres trampas, las tres
+  silenciosas:
+  - un clic antes de hidratar no hace nada;
+  - el mismo popup que pasa a la armada siguiente recibe lo tecleado si no se
+    espera su título exacto;
+  - la barra fija sale a media página en una captura completa.
+- **Una regla que vive en dos sitios se rompe; una prueba que compara las dos,
+  no.** El texto duplicado del manual se desviaba sin que nada fallara. Ahora
+  el manual es una fuente, y las tablas que copian el código tienen una
+  prueba que las compara.
 
 ### Cierre Fase 41 — El dibujo de la poligonal como un mapa (2026-10-08)
 
