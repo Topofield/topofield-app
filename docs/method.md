@@ -51,6 +51,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | [`prds/38-precision-minimos-cuadrados.md`](./prds/38-precision-minimos-cuadrados.md) | cerrada |
 | 40 | Informes entregables | [`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md) | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | [`prds/40-visor-poligonal.md`](./prds/40-visor-poligonal.md) | cerrada |
+| 42 | El manual por capítulos | [`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md) | en curso |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 

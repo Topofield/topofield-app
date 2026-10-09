@@ -19,7 +19,8 @@ peticiones sin fase**, todas con su texto más abajo:
 | **Semáforo por velocidad** | «Semáforo por velocidad con margen de ruido» | Que el ruido de la mira no dispare la alarma por velocidad |
 | **NC1** | «Catálogos en la nivelación» | Quitar «Tomar del catálogo» del equipo en el alta de la nivelación, como en la poligonal (hoy sigue en `leveling-details-dialog.tsx`) |
 
-Lo demás de este archivo está resuelto y se conserva como registro.
+Lo demás de este archivo está resuelto y se conserva como registro, salvo
+«El manual por capítulos (Fase 42)», al final, que está en curso.
 
 ## Cómo se resolvieron las peticiones (registro hasta el 2026-10-08)
 
@@ -841,3 +842,14 @@ quitar el reparto angular y las fórmulas de asentamientos, y reescribir las
 frases con el estado del proceso en la app. Es la **Fase 40**
 ([`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md)),
 **cerrada** y en producción el 2026-10-08.
+
+## El manual por capítulos (Fase 42)
+
+El 2026-10-08, con el producto terminado y antes de redactar de nuevo la
+monografía, el usuario pidió: «El manual quiero rediseñarlo además su ux/ui
+para que se pueda leer por secciones o capítulos, como los manuales típicos,
+y que esté dividido por los flujos de usuario. […] Para cada flujo, quiero que
+hagas el recorrido real, vayas tomando los pantallazos, y guardándolos así
+como actualizando el manual. El manual debe tener un lenguaje sencillo y fácil
+de entender.» Eligió una sola fuente: Markdown por capítulo, que la app pinta.
+Es la **Fase 42** ([`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md)).

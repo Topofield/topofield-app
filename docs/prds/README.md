@@ -47,6 +47,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | `38-precision-minimos-cuadrados.md` | cerrada |
 | 40 | Informes entregables | `39-informes-entregables.md` | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | `40-visor-poligonal.md` | cerrada |
+| 42 | El manual por capítulos | `41-manual-por-capitulos.md` | en curso |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 
