@@ -103,8 +103,10 @@ y les quitaron el cierre: desde la 37 ningún proceso se cierra, y la visita de
 asentamientos se mide por armadas, sin compensar, desde los BM de su lugar. La
 38 dejó un solo informe por proceso, en su página, con el PDF del navegador y
 un Excel de fórmulas vivas con la forma de las carteras, y quitó los informes
-consolidados. La 40 hizo del informe un entregable: sin la marca de la app,
-con pie y paginación propios, y solo con las fórmulas del ajuste.
+consolidados. La 39 dio a mínimos cuadrados la precisión de cada punto
+(elipses de error al 95 %). La 40 hizo del informe un entregable: sin la marca
+de la app, con pie y paginación propios, y solo con las fórmulas del ajuste. La
+41 hizo del dibujo de la poligonal un visor que se mueve como un mapa.
 
 ---
 
@@ -143,7 +145,7 @@ Mailpit: `http://127.0.0.1:55324`.
 | `npx supabase gen types typescript --local > src/types/database.ts` | Regenera tipos |
 | `npx tsx --env-file=.env.local scripts/resincronizar-asentamientos.mjs` | Recalcula todas las visitas de cada lugar con el motor de la Fase 37 —por tramos, desde los BM del lugar y sin compensar— y las guarda con `save_visit` (`recomputeSite`). Simula por defecto, contando las visitas y las lecturas cuya cota cambia; escribe con `--aplicar`. Es el paso 2 del despliegue de la Fase 37 (§ 13); hasta entonces reescribía solo las lecturas de las visitas abiertas (Fase 11) |
 | `npx tsx --env-file=.env.local scripts/agregar-cartera-demo.mjs` | Agrega el lugar de la cartera real de asentamientos a cada «Proyecto de ejemplo» que no lo tenga, con `insertarCartera` (Fase 37). Simula por defecto; escribe con `--aplicar` |
-| `npx tsx --env-file=.env.local scripts/reparar-resultados-estacion.mjs` | Detecta procesos cuyas estaciones no tienen resultados persistidos y los recalcula. Simula por defecto; escribe con `--aplicar`. Salta los cerrados y rechazados |
+| `npx tsx --env-file=.env.local scripts/reparar-resultados-estacion.mjs` | Detecta procesos cuyas estaciones no tienen resultados persistidos y los recalcula. Simula por defecto; escribe con `--aplicar`. (La rama que saltaba los cerrados y rechazados ya no se ejecuta: desde las Fases 35 y 36 no hay esos estados) |
 
 ### Advertencia sobre el entorno local
 
@@ -269,8 +271,9 @@ Componente cliente (editor)
 Validación + cálculo → escritura → revalidatePath
 ```
 
-Ningún archivo usa `createBrowserClient`. Toda escritura atraviesa una Server
-Action donde se aplican las guardas de negocio.
+Ningún archivo importa el cliente de navegador (`lib/supabase/client.ts`, que
+envuelve `createBrowserClient`). Toda escritura atraviesa una Server Action
+donde se aplican las guardas de negocio.
 
 ### Server Actions
 
@@ -281,8 +284,8 @@ Action donde se aplican las guardas de negocio.
 | `(app)/actions.ts` | `signOutAction` |
 | `(app)/projects/new/actions.ts` | `createProjectAction` |
 | `(app)/projects/[id]/actions.ts` | `updateProjectAction`, `archiveProjectAction`, `restoreProjectAction`, `deleteProjectAction` (hasta la Fase 37 rechazaba un proyecto con trabajo cerrado), `createReferencePointAction`, `updateReferencePointAction`, `deleteReferencePointAction` |
-| `(app)/projects/[id]/polygonal/new/actions.ts` | `createPolygonalProcessAction` |
-| `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `closePolygonalProcessAction`, `duplicatePolygonalProcessAction`, `renamePolygonalProcessAction`, `deletePolygonalProcessAction`, `setAngleInputFormatAction` (Fase 13), `georeferencePolygonalProcessAction` (Fase 15) |
+| `(app)/projects/[id]/polygonal/create-actions.ts` | `createPolygonalProcessAction` (el popup del alta, Fase 35) |
+| `(app)/projects/[id]/polygonal/[pid]/actions.ts` | `savePolygonalProcessAction`, `duplicatePolygonalProcessAction`, `renamePolygonalProcessAction`, `deletePolygonalProcessAction`, `setAngleInputFormatAction` (Fase 13), `georeferencePolygonalProcessAction` (Fase 15) |
 | `(app)/projects/[id]/leveling/create-actions.ts` | `createLevelingProcessAction` (el popup del alta, Fase 36) |
 | `(app)/projects/[id]/leveling/[pid]/actions.ts` | `saveLevelingProcessAction` (detecta el orden y guarda la libreta a medias, Fase 36), `duplicateLevelingProcessAction`, `renameLevelingProcessAction`, `deleteLevelingProcessAction` (Fase 22) |
 | `(app)/projects/[id]/sites/actions.ts` | `createSiteAction` y `saveSiteAction` (el popup del lugar, Fase 37), `renameSiteAction`, `duplicateSiteAction` (copia también sus BM, Fase 37), `deleteSiteAction` (Fase 22); `closeSiteAction` salió en la Fase 37 |
@@ -497,7 +500,8 @@ funciones que entienden Excel 2016, LibreOffice y Google Sheets, sin `LET`,
 anchos y prepara la hoja en A4 apaisado, ajustada al ancho. Cada hoja abre
 con su encabezado (`writeSheetHeader`): el título, los datos del proceso —en
 la poligonal y la nivelación, también la ubicación y el responsable del alta—
-y al final «Exportado», con la fecha de Bogotá y «Generado por TopoField».
+y al final «Exportado», con la fecha de Bogotá (sin la marca de la app desde
+la Fase 40).
 Cada «Resumen» lleva el proyecto con su datum (`projectPairs`) y «Cómo leer el
 libro».
 
@@ -638,10 +642,12 @@ projects         proyecto topográfico
 ```
 
 **`equipment` es una plantilla, no una referencia (Fase 25).** Guarda las
-estaciones totales y los niveles de cada usuario; elegir uno en un formulario
-**copia** sus valores en las columnas `equipment_*` y de precisión del
-proceso o de la visita, que siguen siendo la fuente del informe (y estuvieron
-bajo la inmutabilidad mientras hubo cierre). Ningún proceso referencia
+estaciones totales y los niveles de cada usuario. Elegir uno («Tomar del
+catálogo», en el alta de la nivelación y en la visita) **copia** su marca,
+modelo y serie en las columnas `equipment_*` del proceso o de la visita, que
+siguen siendo la fuente del informe. La poligonal teclea su equipo, sin
+catálogo, desde las correcciones de la Fase 35. Hasta las Fases 35 a 37 se
+copiaban también la precisión y la calibración. Ningún proceso referencia
 `equipment`, así que corregir o borrar un equipo no cambia nada medido ni
 informado —el agujero por el que la Fase 8 descartó una tabla referenciada por
 id—. Las escalas de sus columnas
@@ -657,7 +663,8 @@ sus observaciones y, desde la Fase 23, la portada congelada en `cover`; un
 trigger rechazaba todo `UPDATE` (§ 5). Con los consolidados la borra
 `20261010000000_sin_informes_consolidados.sql` —la tabla, su trigger
 `reports_reject_update` y su función `reject_update_on_report()`; las
-políticas se van con la tabla—, que va **después** del merge (§ 13). El
+políticas se van con la tabla—, que fue **después** del merge y ya está
+aplicada (§ 13). El
 informe de cada proceso nunca tuvo fila: se compone en vivo con la portada
 del proyecto (`coverOf`, § 3). Del `§3.2` del PRD principal no queda
 `reports`.
@@ -786,15 +793,18 @@ transacción:
 
 Columnas del alta (Fase 36): `location`, `responsible_name` y
 `responsible_role`, como en la poligonal. Del equipo, el alta pide marca,
-modelo y serie; `level_type`, `km_precision_mm`, `equipment_calibration_date`,
-`correction_method`, `has_warnings` y `warning_messages` quedan sin escribir ni
-leer en la pantalla (§ 11). `leveling_readings` no cambia: la captura por
+modelo y serie; `level_type`, `km_precision_mm`, `equipment_calibration_date`
+y `correction_method` quedan sin escribir ni leer en la pantalla (§ 11).
+`has_warnings` y `warning_messages`, que son de `leveling_readings`, tampoco
+se escriben. `leveling_readings` no cambia: la captura por
 armada escribe en el modelo por punto de siempre (hallazgo 7 del PRD).
 
 ### `settlement_readings` — columnas de resultado
 
-Igual que `polygonal_processes`, los cálculos se persisten para que los
-informes de la Fase 6 los lean sin recalcular:
+Los cálculos se persisten como caché (los reescriben `resyncSiteReadings` y
+`save_visit`): el dashboard y el hub leen `alert_status` sin recalcular; el
+panel, el informe, los Resultados de la visita y el Excel recalculan con
+`computeHistory`.
 
 | Columna | Contenido |
 |---|---|
@@ -973,9 +983,10 @@ calcular. En la visita (Fase 37) tampoco: es el que alcanza su tramo peor, o
 se descartó (`docs/prds/07-precision-equipo-por-proceso.md`, decisión #2): una
 tabla `equipment` referenciada por id reabre el agujero de trazabilidad que
 motivó la fase, porque editar la fila cambiaría el equipo de los informes de
-procesos ya cerrados. Con los campos sueltos en el proceso, el congelado sale
-gratis de la inmutabilidad que ya existe (§ 5), mientras el proceso siga
-cerrado.
+procesos ya cerrados. Con los campos sueltos en el proceso, el congelado salía
+gratis de la inmutabilidad que existía entonces (§ 5), mientras el proceso
+estuviera cerrado. Desde las Fases 35 a 37 nada se cierra, y el equipo del
+informe es el que el proceso tenga guardado.
 
 **Consecuencia para el informe.** Antes de esta fase, la página de impresión
 de los informes consolidados leía `project.precision_order`/`project.equipment_*`
@@ -1019,8 +1030,8 @@ El PRD (§ 4.6) exigía que un proceso `closed` o `rejected` fuera inmutable.
 siguió inmutable fue **el informe consolidado emitido**: `reports` no admitía
 `UPDATE` y su portada quedaba congelada en `cover` (abajo, «Lo que dependía de
 lo cerrado»). **Desde la Fase 38 no queda nada inmutable**: sin consolidados,
-`20261010000000_sin_informes_consolidados.sql` (después del merge, § 13)
-borra la tabla, su trigger `reports_reject_update` y su función
+`20261010000000_sin_informes_consolidados.sql` (después del merge, ya
+aplicada, § 13) borra la tabla, su trigger `reports_reject_update` y su función
 `reject_update_on_report()`. Lo prueba `sin_informes_consolidados.test.sql`
 (§ 9). Lo que sigue es el registro.
 
@@ -1237,12 +1248,12 @@ Dos detalles que rompen el flujo en silencio si se olvidan:
 
 **Qué trae la demo (Fase 21).** Desde la Fase 21 el «Proyecto de ejemplo» son
 las carteras de campo reales con que se validó el motor, no datos sintéticos:
-la poligonal V10 de la cartera TT4 (cerrada, con su informe), la Famarena de
-la Sede Vivero ajustada por mínimos cuadrados y su versión en sistema local
-para georreferenciar, la nivelación de El Verjón con ida y vuelta y el tramo 2
-leído del crudo de un nivel digital Leica (cerrado, con su informe), más Torre
-Alameda, la simulación del prototipo de asentamientos (cerrada, con su
-informe). Desde las Fases 35 a 37 nada de eso se cierra, y los informes ya no
+la poligonal V10 de la cartera TT4, la Famarena de la Sede Vivero ajustada
+por mínimos cuadrados y su versión en sistema local para georreferenciar, la
+nivelación de El Verjón con ida y vuelta y el tramo 2 leído del crudo de un
+nivel digital Leica, más Torre Alameda, la simulación del prototipo de
+asentamientos. Hasta las Fases 35 a 37 se creaban cerradas y con su informe;
+desde entonces nada de eso se cierra, y los informes ya no
 se llaman «de cierre»; **desde la Fase 38** la demo no crea informes
 consolidados (salió `insertar-informe.ts`, con las banderas `informe` de
 `fixtures.ts`): el informe de cada proceso está en su página. **Desde la Fase
@@ -1288,7 +1299,10 @@ testear los algoritmos de forma aislada y es lo que sostiene la monografía.
 | `settlement.ts` | `computeSettlements`, `classifyAlert`, `computeTrends`, `detectTrendDeviations`, `computeHistory` |
 | `settlement-book.ts` | La libreta de la visita por tramos, sin compensar (Fase 37): `computeBook`, `tramoStarts`, `bookVerification`, `bookElevations`, `bookTemplate`, `bookPending`, `visitStatusOf`, `auxiliaryPoints`, `bookBenchmarkChecks` |
 | `visit-record.ts` | `visitRecordOf` —lo que se guarda de una visita— y `recalculateSite` (Fase 37) |
-| `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `LEVELING_TOLERANCE_K`, `DAYS_PER_MONTH`, `SETTLEMENT_THRESHOLD_PRESETS`, `angularTolerance`, `minRelativePrecision`, `levelingTolerance`, `thresholdsFor`; el margen fijo de la tendencia (`trendDeviationMargin`, `accelerationMargin`, Fase 37) |
+| `settlement-summary.ts` | `summarizeSite`, `chainedMeans`, `nextAccumulatedThreshold` — el resumen del lugar para el panel y el informe |
+| `settlement-persistence.ts` | `readingChanged`, `visitsToRewrite`, `bookRowsToPersist` — qué lecturas hay que reescribir al guardar |
+| `correction-breakdown.ts` | `correctionBreakdown` — cómo corrigió el método elegido, con las cifras del motor, para el paso Ajuste y el informe (Fase 35); solo vuelve a resolver el 2×2 de Crandall para mostrar λ₁ y λ₂ |
+| `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `LEVELING_TOLERANCE_K`, `DAYS_PER_MONTH`, `SETTLEMENT_THRESHOLD_PRESETS`, `CALIBRATION_MAX_MONTHS`, `MIDDLE_WIRE_TOLERANCE_M`, `TREND_DEVIATION_RATE_FACTOR`, `angularTolerance`, `minRelativePrecision`, `levelingTolerance`, `detectPrecisionOrder`, `thresholdsFor`, `thresholdsOf`; el margen fijo de la tendencia (`trendDeviationMargin`, `accelerationMargin`, Fase 37) |
 
 ### `computePolygonal`
 
@@ -1418,16 +1432,18 @@ con la hoja: replicar el error del Excel sería replicar un error.
 
 ### Lecturas múltiples
 
-Cada ángulo guarda N lecturas en `polygonal_angle_readings` (mínimo
-configurable por proceso, 3 por defecto) y la estación guarda el **promedio**,
+Cada ángulo guarda N lecturas en `polygonal_angle_readings` y la estación
+guarda el **promedio** (`angle_readings_min` sigue en la tabla, pero no se lee
+desde la Fase 35; § 11),
 recalculado por el servidor: es derivado, no un dato que el cliente pueda
 contradecir.
 
 La dispersión (máx − mín) se muestra como dato junto al promedio, sin juicio.
 Hasta la Fase 31 avisaba si superaba el doble de la precisión angular del
 equipo (`READING_DISPERSION_FACTOR`); el usuario la quitó (D-5), porque con
-ese umbral saltaba en el 32–58 % de los datos correctos. `validateReadings`
-solo exige el mínimo de lecturas.
+ese umbral saltaba en el 32–58 % de los datos correctos. Ningún validador
+exige un mínimo de lecturas: `readingDmsError` solo revisa el rango de cada
+una.
 
 ### Captura en grados decimales (Fase 13)
 
@@ -1469,9 +1485,10 @@ filas de libreta de salida.
   anterior); `proposedLevelingType` propone `closed` para un recorrido que
   vuelve a su BM y `open` (o `link`, si ya lo era) para ida y vuelta.
 - El diálogo (`components/leveling/import-dialog.tsx`) no guarda: entrega
-  filas y configuración. En el editor llenan el borrador; al crear,
-  `createLevelingProcessAction` inserta el proceso y guarda las lecturas con
-  `saveLevelingProcessAction`, y si eso falla borra el proceso recién creado.
+  filas y configuración. La pantalla por pasos («Importar .L o CSV») las
+  aplica al borrador (`draftWithImport`) y guarda al aceptar. El alta crea la
+  nivelación vacía: la rama de `createLevelingProcessAction` que guardaba
+  lecturas importadas se quedó sin llamadores desde la Fase 36.
 
 **La vuelta de una abierta.** Hasta la Fase 16, `computeLeveling` arrancaba
 la vuelta en `startElevation` si no había cota de llegada conocida, y en una
@@ -1534,8 +1551,9 @@ estaciones de coordenadas conocidas.
 - Un amarre del catálogo pasa a **manual** (`reference_point_id = null`, el
   código se queda): si no, `resolveStartAzimuth` recalcularía el azimut desde
   sus coordenadas locales en el siguiente guardado y desharía la rotación.
-- La acción escribe fila a fila con `UPDATE`: en un cerrado el trigger no deja
-  borrar y reinsertar, que es lo que hace el guardado.
+- La acción escribe con `georeference_polygonal`, en una transacción:
+  actualiza cada estación por su id, solo en sus columnas de posición. Así se
+  diseñó cuando la poligonal se cerraba (Fase 15), y sigue sirviendo.
 
 ### Trazas y dibujo (Fase 13)
 
@@ -1582,10 +1600,11 @@ aviso «Usa Ctrl + rueda para acercar». Con el foco en el dibujo, flechas,
 + / − y 0.
 
 **Un solo camino de filas a entrada.** `polygonal-draft.ts` (sin `"use
-client"`) contiene `processToConfig`, `stationToDraft` y `buildInput`, y
-`polygonalInputOf` los compone. El editor y el informe imprimible, que se
-renderiza en el servidor, construyen la entrada del cálculo por ahí, así que el
-dibujo del informe es por construcción el del editor.
+client"`) contiene `polygonalInputOf`, que compone `draftOf` e `inputOf`
+(`polygonal-save.ts`) con el orden y el tipo de ángulo detectados. La pantalla
+por pasos, el informe, el Excel y la georreferenciación arman la entrada del
+cálculo por ahí, así que el dibujo del informe es por construcción el de la
+pantalla.
 
 ### Métodos de corrección
 
@@ -2061,8 +2080,8 @@ de 11 px en un teléfono.
 
 ## 7. Validación
 
-`src/lib/validators/polygonal.ts` implementa dos capas (PRD § 5). También son
-funciones puras.
+`src/lib/validators/polygonal.ts` implementa la capa de captura (PRD § 5); la
+de cierre salió en la Fase 35 (abajo). También son funciones puras.
 
 ### Números tecleados (Fase 20)
 
@@ -2115,12 +2134,12 @@ estación de partida si hay mediciones, y un Norte y un Este finitos.
 | Minutos o segundos fuera de 0-59 | Error, bloquea |
 | Una lectura con grados fuera de 0-359 (salvo 360°00′00″ exacto), minutos o segundos fuera de 0-59, o grados y minutos con decimales (`readingDmsError`, Fase 24) | Error, bloquea: «Lectura N: …» |
 | Ángulo obligatorio incompleto | Error, bloquea |
+| Ángulo de 0° o 360° exacto | Advertencia, no bloquea |
 
 La regla de las lecturas existe aparte porque el ángulo de la estación es el
 **promedio**, que llega normalizado: una lectura de 65″ se promediaba como
 1′05″ y la regla de 0-59 nunca la veía. El popup y la Server Action pasan las
 lecturas crudas al mismo validador.
-| Ángulo de 0° o 360° exacto | Advertencia, no bloquea |
 
 ### El equipo del catálogo (Fase 25)
 
@@ -2272,7 +2291,7 @@ con contenido oscuro pasando por debajo.
   de la barra, tapaba Equipos, Manual y la cuenta y se quedaba sus toques.
 - **`Modal` y `Drawer` se pintan en un portal sobre `<body>`.** Un antecesor
   con su propio contexto de apilamiento —la barra de acciones, `sticky z-20`,
-  donde vive el diálogo «Cerrar proceso»— dejaba su `z-50` por debajo de la
+  donde vivía el diálogo «Cerrar proceso» hasta las Fases 35 a 37— dejaba su `z-50` por debajo de la
   barra (`z-40`) y de la ruta (`z-45`).
 - **Todo `Modal` limita su alto** (`100dvh − 2rem`) y desplaza el cuerpo, con
   la cabecera y el pie a la vista; `size` solo cambia el ancho. Hasta las
@@ -2597,20 +2616,25 @@ Excepciones conocidas, anteriores a la Fase 20 y comprobadas al revisarla:
 `PrecisionOrderSelect` importa las tolerancias y los tipos del proyecto, los
 `…Fieldset` de equipo (Fase 8) los tipos —las tolerancias, solo hasta que la
 Fase 31 quitó el aviso de equipo—, y `StatusIndicator` el tipo de los
-niveles del semáforo. Son controles de formulario del dominio que se
-quedaron aquí porque los usan los tres módulos.
+niveles del semáforo. `PrecisionOrderSelect` se quedó sin usuarios desde que
+el orden se detecta (Fases 35 a 37), y los fieldsets solo los usa el catálogo
+de equipos.
 
 El catálogo de equipos (Fase 25) **no** entró en los fieldsets: ganaron solo
 dos huecos, `header` y `footer` (el `order` opcional que tenían servía al aviso
 de equipo y salió con él en la Fase 31). El selector, el botón
 «Guardar en el catálogo», la acción que llama y el aviso de calibración viven
-en `components/equipment/` (`TotalStationEquipment`, `LevelEquipment`), y el
-catálogo llega por un contexto que carga el layout de las pantallas
-autenticadas.
+en `components/equipment/`, y el catálogo llega por un contexto que carga el
+layout de las pantallas autenticadas. Desde las Fases 35 a 37 los formularios
+montan `EquipmentIdentity` (la identidad con «Tomar del catálogo», en la
+nivelación y la visita) y `TotalStationIdentity` (la poligonal, sin
+catálogo); `TotalStationEquipment` y `LevelEquipment` siguen exportados, sin
+usuarios.
 
 Es un criterio verificable leyendo los imports, y explica la separación que ya
 existe: `Breadcrumbs` recibe `{ label, href }[]` y sirve a cualquier jerarquía;
-`ProcessTable` importa `PolygonalProcess` y conoce estados y tolerancias.
+`ProcessTable` importa los filtros del hub (`lib/process-list`) y los tonos de
+estado (`lib/process-status`).
 
 Consecuencia para los módulos nuevos: la tabla de nivelación **no** va al
 sistema de diseño. Si comparte estructura con la de poligonales, lo que se
@@ -2649,7 +2673,9 @@ pantalla, un spinner decorativo no.
 es la referencia: punto `aria-hidden` más etiqueta de texto real, no solo
 `aria-label`. Desde la Fase 5 admite dos modos: `status` (3 niveles —
 poligonal y nivelación) o `level` (4 niveles — semáforo de asentamientos), y
-el tipo obliga a pasar uno u otro, nunca ninguno ni ambos. El semáforo de 4
+el tipo obliga a pasar uno u otro, nunca ninguno ni ambos. El modo `status`
+ya no lo usa ninguna pantalla —los estados del hub van en `Badge`—; solo
+`/design-system`. El semáforo de 4
 niveles añade además **forma** como segundo canal gráfico (círculo,
 cuadrado, rombo, triángulo): los cuatro tokens de color cumplen 3:1 contra
 blanco individualmente, pero medidos entre sí quedan comprimidos en una
@@ -2706,7 +2732,8 @@ navegador lo sintetizaría.
 ### Responsive
 
 Punto de corte principal: 768 px. Las tablas densas de escritorio se convierten
-en tarjetas por elemento en móvil — el patrón está en `stations-table.tsx`.
+en tarjetas por elemento en móvil — el patrón está en
+`components/projects/process-table.tsx` (`md:hidden`).
 Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ### Accesibilidad
