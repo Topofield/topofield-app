@@ -52,7 +52,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 40 | Informes entregables | [`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md) | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | [`prds/40-visor-poligonal.md`](./prds/40-visor-poligonal.md) | cerrada |
 | 42 | El manual por capítulos | [`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md) | cerrada |
-| 43 | Las correcciones del recorrido | [`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md) | en curso |
+| 43 | Las correcciones del recorrido | [`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 

@@ -48,7 +48,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 40 | Informes entregables | `39-informes-entregables.md` | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | `40-visor-poligonal.md` | cerrada |
 | 42 | El manual por capítulos | `41-manual-por-capitulos.md` | cerrada |
-| 43 | Las correcciones del recorrido | `42-correcciones-del-recorrido.md` | en curso |
+| 43 | Las correcciones del recorrido | `42-correcciones-del-recorrido.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

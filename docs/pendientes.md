@@ -10,7 +10,7 @@ que lo descartó.
 
 ## Estado (2026-10-09)
 
-Las **42 fases están cerradas** y el producto está terminado. Quedan **seis
+Las **43 fases están cerradas** y el producto está terminado. Quedan **tres
 peticiones sin fase**, todas con su texto más abajo:
 
 | Petición | Sección | Qué falta |
@@ -18,11 +18,9 @@ peticiones sin fase**, todas con su texto más abajo:
 | **HC2** | «Navegación» | Un selector en cada miga de la barra para saltar entre proyectos y procesos |
 | **Semáforo por velocidad** | «Semáforo por velocidad con margen de ruido» | Que el ruido de la mira no dispare la alarma por velocidad |
 | **NC1** | «Catálogos en la nivelación» | Quitar «Tomar del catálogo» del equipo en el alta de la nivelación, como en la poligonal (hoy sigue en `leveling-details-dialog.tsx`) |
-| **Visitas desde 1** | «La cartera de la demo numera sus visitas desde 1» | Que la demo numere su primera visita como la 0, igual que la aplicación |
-| **Columna Alerta** | «La columna Alerta de las visitas se corta en el panel» | Que la tabla de visitas del panel quepa a 1280 px |
-| **Botón de importar** | «El diálogo de importación habla de un botón que no tiene» | Que el texto nombre «Usar estas lecturas» |
 
-Lo demás de este archivo está resuelto y se conserva como registro.
+Lo demás de este archivo está resuelto y se conserva como registro. Los
+tres hallazgos del recorrido del manual los resolvió la **Fase 43**.
 
 ## Cómo se resolvieron las peticiones (registro hasta el 2026-10-08)
 
@@ -873,7 +871,10 @@ de 5 m son lecturas válidas. La demo y el seed las tienen porque las insertan
 sin pasar por el validador, así que el fallo solo aparece capturando a mano.
 Afecta a la nivelación y a la visita, que comparten el validador.
 
-## La cartera de la demo numera sus visitas desde 1 (Fase 42, sin fase)
+## La cartera de la demo numera sus visitas desde 1 (Fase 42)
+
+> **Resuelta en la Fase 43** ([`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md)).
+> Se conserva el hallazgo como registro.
 
 Al recorrer el manual: la aplicación numera la primera visita de un lugar como
 la **0**, la línea base (Fase 5, decisión 14; `nextNumber` en
@@ -882,14 +883,20 @@ ejemplo» las inserta de la 1 a la 7 (`insertar-cartera.ts`). La misma cartera
 tecleada en la aplicación queda de la 0 a la 6. Es una etiqueta —el histórico
 se ordena por fecha— y no cambia ningún cálculo.
 
-## La columna Alerta de las visitas se corta en el panel (Fase 42, sin fase)
+## La columna Alerta de las visitas se corta en el panel (Fase 42)
+
+> **Resuelta en la Fase 43** ([`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md)).
+> Se conserva el hallazgo como registro.
 
 Al recorrer el manual, a 1280 px: en la tabla de visitas del panel de un
 lugar, la columna **Alerta** sale cortada («Norm», «Alarm»). Con 16 puntos de
 códigos largos, como «A4(5A-4B)», la tabla no cabe en su tarjeta. Es
 visual; los datos están bien.
 
-## El diálogo de importación habla de un botón que no tiene (Fase 42, sin fase)
+## El diálogo de importación habla de un botón que no tiene (Fase 42)
+
+> **Resuelta en la Fase 43** ([`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md)).
+> Se conserva el hallazgo como registro.
 
 Al recorrer el manual: «Importar libreta desde archivo» dice «Nada se guarda
 hasta que pulse Guardar», pero su botón es **Usar estas lecturas**

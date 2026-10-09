@@ -4,8 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-09 · Fase 42 cerrada; fases 38 a 41 en
-producción, con la migración de la 38 aplicada (§ 13) · 1228 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-09 · Fase 43 cerrada; fases 38 a 42 en
+producción, con la migración de la 38 aplicada (§ 13) · 1229 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -96,6 +96,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 40 | Informes entregables | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | cerrada |
 | 42 | El manual por capítulos | cerrada |
+| 43 | Las correcciones del recorrido | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -2779,7 +2780,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1228 tests en 100 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1229 tests en 100 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |

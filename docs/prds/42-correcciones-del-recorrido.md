@@ -1,6 +1,6 @@
 # PRD-de-fase 43 — Las correcciones del recorrido
 
-**Estado:** en curso (aprobado el 2026-10-09)
+**Estado:** cerrada (aprobado y cerrado el 2026-10-09)
 **Fecha de apertura:** 2026-10-09
 **Rama:** `fase-43-correcciones-del-recorrido`
 **Petición:** del usuario, 2026-10-09. Ante los tres hallazgos que dejó el
