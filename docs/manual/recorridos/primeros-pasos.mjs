@@ -2,6 +2,7 @@
 // proyecto de ejemplo, el dashboard, la barra y el tema.
 
 import {
+  BASE,
   CUENTA,
   abrir,
   borrarCuenta,
@@ -40,8 +41,14 @@ export async function recorrer() {
     await cap.paso("revise-su-correo");
 
     // El enlace del correo confirma la cuenta y deja la sesión iniciada.
+    // Se sigue el enlace sin redirigir y el código se canjea en el
+    // /auth/callback de este servidor: fuera del puerto 3000, Supabase
+    // redirige a `site_url` (config.toml), donde puede no haber nadie.
     const enlace = await enlaceDeConfirmacion();
-    await page.goto(enlace, { waitUntil: "networkidle", timeout: 120_000 });
+    const respuesta = await fetch(enlace, { redirect: "manual" });
+    const codigo = new URL(respuesta.headers.get("location") ?? "", BASE).searchParams.get("code");
+    if (!codigo) throw new Error(`El enlace de confirmación no trajo un código: ${respuesta.headers.get("location")}`);
+    await page.goto(`${BASE}/auth/callback?code=${codigo}`, { waitUntil: "networkidle", timeout: 120_000 });
     await page.waitForURL(/dashboard/, { timeout: 120_000 });
     // La primera visita crea el proyecto de ejemplo; se recarga para verlo.
     await page.waitForTimeout(1500);
