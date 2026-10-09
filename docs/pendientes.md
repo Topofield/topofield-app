@@ -8,9 +8,9 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-10-08)
+## Estado (2026-10-09)
 
-Las **41 fases están cerradas** y el producto está terminado. Quedan **tres
+Las **42 fases están cerradas** y el producto está terminado. Quedan **seis
 peticiones sin fase**, todas con su texto más abajo:
 
 | Petición | Sección | Qué falta |
@@ -18,9 +18,11 @@ peticiones sin fase**, todas con su texto más abajo:
 | **HC2** | «Navegación» | Un selector en cada miga de la barra para saltar entre proyectos y procesos |
 | **Semáforo por velocidad** | «Semáforo por velocidad con margen de ruido» | Que el ruido de la mira no dispare la alarma por velocidad |
 | **NC1** | «Catálogos en la nivelación» | Quitar «Tomar del catálogo» del equipo en el alta de la nivelación, como en la poligonal (hoy sigue en `leveling-details-dialog.tsx`) |
+| **Visitas desde 1** | «La cartera de la demo numera sus visitas desde 1» | Que la demo numere su primera visita como la 0, igual que la aplicación |
+| **Columna Alerta** | «La columna Alerta de las visitas se corta en el panel» | Que la tabla de visitas del panel quepa a 1280 px |
+| **Botón de importar** | «El diálogo de importación habla de un botón que no tiene» | Que el texto nombre «Usar estas lecturas» |
 
-Lo demás de este archivo está resuelto y se conserva como registro, salvo
-«El manual por capítulos (Fase 42)», al final, que está en curso.
+Lo demás de este archivo está resuelto y se conserva como registro.
 
 ## Cómo se resolvieron las peticiones (registro hasta el 2026-10-08)
 
