@@ -1,13 +1,13 @@
 // Capítulo 2 · Proyectos: crear uno, su pestaña de configuración, los puntos
 // de referencia y el listado de procesos (con el proyecto de ejemplo).
 //
-// El proyecto que crea, «Sede Vivero — Universidad Distrital», es el que usan
+// El proyecto que crea, «Proyecto Demo», es el que usan
 // los recorridos de la poligonal y la nivelación.
 
 import { CARTERA_TT4 } from "../../../src/lib/demo/carteras.ts";
 import { abrir, capitulo, dialogo, entrar, idDe, ir, sql, usuario } from "./comun.mjs";
 
-export const PROYECTO = "Sede Vivero — Universidad Distrital";
+export const PROYECTO = "Proyecto Demo";
 
 /** El id del proyecto del recorrido (lo crea este capítulo). */
 export function idProyecto() {
@@ -53,7 +53,7 @@ export async function recorrer() {
     await page.waitForURL(/projects\/new/);
     await page.waitForTimeout(800);
     await page.getByLabel("Nombre del proyecto").fill(PROYECTO);
-    await page.getByLabel("Descripción").fill("Levantamientos topográficos del campus");
+    await page.getByLabel("Descripción").fill("Carteras de campo reales para practicar con TopoField");
     await page.getByLabel("Cliente").fill("Universidad Distrital Francisco José de Caldas");
     await page.getByLabel("Ubicación").fill("Bogotá D.C.");
     await page.getByLabel("Proyección").fill("Origen Nacional");

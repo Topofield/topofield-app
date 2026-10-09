@@ -12,7 +12,7 @@ procesos. Todo trabajo en TopoField vive dentro de un proyecto.
    - **Latitud** y **Longitud**, si quiere, en grados decimales.
    - **Datum**, obligatorio (viene MAGNA-SIRGAS), y **Proyección**.
 
-   ![Formulario Nuevo proyecto lleno para la Sede Vivero de la Universidad Distrital, con su cliente, ubicación, datum MAGNA-SIRGAS y proyección Origen Nacional](../../public/manual/proyectos/01-nuevo-proyecto.png)
+   ![Formulario Nuevo proyecto lleno para el «Proyecto Demo», con su cliente, ubicación, datum MAGNA-SIRGAS y proyección Origen Nacional](../../public/manual/proyectos/01-nuevo-proyecto.png)
 
 3. Pulse **Crear proyecto**. Se abre el proyecto, todavía sin procesos.
 
