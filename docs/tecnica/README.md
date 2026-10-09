@@ -41,7 +41,7 @@ monografía de grado (Universidad Distrital).
 
 | Capa | Tecnología |
 |---|---|
-| Framework | Next.js 16.3.3 (App Router) |
+| Framework | Next.js 16.3.8 (App Router) |
 | UI | React 19.2.4 · Tailwind CSS v4 |
 | Datos y autenticación | Supabase (PostgreSQL + Auth) |
 | Lenguaje | TypeScript 5 (`strict`, `noUncheckedIndexedAccess`) |
@@ -3846,6 +3846,12 @@ HTTP con sesión de navegador (12 KB, tres hojas, catálogo y cotas correctos).
 desarrollo. Si un override deja de hacer falta porque el padre se actualiza,
 se puede quitar y comprobar con `npm audit` que sigue en cero.
 
+**Cerrado el 2026-10-09**: `next` pasó a 16.3.8 —el parche de la misma
+línea, que el aviso cubre hasta 16.3.7— y `npm audit fix` puso al día `sharp`
+y `source-map-js`. En producción, `npm audit --omit=dev` da **0**. Con
+desarrollo quedan 5 altos en la cadena de `braces` (herramientas de
+desarrollo, no se despliegan), que solo se corrigen con `--force` y cambios de
+versión mayor. El texto original queda como registro.
 **Abierto de nuevo (2026-10-08): avisos nuevos de `npm audit`.** En
 producción (`--omit=dev`) da 4: 1 crítico y 3 altos. El crítico es `next`
 16.3.3 (RCE en `next/og`, SSRF en la optimización de imágenes,
