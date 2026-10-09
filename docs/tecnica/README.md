@@ -2893,8 +2893,9 @@ de Postgres con pruebas pgTAP; ver [deuda técnica](#11-deuda-técnica-conocida)
 ### Cómo se testea la interfaz
 
 Sin jsdom, no se testea el comportamiento en el navegador. El patrón es
-**extraer la decisión como función pura** y testear esa función: `verdictFor`
-en `closure-verdict.tsx`, `resolveBreadcrumbs` en `breadcrumbs.tsx`,
+**extraer la decisión como función pura** y testear esa función: `orderChecks`
+en `polygonal/order-verdict.tsx` y `levelingOrderChecks` en
+`leveling/order-verdict.tsx`, `resolveBreadcrumbs` en `breadcrumbs.tsx`,
 `tabHref` en `tabs.tsx`. Cuando lo que importa es **qué se pinta**, sin
 eventos, basta `renderToStaticMarkup` de `react-dom/server` en el entorno
 `node`: así prueba `polygonal-correction.test.tsx` las fórmulas del informe
@@ -2955,8 +2956,9 @@ necesita:
 6. **Editor** en `src/components/<modulo>/`, reutilizando el design system.
 7. **Ruta** `src/app/(app)/projects/[id]/<modulo>/[pid]/`.
 8. **Informe y Excel** (Fase 38): su sección en `lib/reports/sections.ts` y
-   `components/reports/sections/`, que `ProcessReport` muestra en el paso de
-   Informe con `printable`; y su libro en `lib/export/`, con las primitivas de
+   `components/reports/sections/`, que `ProcessReport` compone en el paso de
+   Informe; la cabecera del módulo, sobre `ProcessHeader`, muestra «Exportar
+   PDF» y «Exportar Excel» con `printable`; y su libro en `lib/export/`, con las primitivas de
    `cells.ts`, la ruta `export/route.ts` y una prueba con `formulaMismatches`.
 9. **Manual**: escribir su sección **en los dos sitios**
    (`docs/manual/README.md` y `src/app/(app)/manual/`, mismo commit) y
@@ -3046,7 +3048,11 @@ Quitarlos cambia el tipo de las secciones, y no cambia nada visible. Los
 ayudantes del Excel viejo de `workbook.ts` y los comentarios del consolidado
 salieron al cerrar la fase.
 
-**El borrado de `capture_mode` depende de producción (Fase 37).** El paso 3
+**Cerrado en el despliegue de la Fase 37 (2026-10-07)**: la consulta previa
+no dio ninguna visita de cotas tecleadas y el paso 3 borró la columna. Queda
+`SiteVisitInput.elevations` (`visit-record.ts`), que deja de hacer falta
+cuando no quede ninguna visita sin libreta. El texto original queda como
+registro. **El borrado de `capture_mode` dependía de producción (Fase 37).** El paso 3
 del despliegue (`20261009000000_asentamientos_sin_cierre.sql`) borra la
 columna que distinguía las visitas de cotas tecleadas. Si la consulta previa
 de producción (§ 13) da alguna, se decide con el usuario antes del `db push`:
@@ -3201,7 +3207,7 @@ catálogo quedaba corregido y el proceso con el amarre de antes.
 pide solo la identidad del nivel, hay un solo método y nadie escribe ni lee
 los avisos. El Excel muestra el tipo de nivel de los procesos que lo tienen
 —desde la Fase 38, ni la σ ni la calibración—, y la demo y el seed aún
-escriben `level_type` y `km_precision_mm`. Borrarlas es una migración
+escriben `level_type`, `km_precision_mm` y `equipment_calibration_date`. Borrarlas es una migración
 destructiva para cuando nada las lea (fuera de alcance en el PRD de la fase).
 
 **El orden y las cotas guardados de las nivelaciones anteriores a la Fase 36.**
@@ -3214,6 +3220,10 @@ el «Cumple» del hub y del dashboard lee lo guardado, y puede marcar ✕ una
 nivelación que alcanza un orden. Se corrige sola al guardar la
 nivelación (cualquier popup); si hiciera falta de una vez, un script que
 re-guarde cada nivelación con `levelingRecordOf` tras el paso 1.
+
+> Sin datos afectados desde la regeneración de la demo (Fase 37, § 13): las
+> dos nivelaciones de producción eran las de la demo, y se recrearon con el
+> orden detectado.
 
 **Cabos menores de la revisión de la Fase 36.** Quedaron anotados sin
 corregir, ninguno en el camino de la captura por armada:
@@ -3242,8 +3252,9 @@ corregir, ninguno en el camino de la captura por armada:
   puede simular.
 - Una fila huérfana de una libreta vieja que no encadena no tiene lápiz: se
   repara quitando armadas o reimportando.
-- La captura 30 del manual es anterior al botón de imprimir de la cabecera de
-  la poligonal (Fase 35).
+- **Resuelto en la Fase 38**: la captura 30 del manual, que era anterior al
+  botón de imprimir de la cabecera de la poligonal (Fase 35), se regeneró con
+  el paso Informe y su «Exportar PDF».
 
 **El estado de la nivelación conserva `closed` y `rejected` en el tipo.**
 `LevelingProcess.status` reutiliza `ProcessStatus`, el de la poligonal y los
@@ -3302,8 +3313,8 @@ configuración de paneles, no código. Ver § 13.
 
 **`relative_precision` se persiste como texto ya formateado.** La presentación
 ya es una sola: `formatPrecision` (`lib/utils/format.ts`) es el único
-formateador y lo usan el hub, el editor, el veredicto, el diálogo de cierre y
-el informe —comprobado en la Fase 24; el Excel lo usó hasta la Fase 38, que
+formateador y lo usan el hub, el veredicto del paso Ajuste, el informe y su
+resumen de precisión —comprobado en la Fase 24; el Excel lo usó hasta la Fase 38, que
 escribe la precisión como número, la X de 1:X, con fórmula—. El «`1:1001` en
 el listado y `1:1.001` en el editor» que registraba esta entrada era de antes
 de unificarlo.
@@ -3315,9 +3326,8 @@ ya es correcto. El texto original sigue como registro.
 
 El problema de ordenamiento que esto causaba ya está sorteado: `parsePrecision`
 (`src/lib/process-list.ts`) extrae el valor numérico antes de comparar, para que
-`1:46` no quede después de `1:1001`. Pero es una solución en la capa de
-presentación. Lo que corresponde es extraer un formateador único a
-`src/lib/utils/format.ts` y evaluar guardar el número en vez de la cadena.
+`1:46` no quede después de `1:1001`. Lo único pendiente es guardar el número
+en vez de la cadena.
 
 **Cerrado en la Fase 27 — el rechazo del amarre tiene test** (`referenceStartAzimuth`, en `validators/polygonal.ts`), con un mensaje propio para un punto que no está en el catálogo y la consulta filtrada por el proyecto del proceso. El texto original queda como registro. **El rechazo de un amarre sin coordenadas no tiene test automatizado.** El
 selector de punto de amarre excluye los `reference_points` sin `north`/`east`
@@ -3361,7 +3371,8 @@ pantallas de proceso —y con ellas la visita y su editor— tienen su esqueleto
 (`ProcessLoading`); antes mostraban el del hub. «Nuevo proyecto» y los `new`
 de cada módulo siguen heredando el del proyecto o ninguno.
 
-**`ProjectCard` no tenía hover de fondo**, a diferencia de las filas del hub.
+Cerrado en la Fase 24 (arriba): **`ProjectCard` no tenía hover de fondo**, a
+diferencia de las filas del hub; hoy lleva `hover:bg-sel`.
 
 **El fixture «Enlace P1-P3»** del seed tiene su punto de llegada redondeado a 5
 decimales, lo que deja un error residual de 3.8e-7 m y una precisión de
@@ -3633,9 +3644,10 @@ Queda en pie parte de la limitación de fondo. Desde la Fase 23 la escritura
 de la visita —purga, cabecera, libreta, lecturas y propagación— vive en la
 función `save_visit`, que sí tiene pruebas contra la base local (pgTAP, § 9).
 Desde la Fase 37 la carga de `saveVisitAction` sale de `visitRecordOf`, que
-tiene pruebas (§ 9). Siguen sin cobertura automática `resyncSiteReadings` y
-`recomputeSite`: se verificaron comparando la base antes y después, y con la
-simulación del script de resincronización.
+tiene pruebas (§ 9). Desde la revisión final de la Fase 37, `recomputeSite`
+tiene pruebas con un cliente simulado (`settlement-sync.test.ts`). Sigue sin
+cobertura `resyncSiteReadings`, que se verificó comparando la base antes y
+después, y con la simulación del script de resincronización.
 
 **Cerrado — la gráfica distingue diez series por forma.** `SERIES_MARKERS`
 pasó de 5 a 10 formas en la Fase 6, porque con cinco la **forma sola** se
@@ -3660,10 +3672,10 @@ y `reports/eligibility.ts` con los consolidados, en la 38). La que
 **escribe** en los cuatro guardados de varias tablas pasó en la Fase 23 a
 funciones de Postgres con pruebas pgTAP contra la base local (§ 3 y § 9); esa
 misma vía sirve para probar triggers y RLS. Lo demás —`resyncSiteReadings`,
-`recomputeSite`, las acciones de una sola tabla y el armado de las cargas en
-TypeScript— sigue sin cobertura automática, porque el proyecto no puede
-mockear el cliente de Supabase, y depende de verificación manual contra la
-base.
+las acciones de una sola tabla y el armado de las cargas en TypeScript— sigue
+sin cobertura: un cliente simulado (como el de `settlement-sync.test.ts` o
+`paginate.test.ts`) prueba qué se pide, no lo que la base hace con ello, y
+depende de verificación manual contra la base.
 
 **Cerrado — los datos de producción ya tienen sus resultados de estación.**
 El generador del proyecto de ejemplo (`crear-proyecto-demo.ts`) y el seed
@@ -3685,9 +3697,10 @@ valores que produce el generador corregido en local.
 > da 0/270/180/90 — es el polígono espejo, y cierra igual. El registro se deja
 > como quedó porque documenta una reparación histórica en producción.
 
-El script queda en el repositorio porque sigue siendo la herramienta correcta
-si vuelve a aparecer un proceso con resultados sin persistir. Corre en modo
-simulación por defecto; escribe solo con `--aplicar`.
+El script quedó en el repositorio como registro, pero ya no corre: pide
+`projects.precision_order`, que la Fase 8 borró, y la guarda de lo cerrado no
+tiene nada que saltar desde la Fase 35. Habría que adaptarlo antes de volver a
+usarlo.
 
 **Cerrado — el informe incluye la gráfica de asentamientos.**
 `components/reports/settlement-plot.tsx` dibuja la serie temporal en SVG
@@ -3812,9 +3825,17 @@ las tres rutas de exportación a cambio de nada. No se hizo: el override da el
 mismo resultado sin tocar código. Verificado descargando un `.xlsx` real por
 HTTP con sesión de navegador (12 KB, tres hojas, catálogo y cotas correctos).
 
-`npm audit` queda en **0 vulnerabilidades**, producción y desarrollo. Si un
-override deja de hacer falta porque el padre se actualiza, se puede quitar y
-comprobar con `npm audit` que sigue en cero.
+`npm audit` quedó entonces en **0 vulnerabilidades**, producción y
+desarrollo. Si un override deja de hacer falta porque el padre se actualiza,
+se puede quitar y comprobar con `npm audit` que sigue en cero.
+
+**Abierto de nuevo (2026-10-08): avisos nuevos de `npm audit`.** En
+producción (`--omit=dev`) da 4: 1 crítico y 3 altos. El crítico es `next`
+16.3.3 (RCE en `next/og`, SSRF en la optimización de imágenes,
+envenenamiento de caché), que se corrige en 16.4.0. Los altos son `sharp` y
+`source-map-js`, y con desarrollo suben a 11. La app no usa `next/og` ni
+`ImageResponse`. Toca actualizar `next` (fuera del rango declarado, así que es
+una decisión del usuario) y revisar los overrides.
 
 **Cerrado en la Fase 26 — la auditoría del motor de cálculo**
 ([`../auditoria-calculo.md`](../auditoria-calculo.md)). Cuatro revisiones
@@ -3829,7 +3850,9 @@ retirara su distorsión, D-9—, CR4 en la 31, que quitó D-4 y D-5, y CR3 en la
 32 (D-3, D-6 y D-7). El resto queda documentado en la § 2 de la auditoría,
 sin cambio.
 
-**Una distancia tecleada que los hilos tapan (Fase 26, visto al verificar).**
+**Resuelto en la Fase 36**: con hilos, el popup de la armada (y el de la
+visita, que usa los mismos `VisualFields`) muestra la distancia que dan, sin
+campo para teclear otra. El texto original queda como registro. **Una distancia tecleada que los hilos tapan (Fase 26, visto al verificar).**
 Con los tres hilos capturados, la distancia sale de ellos (Fase 9) y la que
 se teclea en la celda se ignora, aunque la celda la siga mostrando: escribir
 «−50» en una fila con hilos no da error ni cambia el cálculo. Es el diseño
@@ -3897,7 +3920,10 @@ de los ajustes correctos. Su pariente con fuente, la banda de USACE, es sobre
 la mitad de las veces. La sustituye la prueba χ² bilateral al 95 % de su r
 (§ 6). Sigue sin decidir nada: solo cambia el texto.
 
-**Mínimos cuadrados en una abierta sin control (Fase 14).** El selector no lo
+**Resuelto en la Fase 35**: al pasar a sin control desde «Editar datos», el
+guardado escribe Brújula y conserva los pesos, y el paso Ajuste no muestra el
+selector, así que volver a mínimos cuadrados no los pide de nuevo. El texto
+original queda como registro. **Mínimos cuadrados en una abierta sin control (Fase 14).** El selector no lo
 ofrece ahí, pero un proceso con el método al que después se le cambia el tipo
 a sin control lo conserva: el panel muestra entonces el selector para elegir
 otro, y el guardado lo rechaza con un mensaje hasta que se cambie. No se
@@ -4117,14 +4143,15 @@ cuándo, qué estado) en vez de las dos columnas.
 La ruta `/manual` (`src/app/(app)/manual/`) sirve el manual de usuario dentro de
 la aplicación. **A diferencia de `/design-system`, existe en producción**: es
 documentación del producto, no una herramienta de desarrollo. Vive dentro del
-grupo `(app)`, así que hereda la comprobación de sesión y el encabezado.
+grupo `(app)`, así que hereda la comprobación de sesión y la barra superior
+(`AppBar`, Fase 33).
 
 ### Estructura
 
 | Archivo | Responsabilidad |
 |---|---|
-| `manual-data.ts` | Todo el contenido: textos, filas de tabla, metadatos de las capturas |
-| `page.tsx` | Las once secciones y sus piezas de presentación (`Seccion`, `Captura`, `Tabla`, `Nota`) |
+| `manual-data.ts` | Capturas, índice, filas de tabla y preguntas frecuentes |
+| `page.tsx` | Las trece secciones con su texto, y sus piezas de presentación (`Seccion`, `Captura`, `Tabla`, `Fila`, `Nota`, `VolverArriba`) |
 
 **Dos archivos, a propósito.** Es un documento, no funcionalidad: cada sección
 se renderiza una vez, en un orden fijo, así que repartirlas en un archivo por
@@ -4142,17 +4169,16 @@ compense su coste, y se factura por uso. El riesgo real de `<img>` —el salto d
 layout— se evita con `width`/`height` reales en cada imagen. Hay un
 `eslint-disable` puntual con esa explicación.
 
-**`loading="lazy"` en todas menos la primera.** Las treinta y una capturas
-—la Fase 38 quitó la 18 y la 19, las de los informes consolidados— suman unos
-8,5 MB; sin esto la página las descargaría de golpe.
+**`loading="lazy"` en todas menos la primera.** Las treinta y tres capturas
+—la Fase 38 quitó la 18 y la 19, las de los informes consolidados; la 39 sumó
+la 36 y la 37— suman unos 8,6 MB; sin esto la página las descargaría de golpe.
 
 **`Nota` propia en lugar de `Alert`.** `Alert` lleva `role="alert"` siempre, lo
 que anuncia el contenido con prioridad al lector de pantalla. Una nota
 informativa de un manual no es una alerta activa.
 
-**Los módulos pendientes dicen la palabra «Pendiente».** El color nunca es el
-único canal, y las tarjetas no contienen nada accionable para que nadie crea
-que puede entrar a un módulo que aún no existe.
+Retirado en la Fase 6, cuando ya no quedaron módulos pendientes: **los
+módulos pendientes decían la palabra «Pendiente»**.
 
 **El índice son anclas de HTML**, sin JavaScript de cliente, igual que las
 pestañas y los filtros del resto de la aplicación. Los `id` de `SECCIONES` deben
@@ -4225,7 +4251,7 @@ CHECK. La de la Fase 24 dejó el CHECK
 veredicto, ningún informe sin portada, las cuatro funciones de guardado como
 `SECURITY INVOKER` y sin `EXECUTE` para `anon`, sus dos triggers activos,
 `reports` sin política de `UPDATE` y cero procesos calculados con el veredicto
-nulo.
+nulo (el trigger de la C0 salió en la Fase 37 y `reports` en la 38).
 
 La de la Fase 30 añade `settlement_book_readings.catalog_elevation` y recrea
 `save_visit`; se aplicó antes del merge del PR #19. Verificado: la columna es
@@ -4294,7 +4320,8 @@ Lo guardado coincide con lo recalculado en cotas, alturas de instrumento y
 acumulados (diferencia 0). Las dos conservan en `precision_order` el tercer
 orden que declaraban hasta su próximo guardado; su «Cumple» guardado es el
 mismo, así que el hub no difiere, y la cabecera, el informe y el Excel dicen
-el detectado.
+el detectado. Desde la regeneración de la demo (Fase 37), ya no: se recrearon
+con el orden detectado.
 
 Con las dos aplicadas, las poligonales de producción se leyeron en solo lectura
 y se calcularon con el motor de la app (`polygonalInputOf`), contra las hojas
@@ -4312,8 +4339,9 @@ Los 0.005 mm de la TT4 son el azimut de partida, que la app guarda a la décima
 de segundo (330°35′57.2″ frente a 57.23″ en la hoja). Lo guardado en
 producción coincide con lo recalculado: error, precisión y coordenadas con
 menos de 0.05 mm. El orden detectado es tercero en la TT4 y segundo en la
-Vivero, que guarda el tercero que se declaró antes de la fase; las pantallas
-muestran el detectado.
+Vivero, que guardaba el tercero que se declaró antes de la fase; las pantallas
+muestran el detectado. Desde la regeneración de la demo (Fase 37), se guarda
+el detectado.
 
 **La Fase 37 llevó el esquema en tres pasos** (preparados y aplicados el
 2026-10-07; cómo se aplicaron, al final de este apartado). Dos migraciones y,
@@ -4430,7 +4458,8 @@ hoja.
   Alameda (8 puntos, BM-1 y BM-2, 14 visitas calculadas, 168 filas de libreta y
   112 lecturas) y «Control de asentamiento estructural», la cartera real (16
   puntos, PISCINA/BM = 156.2990, 7 visitas, 119 filas y 112 lecturas), además
-  de 3 poligonales, 2 nivelaciones, 3 informes y 5 puntos de referencia.
+  de 3 poligonales, 2 nivelaciones, 3 informes (salieron con la Fase 38) y 5
+  puntos de referencia.
 
 El primer `db push` lo ejecutó el usuario: el modo automático del agente lo
 bloquea. El `git push` de `main`, el `db push` del paso 3 y el borrado de la
@@ -4465,8 +4494,7 @@ directo en `main` el 2026-10-08, sin PR (petición del usuario), y el usuario
 verificó el PDF en producción.
 
 **La Fase 39 no tiene migración**: su despliegue es el merge. Su rama sale de
-la de la Fase 38, así que entra a `main` con ella o después de ella; el paso
-de la 38 —su `db push` después del merge— no cambia.
+la de la Fase 38, y entró a `main` después de ella (§ siguiente).
 
 **Cómo se desplegaron las Fases 38 y 39** (2026-10-08): el PR #31 (la 38) se
 fusionó primero, y después el #32 (la 39), con `main` integrado en su rama
