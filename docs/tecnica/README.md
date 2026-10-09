@@ -4,8 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-08 · Fases 38 a 40 en `main` y en
-producción, con la migración de la 38 aplicada (§ 13) · 1187 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-08 · Fases 38 a 41 en `main` y en
+producción, con la migración de la 38 aplicada (§ 13) · 1193 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -94,6 +94,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 38 | El informe de cada proceso | cerrada |
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | cerrada |
 | 40 | Informes entregables | cerrada |
+| 41 | El dibujo de la poligonal como un mapa | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -407,7 +408,8 @@ Resultado (cifras, orden alcanzado y por qué, o la alerta), 2. Datos de campo
 pantalla y en el PDF, sin librerías. Desde la Fase 40 el informe solo lleva
 las del ajuste —la del método (Brújula, Tránsito, Crandall o mínimos
 cuadrados) y la de la elipse de error—; el reparto angular se dice en el
-texto con su valor por ángulo; `src/types/mathml.d.ts` declara los
+texto con su valor por ángulo. Cada una lleva su leyenda «donde:» (Fase 41,
+`legend` de `Formula`): sus símbolos, como texto, en la misma línea gris; `src/types/mathml.d.ts` declara los
 elementos, que `@types/react` 19 aún no trae. Una letra griega sola va con
 `mathvariant="normal"`: Chrome la pasaría a la cursiva matemática (U+1D6FC…),
 que muchas fuentes no tienen.
@@ -1567,6 +1569,18 @@ El editor usa `PolygonalPlotViewer`, que mide su contenedor y dibuja con el
 ancho real: con un `viewBox` fijo, en un teléfono el texto se reducía a unos
 4 px. El informe usa `PolygonalPlot` con el tamaño por defecto.
 
+Desde la Fase 41 el visor se mueve como un mapa: arrastrar desplaza; Ctrl +
+rueda, doble clic y el pellizco de dos dedos acercan hacia el punto con
+`zoomAt` (pura, con tests: el punto bajo el cursor no se mueve; acota a
+[1, `MAX_PLOT_ZOOM`]); los botones + / − y encuadrar flotan sobre el `<svg>`
+por la prop `viewport` de `PolygonalPlot`, que también lleva los gestos para
+que no actúen sobre la leyenda. La rueda va por un `addEventListener` no
+pasivo (React registra `onWheel` como pasivo y no deja cancelarla), enganchado
+con un ref de callback: el dibujo puede aparecer después del primer render.
+La rueda sola no se captura —la página del editor es larga— y muestra el
+aviso «Usa Ctrl + rueda para acercar». Con el foco en el dibujo, flechas,
++ / − y 0.
+
 **Un solo camino de filas a entrada.** `polygonal-draft.ts` (sin `"use
 client"`) contiene `processToConfig`, `stationToDraft` y `buildInput`, y
 `polygonalInputOf` los compone. El editor y el informe imprimible, que se
@@ -2725,7 +2739,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1187 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1193 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2753,8 +2767,8 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `components/polygonal/order-verdict.test.ts` | 4 | El «Por qué» del orden alcanzado, orden por orden, con y sin condición angular (Fase 35) |
 | `components/polygonal/adjusted-table.test.ts` | 2 | La poligonal ajustada al estilo de la hoja: las coordenadas del punto de llegada y la fila Σ (Fase 35) |
 | `lib/polygonal-amarre.test.ts` | 22 | Los puntos del amarre al catálogo: reutilizar, completar, crear o mover el que tiene otras coordenadas; `catalogMoves`, los que cambian con sus coordenadas de antes y las otras poligonales que los usan; `repeatedPointName` con el medio milímetro, y `catalogPointOf`; `planCatalogWrites` —insertar, actualizar por id, un punto nuevo repetido una sola vez, el id propuesto para la referencia— y `catalogPointsProblem`: puntos sin nombre o con coordenadas no finitas, que no son los del amarre o que repiten nombre (Fase 35 y sus correcciones) |
-| `components/reports/sections/polygonal-correction.test.tsx` | 5 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35); el reparto angular en el texto, con su valor por ángulo (Fase 40) |
-| `components/reports/math.test.tsx` | 2 | Una letra griega sola va recta en MathML (Fase 35) |
+| `components/reports/sections/polygonal-correction.test.tsx` | 6 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35); el reparto angular en el texto, con su valor por ángulo (Fase 40); la leyenda «donde:» de cada fórmula y mínimos cuadrados sin pesos sin «faltan los pesos» (Fase 41) |
+| `components/reports/math.test.tsx` | 4 | Una letra griega sola va recta en MathML (Fase 35); la leyenda de `Formula`, «donde: símbolo — significado · …», y nada sin ella (Fase 41) |
 | `lib/errors/action-call.test.ts` | 3 | Un rechazo de red de una acción vuelve como error, sin lanzar, y las señales de navegación de Next pasan (Fase 35) |
 | `lib/calculations/least-squares.test.ts` | 28 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal; las matrices de la última iteración que usa el Excel, con N = A·Q·Aᵀ y N·k = −w (Fase 38) |
 | `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, velocidad como cadena y a la precisión de su columna; desde la Fase 37, cualquier visita, sin excepción de las cerradas; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |
@@ -2766,7 +2780,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/demo/fixtures.test.ts` | 19 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045) en tercer orden detectado, y la Vivero alcanza segundo orden (Fase 35); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos, en segundo orden detectado, y el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km en primer orden (Fase 36); desde la Fase 38, sin los informes de la demo; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo, y con la regla «dentro de tolerancia» sin compensar cuando no cumple (Fase 28); Torre Alameda sin compensar ni cerrar (Fase 37): ocho puntos, catorce visitas y sus dos BM del lugar, todas calculadas y solo la 9 sin verificación, cada cota a menos del cierre de su visita de la serie, el otro BM que nivela salvo en la visita 13 (Fase 30) y, con el margen fijo, ni avisos de tendencia ni «Acelerando» |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
-| `lib/design/polygonal-plot.test.ts` | 24 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13); el factor de las elipses de error: ×500 en la Vivero, la mayor al 15 % de la extensión, nunca menor que 1 y sin elipses, sin factor; el giro del SVG que lleva el eje mayor a su azimut, y los extremos de cada elipse para el encuadre (Fase 39) |
+| `lib/design/polygonal-plot.test.ts` | 27 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13); el factor de las elipses de error: ×500 en la Vivero, la mayor al 15 % de la extensión, nunca menor que 1 y sin elipses, sin factor; el giro del SVG que lleva el eje mayor a su azimut, y los extremos de cada elipse para el encuadre (Fase 39); `zoomAt`: el punto bajo el cursor no se mueve, sin punto acerca alrededor del centro y el acercamiento se acota a [1, 256] (Fase 41) |
 | `lib/calculations/least-squares-precision.test.ts` | 23 | La precisión de cada punto (Fase 39): `fQuantile2` contra la tabla 19.2 de Ghilani al 90, 95 y 99 % y c con r = 1, 2 y 3; `errorEllipse` sin correlación, girada y en [0°, 180°); `adjustedCofactor` con A·Q_l̂·Aᵀ = 0; la Vivero contra un **ajuste paramétrico independiente** (mismo σ₀, σ N, σ E y covarianza a la millonésima de milímetro), los puntos fijos, la elipse al 95 % y la misma Vivero modelada sin amarre; una abierta con control, con r = 3 y r = 2, contra la propagación por diferencias finitas a través del motor |
 | `lib/export/settlement-workbook.test.ts` | 6 | **El Excel de asentamientos con fórmulas vivas** (Fase 38, reescrita, con los casos de `settlement-workbook.fixtures.ts`): toda fórmula da el valor del motor con Torre Alameda, la cartera real y un punto que se salta una visita; ese punto compara contra la última visita en que se midió; cambiar una lectura de la libreta recalcula su cota en la comparación; las hojas Libretas, Comparación y Resumen |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |
@@ -4415,6 +4429,9 @@ otra sesión que corra en local el código de `main` sin esta fase fallaría al
 leer `reports`. Por lo mismo, **una vez aplicada, volver en Vercel a un
 despliegue anterior a la Fase 38 rompe todas las páginas de proceso**: el
 código viejo llama a `getReports`.
+
+**La Fase 41 no tiene migración**: su despliegue es el merge, por el PR #34
+el 2026-10-08, con la leyenda de las fórmulas del informe sumada.
 
 **La Fase 40 no tiene migración**: su despliegue es el merge. Se fusionó
 directo en `main` el 2026-10-08, sin PR (petición del usuario), y el usuario

@@ -47,6 +47,112 @@ function sec(v: number): string {
   return `${r < 0 ? "−" : "+"}${Math.abs(r).toFixed(1)}″`;
 }
 
+// Las leyendas de las fórmulas (Fase 41): qué es cada símbolo. Cada fórmula
+// lleva la suya; Q, A y σ₀ se explican una vez, en la de mínimos cuadrados.
+type Legend = [ReactNode, string][];
+const LEGEND_CORR: Legend[number] = [
+  <>
+    C<sub>N,i</sub>, C<sub>E,i</sub>
+  </>,
+  "corrección a las proyecciones norte y este del lado i",
+];
+const LEGEND_ERR: Legend[number] = [
+  <>
+    e<sub>N</sub>, e<sub>E</sub>
+  </>,
+  "error de cierre en norte y este",
+];
+const LEGEND_D: Legend[number] = [
+  <>
+    d<sub>i</sub>
+  </>,
+  "longitud del lado i",
+];
+const BOWDITCH_LEGEND: Legend = [LEGEND_CORR, LEGEND_ERR, LEGEND_D, ["P", "perímetro, la suma de las longitudes"]];
+const TRANSIT_LEGEND: Legend = [
+  LEGEND_CORR,
+  LEGEND_ERR,
+  [
+    <>
+      |ΔN<sub>i</sub>|, |ΔE<sub>i</sub>|
+    </>,
+    "proyección absoluta del lado i en cada eje",
+  ],
+  [
+    <>
+      k<sub>N</sub>, k<sub>E</sub>
+    </>,
+    "corrección unitaria de cada eje",
+  ],
+];
+const CRANDALL_LEGEND: Legend = [
+  [
+    <>
+      δd<sub>i</sub>
+    </>,
+    "corrección a la longitud del lado i",
+  ],
+  LEGEND_D,
+  [
+    <>
+      Az<sub>i</sub>
+    </>,
+    "azimut del lado i, ya corregido",
+  ],
+  LEGEND_ERR,
+  [
+    <>
+      λ<sub>1</sub>, λ<sub>2</sub>
+    </>,
+    "multiplicadores de Lagrange de las dos condiciones",
+  ],
+];
+const LEAST_SQUARES_LEGEND: Legend = [
+  ["v", "correcciones a las observaciones"],
+  ["Q", "matriz cofactor de las observaciones"],
+  ["A", "derivadas de las condiciones respecto a las observaciones"],
+  ["w", "lo que falta para cumplir cada condición"],
+  [
+    <>
+      σ<sub>j</sub>
+    </>,
+    "precisión a priori de la observación j",
+  ],
+  [
+    <>
+      σ<sub>d</sub>
+    </>,
+    "precisión de una medición de distancia",
+  ],
+  ["n", "veces que se midió cada distancia"],
+  ["P", "matriz de pesos, Q⁻¹"],
+  ["r", "redundancia, el número de condiciones"],
+  [
+    <>
+      σ<sub>0</sub>
+    </>,
+    "error estándar de la unidad de peso",
+  ],
+];
+const PRECISION_LEGEND: Legend = [
+  [
+    <>
+      Q<sub>l̂</sub>
+    </>,
+    "cofactor de las observaciones ajustadas",
+  ],
+  [
+    <>
+      Σ<sub>NE</sub>
+    </>,
+    "covarianza de las coordenadas norte y este del punto",
+  ],
+  ["J", "derivadas de las coordenadas del punto respecto a las observaciones"],
+  ["c", "factor de la elipse al nivel de confianza"],
+  ["F", "cuantil de la distribución F de Fisher"],
+  ["r", "redundancia"],
+];
+
 /** e_N y e_E, con su subíndice. */
 const ErrorsText = ({ n, e }: { n: number; e: number }) => (
   <>
@@ -163,7 +269,7 @@ function Bowditch({ b, ...p }: CorrectionProps & { b: Proportional }) {
         El error de cierre lineal <ErrorsText n={b.errorN} e={b.errorE} /> se repartió en proporción a la longitud de
         cada lado: los lados largos absorben más corrección.
       </p>
-      <Formula>
+      <Formula legend={BOWDITCH_LEGEND}>
         <MathLine>
           <Sub base={<Mi>C</Mi>} sub={<><Mi>N</Mi><Mo>,</Mo><Mi>i</Mi></>} />
           <Mo>=</Mo>
@@ -235,7 +341,7 @@ function Transit({ b, ...p }: CorrectionProps & { b: Proportional }) {
         El error de cierre <ErrorsText n={b.errorN} e={b.errorE} /> se repartió en cada eje en proporción a la
         proyección absoluta de cada lado: un lado casi norte-sur absorbe casi toda la corrección en N y poca en E.
       </p>
-      <Formula caption="k: corrección unitaria de cada eje">
+      <Formula legend={TRANSIT_LEGEND}>
         <MathLine>
           <Sub base={<Mi>C</Mi>} sub={<><Mi>N</Mi><Mo>,</Mo><Mi>i</Mi></>} />
           <Mo>=</Mo>
@@ -352,7 +458,7 @@ function Crandall({ b, ...p }: CorrectionProps & { b: Extract<CorrectionBreakdow
         lados, por mínimos cuadrados con peso 1/d: la corrección más pequeña posible, en proporción a cada distancia,
         que hace cerrar la poligonal.
       </p>
-      <Formula>
+      <Formula legend={CRANDALL_LEGEND}>
         <MathLine>
           <Mi>min</Mi>
           <Mo>⁡</Mo>
@@ -525,7 +631,7 @@ function LeastSquares({ b, ...p }: CorrectionProps & { b: Extract<CorrectionBrea
           />
         </>
       )}
-      <Formula caption="Se itera porque las condiciones no son lineales en los ángulos.">
+      <Formula legend={LEAST_SQUARES_LEGEND} caption="Se itera porque las condiciones no son lineales en los ángulos.">
         <MathLine>
           <Mi>v</Mi>
           <Mo>=</Mo>
@@ -570,7 +676,7 @@ function LeastSquares({ b, ...p }: CorrectionProps & { b: Extract<CorrectionBrea
       )}
       {!adj ? (
         <p className="report-text">
-          Sin ajuste: {w ? "la geometría de la poligonal no permite el ajuste." : "faltan los pesos del ajuste."}
+          Sin ajuste: {w ? "la geometría de la poligonal no permite el ajuste." : "no se declararon las precisiones a priori de los ángulos y las distancias."}
         </p>
       ) : (
         <>
@@ -668,7 +774,7 @@ function PointPrecision({
         de error al {level} % es la estándar multiplicada por c, que depende de la redundancia r (Ghilani y Wolf,{" "}
         <em>Adjustment Computations</em>, ec. 19.22). Con las pocas condiciones de una poligonal simple, c es grande.
       </p>
-      <Formula>
+      <Formula legend={PRECISION_LEGEND}>
         <MathLine>
           <Sub base={<Mi>Q</Mi>} sub={<Hat><Mi>l</Mi></Hat>} />
           <Mo>=</Mo>

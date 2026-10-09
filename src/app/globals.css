@@ -469,6 +469,14 @@
     margin: 0;
   }
 
+  /* «donde: …» (Fase 41): qué es cada símbolo, como texto corrido. */
+  .report-formula-legend {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-ink-2);
+    margin: 0.25rem 0 0.125rem;
+  }
+
   .report-table .report-sum td {
     font-weight: 600;
   }

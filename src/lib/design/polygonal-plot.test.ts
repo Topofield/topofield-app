@@ -9,9 +9,12 @@ import {
   ellipseRotation,
   exaggeratedPoints,
   exaggerationFactor,
+  MAX_PLOT_ZOOM,
   niceFloor,
   plotFrame,
   scaleBarMeters,
+  zoomAt,
+  type PlotViewState,
 } from "./polygonal-plot";
 
 function st(pointCode: string, angle: number, distance: number | null): StationInput {
@@ -240,5 +243,46 @@ describe("ellipseExtremes: los extremos de cada elipse exagerada, para el encuad
 
   it("los puntos fijos no aportan nada", () => {
     expect(ellipseExtremes(traces.slice(0, 1), precision, 500)).toEqual([]);
+  });
+});
+
+describe("zoomAt", () => {
+  const W = 720;
+  const H = 480;
+  const pts = [
+    { north: 1000, east: 2000 },
+    { north: 1080, east: 2150 },
+  ];
+  // El encuadre como lo arma `PolygonalPlot` con una vista.
+  function frameOf(view: PlotViewState) {
+    const base = plotFrame(pts, W, H, 48);
+    const c = { east: (base.east[0] + base.east[1]) / 2, north: (base.north[0] + base.north[1]) / 2 };
+    const mpp = base.metersPerPixel / view.zoom;
+    return plotFrame(pts, W, H, 48, {
+      zoom: view.zoom,
+      center: { east: c.east - view.offsetX * mpp, north: c.north + view.offsetY * mpp },
+    });
+  }
+
+  it("deja en su sitio el punto del dibujo bajo el cursor", () => {
+    const before: PlotViewState = { zoom: 3, offsetX: -40, offsetY: 25 };
+    const point = { north: 1050, east: 2100 };
+    const f0 = frameOf(before);
+    const x = f0.toX(point.east);
+    const y = f0.toY(point.north);
+    const after = zoomAt(before, 2.5, x - W / 2, y - H / 2);
+    const f1 = frameOf(after);
+    expect(after.zoom).toBeCloseTo(7.5, 10);
+    expect(f1.toX(point.east)).toBeCloseTo(x, 6);
+    expect(f1.toY(point.north)).toBeCloseTo(y, 6);
+  });
+
+  it("sin punto, acerca alrededor del centro", () => {
+    expect(zoomAt({ zoom: 2, offsetX: 10, offsetY: -6 }, 2)).toEqual({ zoom: 4, offsetX: 20, offsetY: -12 });
+  });
+
+  it("acota el acercamiento entre ×1 y el máximo", () => {
+    expect(zoomAt({ zoom: 1.5, offsetX: 30, offsetY: 30 }, 0.25)).toEqual({ zoom: 1, offsetX: 20, offsetY: 20 });
+    expect(zoomAt({ zoom: 200, offsetX: 0, offsetY: 0 }, 4).zoom).toBe(MAX_PLOT_ZOOM);
   });
 });

@@ -5,7 +5,9 @@
 // Los colores van como variables CSS del sistema de diseño, que el navegador
 // resuelve también al imprimir.
 
+import type { ComponentProps, ReactNode } from "react";
 import { niceTicks } from "@/lib/design/chart-scale";
+import { cn } from "@/lib/utils/cn";
 import {
   ellipseExtremes,
   ellipseFactor,
@@ -52,6 +54,11 @@ interface PolygonalPlotProps {
    * de `fieldTraverse`, y la leyenda no habla de ajuste ni de compensación.
    */
   field?: boolean;
+  /**
+   * La capa interactiva del editor (Fase 41): los gestos van en el contenedor
+   * del `<svg>` —no en la leyenda— y `overlay` se pinta encima del dibujo.
+   */
+  viewport?: { props: ComponentProps<"div">; overlay: ReactNode };
 }
 
 /**
@@ -88,6 +95,7 @@ export function PolygonalPlot({
   width: W = PLOT_WIDTH,
   height: H = PLOT_HEIGHT,
   field = false,
+  viewport,
 }: PolygonalPlotProps) {
   const traces = polygonalTraces(input, result);
   if (!traces) {
@@ -179,190 +187,193 @@ export function PolygonalPlot({
 
   return (
     <figure className="flex flex-col gap-2">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="h-auto w-full max-w-full touch-none select-none rounded-md border border-rule bg-card"
-        role="img"
-        aria-label={summary}
-      >
-        {/* Sin clipPath: el <svg> raíz ya recorta lo que sale de su área, y un
-            id fijo se duplicaría en el informe, que imprime varias poligonales. */}
-        <g>
-          {/* Grilla de coordenadas */}
-          {eastTicks.map((e) => (
-            <g key={`e${e}`}>
-              <line
-                x1={frame.toX(e)}
-                x2={frame.toX(e)}
-                y1={0}
-                y2={H}
-                stroke="var(--color-rule)"
-                strokeWidth={1}
-              />
-              <text
-                x={frame.toX(e)}
-                y={H - 6}
-                textAnchor="middle"
-                fontSize={10}
-                fill="var(--color-ink-2)"
-              >
-                E {coord(e)}
-              </text>
-            </g>
-          ))}
-          {northTicks.map((n) => (
-            <g key={`n${n}`}>
-              <line
-                x1={0}
-                x2={W}
-                y1={frame.toY(n)}
-                y2={frame.toY(n)}
-                stroke="var(--color-rule)"
-                strokeWidth={1}
-              />
-              <text
-                x={6}
-                y={frame.toY(n) - 4}
-                fontSize={10}
-                fill="var(--color-ink-2)"
-              >
-                N {coord(n)}
-              </text>
-            </g>
-          ))}
+      <div {...viewport?.props} className={cn("relative", viewport?.props.className)}>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="h-auto w-full max-w-full touch-none select-none rounded-md border border-rule bg-card"
+          role="img"
+          aria-label={summary}
+        >
+          {/* Sin clipPath: el <svg> raíz ya recorta lo que sale de su área, y un
+              id fijo se duplicaría en el informe, que imprime varias poligonales. */}
+          <g>
+            {/* Grilla de coordenadas */}
+            {eastTicks.map((e) => (
+              <g key={`e${e}`}>
+                <line
+                  x1={frame.toX(e)}
+                  x2={frame.toX(e)}
+                  y1={0}
+                  y2={H}
+                  stroke="var(--color-rule)"
+                  strokeWidth={1}
+                />
+                <text
+                  x={frame.toX(e)}
+                  y={H - 6}
+                  textAnchor="middle"
+                  fontSize={10}
+                  fill="var(--color-ink-2)"
+                >
+                  E {coord(e)}
+                </text>
+              </g>
+            ))}
+            {northTicks.map((n) => (
+              <g key={`n${n}`}>
+                <line
+                  x1={0}
+                  x2={W}
+                  y1={frame.toY(n)}
+                  y2={frame.toY(n)}
+                  stroke="var(--color-rule)"
+                  strokeWidth={1}
+                />
+                <text
+                  x={6}
+                  y={frame.toY(n) - 4}
+                  fontSize={10}
+                  fill="var(--color-ink-2)"
+                >
+                  N {coord(n)}
+                </text>
+              </g>
+            ))}
 
-          {/* Amarre y línea de orientación hasta el arranque */}
-          {reference && adjusted[0] && (
-            <g>
-              <line
-                x1={frame.toX(reference.east)}
-                y1={frame.toY(reference.north)}
-                x2={frame.toX(adjusted[0].east)}
-                y2={frame.toY(adjusted[0].north)}
-                stroke="var(--color-ink-2)"
-                strokeWidth={1}
-                strokeDasharray="2 3"
-              />
-              <polygon
-                points={(() => {
-                  const x = frame.toX(reference.east);
-                  const y = frame.toY(reference.north);
-                  return `${x},${y - 7} ${x + 6},${y + 5} ${x - 6},${y + 5}`;
-                })()}
-                fill="var(--color-ink)"
-              />
-              <text
-                x={frame.toX(reference.east) + 9}
-                y={frame.toY(reference.north) + 4}
-                fontSize={11}
-                fill="var(--color-ink)"
-              >
-                {reference.code} (amarre)
-              </text>
-            </g>
-          )}
+            {/* Amarre y línea de orientación hasta el arranque */}
+            {reference && adjusted[0] && (
+              <g>
+                <line
+                  x1={frame.toX(reference.east)}
+                  y1={frame.toY(reference.north)}
+                  x2={frame.toX(adjusted[0].east)}
+                  y2={frame.toY(adjusted[0].north)}
+                  stroke="var(--color-ink-2)"
+                  strokeWidth={1}
+                  strokeDasharray="2 3"
+                />
+                <polygon
+                  points={(() => {
+                    const x = frame.toX(reference.east);
+                    const y = frame.toY(reference.north);
+                    return `${x},${y - 7} ${x + 6},${y + 5} ${x - 6},${y + 5}`;
+                  })()}
+                  fill="var(--color-ink)"
+                />
+                <text
+                  x={frame.toX(reference.east) + 9}
+                  y={frame.toY(reference.north) + 4}
+                  fontSize={11}
+                  fill="var(--color-ink)"
+                >
+                  {reference.code} (amarre)
+                </text>
+              </g>
+            )}
 
-          {/* Sin compensar, exagerada ×k: discontinua */}
-          {exaggerated && (
-            <g>
-              <polyline
-                points={toPoints(exaggerated)}
-                fill="none"
-                stroke="var(--color-warning)"
-                strokeWidth={1.5}
-                strokeDasharray="6 4"
-              />
-              {exaggerated.map((p, i) => (
-                <circle
-                  key={i}
-                  cx={frame.toX(p.east)}
-                  cy={frame.toY(p.north)}
-                  r={3}
-                  fill="var(--color-card)"
+            {/* Sin compensar, exagerada ×k: discontinua */}
+            {exaggerated && (
+              <g>
+                <polyline
+                  points={toPoints(exaggerated)}
+                  fill="none"
                   stroke="var(--color-warning)"
                   strokeWidth={1.5}
+                  strokeDasharray="6 4"
                 />
-              ))}
-            </g>
-          )}
-
-          {/* Elipses de error, centradas en cada vértice ajustado. Un punto que
-              solo se mueve a lo largo de un lado da una elipse plana: se
-              dibuja como un trazo. */}
-          {precision && ek && (
-            <g>
-              {traces.map((t, i) => {
-                const p = precision.stations[i];
-                if (!p || p.ellipse.semiMajor <= 0) return null;
-                // A la centésima de píxel: el servidor y el navegador difieren en
-                // el decimal 13 de la covarianza, y React avisaría de que el HTML
-                // no coincide al hidratar.
-                const cx = px(frame.toX(t.adjusted.east));
-                const cy = px(frame.toY(t.adjusted.north));
-                return (
-                  <ellipse
-                    key={`elipse-${i}`}
-                    cx={cx}
-                    cy={cy}
-                    rx={px((p.ellipse.semiMajor * ek) / frame.metersPerPixel)}
-                    ry={px(Math.max((p.ellipse.semiMinor * ek) / frame.metersPerPixel, 0.75))}
-                    transform={`rotate(${px(ellipseRotation(p.ellipse.majorAzimuth))} ${cx} ${cy})`}
-                    fill="var(--color-success)"
-                    fillOpacity={0.12}
-                    stroke="var(--color-success)"
+                {exaggerated.map((p, i) => (
+                  <circle
+                    key={i}
+                    cx={frame.toX(p.east)}
+                    cy={frame.toY(p.north)}
+                    r={3}
+                    fill="var(--color-card)"
+                    stroke="var(--color-warning)"
                     strokeWidth={1.5}
                   />
-                );
-              })}
-            </g>
-          )}
+                ))}
+              </g>
+            )}
 
-          {/* Ajustada: continua, con vértices rotulados. En tinta, como la
-              serie principal del prototipo: en mira quedaba en el mismo tono
-              que la sin compensar (warning) y solo las separaba el trazo. */}
-          <polyline
-            points={toPoints(adjusted)}
-            fill="none"
-            stroke="var(--color-ink)"
-            strokeWidth={2}
-          />
-          {labelled.map((t, i) => (
-            <g key={`${t.code}-${i}`}>
-              <circle
-                cx={frame.toX(t.adjusted.east)}
-                cy={frame.toY(t.adjusted.north)}
-                r={4}
-                fill="var(--color-ink)"
-              />
-              <text
-                x={frame.toX(t.adjusted.east) + 7}
-                y={frame.toY(t.adjusted.north) - 7}
-                fontSize={12}
-                fontWeight={600}
-                fill="var(--color-ink)"
-              >
-                {t.code}
-              </text>
-            </g>
-          ))}
-        </g>
+            {/* Elipses de error, centradas en cada vértice ajustado. Un punto que
+                solo se mueve a lo largo de un lado da una elipse plana: se
+                dibuja como un trazo. */}
+            {precision && ek && (
+              <g>
+                {traces.map((t, i) => {
+                  const p = precision.stations[i];
+                  if (!p || p.ellipse.semiMajor <= 0) return null;
+                  // A la centésima de píxel: el servidor y el navegador difieren en
+                  // el decimal 13 de la covarianza, y React avisaría de que el HTML
+                  // no coincide al hidratar.
+                  const cx = px(frame.toX(t.adjusted.east));
+                  const cy = px(frame.toY(t.adjusted.north));
+                  return (
+                    <ellipse
+                      key={`elipse-${i}`}
+                      cx={cx}
+                      cy={cy}
+                      rx={px((p.ellipse.semiMajor * ek) / frame.metersPerPixel)}
+                      ry={px(Math.max((p.ellipse.semiMinor * ek) / frame.metersPerPixel, 0.75))}
+                      transform={`rotate(${px(ellipseRotation(p.ellipse.majorAzimuth))} ${cx} ${cy})`}
+                      fill="var(--color-success)"
+                      fillOpacity={0.12}
+                      stroke="var(--color-success)"
+                      strokeWidth={1.5}
+                    />
+                  );
+                })}
+              </g>
+            )}
 
-        {/* Flecha de norte */}
-        <g transform={`translate(${W - 30}, 18)`}>
-          <polygon points="0,0 7,18 0,13 -7,18" fill="var(--color-ink)" />
-          <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--color-ink)">
-            N
-          </text>
-        </g>
+            {/* Ajustada: continua, con vértices rotulados. En tinta, como la
+                serie principal del prototipo: en mira quedaba en el mismo tono
+                que la sin compensar (warning) y solo las separaba el trazo. */}
+            <polyline
+              points={toPoints(adjusted)}
+              fill="none"
+              stroke="var(--color-ink)"
+              strokeWidth={2}
+            />
+            {labelled.map((t, i) => (
+              <g key={`${t.code}-${i}`}>
+                <circle
+                  cx={frame.toX(t.adjusted.east)}
+                  cy={frame.toY(t.adjusted.north)}
+                  r={4}
+                  fill="var(--color-ink)"
+                />
+                <text
+                  x={frame.toX(t.adjusted.east) + 7}
+                  y={frame.toY(t.adjusted.north) - 7}
+                  fontSize={12}
+                  fontWeight={600}
+                  fill="var(--color-ink)"
+                >
+                  {t.code}
+                </text>
+              </g>
+            ))}
+          </g>
 
-        {/* Barra de escala */}
-        <g transform={`translate(12, ${H - 28})`}>
-          <rect x={0} y={0} width={barPixels} height={4} fill="var(--color-ink)" />
-          <text x={barPixels / 2} y={-4} textAnchor="middle" fontSize={10} fill="var(--color-ink)">
-            {barMeters.toLocaleString("es-CO")} m
-          </text>
-        </g>
-      </svg>
+          {/* Flecha de norte */}
+          <g transform={`translate(${W - 30}, 18)`}>
+            <polygon points="0,0 7,18 0,13 -7,18" fill="var(--color-ink)" />
+            <text x={0} y={32} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--color-ink)">
+              N
+            </text>
+          </g>
+
+          {/* Barra de escala */}
+          <g transform={`translate(12, ${H - 28})`}>
+            <rect x={0} y={0} width={barPixels} height={4} fill="var(--color-ink)" />
+            <text x={barPixels / 2} y={-4} textAnchor="middle" fontSize={10} fill="var(--color-ink)">
+              {barMeters.toLocaleString("es-CO")} m
+            </text>
+          </g>
+        </svg>
+        {viewport?.overlay}
+      </div>
 
       <figcaption className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-2">
         <span className="inline-flex items-center gap-2">

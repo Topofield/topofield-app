@@ -181,3 +181,32 @@ export function plotFrame(
 export function scaleBarMeters(metersPerPixel: number, targetPixels: number): number {
   return niceFloor(metersPerPixel * targetPixels);
 }
+
+/** Acercamiento máximo del editor (Fase 13). */
+export const MAX_PLOT_ZOOM = 256;
+
+/** Acercamiento y desplazamiento, en unidades del viewBox (ver `PlotView`). */
+export interface PlotViewState {
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+/**
+ * Acerca ×`factor` hacia un punto de la pantalla (Fase 41), como un mapa: el
+ * punto del dibujo bajo `(dx, dy)` —en unidades del viewBox, medidas desde el
+ * centro— queda en el mismo sitio. Con `(0, 0)`, acerca alrededor del centro.
+ * El acercamiento se acota a [1, `MAX_PLOT_ZOOM`].
+ *
+ * Con el encuadre de `plotFrame`, un punto a `u` píxeles base del centro
+ * inicial se ve en `u·zoom + offset`; fijar esa posición da la fórmula.
+ */
+export function zoomAt(view: PlotViewState, factor: number, dx = 0, dy = 0): PlotViewState {
+  const zoom = Math.min(MAX_PLOT_ZOOM, Math.max(1, view.zoom * factor));
+  const applied = zoom / view.zoom;
+  return {
+    zoom,
+    offsetX: dx + (view.offsetX - dx) * applied,
+    offsetY: dy + (view.offsetY - dy) * applied,
+  };
+}

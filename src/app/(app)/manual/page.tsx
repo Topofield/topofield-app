@@ -991,14 +991,19 @@ export default function ManualPage() {
         </Nota>
 
         <p>
-          Con <strong>Acercar</strong>, <strong>Alejar</strong> y{" "}
-          <strong>Restablecer</strong>, y con las <strong>flechas</strong> o
-          arrastrando el dibujo, puede acercarse a un vértice; todos los
-          controles funcionan con el teclado. Si el amarre está lejos, queda
-          fuera del encuadre y solo se ve su línea de orientación: la leyenda
-          lo indica. La rueda del ratón no hace zoom, para no
-          interferir con el desplazamiento de la página. El factor de
-          exageración no cambia al acercarse.
+          El dibujo se mueve como un mapa. Arrástrelo para desplazarlo, y
+          acérquese a un vértice con <strong>Ctrl + rueda</strong> (
+          <strong>⌘ + rueda</strong> en Mac), con doble clic o, en un teléfono,
+          pellizcando: el acercamiento va hacia el punto señalado. La rueda
+          sola sigue bajando la página, y el dibujo recuerda cómo acercar.
+          Abajo a la derecha están los botones <strong>+</strong> y{" "}
+          <strong>−</strong> y, cuando la vista se ha movido, el de{" "}
+          <strong>encuadrar</strong>, que vuelve a mostrar toda la poligonal.
+          Con el teclado, sobre el dibujo: las flechas lo desplazan,{" "}
+          <strong>+</strong> y <strong>−</strong> acercan y alejan, y{" "}
+          <strong>0</strong> encuadra. Si el amarre está lejos, queda fuera
+          del encuadre y solo se ve su línea de orientación: la leyenda lo
+          indica. El factor de exageración no cambia al acercarse.
         </p>
 
         <h3
@@ -1101,7 +1106,8 @@ export default function ManualPage() {
             elegido, paso a paso, con las cifras de esta poligonal. El reparto
             del error angular se dice con su valor por ángulo; el método de
             ajuste —y, en mínimos cuadrados, la elipse de error— lleva su
-            fórmula en notación matemática.
+            fórmula en notación matemática, con una línea «donde:» que dice qué
+            es cada símbolo.
           </li>
           <li>
             <strong>Poligonal ajustada</strong>, con la fila Σ.
