@@ -65,6 +65,15 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // No anunciar el framework ni su presencia (`x-powered-by: Next.js`).
   poweredByHeader: false,
+  // El manual (Fase 42) se lee de `docs/manual/` con `fs` en el servidor, y
+  // sus rutas son dinámicas (las cookies del layout de `(app)`): en Vercel los
+  // archivos tienen que viajar con la función. Sin esto, `/manual` da 500 solo
+  // en producción —`next dev` y `next start` no usan el tracing—. Se comprueba
+  // en `.next/server/app/(app)/manual/**/page.js.nft.json` tras el build.
+  outputFileTracingIncludes: {
+    "/manual": ["./docs/manual/*.md", "./docs/manual/capturas.json"],
+    "/manual/*": ["./docs/manual/*.md", "./docs/manual/capturas.json"],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

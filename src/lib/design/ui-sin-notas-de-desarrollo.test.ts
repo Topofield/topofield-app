@@ -8,12 +8,13 @@ import { describe, expect, it } from "vitest";
 // programa, no para quien mide. Este test las busca en los textos de la
 // interfaz —el código sin sus comentarios— para que no vuelvan.
 //
-// Quedan fuera el manual (`app/(app)/manual/`, que sí cita el documento) y la
-// página interna del sistema de diseño.
+// Queda fuera la página interna del sistema de diseño. El manual ya no: desde
+// la Fase 42 su texto vive en `docs/manual/`, y `manual.test.ts` le aplica la
+// misma regla.
 
 const RAIZ = join(process.cwd(), "src");
 const CARPETAS = ["components", "app"];
-const EXCLUIDOS = [/^app\/\(app\)\/manual\//, /^app\/design-system\//];
+const EXCLUIDOS = [/^app\/design-system\//];
 
 const PROHIBIDOS: [string, RegExp][] = [
   ["referencia a una sección del PRD", /§/g],

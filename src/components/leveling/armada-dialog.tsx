@@ -11,6 +11,7 @@ import {
   armadaFormOf,
   armadaProblem,
   readArmadaForm,
+  readingWarnings,
   wiresOf,
   type ArmadaForm,
   type VisualForm,
@@ -153,6 +154,11 @@ export function ArmadaDialog({ draft, run, k, result, onSave, onContinue, onClos
   const backDistance = distanceOf(form.back);
   const foreDistance = distanceOf(form.fore);
   const continuesToReturn = form.ends && run === "forward" && draft.details.hasReturnRun;
+  const warnings = readingWarnings([
+    ["Vista atrás", form.back.reading],
+    ...form.intermediates.map((v, i) => [`Vista intermedia ${i + 1}`, v.reading] as const),
+    ["Vista adelante", form.fore.reading],
+  ]);
   const canRemove = editing && k === spans.length - 1;
 
   function commit(next: LevelingDraft, after: { run: RunType; k: number } | null) {
@@ -235,6 +241,13 @@ export function ArmadaDialog({ draft, run, k, result, onSave, onContinue, onClos
           El nivel entre <strong className="text-ink">{from}</strong>, ya con cota, y el punto siguiente.
         </p>
         {error && <Alert variant="error">{error}</Alert>}
+        {warnings.length > 0 && (
+          <Alert variant="warning">
+            {warnings.map((w) => (
+              <p key={w}>{w}</p>
+            ))}
+          </Alert>
+        )}
 
         <fieldset className="flex flex-col gap-3 rounded-lg border border-rule px-4 py-3">
           <legend className="sr-only">Vista atrás</legend>

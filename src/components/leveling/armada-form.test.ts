@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CARTERA_VERJON } from "@/lib/demo/carteras";
 import type { ReadingDraft } from "@/app/(app)/projects/[id]/leveling/[pid]/actions";
 import { armadaAt, emptyRow, writeArmada } from "./armadas";
-import { armadaEnd, armadaFormOf, armadaProblem, readArmadaForm, wiresOf } from "./armada-form";
+import { armadaEnd, armadaFormOf, armadaProblem, readArmadaForm, readingWarnings, wiresOf } from "./armada-form";
 import type { LevelingDraft } from "./leveling-save";
 
 const toDraft = (x: (typeof CARTERA_VERJON.ida)[number]): ReadingDraft => ({
@@ -89,8 +89,9 @@ describe("el formulario de la armada", () => {
 
   it("los errores de la libreta, en la vista que los tiene", () => {
     const a = armadaAt(ida, 1);
-    const bad = writeArmada(ida, 1, { ...a, back: { ...a.back, reading: 5 } });
-    expect(armadaProblem(bad, 1, "open")).toBe("Vista atrás: La lectura de mira debe estar entre 0.000 y 4.000 m.");
+    // Una lectura de 5 m ya no es error (Fase 42): avisa en el popup.
+    const tall = writeArmada(ida, 1, { ...a, back: { ...a.back, reading: 5 } });
+    expect(armadaProblem(tall, 1, "open")).toBeNull();
     const noDist = writeArmada(ida, 1, { ...a, fore: { ...a.fore, distanceM: null } });
     expect(armadaProblem(noDist, 1, "open")).toBe(
       "Vista adelante: Falta la distancia de la V−: sin ella el recorrido no acumula.",
@@ -100,5 +101,17 @@ describe("el formulario de la armada", () => {
 
   it("una armada que no quedó en la libreta es un error, no un silencio", () => {
     expect(armadaProblem(ida, 99, "open")).toBe("La armada no quedó en la libreta: revisa sus puntos.");
+  });
+});
+
+describe("readingWarnings", () => {
+  it("avisa por vista de las lecturas fuera de 0 a 4 m, sin bloquear", () => {
+    expect(
+      readingWarnings([
+        ["Vista atrás", "1.218"],
+        ["B10", "4,120"],
+        ["Vista adelante", ""],
+      ]),
+    ).toEqual(["B10: La lectura de 4.120 m está fuera de 0.000 a 4.000 m: compruebe que sea correcta."]);
   });
 });

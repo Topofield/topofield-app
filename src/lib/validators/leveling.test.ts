@@ -14,6 +14,7 @@ import {
   findIncompleteTurningPoint,
   hasReadingErrors,
   turningPointBlocker,
+  readingRangeWarning,
   validateReadingCapture,
   validateRunCapture,
 } from "./leveling";
@@ -172,14 +173,25 @@ describe("validateReadingCapture — capa de captura (§ 5.1)", () => {
     expect(issues.warnings).toEqual({});
   });
 
-  it("rechaza lectura de mira negativa", () => {
+  it("una lectura de mira negativa avisa, no bloquea (mira invertida, Fase 42)", () => {
     const issues = validateReadingCapture(reading({ backsight: -0.1 }));
-    expect(issues.errors.backsight).toBeDefined();
+    expect(issues.warnings.backsight).toContain("fuera de 0.000 a 4.000 m");
+    expect(issues.errors.backsight).toBeUndefined();
   });
 
-  it("rechaza lectura de mira mayor que 4.000 m", () => {
-    const issues = validateReadingCapture(reading({ foresight: 4.5 }));
-    expect(issues.errors.foresight).toBeDefined();
+  it("una lectura de más de 4 m avisa, no bloquea: la cartera real lee 4.120 con mira de 5 m (Fase 42)", () => {
+    const issues = validateReadingCapture(reading({ foresight: 4.12 }));
+    expect(issues.warnings.foresight).toBe(
+      "La lectura de 4.120 m está fuera de 0.000 a 4.000 m: compruebe que sea correcta.",
+    );
+    expect(issues.errors.foresight).toBeUndefined();
+  });
+
+  it("dentro de 0 a 4 m no avisa", () => {
+    expect(readingRangeWarning(0)).toBeNull();
+    expect(readingRangeWarning(4)).toBeNull();
+    expect(readingRangeWarning(null)).toBeNull();
+    expect(readingRangeWarning(Number.NaN)).toBeNull();
   });
 
   it("advierte cuando V+ y V− son exactamente iguales", () => {

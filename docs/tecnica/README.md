@@ -4,8 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-08 · Fases 38 a 41 en `main` y en
-producción, con la migración de la 38 aplicada (§ 13) · 1193 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-09 · Fase 42 cerrada; fases 38 a 41 en
+producción, con la migración de la 38 aplicada (§ 13) · 1228 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -95,6 +95,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 39 | Mínimos cuadrados: requisitos y precisión de cada punto | cerrada |
 | 40 | Informes entregables | cerrada |
 | 41 | El dibujo de la poligonal como un mapa | cerrada |
+| 42 | El manual por capítulos | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -121,8 +122,8 @@ npm run dev
 
 Credenciales de los datos de ejemplo: `topofieldsarf@gmail.com` / `seed1234`.
 Es la misma cuenta que se usa en producción, con una contraseña **solo local**;
-la de producción no está en el repositorio. `capturas.mjs` oculta el correo del
-menú de cuenta, que es real, para que no quede en las capturas del manual.
+la de producción no está en el repositorio. Los recorridos del manual no la
+usan: tienen su propia cuenta, `manual@topofield.local` (§ 12).
 
 **El registro exige un código de invitación.** Defina `SIGNUP_INVITE_CODE` en
 `.env.local` (ver `.env.example`); sin esa variable nadie puede registrarse, ni
@@ -202,7 +203,7 @@ src/
 │   ├── (auth)/              login y registro
 │   ├── (app)/               pantallas autenticadas
 │   │   ├── dashboard/
-│   │   ├── manual/          manual de usuario (§ 12)
+│   │   ├── manual/          portada y [capitulo]/ del manual, leídos de docs/manual/ (§ 12)
 │   │   ├── equipos/         catálogo de equipos del usuario (Fase 25)
 │   │   ├── projects/new/    alta de proyecto
 │   │   └── projects/[id]/
@@ -247,8 +248,8 @@ src/
 └── proxy.ts                 protección de rutas
 ```
 
-Fuera de `src/`: `public/manual/` (capturas que sirve la página `/manual` y
-enlaza el manual en Markdown), `supabase/migrations/` y `supabase/tests/`
+Fuera de `src/`: `docs/manual/` (el manual, un Markdown por capítulo, y sus
+recorridos), `public/manual/` (sus capturas, una carpeta por capítulo), `supabase/migrations/` y `supabase/tests/`
 (pruebas pgTAP, Fase 23), y `scripts/` (seed y mantenimiento).
 
 > **Next 16 renombró `middleware` a `proxy`.** El archivo es `src/proxy.ts`.
@@ -2169,6 +2170,15 @@ con sus pruebas. `meets_tolerance` guarda si alcanza algún orden, y
 `discrepancy_tolerance_mm` y `meets_discrepancy`, la discrepancia al orden
 alcanzado con cualquier tipo que tenga vuelta.
 
+**Una lectura de mira fuera de 0 a 4 m avisa, no bloquea (Fase 42).** Hasta
+entonces era un error de captura (PRD § 5.1). El recorrido real del manual lo
+destapó: la cartera de asentamientos tiene lecturas de hasta 4.120 m (mira de
+5 m), y la demo solo las tenía porque las inserta sin pasar por el validador.
+`readingRangeWarning` (`validators/leveling.ts`) da el aviso, que comparten la
+nivelación y la visita, y `readingWarnings` (`components/leveling/armada-form.ts`)
+lo muestra en vivo en los dos popups de armada. Una mira invertida da
+negativo: también avisa.
+
 **La visita tampoco tiene capa de cierre desde la Fase 37**: ya nada se
 cierra. Hasta entonces quedaba de aquella capa lo que usaba la visita: un
 **punto de cambio incompleto** —con V+ y sin V−, o al revés, fuera de la
@@ -2766,7 +2776,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1193 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1228 tests en 100 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2777,7 +2787,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
 | `lib/validators/polygonal.test.ts` | 64 | Captura de poligonal, `expectStationCapture`, código de punto obligatorio; pesos del ajuste por mínimos cuadrados: completos, dentro de la columna y a su escala, con cualquier método (Fase 14); puntos de control de la georreferenciación (Fase 15); cada lectura en su rango aunque el promedio salga válido (Fase 24); la fila de cierre y la de orientación en `expectStationCapture`, segundos de dos decimales y distancias de cinco (Fase 26); el azimut desde el punto de amarre y su rechazo (Fase 27); la captura parcial de una cerrada y `stationCaptureIssues`, que valida el promedio de las lecturas, y la cabecera de un guardado hecho a mano (Fase 35); el aviso de pesos nombra los que faltan, y «las veces que se midió cada distancia» (Fase 39) |
 | `lib/validators/settlement.test.ts` | 33 | Captura de asentamientos; vigencia, regla de la línea base abierta, baja y alta (Fase 11); qué cuenta como cambiar la C0, a la escala de la base (Fase 23); la fecha entre sus vecinas (Fase 26); el alta en cualquier fecha de calendario (Fase 37, que retiró el cierre, deshacer la baja con visitas cerradas y la alarma que no bloqueaba el cierre); un BM que repite el código de otro del lugar salvo mayúsculas o espacios, y el que se edita no choca consigo mismo (revisión final de la Fase 37) |
-| `lib/validators/leveling.test.ts` | 39 | Captura de nivelación: hilos y su hilo medio, distancias por visual —obligatorias en BM y puntos de cambio, en cero o negativas un error (Fase 26)—, rango de las lecturas; la V+ del BM inicial y la última fila de un recorrido que cierra, salvo con `allowUnfinished`, la libreta a medias de la nivelación (Fase 36); sin avisos de equilibrado, tampoco con la ida de El Verjón (Fase 36); el punto de cambio incompleto: aviso en la celda, y `turningPointBlocker` con su fila, también en la vuelta (Fase 24) |
+| `lib/validators/leveling.test.ts` | 40 | Captura de nivelación: hilos y su hilo medio, distancias por visual —obligatorias en BM y puntos de cambio, en cero o negativas un error (Fase 26)—, una lectura fuera de 0 a 4 m avisa y no bloquea (Fase 42); la V+ del BM inicial y la última fila de un recorrido que cierra, salvo con `allowUnfinished`, la libreta a medias de la nivelación (Fase 36); sin avisos de equilibrado, tampoco con la ida de El Verjón (Fase 36); el punto de cambio incompleto: aviso en la celda, y `turningPointBlocker` con su fila, también en la vuelta (Fase 24) |
 | `lib/calculations/polygonal.test.ts` | 48 | Motor de cálculo, los tres tipos y métodos; `polygonalTraces` con el invariante del error de cierre (Fase 13); fila de cierre con el amarre dentro y fuera del barrido, interior y exterior; abiertas amarradas; mínimos cuadrados que antes no convergía o daba «singular» (Fase 26) |
 | `lib/calculations/polygonal-detect.test.ts` | 11 | **El orden y el tipo de ángulo detectados** (Fase 35): las fronteras de cada orden, sin verificación y sin alcanzar el ordinario; interior y exterior, con y sin fila de cierre; la TT4 en tercer orden; `observedAzimuths` y `angularConditionCount` |
 | `lib/calculations/correction-breakdown.test.ts` | 5 | El desglose de la corrección con la TT4 en los cuatro métodos, contra el motor: factores de Brújula y Tránsito, λ₁ y λ₂ de Crandall que reproducen sus proyecciones, el datum de mínimos cuadrados (Fase 35) |
@@ -2817,7 +2827,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/demo/cartera-asentamientos.test.ts` | 5 | **La cartera real de asentamientos** (Fase 37, decisión 23): 16 puntos y 7 visitas, la 7 del 2022-06-05; cada visita una armada abierta, calculada y sin verificación; reproduce celda a celda las cotas, «Comparación n» y «Comparación al anterior» de la hoja; los avisos de B10 |
 | `lib/calculations/leveling-detect.test.ts` | 14 | **El orden detectado y la compensación sin limitantes** (Fase 36): El Verjón en segundo orden con las cotas ajustadas del lienzo, el tramo 2 en −0.4 mm y primer orden, fuera del ordinario sin orden pero compensada, la abierta sin vuelta sin orden; la regla de la visita no cambia; la libreta a medias (`pendingRun`): sin armadas, una cerrada que no vuelve al BM, la ida y la vuelta de una abierta sin terminar, la abierta sin vuelta y una vuelta vieja que llega al BM como punto de cambio; «never» no compensa; una libreta que no encadena —un punto de cambio sin V+— queda sin orden y sin compensar, y una a medias que cuadra no (revisión final) |
 | `components/leveling/armadas.test.ts` | 10 | La captura por armada (Fase 36): las 10 armadas de la ida de El Verjón, la armada 2 con sus lecturas, capturar armada por armada reproduce la hoja, editar una del medio solo cambia sus filas, una armada a medias al final, una intermedia colgada después del último punto, quitar la última; la armada siguiente y el fin del recorrido; agregar una armada tras una intermedia colgada abre desde el último punto y la intermedia conserva su cota (revisión final) |
-| `components/leveling/armada-form.test.ts` | 7 | El popup de armada (Fase 36): del formulario a la armada y de vuelta, los hilos con la distancia y la comprobación del medio, los campos obligatorios y los números, la casilla de fin según el tipo y el recorrido, y los errores de la libreta en la vista que los tiene; una armada que no queda en la libreta es un error (revisión final) |
+| `components/leveling/armada-form.test.ts` | 8 | El popup de armada (Fase 36): del formulario a la armada y de vuelta, los hilos con la distancia y la comprobación del medio, los campos obligatorios y los números, la casilla de fin según el tipo y el recorrido, y los errores de la libreta en la vista que los tiene; una armada que no queda en la libreta es un error (revisión final); `readingWarnings`, los avisos de lecturas fuera de 0 a 4 m que muestran los dos popups (Fase 42) |
 | `components/leveling/leveling-save.test.ts` | 12 | El borrador y la carga del guardado (Fase 36): la libreta de El Verjón en orden, la carga sin el orden, la entrada del motor, la importación, el BM que renombra los extremos de la libreta, dónde empieza la vuelta y el recorrido vacío; lo que se guarda (`levelingRecordOf`) y se exporta: la cabecera con el orden detectado, la libreta a medias en curso, la escala de cada columna, y el Excel de una nivelación guardada antes de la fase con el orden detectado y las cotas compensadas (revisión final; desde la Fase 38, leídos en las hojas «Nivelación» y «Cotas ajustadas») |
 | `components/leveling/leveling-details.test.ts` | 9 | El alta y el popup del BM (Fase 36): el título, la cota con coma, el BM de llegada en la de enlace, la abierta sin él; los avisos de Editar datos: quitar la vuelta borra su libreta, cambiar el tipo o un BM la recalcula (revisión final) |
 | `components/leveling/libreta-rows.test.ts` | 10 | La tabla de la hoja (Fase 36): lecturas, AI y cota sin compensar de El Verjón con sus rótulos, el lápiz de cada fila, la vuelta, la libreta vacía; la lista por armada del teléfono; la comprobación aritmética; las lecturas a 3 o 4 decimales por libreta; `libretaBlocker` con la fila y el recorrido del punto de cambio incompleto (revisión final) |
@@ -2848,7 +2858,12 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
 | `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
 | `components/equipment/equipment-picker.test.ts` | 7 | El selector ofrece solo los equipos de su tipo, no duplica lo guardado, avisa de la calibración y no aparece en un cerrado (Fase 25); el alta de la poligonal no ofrece el catálogo y la de la nivelación sí (correcciones de la Fase 35) |
-| `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` (fuera del manual) cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
+| `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
+| `lib/manual/markdown.test.ts` | 11 | **El Markdown del manual** (Fase 42): slugs de GitHub con tildes y repetidos, texto sin escapar, archivos de capítulo, enlaces entre archivos, anclas y externos, rutas de captura y la imagen sola en su párrafo |
+| `lib/manual/png.test.ts` | 3 | El tamaño de un PNG desde su cabecera; lo que no es un PNG se rechaza (Fase 42) |
+| `lib/manual/manual.test.ts` | 10 | **El manual real** (Fase 42): numeración y slugs, el README enlaza cada capítulo en orden, resumen y flujos, vecinos; sin «§», «Fase N», «PRD» ni HTML; todo enlace y ancla resuelve; cada imagen es captura de su capítulo, existe, tiene alt y está en `capturas.json` con su tamaño; no sobra ningún PNG |
+| `lib/manual/constantes.test.ts` | 4 | Las tablas del manual que copian el código: órdenes, tolerancia angular y precisión mínima; el K de la nivelación; el semáforo; los estados (Fase 42) |
+| `components/manual/markdown.test.tsx` | 5 | El recorredor del manual (Fase 42): figura fuera de párrafo a la mitad de su tamaño, la primera `eager`; anclas y enlaces a rutas de la app; pasos, nota sin `role="alert"`, `th scope`; lo no admitido falla; cada capítulo real se pinta |
 | `lib/utils/parse.test.ts` | 10 | **Coma o punto decimal**: signo, espacios, estados intermedios (`1,`, `,5`); vacío es `null` y lo inválido también, nunca `NaN`; separador de miles, exponentes y letras inválidos (Fase 20) |
 | `components/design-system/number-input.test.ts` | 8 | `NumberInput`: texto con teclado decimal, lo inválido se marca en vez del error del validador; el contador de celdas inválidas; `DmsInput` con segundos decimales (Fase 20) |
 | `lib/theme.test.ts` | 6 | Cookie del tema: claro, oscuro, ausente y desconocido; atributo `data-theme`; cabecera de la cookie (Fase 20) |
@@ -2960,9 +2975,10 @@ necesita:
    Informe; la cabecera del módulo, sobre `ProcessHeader`, muestra «Exportar
    PDF» y «Exportar Excel» con `printable`; y su libro en `lib/export/`, con las primitivas de
    `cells.ts`, la ruta `export/route.ts` y una prueba con `formulaMismatches`.
-9. **Manual**: escribir su sección **en los dos sitios**
-   (`docs/manual/README.md` y `src/app/(app)/manual/`, mismo commit) y
-   regenerar capturas con `node docs/manual/capturas.mjs`.
+9. **Manual**: su capítulo en `docs/manual/NN-<slug>.md`, enlazado desde el
+   README, y su recorrido en `docs/manual/recorridos/`; regenerar con
+   `npm run manual:capturas <slug>`. `npm test` comprueba enlaces, capturas y
+   tablas (§ 12).
 
 Antes de empezar, redactar el PRD de la fase en `docs/prds/`, según
 [`docs/method.md`](../method.md).
@@ -3740,8 +3756,9 @@ proyecto, la sección simplemente no se escribe.
 **Cerrado — las capturas del manual ya no llevan el indicador «1 Issue» de
 Next.** En desarrollo, React usa `eval()` para reconstruir pilas de llamadas y
 la CSP no incluye `'unsafe-eval'`, así que Next muestra un indicador rojo
-sobre la página. Desde la Fase 18, `capturas.mjs` oculta `nextjs-portal` antes
-de cada captura y todas se regeneraron sin él. La CSP no se relajó: abriría
+sobre la página. Desde la Fase 18 el script de capturas —desde la Fase 42,
+`docs/manual/recorridos/comun.mjs`— oculta `nextjs-portal` antes de cada
+captura y todas se regeneraron sin él. La CSP no se relajó: abriría
 `eval` en desarrollo solo por una captura.
 
 **Cerrado en la Fase 23 — la C0 de un punto con lecturas cerradas**, y
@@ -4140,65 +4157,88 @@ cuándo, qué estado) en vez de las dos columnas.
 
 ## 12. Manual de usuario en la app
 
-La ruta `/manual` (`src/app/(app)/manual/`) sirve el manual de usuario dentro de
-la aplicación. **A diferencia de `/design-system`, existe en producción**: es
-documentación del producto, no una herramienta de desarrollo. Vive dentro del
-grupo `(app)`, así que hereda la comprobación de sesión y la barra superior
-(`AppBar`, Fase 33).
+La ruta `/manual` sirve el manual de usuario dentro de la aplicación. **A
+diferencia de `/design-system`, existe en producción**: es documentación del
+producto, no una herramienta de desarrollo. Vive dentro del grupo `(app)`, así
+que hereda la comprobación de sesión y la barra superior (`AppBar`, Fase 33).
+
+Desde la **Fase 42** el manual va por capítulos, uno por flujo de usuario, y
+**tiene una sola fuente**: los Markdown de `docs/manual/`. La aplicación los lee
+y los pinta en el servidor; no hay otra copia del texto.
 
 ### Estructura
 
 | Archivo | Responsabilidad |
 |---|---|
-| `manual-data.ts` | Capturas, índice, filas de tabla y preguntas frecuentes |
-| `page.tsx` | Las trece secciones con su texto, y sus piezas de presentación (`Seccion`, `Captura`, `Tabla`, `Fila`, `Nota`, `VolverArriba`) |
-
-**Dos archivos, a propósito.** Es un documento, no funcionalidad: cada sección
-se renderiza una vez, en un orden fijo, así que repartirlas en un archivo por
-sección solo añadía imports. Las piezas de presentación viven al final de
-`page.tsx`, como en `/design-system`; no van a `src/components/design-system/`
-porque conocen el dominio (rutas de captura, terminología topográfica) y el
-criterio de composición (§ 8) lo prohíbe.
+| `docs/manual/README.md` | La portada y el índice. Su introducción —lo que va antes de «Capítulos»— es la portada en la app; «Mantener este manual» es la guía de estilo y no se pinta |
+| `docs/manual/NN-<slug>.md` | Un capítulo por flujo. La lista sale de los nombres de archivo: no hay registro aparte |
+| `docs/manual/capturas.json` | El ancho y el alto de cada captura; lo escribe el recorrido |
+| `docs/manual/recorridos/` | Un script de Playwright por capítulo, que hace el flujo en la app y captura cada paso (`npm run manual:capturas`) |
+| `public/manual/<slug>/NN-<paso>.png` | Las capturas, una carpeta por capítulo |
+| `src/lib/manual/markdown.ts` | Puro: lee los tokens (`marked`), da a cada título su ancla con el slug de GitHub y traduce enlaces y capturas a rutas de la app |
+| `src/lib/manual/png.ts` | Puro: el tamaño de un PNG desde su cabecera y `ESCALA_CAPTURAS = 2` |
+| `src/lib/manual/manual.ts` | Lee los archivos con `fs`, dentro de `cache()`; una vez por instancia en producción |
+| `src/components/manual/markdown.tsx` | Recorre los tokens y devuelve React: pasos, figuras, notas y tablas con el sistema de diseño |
+| `src/components/manual/indice-capitulo.tsx`, `navegacion-capitulos.tsx` | El índice del capítulo (fijo al lado en escritorio, en `<details>` en el teléfono) y anterior / siguiente |
+| `src/app/(app)/manual/page.tsx`, `[capitulo]/page.tsx` | La portada con una tarjeta por capítulo, y la página de cada capítulo; un slug que no existe da 404 |
 
 ### Decisiones que conviene conocer antes de tocarlo
 
-**`<img>` plano, no `next/image`.** Las capturas son PNG estáticos ya generados
-al tamaño correcto por `docs/manual/capturas.mjs` y versionados en
-`public/manual/`. La optimización en tiempo de ejecución no aporta nada que
-compense su coste, y se factura por uso. El riesgo real de `<img>` —el salto de
-layout— se evita con `width`/`height` reales en cada imagen. Hay un
-`eslint-disable` puntual con esa explicación.
+**`marked` y un recorredor propio** (`marked` 18.0.14, fijada exacta). Un solo
+paquete sin dependencias; los mismos tokens sirven para pintar, para el índice
+y para las pruebas. El recorredor devuelve React, así que no hay
+`dangerouslySetInnerHTML` ni JS de cliente, y la CSP no cambia. Lo que el
+manual no usa —HTML crudo, imágenes que no son capturas, enlaces que no
+resuelven— lanza un error, y las pruebas lo atrapan antes de que llegue a la
+pantalla.
 
-**`loading="lazy"` en todas menos la primera.** Las treinta y tres capturas
-—la Fase 38 quitó la 18 y la 19, las de los informes consolidados; la 39 sumó
-la 36 y la 37— suman unos 8,6 MB; sin esto la página las descargaría de golpe.
+**Los archivos viajan con la función.** Las rutas de `(app)` son dinámicas (las
+cookies del layout), así que `/manual` lee los `.md` en cada petición.
+`next.config.ts` los incluye con `outputFileTracingIncludes` para `/manual` y
+`/manual/*`. **`next dev` y `next start` no usan el tracing**: un error ahí
+solo aparece en Vercel, como un 500. Tras `npm run build`, compruebe que
+`.next/server/app/(app)/manual/[capitulo]/page.js.nft.json` lista los `.md` y
+`capturas.json`.
 
-**`Nota` propia en lugar de `Alert`.** `Alert` lleva `role="alert"` siempre, lo
-que anuncia el contenido con prioridad al lector de pantalla. Una nota
-informativa de un manual no es una alerta activa.
+**Las capturas, a la mitad.** Se toman a 2 píxeles por píxel de pantalla
+(1280 × 800 en escritorio, 390 × 844 en el teléfono) y se muestran a su tamaño
+de pantalla: nítidas y sin el antiguo indicador `angosta`. El tamaño sale de
+`capturas.json`, no de leer el PNG en la petición: así los PNG no viajan con la
+función. `<img>` plano, no `next/image`, con `width`/`height` y `lazy` salvo
+la primera.
 
-Retirado en la Fase 6, cuando ya no quedaron módulos pendientes: **los
-módulos pendientes decían la palabra «Pendiente»**.
+**Enlaces entre archivos.** Los capítulos se enlazan como en GitHub
+(`03-poligonal.md#ajustar`) y la app los traduce (`/manual/poligonal#ajustar`).
+Por eso las anclas siguen el slug de GitHub y los títulos no llevan números
+ni «·».
 
-**El índice son anclas de HTML**, sin JavaScript de cliente, igual que las
-pestañas y los filtros del resto de la aplicación. Los `id` de `SECCIONES` deben
-ser únicos: dos anclas iguales navegan siempre a la primera, sin dar error. Son
-once en una sola lista, así que se comprueba a ojo.
+**El recorrido usa su propia cuenta**, `manual@topofield.local`. La borra
+y la vuelve a registrar **por el formulario**, confirma el correo en Mailpit
+—así el registro también es un flujo del manual— y deja que la primera
+entrada cree el proyecto de ejemplo. Teclea desde cero las carteras reales de
+`src/lib/demo/carteras*.ts` y lee de la demo Torre Alameda. El código de
+invitación real no sale en la captura: se fotografía uno de ejemplo.
 
-### El texto vive por duplicado
+**Imprimir un capítulo** saca su título y su contenido: el título no va en
+`PageHeader`, cuyo `<header>` se oculta al imprimir, y las figuras no se
+parten entre páginas. Es lo que usa el anexo de la monografía.
 
-`docs/manual/README.md` es la fuente de la redacción; `manual-data.ts` es su
-maquetación. No hay generación automática entre los dos: eliminar la
-duplicación exigiría un parseador de Markdown, que el proyecto no admite.
+### Las pruebas
 
-**Al cambiar la redacción, cambie los dos en el mismo commit.** Es una regla
-manual, como la verificación de contraste — no hay nada que falle en `npm test`
-si divergen.
+`src/lib/manual/manual.test.ts`, sobre los archivos reales, comprueba:
 
-Al añadir funcionalidad hay que tocar los dos sitios: la sección nueva en el
-Markdown, y en la app su texto en `manual-data.ts` más su sección en
-`page.tsx`. La lista `MODULOS_PENDIENTES` desapareció al cerrar la Fase 6: ya
-no quedan módulos por implementar.
+- la numeración y los slugs;
+- que el README enlaza cada capítulo, en orden;
+- el resumen de cada uno;
+- que cada imagen es una captura de su capítulo, existe, tiene alt y figura en
+  el manifiesto con su tamaño real;
+- que no sobra ningún PNG ni ninguna entrada del manifiesto;
+- que todo enlace y ancla resuelve;
+- que no hay «§», «Fase N», «PRD» ni HTML.
+
+`constantes.test.ts` compara con el código las tablas del manual que lo copian:
+órdenes y tolerancias, el K de la nivelación, el semáforo y los estados.
+`markdown.test.tsx` pinta casos sueltos y cada capítulo real.
 
 ---
 

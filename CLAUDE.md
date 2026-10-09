@@ -11,6 +11,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Build: `npm run build`
 - Lint: `npm run lint`
 - Type check: `npm run typecheck` (alias de `tsc --noEmit`)
+- Capturas del manual: `npm run manual:capturas [capítulo…]` (recorre la app real; requiere la base local y el dev; ver `docs/manual/README.md`)
 - Tests: `npm test` (Vitest, entorno node)
 - Tests de la base: `npx supabase test db` (pgTAP en `supabase/tests/`, sobre la base local)
 - Supabase local: `npx supabase start`
@@ -22,7 +23,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 ## Architecture
 - `src/app/(auth)/` → páginas de login y registro (Supabase Auth); `src/app/auth/callback/` → confirmación de correo
 - `src/app/(app)/dashboard/` → dashboard principal con lista de proyectos
-- `src/app/(app)/manual/` → el manual de usuario en la app (ruta `/manual`)
+- `src/app/(app)/manual/` → el manual de usuario en la app: la portada (`/manual`) y cada capítulo (`/manual/[capitulo]`), leídos de `docs/manual/` con `src/lib/manual/`
 - `src/app/(app)/equipos/` → el catálogo de equipos de la cuenta (ruta `/equipos`)
 - `src/app/(app)/projects/[id]/` → hub del proyecto, tabs de procesos/config
 - `src/app/(app)/projects/[id]/polygonal/[pid]/` → poligonal: pasos Datos · Ajuste · Informe, y `export/` (Excel); el alta es un popup del hub
@@ -75,7 +76,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - El comportamiento **actual** está en `docs/tecnica/README.md`. `PRD-TopoField.md` es el requisito inicial: sirve para el porqué de una regla (`§5` reglas de validación, `§5.4` tolerancias por orden, `§6` algoritmos de cálculo), no para lo que hace hoy la app; su cierre y bloqueo (`§4.6`) ya no existen.
 
 ## Método de planificación
-- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 41, todas cerradas.
+- El desarrollo se hace **fase por fase**. Las 6 primeras siguen el orden de implementación del PRD principal (§ 9); desde la 7, cada fase nace de una petición del usuario o del contraste con carteras de campo reales, anotada antes en `docs/pendientes.md`. Van 42, todas cerradas.
 - Antes de implementar una fase se redacta su PRD detallado en `docs/prds/NN-<slug>.md`. JIT, no por adelantado.
 - El proceso completo (apertura, ejecución, cierre, anti-patrones) está en `docs/method.md`. Consultarlo antes de iniciar trabajo de cualquier fase.
 - El índice de fases y su estado (pendiente / en curso / cerrada) está en `docs/prds/README.md`.
@@ -85,10 +86,9 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - `docs/tecnica/README.md` → arquitectura, modelo de datos, seguridad, motor de cálculo, sistema de diseño, cómo añadir un módulo y deuda técnica. Es la referencia para desarrollar.
 - `docs/auditoria-calculo.md` → auditoría del motor de cálculo (Fase 26): qué se verificó contra las carteras, los errores corregidos y los criterios por decidir.
 - `docs/math/` → los fundamentos matemáticos de la poligonal y de la nivelación, con ejemplos resueltos, para la monografía. Al cambiar una fórmula, actualizarlos (el ejemplo de nivelación está fijado por un test).
-- `docs/manual/README.md` → manual de usuario, con capturas de la app real. Es la **fuente de la redacción**.
-- `src/app/(app)/manual/` → la ruta `/manual` de la app: el mismo manual maquetado con el sistema de diseño, visible para el usuario final y en producción. IMPORTANT: el texto vive **por duplicado** en los dos sitios y no hay generación automática; al editar uno, editar el otro en el mismo commit.
-- `docs/manual/capturas.mjs` → regenera las capturas en `public/manual/` (copia única; el Markdown las referencia con ruta relativa).
-- IMPORTANT: ambos se actualizan **al cerrar cada fase**, no al final del proyecto. Al cambiar algo visible: documentarlo en el manual (dos copias), regenerar capturas con `node docs/manual/capturas.mjs` —y commitear solo las que cambian por la fase—, y actualizar en la doc técnica el estado de fases, la tabla de pruebas y la deuda técnica (§ 11, entrada por entrada).
+- `docs/manual/` → el manual de usuario, **una sola fuente** (Fase 42): `README.md` es la portada y el índice, y cada capítulo, uno por flujo, es `NN-<slug>.md`. La ruta `/manual` los lee y los pinta; no hay otra copia del texto. Su guía de estilo está al final del README.
+- `docs/manual/recorridos/` → un script de Playwright por capítulo que hace el flujo real en la app y captura cada paso en `public/manual/<capitulo>/`, con su tamaño en `docs/manual/capturas.json`: `npm run manual:capturas [capítulo…]`.
+- IMPORTANT: ambos se actualizan **al cerrar cada fase**, no al final del proyecto. Al cambiar algo visible: actualizar su capítulo del manual y su recorrido, regenerar con `npm run manual:capturas <capítulo>` —y commitear solo las capturas que cambian por la fase—, y actualizar en la doc técnica el estado de fases, la tabla de pruebas y la deuda técnica (§ 11, entrada por entrada).
 
 ## Workflow
 - Antes de tareas complejas, leer las secciones relevantes de `docs/tecnica/README.md` y el PRD de la fase actual en `docs/prds/`.

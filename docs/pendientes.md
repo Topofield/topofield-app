@@ -19,7 +19,8 @@ peticiones sin fase**, todas con su texto más abajo:
 | **Semáforo por velocidad** | «Semáforo por velocidad con margen de ruido» | Que el ruido de la mira no dispare la alarma por velocidad |
 | **NC1** | «Catálogos en la nivelación» | Quitar «Tomar del catálogo» del equipo en el alta de la nivelación, como en la poligonal (hoy sigue en `leveling-details-dialog.tsx`) |
 
-Lo demás de este archivo está resuelto y se conserva como registro.
+Lo demás de este archivo está resuelto y se conserva como registro, salvo
+«El manual por capítulos (Fase 42)», al final, que está en curso.
 
 ## Cómo se resolvieron las peticiones (registro hasta el 2026-10-08)
 
@@ -841,3 +842,53 @@ quitar el reparto angular y las fórmulas de asentamientos, y reescribir las
 frases con el estado del proceso en la app. Es la **Fase 40**
 ([`prds/39-informes-entregables.md`](./prds/39-informes-entregables.md)),
 **cerrada** y en producción el 2026-10-08.
+
+## El manual por capítulos (Fase 42)
+
+El 2026-10-08, con el producto terminado y antes de redactar de nuevo la
+monografía, el usuario pidió: «El manual quiero rediseñarlo además su ux/ui
+para que se pueda leer por secciones o capítulos, como los manuales típicos,
+y que esté dividido por los flujos de usuario. […] Para cada flujo, quiero que
+hagas el recorrido real, vayas tomando los pantallazos, y guardándolos así
+como actualizando el manual. El manual debe tener un lenguaje sencillo y fácil
+de entender.» Eligió una sola fuente: Markdown por capítulo, que la app pinta.
+Es la **Fase 42** ([`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md)).
+
+## Lecturas de mira mayores de 4 m (Fase 42)
+
+> **Resuelta en la Fase 42**, como corrección aparte: fuera de 0 a 4 m la
+> lectura **avisa, no bloquea** (decisión del usuario, 2026-10-09), en el
+> validador y en los popups de armada de la nivelación y de la visita. Se
+> conserva el hallazgo como registro.
+
+El recorrido real del manual (Fase 42), al teclear la cartera de
+asentamientos en la armada, se detuvo en la tercera visita (2022-04-12): diez
+de sus dieciséis lecturas pasan de 4 m —A1 4.062, B10 4.120…— y el popup las
+rechaza con «La lectura de mira debe estar entre 0.000 y 4.000 m»
+(`MAX_READING = 4`, `src/lib/validators/leveling.ts`, PRD § 5.1). Con una mira
+de 5 m son lecturas válidas. La demo y el seed las tienen porque las insertan
+sin pasar por el validador, así que el fallo solo aparece capturando a mano.
+Afecta a la nivelación y a la visita, que comparten el validador.
+
+## La cartera de la demo numera sus visitas desde 1 (Fase 42, sin fase)
+
+Al recorrer el manual: la aplicación numera la primera visita de un lugar como
+la **0**, la línea base (Fase 5, decisión 14; `nextNumber` en
+`settlement/[siteId]/actions.ts`), pero la cartera real del «Proyecto de
+ejemplo» las inserta de la 1 a la 7 (`insertar-cartera.ts`). La misma cartera
+tecleada en la aplicación queda de la 0 a la 6. Es una etiqueta —el histórico
+se ordena por fecha— y no cambia ningún cálculo.
+
+## La columna Alerta de las visitas se corta en el panel (Fase 42, sin fase)
+
+Al recorrer el manual, a 1280 px: en la tabla de visitas del panel de un
+lugar, la columna **Alerta** sale cortada («Norm», «Alarm»). Con 16 puntos de
+códigos largos, como «A4(5A-4B)», la tabla no cabe en su tarjeta. Es
+visual; los datos están bien.
+
+## El diálogo de importación habla de un botón que no tiene (Fase 42, sin fase)
+
+Al recorrer el manual: «Importar libreta desde archivo» dice «Nada se guarda
+hasta que pulse Guardar», pero su botón es **Usar estas lecturas**
+(`components/leveling/import-dialog.tsx`). El de la visita no lo dice.
+
