@@ -1,0 +1,136 @@
+# Primeros pasos
+
+Cómo crear su cuenta, entrar por primera vez y moverse por la aplicación. Al
+final, las tres ideas que ordenan todo TopoField.
+
+## Crear su cuenta
+
+Para crear una cuenta necesita un **código de invitación**. Pídalo a quien
+administra la aplicación.
+
+1. Abra TopoField en el navegador. Verá la pantalla para entrar. Pulse
+   **Regístrate**, debajo del botón **Entrar**.
+
+   ![Pantalla de inicio de sesión de TopoField, con los campos Correo y Contraseña, el botón Entrar y, debajo, el enlace Regístrate](../../public/manual/primeros-pasos/01-inicio-de-sesion.png)
+
+2. Llene el formulario: el código de invitación, su nombre, su apellido, su
+   correo y una contraseña de al menos 6 caracteres. Pulse **Crear cuenta**.
+
+   ![Formulario Crear cuenta lleno: código de invitación, nombre Andrea, apellido Rojas, correo y contraseña](../../public/manual/primeros-pasos/02-crear-cuenta.png)
+
+3. La aplicación le pide que revise su correo. Abra el mensaje de TopoField y
+   pulse el enlace para confirmar la cuenta. Si no lo encuentra, mire en el
+   correo no deseado.
+
+   ![Pantalla «Revise su correo»: le enviamos un mensaje para confirmar su cuenta](../../public/manual/primeros-pasos/03-revise-su-correo.png)
+
+4. Al pulsar el enlace, la cuenta queda confirmada y entra directamente a la
+   aplicación.
+
+> Hasta que confirme el correo no podrá entrar. El enlace caduca: si tarda
+> mucho, regístrese de nuevo.
+
+## Entrar
+
+Las siguientes veces, escriba su **correo** y su **contraseña** en la pantalla
+de inicio y pulse **Entrar**. Cada usuario ve solo sus propios proyectos.
+
+## El proyecto de ejemplo
+
+La primera vez que entra, su cuenta ya trae un **Proyecto de ejemplo** hecho
+con carteras de campo reales y ya calculado. Sirve para conocer la aplicación
+sin capturar nada:
+
+- **Tres poligonales.** La V10, amarrada al punto TT4; la de la Sede Vivero,
+  ajustada por mínimos cuadrados, y la misma Sede Vivero medida en un sistema
+  local, lista para georreferenciar.
+- **Dos nivelaciones.** El Verjón, con ida y vuelta por los mismos puntos, y
+  el tramo 2, leído del archivo de un nivel digital.
+- **Dos controles de asentamientos.** Torre Alameda, simulado, con catorce
+  visitas, y el control de asentamiento estructural, una cartera real de
+  dieciséis puntos y siete visitas.
+
+Puede modificarlo, archivarlo o eliminarlo cuando quiera.
+
+## El dashboard
+
+Es la pantalla de inicio. Arriba hay tres indicadores:
+
+- **Proyectos activos**: cuántos proyectos tiene en curso.
+- **Procesos calculados**: los trabajos ya resueltos, listos para revisar.
+- **Fuera de tolerancia**: los trabajos que requieren revisión. Son las
+  poligonales y nivelaciones que no alcanzan ningún orden de precisión, y los
+  lugares con algún punto en alerta o alarma.
+
+Debajo están sus proyectos, cada uno con cuántos procesos tiene. **Activos** y
+**Archivados** cambian la lista, y **+ Nuevo Proyecto** crea uno.
+
+![Dashboard con los indicadores Proyectos activos 1, Procesos calculados 7 y Fuera de tolerancia 2, y la tarjeta del Proyecto de ejemplo](../../public/manual/primeros-pasos/04-dashboard.png)
+
+## Moverse por la aplicación
+
+La barra de arriba queda fija mientras baja por cualquier pantalla:
+
+- **El logo** lo devuelve al dashboard.
+- **La ruta**, a su lado, dice dónde está: «Dashboard › Proyecto de ejemplo ›
+  Poligonal V10…». Cada nombre lleva a ese nivel. En el teléfono se reduce a
+  «‹» y el nivel anterior.
+- **Equipos** abre su catálogo de equipos (vea
+  [El catálogo de equipos](07-equipos.md)).
+- **Manual** abre este manual.
+- **El círculo con su inicial** abre el menú de cuenta: su correo, el tema y
+  **Cerrar sesión**.
+
+![Menú de cuenta abierto: Sesión iniciada como, el tema con Sistema, Claro y Oscuro, y Cerrar sesión](../../public/manual/primeros-pasos/05-menu-de-cuenta.png)
+
+## Elegir el tema
+
+En el menú de cuenta elija el tema:
+
+- **Sistema** sigue la configuración de su teléfono o computador.
+- **Claro** y **Oscuro** lo fijan.
+
+La elección se recuerda en ese navegador. En la pantalla de inicio, el tema se
+cambia con el icono de arriba a la derecha. El informe impreso sale siempre en
+claro.
+
+![El dashboard en tema oscuro](../../public/manual/primeros-pasos/06-tema-oscuro.png "El tema oscuro descansa la vista de noche; a pleno sol, el claro se lee mejor.")
+
+## Cómo se organiza TopoField
+
+Tres ideas ordenan toda la aplicación:
+
+- **Proyecto.** Es la carpeta de un trabajo topográfico. Guarda el cliente, la
+  ubicación, el datum y la proyección, y los puntos de referencia que usan sus
+  procesos.
+- **Proceso.** Es un levantamiento concreto dentro de un proyecto: una
+  poligonal, una nivelación o un control de asentamientos. Cada proceso guarda
+  su propio equipo, porque puede cambiar de un levantamiento a otro.
+- **Cálculo en vivo.** Lo que captura se guarda al confirmarlo y se calcula al
+  momento. No hay botón de calcular.
+
+La poligonal, la nivelación y cada visita de asentamientos muestran su
+**estado**:
+
+| Estado | Qué significa |
+|---|---|
+| **Borrador** | Creado, todavía sin datos suficientes |
+| **En progreso** | Con datos de campo, pero sin un cálculo completo. En una visita se dice **En medición** |
+| **Calculado** | El cálculo está resuelto: listo para revisar y para el informe |
+
+El **orden de precisión** no se declara: la aplicación lo detecta al calcular
+y le dice qué orden alcanzó el trabajo.
+
+## Nada se cierra: todo se recalcula
+
+En TopoField ningún trabajo se cierra ni se bloquea. No hay botones para
+cerrar o reabrir, y siempre puede corregir. A cambio:
+
+- **Todo se recalcula en vivo.** Si corrige una lectura, la cota de un BM o la
+  cota base de un punto, se recalcula todo lo que depende de ese dato. Antes
+  de guardar, la aplicación le avisa qué va a cambiar.
+- **El orden se detecta.** Cada trabajo dice qué orden de precisión alcanzó, y
+  su informe avisa si no alcanza ninguno.
+- **El PDF guarda el momento.** El informe muestra el trabajo tal como está al
+  abrirlo. Si necesita conservar una versión, expórtela a PDF (vea
+  [El informe y el Excel](06-informe-y-excel.md)).

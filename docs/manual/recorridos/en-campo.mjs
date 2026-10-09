@@ -15,6 +15,9 @@ export async function recorrer() {
       `select id from public.polygonal_processes where name like 'Poligonal V10%' and project_id='${idProyecto()}'`,
     );
     await ir(page, `/projects/${idProyecto()}/polygonal/${tt4}?tab=datos`);
+    // El selector arriba de la pantalla, con las mediciones debajo.
+    await page.getByRole("group", { name: "Vista" }).evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().top - 70));
+    await page.waitForTimeout(400);
     await cap.paso("poligonal-tabla");
     await page.getByRole("button", { name: "Dibujo", exact: true }).click();
     await page.waitForTimeout(600);

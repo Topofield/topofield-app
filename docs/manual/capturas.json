@@ -1,0 +1,258 @@
+{
+  "asentamientos/01-nuevo-lugar.png": [
+    896,
+    1172
+  ],
+  "asentamientos/02-lugar-nuevo.png": [
+    2560,
+    1600
+  ],
+  "asentamientos/03-nuevo-punto.png": [
+    896,
+    592
+  ],
+  "asentamientos/04-puntos.png": [
+    2560,
+    2478
+  ],
+  "asentamientos/05-nuevo-bm.png": [
+    896,
+    624
+  ],
+  "asentamientos/06-bms.png": [
+    2560,
+    1600
+  ],
+  "asentamientos/07-nueva-visita.png": [
+    896,
+    944
+  ],
+  "asentamientos/08-libreta-plantilla.png": [
+    2560,
+    2772
+  ],
+  "asentamientos/09-armada.png": [
+    1344,
+    2936
+  ],
+  "asentamientos/10-libreta-con-aviso.png": [
+    2560,
+    2432
+  ],
+  "asentamientos/11-resultados.png": [
+    2560,
+    2556
+  ],
+  "asentamientos/12-panel.png": [
+    2560,
+    2104
+  ],
+  "asentamientos/13-informe.png": [
+    2560,
+    6138
+  ],
+  "asentamientos/14-dar-de-baja.png": [
+    896,
+    852
+  ],
+  "asentamientos/15-dos-armadas.png": [
+    2560,
+    2472
+  ],
+  "asentamientos/16-armada-punto-de-cambio.png": [
+    1344,
+    2496
+  ],
+  "asentamientos/17-bm-desplazado.png": [
+    2560,
+    2592
+  ],
+  "en-campo/01-poligonal-tabla.png": [
+    780,
+    1688
+  ],
+  "en-campo/02-poligonal-dibujo.png": [
+    780,
+    1688
+  ],
+  "en-campo/03-visita-armadas.png": [
+    780,
+    1688
+  ],
+  "en-campo/04-visita-armada.png": [
+    780,
+    1688
+  ],
+  "en-campo/05-panel-oscuro.png": [
+    780,
+    1688
+  ],
+  "equipos/01-catalogo-vacio.png": [
+    2560,
+    1600
+  ],
+  "equipos/02-nueva-estacion.png": [
+    1344,
+    1152
+  ],
+  "equipos/03-catalogo.png": [
+    2560,
+    1600
+  ],
+  "equipos/04-tomar-del-catalogo.png": [
+    896,
+    1932
+  ],
+  "informe-y-excel/01-pagina-de-informe.png": [
+    2560,
+    1600
+  ],
+  "informe-y-excel/02-como-se-imprime.png": [
+    2560,
+    7810
+  ],
+  "nivelacion/01-nueva-nivelacion.png": [
+    896,
+    1308
+  ],
+  "nivelacion/02-libreta-vacia.png": [
+    2560,
+    1600
+  ],
+  "nivelacion/03-armada.png": [
+    1344,
+    1864
+  ],
+  "nivelacion/04-libreta.png": [
+    2560,
+    2274
+  ],
+  "nivelacion/05-compensacion.png": [
+    2560,
+    3842
+  ],
+  "nivelacion/06-informe.png": [
+    2560,
+    5688
+  ],
+  "nivelacion/07-importar.png": [
+    1344,
+    2936
+  ],
+  "nivelacion/08-importada.png": [
+    2560,
+    1988
+  ],
+  "poligonal/01-nueva-poligonal.png": [
+    896,
+    1404
+  ],
+  "poligonal/02-sin-datos.png": [
+    2560,
+    1600
+  ],
+  "poligonal/03-puntos-de-amarre.png": [
+    1344,
+    1364
+  ],
+  "poligonal/04-agregar-medicion.png": [
+    896,
+    1112
+  ],
+  "poligonal/05-cierre-angular.png": [
+    896,
+    816
+  ],
+  "poligonal/06-datos.png": [
+    2560,
+    2736
+  ],
+  "poligonal/07-orden-alcanzado.png": [
+    1984,
+    838
+  ],
+  "poligonal/08-ajuste.png": [
+    2560,
+    2352
+  ],
+  "poligonal/09-dibujo.png": [
+    630,
+    728
+  ],
+  "poligonal/10-informe.png": [
+    2560,
+    8296
+  ],
+  "poligonal/11-minimos-cuadrados-pesos.png": [
+    1984,
+    978
+  ],
+  "poligonal/12-minimos-cuadrados.png": [
+    2560,
+    3978
+  ],
+  "poligonal/13-precision-de-cada-punto.png": [
+    1216,
+    788
+  ],
+  "poligonal/14-georreferenciar.png": [
+    1344,
+    1968
+  ],
+  "poligonal/15-georreferenciada.png": [
+    630,
+    768
+  ],
+  "primeros-pasos/01-inicio-de-sesion.png": [
+    2560,
+    1600
+  ],
+  "primeros-pasos/02-crear-cuenta.png": [
+    2560,
+    1600
+  ],
+  "primeros-pasos/03-revise-su-correo.png": [
+    2560,
+    1600
+  ],
+  "primeros-pasos/04-dashboard.png": [
+    2560,
+    1600
+  ],
+  "primeros-pasos/05-menu-de-cuenta.png": [
+    512,
+    444
+  ],
+  "primeros-pasos/06-tema-oscuro.png": [
+    2560,
+    1600
+  ],
+  "proyectos/01-nuevo-proyecto.png": [
+    2560,
+    1664
+  ],
+  "proyectos/02-proyecto-nuevo.png": [
+    2560,
+    1600
+  ],
+  "proyectos/03-nuevo-punto-de-referencia.png": [
+    896,
+    852
+  ],
+  "proyectos/04-configuracion.png": [
+    2560,
+    2884
+  ],
+  "proyectos/05-listado-de-procesos.png": [
+    2560,
+    1600
+  ],
+  "proyectos/06-filtro-calculados.png": [
+    2560,
+    1600
+  ],
+  "proyectos/07-nuevo-proceso.png": [
+    896,
+    544
+  ]
+}

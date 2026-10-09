@@ -110,7 +110,7 @@ const CSS_CAPTURA =
  * 1280 × 800. Las dos a `ESCALA_CAPTURAS` píxeles por píxel.
  */
 export async function abrir({ movil = false } = {}) {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: "chromium", args: ["--lang=es-CO"], env: { ...process.env, LANG: "es_CO.UTF-8", LANGUAGE: "es_CO:es" } });
   // El idioma y la zona del usuario: el botón del archivo dice «Seleccionar
   // archivo» y las fechas salen en Bogotá.
   const lugar = { locale: "es-CO", timezoneId: "America/Bogota" };
