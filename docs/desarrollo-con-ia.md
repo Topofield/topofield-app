@@ -7,8 +7,8 @@ dominante no es la excepción — es el resultado equivocado que parece correcto
 
 Cada regla se justifica por el mecanismo que la hace cierta, no por la anécdota
 que la originó. Destilado de un proyecto completo desarrollado con asistencia de
-IA: seis ciclos de trabajo, un plan de saneamiento y una auditoría de seguridad
-con pruebas de explotación.
+IA: cuarenta y una fases de trabajo, una auditoría del cálculo contra carteras
+de campo reales y una auditoría de seguridad con pruebas de explotación.
 
 ---
 

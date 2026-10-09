@@ -8,7 +8,20 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
-## Estado (2026-10-03)
+## Estado (2026-10-08)
+
+Las **41 fases están cerradas** y el producto está terminado. Quedan **tres
+peticiones sin fase**, todas con su texto más abajo:
+
+| Petición | Sección | Qué falta |
+|---|---|---|
+| **HC2** | «Navegación» | Un selector en cada miga de la barra para saltar entre proyectos y procesos |
+| **Semáforo por velocidad** | «Semáforo por velocidad con margen de ruido» | Que el ruido de la mira no dispare la alarma por velocidad |
+| **NC1** | «Catálogos en la nivelación» | Quitar «Tomar del catálogo» del equipo en el alta de la nivelación, como en la poligonal (hoy sigue en `leveling-details-dialog.tsx`) |
+
+Lo demás de este archivo está resuelto y se conserva como registro.
+
+## Cómo se resolvieron las peticiones (registro hasta el 2026-10-08)
 
 El 2026-09-29 el usuario pidió cerrar los huecos de funcionalidad y mejorar la
 navegación. Se partió en **dos fases seguidas** (decisión del usuario): la
@@ -102,6 +115,15 @@ El 2026-10-07, al probar la poligonal rediseñada, el usuario reportó tres
 fallos, corregidos sin fase en la rama `fase-35-correcciones`, y pidió dejar
 anotado lo mismo para la nivelación: «Catálogos en la nivelación», al final,
 sin fase.
+
+El 2026-10-08 llegaron las tres últimas, y las tres se abrieron y se cerraron
+ese mismo día:
+
+- la **Fase 39**, la precisión de cada punto en mínimos cuadrados;
+- la **Fase 40**, los informes entregables;
+- la **Fase 41**, el dibujo de la poligonal como un mapa ([`prds/40-visor-poligonal.md`](./prds/40-visor-poligonal.md)). Se pidió sin pasar por este archivo.
+
+Las de la 39 y la 40 están al final.
 
 Las peticiones anteriores están todas resueltas; las últimas, UI1 y UI2,
 cerraron en la Fase 20. La tabla y los textos de abajo se conservan como
