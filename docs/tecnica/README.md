@@ -5,7 +5,7 @@ está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
 **Última actualización:** 2026-10-08 · Fases 38 a 40 en `main` y en
-producción, con la migración de la 38 aplicada (§ 13); la 41 en su rama · 1190 tests y 137 pruebas de base (pgTAP) ·
+producción, con la migración de la 38 aplicada (§ 13); la 41 en su rama · 1193 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -407,7 +407,8 @@ Resultado (cifras, orden alcanzado y por qué, o la alerta), 2. Datos de campo
 pantalla y en el PDF, sin librerías. Desde la Fase 40 el informe solo lleva
 las del ajuste —la del método (Brújula, Tránsito, Crandall o mínimos
 cuadrados) y la de la elipse de error—; el reparto angular se dice en el
-texto con su valor por ángulo; `src/types/mathml.d.ts` declara los
+texto con su valor por ángulo. Cada una lleva su leyenda «donde:» (Fase 41,
+`legend` de `Formula`): sus símbolos, como texto, en la misma línea gris; `src/types/mathml.d.ts` declara los
 elementos, que `@types/react` 19 aún no trae. Una letra griega sola va con
 `mathvariant="normal"`: Chrome la pasaría a la cursiva matemática (U+1D6FC…),
 que muchas fuentes no tienen.
@@ -2737,7 +2738,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1190 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1193 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2765,8 +2766,8 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `components/polygonal/order-verdict.test.ts` | 4 | El «Por qué» del orden alcanzado, orden por orden, con y sin condición angular (Fase 35) |
 | `components/polygonal/adjusted-table.test.ts` | 2 | La poligonal ajustada al estilo de la hoja: las coordenadas del punto de llegada y la fila Σ (Fase 35) |
 | `lib/polygonal-amarre.test.ts` | 22 | Los puntos del amarre al catálogo: reutilizar, completar, crear o mover el que tiene otras coordenadas; `catalogMoves`, los que cambian con sus coordenadas de antes y las otras poligonales que los usan; `repeatedPointName` con el medio milímetro, y `catalogPointOf`; `planCatalogWrites` —insertar, actualizar por id, un punto nuevo repetido una sola vez, el id propuesto para la referencia— y `catalogPointsProblem`: puntos sin nombre o con coordenadas no finitas, que no son los del amarre o que repiten nombre (Fase 35 y sus correcciones) |
-| `components/reports/sections/polygonal-correction.test.tsx` | 5 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35); el reparto angular en el texto, con su valor por ángulo (Fase 40) |
-| `components/reports/math.test.tsx` | 2 | Una letra griega sola va recta en MathML (Fase 35) |
+| `components/reports/sections/polygonal-correction.test.tsx` | 6 | «Corrección por método …» en el informe, con la TT4 en los cuatro métodos: qué ángulos se corrigen, sus cifras y fórmulas en MathML; nada en la abierta sin control (Fase 35); el reparto angular en el texto, con su valor por ángulo (Fase 40); la leyenda «donde:» de cada fórmula y mínimos cuadrados sin pesos sin «faltan los pesos» (Fase 41) |
+| `components/reports/math.test.tsx` | 4 | Una letra griega sola va recta en MathML (Fase 35); la leyenda de `Formula`, «donde: símbolo — significado · …», y nada sin ella (Fase 41) |
 | `lib/errors/action-call.test.ts` | 3 | Un rechazo de red de una acción vuelve como error, sin lanzar, y las señales de navegación de Next pasan (Fase 35) |
 | `lib/calculations/least-squares.test.ts` | 28 | Ajuste por mínimos cuadrados por la ruta de `computePolygonal`: la Vivero contra el PRD, **condiciones en cero**, correcciones no uniformes, mismo veredicto que Bowditch, TT4 con la orientación como datum, abierta con y sin azimut de llegada, sin pesos, escala de σ₀, coeficientes contra diferencias finitas; una abierta de un solo lado no se ajusta y no lanza, singularidad con tolerancia relativa, aviso de no convergencia; lectura de σ₀ (Fase 14); desde la Fase 32, con la prueba χ² al 95 %: los intervalos de r = 2 y r = 3, la Vivero consistente, las fronteras, la r que cambia la lectura y los casos que la banda [0.5, 2] juzgaba mal; las matrices de la última iteración que usa el Excel, con N = A·Q·Aᵀ y N·k = −w (Fase 38) |
 | `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, velocidad como cadena y a la precisión de su columna; desde la Fase 37, cualquier visita, sin excepción de las cerradas; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |

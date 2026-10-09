@@ -1106,7 +1106,8 @@ export default function ManualPage() {
             elegido, paso a paso, con las cifras de esta poligonal. El reparto
             del error angular se dice con su valor por ángulo; el método de
             ajuste —y, en mínimos cuadrados, la elipse de error— lleva su
-            fórmula en notación matemática.
+            fórmula en notación matemática, con una línea «donde:» que dice qué
+            es cada símbolo.
           </li>
           <li>
             <strong>Poligonal ajustada</strong>, con la fila Σ.
