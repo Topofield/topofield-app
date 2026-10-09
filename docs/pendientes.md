@@ -870,3 +870,25 @@ de 5 m son lecturas válidas. La demo y el seed las tienen porque las insertan
 sin pasar por el validador, así que el fallo solo aparece capturando a mano.
 Afecta a la nivelación y a la visita, que comparten el validador.
 
+## La cartera de la demo numera sus visitas desde 1 (Fase 42, sin fase)
+
+Al recorrer el manual: la aplicación numera la primera visita de un lugar como
+la **0**, la línea base (Fase 5, decisión 14; `nextNumber` en
+`settlement/[siteId]/actions.ts`), pero la cartera real del «Proyecto de
+ejemplo» las inserta de la 1 a la 7 (`insertar-cartera.ts`). La misma cartera
+tecleada en la aplicación queda de la 0 a la 6. Es una etiqueta —el histórico
+se ordena por fecha— y no cambia ningún cálculo.
+
+## La columna Alerta de las visitas se corta en el panel (Fase 42, sin fase)
+
+Al recorrer el manual, a 1280 px: en la tabla de visitas del panel de un
+lugar, la columna **Alerta** sale cortada («Norm», «Alarm»). Con 16 puntos de
+códigos largos, como «A4(5A-4B)», la tabla no cabe en su tarjeta. Es
+visual; los datos están bien.
+
+## El diálogo de importación habla de un botón que no tiene (Fase 42, sin fase)
+
+Al recorrer el manual: «Importar libreta desde archivo» dice «Nada se guarda
+hasta que pulse Guardar», pero su botón es **Usar estas lecturas**
+(`components/leveling/import-dialog.tsx`). El de la visita no lo dice.
+

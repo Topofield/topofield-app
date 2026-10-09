@@ -42,6 +42,7 @@ con esta tabla, manda la tabla.
 | §1.3 | Ingreso manual o CSV | Se importan libretas de nivel digital: el `.L` de Leica y una plantilla CSV propia, en la nivelación y en la visita | 16 · 37 | § 6 «Importación de libretas de nivelación» |
 | §6.8, §6.9 | Se compensa solo si cumple; la vuelta solo controla | **Se compensa siempre** que haya contra qué cerrar. Con vuelta, entra en la compensación. El BM de partida no se corrige, y cada punto tiene una sola «cota ajustada» | 19 · 26 · 28 · 36 | § 6, nivelación |
 | §5.1, §5.4 | Aviso de equilibrado de visuales | Retirado: era un aviso de campo y no cambia ninguna cota | 36 | § 6 «Tolerancias» |
+| §5.1 | Una lectura de mira fuera de 0–4 m es un error | Avisa y no bloquea: una mira de 5 m lee 4.120, como la cartera real de asentamientos | 42 | § 7 |
 | §4.5, §3.2 | Visita en modo libreta compensada o de cotas directas; visita y lugar cerrados | **Toda visita se mide con libreta**, por armadas, desde los BM del lugar (`site_benchmarks`, copias que no se sincronizan), y **no se compensa**: la cota es AI − lectura y el cierre solo verifica. Cada lectura se guarda al escribirla. El lugar tiene pestañas Panel · Puntos · BMs · Informe | 18 · 37 | § 4 «La libreta de la visita», § 6 |
 | §6.10, §3.2 | Asentamiento diferencial y distorsión angular, con coordenadas | Quitados: los puntos de control no tienen posición | 29 | § 6 «Sin posición» |
 | §4.5, §6.10 | Catálogo fijo de puntos | Puntos que se dan de alta y de baja a mitad de la serie; la línea base es la C0 o, si no hay, la primera lectura | 11 | § 4 «`settlement_points` — vigencia» |
@@ -58,7 +59,7 @@ con esta tabla, manda la tabla.
 - **Alcance (§ 1.1, § 1.3).** Los tres procesos, organizados por proyecto. Siguen fuera: el replanteo, las secciones, los volúmenes, el GPS diferencial, la importación desde la estación total, la firma digital, los varios roles, el modo offline y el mapa.
 - **Stack (§ 2).** Supabase (PostgreSQL y Auth), Tailwind, el sistema de diseño propio y Vercel.
 - **Datos (§ 3).** Los ángulos en tres columnas, RLS por usuario, `reference_points`, los tipos de poligonal, de nivelación y de punto, y los umbrales del lugar.
-- **Validación (§ 5).** Las reglas de captura de § 5.1 y las tolerancias de § 5.4, todas en `tolerances.ts`.
+- **Validación (§ 5).** Las reglas de captura de § 5.1 (salvo el rango de la mira) y las tolerancias de § 5.4, todas en `tolerances.ts`.
 - **Algoritmos (§ 6).** Bowditch, Tránsito, Crandall (como lo corrigió la Fase 26), la altura de instrumento, la comprobación aritmética, la corrección proporcional y el asentamiento parcial, acumulado y con su velocidad.
 - **Interfaz (§ 10).** Los decimales y el idioma.
 

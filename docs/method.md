@@ -119,6 +119,12 @@ Al cerrar:
   estado de fases, listas de módulos pendientes, y cualquier instrucción que
   mencione algo que la fase eliminó. Un `grep` de las cifras y los nombres que
   la fase cambió basta para encontrarlas.
+- **Si la fase cambió algo visible**, se actualiza su capítulo del manual
+  (`docs/manual/NN-<slug>.md`) y su recorrido (`docs/manual/recorridos/`), y se
+  regenera con `npm run manual:capturas <capítulo>`. `npm test` comprueba que
+  cada captura y cada enlace existen y que las tablas copiadas del código
+  coinciden con él; lo que no comprueba es que el texto diga lo que la pantalla
+  hace: eso se mira en las capturas.
 - Se anota en este mismo archivo, bajo "Aprendizajes", cualquier cosa que el ciclo enseñó y que vale la pena llevar a la siguiente fase.
 
 #### Por qué este paso existe
