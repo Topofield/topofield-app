@@ -778,8 +778,9 @@ mide una visita, y entra en esa fase:
 ## Semáforo por velocidad con margen de ruido (sin fase)
 
 Lo anticipó el análisis de la cartera real de asentamientos (2026-10-03) y lo
-confirmó el lienzo de la Fase 37: con los umbrales de edificio, las visitas 2
-a 5 de la cartera salen en **alarma por velocidad por puro ruido**. Un
+confirmó el lienzo de la Fase 37: con los umbrales de edificio, las visitas 1
+a 4 de la cartera (2 a 5 en la hoja) salen en **alarma por velocidad por puro
+ruido**. Un
 milímetro en siete días son 4.35 mm/mes —precaución— y tres, 13 mm/mes
 —alarma—, con una mira que resuelve el milímetro. El margen de ruido
 de la Fase 32 se aplica a los avisos de tendencia, no al semáforo. La hoja de

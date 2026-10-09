@@ -1262,8 +1262,10 @@ consolidados (salió `insertar-informe.ts`, con las banderas `informe` de
 con las visitas sin compensar —solo la
 9 queda sin verificación—, y la demo suma la primera serie real de
 asentamientos: «Control de asentamiento estructural», 16 puntos sin C0, el BM
-de la piscina (`PISCINA/BM`, 156.299) y 7 visitas de una armada, con la 7 del
-2022-06-05, «AA3» y B10 en la visita 3 tal cual la hoja. Los datos de campo
+de la piscina (`PISCINA/BM`, 156.299) y 7 visitas de una armada, la última
+del 2022-06-05, «AA3» y B10 en la visita del 2022-04-12 tal cual la hoja.
+Desde la Fase 43 se numeran como la aplicación, de la 0 (base) a la 6; la
+hoja lo hace de la 1 a la 7. Los datos de campo
 viven **una sola vez** en `src/lib/demo/` —`carteras.ts`, `crudo-tramo2.ts`
 (el `.L` como texto, porque `docs/` no se despliega), `torre-alameda.ts`,
 `cartera-asentamientos.ts`— y los usan la demo, el seed y los tests. Los
@@ -1924,8 +1926,9 @@ longitud de su libreta (`VisitCircuit`, que leía `visitCircuitsOf`:
 `total_distance_km` o, sin libreta, `DIRECT_CAPTURE_CIRCUIT_KM`, 0.5 km), y
 Torre Alameda, con circuitos de 0.112 km, bajaba a 2.8 mm en tercer orden. La
 visita ya no declara orden y su libreta puede no tener distancias. Con el
-margen fijo, B10 de la cartera real avisa «excesiva» en la visita 3 (−50 mm
-frente a unos 17.1 previstos) y «contraria» en la 4 (+45 mm), y Torre Alameda
+margen fijo, B10 de la cartera real avisa «excesiva» en la visita 2, la del
+2022-04-12 (−50 mm frente a unos 17.1 previstos), y «contraria» en la 3, la
+del 2022-04-19 (+45 mm), y Torre Alameda
 no da avisos ni «Acelerando». El factor 2 (`TREND_DEVIATION_RATE_FACTOR`) sigue
 siendo una decisión con nombre. Solo evalúa desde la tercera lectura del punto.
 P-09 del marco teórico y las series del seed son tests de regresión: no dan
@@ -2811,7 +2814,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/calculations/settlement-persistence.test.ts` | 19 | **Qué lecturas hay que reescribir** al recalcular: cambio de solo la alerta, velocidad como cadena y a la precisión de su columna; desde la Fase 37, cualquier visita, sin excepción de las cerradas; filas de libreta a persistir y lectura de la base (Fase 18); la cota de catálogo de los BM de control, solo en sus filas (Fase 30) |
 | `lib/calculations/settlement-book-tramos.test.ts` | 11 | **Los tramos de la libreta de la visita** (Fase 37): dónde arranca cada uno; la visita 12 de Torre Alameda, cerrada en segundo orden con −1.6 mm y BM-1 en 99.9984, sin compensar; la cartera, abierta y sin orden; un tramo que arranca en otro BM toma su cota, uno de enlace, uno que arranca fuera de los BM del lugar; la cadena con una fila sin lectura, sin la V+ de la armada o sin la V− de un punto de cambio; la plantilla sin lecturas; la verificación del tramo peor |
 | `lib/calculations/settlement-book-plantilla.test.ts` | 13 | Las cotas de los puntos sin corregir, el punto en dos armadas como error con sus dos filas, el punto por leer y el ausente; la plantilla de la visita nueva —las armadas de la anterior sin lecturas, la baja y el alta, sin anterior y sin BM—; lo pendiente y el estado; el punto auxiliar (Fase 37); un punto de cambio seguido de un tramo desde un BM no espera V+ (revisión final) |
-| `lib/calculations/settlement-book-bm.test.ts` | 3 | Un BM del lugar leído de paso, en tercer orden, y el de cierre no; el margen fijo de 6 mm; B10 de la cartera, «excesiva» en la visita 3 y «contraria» en la 4 (Fase 37) |
+| `lib/calculations/settlement-book-bm.test.ts` | 3 | Un BM del lugar leído de paso, en tercer orden, y el de cierre no; el margen fijo de 6 mm; B10 de la cartera, «excesiva» en la visita 2 y «contraria» en la 3 (Fase 37; numeradas desde 0 en la Fase 43) |
 | `lib/calculations/visit-record.test.ts` | 11 | **El registro de una visita** (Fase 37): un circuito cerrado en segundo orden, sin compensar y calculado; la cartera sin verificación; una fila por leer, sin cota y en medición; el recálculo del lugar al cambiar la cota de un BM, sin C0 y con ella; una visita sin libreta entra al histórico con sus cotas; `visitSaveOf`: una visita de cotas tecleadas conserva sus cotas y su cabecera; un punto auxiliar guardado en los BM no verifica la visita que lo midió, y sí las demás (revisión final) |
 | `lib/calculations/angles.test.ts` | 22 | Conversiones DMS ↔ decimal; captura en grados decimales, con ida y vuelta exacta en 12 000 valores (Fase 13); promedio y dispersión de lecturas a través de 0°/360°, redondeo a 0.1″, coma decimal y sin aviso falso en la vista decimal (Fase 26) |
 | `lib/demo/fixtures.test.ts` | 19 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045) en tercer orden detectado, y la Vivero alcanza segundo orden (Fase 35); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos, en segundo orden detectado, y el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km en primer orden (Fase 36); desde la Fase 38, sin los informes de la demo; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo, y con la regla «dentro de tolerancia» sin compensar cuando no cumple (Fase 28); Torre Alameda sin compensar ni cerrar (Fase 37): ocho puntos, catorce visitas y sus dos BM del lugar, todas calculadas y solo la 9 sin verificación, cada cota a menos del cierre de su visita de la serie, el otro BM que nivela salvo en la visita 13 (Fase 30) y, con el margen fijo, ni avisos de tendencia ni «Acelerando» |
@@ -2824,7 +2827,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/validators/settlement-book.test.ts` | 10 | Los mensajes de la derivación, con las filas desde 1 (Fase 18); el de la comprobación de un BM, que no culpa a ninguno (Fase 30); `validateBook` (Fase 37): la libreta vacía, cada tramo desde un BM del lugar, las lecturas por leer no son error, la distancia opcional y una tecleada que no puede ser cero, y un valor que no es número |
 | `lib/calculations/settlement-summary.test.ts` | 15 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas; siguiente umbral de acumulado (Fase 18); el promedio encadenado con altas, bajas, visitas sin lecturas y sin puntos comunes (Fase 31) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y alcanza un orden; determinista (Fase 18); sin compensar, cada cota se aparta de la objetivo menos que el cierre, y un cierre fuera de todos los órdenes deja las cotas en las objetivo y la visita sin orden; una sola armada con cuatro puntos o menos (Fase 37) |
-| `lib/demo/cartera-asentamientos.test.ts` | 5 | **La cartera real de asentamientos** (Fase 37, decisión 23): 16 puntos y 7 visitas, la 7 del 2022-06-05; cada visita una armada abierta, calculada y sin verificación; reproduce celda a celda las cotas, «Comparación n» y «Comparación al anterior» de la hoja; los avisos de B10 |
+| `lib/demo/cartera-asentamientos.test.ts` | 6 | **La cartera real de asentamientos** (Fase 37, decisión 23): 16 puntos y 7 visitas, la última del 2022-06-05; cada visita una armada abierta, calculada y sin verificación; reproduce celda a celda las cotas, «Comparación n» y «Comparación al anterior» de la hoja; numeradas de la 0 a la 6, como la aplicación (Fase 43); los avisos de B10 |
 | `lib/calculations/leveling-detect.test.ts` | 14 | **El orden detectado y la compensación sin limitantes** (Fase 36): El Verjón en segundo orden con las cotas ajustadas del lienzo, el tramo 2 en −0.4 mm y primer orden, fuera del ordinario sin orden pero compensada, la abierta sin vuelta sin orden; la regla de la visita no cambia; la libreta a medias (`pendingRun`): sin armadas, una cerrada que no vuelve al BM, la ida y la vuelta de una abierta sin terminar, la abierta sin vuelta y una vuelta vieja que llega al BM como punto de cambio; «never» no compensa; una libreta que no encadena —un punto de cambio sin V+— queda sin orden y sin compensar, y una a medias que cuadra no (revisión final) |
 | `components/leveling/armadas.test.ts` | 10 | La captura por armada (Fase 36): las 10 armadas de la ida de El Verjón, la armada 2 con sus lecturas, capturar armada por armada reproduce la hoja, editar una del medio solo cambia sus filas, una armada a medias al final, una intermedia colgada después del último punto, quitar la última; la armada siguiente y el fin del recorrido; agregar una armada tras una intermedia colgada abre desde el último punto y la intermedia conserva su cota (revisión final) |
 | `components/leveling/armada-form.test.ts` | 8 | El popup de armada (Fase 36): del formulario a la armada y de vuelta, los hilos con la distancia y la comprobación del medio, los campos obligatorios y los números, la casilla de fin según el tipo y el recorrido, y los errores de la libreta en la vista que los tiene; una armada que no queda en la libreta es un error (revisión final); `readingWarnings`, los avisos de lecturas fuera de 0 a 4 m que muestran los dos popups (Fase 42) |
@@ -3113,7 +3116,7 @@ sin corregir:
 **El semáforo por velocidad alarma por ruido (visto en la Fase 37).** Con los
 umbrales de edificio y visitas cada siete días, un milímetro son 4.35 mm/mes
 —precaución— y tres, 13 mm/mes —alarma—, con una mira que resuelve el
-milímetro: las visitas 2 a 5 de la cartera real salen en alarma por
+milímetro: las visitas 1 a 4 de la cartera real (2 a 5 en la hoja) salen en alarma por
 velocidad. El margen de ruido (§ 6) se aplica a los avisos de tendencia, no al
 semáforo. Quedó fuera de la fase, como petición aparte en `pendientes.md`
 («Semáforo por velocidad con margen de ruido»).
@@ -3790,8 +3793,9 @@ margen bajaba a 2.8 mm sin dar avisos.
 > **Simplificado en la Fase 37** (decisión 17): la visita ya no declara orden
 > y su libreta puede no tener distancias, así que el margen vuelve a ser fijo,
 > el de dos visitas sin libreta en tercer orden: 6 mm (§ 6). Ya hay una serie
-> real, la cartera: con el margen fijo, B10 avisa «excesiva» en la visita 3 y
-> «contraria» en la 4, donde la hoja tiene el salto de −50 mm y su vuelta. El
+> real, la cartera: con el margen fijo, B10 avisa «excesiva» en la visita 2 y
+> «contraria» en la 3 (desde 0, Fase 43), donde la hoja tiene el salto de
+> −50 mm y su vuelta. El
 > margen no llega al semáforo por velocidad (arriba).
 
 **Tres componentes del sistema de diseño conocen el dominio.** La § 8 dice que
