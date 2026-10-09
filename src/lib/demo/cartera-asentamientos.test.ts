@@ -3,13 +3,14 @@ import { detectTrendDeviations } from "@/lib/calculations/settlement";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
 import { recalculateSite } from "@/lib/calculations/visit-record";
 import type { PointInput } from "@/types/settlement";
-import { CARTERA_ASENTAMIENTOS as C, carteraBook } from "./cartera-asentamientos";
+import { CARTERA_ASENTAMIENTOS as C, carteraVisitas } from "./cartera-asentamientos";
 
 // La cartera real (docs/carteras/Control_asentamiento_estructural_ REAL.xlsx):
 // cada visita es una armada desde PISCINA/BM con una vista a cada punto. Lo
 // que la hoja da en sus celdas, en mm enteros: «COMPARACION n» —el acumulado
-// contra la visita 1— y «COMPARACION AL ANTERIOR» —el parcial— de C27:BQ43,
-// sin la fila del BM. Las cotas, de las columnas COTA (F, K, P, U, Z, AE, AJ).
+// contra su visita 1, la base— y «COMPARACION AL ANTERIOR» —el parcial— de
+// C27:BQ43, sin la fila del BM. La hoja numera sus visitas de la 1 a la 7; la
+// aplicación, de la 0 (base) a la 6 (Fase 43). Las cotas, de las columnas COTA (F, K, P, U, Z, AE, AJ).
 
 const COTAS = [
   [156.697, 156.704, 156.709, 156.696, 156.702, 156.712, 153.689, 153.634, 153.682, 153.692, 153.682, 153.689, 153.693, 153.691, 153.682, 153.689],
@@ -21,7 +22,7 @@ const COTAS = [
   [156.69, 156.69, 156.692, 156.691, 156.697, 156.697, 153.68, 153.646, 153.676, 153.689, 153.678, 153.682, 153.694, 153.694, 153.677, 153.672],
 ];
 
-/** «COMPARACION n», de la visita 2 a la 7. */
+/** «COMPARACION n», de la visita 2 a la 7 de la hoja (1 a 6 de la app). */
 const ACUMULADOS = [
   [-1, -2, -1, 0, 0, -1, 0, 11, -2, 0, -2, -3, 1, 3, 0, -10],
   [-1, -3, -7, -1, -1, -10, -2, 10, -4, -1, -5, -6, 1, 3, -1, -60],
@@ -31,7 +32,7 @@ const ACUMULADOS = [
   [-7, -14, -17, -5, -5, -15, -9, 12, -6, -3, -4, -7, 1, 3, -5, -17],
 ];
 
-/** «COMPARACION AL ANTERIOR», de la visita 2 a la 7. */
+/** «COMPARACION AL ANTERIOR», de la visita 2 a la 7 de la hoja (1 a 6 de la app). */
 const PARCIALES = [
   [-1, -2, -1, 0, 0, -1, 0, 11, -2, 0, -2, -3, 1, 3, 0, -10],
   [0, -1, -6, -1, -1, -9, -2, -1, -2, -1, -3, -3, 0, 0, -1, -50],
@@ -41,7 +42,7 @@ const PARCIALES = [
   [-1, 0, 0, -1, 0, 0, -1, 0, -1, 0, -1, 0, 0, 0, 0, -1],
 ];
 
-// Sin C0: la línea base de cada punto es su lectura de la visita 1.
+// Sin C0: la línea base de cada punto es su lectura de la visita 0.
 const POINTS: PointInput[] = C.points.map((code, i) => ({
   id: `p${i}`,
   code,
@@ -54,12 +55,12 @@ const site = recalculateSite({
   points: POINTS,
   benchmarks: [C.benchmark],
   thresholds: thresholdsFor("edificio"),
-  visits: C.visits.map((v, i) => ({ id: `v${i + 1}`, visitNumber: i + 1, date: v.date, rows: carteraBook(v) })),
+  visits: carteraVisitas().map((v) => ({ id: `v${v.visitNumber}`, ...v })),
 });
 const at = (visit: number, point: number) => site[visit]!.readings.find((r) => r.pointId === `p${point}`)!;
 
 describe("la cartera real de asentamientos (Fase 37, decisión 23)", () => {
-  it("son 16 puntos y 7 visitas; la 7, del 5 de junio de 2022", () => {
+  it("son 16 puntos y 7 visitas; la última, del 5 de junio de 2022", () => {
     expect(C.points).toHaveLength(16);
     expect(C.visits.map((v) => v.date)).toEqual([
       "2022-03-24", "2022-03-31", "2022-04-12", "2022-04-19", "2022-04-29", "2022-05-16", "2022-06-05",
@@ -95,18 +96,23 @@ describe("la cartera real de asentamientos (Fase 37, decisión 23)", () => {
     );
   });
 
-  it("B10 avisa «excesiva» en la visita 3 y «contraria» en la 4", () => {
+  it("las visitas van de la 0 (base) a la 6, como las numera la aplicación", () => {
+    expect(carteraVisitas().map((v) => v.visitNumber)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(carteraVisitas()[0]!.date).toBe(C.visits[0]!.date);
+  });
+
+  it("B10 avisa «excesiva» en la visita 2 y «contraria» en la 3", () => {
     const deviations = detectTrendDeviations(
       site.map(({ visitId, readings }, i) => ({
         visitId,
-        visitNumber: i + 1,
+        visitNumber: i,
         date: C.visits[i]!.date,
         readings,
         worstAlert: "normal" as const,
       })),
     );
     const b10 = `p${C.points.indexOf("B10")}`;
-    expect(deviations.get("v3")?.get(b10)?.kind).toBe("excessive");
-    expect(deviations.get("v4")?.get(b10)?.kind).toBe("contrary");
+    expect(deviations.get("v2")?.get(b10)?.kind).toBe("excessive");
+    expect(deviations.get("v3")?.get(b10)?.kind).toBe("contrary");
   });
 });

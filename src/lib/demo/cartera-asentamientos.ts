@@ -101,3 +101,11 @@ export function carteraBook(visit: CarteraVisita): BookRowPayload[] {
     ),
   ];
 }
+
+/**
+ * Las visitas como las guarda la demo y el seed: la hoja las numera de la 1 a
+ * la 7, la aplicación de la 0 (base) a la 6, y así se guardan (Fase 43).
+ */
+export function carteraVisitas(): { visitNumber: number; date: string; rows: BookRowPayload[] }[] {
+  return CARTERA_ASENTAMIENTOS.visits.map((v, i) => ({ visitNumber: i, date: v.date, rows: carteraBook(v) }));
+}
