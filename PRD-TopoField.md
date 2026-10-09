@@ -3,7 +3,7 @@
 
 **Versión:** 1.0  
 **Fecha:** Febrero 2026  
-**Autor:** María Camila Vélez  
+**Autor:** Sebastián Alejandro Ruiz Franco  
 **Proyecto:** Monografía — Ingeniería Topográfica — Universidad Distrital Francisco José de Caldas
 
 ---
