@@ -5,7 +5,7 @@ está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
 **Última actualización:** 2026-10-08 · Fases 38 a 40 en `main` y en
-producción, con la migración de la 38 aplicada (§ 13) · 1187 tests y 137 pruebas de base (pgTAP) ·
+producción, con la migración de la 38 aplicada (§ 13); la 41 en su rama · 1190 tests y 137 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -1567,6 +1567,18 @@ El editor usa `PolygonalPlotViewer`, que mide su contenedor y dibuja con el
 ancho real: con un `viewBox` fijo, en un teléfono el texto se reducía a unos
 4 px. El informe usa `PolygonalPlot` con el tamaño por defecto.
 
+Desde la Fase 41 el visor se mueve como un mapa: arrastrar desplaza; Ctrl +
+rueda, doble clic y el pellizco de dos dedos acercan hacia el punto con
+`zoomAt` (pura, con tests: el punto bajo el cursor no se mueve; acota a
+[1, `MAX_PLOT_ZOOM`]); los botones + / − y encuadrar flotan sobre el `<svg>`
+por la prop `viewport` de `PolygonalPlot`, que también lleva los gestos para
+que no actúen sobre la leyenda. La rueda va por un `addEventListener` no
+pasivo (React registra `onWheel` como pasivo y no deja cancelarla), enganchado
+con un ref de callback: el dibujo puede aparecer después del primer render.
+La rueda sola no se captura —la página del editor es larga— y muestra el
+aviso «Usa Ctrl + rueda para acercar». Con el foco en el dibujo, flechas,
++ / − y 0.
+
 **Un solo camino de filas a entrada.** `polygonal-draft.ts` (sin `"use
 client"`) contiene `processToConfig`, `stationToDraft` y `buildInput`, y
 `polygonalInputOf` los compone. El editor y el informe imprimible, que se
@@ -2725,7 +2737,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1187 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1190 tests en 95 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2766,7 +2778,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/demo/fixtures.test.ts` | 19 | La demo de carteras reales contra el motor (Fase 21): la TT4 cumple (12″, 1:7045) en tercer orden detectado, y la Vivero alcanza segundo orden (Fase 35); la Vivero converge por mínimos cuadrados y en sistema local da la misma precisión; El Verjón da 5.0 mm de discrepancia y sus puntos homólogos, en segundo orden detectado, y el tramo 2, leído del crudo, cierra en −0.4 mm sobre 1.397 km en primer orden (Fase 36); desde la Fase 38, sin los informes de la demo; amarres y BMs en el catálogo; El Verjón como circuito de −5.0 mm con D4 = 3315.0855 y sus cotas adoptadas, el tramo 2 con C14 = 2542.2271, el BM de partida fijo, y con la regla «dentro de tolerancia» sin compensar cuando no cumple (Fase 28); Torre Alameda sin compensar ni cerrar (Fase 37): ocho puntos, catorce visitas y sus dos BM del lugar, todas calculadas y solo la 9 sin verificación, cada cota a menos del cierre de su visita de la serie, el otro BM que nivela salvo en la visita 13 (Fase 30) y, con el margen fijo, ni avisos de tendencia ni «Acelerando» |
 | `lib/demo/crudo-tramo2.test.ts` | 1 | El crudo Leica de `src/` es idéntico, byte a byte, al de `docs/carteras/` (Fase 21) |
 | `lib/design/chart-scale.test.ts` | 18 | Escala lineal y marcas «nice», incluidos rangos degenerados; escala y marcas de tiempo en días (Fase 18) |
-| `lib/design/polygonal-plot.test.ts` | 24 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13); el factor de las elipses de error: ×500 en la Vivero, la mayor al 15 % de la extensión, nunca menor que 1 y sin elipses, sin factor; el giro del SVG que lleva el eje mayor a su azimut, y los extremos de cada elipse para el encuadre (Fase 39) |
+| `lib/design/polygonal-plot.test.ts` | 27 | Geometría del dibujo de la poligonal: factor de exageración con los valores del seed (TT4 ×100, Vivero ×200, Pentágono ×1), proporción 1:1, zoom (Fase 13); el factor de las elipses de error: ×500 en la Vivero, la mayor al 15 % de la extensión, nunca menor que 1 y sin elipses, sin factor; el giro del SVG que lleva el eje mayor a su azimut, y los extremos de cada elipse para el encuadre (Fase 39); `zoomAt`: el punto bajo el cursor no se mueve, sin punto acerca alrededor del centro y el acercamiento se acota a [1, 256] (Fase 41) |
 | `lib/calculations/least-squares-precision.test.ts` | 23 | La precisión de cada punto (Fase 39): `fQuantile2` contra la tabla 19.2 de Ghilani al 90, 95 y 99 % y c con r = 1, 2 y 3; `errorEllipse` sin correlación, girada y en [0°, 180°); `adjustedCofactor` con A·Q_l̂·Aᵀ = 0; la Vivero contra un **ajuste paramétrico independiente** (mismo σ₀, σ N, σ E y covarianza a la millonésima de milímetro), los puntos fijos, la elipse al 95 % y la misma Vivero modelada sin amarre; una abierta con control, con r = 3 y r = 2, contra la propagación por diferencias finitas a través del motor |
 | `lib/export/settlement-workbook.test.ts` | 6 | **El Excel de asentamientos con fórmulas vivas** (Fase 38, reescrita, con los casos de `settlement-workbook.fixtures.ts`): toda fórmula da el valor del motor con Torre Alameda, la cartera real y un punto que se salta una visita; ese punto compara contra la última visita en que se midió; cambiar una lectura de la libreta recalcula su cota en la comparación; las hojas Libretas, Comparación y Resumen |
 | `lib/design/chart-domain.test.ts` | 16 | Dominio Y de las gráficas de asentamiento: 0, los datos y el siguiente umbral por encima; sin datos, sobre un umbral, más allá de la alarma, levantamiento, umbrales desordenados, `NaN` (Fase 18) |

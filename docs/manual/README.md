@@ -572,12 +572,16 @@ coordenadas, con flecha de norte, barra de escala y el amarre si lo tiene.
 > del dibujo, y nunca es menor que 1. Una abierta sin control no tiene nada que
 > compensar y no muestra trazo discontinuo.
 
-Con **Acercar**, **Alejar** y **Restablecer**, y con las **flechas** o
-arrastrando el dibujo, puede acercarse a un vértice; todos los controles
-funcionan con el teclado. Si el amarre está lejos, queda fuera del encuadre y
-solo se ve su línea de orientación: la leyenda lo indica. La rueda del ratón
-no hace zoom, para no interferir con el desplazamiento de la página. El factor
-de exageración no cambia al acercarse.
+El dibujo se mueve como un mapa. Arrástrelo para desplazarlo, y acérquese a un
+vértice con **Ctrl + rueda** (**⌘ + rueda** en Mac), con doble clic o, en un
+teléfono, pellizcando: el acercamiento va hacia el punto señalado. La rueda
+sola sigue bajando la página, y el dibujo recuerda cómo acercar. Abajo a la
+derecha están los botones **+** y **−** y, cuando la vista se ha movido, el de
+**encuadrar**, que vuelve a mostrar toda la poligonal. Con el teclado, sobre el
+dibujo: las flechas lo desplazan, **+** y **−** acercan y alejan, y **0**
+encuadra. Si el amarre está lejos, queda fuera del encuadre y solo se ve su
+línea de orientación: la leyenda lo indica. El factor de exageración no cambia
+al acercarse.
 
 ### 5.6 Georreferenciar
 

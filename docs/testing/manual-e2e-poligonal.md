@@ -427,9 +427,14 @@ poligonales más.
   se ve.
 - Abrir **Reconocimiento E1-E4** → **2 · Ajuste**. ✓ Sin trazo discontinuo:
   «Abierta sin control: no se compensa.»
-- En la TT4, pulsar **Acercar** dos veces, arrastrar el dibujo, usar las
-  **flechas** y pulsar **Restablecer**. ✓ Vuelve al encuadre completo. Todos
-  los botones responden al teclado (Tab y Enter).
+- En la TT4 (Fase 41): ✓ no hay botones sobre el dibujo; **+** y **−** flotan
+  abajo a la derecha. Con el cursor sobre un vértice, **Ctrl + rueda** acerca
+  y ✓ el vértice no se mueve; la rueda sola ✓ baja la página y muestra «Usa
+  Ctrl + rueda para acercar». Doble clic acerca hacia el punto; arrastrar
+  desplaza. Pulsar **encuadrar** (✓ solo aparece con la vista movida): vuelve
+  al encuadre completo. Con Tab hasta el dibujo: flechas, **+**, **−** y **0**
+  responden, y Tab llega a los botones flotantes.
+- En un teléfono, ✓ pellizcar acerca y un dedo desplaza.
 - Con el navegador en ancho de teléfono (390 px), ✓ los rótulos del dibujo se
   leen: no se encogen con la pantalla.
 
