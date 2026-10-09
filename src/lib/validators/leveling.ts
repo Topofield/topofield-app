@@ -39,9 +39,20 @@ export interface ReadingCaptureIssues {
   >;
 }
 
-/** Rango físico de una lectura de mira, en metros (§ 5.1). */
+/**
+ * Rango habitual de una lectura de mira, en metros (§ 5.1). Fuera de él la
+ * lectura AVISA, no bloquea (Fase 42): una mira de 5 m lee 4.120 —la cartera
+ * real de asentamientos lo hace— y una mira invertida, negativo.
+ */
 const MIN_READING = 0;
 const MAX_READING = 4;
+
+/** El aviso de una lectura fuera del rango habitual, o `null`. */
+export function readingRangeWarning(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  if (value >= MIN_READING && value <= MAX_READING) return null;
+  return `La lectura de ${value.toFixed(3)} m está fuera de ${MIN_READING.toFixed(3)} a ${MAX_READING.toFixed(3)} m: compruebe que sea correcta.`;
+}
 
 /**
  * Tipos de punto que entran en la comprobación aritmética y en el acumulado
@@ -119,16 +130,12 @@ export function validateReadingCapture(
   }
 
   for (const field of ["backsight", "foresight"] as const) {
-    const value = reading[field];
-    if (value == null) continue;
-    if (value < MIN_READING || value > MAX_READING) {
-      errors[field] = `La lectura de mira debe estar entre ${MIN_READING.toFixed(3)} y ${MAX_READING.toFixed(3)} m.`;
-    }
+    const warning = readingRangeWarning(reading[field]);
+    if (warning) warnings[field] = warning;
   }
 
   if (
-    errors.backsight == null &&
-    errors.foresight == null &&
+    warnings.foresight == null &&
     reading.backsight != null &&
     reading.foresight != null &&
     reading.backsight === reading.foresight

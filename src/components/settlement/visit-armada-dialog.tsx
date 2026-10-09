@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Alert, Badge, Button, Input, Modal, NumberInput, Select, Textarea } from "@/components/design-system";
 import { VisualFields } from "@/components/leveling/armada-dialog";
+import { readingWarnings } from "@/components/leveling/armada-form";
 import { saveBenchmarkAction } from "@/app/(app)/projects/[id]/settlement/[siteId]/benchmark-actions";
 import type { ActionResult } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
 import { samePointCode } from "@/lib/calculations/leveling";
@@ -106,6 +107,11 @@ export function VisitArmadaDialog({
     null,
   );
   const [busy, setBusy] = useState(false);
+  const warnings = readingWarnings([
+    ["Vista atrás", form.back.reading],
+    ...form.points.map((p, i) => [p.pointCode.trim() || `Punto ${i + 1}`, p.reading] as const),
+    ...(form.noFore ? [] : ([["Vista adelante", form.fore.reading]] as const)),
+  ]);
   // «Desde» se elige antes de la primera lectura guardada; después es fijo.
   const [touched, setTouched] = useState(false);
 
@@ -362,6 +368,13 @@ export function VisitArmadaDialog({
           Desde <strong className="text-ink">{form.backCode || "…"}</strong>. Cada lectura se guarda al escribirla.
         </p>
         {error && <Alert variant="error">{error}</Alert>}
+        {warnings.length > 0 && (
+          <Alert variant="warning">
+            {warnings.map((w) => (
+              <p key={w}>{w}</p>
+            ))}
+          </Alert>
+        )}
 
         {/* Vista atrás */}
         <fieldset className="flex flex-col gap-3 rounded-lg border border-rule px-4 py-3">

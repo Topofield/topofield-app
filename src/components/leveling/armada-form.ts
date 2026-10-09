@@ -6,7 +6,7 @@ import type { ReadingDraft } from "@/app/(app)/projects/[id]/leveling/[pid]/acti
 import { distanceFromWires, samePointCode } from "@/lib/calculations/leveling";
 import { MIDDLE_WIRE_TOLERANCE_M } from "@/lib/calculations/tolerances";
 import { parseNumber, readNumberText } from "@/lib/utils/parse";
-import { validateRunCapture, type ReadingCaptureIssues } from "@/lib/validators/leveling";
+import { readingRangeWarning, validateRunCapture, type ReadingCaptureIssues } from "@/lib/validators/leveling";
 import type { LevelingType, RunType } from "@/types/leveling";
 import { armadaSpans, type Armada, type Visual } from "./armadas";
 import type { LevelingDraft } from "./leveling-save";
@@ -179,4 +179,16 @@ export function armadaProblem(rows: readonly ReadingDraft[], k: number, type: Le
   if (span.closer == null) return null;
   const fore = firstError(issues[span.closer], ["pointCode", "foresight", "foreWires", "foreDistanceM", "pointType"]);
   return fore ? `Vista adelante: ${fore}` : null;
+}
+
+/**
+ * Los avisos de las lecturas fuera del rango habitual de la mira, por vista
+ * (Fase 42): no bloquean, pero el popup los muestra mientras se teclea. Lo usan
+ * la armada de la nivelación y la de la visita.
+ */
+export function readingWarnings(views: readonly (readonly [label: string, reading: string])[]): string[] {
+  return views.flatMap(([label, reading]) => {
+    const warning = readingRangeWarning(parseNumber(reading));
+    return warning ? [`${label}: ${warning}`] : [];
+  });
 }

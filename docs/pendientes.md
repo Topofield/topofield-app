@@ -853,3 +853,20 @@ hagas el recorrido real, vayas tomando los pantallazos, y guardándolos así
 como actualizando el manual. El manual debe tener un lenguaje sencillo y fácil
 de entender.» Eligió una sola fuente: Markdown por capítulo, que la app pinta.
 Es la **Fase 42** ([`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md)).
+
+## Lecturas de mira mayores de 4 m (Fase 42)
+
+> **Resuelta en la Fase 42**, como corrección aparte: fuera de 0 a 4 m la
+> lectura **avisa, no bloquea** (decisión del usuario, 2026-10-09), en el
+> validador y en los popups de armada de la nivelación y de la visita. Se
+> conserva el hallazgo como registro.
+
+El recorrido real del manual (Fase 42), al teclear la cartera de
+asentamientos en la armada, se detuvo en la tercera visita (2022-04-12): diez
+de sus dieciséis lecturas pasan de 4 m —A1 4.062, B10 4.120…— y el popup las
+rechaza con «La lectura de mira debe estar entre 0.000 y 4.000 m»
+(`MAX_READING = 4`, `src/lib/validators/leveling.ts`, PRD § 5.1). Con una mira
+de 5 m son lecturas válidas. La demo y el seed las tienen porque las insertan
+sin pasar por el validador, así que el fallo solo aparece capturando a mano.
+Afecta a la nivelación y a la visita, que comparten el validador.
+
