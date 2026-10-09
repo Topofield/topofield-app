@@ -180,7 +180,8 @@ La pestaña **Panel** reúne todo el historial:
 - **Los indicadores**: el asentamiento máximo, el promedio actual, la
   velocidad máxima, cuántas visitas tienen alertas y los umbrales.
 - **Las visitas**, de la más reciente a la más antigua, con su promedio, su
-  máximo, su mayor movimiento y su peor alerta.
+  máximo y su mayor movimiento —debajo de cada uno, el punto donde ocurre— y
+  su peor alerta.
 - **La tendencia**: el promedio de los puntos en el tiempo, o cada punto por
   separado con **Por punto**.
 - **Los avisos** de lecturas fuera de tendencia.
