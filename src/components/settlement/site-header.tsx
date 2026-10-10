@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import type { RouteMenus } from "@/lib/route-menus";
 import { Badge } from "@/components/design-system";
 import { ProcessHeader } from "@/components/process/process-header";
 import { deleteSiteAction, duplicateSiteAction } from "@/app/(app)/projects/[id]/sites/actions";
@@ -15,6 +16,7 @@ import { SiteDialog } from "./site-dialog";
 export function SiteHeader({
   projectId,
   projectName,
+  menus,
   site,
   summary,
   printable,
@@ -22,6 +24,7 @@ export function SiteHeader({
 }: {
   projectId: string;
   projectName: string;
+  menus?: RouteMenus;
   site: Site;
   /** «16 puntos de control · 1 BM · base el 24 de marzo de 2022». */
   summary: string;
@@ -32,6 +35,7 @@ export function SiteHeader({
   return (
     <ProcessHeader
       projectName={projectName}
+      menus={menus}
       hubHref={`/projects/${projectId}?tab=processes&modulo=asentamientos`}
       title={site.name}
       badges={<Badge tone="neutral">Control de asentamientos · {STRUCTURE_TYPE_LABELS[site.structure_type]}</Badge>}

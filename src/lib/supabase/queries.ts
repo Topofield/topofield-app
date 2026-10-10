@@ -21,6 +21,7 @@ import type {
 } from "@/types/settlement";
 import { worst } from "@/lib/calculations/settlement";
 import type { ProcessCounts } from "@/lib/process-counts";
+import { routeMenusOf, type RouteMenus } from "@/lib/route-menus";
 
 type Client = SupabaseClient<Database>;
 
@@ -641,3 +642,30 @@ export async function getSiteSummariesByProject(
   return summaries;
 }
 
+/**
+ * Los menús de la ruta de la barra (Fase 44): los proyectos de la cuenta y los
+ * procesos del proyecto, solo id y nombre. Cuatro consultas en paralelo; RLS
+ * limita las filas a las del usuario.
+ */
+export async function getRouteMenus(
+  supabase: Client,
+  projectId: string,
+  processHref?: string,
+): Promise<RouteMenus> {
+  const [projects, polygonals, levelings, sites] = await Promise.all([
+    supabase.from("projects").select("id, name, status"),
+    supabase.from("polygonal_processes").select("id, name").eq("project_id", projectId),
+    supabase.from("leveling_processes").select("id, name").eq("project_id", projectId),
+    supabase.from("sites").select("id, name").eq("project_id", projectId).eq("kind", "settlement"),
+  ]);
+  for (const r of [projects, polygonals, levelings, sites]) if (r.error) throw r.error;
+  return routeMenusOf(
+    {
+      projects: projects.data ?? [],
+      polygonals: polygonals.data ?? [],
+      levelings: levelings.data ?? [],
+      sites: sites.data ?? [],
+    },
+    { projectId, processHref },
+  );
+}

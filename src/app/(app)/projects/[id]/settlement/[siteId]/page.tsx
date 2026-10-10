@@ -16,6 +16,7 @@ import {
   getSiteBooks,
   getSitePoints,
   getVisits,
+  getRouteMenus,
 } from "@/lib/supabase/queries";
 import { formatDateOnly, todayInBogota } from "@/lib/utils/format";
 import { BenchmarksTab } from "./benchmarks-tab";
@@ -53,11 +54,12 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
   const site = await getSite(supabase, siteId);
   if (!site || site.project_id !== project.id || site.kind !== "settlement") notFound();
 
-  const [sitePoints, visits, benchmarks, booksByVisit] = await Promise.all([
+  const [sitePoints, visits, benchmarks, booksByVisit, menus] = await Promise.all([
     getSitePoints(supabase, site.id),
     getVisits(supabase, site.id),
     getSiteBenchmarks(supabase, site.id),
     getSiteBooks(supabase, site.id),
+    getRouteMenus(supabase, project.id, `/projects/${project.id}/settlement/${site.id}`),
   ]);
 
   const hoy = todayInBogota();
@@ -92,6 +94,7 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
       <SiteHeader
         projectId={project.id}
         projectName={project.name}
+        menus={menus}
         site={site}
         summary={summary}
         printable={activeTab === "informe"}

@@ -11,6 +11,7 @@ import {
   getPolygonalStations,
   getProjectById,
   getReferencePoints,
+  getRouteMenus,
 } from "@/lib/supabase/queries";
 
 interface PolygonalPageProps {
@@ -36,22 +37,23 @@ export default async function PolygonalPage({ params, searchParams }: PolygonalP
   const process = await getPolygonalProcess(supabase, pid);
   if (!process || process.project_id !== id) notFound();
 
-  const [stations, project, referencePoints, processes] = await Promise.all([
+  const basePath = `/projects/${id}/polygonal/${pid}`;
+  const [stations, project, referencePoints, processes, menus] = await Promise.all([
     getPolygonalStations(supabase, pid),
     getProjectById(supabase, id),
     getReferencePoints(supabase, id),
     // Para el aviso del amarre: qué otras poligonales usan un punto que se corrige.
     step === "datos" ? getPolygonalAmarres(supabase, id) : Promise.resolve([]),
+    getRouteMenus(supabase, id, basePath),
   ]);
   if (!project) notFound();
-
-  const basePath = `/projects/${id}/polygonal/${pid}`;
 
   return (
     <div className="flex flex-col gap-5">
       <PolygonalHeader
         projectId={id}
         projectName={project.name}
+        menus={menus}
         process={process}
         stations={stations}
         exportHref={`${basePath}/export`}

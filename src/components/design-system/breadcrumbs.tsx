@@ -1,9 +1,21 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 
+export interface BreadcrumbMenuEntry {
+  label: string;
+  href: string;
+  hint?: string;
+  current?: boolean;
+}
+
 export interface BreadcrumbItem {
   label: string;
   href?: string;
+  /**
+   * Los hermanos de este nivel, para saltar a otro (Fase 44): otros proyectos,
+   * otros procesos. Con menos de dos entradas no se ofrece.
+   */
+  menu?: { label: string; entries: BreadcrumbMenuEntry[] };
 }
 
 interface ResolvedItem extends BreadcrumbItem {
@@ -27,6 +39,7 @@ export function resolveBreadcrumbs(
       label: item.label,
       href: isLast ? undefined : item.href,
       current: isLast,
+      ...(item.menu && item.menu.entries.length > 1 && { menu: item.menu }),
     };
   });
   const parent = clean.length > 1 ? clean[clean.length - 2] : null;
@@ -44,6 +57,15 @@ export function resolveBreadcrumbs(
  * `--ruta-inicio` y `--ruta-fin` (`globals.css`). Así no hay JavaScript, ni
  * parpadeo al cargar, ni salto del contenido. Una raya corta la separa del
  * logo.
+ *
+ * Una miga con `menu` lleva al lado un botón que abre a sus hermanos (Fase
+ * 44): un panel con el atributo `popover`, como el menú de cuenta, que se
+ * cierra al tocar fuera o con Esc. No se puede anclar a la miga sin CSS que
+ * no todos los navegadores tienen, así que cuelga de la barra, alineado con
+ * el inicio de la ruta. La `key` del `<nav>` cambia con la página: al navegar
+ * desde el menú, el panel abierto se desmonta y se cierra. En el teléfono la
+ * ruta se reduce al retorno, sin menús. La miga actual no se encoge antes que
+ * las anteriores: es lo que más hay que leer.
  */
 export function Breadcrumbs({
   items,
@@ -57,6 +79,7 @@ export function Breadcrumbs({
 
   return (
     <nav
+      key={trail.map((t) => t.href ?? t.label).join("|")}
       aria-label="Ruta de navegación"
       className={cn(
         "fixed top-0 right-(--ruta-fin) left-(--ruta-inicio) z-45 flex h-(--barra-alto) min-w-0 items-center",
@@ -84,7 +107,10 @@ export function Breadcrumbs({
         )}
       >
         {trail.map((item, i) => (
-          <li key={`${item.label}-${i}`} className="flex min-w-0 items-center gap-1.5">
+          <li
+            key={`${item.label}-${i}`}
+            className={cn("flex min-w-0 items-center gap-1.5", item.current && "max-w-[60%] shrink-0")}
+          >
             {i > 0 && (
               <span aria-hidden className="text-ink-3">
                 ›
@@ -107,9 +133,55 @@ export function Breadcrumbs({
                 {item.label}
               </span>
             )}
+            {item.menu && <RouteMenu id={`ruta-menu-${i}`} {...item.menu} />}
           </li>
         ))}
       </ol>
     </nav>
+  );
+}
+
+/** El botón ▾ de una miga y su panel con los hermanos de ese nivel. */
+function RouteMenu({ id, label, entries }: { id: string; label: string; entries: BreadcrumbMenuEntry[] }) {
+  return (
+    <>
+      <button
+        type="button"
+        popoverTarget={id}
+        aria-label={label}
+        title={label}
+        className="-ml-0.5 flex h-6 w-5 shrink-0 items-center justify-center rounded text-ink-3 transition-colors hover:bg-sel hover:text-ink"
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="m3 4.5 3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <div
+        id={id}
+        popover="auto"
+        aria-label={label}
+        className="fixed inset-auto top-[calc(var(--barra-alto)+0.375rem)] left-(--ruta-inicio) m-0 max-h-[min(60vh,28rem)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-rule bg-card p-1 text-ink shadow-lg"
+      >
+        <p className="px-3 pt-2 pb-1 text-xs text-ink-2">{label}</p>
+        <ul>
+          {entries.map((entry) => (
+            <li key={entry.href}>
+              <Link
+                href={entry.href}
+                title={entry.label}
+                aria-current={entry.current ? "page" : undefined}
+                className={cn(
+                  "flex items-baseline justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sel",
+                  entry.current && "bg-mira-bg font-medium",
+                )}
+              >
+                <span className="truncate">{entry.label}</span>
+                {entry.hint && <span className="shrink-0 text-xs text-ink-2">{entry.hint}</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }

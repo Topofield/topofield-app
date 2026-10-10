@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { RouteMenus } from "@/lib/route-menus";
 import { Badge } from "@/components/design-system";
 import { ProcessHeader } from "@/components/process/process-header";
 import {
@@ -23,6 +24,7 @@ import { draftWithBm, levelingDraftOf, levelingInputOf, levelingPayloadOf } from
 interface LevelingHeaderProps {
   projectId: string;
   projectName: string;
+  menus?: RouteMenus;
   process: LevelingProcess;
   readings: LevelingReading[];
   exportHref: string;
@@ -57,6 +59,7 @@ function formOf(p: LevelingProcess): LevelingDetailsForm {
 export function LevelingHeader({
   projectId,
   projectName,
+  menus,
   process,
   readings,
   exportHref,
@@ -100,6 +103,7 @@ export function LevelingHeader({
   return (
     <ProcessHeader
       projectName={projectName}
+      menus={menus}
       hubHref={hubHref}
       title={process.name}
       badges={
