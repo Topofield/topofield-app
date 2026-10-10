@@ -2,7 +2,7 @@
 //   - la cartera real «Control de asentamiento estructural»
 //     (`docs/carteras/Control_asentamiento_estructural_ REAL.xlsx`) desde cero:
 //     el lugar, sus 16 puntos, su BM y sus siete visitas, cada lectura tecleada
-//     en la armada; la visita 3 con el aviso de B10; el panel y el informe;
+//     en la armada; la visita 2 con el aviso de B10; el panel y el informe;
 //   - de la demo, Torre Alameda: una visita de dos armadas por un punto de
 //     cambio, la del BM desplazado y la importación de la plantilla CSV.
 

@@ -34,6 +34,8 @@ interface VisitsTableProps {
  * Visitas del lugar (Fase 18; columnas de la Fase 37, lienzo «Lugar B»):
  * promedio, máximo, mayor movimiento y alerta. Pulsar la fila la elige para
  * resaltarla en la tendencia; el enlace de la primera columna abre la visita.
+ * El código del punto va debajo de su valor para que la tabla quepa en su
+ * tarjeta a 1280 px con códigos largos, como «A4(5A-4B)» (Fase 43).
  */
 export function VisitsTable({ rows, hrefBase, selectedId = null, onSelect }: VisitsTableProps) {
   if (rows.length === 0) {
@@ -99,8 +101,8 @@ export function VisitsTable({ rows, hrefBase, selectedId = null, onSelect }: Vis
                 <td className="whitespace-nowrap py-2 pr-3 text-right font-mono tabular-nums">
                   {row.maxSettlement ? (
                     <>
-                      {formatSignedMm(row.maxSettlement.value)}{" "}
-                      <span className="font-sans text-ink-2">{row.maxSettlement.code}</span>
+                      {formatSignedMm(row.maxSettlement.value)}
+                      <span className="block font-sans text-xs text-ink-2">{row.maxSettlement.code}</span>
                     </>
                   ) : (
                     "—"
@@ -109,8 +111,8 @@ export function VisitsTable({ rows, hrefBase, selectedId = null, onSelect }: Vis
                 <td className="whitespace-nowrap py-2 pr-3 text-right font-mono tabular-nums">
                   {row.visitNumber !== 0 && row.maxMove ? (
                     <>
-                      {formatSignedMm(row.maxMove.value)}{" "}
-                      <span className="font-sans text-ink-2">{row.maxMove.code}</span>
+                      {formatSignedMm(row.maxMove.value)}
+                      <span className="block font-sans text-xs text-ink-2">{row.maxMove.code}</span>
                     </>
                   ) : (
                     "—"

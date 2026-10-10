@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
 import type { Database } from "@/types/database";
 import type { PointInput } from "@/types/settlement";
-import { CARTERA_ASENTAMIENTOS as C, carteraBook } from "./cartera-asentamientos";
+import { CARTERA_ASENTAMIENTOS as C, carteraVisitas } from "./cartera-asentamientos";
 import { insertarVisitas } from "./insertar-visitas";
 
 type Client = SupabaseClient<Database>;
@@ -65,7 +65,7 @@ export async function insertarCartera(supabase: Client, projectId: string): Prom
     points,
     [C.benchmark],
     thresholdsFor("edificio"),
-    C.visits.map((v, i) => ({ visitNumber: i + 1, date: v.date, operator: null, rows: carteraBook(v) })),
+    carteraVisitas().map((v) => ({ ...v, operator: null })),
   );
   return lugar.id;
 }

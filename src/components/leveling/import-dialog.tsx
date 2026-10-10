@@ -240,7 +240,7 @@ export function ImportDialog({
           <p className="text-sm text-ink-2">
             Se leen el archivo <strong>.L de un nivel digital Leica</strong> y
             la <strong>plantilla CSV</strong> de TopoField. Nada se guarda hasta
-            que pulse Guardar.
+            que pulse <strong>Usar estas lecturas</strong>.
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <label className="text-sm font-medium text-ink">

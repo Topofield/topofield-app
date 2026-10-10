@@ -31,14 +31,14 @@ describe("el margen fijo de la tendencia", () => {
     expect(trendDeviationMargin()).toBe(6);
   });
 
-  it("B10 de la cartera: «excesiva» en la visita 3 y «contraria» en la 4", () => {
+  it("B10 de la cartera: «excesiva» en la visita 2 y «contraria» en la 3", () => {
     const dates = ["2022-03-24", "2022-03-31", "2022-04-12", "2022-04-19"];
     const cotas = [153.689, 153.679, 153.629, 153.674];
-    const visits = dates.map((date, i) => ({ id: `v${i + 1}`, visitNumber: i + 1, date, readings: [{ pointId: "B10", elevation: cotas[i]! }] }));
+    const visits = dates.map((date, i) => ({ id: `v${i}`, visitNumber: i, date, readings: [{ pointId: "B10", elevation: cotas[i]! }] }));
     const dev = detectTrendDeviations(
       computeSettlements([{ id: "B10", code: "B10", initialElevation: null, activeFrom: null, retiredOn: null }], visits),
     );
-    expect(dev.get("v3")?.get("B10")).toMatchObject({ kind: "excessive", partialMm: -50, expectedMm: 17.1, marginMm: 6 });
-    expect(dev.get("v4")?.get("B10")).toMatchObject({ kind: "contrary", partialMm: 45 });
+    expect(dev.get("v2")?.get("B10")).toMatchObject({ kind: "excessive", partialMm: -50, expectedMm: 17.1, marginMm: 6 });
+    expect(dev.get("v3")?.get("B10")).toMatchObject({ kind: "contrary", partialMm: 45 });
   });
 });
