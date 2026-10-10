@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Alert, Button, Input, Modal, Textarea } from "@/components/design-system";
-import { EquipmentIdentity } from "@/components/equipment/equipment-picker";
+import { EquipmentIdentity } from "@/components/process/equipment-identity";
 import { createVisitAction } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
 import { callAction } from "@/lib/errors/action-call";
 import { readVisitForm, type VisitData, type VisitForm } from "./visit-dialog-form";
@@ -105,7 +105,6 @@ export function VisitDialog(props: DialogProps) {
           </summary>
           <div className="px-3 pb-3">
             <EquipmentIdentity
-              kind="level"
               value={{ brand: form.brand, model: form.model, serial: form.serial }}
               onChange={(v) => set({ brand: v.brand, model: v.model, serial: v.serial })}
             />

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Alert, Button, Input, Modal } from "@/components/design-system";
-import { TotalStationIdentity } from "@/components/equipment/equipment-picker";
+import { EquipmentIdentity } from "@/components/process/equipment-identity";
 import { createPolygonalProcessAction } from "@/app/(app)/projects/[id]/polygonal/create-actions";
 import { cn } from "@/lib/utils/cn";
 import { POLYGONAL_TYPES, POLYGONAL_TYPE_LABELS, type PolygonalType } from "@/types/polygonal";
@@ -183,7 +183,7 @@ export function PolygonalDetailsDialog(props: DialogProps) {
             <span className="text-sm font-normal text-ink-2">Estación total</span>
           </summary>
           <div className="px-3 pb-3">
-            <TotalStationIdentity
+            <EquipmentIdentity
               value={{
                 brand: details.equipmentBrand,
                 model: details.equipmentModel,

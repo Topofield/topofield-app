@@ -21,7 +21,6 @@ import type {
 } from "@/types/settlement";
 import { worst } from "@/lib/calculations/settlement";
 import type { ProcessCounts } from "@/lib/process-counts";
-import type { Equipment } from "@/types/equipment";
 
 type Client = SupabaseClient<Database>;
 
@@ -640,21 +639,5 @@ export async function getSiteSummariesByProject(
   }
 
   return summaries;
-}
-
-/**
- * El catálogo de equipos del usuario (Fase 25), por tipo, marca y modelo. RLS
- * lo limita a sus filas.
- */
-export async function getEquipment(supabase: Client): Promise<Equipment[]> {
-  const { data, error } = await supabase
-    .from("equipment")
-    .select("*")
-    .order("kind")
-    .order("brand", { nullsFirst: false })
-    .order("model", { nullsFirst: false })
-    .order("serial", { nullsFirst: false });
-  if (error) throw error;
-  return (data ?? []) as Equipment[];
 }
 

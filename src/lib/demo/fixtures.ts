@@ -378,38 +378,3 @@ export const ASENTAMIENTO_DEMO: AsentamientoDemo = {
   visits: alamedaVisits(),
 };
 
-/**
- * Los equipos del catálogo de la demo (Fase 25): la estación total de las
- * poligonales y el nivel de Torre Alameda, con los mismos datos que copian
- * sus procesos. Su calibración de 2024 muestra el aviso de más de un año.
- */
-export const EQUIPOS_DEMO = [
-  {
-    kind: "total_station",
-    brand: EQUIPO_POLIGONAL.equipmentBrand,
-    model: EQUIPO_POLIGONAL.equipmentModel,
-    serial: EQUIPO_POLIGONAL.equipmentSerial,
-    // El catálogo guarda la ficha completa; la poligonal copia solo la
-    // identidad (Fase 35). 5″ es una de sus clases de catálogo y 1.5 mm + 2 ppm
-    // su EDM con prisma.
-    calibration_date: "2026-02-10",
-    angular_precision_seconds: 5,
-    distance_precision_mm: 1.5,
-    distance_precision_ppm: 2,
-    level_type: null,
-    km_precision_mm: null,
-  },
-  {
-    kind: "level",
-    brand: ASENTAMIENTO_DEMO.equipmentBrand,
-    model: ASENTAMIENTO_DEMO.equipmentModel,
-    serial: ASENTAMIENTO_DEMO.equipmentSerial,
-    calibration_date: ASENTAMIENTO_DEMO.equipmentCalibrationDate,
-    angular_precision_seconds: null,
-    distance_precision_mm: null,
-    distance_precision_ppm: null,
-    level_type: ASENTAMIENTO_DEMO.levelType,
-    km_precision_mm: ASENTAMIENTO_DEMO.kmPrecisionMm,
-  },
-] as const;
-

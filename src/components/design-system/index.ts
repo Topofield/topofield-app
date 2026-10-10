@@ -7,7 +7,6 @@ export { Card } from "./card";
 export { DmsInput, EMPTY_DMS, type DmsValue } from "./dms-input";
 export { Drawer, type DrawerProps } from "./drawer";
 export { EmptyState } from "./empty-state";
-export { LevelFieldset, TotalStationFieldset } from "./equipment-fields";
 export {
   PrecisionOrderSelect,
   type PrecisionOrderKind,

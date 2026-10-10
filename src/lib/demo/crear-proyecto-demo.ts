@@ -14,7 +14,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import {
   ASENTAMIENTO_DEMO,
-  EQUIPOS_DEMO,
   NIVELACION_VERJON,
   nivelacionTramo2,
   PROCESOS_DEMO,
@@ -23,7 +22,6 @@ import {
 } from "./fixtures";
 import { insertarAsentamiento } from "./insertar-asentamiento";
 import { insertarCartera } from "./insertar-cartera";
-import { insertarEquipos } from "./insertar-equipos";
 import { insertarNivelacion } from "./insertar-nivelacion";
 import { insertarPoligonal } from "./insertar-poligonal";
 
@@ -156,10 +154,6 @@ export async function crearProyectoDemo(
   // --- Asentamientos: Torre Alameda, simulada, y la cartera real (Fase 37). --
   await insertarAsentamiento(supabase, proyecto.id, ASENTAMIENTO_DEMO);
   await insertarCartera(supabase, proyecto.id);
-
-  // El catálogo de equipos, al final y sin que nada de la demo dependa de él
-  // (Fase 25): si fallara, el proyecto ya está creado.
-  await insertarEquipos(supabase, userId, EQUIPOS_DEMO);
 
   return true;
 }
