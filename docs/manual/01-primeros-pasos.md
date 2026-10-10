@@ -5,16 +5,23 @@ final, las tres ideas que ordenan todo TopoField.
 
 ## Crear su cuenta
 
-Para crear una cuenta necesita un **código de invitación**. Pídalo a quien
-administra la aplicación.
+Para crear una cuenta necesita un **código de invitación**: la aplicación no
+está abierta al público y, sin el código, el registro no avanza. Pídalo a
+quien administra la aplicación.
 
 1. Abra TopoField en el navegador. Verá la pantalla para entrar. Pulse
    **Regístrate**, debajo del botón **Entrar**.
 
    ![Pantalla de inicio de sesión de TopoField, con los campos Correo y Contraseña, el botón Entrar y, debajo, el enlace Regístrate](../../public/manual/primeros-pasos/01-inicio-de-sesion.png)
 
-2. Llene el formulario: el código de invitación, su nombre, su apellido, su
-   correo y una contraseña de al menos 6 caracteres. Pulse **Crear cuenta**.
+2. Llene el formulario:
+   - **Código de invitación**: el que le dieron, tal cual.
+   - **Nombre** y **Apellido**: identifican su cuenta.
+   - **Correo**: es su usuario para entrar, y a él llega el mensaje de
+     confirmación. Use uno que revise.
+   - **Contraseña**: al menos 6 caracteres.
+
+   Pulse **Crear cuenta**.
 
    ![Formulario Crear cuenta lleno: código de invitación, nombre Andrea, apellido Rojas, correo y contraseña](../../public/manual/primeros-pasos/02-crear-cuenta.png)
 
@@ -33,7 +40,9 @@ administra la aplicación.
 ## Entrar
 
 Las siguientes veces, escriba su **correo** y su **contraseña** en la pantalla
-de inicio y pulse **Entrar**. Cada usuario ve solo sus propios proyectos.
+de inicio y pulse **Entrar**. La sesión queda abierta en ese navegador hasta
+que la cierre desde el menú de cuenta. Cada usuario ve solo sus propios
+proyectos: nadie más puede abrirlos.
 
 ## El proyecto de ejemplo
 
@@ -50,20 +59,27 @@ sin capturar nada:
   visitas, y el control de asentamiento estructural, una cartera real de
   dieciséis puntos y siete visitas.
 
-Puede modificarlo, archivarlo o eliminarlo cuando quiera.
+Es un proyecto como cualquier otro: puede abrir sus procesos, cambiar datos
+para ver cómo se recalcula todo, archivarlo o eliminarlo cuando quiera. Lo que
+haga en él no afecta a sus demás proyectos.
 
 ## El dashboard
 
 Es la pantalla de inicio. Arriba hay tres indicadores:
 
-- **Proyectos activos**: cuántos proyectos tiene en curso.
-- **Procesos calculados**: los trabajos ya resueltos, listos para revisar.
-- **Fuera de tolerancia**: los trabajos que requieren revisión. Son las
+- **Proyectos activos**: cuántos proyectos tiene en curso, sin contar los
+  archivados.
+- **Procesos calculados**: cuántos trabajos ya tienen su cálculo resuelto y
+  están listos para revisar o para entregar.
+- **Fuera de tolerancia**: cuántos trabajos piden su atención. Son las
   poligonales y nivelaciones que no alcanzan ningún orden de precisión, y los
-  lugares con algún punto en alerta o alarma.
+  lugares con algún punto en alerta o alarma. Si es cero, no hay nada
+  pendiente de revisar.
 
-Debajo están sus proyectos, cada uno con cuántos procesos tiene. **Activos** y
-**Archivados** cambian la lista, y **+ Nuevo Proyecto** crea uno.
+Debajo están sus proyectos, cada uno en una tarjeta con cuántos procesos
+tiene; pulse una para abrir el proyecto. **Activos** y **Archivados** cambian
+entre los proyectos en curso y los que guardó aparte, y **+ Nuevo Proyecto**
+crea uno (vea [Proyectos](02-proyectos.md)).
 
 ![Dashboard con los indicadores Proyectos activos 1, Procesos calculados 7 y Fuera de tolerancia 2, y la tarjeta del Proyecto de ejemplo](../../public/manual/primeros-pasos/04-dashboard.png)
 
@@ -90,8 +106,9 @@ La barra de arriba queda fija mientras baja por cualquier pantalla:
 
 En el menú de cuenta elija el tema:
 
-- **Sistema** sigue la configuración de su teléfono o computador.
-- **Claro** y **Oscuro** lo fijan.
+- **Sistema** sigue la configuración de su teléfono o computador: si el
+  equipo pasa a oscuro de noche, la aplicación también.
+- **Claro** y **Oscuro** fijan uno, sin importar el equipo.
 
 La elección se recuerda en ese navegador. En la pantalla de inicio, el tema se
 cambia con el icono de arriba a la derecha. El informe impreso sale siempre en
@@ -109,8 +126,9 @@ Tres ideas ordenan toda la aplicación:
 - **Proceso.** Es un levantamiento concreto dentro de un proyecto: una
   poligonal, una nivelación o un control de asentamientos. Cada proceso guarda
   su propio equipo, porque puede cambiar de un levantamiento a otro.
-- **Cálculo en vivo.** Lo que captura se guarda al confirmarlo y se calcula al
-  momento. No hay botón de calcular.
+- **Cálculo en vivo.** Lo que captura se guarda al confirmar cada ventana y se
+  calcula en ese momento: el cierre, las cotas y el orden alcanzado se
+  actualizan solos. No hay botón de calcular.
 
 La poligonal, la nivelación y cada visita de asentamientos muestran su
 **estado**:

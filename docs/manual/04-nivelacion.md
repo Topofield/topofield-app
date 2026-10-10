@@ -44,13 +44,26 @@ al resto del recorrido.
 
 1. En el proyecto, pulse **+ Nuevo Proceso** y elija **Nivelación**.
 2. Llene la ventana **Nueva nivelación**:
-   - **Título**, obligatorio.
-   - **¿Cómo es el recorrido?**: **Cerrada**, **De enlace** o **Abierta**,
-     cada una con su dibujo.
-   - **Con vuelta**, si va a volver por los mismos puntos.
-   - **BM de partida** y su **Cota conocida (m)**. En la de enlace, también el
-     **BM de llegada** y su cota.
-   - Plegados y opcionales: la ubicación, el responsable y el equipo.
+   - **Título**: el nombre con que la encontrará en el proyecto. Obligatorio.
+   - **¿Cómo es el recorrido?**: elija según dónde termina la nivelación.
+     - **Cerrada** si sale de un BM y vuelve a él. El error de cierre es la
+       diferencia entre la cota con que llega y la cota conocida del BM.
+     - **De enlace** si sale de un BM y termina en otro BM de cota conocida.
+       El error de cierre se mide contra la cota de llegada, así que la
+       ventana le pide también ese BM.
+     - **Abierta** si termina en un punto sin cota conocida. Solo se puede
+       comprobar si vuelve por los mismos puntos.
+   - **Con vuelta**: márquela si, después de llegar, va a medir de regreso por
+     los mismos puntos. La aplicación comparará la ida con la vuelta, y en una
+     abierta es la única forma de comprobar el trabajo.
+   - **BM de partida** y su **Cota conocida (m)**: el código del banco de
+     nivel donde arranca, como lo tiene en la cartera, y su cota. De esa cota
+     salen todas las demás.
+   - En la de enlace, además, el **BM de llegada** y su **Cota conocida del BM
+     de llegada (m)**.
+   - **Ubicación, responsable y equipo**, plegado y opcional: dónde se midió,
+     quién responde por el trabajo y con qué nivel (marca, modelo y n.º de
+     serie). Salen en la cabecera y en el informe.
 
    ![Ventana Nueva nivelación: título «El Verjón — ida y vuelta», recorrido Abierta, Con vuelta marcado, BM de partida D1 con cota 3288.5](../../public/manual/nivelacion/01-nueva-nivelacion.png)
 
@@ -59,22 +72,30 @@ al resto del recorrido.
 
    ![El paso Libreta vacío, con la tarjeta del BM D1, la fila del BM y los botones + Agregar la primera armada e Importar .L o CSV](../../public/manual/nivelacion/02-libreta-vacia.png)
 
-El orden de precisión no se pide: se detecta al compensar.
+El orden de precisión no se pide: la aplicación lo detecta al compensar,
+según el error que dé el trabajo. Todo lo de esta ventana se cambia después
+con **Editar datos**, en la cabecera.
 
 ## La libreta armada por armada
 
+Cada armada se captura en una ventana, en el mismo orden en que se lee en el
+terreno.
+
 1. Pulse **+ Agregar la primera armada**. Arriba, la ventana dice dónde está
-   el nivel: «El nivel entre D1, ya con cota, y el punto siguiente».
-2. En **Vista atrás · V+**, escriba la **Lectura** y la **Distancia (m)** a la
-   mira.
-3. En **Vista adelante · V−**, escriba el **Punto**, su **Lectura** y su
-   **Distancia (m)**.
-4. Si leyó una radiación desde esta armada, pulse **+ Vista intermedia** y
-   escriba su punto y su lectura.
-5. Abajo, la ventana calcula en vivo la **altura del instrumento** y la
-   **cota** del punto de adelante.
+   el nivel: «El nivel entre D1, ya con cota, y el punto siguiente». Así sabe
+   siempre desde qué punto viene la cota.
+2. En **Vista atrás · V+**, escriba la **Lectura** de la mira sobre el punto
+   que ya tiene cota y la **Distancia (m)** del nivel a esa mira.
+3. En **Vista adelante · V−**, escriba el **Punto** al que lleva la cota (por
+   ejemplo, C 1), su **Lectura** y su **Distancia (m)**.
+4. Si desde esta misma armada leyó puntos solo para conocer su cota, pulse
+   **+ Vista intermedia** por cada uno y escriba su punto y su lectura.
+5. Revise abajo la **altura del instrumento** y la **cota** del punto de
+   adelante: la ventana las calcula mientras escribe, y sirven para detectar
+   una lectura mal tecleada antes de guardar.
 6. Pulse **Guardar y seguir desde …**: se guarda y se abre la armada
-   siguiente. **Guardar** guarda y cierra.
+   siguiente, que ya parte del punto de adelante. **Guardar** guarda y cierra
+   la ventana.
 
 ![La armada 4 de la ida de El Verjón: V+ a C 3, la vista adelante a C 4, la vista intermedia AUX1 y, abajo, la altura del instrumento y la cota de C 4](../../public/manual/nivelacion/03-armada.png)
 
@@ -84,11 +105,15 @@ El orden de precisión no se pide: se detecta al compensar.
 > distancia sale de ellos y la aplicación comprueba que la lectura sea su
 > promedio. La distancia acumulada no se escribe: la aplicación la suma.
 
-En la última armada aparece la casilla de fin:
+En la última armada aparece una casilla para indicar que el recorrido
+terminó. Márquela cuando la vista adelante sea el punto final:
 
-- **Llega al BM**, en la cerrada.
+- **Llega al BM**, en la cerrada: la vista adelante es el BM de partida.
 - **Llega a** el BM de llegada, en la de enlace.
-- **Fin de la ida**, en la abierta.
+- **Fin de la ida**, en la abierta: el último punto de la ida.
+
+Sin esa marca, la aplicación entiende que la libreta sigue a medias y no
+compensa.
 
 Si hay vuelta, márquela y pulse **Guardar y seguir con la vuelta**: se abre la
 primera armada de la vuelta. Al final de la vuelta, la casilla es **Llega a**
@@ -102,14 +127,17 @@ el BM de partida.
 
 El paso **Libreta** muestra:
 
-- **La tabla**, como la cartera: punto, V+ y su distancia, AI, V− y su
-  distancia, la vista intermedia y la cota sin compensar. Con vuelta, **Ida** y
-  **Vuelta** cambian de recorrido.
-- **La comprobación aritmética**: ΣV+ − ΣV− frente a la cota final menos la
-  inicial. Dice **cuadra** si coinciden. Comprueba las sumas de la libreta, no
-  la calidad de la medición.
-- **El perfil**, a la derecha: la cota de cada punto y, por cada armada, la
-  mira atrás, la visual del nivel y la mira adelante.
+- **La tabla**, con las mismas columnas de la cartera: punto, V+ y su
+  distancia, AI, V− y su distancia, la vista intermedia y la cota sin
+  compensar. Con vuelta, **Ida** y **Vuelta** cambian de recorrido.
+- **La comprobación aritmética**: la suma de las V+ menos la suma de las V−
+  debe ser igual a la cota final menos la inicial. Si coinciden, dice
+  **cuadra**. Comprueba que las cuentas de la libreta estén bien hechas, no
+  que la medición sea buena: eso lo dice la compensación.
+- **El perfil**, a la derecha: el dibujo del terreno con la cota de cada
+  punto y, por cada armada, la mira atrás, la visual del nivel y la mira
+  adelante. Sirve para ver de un vistazo si alguna cota se sale de lo
+  esperado.
 
 ![El paso Libreta de El Verjón con la tabla de la ida, la comprobación aritmética y el perfil](../../public/manual/nivelacion/04-libreta.png)
 
@@ -118,9 +146,11 @@ Para corregir, el **lápiz** de cada fila abre la armada que esa fila cierra.
 
 ## Compensar
 
-Abra el paso **2 · Compensación**. El método es la **corrección proporcional a
-la distancia**: el error se reparte según la distancia recorrida hasta cada
-punto.
+Abra el paso **2 · Compensación**. Compensar es repartir el error de cierre
+entre los puntos para que la nivelación cierre exactamente. El método es la
+**corrección proporcional a la distancia**: cada punto recibe una parte del
+error según la distancia recorrida hasta él, porque el error se acumula con
+cada armada.
 
 Arriba van cuatro cifras: el **error de cierre** (en una abierta con vuelta, la
 **discrepancia** entre ida y vuelta), la **distancia**, la **tolerancia** y el
@@ -179,13 +209,17 @@ CSV**, a la derecha de los pasos, las pasa a la libreta sin teclearlas.
 1. Pulse **Importar .L o CSV** y elija el archivo: el **.L de un nivel digital
    Leica** o la **plantilla CSV** de TopoField, que se descarga desde la misma
    ventana.
-2. Revise la vista previa:
-   - **Cómo se lee el recorrido**: un recorrido cerrado, o ida y vuelta. Con
-     ida y vuelta, en qué armada empieza la vuelta; la aplicación propone la
-     que detecta.
-   - **La cota del BM de partida**, si la del archivo no coincide.
+2. Revise la vista previa. El archivo trae las lecturas, pero no todo lo que
+   la aplicación necesita, así que confirme tres cosas:
+   - **Cómo se lee el recorrido**: si es un recorrido cerrado o una ida y
+     vuelta. Con ida y vuelta, en qué armada empieza la vuelta. La aplicación
+     propone la que detecta (donde el recorrido vuelve sobre sus puntos);
+     cámbiela si no es esa.
+   - **La cota del BM de partida**: la del archivo o la que ya tiene la
+     nivelación, si no coinciden.
    - **El tipo de cada punto**: el nivel no distingue un BM de un punto de
-     cambio, así que la aplicación lo deduce y usted lo corrige.
+     cambio, así que la aplicación lo deduce. Corríjalo donde no acierte,
+     porque el tipo decide qué lecturas lleva cada fila.
 3. Pulse **Usar estas lecturas**. La libreta se reemplaza y se guarda.
 
 ![Ventana Importar libreta desde archivo con el crudo CRDUDO-TRAMO2.L de un nivel Leica: 16 armadas y 64 visuales, ida y vuelta desde la armada 9, la cota del BM C10 y la tabla de puntos con su tipo](../../public/manual/nivelacion/07-importar.png)

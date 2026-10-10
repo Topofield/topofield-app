@@ -1,7 +1,8 @@
 # En campo, con el teléfono
 
-TopoField se usa también desde el teléfono, en el sitio de trabajo. Este
-capítulo muestra cómo se ven las pantallas de captura en una pantalla pequeña.
+TopoField se usa también desde el teléfono, para capturar en el sitio de
+trabajo en lugar de pasar la cartera después. Las pantallas se acomodan al
+ancho del teléfono; este capítulo muestra qué cambia frente al computador.
 
 ## La poligonal en el teléfono
 
@@ -18,8 +19,9 @@ La barra de arriba se reduce a «‹» y el nivel anterior, para volver atrás.
 
 ## La visita en el teléfono
 
-La libreta de una visita se ve como una lista de armadas. Pulse una para
-abrirla.
+La libreta de una visita se ve como una lista de armadas, en lugar de la
+tabla completa, para que quepa en la pantalla. Cada una dice desde qué BM o
+punto sale y cuántos puntos van leídos. Pulse una para abrirla.
 
 ![La libreta de la visita 12 de Torre Alameda en un teléfono, como lista de armadas](../../public/manual/en-campo/03-visita-armadas.png)
 

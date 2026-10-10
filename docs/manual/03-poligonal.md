@@ -20,12 +20,19 @@ precisión que no existe.
 
 1. En el proyecto, pulse **+ Nuevo Proceso** y elija **Poligonal**.
 2. Llene la ventana **Nueva poligonal**:
-   - **Título**, el único obligatorio.
-   - **Ubicación**, **Responsable** y **Cargo del responsable**, que salen en
-     el informe.
-   - **Tipo de poligonal**: debajo, una línea explica cómo se comprueba.
+   - **Título**: el nombre con que la encontrará en el proyecto. Es el único
+     campo obligatorio.
+   - **Ubicación**, **Responsable** y **Cargo del responsable**: dónde se
+     midió y quién responde por el trabajo. Salen en la cabecera y en la
+     portada del informe.
+   - **Tipo de poligonal**: elíjalo según cómo termina el recorrido. Si vuelve
+     al punto de partida, **Cerrada**; si termina en otro punto de coordenadas
+     conocidas, **Abierta con control**; si termina en un punto nuevo,
+     **Abierta sin control**. El tipo decide qué se puede comprobar (vea la
+     tabla de arriba), y debajo una línea se lo recuerda.
    - **Equipo**, plegado y opcional: la marca, el modelo y el número de serie
-     de la estación total.
+     de la estación total. Sale en el informe, para que conste con qué
+     instrumento se midió.
 
    ![Ventana Nueva poligonal llena: título «Poligonal V10 — cartera TT4», ubicación, responsable Andrea Rojas, topógrafa, tipo Cerrada y el equipo Leica TS06 plus](../../public/manual/poligonal/01-nueva-poligonal.png)
 
@@ -51,19 +58,29 @@ segundo.
 
 ## El amarre
 
-El amarre son los puntos conocidos de donde arranca la poligonal.
+El amarre son los puntos conocidos de donde arranca la poligonal: la estación
+donde armó primero y la dirección hacia la que orientó el instrumento. Con
+ellos, la aplicación sabe en qué coordenadas y con qué azimut empieza el
+recorrido.
 
 1. Pulse **Ingresar puntos de amarre**.
-2. En **Estación de partida**, elija el punto en **Tomar del catálogo** (los
-   puntos de referencia del proyecto) o escriba su nombre, su norte y su este.
-3. En **Referencia · 0° atrás**, diga cómo se orientó:
-   - **Punto con coordenadas**: el punto al que visó en 0°. El azimut de
-     partida se calcula solo y la ventana lo muestra.
-   - **Solo el azimut**: si no tiene las coordenadas de la referencia, su
-     nombre y el azimut hacia ella.
-   - **Sin 0 atrás**: el azimut del primer lado.
+2. En **Estación de partida**, elija el punto en **Tomar del catálogo**, que
+   ofrece los puntos de referencia del proyecto, o escriba su nombre, su
+   norte y su este si no lo guardó antes.
+3. En **Referencia · 0° atrás**, diga cómo orientó el instrumento. Elija la
+   opción que corresponda a lo que tiene en la cartera:
+   - **Punto con coordenadas**: visó en 0° a otro punto conocido. Elíjalo o
+     escriba sus coordenadas, y la aplicación calcula el azimut de partida y
+     lo muestra debajo. Es el caso más común.
+   - **Solo el azimut**: conoce la dirección hacia la referencia, pero no sus
+     coordenadas. Escriba su nombre y el azimut de la estación de partida
+     hacia ella.
+   - **Sin 0 atrás**: no orientó contra una visual atrás. Escriba el azimut del
+     primer lado, por ejemplo de un levantamiento anterior; la primera
+     medición entonces no lleva ángulo.
 4. En una abierta con control aparece también la **Llegada**: el punto conocido
-   donde termina, y su azimut si lo tiene.
+   donde termina el recorrido. Su **Azimut de llegada** es opcional; si lo
+   escribe, la aplicación comprueba además el cierre angular.
 5. Pulse **Guardar el amarre**.
 
 ![Ventana Puntos de amarre: estación de partida V10 y punto de referencia TT4 tomados del catálogo, con su norte y su este](../../public/manual/poligonal/03-puntos-de-amarre.png)
@@ -86,17 +103,26 @@ distancia y el azimut sin ajustar.
 1. Pulse **+ Agregar punto**. Arriba, la ventana le dice dónde está: «Estás en
    D1 · atrás en V10».
 2. Escriba el **Punto siguiente**.
-3. Escriba la **Lectura 1** del ángulo en grados, minutos y segundos. Si midió
-   varias veces, pulse **+ Lectura** por cada una: la ventana muestra el
-   promedio, que es el que entra en el cálculo.
-4. Escriba la **Distancia horizontal** hasta el punto siguiente.
+3. Escriba la **Lectura 1**: el ángulo horizontal medido en la estación donde
+   está, desde el punto de atrás hasta el siguiente, en grados, minutos y
+   segundos. Si lo midió varias veces, pulse **+ Lectura** por cada una: la
+   ventana muestra el promedio, que es el que entra en el cálculo, y la
+   dispersión entre lecturas, para que vea si alguna se aleja.
+4. Escriba la **Distancia horizontal** hasta el punto siguiente, en metros.
+   Es la distancia ya reducida al horizonte, como la anota la estación.
 5. Pulse **Agregar y seguir en D2**: se guarda y la ventana queda lista para la
    medición siguiente. **Terminar** guarda y la cierra.
 
 ![Ventana Agregar medición: «Estás en D1 · atrás en V10», punto siguiente D2, lectura de 124°29′42″, distancia horizontal de 11.606 m y el botón Agregar y seguir en D2](../../public/manual/poligonal/04-agregar-medicion.png)
 
 En una cerrada, desde la segunda medición aparece la casilla **Cierre: este
-lado vuelve a V10**. Márquela en el último lado y pulse **Agregar el cierre**.
+lado vuelve a V10**. Márquela en el último lado, el que regresa a la estación
+de partida, y pulse **Agregar el cierre**.
+
+En una abierta con control, desde la segunda estación la ventana pide la
+**deflexión** en lugar del ángulo: cuánto se desvía el lado siguiente de la
+prolongación del anterior. Escriba la lectura y elija su **Sentido**,
+**Derecha** o **Izquierda**, como lo anotó en la cartera.
 
 ## Cerrar la poligonal
 
@@ -134,8 +160,10 @@ distancia de cero o mayor de 1000 m, o un punto sin nombre.
 
 ## Ajustar
 
-Abra el paso **2 · Ajuste**. Arriba elija el **Método de ajuste**. Cambiarlo
-recalcula y guarda al momento.
+Abra el paso **2 · Ajuste**. Ajustar es repartir el error de cierre entre las
+mediciones para que la poligonal cierre exactamente. Arriba elija el **Método
+de ajuste**, que decide cómo se reparte. Cambiarlo recalcula y guarda al
+momento, así que puede compararlos.
 
 | Método | Cómo reparte el error |
 |---|---|
@@ -144,9 +172,19 @@ recalcula y guarda al momento.
 | **Crandall** | Corrige solo las distancias, por mínimos cuadrados, y conserva los ángulos ya corregidos |
 | **Mínimos cuadrados** | Ajusta ángulos y distancias a la vez, según la precisión de cada uno. Solo en cerrada y abierta con control |
 
-Debajo van cuatro cifras: el **error angular**, el **error de cierre lineal**,
-la **precisión relativa** y el **orden alcanzado**. Pulse **Por qué** para ver
-cada orden con su tolerancia y si la poligonal la cumple.
+Debajo van cuatro cifras:
+
+- **Error angular**: cuánto difiere la suma de los ángulos medidos de la que
+  debería dar.
+- **Error de cierre lineal**: la distancia entre donde terminó la poligonal y
+  donde debía terminar, en metros.
+- **Precisión relativa**: ese error frente al perímetro, como 1:7.045 (un
+  metro de error por cada 7.045 m recorridos). Cuanto mayor el segundo número,
+  mejor.
+- **Orden alcanzado**: la clase de precisión que cumple el trabajo.
+
+Pulse **Por qué** para ver cada orden con su tolerancia y si la poligonal la
+cumple.
 
 ![Método Brújula, error angular de +12.0″, error de cierre de 0.016 m, precisión 1:7.045 y orden alcanzado Tercer orden, con el «Por qué» abierto](../../public/manual/poligonal/07-orden-alcanzado.png)
 
@@ -247,12 +285,20 @@ de sus estaciones** de coordenadas conocidas. En el ejemplo, la Sede Vivero se
 midió desde P1 (1000, 1000) y se georreferencia con los vértices D1 y D3.
 
 1. En el paso **Ajuste**, junto al dibujo, pulse **Georreferenciar**.
-2. En **Punto A**, elija la **Estación** y escriba su **Norte real** y su
-   **Este real**, o tómelos del catálogo del proyecto.
+2. En **Punto A**, elija la **Estación** de la poligonal y escriba su **Norte
+   real** y su **Este real**, o tómelos de los puntos de referencia del
+   proyecto.
 3. Haga lo mismo en **Punto B**. Use las dos estaciones **más alejadas** entre
-   sí.
-4. Revise la vista previa: la **rotación**, la **traslación**, el **factor de
-   escala**, los **residuos** y las coordenadas actuales junto a las reales.
+   sí: cuanto más separadas, mejor queda definida la rotación.
+4. Revise la vista previa antes de confirmar:
+   - **Rotación** y **traslación**: cuánto se gira y se desplaza la
+     poligonal para llevarla al sistema real.
+   - **Factor de escala**: la relación entre la distancia de los dos puntos
+     en la poligonal y en el sistema real. Debe dar muy cerca de 1; si se
+     aleja, una de las coordenadas que escribió probablemente está mal.
+   - **Residuos**: cuánto difieren los puntos A y B, ya transformados, de las
+     coordenadas reales que dio. Deben ser de milímetros.
+   - Las coordenadas actuales de cada estación junto a las reales.
 5. Pulse **Georreferenciar**.
 
 ![Ventana Georreferenciar la poligonal: D1 y D3 con sus coordenadas reales, rotación de 132°46′37.2″, factor de escala 0.999996, residuos de 0.2 mm y las coordenadas actuales y reales de cada estación](../../public/manual/poligonal/14-georreferenciar.png)

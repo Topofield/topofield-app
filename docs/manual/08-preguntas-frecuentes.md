@@ -143,6 +143,7 @@ repetir la medición.
 | **Cota** | La altura de un punto, en metros |
 | **Cota ajustada** | La cota de un punto después de compensar la nivelación |
 | **Compensar** | Repartir el error de cierre entre las mediciones, para que el trabajo cierre exacto |
+| **Deflexión** | En una poligonal abierta, el ángulo que se desvía un lado de la prolongación del anterior, a la derecha o a la izquierda |
 | **Discrepancia** | La diferencia entre el desnivel de la ida y el de la vuelta |
 | **Elipse de error** | La zona alrededor de un punto ajustado donde está, con un 95 % de probabilidad, su posición verdadera |
 | **Georreferenciar** | Llevar una poligonal medida en coordenadas locales al sistema real, girándola y trasladándola |
@@ -152,8 +153,10 @@ repetir la medición.
 | **Precisión relativa** | El error de cierre lineal de una poligonal comparado con su perímetro, escrito 1:X |
 | **Punto de cambio** | El punto que pasa la cota de una armada a la siguiente: lleva V− y V+ |
 | **Radiación (vista intermedia)** | Un punto que se lee solo para conocer su cota, sin seguir el recorrido por él |
+| **Semáforo** | El estado de un punto de control según sus umbrales: normal, precaución, alerta o alarma |
 | **Tolerancia** | El error máximo que admite un orden de precisión |
 | **Tramo** | En una visita, las armadas que salen de un BM del lugar y siguen por sus puntos de cambio |
+| **Umbral** | El valor de velocidad o de acumulado a partir del cual un punto pasa al nivel siguiente del semáforo |
 | **V+ (vista más)** | La lectura hacia atrás, a un punto con cota: se suma |
 | **V− (vista menos)** | La lectura hacia adelante, al punto siguiente: se resta |
 | **Velocidad** | El parcial dividido por el tiempo entre las dos visitas, en mm/mes |
