@@ -45,7 +45,7 @@
   ],
   "asentamientos/12-panel.png": [
     2560,
-    2314
+    2282
   ],
   "asentamientos/13-informe.png": [
     2560,
@@ -86,22 +86,6 @@
   "en-campo/05-panel-oscuro.png": [
     780,
     1688
-  ],
-  "equipos/01-catalogo-vacio.png": [
-    2560,
-    1600
-  ],
-  "equipos/02-nueva-estacion.png": [
-    1344,
-    1152
-  ],
-  "equipos/03-catalogo.png": [
-    2560,
-    1600
-  ],
-  "equipos/04-tomar-del-catalogo.png": [
-    896,
-    1932
   ],
   "informe-y-excel/01-pagina-de-informe.png": [
     2560,
@@ -219,11 +203,15 @@
     2560,
     1600
   ],
-  "primeros-pasos/05-menu-de-cuenta.png": [
+  "primeros-pasos/05-menu-de-la-ruta.png": [
+    2560,
+    1600
+  ],
+  "primeros-pasos/06-menu-de-cuenta.png": [
     512,
     444
   ],
-  "primeros-pasos/06-tema-oscuro.png": [
+  "primeros-pasos/07-tema-oscuro.png": [
     2560,
     1600
   ],

@@ -63,7 +63,7 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Borra la cuenta del recorrido y lo suyo. `projects.user_id` no tiene
- * cascada, así que primero van sus proyectos y su catálogo.
+ * cascada, así que primero van sus proyectos.
  */
 export async function borrarCuenta() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -74,7 +74,6 @@ export async function borrarCuenta() {
   const existente = data?.users.find((u) => u.email === CUENTA.email);
   if (!existente) return;
   sql(`delete from public.projects where user_id='${existente.id}'`);
-  sql(`delete from public.equipment where user_id='${existente.id}'`);
   const { error } = await admin.auth.admin.deleteUser(existente.id);
   if (error) throw error;
 }

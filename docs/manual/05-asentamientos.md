@@ -201,6 +201,12 @@ de acumulado; gana el peor de los dos:
 Cada nivel tiene su forma y su nombre, además del color: se reconoce con
 daltonismo o impreso en blanco y negro.
 
+Un movimiento de hasta **6 mm** entre dos visitas no cuenta para la velocidad:
+cabe en el error normal de la medición. Con visitas cada semana, 1 mm daría
+más de 4 mm/mes y pondría el punto en precaución sin que se haya movido. En
+ese caso el punto se juzga solo por su acumulado. La velocidad se sigue
+mostrando igual.
+
 > Un punto en alarma se guarda como cualquier otro. El semáforo es un
 > diagnóstico, no un bloqueo: un asentamiento alarmante es justo lo que este
 > módulo existe para documentar.

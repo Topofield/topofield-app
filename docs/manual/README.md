@@ -17,9 +17,8 @@ ejemplos son carteras de campo reales.
 4. [La nivelación](04-nivelacion.md): la libreta por armadas, la vuelta, la compensación y la importación desde un nivel digital.
 5. [Control de asentamientos](05-asentamientos.md): el lugar, sus puntos, sus BM, las visitas y el panel.
 6. [El informe y el Excel](06-informe-y-excel.md): qué lleva el informe y cómo exportarlo.
-7. [El catálogo de equipos](07-equipos.md): guardar las estaciones totales y los niveles.
-8. [En campo, con el teléfono](08-en-campo.md): capturar en el sitio de trabajo.
-9. [Preguntas frecuentes y glosario](09-preguntas-frecuentes.md): las dudas comunes y las palabras técnicas.
+7. [En campo, con el teléfono](07-en-campo.md): capturar en el sitio de trabajo.
+8. [Preguntas frecuentes y glosario](08-preguntas-frecuentes.md): las dudas comunes y las palabras técnicas.
 
 La aplicación está publicada en
 [topofield-app.vercel.app](https://topofield-app.vercel.app). Este mismo texto

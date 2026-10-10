@@ -19,7 +19,6 @@ const ORDEN = [
   "nivelacion",
   "asentamientos",
   "informe-y-excel",
-  "equipos",
   "en-campo",
 ];
 
