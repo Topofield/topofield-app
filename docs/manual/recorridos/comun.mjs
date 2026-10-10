@@ -150,8 +150,15 @@ export async function entrar(page) {
 /**
  * Las capturas de un capítulo. `paso(nombre, objetivo?)` escribe
  * `NN-nombre.png` con el número siguiente y anota su tamaño en el manifiesto.
- * El objetivo puede ser la página (por defecto, solo lo visible), un locator
- * (recorta a ese elemento) o `{ completa: true }` (la página entera).
+ *
+ * Toda captura es de la pantalla entera, con la barra arriba: nunca se recorta
+ * a un elemento. El objetivo dice qué mostrar en ella:
+ * - nada: lo que está a la vista;
+ * - un locator: una ventana abierta se fotografía con la página atenuada
+ *   detrás; un bloque de la página se desplaza hasta quedar bajo la barra;
+ * - `{ completa: true }`: una pantalla alta (hasta 1700 px) con la página
+ *   desde arriba, para las páginas largas;
+ * - `{ paginaEntera: true }`: la página entera, solo para el informe impreso.
  */
 export function capitulo(slug, page) {
   const carpeta = join(PUBLICO, slug);
@@ -166,16 +173,29 @@ export function capitulo(slug, page) {
       const archivo = `${String(n).padStart(2, "0")}-${nombre}.png`;
       const ruta = join(carpeta, archivo);
       await page.waitForTimeout(500);
-      if (objetivo && typeof objetivo.screenshot === "function") {
-        await objetivo.screenshot({ path: ruta, animations: "disabled" });
-      } else {
-        // La barra es fija: en una captura de página completa se pinta donde
+      if (objetivo?.paginaEntera) {
+        // La barra es fija: en una captura de página entera se pinta donde
         // estaba la ventana. Arriba del todo, queda en su sitio.
-        if (objetivo?.completa) {
-          await page.evaluate(() => window.scrollTo(0, 0));
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: ruta, animations: "disabled", fullPage: true });
+      } else if (objetivo?.completa) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        const alto = await page.evaluate(() => Math.min(document.documentElement.scrollHeight, 1700));
+        await conAlto(page, Math.max(alto, page.viewportSize().height), async () => {
+          await page.waitForTimeout(400);
+          await page.screenshot({ path: ruta, animations: "disabled" });
+        });
+      } else {
+        if (objetivo && typeof objetivo.evaluate === "function") {
+          await objetivo.evaluate((el) => {
+            if (el.closest('[role="dialog"], [popover]')) return;
+            const arriba = el.getBoundingClientRect().top + window.scrollY - 64;
+            window.scrollTo(0, Math.max(0, arriba));
+          });
           await page.waitForTimeout(300);
         }
-        await page.screenshot({ path: ruta, animations: "disabled", fullPage: Boolean(objetivo?.completa) });
+        await page.screenshot({ path: ruta, animations: "disabled" });
       }
       tomadas.push(`${slug}/${archivo}`);
       console.log(`  ✓ ${slug}/${archivo}`);

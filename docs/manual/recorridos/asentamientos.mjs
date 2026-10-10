@@ -58,6 +58,11 @@ async function medirVisita(page, visita, n, cap) {
     const campo = a.getByLabel(`Lectura a ${codigo}`);
     await campo.fill(String(visita.readings[i]));
     await campo.press("Enter");
+    if (cap && n === 1 && i === 7) {
+      await a.getByText(/guardado/).last().waitFor();
+      await page.waitForTimeout(500);
+      await conAlto(page, 1500, () => cap.paso("armada-a-medias", a));
+    }
   }
   await a.getByText(/guardado/).last().waitFor();
   await page.waitForTimeout(500);

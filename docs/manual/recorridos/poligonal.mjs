@@ -27,10 +27,11 @@ async function angulo(zona, etiqueta, [g, m, s]) {
   await grupo.getByLabel("Segundos", { exact: true }).fill(String(s));
 }
 
-async function nuevaPoligonal(page, { titulo, tipo = "Cerrada", equipo }) {
+async function nuevaPoligonal(page, { titulo, tipo = "Cerrada", equipo, cap }) {
   const proyecto = idProyecto();
   await ir(page, `/projects/${proyecto}`);
   await page.getByRole("button", { name: "+ Nuevo Proceso" }).click();
+  if (cap) await cap.paso("nuevo-proceso", page.getByRole("dialog"));
   await page.getByRole("dialog").getByRole("button", { name: "Poligonal", exact: true }).click();
   const d = dialogo(page, "Nueva poligonal");
   await d.getByLabel("Título").fill(titulo);
@@ -58,8 +59,12 @@ async function crear(page, d) {
  * Teclea las mediciones de una cartera en el popup «Agregar medición»: cada
  * estación con su ángulo, el punto siguiente y la distancia. La última vuelve
  * a la partida (el cierre) y después va el cierre angular.
+ *
+ * `capturar(i, d)` fotografía la ventana llena de la medición `i`; con
+ * `pausa: { tras, capturar }`, después de guardar la medición `tras` se cierra
+ * la ventana, se fotografía la pantalla y se sigue con «+ Agregar punto».
  */
-async function medir(page, mediciones, { capturar } = {}) {
+async function medir(page, mediciones, { capturar, pausa } = {}) {
   await page.getByRole("button", { name: "+ Agregar punto" }).click();
   const d = page.getByRole("dialog");
   for (const [i, m] of mediciones.entries()) {
@@ -71,8 +76,17 @@ async function medir(page, mediciones, { capturar } = {}) {
       await d.getByLabel("Punto siguiente").fill(m.hacia);
     }
     await d.getByLabel(/Distancia horizontal/).fill(String(m.distancia));
-    if (capturar && i === 1) await capturar(d);
+    if (capturar) await capturar(i, d);
     await d.getByRole("button", { name: m.cierre ? "Agregar el cierre" : /^Agregar y seguir/ }).click();
+    if (pausa && i === pausa.tras) {
+      await d.getByText(`Estás en ${mediciones[i + 1].desde}`, { exact: false }).waitFor();
+      await d.getByRole("button", { name: "Cancelar" }).click();
+      await d.waitFor({ state: "detached" });
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(800);
+      await pausa.capturar();
+      await pulsarHasta(page.getByRole("button", { name: "+ Agregar punto" }), d);
+    }
   }
   return d;
 }
@@ -89,6 +103,7 @@ export async function recorrer() {
     const alta = await nuevaPoligonal(page, {
       titulo: NOMBRE_TT4,
       equipo: { marca: "Leica", modelo: "TS06 plus", serie: "1352874" },
+      cap,
     });
     await cap.paso("nueva-poligonal", alta);
     await crear(page, alta);
@@ -103,6 +118,9 @@ export async function recorrer() {
     await conAlto(page, 1100, () => cap.paso("puntos-de-amarre", amarre));
     await amarre.getByRole("button", { name: "Guardar el amarre" }).click();
     await amarre.waitFor({ state: "detached" });
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(800);
+    await cap.paso("amarre");
 
     // Las mediciones, desde → hacia, como la cartera.
     const est = CARTERA_TT4.stations;
@@ -114,7 +132,11 @@ export async function recorrer() {
       cierre: i === est.length - 2,
     }));
     const medicion = await medir(page, mediciones, {
-      capturar: (d) => conAlto(page, 1100, () => cap.paso("agregar-medicion", d)),
+      capturar: async (i, d) => {
+        if (i === 0) await conAlto(page, 1100, () => cap.paso("agregar-medicion", d));
+        if (i === mediciones.length - 1) await conAlto(page, 1100, () => cap.paso("ultimo-lado", d));
+      },
+      pausa: { tras: 2, capturar: () => cap.paso("tres-mediciones") },
     });
     // El cierre angular, en V10 hacia TT4.
     await medicion.getByText("Cierre angular").first().waitFor();

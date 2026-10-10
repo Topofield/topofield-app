@@ -84,6 +84,9 @@ terreno.
 1. Pulse **+ Agregar la primera armada**. Arriba, la ventana dice dónde está
    el nivel: «El nivel entre D1, ya con cota, y el punto siguiente». Así sabe
    siempre desde qué punto viene la cota.
+
+   ![La ventana de la armada 1 de la ida sobre la libreta vacía: V+ a D1 con su lectura y su distancia, la vista adelante a C 1 y, abajo, la altura del instrumento y la cota de C 1](../../public/manual/nivelacion/03-primera-armada.png)
+
 2. En **Vista atrás · V+**, escriba la **Lectura** de la mira sobre el punto
    que ya tiene cota y la **Distancia (m)** del nivel a esa mira.
 3. En **Vista adelante · V−**, escriba el **Punto** al que lleva la cota (por
@@ -97,7 +100,13 @@ terreno.
    siguiente, que ya parte del punto de adelante. **Guardar** guarda y cierra
    la ventana.
 
-![La armada 4 de la ida de El Verjón: V+ a C 3, la vista adelante a C 4, la vista intermedia AUX1 y, abajo, la altura del instrumento y la cota de C 4](../../public/manual/nivelacion/03-armada.png)
+![La armada 4 de la ida de El Verjón: V+ a C 3, la vista adelante a C 4, la vista intermedia AUX1 y, abajo, la altura del instrumento y la cota de C 4](../../public/manual/nivelacion/04-armada.png)
+
+Cada armada guardada aparece en la libreta, con su altura del instrumento y la
+cota de cada punto, y el perfil se dibuja a la derecha. Si cierra la ventana,
+**+ Agregar armada** sigue desde el último punto.
+
+![La libreta de la ida tras cuatro armadas: D1, C 1, C 2, C 3, la intermedia AUX1 y C 4 con sus lecturas, distancias, alturas del instrumento y cotas, el botón + Agregar armada y el perfil de la ida](../../public/manual/nivelacion/05-libreta-a-medias.png)
 
 > **Las distancias.** La distancia a cada mira es obligatoria en los BM y en
 > los puntos de cambio: sin ella, la compensación queda mal repartida. Si
@@ -114,6 +123,8 @@ terminó. Márquela cuando la vista adelante sea el punto final:
 
 Sin esa marca, la aplicación entiende que la libreta sigue a medias y no
 compensa.
+
+![La armada 10, la última de la ida: V+ a C 8, la vista adelante a D4 con «El fin del recorrido», la casilla Fin de la ida marcada y los botones Guardar y Guardar y seguir con la vuelta](../../public/manual/nivelacion/06-fin-de-la-ida.png)
 
 Si hay vuelta, márquela y pulse **Guardar y seguir con la vuelta**: se abre la
 primera armada de la vuelta. Al final de la vuelta, la casilla es **Llega a**
@@ -139,7 +150,7 @@ El paso **Libreta** muestra:
   adelante. Sirve para ver de un vistazo si alguna cota se sale de lo
   esperado.
 
-![El paso Libreta de El Verjón con la tabla de la ida, la comprobación aritmética y el perfil](../../public/manual/nivelacion/04-libreta.png)
+![El paso Libreta de El Verjón con la tabla de la ida, la comprobación aritmética y el perfil](../../public/manual/nivelacion/07-libreta.png)
 
 Para corregir, el **lápiz** de cada fila abre la armada que esa fila cierra.
 **Quitar la armada** borra la última.
@@ -168,7 +179,7 @@ la distancia en kilómetros, en un solo sentido.
 El Verjón, la discrepancia de 5.0 mm cabe en segundo orden (5.3 mm) y no en
 primero (2.6 mm).
 
-![El paso Compensación de El Verjón: discrepancia de 5.0 mm, distancias de 384.3 y 397.6 m, tolerancia de 5.3 mm y segundo orden; la tabla de cotas compensadas y ajustadas y el gráfico de ida, vuelta y ajustada](../../public/manual/nivelacion/05-compensacion.png)
+![El paso Compensación de El Verjón: discrepancia de 5.0 mm, distancias de 384.3 y 397.6 m, tolerancia de 5.3 mm y segundo orden; la tabla de cotas compensadas y ajustadas y el gráfico de ida, vuelta y ajustada](../../public/manual/nivelacion/08-compensacion.png)
 
 - **Se compensa siempre** que haya contra qué cerrar. Si el trabajo no alcanza
   ni el ordinario, se compensa igual y un aviso lo dice: un trabajo así, en la
@@ -222,12 +233,12 @@ CSV**, a la derecha de los pasos, las pasa a la libreta sin teclearlas.
      porque el tipo decide qué lecturas lleva cada fila.
 3. Pulse **Usar estas lecturas**. La libreta se reemplaza y se guarda.
 
-![Ventana Importar libreta desde archivo con el crudo CRDUDO-TRAMO2.L de un nivel Leica: 16 armadas y 64 visuales, ida y vuelta desde la armada 9, la cota del BM C10 y la tabla de puntos con su tipo](../../public/manual/nivelacion/07-importar.png)
+![Ventana Importar libreta desde archivo con el crudo CRDUDO-TRAMO2.L de un nivel Leica: 16 armadas y 64 visuales, ida y vuelta desde la armada 9, la cota del BM C10 y la tabla de puntos con su tipo](../../public/manual/nivelacion/10-importar.png)
 
 El nivel mide dos veces cada visual: se guarda el promedio, y la ventana
 muestra la mayor diferencia entre las dos como control.
 
-![La libreta del tramo 2 ya importada](../../public/manual/nivelacion/08-importada.png)
+![La libreta del tramo 2 ya importada](../../public/manual/nivelacion/11-importada.png)
 
 ## El informe
 
@@ -242,4 +253,4 @@ El paso **3 · Informe** muestra el informe de la nivelación:
 Arriba están **Exportar PDF** y **Exportar Excel**. Vea
 [El informe y el Excel](06-informe-y-excel.md).
 
-![El paso Informe de El Verjón](../../public/manual/nivelacion/06-informe.png)
+![El paso Informe de El Verjón](../../public/manual/nivelacion/09-informe.png)

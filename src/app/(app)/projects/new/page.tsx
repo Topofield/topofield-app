@@ -14,8 +14,8 @@ export default function NewProjectPage() {
         Nuevo proyecto
       </h1>
       <p className="mt-1 text-sm text-ink-2">
-        Los datos del proyecto y su sistema de referencia. El equipo y el orden
-        de precisión se declaran en cada proceso.
+        Los datos del proyecto y su sistema de referencia. El equipo se escribe
+        en cada proceso, y el orden de precisión se detecta al calcular.
       </p>
       <Card className="mt-6">
         <NewProjectForm />
