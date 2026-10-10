@@ -4537,8 +4537,8 @@ leer `reports`. Por lo mismo, **una vez aplicada, volver en Vercel a un
 despliegue anterior a la Fase 38 rompe todas las páginas de proceso**: el
 código viejo llama a `getReports`.
 
-**La Fase 44 tiene un paso después del merge, y un recálculo.** Antes del
-merge no hace falta nada. Después:
+**La Fase 44 tiene un paso después del merge, y un recálculo** (aplicados el
+2026-10-09). Antes del merge no hace falta nada. Después:
 
 1. Merge a `main`. Vercel despliega el código, que ya no lee `equipment`.
 2. `npx supabase db push` aplica `20261011000000_sin_catalogo_equipos`: borra
@@ -4552,7 +4552,14 @@ La migración va **después** porque borra: el código anterior lee `equipment`
 en el layout de todas las páginas autenticadas. Se pierden los equipos del
 catálogo de producción, que ningún proceso referenciaba. Una vez aplicada,
 volver en Vercel a un despliegue anterior a la Fase 44 rompe todas las páginas
-autenticadas. Localmente se aplicó con `migration up --local`.
+autenticadas. Localmente se aplicó con `migration up --local`. El merge (PR #40)
+y la espera del despliegue los hizo el agente; el `db push` y el recálculo,
+el usuario: el modo automático bloquea el primero y el segundo necesita la
+clave secreta de producción. Verificado después, en solo lectura: la
+migración figura en `migration list --linked`, `equipment` no existe, y en
+la cartera de la demo de producción —numerada de la 1 a la 7, anterior a la
+Fase 43— las visitas 2 a 4 guardan alarma y de la 5 a la 7, normal, como da
+el motor.
 
 **Las Fases 42 y 43 no tienen migración**: su despliegue fue el merge, por los
 PR #36 y #39 el 2026-10-09. La demo que ya existía conserva la numeración de
