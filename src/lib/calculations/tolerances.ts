@@ -184,6 +184,15 @@ export function trendDeviationMargin(): number {
 }
 
 /**
+ * Hasta cuántos mm de parcial el semáforo no juzga la velocidad (Fase 44): el
+ * margen de ruido de dos visitas, el mismo de los avisos de tendencia. Con
+ * visitas cada siete días, 1 mm de una mira que resuelve el milímetro son
+ * 4.35 mm/mes, y el semáforo de un edificio (2 · 5 · 10 mm/mes) alarmaba por
+ * ruido. Un parcial que cabe aquí se clasifica solo por su acumulado.
+ */
+export const ALERT_VELOCITY_NOISE_MM = trendDeviationMargin();
+
+/**
  * Margen de ruido, en mm/mes, del aumento de velocidad de «Acelerando» (Fase
  * 32, hallazgo 4 del PRD). Las dos velocidades dependen de tres cotas:
  *

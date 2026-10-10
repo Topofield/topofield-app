@@ -11,6 +11,7 @@
 
 import {
   accelerationMargin,
+  ALERT_VELOCITY_NOISE_MM,
   DAYS_PER_MONTH,
   TREND_DEVIATION_RATE_FACTOR,
   trendDeviationMargin,
@@ -216,6 +217,9 @@ export function computeSettlements(
  * Un valor `null` no clasifica por ese criterio —no lo fuerza a `normal`—: la
  * línea base no tiene velocidad y debe poder clasificarse solo por acumulado.
  *
+ * La velocidad tampoco clasifica si su parcial cabe en el ruido de la mira
+ * (`ALERT_VELOCITY_NOISE_MM`, Fase 44): 1 mm en una semana no es un ritmo.
+ *
  * ATENCIÓN: los estados de alerta de los casos de estudio del marco teórico NO
  * se derivan de sus propios umbrales (verificado; ver hallazgo 3 del PRD de
  * fase). No sirven para comprobar esta función.
@@ -223,10 +227,11 @@ export function computeSettlements(
 export function classifyAlert(
   velocity: number | null,
   accumulated: number | null,
+  partial: number | null,
   thresholds: Thresholds,
 ): AlertLevel {
   const byVelocity: AlertLevel =
-    velocity === null
+    velocity === null || partial === null || Math.abs(partial) <= ALERT_VELOCITY_NOISE_MM
       ? "normal"
       : level(Math.abs(velocity), [
           thresholds.velocityCaution,
@@ -276,6 +281,7 @@ export function classifyReadings(
       alertStatus: classifyAlert(
         reading.velocity,
         reading.accumulatedSettlement,
+        reading.partialSettlement,
         thresholds,
       ),
     }));
