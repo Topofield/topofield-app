@@ -1,6 +1,6 @@
 # PRD-de-fase 44 — Los últimos pendientes
 
-**Estado:** en curso (aprobado el 2026-10-09)
+**Estado:** cerrada (aprobado y cerrado el 2026-10-09)
 **Fecha de apertura:** 2026-10-09
 **Rama:** `fase-44-ultimos-pendientes`
 **Petición:** del usuario, 2026-10-09. Ante las tres peticiones sin fase de
@@ -120,3 +120,14 @@ nada abierto.
   arquitectura ni en las reglas), `PRD-TopoField.md` (su tabla de estado),
   `method.md`, `prds/README.md` y `pendientes.md`, que queda sin peticiones
   abiertas.
+
+## Despliegue
+
+1. Merge a `main`; Vercel despliega el código, que ya no lee `equipment`.
+2. `npx supabase db push`: aplica `20261011000000_sin_catalogo_equipos`, que
+   borra la tabla. Va **después** del merge porque el código anterior la lee
+   en el layout de todas las páginas autenticadas.
+3. `scripts/resincronizar-asentamientos.mjs`, en simulación y luego con
+   `--aplicar`: el semáforo se guarda en `settlement_readings.alert_status`
+   (lo leen el hub y el dashboard), y la regla nueva solo llega a lo que se
+   recalcula.
