@@ -23,23 +23,38 @@ se cierra: si corrige un dato, todo lo que depende de él se recalcula.
 1. En el proyecto, pulse **+ Nuevo Proceso** y elija **Control de
    Asentamientos**.
 2. Llene la ventana **Nuevo lugar**:
-   - **Nombre**, el único obligatorio.
-   - **Tipo de estructura**: edificio, presa, terraplén u otro. Carga los
-     umbrales del semáforo típicos de esa estructura.
-   - **Descripción**, opcional.
-   - **Umbrales del semáforo**, plegados: puede ajustarlos si el caso lo pide.
+   - **Nombre**: cómo reconocerá el lugar en el proyecto. Es el único
+     obligatorio.
+   - **Tipo de estructura**: edificio, presa, terraplén u otro. Elegirlo
+     carga los **umbrales del semáforo** típicos de esa estructura: los
+     límites de velocidad (mm/mes) y de asentamiento acumulado (mm) a partir
+     de los cuales un punto pasa a precaución, a alerta y a alarma. Una presa,
+     por ejemplo, tolera menos acumulado que un edificio.
+   - **Descripción**, opcional: qué se monitorea y dónde. Sale en el informe.
+   - **Umbrales del semáforo**, plegados: muestran los valores cargados.
+     Ábralos solo si el estudio de la estructura fija otros límites, y
+     cámbielos allí.
 
    ![Ventana Nuevo lugar: nombre «Control de asentamiento estructural», tipo Edificio y la descripción](../../public/manual/asentamientos/01-nuevo-lugar.png)
 
-3. Pulse **Crear lugar**. Se abre el lugar, todavía sin puntos.
+3. Pulse **Crear lugar**. Se abre el lugar, todavía sin puntos: se agregan
+   en el paso siguiente.
 
    ![El lugar recién creado, con su cabecera, el botón + Nueva visita y las pestañas Panel, Puntos, BMs e Informe](../../public/manual/asentamientos/02-lugar-nuevo.png)
 
 ## Los puntos de control
 
+Son las marcas fijadas en la estructura cuyo descenso se quiere seguir.
+
 1. Abra la pestaña **Puntos** y pulse **Agregar punto**.
-2. Escriba el **Código** y la **Ubicación**. La **Cota C0** es opcional: si la
-   deja vacía, la línea base del punto es su primera lectura.
+2. Llene la ventana:
+   - **Código**: el nombre del punto, como en la cartera. Es el que verá en
+     la libreta de cada visita.
+   - **Ubicación**: dónde está en la estructura (por ejemplo, la columna o el
+     eje), para encontrarlo en campo.
+   - **Cota C0**, opcional: la cota de referencia contra la que se mide el
+     asentamiento acumulado del punto, si ya la conoce por un estudio
+     anterior. Si la deja vacía, la referencia es su primera lectura.
 3. Pulse **Guardar**. Repita por cada punto.
 
 ![Ventana Nuevo punto con el código A4(8-7A) y su ubicación](../../public/manual/asentamientos/03-nuevo-punto.png)
@@ -55,10 +70,14 @@ acumulado antes de guardar.
 
 ## Los BM del lugar
 
-Cada lugar tiene sus propios BM. Son del lugar y no se sincronizan con nada.
+Los BM son los puntos de cota conocida, fuera de la estructura y que no se
+mueven, desde donde se nivela cada visita. Cada lugar tiene los suyos. Son
+copias propias del lugar: aunque el mismo BM aparezca en una nivelación del
+proyecto, cambiarlo allí no lo cambia aquí.
 
 1. Abra la pestaña **BMs** y pulse **+ BM**.
-2. Escriba el **Código**, la **Cota (m)** y, si quiere, una descripción.
+2. Escriba el **Código** del BM, su **Cota (m)** conocida y, si quiere, una
+   **Descripción** que ayude a encontrarlo.
 3. Pulse **Guardar**.
 
 ![Ventana Nuevo BM: PISCINA/BM con cota 156.299, el BM de la piscina](../../public/manual/asentamientos/05-nuevo-bm.png)
@@ -72,8 +91,14 @@ importados son copias: si la nivelación cambia después, el BM no.
 ## Una visita
 
 1. En la cabecera del lugar, pulse **+ Nueva visita**.
-2. Escriba la **Fecha**, que tiene que ser posterior a la de la última visita,
-   y el **Nivelador**. La **Nota** y el **equipo** son opcionales.
+2. Llene la ventana:
+   - **Fecha**: el día en que midió. Tiene que ser posterior a la de la
+     última visita, porque el historial se ordena por fecha.
+   - **Nivelador**: quién hizo la medición. Sale en el informe.
+   - **Nota**, opcional: lo que conviene saber de esa campaña (lluvia, un
+     punto tapado, una obra cerca). Sale en el informe junto a la visita.
+   - **Equipo**, plegado y opcional: la marca, el modelo y el n.º de serie del
+     nivel.
 3. Pulse **Crear y empezar**.
 
 ![Ventana Nueva visita con la fecha 24 de marzo de 2022 y el nivelador](../../public/manual/asentamientos/07-nueva-visita.png)
@@ -88,14 +113,19 @@ las lecturas.
 ## La libreta y la armada
 
 1. Pulse **Retomar medición**, o **Editar** en la armada. Se abre su ventana.
-2. En **Vista atrás · V+**, escriba la **Lectura** al BM. La distancia es
-   opcional.
+2. En **Vista atrás · V+**, escriba la **Lectura** de la mira sobre el BM. La
+   distancia es opcional: la visita no se compensa, así que no la necesita
+   para calcular.
 3. En **Vistas a los puntos**, escriba la lectura de cada punto. Cada lectura
    **se guarda al escribirla**: al salir del campo o con Enter, que además pasa
    al campo siguiente. Junto a cada una aparece su cota y un ✓ cuando quedó
    guardada.
-4. En **Vista adelante · V−**, marque **Sin vista adelante** si la armada
-   termina en los puntos, o escriba el punto, su lectura y su distancia.
+4. En **Vista adelante · V−**, diga cómo termina la armada:
+   - **Sin vista adelante**, si leyó los puntos y no cerró contra nada. Es lo
+     más común en una visita corta.
+   - El **punto**, su **lectura** y su **distancia**, si terminó en un punto
+     de cambio (para seguir en otra armada) o en un BM del lugar (para
+     comprobar la medición).
 5. Pulse **Terminar armada**.
 
 ![La armada de la primera visita: la V+ de 1.218 a PISCINA/BM y las dieciséis lecturas, cada una con su cota y su ✓](../../public/manual/asentamientos/09-armada.png)
@@ -121,11 +151,14 @@ el cierre y el orden alcanzado.
 
 ## Importar la libreta
 
-Con un nivel digital, **Importar .L o CSV**, a la derecha de los pasos, pasa a
-la libreta el archivo **.L de Leica** o la **plantilla CSV**, como en la
-nivelación. El archivo se lee como un solo tramo desde el BM de su primera
-fila, que tiene que estar en los BM del lugar. Reemplaza la libreta de la
-visita; si ya tenía lecturas, la ventana lo avisa.
+Con un nivel digital, las lecturas ya están en un archivo. **Importar .L o
+CSV**, a la derecha de los pasos, las pasa a la libreta sin teclearlas: acepta
+el archivo **.L de Leica** o la **plantilla CSV**, como en la nivelación.
+
+El archivo se lee como un solo tramo que sale del BM de su primera fila, así
+que ese BM tiene que estar antes en la pestaña **BMs** del lugar, con el mismo
+código. Importar reemplaza la libreta de la visita; si ya tenía lecturas, la
+ventana lo avisa antes.
 
 ## Cómo se calcula
 
@@ -166,10 +199,16 @@ ritmo preveía unos 17: la libreta lo avisa para que revise la lectura.
 
 ## Los resultados
 
-El paso **2 · Resultados** de cada visita muestra sus indicadores (el
-asentamiento máximo, el promedio, el mayor movimiento y la alerta) y, por
-punto, la cota, el parcial, el acumulado, la velocidad, el estado y la
-**tendencia**: **Acelera** o **Converge**.
+El paso **2 · Resultados** de cada visita muestra cómo quedó la estructura en
+esa fecha. Arriba, sus indicadores: el asentamiento máximo, el promedio, el
+mayor movimiento desde la visita anterior y la peor alerta. Debajo, una fila
+por punto con su cota, el parcial, el acumulado, la velocidad, el estado y la
+**tendencia**, que compara sus dos últimas velocidades:
+
+- **Converge** si el punto baja cada vez más despacio: se está
+  estabilizando.
+- **Acelera** si baja cada vez más rápido, más allá de lo que explica el error
+  de la medición: conviene vigilarlo.
 
 ![Resultados de la visita 6: los indicadores, la tabla de puntos con su cota, parcial, acumulado, velocidad, estado y tendencia, y el gráfico del acumulado](../../public/manual/asentamientos/11-resultados.png)
 
@@ -177,13 +216,16 @@ punto, la cota, el parcial, el acumulado, la velocidad, el estado y la
 
 La pestaña **Panel** reúne todo el historial:
 
-- **Los indicadores**: el asentamiento máximo, el promedio actual, la
-  velocidad máxima, cuántas visitas tienen alertas y los umbrales.
+- **Los indicadores**: el asentamiento máximo y en qué punto, el promedio
+  actual, la velocidad máxima, cuántas visitas tienen algún punto en alerta o
+  alarma, y los umbrales con que se juzga.
 - **Las visitas**, de la más reciente a la más antigua, con su promedio, su
   máximo y su mayor movimiento —debajo de cada uno, el punto donde ocurre— y
   su peor alerta.
-- **La tendencia**: el promedio de los puntos en el tiempo, o cada punto por
-  separado con **Por punto**.
+- **La tendencia**: una gráfica del asentamiento promedio en el tiempo, con
+  las líneas de los umbrales y la franja entre el punto que más bajó y el que
+  menos. **Por punto** muestra cada punto por separado. Pulsar una visita en
+  la tabla la resalta en la gráfica.
 - **Los avisos** de lecturas fuera de tendencia.
 
 ![Panel de la cartera: los indicadores, la tabla de visitas de la 0 a la 6, la tendencia del promedio con sus umbrales y los avisos de B10](../../public/manual/asentamientos/12-panel.png)

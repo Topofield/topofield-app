@@ -51,7 +51,13 @@ pinta allí.
 
 **El lenguaje.** Se trata al lector de «usted». Frases cortas y una acción por
 paso: qué pulsar o escribir, y qué aparece después. Cada palabra técnica se
-explica la primera vez y va al glosario del capítulo 9.
+explica la primera vez y va al glosario del capítulo 8.
+
+**Explicar, no describir.** Un manual dice para qué sirve cada campo y cada
+opción, y cómo elegir: «**De enlace**, si sale de un BM y termina en otro de
+cota conocida», no «tres opciones, cada una con su dibujo». Lo que se ve en
+pantalla ya lo muestra la captura; el texto añade lo que la captura no dice:
+el propósito, la consecuencia y cuándo usar cada cosa.
 
 **Las capturas** salen de un recorrido real de la aplicación:
 `docs/manual/recorridos/`, un script por capítulo. Requieren la base local y

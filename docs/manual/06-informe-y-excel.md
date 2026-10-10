@@ -55,11 +55,15 @@ PDF.
 ## Exportar Excel
 
 **Exportar Excel**, junto a **Exportar PDF**, descarga un libro de Excel
-(`.xlsx`) con la forma de las carteras de campo de cada módulo:
+(`.xlsx`) con la forma de las carteras de campo de cada módulo. Sirve para
+entregar el cálculo de forma que se pueda revisar: quien lo reciba ve cada
+fórmula y puede rehacer las cuentas sin la aplicación.
 
-- **Las celdas amarillas** son los datos medidos o escritos.
+- **Las celdas amarillas** son los datos medidos o escritos: las lecturas,
+  las distancias, las cotas conocidas.
 - **Las demás llevan fórmulas** que dan el mismo valor que la aplicación. Si
-  cambia un dato, Excel recalcula lo que depende de él.
+  cambia un dato amarillo, Excel recalcula todo lo que depende de él, así que
+  sirve también para probar qué pasaría con otra lectura.
 - **Las tolerancias** de cada orden van en un bloque de celdas, y las fórmulas
   las usan.
 

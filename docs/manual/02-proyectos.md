@@ -7,10 +7,18 @@ procesos. Todo trabajo en TopoField vive dentro de un proyecto.
 
 1. En el dashboard, pulse **+ Nuevo Proyecto**.
 2. Llene los datos del proyecto:
-   - **Nombre del proyecto**, **Cliente** y **Ubicación**, obligatorios.
-   - **Descripción**, si quiere.
-   - **Latitud** y **Longitud**, si quiere, en grados decimales.
-   - **Datum**, obligatorio (viene MAGNA-SIRGAS), y **Proyección**.
+   - **Nombre del proyecto**: cómo lo reconocerá en el dashboard. Obligatorio.
+   - **Cliente** y **Ubicación**: para quién es el trabajo y dónde se hace.
+     Son obligatorios porque salen en la portada de cada informe.
+   - **Descripción**: una nota libre sobre el trabajo, si le sirve.
+   - **Latitud** y **Longitud**, en grados decimales: la posición general del
+     sitio, como dato de referencia. Son opcionales y no entran en ningún
+     cálculo.
+   - **Datum** y **Proyección**: el sistema en que están las coordenadas del
+     proyecto. El datum viene en MAGNA-SIRGAS, el oficial de Colombia; la
+     proyección, por ejemplo Origen Nacional, es opcional. Los dos salen en la
+     portada del informe y en el Excel, para que quien los reciba sepa en qué
+     sistema leer las coordenadas. La aplicación no transforma entre sistemas.
 
    ![Formulario Nuevo proyecto lleno para el «Proyecto Demo», con su cliente, ubicación, datum MAGNA-SIRGAS y proyección Origen Nacional](../../public/manual/proyectos/01-nuevo-proyecto.png)
 
@@ -35,14 +43,21 @@ sistema de referencia y el botón **+ Nuevo Proceso**. Debajo hay dos pestañas:
 ## Los puntos de referencia
 
 Son puntos de coordenadas conocidas, como vértices geodésicos o mojones. Se
-guardan una vez en el proyecto y después se eligen como punto de partida o de
-llegada de una poligonal, sin volver a teclearlos.
+guardan una vez en el proyecto y después se eligen al amarrar o al
+georreferenciar una poligonal, sin volver a teclear sus coordenadas.
 
 1. Abra la pestaña **Configuración** y, en **Puntos de referencia**, pulse
    **Agregar punto**.
-2. Escriba el **Código**, elija el **Tipo** (BM, Control, GPS o Detalle) y
-   escriba el **Norte**, el **Este** y, si la tiene, la **Cota**. Pulse
-   **Guardar**.
+2. Llene la ventana:
+   - **Código**: el nombre del punto, como aparece en la cartera (por ejemplo,
+     TT4). Es el que verá al elegirlo en una poligonal.
+   - **Tipo**: BM, Control, GPS o Detalle, según el origen del punto. Sirve
+     para reconocerlo; no cambia ningún cálculo.
+   - **Norte** y **Este**, en metros: sus coordenadas, con tres decimales.
+   - **Cota**, si la tiene, y una **Descripción** que ayude a encontrarlo en
+     el terreno.
+
+   Pulse **Guardar**.
 
    ![Ventana Nuevo punto de referencia con el código TT4, tipo Control, su norte y su este, y la descripción «Mojón de control del campus»](../../public/manual/proyectos/03-nuevo-punto-de-referencia.png)
 
@@ -65,8 +80,9 @@ Para encontrar lo que busca:
 
 - **Buscar proceso…** filtra por nombre mientras escribe. No distingue
   mayúsculas ni tildes: «via» encuentra «Vía terciaria».
-- **Todos los tipos** acota a un tipo de poligonal, de nivelación o de
-  estructura.
+- **Todos los tipos** acota a un tipo: en poligonales, cerrada, abierta con
+  control o abierta sin control; en nivelaciones, el tipo de recorrido; en
+  asentamientos, el tipo de estructura.
 - **Todos**, **Borradores** y **Calculados** muestran solo los procesos en ese
   estado, con cuántos hay en cada grupo. Un lugar de asentamientos no tiene
   estado, así que en ese módulo no aparecen.
@@ -121,7 +137,8 @@ al confirmar.
 
 Al final de la pestaña **Configuración**, en **Zona de peligro**:
 
-- **Archivar** oculta el proyecto de la lista de activos. Lo encuentra en
-  **Archivados**, en el dashboard, y puede restaurarlo cuando quiera.
+- **Archivar** oculta el proyecto de la lista de activos sin borrar nada:
+  sirve para un trabajo terminado que ya no consulta a diario. Lo encuentra
+  en **Archivados**, en el dashboard, y puede restaurarlo cuando quiera.
 - **Eliminar** borra el proyecto con todos sus procesos, lugares y puntos de
   referencia, para siempre. Antes pide confirmación.
