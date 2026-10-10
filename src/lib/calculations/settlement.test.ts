@@ -11,7 +11,7 @@ import {
   monthsBetween,
   pointInputOf,
 } from "./settlement";
-import { accelerationMargin, thresholdsFor, trendDeviationMargin } from "./tolerances";
+import { ALERT_VELOCITY_NOISE_MM, accelerationMargin, thresholdsFor, trendDeviationMargin } from "./tolerances";
 import type {
   PointInput,
   Thresholds,
@@ -385,45 +385,62 @@ const T: Thresholds = thresholdsFor("edificio");
 // velocidad 2/5/10 mm/mes · acumulado 25/50/75 mm
 
 describe("classifyAlert", () => {
+  // Un parcial que pasa de sobra el margen de ruido: la velocidad cuenta.
+  const P = 20;
+
   it("es normal por debajo de todos los umbrales", () => {
-    expect(classifyAlert(-1.9, -24, T)).toBe("normal");
+    expect(classifyAlert(-1.9, -24, P, T)).toBe("normal");
   });
 
   it("clasifica en la frontera exacta del umbral (>=, no >)", () => {
-    expect(classifyAlert(-2, 0, T)).toBe("caution");
-    expect(classifyAlert(-5, 0, T)).toBe("alert");
-    expect(classifyAlert(-10, 0, T)).toBe("alarm");
-    expect(classifyAlert(0, -25, T)).toBe("caution");
-    expect(classifyAlert(0, -50, T)).toBe("alert");
-    expect(classifyAlert(0, -75, T)).toBe("alarm");
+    expect(classifyAlert(-2, 0, P, T)).toBe("caution");
+    expect(classifyAlert(-5, 0, P, T)).toBe("alert");
+    expect(classifyAlert(-10, 0, P, T)).toBe("alarm");
+    expect(classifyAlert(0, -25, P, T)).toBe("caution");
+    expect(classifyAlert(0, -50, P, T)).toBe("alert");
+    expect(classifyAlert(0, -75, P, T)).toBe("alarm");
   });
 
   it("usa el valor absoluto: un levantamiento rápido también alerta", () => {
-    expect(classifyAlert(6, 0, T)).toBe("alert");
-    expect(classifyAlert(0, 80, T)).toBe("alarm");
+    expect(classifyAlert(6, 0, P, T)).toBe("alert");
+    expect(classifyAlert(0, 80, P, T)).toBe("alarm");
   });
 
   it("gana la peor de las dos clasificaciones", () => {
     // Velocidad normal pero acumulado en alarma.
-    expect(classifyAlert(-1, -80, T)).toBe("alarm");
+    expect(classifyAlert(-1, -80, P, T)).toBe("alarm");
     // Velocidad en alarma pero acumulado normal.
-    expect(classifyAlert(-12, -5, T)).toBe("alarm");
+    expect(classifyAlert(-12, -5, P, T)).toBe("alarm");
   });
 
   it("trata la velocidad ausente como no clasificable por velocidad", () => {
     // La línea base no tiene velocidad; solo debe pesar el acumulado.
-    expect(classifyAlert(null, -30, T)).toBe("caution");
-    expect(classifyAlert(null, 0, T)).toBe("normal");
+    expect(classifyAlert(null, -30, null, T)).toBe("caution");
+    expect(classifyAlert(null, 0, null, T)).toBe("normal");
   });
 
   it("trata el acumulado ausente como no clasificable por acumulado", () => {
-    expect(classifyAlert(-6, null, T)).toBe("alert");
+    expect(classifyAlert(-6, null, P, T)).toBe("alert");
   });
 
   it("es normal si no hay ni velocidad ni acumulado", () => {
-    expect(classifyAlert(null, null, T)).toBe("normal");
+    expect(classifyAlert(null, null, null, T)).toBe("normal");
+  });
+
+  it("no juzga la velocidad de un parcial que cabe en el ruido (Fase 44)", () => {
+    // 1 mm en 7 días son 4.35 mm/mes, y 6 mm en 7 días, 26 mm/mes: con los
+    // umbrales de edificio serían «Precaución» y «Alarma» por puro ruido.
+    expect(ALERT_VELOCITY_NOISE_MM).toBe(trendDeviationMargin());
+    expect(classifyAlert(-4.35, -3, -1, T)).toBe("normal");
+    expect(classifyAlert(-26.1, -3, -6, T)).toBe("normal");
+    expect(classifyAlert(26.1, 3, 6, T)).toBe("normal");
+    // 6.1 mm ya no cabe: la velocidad vuelve a contar.
+    expect(classifyAlert(-26.5, -3, -6.1, T)).toBe("alarm");
+    // El acumulado se juzga siempre.
+    expect(classifyAlert(-26.1, -30, -6, T)).toBe("caution");
   });
 });
+
 
 describe("classifyReadings", () => {
   it("asigna el nivel a cada lectura y el peor a la visita", () => {
@@ -461,7 +478,7 @@ describe("classifyReadings", () => {
           date: "2025-02-15",
           readings: [
             { pointId: "p1", elevation: 99.999 }, // −1 mm: normal
-            { pointId: "p2", elevation: 99.994 }, // −6 mm: alerta por velocidad
+            { pointId: "p2", elevation: 99.992 }, // −8 mm: alerta por velocidad (pasa el ruido)
           ],
         },
       ],

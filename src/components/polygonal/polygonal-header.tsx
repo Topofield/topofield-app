@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { RouteMenus } from "@/lib/route-menus";
 import { Badge } from "@/components/design-system";
 import { ProcessHeader } from "@/components/process/process-header";
 import {
@@ -25,6 +26,7 @@ import { callAction } from "@/lib/errors/action-call";
 interface PolygonalHeaderProps {
   projectId: string;
   projectName: string;
+  menus?: RouteMenus;
   process: PolygonalProcess;
   stations: PolygonalStationWithReadings[];
   exportHref: string;
@@ -43,6 +45,7 @@ const blank = (v: string | null) => (v && v.trim() !== "" ? v : null);
 export function PolygonalHeader({
   projectId,
   projectName,
+  menus,
   process,
   stations,
   exportHref,
@@ -79,6 +82,7 @@ export function PolygonalHeader({
   return (
     <ProcessHeader
       projectName={projectName}
+      menus={menus}
       hubHref={hubHref}
       title={process.name}
       badges={

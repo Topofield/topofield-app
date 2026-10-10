@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Alert, Button, Input, Modal } from "@/components/design-system";
-import { EquipmentIdentity } from "@/components/equipment/equipment-picker";
+import { EquipmentIdentity } from "@/components/process/equipment-identity";
 import { createLevelingProcessAction } from "@/app/(app)/projects/[id]/leveling/create-actions";
 import { callAction } from "@/lib/errors/action-call";
 import { cn } from "@/lib/utils/cn";
@@ -262,7 +262,6 @@ export function LevelingDetailsDialog(props: DialogProps) {
               />
             </div>
             <EquipmentIdentity
-              kind="level"
               value={{ brand: form.equipmentBrand, model: form.equipmentModel, serial: form.equipmentSerial }}
               onChange={(v) => set({ equipmentBrand: v.brand, equipmentModel: v.model, equipmentSerial: v.serial })}
             />

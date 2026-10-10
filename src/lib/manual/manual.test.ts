@@ -38,7 +38,7 @@ describe("los capítulos", () => {
     expect(manual.capitulos.map((c) => c.numero)).toEqual(manual.capitulos.map((_, i) => i + 1));
     const slugs = manual.capitulos.map((c) => c.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
-    expect(manual.capitulos.length).toBeGreaterThanOrEqual(9);
+    expect(manual.capitulos.length).toBeGreaterThanOrEqual(8);
   });
 
   it("el README los enlaza todos, en orden", () => {

@@ -11,7 +11,7 @@
 
 import type ExcelJS from "exceljs";
 import { bookElevations, bookRowInputOf, computeBook } from "@/lib/calculations/settlement-book";
-import { DAYS_PER_MONTH } from "@/lib/calculations/tolerances";
+import { ALERT_VELOCITY_NOISE_MM, DAYS_PER_MONTH } from "@/lib/calculations/tolerances";
 import { samePointCode } from "@/lib/calculations/leveling";
 import type { computeHistory } from "@/lib/calculations/settlement";
 import { PRECISION_ORDERS, PRECISION_ORDER_LABELS } from "@/types/project";
@@ -194,14 +194,22 @@ function sheetBooks(wb: ExcelJS.Workbook, a: Parameters<typeof buildSettlementWo
 
 /**
  * El peor nivel de velocidad y acumulado, con la regla de `classifyAlert`. La
- * primera lectura de un punto no tiene velocidad (`vel` null) y se juzga solo
- * por el acumulado.
+ * primera lectura de un punto no tiene velocidad (`speed` null) y se juzga solo
+ * por el acumulado; tampoco cuenta la velocidad de un parcial que no pasa del
+ * margen de ruido (Fase 44).
  */
-function alertFormula(vel: string | null, acc: string, t: Record<keyof Thresholds, string>): string {
+function alertFormula(
+  speed: { vel: string; partial: string; noise: string } | null,
+  acc: string,
+  t: Record<keyof Thresholds, string>,
+): string {
   const level = (x: string, c: string, al: string, am: string) =>
     `IF(ABS(${x})>=${am},3,IF(ABS(${x})>=${al},2,IF(ABS(${x})>=${c},1,0)))`;
   const byAcc = level(acc, t.accumulatedCaution, t.accumulatedAlert, t.accumulatedAlarm);
-  const m = vel ? `MAX(${level(vel, t.velocityCaution, t.velocityAlert, t.velocityAlarm)},${byAcc})` : byAcc;
+  const byVel = speed
+    ? `IF(ABS(${speed.partial})>${speed.noise},${level(speed.vel, t.velocityCaution, t.velocityAlert, t.velocityAlarm)},0)`
+    : null;
+  const m = byVel ? `MAX(${byVel},${byAcc})` : byAcc;
   return `IF(${m}=3,"${ALERT_LEVEL_LABELS.alarm}",IF(${m}=2,"${ALERT_LEVEL_LABELS.alert}",IF(${m}=1,"${ALERT_LEVEL_LABELS.caution}","${ALERT_LEVEL_LABELS.normal}")))`;
 }
 
@@ -228,7 +236,10 @@ function sheetComparison(wb: ExcelJS.Workbook, a: Parameters<typeof buildSettlem
     putLabel(ws, 1, r + 1 + i, label);
     t[key] = putData(ws, 3, r + 1 + i, a.thresholds[key], FMT.rate);
   });
-  r += keys.length + 2;
+  // Hasta este parcial, la velocidad no cuenta para el semáforo (Fase 44).
+  putLabel(ws, 1, r + 1 + keys.length, "Margen de ruido (mm)");
+  const noise = putData(ws, 3, r + 1 + keys.length, ALERT_VELOCITY_NOISE_MM, FMT.mm);
+  r += keys.length + 3;
 
   // Rótulos: «Visita N», su fecha y las cinco columnas.
   const visitRow = r;
@@ -283,7 +294,8 @@ function sheetComparison(wb: ExcelJS.Workbook, a: Parameters<typeof buildSettlem
           FMT.rate,
         );
       }
-      putFormula(ws, c + 4, row, alertFormula(previous ? at(c + 3, row) : null, at(c + 1, row), t), ALERT_LEVEL_LABELS[reading.alertStatus]);
+      const speed = previous ? { vel: at(c + 3, row), partial: at(c + 2, row), noise } : null;
+      putFormula(ws, c + 4, row, alertFormula(speed, at(c + 1, row), t), ALERT_LEVEL_LABELS[reading.alertStatus]);
       previous = { cota, date: dateCells.get(hv.visitId)! };
     });
   });

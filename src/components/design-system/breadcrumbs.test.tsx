@@ -89,4 +89,38 @@ describe("Breadcrumbs en la barra (Fase 33)", () => {
     const back = html.match(/<a[^>]*class="([^"]*sm:hidden[^"]*)"/)?.[1] ?? "";
     expect(back.split(" ")).toContain("min-w-0");
   });
+
+  it("una miga con hermanos abre su menú; la actual va marcada (Fase 44)", () => {
+    const entries = [
+      { label: "Edificio Norte", href: "/projects/1", current: true },
+      { label: "Vía Sur", href: "/projects/2", hint: "Archivado" },
+    ];
+    const html = renderToStaticMarkup(
+      createElement(Breadcrumbs, {
+        items: [
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Edificio Norte", href: "/projects/1", menu: { label: "Otros proyectos", entries } },
+          { label: "Cuadrado" },
+        ],
+      }),
+    );
+    expect(html).toMatch(/<button[^>]*popovertarget="ruta-menu-1"[^>]*aria-label="Otros proyectos"/i);
+    expect(html).toMatch(/<div[^>]*id="ruta-menu-1"[^>]*popover="auto"/);
+    expect(html).toMatch(/<a (?=[^>]*aria-current="page")(?=[^>]*href="\/projects\/1")/);
+    expect(html).toContain("Archivado");
+    // La miga actual no se encoge antes que las anteriores.
+    expect(html).toMatch(/<li class="[^"]*shrink-0[^"]*">(?:(?!<\/li>).)*<span aria-current="page"/);
+  });
+
+  it("sin hermanos, no hay menú", () => {
+    const html = renderToStaticMarkup(
+      createElement(Breadcrumbs, {
+        items: [
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Edificio Norte", menu: { label: "Otros proyectos", entries: [{ label: "Edificio Norte", href: "/projects/1" }] } },
+        ],
+      }),
+    );
+    expect(html).not.toContain("popover");
+  });
 });

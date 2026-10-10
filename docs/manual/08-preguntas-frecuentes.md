@@ -37,9 +37,9 @@ precisión alcanzó, y su informe avisa si no alcanza ninguno.
 ### ¿Dónde pongo el equipo y el orden de precisión?
 
 El equipo va en cada proceso, no en el proyecto: la poligonal y la nivelación
-en su alta, y cada visita en la suya. El orden no se pone en ninguno: se
-detecta al calcular. Si usa siempre el mismo equipo, guárdelo en el catálogo
-(vea [El catálogo de equipos](07-equipos.md)).
+en su alta, y cada visita en la suya. Se escribe la marca, el modelo y el
+número de serie, y sale en el informe. El orden no se pone en ninguno: se
+detecta al calcular.
 
 ### ¿La aplicación juzga si mi equipo da para el orden que necesito?
 
@@ -114,6 +114,13 @@ No. Cada lectura se guarda al escribirla. La visita queda **En medición**, y
 Porque la velocidad se calcula con los días reales entre las dos fechas, no con
 «un mes» fijo. Un intervalo de 28 días y uno de 31 dan velocidades distintas
 aunque el asentamiento sea el mismo.
+
+### Un punto bajó 3 mm en una semana y sigue en Normal. ¿Por qué?
+
+Porque un movimiento de hasta 6 mm entre dos visitas cabe en el error de la
+medición, y el semáforo no juzga su velocidad: solo su acumulado. Si el punto
+de verdad se está moviendo, el acumulado crece visita a visita y el semáforo
+lo marca al pasar sus umbrales.
 
 ### Un tramo de mi visita no alcanza ningún orden. ¿Qué pasa?
 

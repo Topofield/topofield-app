@@ -10,17 +10,12 @@ que lo descartó.
 
 ## Estado (2026-10-09)
 
-Las **43 fases están cerradas** y el producto está terminado. Quedan **tres
-peticiones sin fase**, todas con su texto más abajo:
+Las **44 fases están cerradas** y el producto está terminado. **No queda
+ninguna petición abierta**: la Fase 44 resolvió las tres últimas —el semáforo
+por velocidad con margen de ruido, NC1 (que terminó en quitar el catálogo de
+equipos) y HC2—.
 
-| Petición | Sección | Qué falta |
-|---|---|---|
-| **HC2** | «Navegación» | Un selector en cada miga de la barra para saltar entre proyectos y procesos |
-| **Semáforo por velocidad** | «Semáforo por velocidad con margen de ruido» | Que el ruido de la mira no dispare la alarma por velocidad |
-| **NC1** | «Catálogos en la nivelación» | Quitar «Tomar del catálogo» del equipo en el alta de la nivelación, como en la poligonal (hoy sigue en `leveling-details-dialog.tsx`) |
-
-Lo demás de este archivo está resuelto y se conserva como registro. Los
-tres hallazgos del recorrido del manual los resolvió la **Fase 43**.
+Todo este archivo se conserva como registro.
 
 ## Cómo se resolvieron las peticiones (registro hasta el 2026-10-08)
 
@@ -698,7 +693,10 @@ cuenta con el correo, el tema y «Cerrar sesión».
 
 ### HC2 · Saltar entre proyectos y procesos desde la ruta
 
-Sin fase. Es la continuación natural de HC1: un selector en cada miga de la
+> **Resuelta en la Fase 44** ([`prds/43-ultimos-pendientes.md`](./prds/43-ultimos-pendientes.md)).
+> Se conserva el texto de la petición como registro.
+
+Era la continuación natural de HC1: un selector en cada miga de la
 barra —el proyecto, el proceso o el lugar— para ir a otro sin pasar por el hub
 ni por el dashboard. Se deja fuera de la Fase 33 para ver primero cómo
 funciona la barra. La revisión de la Fase 33 dejó un detalle para esta misma
@@ -773,7 +771,10 @@ mide una visita, y entra en esa fase:
   Además se pueden modificar los datos de estos BM fácilmente o agregar más»;
 - «no manejemos compensar nivelaciones aquí»: la visita no se compensa.
 
-## Semáforo por velocidad con margen de ruido (sin fase)
+## Semáforo por velocidad con margen de ruido
+
+> **Resuelta en la Fase 44** ([`prds/43-ultimos-pendientes.md`](./prds/43-ultimos-pendientes.md)).
+> Se conserva el texto de la petición como registro.
 
 Lo anticipó el análisis de la cartera real de asentamientos (2026-10-03) y lo
 confirmó el lienzo de la Fase 37: con los umbrales de edificio, las visitas 1
@@ -784,7 +785,7 @@ milímetro en siete días son 4.35 mm/mes —precaución— y tres, 13 mm/mes
 de la Fase 32 se aplica a los avisos de tendencia, no al semáforo. La hoja de
 ruta de las Fases 36 y 37 lo deja fuera de su alcance, como petición aparte.
 
-## Catálogos en la nivelación (sin fase)
+## Catálogos en la nivelación
 
 El 2026-10-07, al probar la poligonal rediseñada, el usuario reportó que el
 equipo no se podía escribir («sale por defecto Leica. Quitar eso y llenar
@@ -796,6 +797,9 @@ distancias. Los dos se corrigieron en la poligonal, en la rama
 corrige el punto del catálogo, con aviso de qué cambia.
 
 ### NC1 · Los catálogos en el alta de la nivelación
+
+> **Resuelta en la Fase 44** ([`prds/43-ultimos-pendientes.md`](./prds/43-ultimos-pendientes.md)).
+> Se conserva el texto de la petición como registro.
 
 Al preguntarle si «Tomar del catálogo» del equipo se quitaba también en el
 alta de la nivelación, que usa el mismo bloque (`EquipmentIdentity`), pidió:

@@ -9,6 +9,7 @@ import {
   getLevelingProcess,
   getLevelingReadings,
   getProjectById,
+  getRouteMenus,
 } from "@/lib/supabase/queries";
 
 interface LevelingPageProps {
@@ -34,19 +35,20 @@ export default async function LevelingPage({ params, searchParams }: LevelingPag
   const process = await getLevelingProcess(supabase, pid);
   if (!process || process.project_id !== id) notFound();
 
-  const [readings, project] = await Promise.all([
+  const basePath = `/projects/${id}/leveling/${pid}`;
+  const [readings, project, menus] = await Promise.all([
     getLevelingReadings(supabase, pid),
     getProjectById(supabase, id),
+    getRouteMenus(supabase, id, basePath),
   ]);
   if (!project) notFound();
-
-  const basePath = `/projects/${id}/leveling/${pid}`;
 
   return (
     <div className="flex flex-col gap-5">
       <LevelingHeader
         projectId={id}
         projectName={project.name}
+        menus={menus}
         process={process}
         readings={readings}
         exportHref={`${basePath}/export`}

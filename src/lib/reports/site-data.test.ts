@@ -96,12 +96,13 @@ describe("siteReportOf (Fase 37, decisión 21)", () => {
   });
 
   it("los puntos de la última visita, con su acumulado, su velocidad y su estado", () => {
-    const r = report([visit(1, "2025-01-01", 100), visit(2, "2025-01-31", 99.994)]);
+    // −8 mm: pasa el margen de ruido, así que la velocidad cuenta (Fase 44).
+    const r = report([visit(1, "2025-01-01", 100), visit(2, "2025-01-31", 99.992)]);
     expect(r.last?.visitNumber).toBe(2);
     expect(r.last?.points.map((p) => [p.code, p.accumulated, p.alert])).toEqual([
       ["A1", 0, "normal"],
-      ["B10", -6, "alert"],
+      ["B10", -8, "alert"],
     ]);
-    expect(r.last?.points[1]!.velocity).toBeCloseTo(-6.09, 2);
+    expect(r.last?.points[1]!.velocity).toBeCloseTo(-8.12, 2);
   });
 });

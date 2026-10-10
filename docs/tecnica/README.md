@@ -4,8 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-09 · Fase 43 cerrada; fases 38 a 42 en
-producción, con la migración de la 38 aplicada (§ 13) · 1229 tests y 137 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-10-09 · Fase 44 cerrada; fases 38 a 43 en
+producción, con la migración de la 38 aplicada (§ 13) · 1212 tests y 128 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -97,6 +97,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 41 | El dibujo de la poligonal como un mapa | cerrada |
 | 42 | El manual por capítulos | cerrada |
 | 43 | Las correcciones del recorrido | cerrada |
+| 44 | Los últimos pendientes | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -205,7 +206,6 @@ src/
 │   ├── (app)/               pantallas autenticadas
 │   │   ├── dashboard/
 │   │   ├── manual/          portada y [capitulo]/ del manual, leídos de docs/manual/ (§ 12)
-│   │   ├── equipos/         catálogo de equipos del usuario (Fase 25)
 │   │   ├── projects/new/    alta de proyecto
 │   │   └── projects/[id]/
 │   │       ├── polygonal/[pid]/         pasos Datos · Ajuste · Informe (Fase 35) y export/ (Excel, Fase 38); el alta es un popup del hub
@@ -220,8 +220,7 @@ src/
 ├── components/
 │   ├── auth/                formulario de registro
 │   ├── design-system/       componentes propios reutilizables
-│   ├── process/             cabecera, pasos y borrador comunes (Fases 35 a 37) y el informe de un proceso (Fase 22)
-│   ├── equipment/           catálogo de equipos: página, selector de los formularios y su contexto (Fase 25)
+│   ├── process/             cabecera, pasos y borrador comunes (Fases 35 a 37), el informe de un proceso (Fase 22) y los campos del equipo (Fase 44)
 │   ├── navigation/          barra superior y menú de cuenta (Fase 33); la guarda de cambios sin guardar (Fase 22) salió en la 37
 │   ├── polygonal/           pantalla por pasos de la poligonal: alta, amarre y mediciones en popups, ajuste (Fase 35)
 │   ├── leveling/            pantalla por pasos de la nivelación: alta, BM y armadas en popups, perfil, compensación y su gráfico (Fase 36)
@@ -240,9 +239,9 @@ src/
 │   ├── errors/              errores de la base traducidos para el usuario (Fase 22)
 │   ├── auth/                mensajes de error de autenticación
 │   ├── theme.ts, theme-server.ts   tema claro y oscuro por cookie (Fase 20)
-│   ├── equipment.ts         del catálogo de equipos a los campos de los formularios (Fase 25)
 │   ├── process-list.ts      filtrado y orden del listado del hub (los tres módulos)
 │   ├── process-status.ts    tonos de estado de procesos y visitas (el lugar no tiene, Fase 37)
+│   ├── route-menus.ts       los menús de la ruta de la barra: otros proyectos y otros procesos (Fase 44)
 │   ├── supabase/            clientes y consultas
 │   └── utils/
 ├── types/                   tipos, incluido database.ts generado
@@ -294,7 +293,6 @@ donde se aplican las guardas de negocio.
 | `(app)/projects/[id]/settlement/[siteId]/actions.ts` | `createVisitAction` (el popup: fecha, nivelador, nota y equipo, con la libreta de la plantilla, Fase 37), `saveVisitAction` (la libreta entera, lectura por lectura: ver § 4), `deleteVisitAction` (cualquier visita, y recalcula el lugar, Fase 37); `closeVisitAction` salió en la Fase 37 |
 | `(app)/projects/[id]/settlement/[siteId]/benchmark-actions.ts` | Los BM del lugar (Fase 37): `saveBenchmarkAction` (agrega o edita; si cambia la cota o el código, recalcula el lugar), `deleteBenchmarkAction` (solo uno que ninguna visita nombra), `importBenchmarksAction` y `benchmarkImpactAction` (cuántas visitas lo nombran, para el aviso) |
 | `(app)/projects/[id]/sites/[siteId]/point-actions.ts` | `createPointAction`, `savePointAction` (la C0 se cambia aunque haya lecturas, Fase 37), `pointImpactAction` (cuántas visitas cambian, Fase 37), `deletePointAction`, `retirePointAction`, `undoRetirementAction` (Fase 11) |
-| `(app)/equipos/actions.ts` | `createEquipmentAction`, `updateEquipmentAction`, `deleteEquipmentAction` (Fase 25) |
 
 ### Guardados en una transacción (Fase 23)
 
@@ -575,7 +573,8 @@ libro».
   punto —la celda la elige el exportador, como hace la cartera a mano—,
   VEL. en mm/mes (`DAYS` entre visitas sobre 30.4375) y SEMÁFORO, con `IF`
   contra los umbrales como `classifyAlert` (la primera lectura, solo por el
-  acumulado) y su color. Un punto sin lectura en una visita deja sus celdas
+  acumulado; desde la Fase 44, la velocidad solo si el parcial pasa del
+  «Margen de ruido», una celda bajo los umbrales) y su color. Un punto sin lectura en una visita deja sus celdas
   vacías. «Resumen»: el lugar, su descripción como ubicación, el tipo de
   estructura y sus BM.
 
@@ -623,11 +622,10 @@ Dos detalles que se rompen fácil:
 
 ## 4. Modelo de datos
 
-Quince tablas en `public` (dieciséis hasta la Fase 38, que borra `reports`):
+Catorce tablas en `public` (la Fase 38 borró `reports`, y la 44, `equipment`):
 
 ```
 profiles         perfil del usuario (1:1 con auth.users)
-equipment        catálogo de equipos del usuario (Fase 25)
 projects         proyecto topográfico
 ├── reference_points      puntos de coordenadas conocidas
 ├── sites                 lugar de monitoreo (entidad transversal, Fase 5)
@@ -643,20 +641,14 @@ projects         proyecto topográfico
     └── leveling_readings     lecturas de la libreta
 ```
 
-**`equipment` es una plantilla, no una referencia (Fase 25).** Guarda las
-estaciones totales y los niveles de cada usuario. Elegir uno («Tomar del
-catálogo», en el alta de la nivelación y en la visita) **copia** su marca,
-modelo y serie en las columnas `equipment_*` del proceso o de la visita, que
-siguen siendo la fuente del informe. La poligonal teclea su equipo, sin
-catálogo, desde las correcciones de la Fase 35. Hasta las Fases 35 a 37 se
-copiaban también la precisión y la calibración. Ningún proceso referencia
-`equipment`, así que corregir o borrar un equipo no cambia nada medido ni
-informado —el agujero por el que la Fase 8 descartó una tabla referenciada por
-id—. Las escalas de sus columnas
-son las de los procesos; un CHECK deja vacíos los campos del otro tipo y un
-índice único sobre marca, modelo y serie (sin mayúsculas ni espacios) evita
-el mismo aparato dos veces. `lib/equipment.ts` convierte entre la fila y los
-campos de los formularios.
+**Sin catálogo de equipos (Fase 44).** De la Fase 25 a la 43, la tabla
+`equipment` guardaba las estaciones totales y los niveles de cada usuario como
+plantilla: «Tomar del catálogo», en la nivelación y en la visita, copiaba su
+marca, modelo y serie en las columnas `equipment_*`, y ningún proceso la
+referenciaba. Cuando la poligonal (correcciones de la Fase 35), y luego la
+nivelación y la visita (Fase 44), pasaron a pedir el equipo escribiendo, el
+catálogo se quedó sin uso y se borró con su página. El equipo de cada proceso
+sigue en sus columnas `equipment_*` y sale en el informe y en el Excel.
 
 **Ningún informe se guarda (Fase 38).** La tabla `reports` guardaba los
 informes consolidados: qué procesos incluían y en qué orden
@@ -988,7 +980,8 @@ motivó la fase, porque editar la fila cambiaría el equipo de los informes de
 procesos ya cerrados. Con los campos sueltos en el proceso, el congelado salía
 gratis de la inmutabilidad que existía entonces (§ 5), mientras el proceso
 estuviera cerrado. Desde las Fases 35 a 37 nada se cierra, y el equipo del
-informe es el que el proceso tenga guardado.
+informe es el que el proceso tenga guardado. La Fase 25 sumó el catálogo como
+plantilla, sin referencia, y la Fase 44 lo quitó (§ 4).
 
 **Consecuencia para el informe.** Antes de esta fase, la página de impresión
 de los informes consolidados leía `project.precision_order`/`project.equipment_*`
@@ -1010,7 +1003,7 @@ Las quince tablas tienen RLS activo, con políticas para las operaciones que
 admiten. `site_benchmarks` (Fase 37) cuelga del proyecto a través del lugar,
 como `settlement_points`.
 
-`projects` y `equipment` (Fase 25) filtran por `user_id = auth.uid()`. Las tablas hijas heredan la
+`projects` filtra por `user_id = auth.uid()` (también `equipment`, de la Fase 25 a la 44). Las tablas hijas heredan la
 propiedad mediante `EXISTS` sobre el proyecto contenedor:
 
 ```sql
@@ -1306,7 +1299,7 @@ testear los algoritmos de forma aislada y es lo que sostiene la monografía.
 | `settlement-summary.ts` | `summarizeSite`, `chainedMeans`, `nextAccumulatedThreshold` — el resumen del lugar para el panel y el informe |
 | `settlement-persistence.ts` | `readingChanged`, `visitsToRewrite`, `bookRowsToPersist` — qué lecturas hay que reescribir al guardar |
 | `correction-breakdown.ts` | `correctionBreakdown` — cómo corrigió el método elegido, con las cifras del motor, para el paso Ajuste y el informe (Fase 35); solo vuelve a resolver el 2×2 de Crandall para mostrar λ₁ y λ₂ |
-| `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `LEVELING_TOLERANCE_K`, `DAYS_PER_MONTH`, `SETTLEMENT_THRESHOLD_PRESETS`, `CALIBRATION_MAX_MONTHS`, `MIDDLE_WIRE_TOLERANCE_M`, `TREND_DEVIATION_RATE_FACTOR`, `angularTolerance`, `minRelativePrecision`, `levelingTolerance`, `detectPrecisionOrder`, `thresholdsFor`, `thresholdsOf`; el margen fijo de la tendencia (`trendDeviationMargin`, `accelerationMargin`, Fase 37) |
+| `tolerances.ts` | `ANGULAR_TOLERANCE_K`, `MIN_RELATIVE_PRECISION`, `LEVELING_TOLERANCE_K`, `DAYS_PER_MONTH`, `SETTLEMENT_THRESHOLD_PRESETS`, `ALERT_VELOCITY_NOISE_MM` (Fase 44), `MIDDLE_WIRE_TOLERANCE_M`, `TREND_DEVIATION_RATE_FACTOR`, `angularTolerance`, `minRelativePrecision`, `levelingTolerance`, `detectPrecisionOrder`, `thresholdsFor`, `thresholdsOf`; el margen fijo de la tendencia (`trendDeviationMargin`, `accelerationMargin`, Fase 37) |
 
 ### `computePolygonal`
 
@@ -1704,9 +1697,7 @@ error y la tolerancia se comparan con un margen de 10⁻⁶ mm (`withinTolerance
 Fase 26, C-13): el error sale de restar cotas en coma flotante, y sin margen
 un cierre exactamente igual a la tolerancia cumplía o no según la cota del BM.
 Las tolerancias son las del marco teórico; la FGCS (1984) no lleva el √2 de la
-discrepancia y sus clases están corridas (auditoría del cálculo, § 6). `CALIBRATION_MAX_MONTHS`
-(12) es la antigüedad de la calibración a partir de la cual el formulario de
-equipo avisa (Fase 25).
+discrepancia y sus clases están corridas (auditoría del cálculo, § 6).
 
 El **equilibrado de visuales** (Fases 19 y 32, con los límites de la FGCS) se
 retiró en la Fase 36 (decisión 7): es un aviso de campo, no parte del ajuste, y
@@ -1882,7 +1873,13 @@ verificadas independientemente contra el marco teórico del dominio (ver
   valor esperado por cálculo directo con cinco intervalos reales (28, 30,
   31, 61, 92 días).
 - **`classifyAlert`** — la peor clasificación entre velocidad y acumulado
-  gana, evaluada en las fronteras exactas de cada umbral (`>=`, no `>`). Los
+  gana, evaluada en las fronteras exactas de cada umbral (`>=`, no `>`).
+  Desde la Fase 44, la velocidad no clasifica si su parcial no pasa de
+  `ALERT_VELOCITY_NOISE_MM` —6 mm, el margen de ruido de dos visitas de los
+  avisos de tendencia—: con visitas cada semana, 1 mm de una mira que
+  resuelve el milímetro eran 4.35 mm/mes, y el semáforo alarmaba por ruido.
+  La lectura se juzga entonces solo por su acumulado; la velocidad se
+  guarda y se muestra igual. Los
   estados del marco teórico tampoco sirven como fixture: no se derivan de
   ningún juego de umbrales consistente (mismo documento, hallazgo 3).
 
@@ -2148,16 +2145,10 @@ lecturas crudas al mismo validador.
 
 ### El equipo del catálogo (Fase 25)
 
-`validateEquipmentItem` (`validators/equipment.ts`) valida un equipo antes de
-guardarlo en el catálogo, en la página y en las Server Actions: marca o
-modelo; calibración válida y no futura; precisiones positivas —o no negativas
-los dos términos de distancia— que quepan en su columna. Solo mira los campos
-de su tipo. `calibrationOverdue` dice si una calibración tiene más de
-`CALIBRATION_MAX_MONTHS` a una fecha de referencia. Avisa, no bloquea. Desde
-que la poligonal (Fase 35), la nivelación (Fase 36) y la visita (Fase 37) solo
-piden la identidad del equipo —marca, modelo y serie—, el aviso queda en la
-página del catálogo, contra la fecha de hoy. El equipo que se teclea en un
-proceso sigue sin validarse (fuera del alcance de la fase).
+`validateEquipmentItem` (`validators/equipment.ts`) validaba los equipos del
+catálogo, con el aviso de calibración de más de doce meses
+(`CALIBRATION_MAX_MONTHS`); salieron con el catálogo en la Fase 44. El equipo
+que se teclea en un proceso —marca, modelo y serie— no se valida.
 
 ### Capa 2 — cierre
 
@@ -2268,8 +2259,9 @@ mano, inline.
 `ActionBar` · `Alert` · `Badge` · `Breadcrumbs` · `Button` · `Card` ·
 `DmsInput` · `Drawer` · `EmptyState` · `Input` · `KpiCard` · `Logo` · `Modal` ·
 `NumberInput` · `PageHeader` · `Select` · `Skeleton` · `StatusIndicator` ·
-`Tabs` · `Textarea` · `ThemeSelect`, más `LevelFieldset`/`TotalStationFieldset`
-y `PrecisionOrderSelect`.
+`Tabs` · `Textarea` · `ThemeSelect`, más `PrecisionOrderSelect`. Los
+fieldsets de equipo (`LevelFieldset`, `TotalStationFieldset`) salieron con el
+catálogo en la Fase 44.
 
 ### La barra superior (Fase 33)
 
@@ -2281,7 +2273,8 @@ con contenido oscuro pasando por debajo.
 
 - **A la izquierda**, el logo, que lleva al dashboard: el isotipo por debajo de
   640 px y el logo completo desde ahí.
-- **A la derecha**, `AppBarLink` para Equipos y Manual: icono en SVG en línea
+- **A la derecha**, `AppBarLink` para el Manual (Equipos salió con el
+  catálogo en la Fase 44): icono en SVG en línea
   (no hay librería de iconos) y nombre desde 640 px. El nombre sigue siendo el
   accesible en el teléfono (`sr-only sm:not-sr-only`). La sección actual lleva
   `aria-current="page"` y la raya `mira-strong` de las pestañas.
@@ -2300,6 +2293,16 @@ con contenido oscuro pasando por debajo.
   contexto (en el servidor no se pintan: las migas saltarían al hidratar), las
   migas desde `usePathname` (ids, no nombres) y las rutas paralelas (duplican
   rutas y consultas).
+- **Los menús de la ruta (Fase 44).** Una miga con hermanos —el proyecto, el
+  proceso o el lugar— lleva un botón ⌄ que abre la lista de los demás: los
+  proyectos de la cuenta o los procesos del proyecto, con su tipo y el actual
+  marcado. Es un `popover` como el menú de cuenta, sin JavaScript propio,
+  colgado de la barra y alineado con el inicio de la ruta (anclarlo a la miga
+  pide CSS que no todos los navegadores tienen). La `key` del `<nav>` cambia
+  con la página, así que navegar desde el menú lo cierra. Las listas las arma
+  `routeMenusOf` (`lib/route-menus.ts`) con lo que trae `getRouteMenus`, una
+  consulta por lista. La miga actual no se encoge antes que las anteriores.
+  En el teléfono la ruta sigue reducida al retorno, sin menús.
 - **En el teléfono**, el «‹ nivel anterior» lleva `min-w-0`: sin él, un nombre
   de más de unos 30 caracteres salía del hueco, y como la ruta va por encima
   de la barra, tapaba Equipos, Manual y la cuenta y se quedaba sus toques.
@@ -2631,19 +2634,12 @@ Excepciones conocidas, anteriores a la Fase 20 y comprobadas al revisarla:
 `…Fieldset` de equipo (Fase 8) los tipos —las tolerancias, solo hasta que la
 Fase 31 quitó el aviso de equipo—, y `StatusIndicator` el tipo de los
 niveles del semáforo. `PrecisionOrderSelect` se quedó sin usuarios desde que
-el orden se detecta (Fases 35 a 37), y los fieldsets solo los usa el catálogo
-de equipos.
+el orden se detecta (Fases 35 a 37).
 
-El catálogo de equipos (Fase 25) **no** entró en los fieldsets: ganaron solo
-dos huecos, `header` y `footer` (el `order` opcional que tenían servía al aviso
-de equipo y salió con él en la Fase 31). El selector, el botón
-«Guardar en el catálogo», la acción que llama y el aviso de calibración viven
-en `components/equipment/`, y el catálogo llega por un contexto que carga el
-layout de las pantallas autenticadas. Desde las Fases 35 a 37 los formularios
-montan `EquipmentIdentity` (la identidad con «Tomar del catálogo», en la
-nivelación y la visita) y `TotalStationIdentity` (la poligonal, sin
-catálogo); `TotalStationEquipment` y `LevelEquipment` siguen exportados, sin
-usuarios.
+Los fieldsets de equipo (`equipment-fields.tsx`) los usaba solo el catálogo
+de equipos (Fase 25), y salieron con él en la Fase 44. Las tres altas montan
+`EquipmentIdentity` (`components/process/equipment-identity.tsx`): marca,
+modelo y n.º de serie, para escribir.
 
 Es un criterio verificable leyendo los imports, y explica la separación que ya
 existe: `Breadcrumbs` recibe `{ label, href }[]` y sirve a cualquier jerarquía;
@@ -2780,12 +2776,12 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1229 tests en 100 archivos, Vitest, entorno `node` **sin jsdom**. Además, 137
+1212 tests en 98 archivos, Vitest, entorno `node` **sin jsdom**. Además, 128
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `lib/calculations/settlement.test.ts` | 59 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12); «Acelerando» solo por encima del margen (Fase 31) y en su frontera de 6·√3 = 10.39 mm, `accelerationMargin` con intervalos iguales y distintos, y un punto que se salta una visita toma sus tres lecturas (Fase 32); el margen fijo, 6 mm entre dos visitas sin orden ni circuito (Fase 37, que retiró los casos del margen por circuito y `visitCircuitsOf`) |
+| `lib/calculations/settlement.test.ts` | 60 | Asentamiento parcial/acumulado, velocidad (intervalos 28/30/31/61/92 días), `classifyAlert`, tendencias, orden cronológico; línea base por primera lectura, `isPointActiveOn` y `pointInputOf` (Fase 11); lectura fuera de tendencia con P-09 y el seed como regresión (Fase 12); «Acelerando» solo por encima del margen (Fase 31) y en su frontera de 6·√3 = 10.39 mm, `accelerationMargin` con intervalos iguales y distintos, y un punto que se salta una visita toma sus tres lecturas (Fase 32); el margen fijo, 6 mm entre dos visitas sin orden ni circuito (Fase 37, que retiró los casos del margen por circuito y `visitCircuitsOf`); el semáforo no juzga la velocidad de un parcial de hasta 6 mm (Fase 44) |
 | `lib/calculations/leveling.test.ts` | 90 | Motor de nivelación: libreta, corrección proporcional, cierre, ida y vuelta; la vuelta de una abierta parte de la cota final de la ida (Fase 16); acumulado desde el origen: el BM de partida no se compensa, circuito del seed en 100.3027 / 99.8053 y un proceso reconstruido conserva su regla (Fase 19); sin distancias en un recorrido, la discrepancia no se evalúa (Fase 23); la vuelta de una cerrada con su propia tolerancia y su comprobación aritmética, un cierre igual a la tolerancia con cualquier cota y el acumulado en milímetros (Fase 26); la vuelta compensada en cerrada y de enlace, la cota adoptada y el ejemplo 1 de `docs/math/nivelacion.html` (Fase 28) |
 | `lib/calculations/homologous.test.ts` | 11 | Puntos homólogos ida-vuelta: la columna `P` de El Verjón con `AUX1`/`AUX 1`; los residuos del crudo leído con el importador; sin vuelta, solo con extremos compartidos o con una vuelta que no empieza donde terminó la ida, `null`; filas a medio capturar; códigos repetidos omitidos; de enlace; `samePointCode` (Fase 17) |
 | `lib/import/leveling/import.test.ts` | 23 | Importación de libretas: el crudo real de nivel digital leído del repositorio —cabecera, 16 armadas, promedios redondeados, calidad, giro en la armada 9, líneas desconocidas—; un recorrido (cierre −0.4 mm) e ida y vuelta (discrepancia 0.4 mm, C18 = 2542.9181) pasando por `computeLeveling`; plantilla CSV con `;` y coma decimal, radiaciones, vuelta declarada, comillas y un punto de cambio en dos filas; Windows-1252; una sola armada; detector (Fase 16); una distancia en cero o negativa no se importa (Fase 26) |
@@ -2796,6 +2792,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/calculations/polygonal-detect.test.ts` | 11 | **El orden y el tipo de ángulo detectados** (Fase 35): las fronteras de cada orden, sin verificación y sin alcanzar el ordinario; interior y exterior, con y sin fila de cierre; la TT4 en tercer orden; `observedAzimuths` y `angularConditionCount` |
 | `lib/calculations/correction-breakdown.test.ts` | 5 | El desglose de la corrección con la TT4 en los cuatro métodos, contra el motor: factores de Brújula y Tránsito, λ₁ y λ₂ de Crandall que reproducen sus proyecciones, el datum de mínimos cuadrados (Fase 35) |
 | `lib/process-list.test.ts` | 27 | Filtrado, orden y conteo del listado (Fase 22); sin los filtros de cerrados ni de lugares activos y cerrados desde la Fase 37 |
+| `lib/route-menus.test.ts` | 3 | Los menús de la ruta (Fase 44): los proyectos por nombre con el actual marcado y el archivado avisado; los procesos del proyecto, poligonales, nivelaciones y lugares, cada grupo por nombre; el orden del español |
 | `lib/utils/format.test.ts` | 34 | Fecha relativa, **formateo único de precisión** y mensaje del aviso de lectura fuera de tendencia (Fase 12); fecha corta con meses fijos, mm con signo y cierre de la libreta (Fase 18); coordenadas a 3 decimales y cotas a 4, sin cero negativo (Fase 22); los empates de coordenadas y cotas se redondean como en Excel (Fase 26); la hora del «Guardado», en Bogotá y 24 h (Fase 35) |
 | `lib/calculations/tolerances.test.ts` | 12 | Tolerancias por orden, presets de asentamientos y `thresholdsOf` |
 | `lib/export/polygonal-workbook.test.ts` | 15 | **El Excel de la poligonal con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor (`formulaMismatches`) con la TT4 por Brújula, Tránsito y Crandall, la abierta con control y la sin control, y la abierta con control por Tránsito y Crandall; la hoja lleva el nombre del método; el orden alcanzado de la TT4 es el detectado; cambiar una distancia recalcula las coordenadas; la georreferenciada con la rotación y la escala como datos; la Vivero por mínimos cuadrados, con fórmulas sobre los ángulos y distancias ajustados, y sin pesos, la hoja dice por qué; el encabezado lleva la ubicación y el responsable del alta; los ángulos de minutos enteros no salen con 60″ (revisión final); la precisión de cada punto de la Vivero bajo las matrices, con los valores del motor (Fase 39) |
@@ -2828,7 +2825,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/validators/settlement-book.test.ts` | 10 | Los mensajes de la derivación, con las filas desde 1 (Fase 18); el de la comprobación de un BM, que no culpa a ninguno (Fase 30); `validateBook` (Fase 37): la libreta vacía, cada tramo desde un BM del lugar, las lecturas por leer no son error, la distancia opcional y una tecleada que no puede ser cero, y un valor que no es número |
 | `lib/calculations/settlement-summary.test.ts` | 15 | KPIs: extremos con signo, levantamiento, visita base, visita sin lecturas, lugar sin visitas; siguiente umbral de acumulado (Fase 18); el promedio encadenado con altas, bajas, visitas sin lecturas y sin puntos comunes (Fase 31) |
 | `lib/demo/libreta-asentamientos.test.ts` | 6 | Generador de libretas del seed: válida, con punto de cambio, cierra con el error pedido y alcanza un orden; determinista (Fase 18); sin compensar, cada cota se aparta de la objetivo menos que el cierre, y un cierre fuera de todos los órdenes deja las cotas en las objetivo y la visita sin orden; una sola armada con cuatro puntos o menos (Fase 37) |
-| `lib/demo/cartera-asentamientos.test.ts` | 6 | **La cartera real de asentamientos** (Fase 37, decisión 23): 16 puntos y 7 visitas, la última del 2022-06-05; cada visita una armada abierta, calculada y sin verificación; reproduce celda a celda las cotas, «Comparación n» y «Comparación al anterior» de la hoja; numeradas de la 0 a la 6, como la aplicación (Fase 43); los avisos de B10 |
+| `lib/demo/cartera-asentamientos.test.ts` | 7 | **La cartera real de asentamientos** (Fase 37, decisión 23): 16 puntos y 7 visitas, la última del 2022-06-05; cada visita una armada abierta, calculada y sin verificación; reproduce celda a celda las cotas, «Comparación n» y «Comparación al anterior» de la hoja; numeradas de la 0 a la 6, como la aplicación (Fase 43); el semáforo: alarma en las visitas 1 a 3 y normal de la 4 a la 6 (Fase 44); los avisos de B10 |
 | `lib/calculations/leveling-detect.test.ts` | 14 | **El orden detectado y la compensación sin limitantes** (Fase 36): El Verjón en segundo orden con las cotas ajustadas del lienzo, el tramo 2 en −0.4 mm y primer orden, fuera del ordinario sin orden pero compensada, la abierta sin vuelta sin orden; la regla de la visita no cambia; la libreta a medias (`pendingRun`): sin armadas, una cerrada que no vuelve al BM, la ida y la vuelta de una abierta sin terminar, la abierta sin vuelta y una vuelta vieja que llega al BM como punto de cambio; «never» no compensa; una libreta que no encadena —un punto de cambio sin V+— queda sin orden y sin compensar, y una a medias que cuadra no (revisión final) |
 | `components/leveling/armadas.test.ts` | 10 | La captura por armada (Fase 36): las 10 armadas de la ida de El Verjón, la armada 2 con sus lecturas, capturar armada por armada reproduce la hoja, editar una del medio solo cambia sus filas, una armada a medias al final, una intermedia colgada después del último punto, quitar la última; la armada siguiente y el fin del recorrido; agregar una armada tras una intermedia colgada abre desde el último punto y la intermedia conserva su cota (revisión final) |
 | `components/leveling/armada-form.test.ts` | 8 | El popup de armada (Fase 36): del formulario a la armada y de vuelta, los hilos con la distancia y la comprobación del medio, los campos obligatorios y los números, la casilla de fin según el tipo y el recorrido, y los errores de la libreta en la vista que los tiene; una armada que no queda en la libreta es un error (revisión final); `readingWarnings`, los avisos de lecturas fuera de 0 a 4 m que muestran los dos popups (Fase 42) |
@@ -2859,9 +2856,6 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/export/workbook-colors.test.ts` | 8 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24); también los cuatro de la Fase 38: el fondo y la tinta de los datos (`miraBg`, `miraInk`), «CUMPLE» y «NO CUMPLE» |
 | `lib/export/formula-check.test.ts` | 5 | **El ayudante que evalúa las fórmulas de un libro** (Fase 38): fórmulas encadenadas, de otra hoja, con texto y con fechas; un libro coherente no tiene diferencias y uno con un resultado guardado falso sí; evalúa desde los datos crudos, así que cambiar un dato recalcula toda la cadena; sigue cadenas largas con funciones —el intérprete no es reentrante— y evalúa `MIN` |
 | `lib/export/cells.test.ts` | 5 | Las primitivas de celda (Fase 38): columnas y celdas con el nombre de Excel; una fórmula lleva su resultado guardado y un dato su estilo; `roundHalfUp` redondea los medios como `Math.round`, también los negativos; los bloques de tolerancias copian `tolerances.ts`; el encabezado de cada hoja dice cuándo se exportó, sin la marca de la app (Fase 40) |
-| `lib/validators/equipment.test.ts` | 9 | El equipo del catálogo: marca o modelo, calibración no futura, escalas de las columnas, solo los campos de su tipo; el aviso de calibración a 11, 12 y 13 meses y el 29 de febrero (Fase 25) |
-| `lib/equipment.test.ts` | 8 | Del catálogo al formulario y de vuelta, con coma decimal; la fila solo con su tipo; etiqueta, precisión y el mismo aparato sin distinguir mayúsculas (Fase 25) |
-| `components/equipment/equipment-picker.test.ts` | 7 | El selector ofrece solo los equipos de su tipo, no duplica lo guardado, avisa de la calibración y no aparece en un cerrado (Fase 25); el alta de la poligonal no ofrece el catálogo y la de la nivelación sí (correcciones de la Fase 35) |
 | `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
 | `lib/manual/markdown.test.ts` | 11 | **El Markdown del manual** (Fase 42): slugs de GitHub con tildes y repetidos, texto sin escapar, archivos de capítulo, enlaces entre archivos, anclas y externos, rutas de captura y la imagen sola en su párrafo |
 | `lib/manual/png.test.ts` | 3 | El tamaño de un PNG desde su cabecera; lo que no es un PNG se rechaza (Fase 42) |
@@ -2884,7 +2878,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
 | `components/design-system/tabs.test.ts` | 6 | Construcción de enlaces |
 | `lib/validators/project.test.ts` | 7 | El proyecto ya no valida equipo ni orden de precisión (Fase 8); latitud y longitud con coma decimal, y un separador de miles rechazado (Fase 20) |
-| `components/design-system/breadcrumbs.test.tsx` | 7 | Resolución de la ruta; colocada en la barra, fija entre el logo y los iconos, y en el teléfono el «‹ nivel anterior» puede encogerse y truncarse (Fase 33) |
+| `components/design-system/breadcrumbs.test.tsx` | 9 | Resolución de la ruta; colocada en la barra, fija entre el logo y los iconos, y en el teléfono el «‹ nivel anterior» puede encogerse y truncarse (Fase 33); el menú de los hermanos con el actual marcado, sin menú si no hay hermanos, y la miga actual sin encoger (Fase 44) |
 
 **Pruebas de la base (Fase 23).** `supabase/tests/`, con pgTAP, sobre la base
 local: `npx supabase test db`. Cada archivo crea sus datos en una transacción
@@ -2893,7 +2887,6 @@ que se deshace, así que no depende del seed ni lo toca.
 | Archivo | Pruebas | Cubre |
 |---|---|---|
 | `guardados_atomicos.test.sql` | 27 | Las cuatro funciones de guardado: guardan; una carga que falla a mitad no cambia la cabecera ni las filas de antes; la georreferenciación mueve las coordenadas y rechaza una estación ajena; la propagación no toca otro lugar; otro usuario no escribe con ninguna de las cuatro (RLS) |
-| `catalogo_equipos.test.sql` | 11 | Alta con el dueño por defecto; campos del otro tipo, sin marca ni modelo y el mismo aparato rechazados; editar o borrar un equipo no cambia el proceso que lo copió; otro usuario no ve ni escribe (Fase 25) |
 | `rango_lecturas.test.sql` | 7 | El CHECK de las lecturas de ángulo: los límites y 360°00′00″ exacto se guardan; 65″, 60′, 360°00′01″, 361° y segundos negativos no, y no se pierde lo de antes (Fase 24) |
 | `correcciones_calculo.test.sql` | 8 | Las distancias por visual en cero o negativas, en la nivelación y en la libreta, y dos visitas del mismo lugar en la misma fecha, rechazadas (Fase 26) |
 | `estabilidad_bms.test.sql` | 5 | `save_visit` guarda la cota de catálogo de un BM de control, y la libreta la conserva aunque se corrija el catálogo (Fase 30; desde la Fase 37, sin el caso de la visita cerrada) |
@@ -2902,6 +2895,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `nivelacion_sin_cierre.test.sql` | 15 | La nivelación sin cierre (Fase 36): las columnas del alta y `precision_order` nulo; sin triggers de cierre ni la función de sus lecturas; sin `closed_at` ni `closed_by` y el CHECK que rechaza `closed` y `rejected` (paso 2); se edita siempre; `save_leveling_process` escribe los datos del alta y un orden vacío. Desde la Fase 37 ya no comprueba el trigger de cierre de la visita |
 | `asentamientos_sin_cierre.test.sql` | 33 | Los asentamientos sin cierre (Fase 37): `site_benchmarks` con un código por lugar y la visita que midió cada BM (`origin_visit_id`, con su clave foránea), `starts_section` y `precision_order` nulo; ni la visita, ni el lugar, ni sus lecturas, libreta o puntos tienen triggers de cierre, ni el de la C0, ni sus funciones; sin `closed_at`, `closed_by`, el clima ni `capture_mode` en la visita, sin `status`, `closed_at` ni `closed_by` en el lugar, y sin las funciones de inmutabilidad ni `is_reopening` (la segunda migración, paso 3 del despliegue); como el dueño, la visita queda `in_progress`, la C0 se cambia con lecturas, `save_visit` guarda filas sin lectura con su inicio de tramo, un código de BM repetido se rechaza, `closed` ya no se admite y cualquier visita se borra; otro usuario no ve ni agrega BM del lugar (RLS) |
 | `sin_informes_consolidados.test.sql` | 2 | Sin informes consolidados (Fase 38): la tabla `reports` no existe, ni su función de inmutabilidad `reject_update_on_report()`. Reemplaza a `informe_congelado.test.sql` (Fase 23), que probaba el trigger y la portada congelada |
+| `sin_catalogo_equipos.test.sql` | 2 | Sin el catálogo de equipos (Fase 44): la tabla `equipment` no existe, y el equipo de la nivelación sigue en sus columnas. Reemplaza a `catalogo_equipos.test.sql` (Fase 25) |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -3114,6 +3108,9 @@ sin corregir:
 - Los puntos de la cartera llevan ubicación vacía —la hoja no la trae—;
   editar uno exige escribirla.
 
+**Cerrado en la Fase 44 — el semáforo ya no alarma por ruido**: la velocidad
+de un parcial de hasta 6 mm no clasifica (§ 6), y en la cartera real las
+visitas 4 a 6 quedan en «Normal». El texto original queda como registro.
 **El semáforo por velocidad alarma por ruido (visto en la Fase 37).** Con los
 umbrales de edificio y visitas cada siete días, un milímetro son 4.35 mm/mes
 —precaución— y tres, 13 mm/mes —alarma—, con una mira que resuelve el
@@ -3149,7 +3146,8 @@ pruebas—, pero ninguna pantalla las usa:
 - `PrecisionOrderSelect`: ningún módulo declara ya su orden.
 - `InvalidNumbersContext`: su último usuario fue el editor de la visita.
 - `LevelEquipment` —y `TotalStationEquipment`, desde la Fase 35—: las altas
-  piden solo la identidad del equipo (`EquipmentIdentity`).
+  piden solo la identidad del equipo. **Salieron en la Fase 44** con el
+  catálogo.
 - `turningPointBlocker`: bloqueaba el cierre de la visita.
 - `compensation: "within_tolerance"`, el valor por omisión de
   `computeLeveling`: la nivelación compensa siempre y la visita nunca.
@@ -3803,8 +3801,8 @@ margen bajaba a 2.8 mm sin dar avisos.
 un componente del sistema de diseño no importa nada de `@/types/*` ni de
 `@/lib/*` salvo `cn`, y lo presenta como «criterio verificable leyendo los
 imports». Verificado al cerrar la Fase 13: `status-indicator.tsx` importa
-`AlertLevel`, y `precision-order-select.tsx` y `equipment-fields.tsx` importan
-tolerancias y tipos del proyecto. `AngleInput`, que iba a ser el cuarto, se
+`AlertLevel`, y `precision-order-select.tsx` y `equipment-fields.tsx` —este
+hasta la Fase 44, que lo borró— importan tolerancias y tipos del proyecto. `AngleInput`, que iba a ser el cuarto, se
 movió a la poligonal. O se mueven los tres, o se matiza la regla para admitir
 componentes de formulario del dominio; lo que no puede seguir es la regla
 afirmando algo que el código contradice.
@@ -3886,6 +3884,8 @@ se teclea en la celda se ignora, aunque la celda la siga mostrando: escribir
 «−50» en una fila con hilos no da error ni cambia el cálculo. Es el diseño
 —los hilos son la medición—, pero la celda debería dejarlo ver.
 
+**Retirado en la Fase 44 — el catálogo de equipos**, que la Fase 25 había
+sumado: sin «Tomar del catálogo» en ningún alta, no lo usaba nada (§ 4).
 **Cerrado en la Fase 25 — el catálogo de equipos**, como plantilla: el
 proceso copia los valores y no referencia el catálogo, así que editarlo no
 cambia ningún informe (§ 4). El texto original queda como registro. **No hay
@@ -4536,6 +4536,27 @@ otra sesión que corra en local el código de `main` sin esta fase fallaría al
 leer `reports`. Por lo mismo, **una vez aplicada, volver en Vercel a un
 despliegue anterior a la Fase 38 rompe todas las páginas de proceso**: el
 código viejo llama a `getReports`.
+
+**La Fase 44 tiene un paso después del merge, y un recálculo.** Antes del
+merge no hace falta nada. Después:
+
+1. Merge a `main`. Vercel despliega el código, que ya no lee `equipment`.
+2. `npx supabase db push` aplica `20261011000000_sin_catalogo_equipos`: borra
+   la tabla `equipment`, con su trigger, su índice y sus políticas.
+3. `npx tsx --env-file=.env.local scripts/resincronizar-asentamientos.mjs`,
+   primero en simulación y luego con `--aplicar`: el semáforo se guarda en
+   `settlement_readings.alert_status`, que leen el hub y el dashboard, y la
+   regla del margen de ruido solo llega a las lecturas que se recalculan.
+
+La migración va **después** porque borra: el código anterior lee `equipment`
+en el layout de todas las páginas autenticadas. Se pierden los equipos del
+catálogo de producción, que ningún proceso referenciaba. Una vez aplicada,
+volver en Vercel a un despliegue anterior a la Fase 44 rompe todas las páginas
+autenticadas. Localmente se aplicó con `migration up --local`.
+
+**Las Fases 42 y 43 no tienen migración**: su despliegue fue el merge, por los
+PR #36 y #39 el 2026-10-09. La demo que ya existía conserva la numeración de
+sus visitas de la cartera de la 1 a la 7 (decisión del usuario en la 43).
 
 **La Fase 41 no tiene migración**: su despliegue es el merge, por el PR #34
 el 2026-10-08, con la leyenda de las fórmulas del informe sumada.

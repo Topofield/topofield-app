@@ -101,14 +101,6 @@ export const LEVELING_TOLERANCE_K: Record<PrecisionOrder, number> = {
 export const MIDDLE_WIRE_TOLERANCE_M = 0.002;
 
 /**
- * Antigüedad de la calibración a partir de la cual el formulario de equipo
- * avisa (Fase 25). Doce meses es la revisión periódica habitual de un
- * instrumento topográfico; la ISO 17123 no fija un plazo. Avisa, no bloquea:
- * la fecha la juzga el topógrafo.
- */
-export const CALIBRATION_MAX_MONTHS = 12;
-
-/**
  * Tolerancia de cierre de nivelación en milímetros: K·√D_km.
  *
  * IMPORTANTE: `distanceKm` es la longitud del recorrido en UN SOLO SENTIDO,
@@ -182,6 +174,15 @@ export const SETTLEMENT_VISIT_TOLERANCE_MM = Math.sqrt(VISIT_TOLERANCE_SQ_MM2);
 export function trendDeviationMargin(): number {
   return Math.sqrt(2 * VISIT_TOLERANCE_SQ_MM2) / 2;
 }
+
+/**
+ * Hasta cuántos mm de parcial el semáforo no juzga la velocidad (Fase 44): el
+ * margen de ruido de dos visitas, el mismo de los avisos de tendencia. Con
+ * visitas cada siete días, 1 mm de una mira que resuelve el milímetro son
+ * 4.35 mm/mes, y el semáforo de un edificio (2 · 5 · 10 mm/mes) alarmaba por
+ * ruido. Un parcial que cabe aquí se clasifica solo por su acumulado.
+ */
+export const ALERT_VELOCITY_NOISE_MM = trendDeviationMargin();
 
 /**
  * Margen de ruido, en mm/mes, del aumento de velocidad de «Acelerando» (Fase

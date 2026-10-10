@@ -7,8 +7,9 @@ import { AppBarLink } from "./app-bar-link";
 /**
  * Barra superior de las pantallas autenticadas (Fase 33): fija arriba, de
  * `--barra-alto` (48 px) y a todo el ancho de la ventana. A la izquierda el
- * logo, que lleva al dashboard; a la derecha Equipos, Manual y el menú de
- * cuenta. El hueco del centro es para la ruta de la página.
+ * logo, que lleva al dashboard; a la derecha el Manual y el menú de cuenta
+ * (Equipos salió con el catálogo en la Fase 44). El hueco del centro es para
+ * la ruta de la página.
  *
  * Fija porque es la navegación: la ruta, el manual y la cuenta tienen que
  * estar a mano también al final de una libreta larga. Hasta la Fase 33 medía
@@ -39,7 +40,6 @@ export function AppBar({
         </Link>
         <div className="min-w-0 flex-1" />
         <nav aria-label="Aplicación" className="flex items-center gap-0.5">
-          <AppBarLink href="/equipos" icon={<LevelIcon />} label="Equipos" />
           {/* Visible también en el teléfono: la ayuda hace falta sobre todo en
               campo. */}
           <AppBarLink href="/manual" icon={<BookIcon />} label="Manual" />
@@ -61,16 +61,6 @@ const iconProps = {
   strokeLinejoin: "round" as const,
   "aria-hidden": true,
 };
-
-/** Un nivel sobre su trípode: los equipos de la cuenta. */
-function LevelIcon() {
-  return (
-    <svg {...iconProps}>
-      <rect x="5" y="3.5" width="14" height="5" rx="1.5" />
-      <path d="M12 8.5v3M12 11.5 5.5 20.5M12 11.5v9M12 11.5l6.5 9" />
-    </svg>
-  );
-}
 
 /** Un libro abierto: el manual. */
 function BookIcon() {

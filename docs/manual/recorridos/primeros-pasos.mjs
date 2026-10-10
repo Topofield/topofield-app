@@ -8,7 +8,9 @@ import {
   borrarCuenta,
   capitulo,
   enlaceDeConfirmacion,
+  idDe,
   ir,
+  usuario,
   vaciarBuzon,
 } from "./comun.mjs";
 
@@ -54,6 +56,19 @@ export async function recorrer() {
     await page.waitForTimeout(1500);
     await ir(page, "/dashboard");
     await cap.paso("dashboard");
+
+    // La ruta: en una poligonal de la demo, la lista de los otros procesos.
+    const demo = idDe(
+      "la poligonal TT4 de la demo",
+      `select p.id || '/polygonal/' || pp.id from public.polygonal_processes pp join public.projects p on p.id = pp.project_id
+       where p.user_id = '${usuario()}' and p.name = 'Proyecto de ejemplo' and pp.name like 'Poligonal V10%'`,
+    );
+    await ir(page, `/projects/${demo}`);
+    await page.getByRole("button", { name: "Otros procesos del proyecto" }).click();
+    await page.waitForTimeout(400);
+    await cap.paso("menu-de-la-ruta");
+    await page.keyboard.press("Escape");
+    await ir(page, "/dashboard");
 
     // La barra: el menú de cuenta con el tema.
     await page.getByRole("button", { name: "Cuenta" }).click();

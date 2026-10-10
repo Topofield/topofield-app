@@ -21,7 +21,7 @@ import type {
 } from "@/types/settlement";
 import { worst } from "@/lib/calculations/settlement";
 import type { ProcessCounts } from "@/lib/process-counts";
-import type { Equipment } from "@/types/equipment";
+import { routeMenusOf, type RouteMenus } from "@/lib/route-menus";
 
 type Client = SupabaseClient<Database>;
 
@@ -643,18 +643,29 @@ export async function getSiteSummariesByProject(
 }
 
 /**
- * El catálogo de equipos del usuario (Fase 25), por tipo, marca y modelo. RLS
- * lo limita a sus filas.
+ * Los menús de la ruta de la barra (Fase 44): los proyectos de la cuenta y los
+ * procesos del proyecto, solo id y nombre. Cuatro consultas en paralelo; RLS
+ * limita las filas a las del usuario.
  */
-export async function getEquipment(supabase: Client): Promise<Equipment[]> {
-  const { data, error } = await supabase
-    .from("equipment")
-    .select("*")
-    .order("kind")
-    .order("brand", { nullsFirst: false })
-    .order("model", { nullsFirst: false })
-    .order("serial", { nullsFirst: false });
-  if (error) throw error;
-  return (data ?? []) as Equipment[];
+export async function getRouteMenus(
+  supabase: Client,
+  projectId: string,
+  processHref?: string,
+): Promise<RouteMenus> {
+  const [projects, polygonals, levelings, sites] = await Promise.all([
+    supabase.from("projects").select("id, name, status"),
+    supabase.from("polygonal_processes").select("id, name").eq("project_id", projectId),
+    supabase.from("leveling_processes").select("id, name").eq("project_id", projectId),
+    supabase.from("sites").select("id, name").eq("project_id", projectId).eq("kind", "settlement"),
+  ]);
+  for (const r of [projects, polygonals, levelings, sites]) if (r.error) throw r.error;
+  return routeMenusOf(
+    {
+      projects: projects.data ?? [],
+      polygonals: polygonals.data ?? [],
+      levelings: levelings.data ?? [],
+      sites: sites.data ?? [],
+    },
+    { projectId, processHref },
+  );
 }
-

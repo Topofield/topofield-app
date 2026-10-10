@@ -6,10 +6,13 @@ import { Alert, Breadcrumbs, Button, buttonClasses, Modal } from "@/components/d
 import { PrintButton } from "@/components/reports/print-button";
 import { callAction } from "@/lib/errors/action-call";
 import { formatSavedAt } from "@/lib/utils/format";
+import type { RouteMenus } from "@/lib/route-menus";
 import type { DraftSaveResult } from "./use-process-draft";
 
 interface ProcessHeaderProps {
   projectName: string;
+  /** Los menús de la ruta: otros proyectos y otros procesos (Fase 44). */
+  menus?: RouteMenus;
   /** El hub del proyecto, en el módulo del proceso: a donde vuelven las migas y el borrado. */
   hubHref: string;
   title: string;
@@ -47,6 +50,7 @@ interface ProcessHeaderProps {
  */
 export function ProcessHeader({
   projectName,
+  menus,
   hubHref,
   title,
   badges,
@@ -84,8 +88,8 @@ export function ProcessHeader({
       <Breadcrumbs
         items={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: projectName, href: hubHref },
-          { label: title },
+          { label: projectName, href: hubHref, menu: menus && { label: "Otros proyectos", entries: menus.projects } },
+          { label: title, menu: menus && { label: "Otros procesos del proyecto", entries: menus.processes } },
         ]}
       />
       <div className="flex flex-wrap items-center gap-2">{badges}</div>

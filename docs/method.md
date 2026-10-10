@@ -53,6 +53,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 41 | El dibujo de la poligonal como un mapa | [`prds/40-visor-poligonal.md`](./prds/40-visor-poligonal.md) | cerrada |
 | 42 | El manual por capítulos | [`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md) | cerrada |
 | 43 | Las correcciones del recorrido | [`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md) | cerrada |
+| 44 | Los últimos pendientes | [`prds/43-ultimos-pendientes.md`](./prds/43-ultimos-pendientes.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 

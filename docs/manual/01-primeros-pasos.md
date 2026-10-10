@@ -75,13 +75,16 @@ La barra de arriba queda fija mientras baja por cualquier pantalla:
 - **La ruta**, a su lado, dice dónde está: «Dashboard › Proyecto de ejemplo ›
   Poligonal V10…». Cada nombre lleva a ese nivel. En el teléfono se reduce a
   «‹» y el nivel anterior.
-- **Equipos** abre su catálogo de equipos (vea
-  [El catálogo de equipos](07-equipos.md)).
+- **La flecha ⌄** junto al proyecto o al proceso abre la lista de los demás:
+  los otros proyectos de su cuenta, o los otros procesos del proyecto, con su
+  tipo. Elija uno para ir directo, sin volver al dashboard.
 - **Manual** abre este manual.
 - **El círculo con su inicial** abre el menú de cuenta: su correo, el tema y
   **Cerrar sesión**.
 
-![Menú de cuenta abierto: Sesión iniciada como, el tema con Sistema, Claro y Oscuro, y Cerrar sesión](../../public/manual/primeros-pasos/05-menu-de-cuenta.png)
+![La ruta de una poligonal con la lista «Otros procesos del proyecto» abierta: las poligonales, las nivelaciones y los lugares de la demo, cada uno con su tipo, y la actual resaltada](../../public/manual/primeros-pasos/05-menu-de-la-ruta.png)
+
+![Menú de cuenta abierto: Sesión iniciada como, el tema con Sistema, Claro y Oscuro, y Cerrar sesión](../../public/manual/primeros-pasos/06-menu-de-cuenta.png)
 
 ## Elegir el tema
 
@@ -94,7 +97,7 @@ La elección se recuerda en ese navegador. En la pantalla de inicio, el tema se
 cambia con el icono de arriba a la derecha. El informe impreso sale siempre en
 claro.
 
-![El dashboard en tema oscuro](../../public/manual/primeros-pasos/06-tema-oscuro.png "El tema oscuro descansa la vista de noche; a pleno sol, el claro se lee mejor.")
+![El dashboard en tema oscuro](../../public/manual/primeros-pasos/07-tema-oscuro.png "El tema oscuro descansa la vista de noche; a pleno sol, el claro se lee mejor.")
 
 ## Cómo se organiza TopoField
 

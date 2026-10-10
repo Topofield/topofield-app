@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Alert, Badge, Breadcrumbs, Button, buttonClasses, Modal } from "@/components/design-system";
 import { deleteVisitAction, saveVisitAction } from "@/app/(app)/projects/[id]/settlement/[siteId]/actions";
 import { callAction } from "@/lib/errors/action-call";
+import type { RouteMenus } from "@/lib/route-menus";
 import { formatSavedAt } from "@/lib/utils/format";
 import type { BookRowPayload, VisitStatus } from "@/types/settlement";
 import { VisitDialog } from "./visit-dialog";
@@ -19,6 +20,7 @@ import type { VisitForm } from "./visit-dialog-form";
 export function VisitHeader({
   projectId,
   projectName,
+  menus,
   siteId,
   siteName,
   visitId,
@@ -37,6 +39,8 @@ export function VisitHeader({
 }: {
   projectId: string;
   projectName: string;
+  /** Los menús de la ruta (Fase 44). */
+  menus?: RouteMenus;
   siteId: string;
   siteName: string;
   visitId: string;
@@ -76,8 +80,12 @@ export function VisitHeader({
       <Breadcrumbs
         items={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: projectName, href: `/projects/${projectId}?tab=processes&modulo=asentamientos` },
-          { label: siteName, href: siteHref },
+          {
+            label: projectName,
+            href: `/projects/${projectId}?tab=processes&modulo=asentamientos`,
+            menu: menus && { label: "Otros proyectos", entries: menus.projects },
+          },
+          { label: siteName, href: siteHref, menu: menus && { label: "Otros procesos del proyecto", entries: menus.processes } },
           { label: title },
         ]}
       />

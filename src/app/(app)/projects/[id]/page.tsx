@@ -40,6 +40,7 @@ import {
   getLevelingProcesses,
   getPolygonalProcesses,
   getProjectById,
+  getRouteMenus,
   getReferencePoints,
   getSiteSummariesByProject,
   getSites,
@@ -124,10 +125,11 @@ export default async function ProjectHubPage({
 
   // Solo se carga la lista del módulo visible.
   const enProcesos = activeTab === "processes";
-  const [processes, levelingProcesses, sites] = await Promise.all([
+  const [processes, levelingProcesses, sites, menus] = await Promise.all([
     enProcesos ? getPolygonalProcesses(supabase, project.id) : Promise.resolve([]),
     enProcesos ? getLevelingProcesses(supabase, project.id) : Promise.resolve([]),
     enProcesos ? getSites(supabase, project.id) : Promise.resolve([]),
+    getRouteMenus(supabase, project.id),
   ]);
   const referencePoints = activeTab === "config" ? await getReferencePoints(supabase, project.id) : [];
 
@@ -182,7 +184,10 @@ export default async function ProjectHubPage({
       {/* Cabecera compacta (Fase 22): la descripción y el resto de los datos
           del proyecto están en Configuración. */}
       <PageHeader
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: project.name }]}
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: project.name, menu: { label: "Otros proyectos", entries: menus.projects } },
+        ]}
         title={project.name}
         badge={
           <Badge tone={project.status === "active" ? "success" : "neutral"}>

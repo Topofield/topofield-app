@@ -77,22 +77,22 @@
     --barra-alto: 3rem;
     /* El hueco de la ruta en la barra, medido en pantalla: desde el borde
        izquierdo, 16 de margen + 24 del isotipo + 12 de aire; desde el
-       derecho, 16 de margen + 32 de la cuenta + 12 + 70 de Equipos y Manual
-       con solo el icono + 12 de aire. Si cambia el logo o un enlace de la
-       barra, hay que volver a medirlo. */
+       derecho, 16 de margen + 32 de la cuenta + 12 + 34 del Manual con solo
+       el icono + 12 de aire (Equipos salió en la Fase 44). Si cambia el logo
+       o un enlace de la barra, hay que volver a medirlo. */
     --ruta-inicio: 3.25rem;
-    --ruta-fin: 8.875rem;
+    --ruta-fin: 6.625rem;
     /* Que la barra fija no tape lo que enlaza un ancla (el índice del
        manual). */
     scroll-padding-top: calc(var(--barra-alto) + 1rem);
   }
 
-  /* Desde 640 px: el logo completo (102 px) y Equipos y Manual con su
-     nombre. */
+  /* Desde 640 px: el logo completo (102 px) y el Manual con su nombre
+     (83 px). */
   @media (width >= 40rem) {
     :root {
       --ruta-inicio: 8.25rem;
-      --ruta-fin: 15.5rem;
+      --ruta-fin: 9.6875rem;
     }
   }
 

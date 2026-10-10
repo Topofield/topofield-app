@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { detectTrendDeviations } from "@/lib/calculations/settlement";
 import { thresholdsFor } from "@/lib/calculations/tolerances";
 import { recalculateSite } from "@/lib/calculations/visit-record";
-import type { PointInput } from "@/types/settlement";
+import { ALERT_LEVELS, type AlertLevel, type PointInput } from "@/types/settlement";
 import { CARTERA_ASENTAMIENTOS as C, carteraVisitas } from "./cartera-asentamientos";
 
 // La cartera real (docs/carteras/Control_asentamiento_estructural_ REAL.xlsx):
@@ -99,6 +99,14 @@ describe("la cartera real de asentamientos (Fase 37, decisión 23)", () => {
   it("las visitas van de la 0 (base) a la 6, como las numera la aplicación", () => {
     expect(carteraVisitas().map((v) => v.visitNumber)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(carteraVisitas()[0]!.date).toBe(C.visits[0]!.date);
+  });
+
+  it("el semáforo: alarma por los saltos reales de las visitas 1 a 3, y normal de la 4 a la 6 (Fase 44)", () => {
+    const worst = site.map(({ readings }) =>
+      readings.reduce((acc, r) => (ALERT_LEVELS.indexOf(r.alertStatus) > ALERT_LEVELS.indexOf(acc) ? r.alertStatus : acc), "normal" as AlertLevel),
+    );
+    // Antes, el ruido de ±1 a 6 mm en una semana ponía en alarma también la 4.
+    expect(worst).toEqual(["normal", "alarm", "alarm", "alarm", "normal", "normal", "normal"]);
   });
 
   it("B10 avisa «excesiva» en la visita 2 y «contraria» en la 3", () => {

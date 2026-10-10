@@ -9,6 +9,8 @@ import { VisitResultsTab } from "@/components/settlement/visit-results-tab";
 import { computeHistory, pointInputOf } from "@/lib/calculations/settlement";
 import { bookRowInputOf, bookVerification, computeBook } from "@/lib/calculations/settlement-book";
 import { thresholdsOf } from "@/lib/calculations/tolerances";
+import { getRouteMenus } from "@/lib/supabase/queries";
+import { createClient } from "@/lib/supabase/server";
 import { formatDateOnly, formatEquipmentLine } from "@/lib/utils/format";
 import { PRECISION_ORDER_LABELS } from "@/types/project";
 import { loadVisitData } from "./visit-data";
@@ -37,6 +39,7 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
 
   const siteHref = `/projects/${project.id}/settlement/${site.id}`;
   const basePath = `${siteHref}/visits/${visit.id}`;
+  const menus = await getRouteMenus(await createClient(), project.id, siteHref);
   const index = allVisits.findIndex((v) => v.id === visit.id);
   const prev = index > 0 ? allVisits[index - 1] : null;
   const next = allVisits[index + 1] ?? null;
@@ -67,6 +70,7 @@ export default async function VisitPage({ params, searchParams }: VisitPageProps
       <VisitHeader
         projectId={project.id}
         projectName={project.name}
+        menus={menus}
         siteId={site.id}
         siteName={site.name}
         visitId={visit.id}
