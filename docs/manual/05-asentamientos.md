@@ -119,7 +119,10 @@ las lecturas.
 3. En **Vistas a los puntos**, escriba la lectura de cada punto. Cada lectura
    **se guarda al escribirla**: al salir del campo o con Enter, que además pasa
    al campo siguiente. Junto a cada una aparece su cota y un ✓ cuando quedó
-   guardada.
+   guardada, y abajo, cuántos puntos van leídos.
+
+   ![La armada de la primera visita a medio leer: la V+ de 1.218 a PISCINA/BM, ocho lecturas con su cota y su ✓, los demás puntos vacíos y abajo «Leídos 8 de 16 · guardado»](../../public/manual/asentamientos/09-armada-a-medias.png)
+
 4. En **Vista adelante · V−**, diga cómo termina la armada:
    - **Sin vista adelante**, si leyó los puntos y no cerró contra nada. Es lo
      más común en una visita corta.
@@ -128,7 +131,7 @@ las lecturas.
      comprobar la medición).
 5. Pulse **Terminar armada**.
 
-![La armada de la primera visita: la V+ de 1.218 a PISCINA/BM y las dieciséis lecturas, cada una con su cota y su ✓](../../public/manual/asentamientos/09-armada.png)
+![La armada de la primera visita: la V+ de 1.218 a PISCINA/BM y las dieciséis lecturas, cada una con su cota y su ✓](../../public/manual/asentamientos/10-armada.png)
 
 Abajo, la ventana dice cuántos puntos van leídos. Los botones:
 
@@ -145,9 +148,9 @@ a un **punto de cambio** y la armada siguiente sale de él. Si la última vista
 adelante cae en un BM del lugar, el tramo se **verifica**: la ventana muestra
 el cierre y el orden alcanzado.
 
-![La armada 2 de una visita de Torre Alameda: sale del punto de cambio CP-1 y vuelve a BM-1 con un cierre de −1.6 mm, segundo orden](../../public/manual/asentamientos/16-armada-punto-de-cambio.png)
+![La armada 2 de una visita de Torre Alameda: sale del punto de cambio CP-1 y vuelve a BM-1 con un cierre de −1.6 mm, segundo orden](../../public/manual/asentamientos/17-armada-punto-de-cambio.png)
 
-![La libreta de una visita de Torre Alameda con dos armadas, por el punto de cambio CP-1, y el tramo que vuelve a BM-1](../../public/manual/asentamientos/15-dos-armadas.png)
+![La libreta de una visita de Torre Alameda con dos armadas, por el punto de cambio CP-1, y el tramo que vuelve a BM-1](../../public/manual/asentamientos/16-dos-armadas.png)
 
 ## Importar la libreta
 
@@ -185,14 +188,14 @@ cartera, dice **Sin verificación**.
 aplicación compara la cota medida con la suya. Si no coinciden, avisa: uno de
 los dos BM pudo moverse.
 
-![Visita 13 de Torre Alameda: BM-2 leído de paso da +7.4 mm, y el aviso «BM-2 no nivela con BM-1»](../../public/manual/asentamientos/17-bm-desplazado.png)
+![Visita 13 de Torre Alameda: BM-2 leído de paso da +7.4 mm, y el aviso «BM-2 no nivela con BM-1»](../../public/manual/asentamientos/18-bm-desplazado.png)
 
 **Lecturas fuera de tendencia.** Desde la tercera lectura de un punto, la
 aplicación avisa si una lectura va contra su tendencia o lo mueve mucho más
 de lo que su ritmo preveía. En esta cartera, B10 baja 50 mm en 12 días donde su
 ritmo preveía unos 17: la libreta lo avisa para que revise la lectura.
 
-![Libreta de la visita 2 (12 de abril de 2022), con las lecturas de más de 4 m y el aviso «B10 bajó 50.0 mm en 12 días; a su ritmo anterior serían unos 17.1 mm»](../../public/manual/asentamientos/10-libreta-con-aviso.png)
+![Libreta de la visita 2 (12 de abril de 2022), con las lecturas de más de 4 m y el aviso «B10 bajó 50.0 mm en 12 días; a su ritmo anterior serían unos 17.1 mm»](../../public/manual/asentamientos/11-libreta-con-aviso.png)
 
 > El aviso no bloquea. Pide revisar la lectura o volver a medir; una lectura
 > atípica también puede ser real.
@@ -210,7 +213,7 @@ por punto con su cota, el parcial, el acumulado, la velocidad, el estado y la
 - **Acelera** si baja cada vez más rápido, más allá de lo que explica el error
   de la medición: conviene vigilarlo.
 
-![Resultados de la visita 6: los indicadores, la tabla de puntos con su cota, parcial, acumulado, velocidad, estado y tendencia, y el gráfico del acumulado](../../public/manual/asentamientos/11-resultados.png)
+![Resultados de la visita 6: los indicadores, la tabla de puntos con su cota, parcial, acumulado, velocidad, estado y tendencia, y el gráfico del acumulado](../../public/manual/asentamientos/12-resultados.png)
 
 ## El panel del lugar
 
@@ -228,7 +231,7 @@ La pestaña **Panel** reúne todo el historial:
   la tabla la resalta en la gráfica.
 - **Los avisos** de lecturas fuera de tendencia.
 
-![Panel de la cartera: los indicadores, la tabla de visitas de la 0 a la 6, la tendencia del promedio con sus umbrales y los avisos de B10](../../public/manual/asentamientos/12-panel.png)
+![Panel de la cartera: los indicadores, la tabla de visitas de la 0 a la 6, la tendencia del promedio con sus umbrales y los avisos de B10](../../public/manual/asentamientos/13-panel.png)
 
 **El semáforo.** Cada punto tiene un estado según sus umbrales de velocidad y
 de acumulado; gana el peor de los dos:
@@ -262,7 +265,7 @@ Si un punto se destruye o se pierde, **no lo elimine**: dele de baja.
    el **Motivo**, que es obligatorio.
 3. Pulse **Dar de baja**.
 
-![Ventana Dar de baja B10, con la fecha y el motivo «Destruido por la ampliación de la cubierta»](../../public/manual/asentamientos/14-dar-de-baja.png)
+![Ventana Dar de baja B10, con la fecha y el motivo «Destruido por la ampliación de la cubierta»](../../public/manual/asentamientos/15-dar-de-baja.png)
 
 La baja no borra nada: las lecturas anteriores siguen en el análisis, y las
 visitas nuevas ya no traen el punto en su libreta. **Deshacer baja** la quita,
@@ -287,4 +290,4 @@ Informa las visitas calculadas; las que están en medición se nombran aparte.
 Arriba están **Exportar PDF** y **Exportar Excel**. Vea
 [El informe y el Excel](06-informe-y-excel.md).
 
-![El informe del lugar con sus datos, el veredicto, la evolución y las visitas](../../public/manual/asentamientos/13-informe.png)
+![El informe del lugar con sus datos, el veredicto, la evolución y las visitas](../../public/manual/asentamientos/14-informe.png)

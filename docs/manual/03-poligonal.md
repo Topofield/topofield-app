@@ -19,6 +19,9 @@ precisión que no existe.
 ## Crear la poligonal
 
 1. En el proyecto, pulse **+ Nuevo Proceso** y elija **Poligonal**.
+
+   ![Ventana Nuevo proceso sobre el proyecto, con los tres tipos: Poligonal, Nivelación y Control de Asentamientos](../../public/manual/poligonal/01-nuevo-proceso.png)
+
 2. Llene la ventana **Nueva poligonal**:
    - **Título**: el nombre con que la encontrará en el proyecto. Es el único
      campo obligatorio.
@@ -34,12 +37,12 @@ precisión que no existe.
      de la estación total. Sale en el informe, para que conste con qué
      instrumento se midió.
 
-   ![Ventana Nueva poligonal llena: título «Poligonal V10 — cartera TT4», ubicación, responsable Andrea Rojas, topógrafa, tipo Cerrada y el equipo Leica TS06 plus](../../public/manual/poligonal/01-nueva-poligonal.png)
+   ![Ventana Nueva poligonal llena: título «Poligonal V10 — cartera TT4», ubicación, responsable Andrea Rojas, topógrafa, tipo Cerrada y el equipo Leica TS06 plus](../../public/manual/poligonal/02-nueva-poligonal.png)
 
 3. Pulse **Crear y empezar**. Se abre la pantalla de la poligonal, en el paso
    **Datos**, todavía vacía.
 
-   ![El paso Datos de una poligonal nueva: la tarjeta de puntos de amarre con Ingresar puntos de amarre y Medir sin amarre](../../public/manual/poligonal/02-sin-datos.png)
+   ![El paso Datos de una poligonal nueva: la tarjeta de puntos de amarre con Ingresar puntos de amarre y Medir sin amarre](../../public/manual/poligonal/03-sin-datos.png)
 
 No se le pide el orden de precisión ni el tipo de ángulo: la aplicación los
 detecta al calcular. Todo lo de esta ventana se cambia después con **Editar
@@ -81,9 +84,13 @@ recorrido.
 4. En una abierta con control aparece también la **Llegada**: el punto conocido
    donde termina el recorrido. Su **Azimut de llegada** es opcional; si lo
    escribe, la aplicación comprueba además el cierre angular.
-5. Pulse **Guardar el amarre**.
+5. Pulse **Guardar el amarre**. El paso **Datos** muestra la estación de
+   partida y la referencia, y la tabla de mediciones arranca con la fila del
+   **0 atrás** y el azimut de partida ya calculado.
 
-![Ventana Puntos de amarre: estación de partida V10 y punto de referencia TT4 tomados del catálogo, con su norte y su este](../../public/manual/poligonal/03-puntos-de-amarre.png)
+   ![El paso Datos con el amarre guardado: V10 con sus coordenadas, TT4 con el azimut de 330°35′57.2″ y la primera fila de mediciones, V10 → TT4, 0 atrás](../../public/manual/poligonal/05-amarre.png)
+
+![Ventana Puntos de amarre: estación de partida V10 y punto de referencia TT4 tomados del catálogo, con su norte y su este](../../public/manual/poligonal/04-puntos-de-amarre.png)
 
 > Si corrige las coordenadas de un punto del amarre, la poligonal se
 > recalcula con las mediciones que ya tiene, sin volver a medir. Antes de
@@ -101,7 +108,7 @@ por ejemplo «V10 → D1», con el ángulo medido en el punto de partida, la
 distancia y el azimut sin ajustar.
 
 1. Pulse **+ Agregar punto**. Arriba, la ventana le dice dónde está: «Estás en
-   D1 · atrás en V10».
+   V10 · atrás en TT4».
 2. Escriba el **Punto siguiente**.
 3. Escriba la **Lectura 1**: el ángulo horizontal medido en la estación donde
    está, desde el punto de atrás hasta el siguiente, en grados, minutos y
@@ -110,14 +117,22 @@ distancia y el azimut sin ajustar.
    dispersión entre lecturas, para que vea si alguna se aleja.
 4. Escriba la **Distancia horizontal** hasta el punto siguiente, en metros.
    Es la distancia ya reducida al horizonte, como la anota la estación.
-5. Pulse **Agregar y seguir en D2**: se guarda y la ventana queda lista para la
-   medición siguiente. **Terminar** guarda y la cierra.
+5. Pulse **Agregar y seguir en D1**: se guarda y la ventana queda lista para la
+   medición siguiente, ya parada en D1. **Terminar** guarda y la cierra.
 
-![Ventana Agregar medición: «Estás en D1 · atrás en V10», punto siguiente D2, lectura de 124°29′42″, distancia horizontal de 11.606 m y el botón Agregar y seguir en D2](../../public/manual/poligonal/04-agregar-medicion.png)
+![Ventana Agregar medición sobre el paso Datos: «Estás en V10 · atrás en TT4», punto siguiente D1, lectura de 211°15′07″, distancia horizontal de 20.744 m y el botón Agregar y seguir en D1](../../public/manual/poligonal/06-agregar-medicion.png)
+
+Cada medición guardada aparece en la tabla con su azimut, y el dibujo crece a
+la derecha. Si cierra la ventana a mitad de camino, lo medido queda guardado:
+**+ Agregar punto** sigue desde el último punto.
+
+![El paso Datos con tres mediciones, V10 → D1, D1 → D2 y D2 → D3, cada una con su ángulo, su distancia y su azimut, la fila de D3 pendiente y el dibujo de V10 a D3](../../public/manual/poligonal/07-tres-mediciones.png)
 
 En una cerrada, desde la segunda medición aparece la casilla **Cierre: este
 lado vuelve a V10**. Márquela en el último lado, el que regresa a la estación
 de partida, y pulse **Agregar el cierre**.
+
+![La ventana del último lado: «Estás en D5 · atrás en D4», la casilla Cierre: este lado vuelve a V10 marcada, la lectura de 104°46′07″, la distancia D5 → V10 de 15.425 m y el botón Agregar el cierre](../../public/manual/poligonal/08-ultimo-lado.png)
 
 En una abierta con control, desde la segunda estación la ventana pide la
 **deflexión** en lugar del ángulo: cuánto se desvía el lado siguiente de la
@@ -131,7 +146,7 @@ en la estación de partida. Si la poligonal está amarrada, va hacia la
 referencia, como en la cartera TT4. Si desmarca la casilla, va hacia el primer
 lado. Escriba la lectura y pulse **Guardar el cierre angular**.
 
-![Ventana Cierre angular: en V10, atrás en D5, hacia la referencia TT4, con la lectura de 299°18′51″](../../public/manual/poligonal/05-cierre-angular.png)
+![Ventana Cierre angular: en V10, atrás en D5, hacia la referencia TT4, con la lectura de 299°18′51″](../../public/manual/poligonal/09-cierre-angular.png)
 
 Con eso, el paso **Datos** muestra todo:
 
@@ -143,7 +158,7 @@ Con eso, el paso **Datos** muestra todo:
   exteriores) lleva la marca **detectado**.
 - **El dibujo**, a la derecha, con lo medido sin ajustar.
 
-![Paso Datos de la cartera TT4: el amarre V10 y TT4, las ocho filas de mediciones, el cierre angular con error de +12.0″ y −1.71″ por ángulo, y el dibujo](../../public/manual/poligonal/06-datos.png)
+![Paso Datos de la cartera TT4: el amarre V10 y TT4, las ocho filas de mediciones, el cierre angular con error de +12.0″ y −1.71″ por ángulo, y el dibujo](../../public/manual/poligonal/10-datos.png)
 
 ## Corregir una medición
 
@@ -186,7 +201,7 @@ Debajo van cuatro cifras:
 Pulse **Por qué** para ver cada orden con su tolerancia y si la poligonal la
 cumple.
 
-![Método Brújula, error angular de +12.0″, error de cierre de 0.016 m, precisión 1:7.045 y orden alcanzado Tercer orden, con el «Por qué» abierto](../../public/manual/poligonal/07-orden-alcanzado.png)
+![Método Brújula, error angular de +12.0″, error de cierre de 0.016 m, precisión 1:7.045 y orden alcanzado Tercer orden, con el «Por qué» abierto](../../public/manual/poligonal/11-orden-alcanzado.png)
 
 | Orden | Tolerancia angular | Precisión relativa mínima | Uso típico |
 |---|---|---|---|
@@ -216,7 +231,7 @@ Más abajo están:
   trazo discontinuo, con su error **exagerado** para que se vea (×100 en la
   imagen; la leyenda dice el factor).
 
-![El paso Ajuste completo de la cartera TT4: las cifras, la tabla de la poligonal ajustada, la corrección por Brújula y el dibujo](../../public/manual/poligonal/08-ajuste.png)
+![El paso Ajuste completo de la cartera TT4: las cifras, la tabla de la poligonal ajustada, la corrección por Brújula y el dibujo](../../public/manual/poligonal/12-ajuste.png)
 
 ## Mover y acercar el dibujo
 
@@ -231,7 +246,7 @@ El dibujo se mueve como un mapa:
 - **Con el teclado**, sobre el dibujo: las flechas lo desplazan, **+** y **−**
   acercan y alejan, y **0** encuadra.
 
-![Dibujo de la poligonal V10 con la grilla de coordenadas, la flecha del norte, la barra de escala, el amarre TT4 y los botones + y −](../../public/manual/poligonal/09-dibujo.png)
+![Dibujo de la poligonal V10 con la grilla de coordenadas, la flecha del norte, la barra de escala, el amarre TT4 y los botones + y −](../../public/manual/poligonal/13-dibujo.png)
 
 ## Ajustar por mínimos cuadrados
 
@@ -239,7 +254,7 @@ Los otros métodos reparten el error con una regla fija. Mínimos cuadrados
 busca las correcciones más pequeñas que hacen cerrar la poligonal, según la
 precisión de cada medición. Por eso le pide tres datos:
 
-![El método Mínimos cuadrados elegido: la explicación de los tres datos que pide y sus campos vacíos](../../public/manual/poligonal/11-minimos-cuadrados-pesos.png)
+![El método Mínimos cuadrados elegido: la explicación de los tres datos que pide y sus campos vacíos](../../public/manual/poligonal/15-minimos-cuadrados-pesos.png)
 
 1. Elija **Mínimos cuadrados** en el método de ajuste.
 2. Escriba la **σ angular (″)**, la precisión de un ángulo según la ficha de
@@ -264,7 +279,7 @@ y **σ₀**, que dice si los datos que dio describen bien sus mediciones:
 σ₀ es información, no un veredicto: el orden alcanzado no cambia con el
 método.
 
-![El paso Ajuste de la Sede Vivero con mínimos cuadrados: los pesos 2″, 0.011 m y 2 mediciones, la corrección de cada ángulo y distancia, σ₀ y el dibujo con las elipses](../../public/manual/poligonal/12-minimos-cuadrados.png)
+![El paso Ajuste de la Sede Vivero con mínimos cuadrados: los pesos 2″, 0.011 m y 2 mediciones, la corrección de cada ángulo y distancia, σ₀ y el dibujo con las elipses](../../public/manual/poligonal/16-minimos-cuadrados.png)
 
 **La precisión de cada punto.** Con mínimos cuadrados, la tarjeta **Precisión
 de cada punto** dice cuánto confiar en cada coordenada ajustada:
@@ -276,7 +291,7 @@ de cada punto** dice cuánto confiar en cada coordenada ajustada:
 El punto de partida es fijo y no tiene elipse. El dibujo traza las elipses en
 verde, exageradas.
 
-![Tarjeta Precisión de cada punto de la Sede Vivero: P1 fijo, y para D1 a D4 su σ N, su σ E, los semiejes de la elipse y el azimut del mayor](../../public/manual/poligonal/13-precision-de-cada-punto.png)
+![Tarjeta Precisión de cada punto de la Sede Vivero: P1 fijo, y para D1 a D4 su σ N, su σ E, los semiejes de la elipse y el azimut del mayor](../../public/manual/poligonal/17-precision-de-cada-punto.png)
 
 ## Georreferenciar
 
@@ -301,13 +316,13 @@ midió desde P1 (1000, 1000) y se georreferencia con los vértices D1 y D3.
    - Las coordenadas actuales de cada estación junto a las reales.
 5. Pulse **Georreferenciar**.
 
-![Ventana Georreferenciar la poligonal: D1 y D3 con sus coordenadas reales, rotación de 132°46′37.2″, factor de escala 0.999996, residuos de 0.2 mm y las coordenadas actuales y reales de cada estación](../../public/manual/poligonal/14-georreferenciar.png)
+![Ventana Georreferenciar la poligonal: D1 y D3 con sus coordenadas reales, rotación de 132°46′37.2″, factor de escala 0.999996, residuos de 0.2 mm y las coordenadas actuales y reales de cada estación](../../public/manual/poligonal/18-georreferenciar.png)
 
 La poligonal se gira y se traslada, sin cambiar de escala: los ángulos y las
 distancias medidos no cambian, ni el orden alcanzado. El dibujo anota la
 georreferenciación con su fecha, sus puntos y su rotación.
 
-![El dibujo de la Sede Vivero ya georreferenciada, en coordenadas reales](../../public/manual/poligonal/15-georreferenciada.png)
+![El dibujo de la Sede Vivero ya georreferenciada, en coordenadas reales](../../public/manual/poligonal/19-georreferenciada.png)
 
 La ventana avisa, sin impedirlo, si el factor de escala se aparta de 1 más de
 lo que admite el orden alcanzado: revise las coordenadas que escribió. Si lo
@@ -329,4 +344,4 @@ entregar:
 Arriba están **Exportar PDF** y **Exportar Excel**. Vea
 [El informe y el Excel](06-informe-y-excel.md).
 
-![El paso Informe de la poligonal V10: la portada con los datos del trabajo, el resultado y las secciones del informe](../../public/manual/poligonal/10-informe.png)
+![El paso Informe de la poligonal V10: la portada con los datos del trabajo, el resultado y las secciones del informe](../../public/manual/poligonal/14-informe.png)
