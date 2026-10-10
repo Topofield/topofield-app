@@ -21,7 +21,7 @@ export async function recorrer() {
     // Así lo ve el diálogo de impresión: solo el informe.
     await page.emulateMedia({ media: "print" });
     await page.waitForTimeout(600);
-    await cap.paso("como-se-imprime", { completa: true });
+    await cap.paso("como-se-imprime", { paginaEntera: true });
     await page.emulateMedia({ media: "screen" });
 
     // El Excel: la descarga llega con el nombre del proceso.

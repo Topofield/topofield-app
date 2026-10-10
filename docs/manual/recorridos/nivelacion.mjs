@@ -53,8 +53,11 @@ async function crear(page, d) {
   await page.waitForTimeout(800);
 }
 
-/** Llena el popup de una armada y la guarda. */
-async function armada(page, a, { titulo, fin = false, capturar } = {}) {
+/**
+ * Llena el popup de una armada y la guarda. Con `pausa`, después de guardar
+ * cierra la ventana siguiente, fotografía la libreta y la vuelve a abrir.
+ */
+async function armada(page, a, { titulo, fin = false, capturar, pausa } = {}) {
   // El mismo popup pasa a la armada siguiente: hay que esperar a que cambie
   // de verdad, o lo tecleado cae en la anterior y se pierde al cambiar.
   const d = page.getByRole("dialog", { name: titulo });
@@ -81,6 +84,16 @@ async function armada(page, a, { titulo, fin = false, capturar } = {}) {
     ? d.getByRole("button", { name: /^(Guardar y seguir con la vuelta|Guardar)$/ }).last()
     : d.getByRole("button", { name: /^Guardar y seguir desde/ });
   await boton.click();
+  if (pausa) {
+    const siguiente = page.getByRole("dialog", { name: pausa.siguiente });
+    await siguiente.waitFor();
+    await siguiente.getByRole("button", { name: "Cancelar" }).click();
+    await siguiente.waitFor({ state: "detached" });
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(800);
+    await pausa.capturar();
+    await page.getByRole("button", { name: "+ Agregar armada" }).click();
+  }
 }
 
 export async function recorrer() {
@@ -106,10 +119,20 @@ export async function recorrer() {
     await page.getByRole("button", { name: "+ Agregar la primera armada" }).click();
     const ida = armadasDe(CARTERA_VERJON.ida);
     for (const [k, a] of ida.entries()) {
+      const ultima = k === ida.length - 1;
       await armada(page, a, {
         titulo: `Armada ${k + 1} · ida`,
-        fin: k === ida.length - 1,
-        capturar: k === 3 ? (d) => conAlto(page, 1200, () => cap.paso("armada", d)) : undefined,
+        fin: ultima,
+        capturar:
+          k === 0
+            ? (d) => conAlto(page, 1200, () => cap.paso("primera-armada", d))
+            : k === 3
+              ? (d) => conAlto(page, 1200, () => cap.paso("armada", d))
+              : ultima
+                ? (d) => conAlto(page, 1200, () => cap.paso("fin-de-la-ida", d))
+                : undefined,
+        pausa:
+          k === 3 ? { siguiente: `Armada ${k + 2} · ida`, capturar: () => cap.paso("libreta-a-medias") } : undefined,
       });
     }
     // La vuelta sigue sola desde el fin de la ida, en D4.
