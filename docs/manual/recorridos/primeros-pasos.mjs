@@ -1,4 +1,4 @@
-// Capítulo 1 · Primeros pasos: crear la cuenta, confirmarla, entrar, el
+// Capítulo 1 · Primeros pasos: la presentación, crear la cuenta, confirmarla, entrar, el
 // proyecto de ejemplo, el dashboard, la barra y el tema.
 
 import {
@@ -20,12 +20,19 @@ export async function recorrer() {
   const { browser, page } = await abrir();
   const cap = capitulo("primeros-pasos", page);
   try {
+    // Sin sesión, TopoField abre en la página de presentación (Fase 45).
+    await ir(page, "/");
+    await cap.paso("presentacion");
+
     // Entrar: la pantalla de inicio de sesión.
-    await ir(page, "/sign-in");
+    await page.getByRole("link", { name: "Iniciar sesión" }).first().click();
+    await page.waitForURL(/sign-in/);
+    await page.waitForTimeout(800);
     await cap.paso("inicio-de-sesion");
 
-    // Crear la cuenta con el código de invitación.
-    await page.getByRole("link", { name: "Regístrate" }).click();
+    // Crear la cuenta con el código de invitación, desde la presentación.
+    await ir(page, "/");
+    await page.getByRole("link", { name: "Crear cuenta" }).click();
     await page.waitForURL(/sign-up/);
     await page.waitForTimeout(800);
     // El código real no va en la captura (el manual es público): se fotografía
