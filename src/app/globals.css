@@ -163,6 +163,31 @@
   .clip-triangle {
     clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
   }
+
+  /* Escudo de la Universidad Distrital en la página de presentación
+     (Fase 45). El PNG es solo el trazo, en su canal alfa; el color lo pone la
+     tinta, así que sale oscuro en claro y claro en oscuro sin otro archivo. */
+  .escudo-ud {
+    aspect-ratio: 259 / 415;
+    background-color: var(--color-ink);
+    mask: url("/landing/escudo-ud.png") center / contain no-repeat;
+    print-color-adjust: exact;
+  }
+
+  /* El único movimiento de la página de presentación: los lados de la
+     poligonal del hero se trazan en orden. Cada `<line>` lleva
+     `pathLength="1"` y su `animation-delay`. */
+  .lado-trazado {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trazar-lado 0.32s ease-out forwards;
+  }
+}
+
+@keyframes trazar-lado {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -173,6 +198,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Sin espera: el dibujo del hero sale ya completo. */
+  .lado-trazado {
+    animation: none;
+    stroke-dashoffset: 0;
   }
 }
 
