@@ -16,12 +16,22 @@ const RAIZ = join(process.cwd(), "src");
 const CARPETAS = ["components", "app"];
 const EXCLUIDOS = [/^app\/design-system\//];
 
+const UNIVERSIDAD = "la hoja de la universidad";
+
 const PROHIBIDOS: [string, RegExp][] = [
   ["referencia a una sección del PRD", /§/g],
   ["referencia a una fase", /\bFase \d/g],
-  ["la hoja de la universidad", /universidad/gi],
+  [UNIVERSIDAD, /universidad/gi],
   ["lo que el motor «hoy» no hace", /\bHoy no\b/g],
   ["la migración", /\bla migración\b/gi],
+];
+
+// La página de presentación (Fase 45) sí nombra a la universidad: es la
+// mención del trabajo de grado, que es lo que la página tiene que decir, no
+// una nota de desarrollo. Solo se le levanta esa regla; las demás le aplican.
+const NOMBRAN_LA_UNIVERSIDAD = [
+  /^app\/page\.tsx$/,
+  /^components\/landing\/mencion-ud\.tsx$/,
 ];
 
 /**
@@ -62,6 +72,7 @@ describe("sin notas de desarrollo en la interfaz (Fase 22)", () => {
     for (const archivo of fuentes()) {
       const texto = sinComentarios(readFileSync(join(RAIZ, archivo), "utf8"));
       for (const [motivo, patron] of PROHIBIDOS) {
+        if (motivo === UNIVERSIDAD && NOMBRAN_LA_UNIVERSIDAD.some((e) => e.test(archivo))) continue;
         for (const m of texto.matchAll(patron)) {
           const linea = texto.slice(0, m.index).split("\n").length;
           hallazgos.push(`${archivo}:${linea} «${m[0]}» (${motivo})`);
