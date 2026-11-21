@@ -54,6 +54,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 42 | El manual por capítulos | [`prds/41-manual-por-capitulos.md`](./prds/41-manual-por-capitulos.md) | cerrada |
 | 43 | Las correcciones del recorrido | [`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md) | cerrada |
 | 44 | Los últimos pendientes | [`prds/43-ultimos-pendientes.md`](./prds/43-ultimos-pendientes.md) | cerrada |
+| 45 | La página de presentación | [`prds/44-landing.md`](./prds/44-landing.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -573,6 +574,32 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 45 — La página de presentación (2026-11-21)
+
+Las divergencias están en el PRD-de-fase (`prds/44-landing.md`). `/` pinta, sin
+sesión, una página pública con la mención del trabajo de grado y el escudo de
+la universidad; el dibujo de su hero lo calcula el motor con la cartera TT4.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Una guarda que prohíbe una palabra salta el día que esa palabra es el
+  contenido.** `ui-sin-notas-de-desarrollo.test.ts` vetaba «universidad» para
+  que no volviera «la hoja de la universidad»; la mención del trabajo de grado
+  la necesita. Se le levantó esa regla solo a los dos archivos de la página,
+  no a la carpeta entera: las demás reglas les siguen aplicando.
+- **Insertar un paso al principio de un recorrido renumera sus capturas.**
+  `paso()` numera en orden, así que la presentación desplazó las siete de
+  «Primeros pasos». Se conservaron sus bytes con el número nuevo
+  (`git show HEAD:… > nuevo.png`) para que el commit sea un renombrado y no
+  siete capturas regeneradas.
+- **«Despliega» puede querer decir producción.** La vista previa de Vercel de
+  una rama pide iniciar sesión en Vercel y vive en otra dirección; quien mira
+  `topofield-app.vercel.app` no ve nada hasta el merge. Conviene decir de
+  entrada cuál de las dos se va a hacer.
+- **Las cookies de `localhost` no distinguen el puerto.** Con sesión abierta
+  en el 3000, el dev del 3001 también la ve y `/` salta al dashboard: la
+  página de presentación se mira en una ventana privada.
 
 ### Cierre Fase 42 — El manual por capítulos (2026-10-09)
 
