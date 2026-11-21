@@ -50,7 +50,7 @@ Esta carpeta contiene los **PRDs detallados de cada fase** del desarrollo de Top
 | 42 | El manual por capítulos | `41-manual-por-capitulos.md` | cerrada |
 | 43 | Las correcciones del recorrido | `42-correcciones-del-recorrido.md` | cerrada |
 | 44 | Los últimos pendientes | `43-ultimos-pendientes.md` | cerrada |
-| 45 | La página de presentación | `44-landing.md` | en curso |
+| 45 | La página de presentación | `44-landing.md` | cerrada |
 
 Estados: `pendiente` (sin redactar) · `en curso` (redactado, en implementación) · `cerrada` (criterios cumplidos, fase entregada).
 

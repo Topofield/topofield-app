@@ -1,7 +1,8 @@
 # PRD-de-fase 45 — La página de presentación
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-11-21
+**Fecha de cierre:** 2026-11-21
 
 **Rama:** `fase-45-landing`
 **Petición:** del usuario, 2026-11-21: «quiero diseñar la landing page de
@@ -28,6 +29,8 @@ va marcada como tal.
 >   y a 390 y 320 px sin desborde; el trazo, con y sin «reducir movimiento»;
 >   el orden del foco con teclado; los tres enlaces; el logo del inicio de
 >   sesión vuelve a `/`, y con sesión `/` lleva al dashboard.
+> - **Despliegue:** sin migraciones. La rama se vio primero en una vista
+>   previa de Vercel y el usuario pidió llevarla a producción el mismo día.
 
 ## Qué hay hoy
 

@@ -12,7 +12,8 @@ que lo descartó.
 
 El 2026-11-21 el usuario pidió la página de presentación, con la mención y el
 escudo de la Universidad Distrital en el hero: es la **Fase 45**
-([`prds/44-landing.md`](./prds/44-landing.md)), en curso.
+([`prds/44-landing.md`](./prds/44-landing.md)), **cerrada** el mismo día.
+No queda ninguna petición abierta.
 
 ## Estado (2026-10-09)
 
