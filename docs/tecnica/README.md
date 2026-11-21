@@ -4,8 +4,9 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
-**Última actualización:** 2026-10-09 · Fase 44 cerrada; fases 38 a 43 en
-producción, con la migración de la 38 aplicada (§ 13) · 1212 tests y 128 pruebas de base (pgTAP) ·
+**Última actualización:** 2026-11-21 · Fase 45 en curso (la página de
+presentación, sin desplegar); Fase 44 cerrada; fases 38 a 43 en
+producción, con la migración de la 38 aplicada (§ 13) · 1219 tests y 128 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -98,6 +99,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 42 | El manual por capítulos | cerrada |
 | 43 | Las correcciones del recorrido | cerrada |
 | 44 | Los últimos pendientes | cerrada |
+| 45 | La página de presentación | en curso |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -214,12 +216,14 @@ src/
 │   │       └── settlement/[siteId]/     pestañas Panel · Puntos · BMs · Informe (Fase 37); export/ (Excel, Fase 38); visits/[visitId]/ con los pasos Libreta · Resultados
 │   ├── auth/callback/       confirmación de correo (Supabase Auth)
 │   ├── design-system/       galería del sistema de diseño (404 en producción)
+│   ├── page.tsx             la página de presentación, solo sin sesión (Fase 45); con sesión, el proxy lleva `/` al dashboard
 │   ├── layout.tsx           layout raíz, carga de fuentes
 │   ├── globals.css          tokens de tema y capas base
 │   └── icon.svg             favicon
 ├── components/
 │   ├── auth/                formulario de registro
 │   ├── design-system/       componentes propios reutilizables
+│   ├── landing/             la mención del trabajo de grado con el escudo y la poligonal del hero (Fase 45)
 │   ├── process/             cabecera, pasos y borrador comunes (Fases 35 a 37), el informe de un proceso (Fase 22) y los campos del equipo (Fase 44)
 │   ├── navigation/          barra superior y menú de cuenta (Fase 33); la guarda de cambios sin guardar (Fase 22) salió en la 37
 │   ├── polygonal/           pantalla por pasos de la poligonal: alta, amarre y mediciones en popups, ajuste (Fase 35)
@@ -231,6 +235,7 @@ src/
 │   ├── calculations/        algoritmos puros
 │   ├── validators/          reglas de validación
 │   ├── demo/                proyecto de ejemplo y carteras reales (Fase 21)
+│   ├── landing/             la poligonal del hero, calculada por el motor con la cartera TT4, y los textos y capturas de la página de presentación (Fase 45)
 │   ├── design/              escalas de gráfica, marcadores y contraste
 │   ├── export/              libros de Excel de los tres módulos con fórmulas vivas (Fase 38): `cells.ts`, las primitivas de celda; `formula-check.ts`, solo para pruebas
 │   ├── import/leveling/     lectores de libretas de nivel digital (Fase 16)
@@ -2776,7 +2781,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1212 tests en 98 archivos, Vitest, entorno `node` **sin jsdom**. Además, 128
+1219 tests en 100 archivos, Vitest, entorno `node` **sin jsdom**. Además, 128
 pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2856,7 +2861,9 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/export/workbook-colors.test.ts` | 8 | Cada color del Excel es su token del tema claro de `globals.css` (Fase 24); también los cuatro de la Fase 38: el fondo y la tinta de los datos (`miraBg`, `miraInk`), «CUMPLE» y «NO CUMPLE» |
 | `lib/export/formula-check.test.ts` | 5 | **El ayudante que evalúa las fórmulas de un libro** (Fase 38): fórmulas encadenadas, de otra hoja, con texto y con fechas; un libro coherente no tiene diferencias y uno con un resultado guardado falso sí; evalúa desde los datos crudos, así que cambiar un dato recalcula toda la cadena; sigue cadenas largas con funciones —el intérprete no es reentrante— y evalúa `MIN` |
 | `lib/export/cells.test.ts` | 5 | Las primitivas de celda (Fase 38): columnas y celdas con el nombre de Excel; una fórmula lleva su resultado guardado y un dato su estilo; `roundHalfUp` redondea los medios como `Math.round`, también los negativos; los bloques de tolerancias copian `tolerances.ts`; el encabezado de cada hoja dice cuándo se exportó, sin la marca de la app (Fase 40) |
-| `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) |
+| `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) La página de presentación (Fase 45) queda exenta solo de la regla de «la universidad»: nombrarla es su mención del trabajo de grado |
+| `lib/landing/poligonal-ejemplo.test.ts` | 3 | **La poligonal del hero de la página de presentación** (Fase 45): sale del motor con el cierre de la cartera TT4 (12″, 1:7045, tercer orden), con sus seis lados, y el dibujo de la ajustada cierra en el arranque |
+| `lib/landing/capturas.test.ts` | 4 | Cada captura que enseña la página de presentación está en `docs/manual/capturas.json` (Fase 45) |
 | `lib/manual/markdown.test.ts` | 11 | **El Markdown del manual** (Fase 42): slugs de GitHub con tildes y repetidos, texto sin escapar, archivos de capítulo, enlaces entre archivos, anclas y externos, rutas de captura y la imagen sola en su párrafo |
 | `lib/manual/png.test.ts` | 3 | El tamaño de un PNG desde su cabecera; lo que no es un PNG se rechaza (Fase 42) |
 | `lib/manual/manual.test.ts` | 10 | **El manual real** (Fase 42): numeración y slugs, el README enlaza cada capítulo en orden, resumen y flujos, vecinos; sin «§», «Fase N», «PRD» ni HTML; todo enlace y ancla resuelve; cada imagen es captura de su capítulo, existe, tiene alt y está en `capturas.json` con su tamaño; no sobra ningún PNG |

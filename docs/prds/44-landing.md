@@ -11,6 +11,24 @@ sin preguntar». Lo que la petición no dice lo decide este PRD, y cada decisió
 va marcada como tal.
 **Módulo:** la raíz del sitio (`/`), que hoy no pinta nada.
 
+> **Divergencias de la implementación:**
+>
+> - **El amarillo «mira» marca solo el arranque del dibujo** (V10); los lados
+>   van en tinta, como la ajustada en la aplicación.
+> - **La guarda de notas de desarrollo** (`ui-sin-notas-de-desarrollo.test.ts`,
+>   Fase 22) prohíbe la palabra «universidad» en la interfaz y saltó con la
+>   mención. Se le levantó esa regla, y solo esa, a `app/page.tsx` y a
+>   `components/landing/mencion-ud.tsx`.
+> - **Las capturas de «Primeros pasos» se renumeran:** el recorrido empieza
+>   en la presentación, que es la 01, y las siete que había pasan de 01–07 a
+>   02–08 con los mismos bytes. La de inicio de sesión baja a «Entrar».
+> - **Las capturas de la página van con `next/image`,** no con `<img>` como en
+>   el manual: son de 2560 px y aquí se ven a 720.
+> - **Verificación en pantalla** en local, sin sesión: claro y oscuro a 1280,
+>   y a 390 y 320 px sin desborde; el trazo, con y sin «reducir movimiento»;
+>   el orden del foco con teclado; los tres enlaces; el logo del inicio de
+>   sesión vuelve a `/`, y con sesión `/` lleva al dashboard.
+
 ## Qué hay hoy
 
 `/` no tiene página: `src/app/page.tsx` redirige a `/dashboard`, y sin sesión
@@ -70,7 +88,7 @@ que la recibe de un colega. Con sesión, `/` sigue llevando al dashboard.
 
 La identidad es la de la aplicación (Fase 20) y no se le añade nada: papel
 cuadriculado, tinta, el amarillo «mira» solo en la acción principal y en el
-trazo del dibujo, Barlow en el cuerpo y Barlow Semi Condensed en los títulos.
+arranque del dibujo, Barlow en el cuerpo y Barlow Semi Condensed en los títulos.
 Ningún token nuevo.
 
 ```

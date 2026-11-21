@@ -8,6 +8,12 @@ No es un backlog de ideas: es lo que el usuario ya pidió explícitamente y est�
 esperando. Lo que se descarta se borra de aquí, con su razón anotada en el PRD
 que lo descartó.
 
+## Estado (2026-11-21)
+
+El 2026-11-21 el usuario pidió la página de presentación, con la mención y el
+escudo de la Universidad Distrital en el hero: es la **Fase 45**
+([`prds/44-landing.md`](./prds/44-landing.md)), en curso.
+
 ## Estado (2026-10-09)
 
 Las **44 fases están cerradas** y el producto está terminado. **No queda
