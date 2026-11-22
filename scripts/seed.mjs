@@ -112,13 +112,31 @@ async function recreateUser() {
       );
     }
   }
+  // Toda cuenta nace de una invitación aceptada (Fase 46): el disparador de
+  // `auth.users` rechaza el alta sin ella, también por la API de
+  // administración. El nombre de la cuenta sale de la invitación.
+  const CODIGO = "SEEDTQPF";
+  const { error: invError } = await admin.from("invitations").insert({
+    first_name: "Seed",
+    last_name: "TopoField",
+    email: EMAIL,
+    status: "approved",
+    code: CODIGO,
+    decided_at: new Date().toISOString(),
+  });
+  if (invError) throw invError;
   const { data: created, error } = await admin.auth.admin.createUser({
     email: EMAIL,
     password: PASSWORD,
     email_confirm: true,
-    user_metadata: { first_name: "Seed", last_name: "TopoField" },
+    user_metadata: { invite_code: CODIGO },
   });
   if (error) throw error;
+  // Es la cuenta de producción, y allí el administrador (Fase 46).
+  const { error: adminError } = await admin
+    .from("admins")
+    .insert({ user_id: created.user.id });
+  if (adminError) throw adminError;
   return created.user.id;
 }
 

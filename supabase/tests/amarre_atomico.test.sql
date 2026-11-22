@@ -15,8 +15,11 @@ set local search_path = public, extensions;
 select plan(12);
 
 -- --- Datos, como postgres (sin RLS) ------------------------------------------
-insert into auth.users (id, email) values
-  ('00000000-0000-4000-8000-00000000a401', 'amarre@topofield.test');
+-- Toda cuenta nace de una invitación aceptada (Fase 46).
+insert into public.invitations (first_name, last_name, email, status, code) values
+  ('Prueba', 'Pruebas', 'amarre@topofield.test', 'approved', '7CPBVV67');
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-4000-8000-00000000a401', 'amarre@topofield.test', '{"invite_code":"7CPBVV67"}');
 
 insert into public.projects (id, user_id, name, client, location) values
   ('00000000-0000-4000-8000-00000000b401', '00000000-0000-4000-8000-00000000a401', 'Amarre', 'Pruebas', 'Local'),

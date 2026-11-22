@@ -34,6 +34,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invitations: {
+        Row: {
+          code: string | null
+          company: string | null
+          created_at: string
+          decided_at: string | null
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          purpose: string | null
+          status: string
+          used_at: string | null
+        }
+        Insert: {
+          code?: string | null
+          company?: string | null
+          created_at?: string
+          decided_at?: string | null
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          purpose?: string | null
+          status?: string
+          used_at?: string | null
+        }
+        Update: {
+          code?: string | null
+          company?: string | null
+          created_at?: string
+          decided_at?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          purpose?: string | null
+          status?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       leveling_processes: {
         Row: {
           closure_error_mm: number | null
@@ -1093,12 +1150,28 @@ export type Database = {
         Args: { p_header: Json; p_process_id: string; p_stations: Json }
         Returns: undefined
       }
+      invitation_is_valid: {
+        Args: { p_code: string; p_email: string }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
+      normalize_invite_code: { Args: { p_code: string }; Returns: string }
       owns_reading_station: {
         Args: { target_station: string }
         Returns: boolean
       }
       point_active_on: {
         Args: { p_active_from: string; p_date: string; p_retired_on: string }
+        Returns: boolean
+      }
+      request_invitation: {
+        Args: {
+          p_company?: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_purpose?: string
+        }
         Returns: boolean
       }
       save_leveling_process: {

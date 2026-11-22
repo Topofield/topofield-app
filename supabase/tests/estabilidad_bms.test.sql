@@ -17,8 +17,11 @@ select plan(5);
 select has_column('public', 'settlement_book_readings', 'catalog_elevation',
   'la libreta tiene la cota de catálogo de los BM de control');
 
-insert into auth.users (id, email) values
-  ('00000000-0000-4000-8000-00000000a301', 'bms@topofield.test');
+-- Toda cuenta nace de una invitación aceptada (Fase 46).
+insert into public.invitations (first_name, last_name, email, status, code) values
+  ('Prueba', 'Pruebas', 'bms@topofield.test', 'approved', '9Z83CPZS');
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-4000-8000-00000000a301', 'bms@topofield.test', '{"invite_code":"9Z83CPZS"}');
 insert into public.projects (id, user_id, name, client, location) values
   ('00000000-0000-4000-8000-00000000b301', '00000000-0000-4000-8000-00000000a301',
    'BMs', 'Pruebas', 'Local');

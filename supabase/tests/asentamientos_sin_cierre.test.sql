@@ -10,9 +10,13 @@ set local search_path = public, extensions;
 
 select plan(33);
 
-insert into auth.users (id, email) values
-  ('00000000-0000-4000-8000-00000000a371', 'asentsincierre@topofield.test'),
-  ('00000000-0000-4000-8000-00000000a372', 'otro37@topofield.test');
+-- Toda cuenta nace de una invitación aceptada (Fase 46).
+insert into public.invitations (first_name, last_name, email, status, code) values
+  ('Prueba', 'Pruebas', 'asentsincierre@topofield.test', 'approved', 'HXTEVU94'),
+  ('Prueba', 'Pruebas', 'otro37@topofield.test', 'approved', 'BAC4MX5B');
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-4000-8000-00000000a371', 'asentsincierre@topofield.test', '{"invite_code":"HXTEVU94"}'),
+  ('00000000-0000-4000-8000-00000000a372', 'otro37@topofield.test', '{"invite_code":"BAC4MX5B"}');
 insert into public.projects (id, user_id, name, client, location) values
   ('00000000-0000-4000-8000-00000000b371', '00000000-0000-4000-8000-00000000a371',
    'Asentamientos sin cierre', 'Pruebas', 'Local');
