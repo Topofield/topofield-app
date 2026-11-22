@@ -3,81 +3,82 @@
 import { useActionState, useState } from "react";
 import { Alert, Button, Input } from "@/components/design-system";
 import { signUpAction, type SignUpState } from "@/app/(auth)/sign-up/actions";
+import { MIN_PASSWORD } from "@/lib/validators/sign-up";
 
-const INITIAL_STATE: SignUpState = {};
+const INITIAL_STATE: SignUpState = { step: "invitacion" };
 
 /**
- * Formulario de registro.
+ * Registro con invitación (Fase 46): primero el correo y el código; si la
+ * invitación existe, la contraseña. Los dos pasos son el mismo formulario y
+ * la misma acción, que dice en `state.step` cuál toca.
  *
- * Usa `useActionState` —y no `<form action>` plano— para no perder lo escrito
- * cuando falla: con el código de invitación, el error más probable («código
- * incorrecto») no tiene nada que ver con los demás campos, y obligar a
- * teclearlos otra vez sería gratuito. Mismo patrón que el asistente de
- * proyecto.
+ * La contraseña se controla en el cliente y nunca vuelve del servidor: así
+ * sobrevive a un error sin que el servidor tenga que devolverla.
  */
 export function SignUpForm() {
-  const [state, formAction, isPending] = useActionState(
-    signUpAction,
-    INITIAL_STATE,
-  );
+  const [state, formAction, isPending] = useActionState(signUpAction, INITIAL_STATE);
   const fieldErrors = state.fieldErrors ?? {};
-
-  // La contraseña se controla en el cliente y nunca vuelve del servidor: así
-  // sobrevive a un error —el más probable es «código no válido», que no tiene
-  // nada que ver con ella— sin que el servidor tenga que devolverla.
   const [password, setPassword] = useState("");
+  const enContrasena = state.step === "contrasena";
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} className="flex flex-col gap-4" noValidate>
       {state.error && <Alert variant="error">{state.error}</Alert>}
+      <input type="hidden" name="step" value={state.step} />
 
-      <Input
-        label="Código de invitación"
-        name="invite_code"
-        type="text"
-        autoComplete="off"
-        defaultValue={state.values?.invite_code}
-        error={fieldErrors.invite_code}
-        helperText="Necesita una invitación para crear una cuenta."
-      />
-      <Input
-        label="Nombre"
-        name="first_name"
-        type="text"
-        autoComplete="given-name"
-        defaultValue={state.values?.first_name}
-        error={fieldErrors.first_name}
-      />
-      <Input
-        label="Apellido"
-        name="last_name"
-        type="text"
-        autoComplete="family-name"
-        defaultValue={state.values?.last_name}
-        error={fieldErrors.last_name}
-      />
-      <Input
-        label="Correo"
-        name="email"
-        type="email"
-        autoComplete="email"
-        defaultValue={state.values?.email}
-        error={fieldErrors.email}
-      />
-      <Input
-        label="Contraseña"
-        name="password"
-        type="password"
-        autoComplete="new-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        error={fieldErrors.password}
-        helperText="Mínimo 6 caracteres."
-      />
-
-      <Button type="submit" variant="primary" size="lg" disabled={isPending}>
-        {isPending ? "Creando cuenta…" : "Crear cuenta"}
-      </Button>
+      {enContrasena ? (
+        <>
+          <input type="hidden" name="email" value={state.values?.email ?? ""} />
+          <input type="hidden" name="invite_code" value={state.values?.invite_code ?? ""} />
+          <Alert variant="success">
+            Invitación encontrada para <strong className="font-semibold">{state.values?.email}</strong>.
+            Elija una contraseña para su cuenta.
+          </Alert>
+          <Input
+            label="Contraseña"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={fieldErrors.password}
+            helperText={`Mínimo ${MIN_PASSWORD} caracteres.`}
+            autoFocus
+            required
+          />
+          <Button type="submit" size="lg" disabled={isPending}>
+            {isPending ? "Creando cuenta…" : "Crear cuenta"}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Input
+            label="Correo"
+            name="email"
+            type="email"
+            autoComplete="email"
+            defaultValue={state.values?.email}
+            error={fieldErrors.email}
+            helperText="El mismo con el que solicitó la invitación."
+            required
+          />
+          <Input
+            label="Código de invitación"
+            name="invite_code"
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            placeholder="ABCD-EFGH"
+            defaultValue={state.values?.invite_code}
+            error={fieldErrors.invite_code}
+            required
+          />
+          <Button type="submit" size="lg" disabled={isPending}>
+            {isPending ? "Comprobando…" : "Continuar"}
+          </Button>
+        </>
+      )}
     </form>
   );
 }

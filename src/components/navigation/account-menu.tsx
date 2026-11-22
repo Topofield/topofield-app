@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ThemeSelect } from "@/components/design-system";
 import type { ThemeChoice } from "@/lib/theme";
 
@@ -20,10 +21,13 @@ export function AccountMenu({
   email,
   theme,
   signOut,
+  isAdmin = false,
 }: {
   email: string;
   theme: ThemeChoice;
   signOut: () => Promise<void>;
+  /** El administrador ve además «Invitaciones» (Fase 46). */
+  isAdmin?: boolean;
 }) {
   return (
     <>
@@ -52,6 +56,16 @@ export function AccountMenu({
           <p className="mb-2 text-xs text-ink-2">Tema</p>
           <ThemeSelect initial={theme} variant="buttons" />
         </div>
+        {isAdmin && (
+          <div className="border-b border-rule p-2">
+            <Link
+              href="/admin/invitaciones"
+              className="block w-full rounded-md px-2 py-2 text-left text-sm font-medium text-ink transition-colors hover:bg-sel"
+            >
+              Invitaciones
+            </Link>
+          </div>
+        )}
         <form action={signOut} className="p-2">
           <button
             type="submit"

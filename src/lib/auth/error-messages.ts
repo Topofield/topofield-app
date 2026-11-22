@@ -15,8 +15,10 @@ const TRANSLATIONS: Record<string, string> = {
     "El formato del correo no es válido.",
   "Email rate limit exceeded":
     "Se enviaron demasiados correos. Espera unos minutos antes de intentar de nuevo.",
+  // Desde la Fase 46, sobre todo el disparador `require_invitation`: el alta
+  // no tenía una invitación aceptada que casara.
   "Database error saving new user":
-    "Error al crear el usuario. Inténtalo de nuevo.",
+    "No se pudo crear la cuenta: la invitación no es válida o ya se usó.",
 };
 
 export function translateAuthError(message: string): string {

@@ -1,88 +1,95 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { formatInviteCode } from "@/lib/auth/invite-code";
 import { translateAuthError } from "@/lib/auth/error-messages";
-import { invitacionValida, validateSignUpInput } from "@/lib/validators/sign-up";
+import { crearProyectoDemo } from "@/lib/demo/crear-proyecto-demo";
+import { createClient } from "@/lib/supabase/server";
+import { validateInvitationCheck, validateSignUpInput } from "@/lib/validators/sign-up";
 
 export interface SignUpState {
+  /** `invitacion`: correo y código; `contrasena`: la invitación ya se comprobó. */
+  step: "invitacion" | "contrasena";
   error?: string;
   fieldErrors?: Record<string, string>;
-  /**
-   * Lo que el usuario ya había escrito, para devolvérselo al fallar. La
-   * contraseña nunca viaja de vuelta.
-   */
-  values?: Record<string, string>;
+  /** El correo y el código, para repoblar o para el paso 2. Nunca la contraseña. */
+  values?: { email: string; invite_code: string };
 }
 
-/** Los campos que se repueblan tras un error. Sin la contraseña. */
-function valoresDe(formData: FormData): Record<string, string> {
-  const campos = ["invite_code", "first_name", "last_name", "email"];
-  return Object.fromEntries(
-    campos.map((c) => [c, String(formData.get(c) ?? "")]),
-  );
-}
+const INVITACION_NO_VALIDA =
+  "No encontramos una invitación aceptada para ese correo con ese código. Revise los dos, o solicite una invitación.";
 
 /**
- * A dónde vuelve el usuario tras pulsar el enlace del correo de confirmación.
+ * El registro con invitación (Fase 46), en dos pasos con la misma acción:
  *
- * Se deriva de la petición en curso en lugar de fijarse en una variable, para
- * que funcione igual en local, en las vistas previas de Vercel y en
- * producción. El dominio debe estar en las «Redirect URLs» de Supabase.
- */
-async function urlDeCallback(): Promise<string> {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const protocolo = h.get("x-forwarded-proto") ?? "http";
-  return `${protocolo}://${host}/auth/callback`;
-}
-
-/**
- * Registra un usuario nuevo.
+ * 1. `step=invitacion`: comprueba en la base que hay una invitación aceptada
+ *    de ese correo con ese código (`invitation_is_valid`) y pasa al paso 2.
+ * 2. `step=contrasena`: crea la cuenta con el código en los metadatos. El
+ *    disparador `require_invitation` de `auth.users` vuelve a comprobarlo,
+ *    marca la invitación usada y le pone a la cuenta el nombre de la
+ *    solicitud. Sin confirmación de correo, `signUp` deja la sesión
+ *    iniciada: se crea el proyecto de ejemplo y se entra al dashboard.
  *
- * El registro exige un código de invitación (`SIGNUP_INVITE_CODE`), que se
- * comprueba solo aquí, en el servidor. Con la confirmación de correo activa
- * `signUp` NO deja sesión iniciada, así que no se puede mandar al usuario al
- * dashboard: va a la pantalla de «revise su correo».
+ * Si en Supabase volviera a estar encendida la confirmación, `signUp` no deja
+ * sesión y se manda a «Revise su correo», como antes de esta fase.
  */
-export async function signUpAction(
-  _prevState: SignUpState,
-  formData: FormData,
-): Promise<SignUpState> {
-  const values = valoresDe(formData);
+export async function signUpAction(_prev: SignUpState, formData: FormData): Promise<SignUpState> {
+  const paso = formData.get("step") === "contrasena" ? "contrasena" : "invitacion";
+  const values = {
+    email: String(formData.get("email") ?? ""),
+    invite_code: String(formData.get("invite_code") ?? ""),
+  };
 
-  const validacion = validateSignUpInput(formData);
-  if (!validacion.ok) {
-    return {
-      error: "Revise los campos marcados.",
-      fieldErrors: validacion.errors,
-      values,
-    };
+  const comprobacion = validateInvitationCheck(formData);
+  if (!comprobacion.ok) {
+    return { step: "invitacion", error: "Revise los campos marcados.", fieldErrors: comprobacion.errors, values };
   }
-
-  const { firstName, lastName, email, password, inviteCode } = validacion.data;
-
-  if (!invitacionValida(inviteCode, process.env.SIGNUP_INVITE_CODE)) {
-    return {
-      fieldErrors: { invite_code: "El código de invitación no es válido." },
-      values,
-    };
-  }
+  const { email, code } = comprobacion.data;
+  const normalizados = { email, invite_code: formatInviteCode(code) };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+
+  if (paso === "invitacion") {
+    const { data: valida, error } = await supabase.rpc("invitation_is_valid", { p_email: email, p_code: code });
+    if (error) {
+      console.error("No se pudo comprobar la invitación:", error.message);
+      return { step: "invitacion", error: "No se pudo comprobar la invitación. Inténtelo de nuevo.", values };
+    }
+    if (!valida) return { step: "invitacion", error: INVITACION_NO_VALIDA, values };
+    return { step: "contrasena", values: normalizados };
+  }
+
+  const registro = validateSignUpInput(formData);
+  if (!registro.ok) {
+    return { step: "contrasena", error: "Revise los campos marcados.", fieldErrors: registro.errors, values: normalizados };
+  }
+
+  const { data, error } = await supabase.auth.signUp({
     email,
-    password,
-    options: {
-      data: { first_name: firstName, last_name: lastName },
-      emailRedirectTo: await urlDeCallback(),
-    },
+    password: registro.data.password,
+    options: { data: { invite_code: code } },
   });
 
   if (error) {
-    return { error: translateAuthError(error.message), values };
+    // El disparador rechazó el alta: la invitación se usó o cambió entre los
+    // dos pasos. Supabase lo devuelve como un error genérico de la base.
+    if (error.message === "Database error saving new user") {
+      return { step: "invitacion", error: INVITACION_NO_VALIDA, values: normalizados };
+    }
+    return { step: "contrasena", error: translateAuthError(error.message), values: normalizados };
   }
 
-  redirect("/sign-up/revisa-tu-correo");
+  if (!data.session) redirect("/sign-up/revisa-tu-correo");
+
+  // El proyecto de ejemplo es un extra: si falla, la persona entra igual a
+  // una cuenta vacía. Nunca debe dejarla fuera.
+  if (data.user) {
+    try {
+      await crearProyectoDemo(supabase, data.user.id);
+    } catch (e) {
+      console.error("No se pudo crear el proyecto de ejemplo:", e);
+    }
+  }
+
+  redirect("/dashboard");
 }

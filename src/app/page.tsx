@@ -56,14 +56,20 @@ export default async function Home() {
                 Iniciar sesión
               </Link>
               <Link
-                href="/sign-up"
+                href="/solicitar-invitacion"
                 className={buttonClasses({ variant: "secondary", size: "lg" })}
               >
-                Crear cuenta
+                Solicitar invitación
               </Link>
             </div>
             <p className="mt-3 text-sm text-ink-2">
-              Crear una cuenta pide un código de invitación.
+              ¿Ya tiene un código?{" "}
+              <Link
+                href="/sign-up"
+                className="font-medium text-ink underline decoration-mira-strong underline-offset-2"
+              >
+                Crear cuenta
+              </Link>
             </p>
           </div>
 

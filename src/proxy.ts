@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { updateSession } from "@/lib/supabase/middleware";
 
 // Rutas accesibles sin sesión. `/auth/callback` lo es porque la sesión se
@@ -7,6 +8,7 @@ const PUBLIC_ROUTES = new Set([
   "/sign-in",
   "/sign-up",
   "/sign-up/revisa-tu-correo",
+  "/solicitar-invitacion",
   "/auth/callback",
 ]);
 
@@ -27,11 +29,20 @@ export async function proxy(request: NextRequest) {
   if (RUTAS_SIN_DESVIO.has(path)) return response;
 
   if (!user && !PUBLIC_ROUTES.has(path) && path !== "/") {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+    // Al entrar, vuelve a donde iba (Fase 46: el enlace del correo al
+    // administrador). El dashboard es el destino por defecto: no hace falta
+    // anotarlo.
+    const destino = new URL("/sign-in", request.url);
+    if (path !== "/dashboard") {
+      destino.searchParams.set("next", path + request.nextUrl.search);
+    }
+    return NextResponse.redirect(destino);
   }
 
   if (user && (PUBLIC_ROUTES.has(path) || path === "/")) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const next =
+      path === "/sign-in" ? safeNextPath(request.nextUrl.searchParams.get("next")) : null;
+    return NextResponse.redirect(new URL(next ?? "/dashboard", request.url));
   }
 
   return response;

@@ -25,10 +25,12 @@ export default async function AppLayout({
   }
 
   const theme = await readThemeChoice();
+  // El enlace a las invitaciones, solo para el administrador (Fase 46).
+  const { data: esAdmin } = await supabase.rpc("is_admin");
 
   return (
     <div className="flex min-h-screen flex-col">
-      <AppBar email={user.email ?? ""} theme={theme} signOut={signOutAction} />
+      <AppBar email={user.email ?? ""} theme={theme} signOut={signOutAction} isAdmin={esAdmin === true} />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-8">
         {children}
       </main>

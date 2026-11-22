@@ -19,10 +19,12 @@ export function AppBar({
   email,
   theme,
   signOut,
+  isAdmin = false,
 }: {
   email: string;
   theme: ThemeChoice;
   signOut: () => Promise<void>;
+  isAdmin?: boolean;
 }) {
   return (
     // El alto va en el <header>, con el borde dentro (border-box): la barra
@@ -44,7 +46,7 @@ export function AppBar({
               campo. */}
           <AppBarLink href="/manual" icon={<BookIcon />} label="Manual" />
         </nav>
-        <AccountMenu email={email} theme={theme} signOut={signOut} />
+        <AccountMenu email={email} theme={theme} signOut={signOut} isAdmin={isAdmin} />
       </div>
     </header>
   );
