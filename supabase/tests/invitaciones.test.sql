@@ -15,7 +15,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(30);
+select plan(29);
 
 -- --- Datos, como postgres (sin RLS) ------------------------------------------
 -- Un administrador y un usuario normal, cada uno con su invitación usada.
@@ -46,11 +46,6 @@ select is(
   (select first_name || ' ' || last_name from public.profiles where id = '00000000-0000-4000-8000-00000000a462'),
   'Usuario Normal',
   'el perfil toma el nombre de la solicitud'
-);
-select is(
-  (select raw_user_meta_data ? 'invite_code' from auth.users where id = '00000000-0000-4000-8000-00000000a462'),
-  false,
-  'el código no se queda en los metadatos'
 );
 
 -- --- El disparador: sin invitación válida, no hay cuenta ---------------------

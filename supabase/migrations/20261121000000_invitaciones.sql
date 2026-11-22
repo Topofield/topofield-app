@@ -175,9 +175,11 @@ grant execute on function public.invitation_is_valid(text, text) to anon, authen
 -- Antes de toda alta en `auth.users` —el registro, la API de administración,
 -- un enlace mágico que crea usuario o un insert directo—, la invitación
 -- aceptada de ese correo con ese código pasa a `used`. Si no hay ninguna, el
--- alta no ocurre. El código llega en los metadatos (`invite_code`) y no se
--- queda en ellos; el nombre y el apellido de la cuenta salen de la solicitud
--- (`handle_new_user` los lee de los metadatos para el perfil).
+-- alta no ocurre. El código llega en los metadatos (`invite_code`); no se
+-- quita de ellos porque Supabase Auth los vuelve a escribir al terminar el
+-- registro, y para entonces el código ya está usado. El nombre y el apellido
+-- de la cuenta salen de la solicitud (`handle_new_user` los lee de los
+-- metadatos para el perfil).
 --
 -- Dos altas a la vez con el mismo código: el `update` bloquea la fila, y la
 -- segunda la encuentra ya usada.
@@ -205,7 +207,7 @@ begin
   end if;
 
   new.raw_user_meta_data :=
-    (coalesce(new.raw_user_meta_data, '{}'::jsonb) - 'invite_code')
+    coalesce(new.raw_user_meta_data, '{}'::jsonb)
     || jsonb_build_object('first_name', v_first, 'last_name', v_last);
   return new;
 end;

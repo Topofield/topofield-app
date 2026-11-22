@@ -196,7 +196,7 @@ local no existe todavía al migrar: lo inserta el seed.
   `used` (con `used_at`) y, si no había ninguna que casara, lanza una
   excepción: el alta no ocurre. Además pone en los metadatos el nombre y el
   apellido de la invitación —de ahí los toma `handle_new_user` para el
-  perfil— y quita el código.
+  perfil—.
 
   Vale para **toda** alta, también las de la API de administración y los
   `insert` directos en `auth.users`: el seed y las pruebas pgTAP que crean
