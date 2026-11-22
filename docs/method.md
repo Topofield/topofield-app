@@ -55,6 +55,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 43 | Las correcciones del recorrido | [`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md) | cerrada |
 | 44 | Los últimos pendientes | [`prds/43-ultimos-pendientes.md`](./prds/43-ultimos-pendientes.md) | cerrada |
 | 45 | La página de presentación | [`prds/44-landing.md`](./prds/44-landing.md) | cerrada |
+| 46 | Invitaciones por solicitud | [`prds/45-invitaciones.md`](./prds/45-invitaciones.md) | en curso |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
