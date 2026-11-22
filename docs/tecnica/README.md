@@ -6,8 +6,8 @@ extenderlo.
 
 **Última actualización:** 2026-11-21 · Fase 45 cerrada (la página de
 presentación, sin migraciones: sale a producción con su merge); fases 38 a 43 en
-producción, con la migración de la 38 aplicada (§ 13) · Fase 46 en curso
-(invitaciones por solicitud) · 1240 tests y 157 pruebas de base (pgTAP) ·
+producción, con la migración de la 38 aplicada (§ 13) · Fase 46 cerrada
+(invitaciones por solicitud, sin desplegar: § 13) · 1240 tests y 159 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -101,7 +101,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 43 | Las correcciones del recorrido | cerrada |
 | 44 | Los últimos pendientes | cerrada |
 | 45 | La página de presentación | cerrada |
-| 46 | Invitaciones por solicitud | en curso |
+| 46 | Invitaciones por solicitud | cerrada |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -1248,7 +1248,9 @@ de correo, la regla tiene que vivir en la base:
   Nadie inserta por la tabla: la solicitud entra por **`request_invitation`**
   (`security definer`), que normaliza, deja que los `check` pongan los límites
   y descarta la repetida (`on conflict do nothing` sobre el índice único
-  parcial de las vivas). El registro comprueba el paso 1 con
+  parcial de las vivas). Tiene un tope global contra el formulario
+  automatizado: con 20 solicitudes en la última hora o 100 pendientes, deja de
+  guardar. El registro comprueba el paso 1 con
   **`invitation_is_valid`**, que no devuelve nada más que un booleano.
 - **`admins`**: el administrador es una fila, no una columna del perfil (que
   cada usuario puede editar). Nadie la escribe desde la aplicación; la llenan
@@ -2828,7 +2830,7 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1240 tests en 104 archivos, Vitest, entorno `node` **sin jsdom**. Además, 157
+1240 tests en 104 archivos, Vitest, entorno `node` **sin jsdom**. Además, 159
 pruebas de la base con pgTAP en once archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
@@ -2954,7 +2956,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `asentamientos_sin_cierre.test.sql` | 33 | Los asentamientos sin cierre (Fase 37): `site_benchmarks` con un código por lugar y la visita que midió cada BM (`origin_visit_id`, con su clave foránea), `starts_section` y `precision_order` nulo; ni la visita, ni el lugar, ni sus lecturas, libreta o puntos tienen triggers de cierre, ni el de la C0, ni sus funciones; sin `closed_at`, `closed_by`, el clima ni `capture_mode` en la visita, sin `status`, `closed_at` ni `closed_by` en el lugar, y sin las funciones de inmutabilidad ni `is_reopening` (la segunda migración, paso 3 del despliegue); como el dueño, la visita queda `in_progress`, la C0 se cambia con lecturas, `save_visit` guarda filas sin lectura con su inicio de tramo, un código de BM repetido se rechaza, `closed` ya no se admite y cualquier visita se borra; otro usuario no ve ni agrega BM del lugar (RLS) |
 | `sin_informes_consolidados.test.sql` | 2 | Sin informes consolidados (Fase 38): la tabla `reports` no existe, ni su función de inmutabilidad `reject_update_on_report()`. Reemplaza a `informe_congelado.test.sql` (Fase 23), que probaba el trigger y la portada congelada |
 | `sin_catalogo_equipos.test.sql` | 2 | Sin el catálogo de equipos (Fase 44): la tabla `equipment` no existe, y el equipo de la nivelación sigue en sus columnas. Reemplaza a `catalogo_equipos.test.sql` (Fase 25) |
-| `invitaciones.test.sql` | 29 | **Sin invitación no hay cuenta** (Fase 46): el disparador de `auth.users` rechaza el alta sin código, con uno equivocado, con el de otro correo y con uno usado, y con el bueno la crea, marca la invitación usada y le da al perfil el nombre de la solicitud; una sola solicitud viva por correo; anon y un usuario normal no leen, no insertan ni deciden; `request_invitation` crea la pendiente, descarta la repetida y rechaza lo desmedido; el administrador lee y acepta |
+| `invitaciones.test.sql` | 31 | **Sin invitación no hay cuenta** (Fase 46): el disparador de `auth.users` rechaza el alta sin código, con uno equivocado, con el de otro correo y con uno usado, y con el bueno la crea, marca la invitación usada y le da al perfil el nombre de la solicitud; una sola solicitud viva por correo; anon y un usuario normal no leen, no insertan ni deciden; `request_invitation` crea la pendiente, descarta la repetida y rechaza lo desmedido; el administrador lee y acepta; con 20 solicitudes en la última hora, la siguiente no se guarda |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin

@@ -31,10 +31,13 @@ export async function aceptarInvitacionAction(formData: FormData): Promise<void>
       .update({ status: "approved", code: generateInviteCode(), decided_at: new Date().toISOString() })
       .eq("id", id)
       .eq("status", "pending");
-    if (!error) break;
+    if (!error) {
+      revalidatePath(RUTA);
+      return;
+    }
     if (error.code !== "23505") throw new Error(`No se pudo aceptar la solicitud: ${error.message}`);
   }
-  revalidatePath(RUTA);
+  throw new Error("No se pudo generar un código libre. Inténtelo de nuevo.");
 }
 
 /** Rechaza una solicitud pendiente. No avisa a nadie. */

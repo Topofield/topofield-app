@@ -111,6 +111,12 @@ $$;
  * Guarda una solicitud. Devuelve si creó una fila: `false` cuando ya había una
  * viva para ese correo, que no se duplica ni se avisa. Los valores fuera de
  * rango los rechazan los `check` de la tabla.
+ *
+ * Un tope contra quien automatice el formulario público con correos distintos:
+ * cada solicitud nueva es un correo al administrador y un envío de la cuota de
+ * Resend. Con 20 solicitudes en la última hora, o 100 pendientes sin decidir,
+ * deja de guardar (devuelve `false`, como la repetida) hasta que pase la hora
+ * o el administrador decida.
  */
 create function public.request_invitation(
   p_first_name text,
@@ -128,6 +134,11 @@ as $$
 declare
   v_id uuid;
 begin
+  if (select count(*) from public.invitations where created_at > now() - interval '1 hour') >= 20
+     or (select count(*) from public.invitations where status = 'pending') >= 100 then
+    return false;
+  end if;
+
   insert into public.invitations (first_name, last_name, email, company, purpose)
   values (
     btrim(coalesce(p_first_name, '')),

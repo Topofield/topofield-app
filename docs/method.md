@@ -55,7 +55,7 @@ El PRD principal define 6 fases (§ 9 del PRD). Las fases 7 en adelante no estab
 | 43 | Las correcciones del recorrido | [`prds/42-correcciones-del-recorrido.md`](./prds/42-correcciones-del-recorrido.md) | cerrada |
 | 44 | Los últimos pendientes | [`prds/43-ultimos-pendientes.md`](./prds/43-ultimos-pendientes.md) | cerrada |
 | 45 | La página de presentación | [`prds/44-landing.md`](./prds/44-landing.md) | cerrada |
-| 46 | Invitaciones por solicitud | [`prds/45-invitaciones.md`](./prds/45-invitaciones.md) | en curso |
+| 46 | Invitaciones por solicitud | [`prds/45-invitaciones.md`](./prds/45-invitaciones.md) | cerrada |
 
 El estado de cada fila se actualiza al avanzar (`pendiente` → `en curso` → `cerrada`). El mismo estado vive también en [`prds/README.md`](./prds/README.md) como índice rápido.
 
@@ -575,6 +575,27 @@ base. Ninguna línea ejecutable; los 492 tests siguen siendo los mismos.
 - **`capturas.mjs` reescribe las diecinueve capturas, cambien o no.** Cuatro
   salieron distintas solo por la fecha del día. Se restauraron: solo se
   commitea la captura cuya pantalla tocó la fase.
+
+### Cierre Fase 46 — Invitaciones por solicitud (2026-11-22)
+
+Las divergencias están en el PRD-de-fase (`prds/45-invitaciones.md`). El
+registro pasa a ser por invitación: se solicita, el administrador acepta y el
+código, de un solo uso y ligado al correo, crea la cuenta sin confirmación.
+
+**Aprendizajes a llevar a fases siguientes:**
+
+- **Quitar una barrera obliga a mover la regla.** Lo que cerraba el registro
+  no era el código, que se comprobaba en el formulario, sino el correo de
+  confirmación. Apagarlo sin un disparador en `auth.users` habría abierto el
+  registro a cualquiera que llamara a la API de Supabase. La revisión del PRD
+  encontró además el atajo de las cuentas sin confirmar, que Supabase confirma
+  con un `update` que el disparador no ve.
+- **Una revisión independiente del PRD y otra del código encuentran cosas
+  distintas.** La del PRD, el orden del despliegue y la tabla escribible por
+  `anon`; la del código, que el formulario público no tenía tope.
+- **Toda prueba que crea usuarios depende de la regla de alta.** Las ocho
+  pruebas pgTAP que insertaban en `auth.users` y el seed tuvieron que crear
+  antes su invitación.
 
 ### Cierre Fase 45 — La página de presentación (2026-11-21)
 

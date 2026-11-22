@@ -15,7 +15,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(29);
+select plan(31);
 
 -- --- Datos, como postgres (sin RLS) ------------------------------------------
 -- Un administrador y un usuario normal, cada uno con su invitación usada.
@@ -214,6 +214,26 @@ select is(
   public.invitation_is_valid('pendiente46@topofield.test', 'pndt-aaaa'),
   true,
   'la aceptada es válida con su código, en cualquier forma'
+);
+
+-- --- El tope contra el formulario automatizado --------------------------------
+-- Con 20 solicitudes en la última hora, la siguiente no se guarda.
+
+insert into public.invitations (first_name, last_name, email)
+select 'Robot', 'Masivo', 'robot' || g || '@topofield.test'
+from generate_series(1, 20) g;
+
+set local role anon;
+select is(
+  public.request_invitation('Una', 'Más', 'unamas46@topofield.test'),
+  false,
+  'con 20 solicitudes en la última hora, la siguiente no se guarda'
+);
+reset role;
+select is(
+  (select count(*) from public.invitations where email = 'unamas46@topofield.test'),
+  0::bigint,
+  'y no queda fila'
 );
 
 select * from finish();

@@ -1,7 +1,8 @@
 # PRD-de-fase 46 — Invitaciones por solicitud
 
-**Estado:** en curso
+**Estado:** cerrada
 **Fecha de apertura:** 2026-11-21
+**Fecha de cierre:** 2026-11-22
 
 **Rama:** `fase-46-invitaciones`
 **Petición:** del usuario, 2026-11-21: «como tenemos el límite de Resend y
@@ -14,6 +15,30 @@ ingresando su mail y su código, al pasar crear su contraseña. Ya no necesita
 correo de confirmación por ahora».
 **Módulo:** el registro (`(auth)/sign-up`), una ruta pública nueva, una página
 de administración nueva y la base.
+
+> **Divergencias de la implementación:**
+>
+> - **El código no se quita de los metadatos.** Supabase Auth los vuelve a
+>   escribir al terminar el registro, con el código dentro; para entonces ya
+>   está usado. El disparador solo añade el nombre y el apellido.
+> - **Tope global en `request_invitation`** (decisión 9), tras la revisión de
+>   código: 20 solicitudes por hora o 100 pendientes.
+> - **`aceptarInvitacionAction` falla a la vista** si tres códigos seguidos
+>   chocan con uno existente, en vez de no hacer nada.
+> - **La CLI de Supabase 3.x no lee el `config.toml`** (`[inbucket]` pasó a
+>   `local_smtp`): la migración se aplicó con `npx supabase@2`, y los tipos se
+>   añadieron a mano porque la CLI no veía los contenedores.
+> - **En local la confirmación de correo siguió encendida**: el socket de
+>   Docker no estaba y el servicio de autenticación no se pudo reiniciar con el
+>   `config.toml` nuevo. El flujo se verificó entero igual —solicitud, aviso
+>   (al log, sin clave de Resend), aceptación, registro en dos pasos,
+>   confirmación por Mailpit, proyecto de ejemplo, 404 para un usuario normal,
+>   el código usado rechazado— y el alta directa contra la API de Supabase sin
+>   invitación respondió 500 sin crear la cuenta. **Lo que no se vio en local
+>   es entrar sin confirmar**: queda para producción, tras apagar «Confirm
+>   email».
+> - **Manual:** «Primeros pasos» pasa de 8 a 10 capturas; las cuatro de la
+>   aplicación ya dentro conservan sus bytes con el número nuevo.
 
 ## Por qué
 
@@ -97,8 +122,10 @@ Las tres primeras son del usuario; el resto, de este PRD.
    viene lleno, se responde «recibido» y no se guarda), la regla anterior, y
    que `anon` **no escribe en la tabla**: la solicitud entra por una función
    de la base que valida longitudes y descarta la repetida. Cada solicitud
-   nueva gasta un envío de Resend (100 al día en el plan gratuito); no se
-   añade más por ahora.
+   nueva gasta un envío de Resend (100 al día en el plan gratuito), así que la
+   función tiene un tope global: con 20 solicitudes en la última hora o 100
+   pendientes, deja de guardar hasta que pase la hora o el administrador
+   decida (añadido tras la revisión de código).
 10. **El administrador es una fila en una tabla, no una columna del perfil.**
     `public.admins(user_id)`: cada usuario puede editar su perfil, así que una
     columna ahí se la podría poner cualquiera. Nadie escribe en `admins` desde

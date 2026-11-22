@@ -15,6 +15,11 @@ escudo de la Universidad Distrital en el hero: es la **Fase 45**
 ([`prds/44-landing.md`](./prds/44-landing.md)), **cerrada** el mismo día.
 No queda ninguna petición abierta.
 
+El mismo día pidió las invitaciones por solicitud y el rediseño de la página
+de presentación: la **Fase 46**
+([`prds/45-invitaciones.md`](./prds/45-invitaciones.md)), **cerrada** el
+2026-11-22, y la **47**, la página.
+
 ## Estado (2026-10-09)
 
 Las **44 fases están cerradas** y el producto está terminado. **No queda
