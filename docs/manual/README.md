@@ -11,7 +11,7 @@ ejemplos son carteras de campo reales.
 
 ## Capítulos
 
-1. [Primeros pasos](01-primeros-pasos.md): crear la cuenta, entrar y moverse por la aplicación.
+1. [Primeros pasos](01-primeros-pasos.md): solicitar la invitación, crear la cuenta, entrar y moverse por la aplicación.
 2. [Proyectos](02-proyectos.md): crear un proyecto, sus puntos de referencia y sus procesos.
 3. [La poligonal](03-poligonal.md): medir, ajustar, georreferenciar e informar una poligonal.
 4. [La nivelación](04-nivelacion.md): la libreta por armadas, la vuelta, la compensación y la importación desde un nivel digital.

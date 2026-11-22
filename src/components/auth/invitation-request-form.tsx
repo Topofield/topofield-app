@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 import { Alert, Button, Input, Textarea } from "@/components/design-system";
 import {
@@ -22,13 +21,6 @@ export function InvitationRequestForm() {
         <p className="text-ink">
           Recibimos su solicitud. Si se aprueba, le haremos llegar un código de
           invitación.
-        </p>
-        <p className="text-sm text-ink-2">
-          Con el código, cree su cuenta en{" "}
-          <Link href="/sign-up" className="font-medium text-ink underline decoration-mira-strong underline-offset-2">
-            Crear cuenta
-          </Link>
-          .
         </p>
       </div>
     );

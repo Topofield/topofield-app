@@ -1,48 +1,63 @@
 # Primeros pasos
 
-Cómo crear su cuenta, entrar por primera vez y moverse por la aplicación. Al
+Cómo solicitar la invitación, crear su cuenta, entrar por primera vez y moverse por la aplicación. Al
 final, las tres ideas que ordenan todo TopoField.
 
 ## Crear su cuenta
 
-Para crear una cuenta necesita un **código de invitación**: la aplicación no
-está abierta al público y, sin el código, el registro no avanza. Pídalo a
-quien administra la aplicación.
+TopoField funciona **por invitación**: primero la solicita, y cuando se
+aprueba recibe un **código de invitación** con el que crea su cuenta.
+
+### Solicitar la invitación
 
 1. Abra TopoField en el navegador. Verá la página de presentación. Pulse
-   **Crear cuenta**.
+   **Solicitar invitación**.
 
-   ![Página de presentación de TopoField: la mención del trabajo de grado con el escudo de la Universidad Distrital, los botones Iniciar sesión y Crear cuenta, y una poligonal calculada](../../public/manual/primeros-pasos/01-presentacion.png)
+   ![Página de presentación de TopoField: la mención del trabajo de grado con el escudo de la Universidad Distrital, los botones Iniciar sesión y Solicitar invitación, y una poligonal calculada](../../public/manual/primeros-pasos/01-presentacion.png)
 
 2. Llene el formulario:
-   - **Código de invitación**: el que le dieron, tal cual.
-   - **Nombre** y **Apellido**: identifican su cuenta.
-   - **Correo**: es su usuario para entrar, y a él llega el mensaje de
-     confirmación. Use uno que revise.
-   - **Contraseña**: al menos 6 caracteres.
+   - **Nombre** y **Apellido**: serán los de su cuenta.
+   - **Correo**: con él creará la cuenta y entrará después. Use el suyo: el
+     código solo sirve con ese correo.
+   - **Empresa o entidad** y **¿Para qué quiere usar TopoField?**: opcionales,
+     ayudan a aprobar la solicitud.
 
-   Pulse **Crear cuenta**.
+   Pulse **Solicitar invitación**.
 
-   ![Formulario Crear cuenta lleno: código de invitación, nombre Andrea, apellido Rojas, correo y contraseña](../../public/manual/primeros-pasos/03-crear-cuenta.png)
+   ![Formulario Solicitar invitación lleno: nombre Andrea, apellido Rojas, correo, empresa Topografía Rojas y el uso que le dará](../../public/manual/primeros-pasos/02-solicitar-invitacion.png)
 
-3. La aplicación le pide que revise su correo. Abra el mensaje de TopoField y
-   pulse el enlace para confirmar la cuenta. Si no lo encuentra, mire en el
-   correo no deseado.
+3. La aplicación confirma que recibió la solicitud. Cuando se apruebe, quien
+   administra TopoField le hará llegar su código de invitación, de ocho
+   caracteres, como `ABCD-EFGH`.
 
-   ![Pantalla «Revise su correo»: le enviamos un mensaje para confirmar su cuenta](../../public/manual/primeros-pasos/04-revise-su-correo.png)
+   ![Confirmación: recibimos su solicitud; si se aprueba, le haremos llegar un código de invitación](../../public/manual/primeros-pasos/03-solicitud-recibida.png)
 
-4. Al pulsar el enlace, la cuenta queda confirmada y entra directamente a la
-   aplicación.
+### Crear la cuenta con el código
 
-> Hasta que confirme el correo no podrá entrar. El enlace caduca: si tarda
-> mucho, regístrese de nuevo.
+1. En la pantalla para entrar, pulse **Crear cuenta**.
+
+   ![Pantalla de inicio de sesión de TopoField, con los campos Correo y Contraseña, el botón Entrar y, debajo, los enlaces Crear cuenta y Solicite una invitación](../../public/manual/primeros-pasos/04-inicio-de-sesion.png)
+
+2. Escriba el **correo** con el que pidió la invitación y el **código**. Da
+   igual si lo escribe en mayúsculas o minúsculas, con el guion o sin él.
+   Pulse **Continuar**.
+
+   ![Crear cuenta, primer paso: el correo y el código de invitación](../../public/manual/primeros-pasos/05-crear-cuenta-codigo.png)
+
+3. Si el código corresponde a ese correo, la aplicación lo confirma y le pide
+   una **contraseña** de al menos 6 caracteres. Pulse **Crear cuenta** y
+   entra directamente a la aplicación.
+
+   ![Crear cuenta, segundo paso: invitación encontrada para su correo y el campo Contraseña](../../public/manual/primeros-pasos/06-crear-cuenta-contrasena.png)
+
+> Cada código sirve **una sola vez** y solo con el correo de la solicitud. Si
+> la aplicación no lo encuentra, revise los dos; si ya creó la cuenta con él,
+> entre con su correo y su contraseña.
 
 ## Entrar
 
 Las siguientes veces, pulse **Iniciar sesión** en la página de presentación,
 escriba su **correo** y su **contraseña** y pulse **Entrar**.
-
-![Pantalla de inicio de sesión de TopoField, con los campos Correo y Contraseña, el botón Entrar y, debajo, el enlace Regístrate](../../public/manual/primeros-pasos/02-inicio-de-sesion.png)
 
 La sesión queda abierta en ese navegador hasta que la cierre desde el menú de
 cuenta; mientras siga abierta, TopoField abre directamente en el dashboard.
@@ -85,7 +100,7 @@ tiene; pulse una para abrir el proyecto. **Activos** y **Archivados** cambian
 entre los proyectos en curso y los que guardó aparte, y **+ Nuevo Proyecto**
 crea uno (vea [Proyectos](02-proyectos.md)).
 
-![Dashboard con los indicadores Proyectos activos 1, Procesos calculados 7 y Fuera de tolerancia 2, y la tarjeta del Proyecto de ejemplo](../../public/manual/primeros-pasos/05-dashboard.png)
+![Dashboard con los indicadores Proyectos activos 1, Procesos calculados 7 y Fuera de tolerancia 2, y la tarjeta del Proyecto de ejemplo](../../public/manual/primeros-pasos/07-dashboard.png)
 
 ## Moverse por la aplicación
 
@@ -102,9 +117,9 @@ La barra de arriba queda fija mientras baja por cualquier pantalla:
 - **El círculo con su inicial** abre el menú de cuenta: su correo, el tema y
   **Cerrar sesión**.
 
-![La ruta de una poligonal con la lista «Otros procesos del proyecto» abierta: las poligonales, las nivelaciones y los lugares de la demo, cada uno con su tipo, y la actual resaltada](../../public/manual/primeros-pasos/06-menu-de-la-ruta.png)
+![La ruta de una poligonal con la lista «Otros procesos del proyecto» abierta: las poligonales, las nivelaciones y los lugares de la demo, cada uno con su tipo, y la actual resaltada](../../public/manual/primeros-pasos/08-menu-de-la-ruta.png)
 
-![Menú de cuenta abierto: Sesión iniciada como, el tema con Sistema, Claro y Oscuro, y Cerrar sesión](../../public/manual/primeros-pasos/07-menu-de-cuenta.png)
+![Menú de cuenta abierto: Sesión iniciada como, el tema con Sistema, Claro y Oscuro, y Cerrar sesión](../../public/manual/primeros-pasos/09-menu-de-cuenta.png)
 
 ## Elegir el tema
 
@@ -119,7 +134,7 @@ presentación y en la pantalla de inicio de sesión, el tema se cambia con el
 icono de arriba a la derecha. El informe impreso sale siempre en
 claro.
 
-![El dashboard en tema oscuro](../../public/manual/primeros-pasos/08-tema-oscuro.png "El tema oscuro descansa la vista de noche; a pleno sol, el claro se lee mejor.")
+![El dashboard en tema oscuro](../../public/manual/primeros-pasos/10-tema-oscuro.png "El tema oscuro descansa la vista de noche; a pleno sol, el claro se lee mejor.")
 
 ## Cómo se organiza TopoField
 

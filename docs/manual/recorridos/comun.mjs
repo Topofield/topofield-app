@@ -10,9 +10,10 @@
 //   3. npm run manual:capturas [capitulo…]
 //
 // La cuenta del recorrido es propia (`manual@topofield.local`): se borra y se
-// vuelve a registrar por el formulario, así que su dashboard es el de un
-// usuario nuevo —el proyecto de ejemplo y lo que el recorrido crea—. No toca
-// la cuenta del seed.
+// vuelve a registrar por el formulario —solicitud de invitación, aceptación y
+// registro con el código (Fase 46)—, así que su dashboard es el de un usuario
+// nuevo: el proyecto de ejemplo y lo que el recorrido crea. No toca la cuenta
+// del seed.
 
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
@@ -66,6 +67,8 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
  * cascada, así que primero van sus proyectos.
  */
 export async function borrarCuenta() {
+  // Sus invitaciones también: si no, la solicitud nueva sería la repetida.
+  sql(`delete from public.invitations where email='${CUENTA.email}'`);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secreto = process.env.SUPABASE_SECRET_KEY;
   if (!url || !secreto) throw new Error("Falta NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SECRET_KEY (.env.local)");
@@ -78,7 +81,21 @@ export async function borrarCuenta() {
   if (error) throw error;
 }
 
-/** El enlace de confirmación del último correo que recibió la cuenta. */
+/**
+ * Acepta la solicitud de la cuenta con un código fijo, como lo haría el
+ * administrador en «Invitaciones» (Fase 46). Devuelve el código, para mostrar.
+ */
+export function aceptarInvitacion() {
+  sql(
+    `update public.invitations set status='approved', code='TERRA234', decided_at=now() where email='${CUENTA.email}' and status='pending'`,
+  );
+  return "TERR-A234";
+}
+
+/**
+ * El enlace de confirmación del último correo que recibió la cuenta. Solo hace
+ * falta si la base local aún tiene la confirmación de correo encendida.
+ */
 export async function enlaceDeConfirmacion() {
   for (let intento = 0; intento < 30; intento++) {
     const lista = await (await fetch(`${MAILPIT}/api/v1/search?query=to:${CUENTA.email}`)).json();

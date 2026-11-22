@@ -223,31 +223,39 @@
     2560,
     1600
   ],
-  "primeros-pasos/02-inicio-de-sesion.png": [
+  "primeros-pasos/02-solicitar-invitacion.png": [
     2560,
     1600
   ],
-  "primeros-pasos/03-crear-cuenta.png": [
+  "primeros-pasos/03-solicitud-recibida.png": [
     2560,
     1600
   ],
-  "primeros-pasos/04-revise-su-correo.png": [
+  "primeros-pasos/04-inicio-de-sesion.png": [
     2560,
     1600
   ],
-  "primeros-pasos/05-dashboard.png": [
+  "primeros-pasos/05-crear-cuenta-codigo.png": [
     2560,
     1600
   ],
-  "primeros-pasos/06-menu-de-la-ruta.png": [
+  "primeros-pasos/06-crear-cuenta-contrasena.png": [
     2560,
     1600
   ],
-  "primeros-pasos/07-menu-de-cuenta.png": [
+  "primeros-pasos/07-dashboard.png": [
     2560,
     1600
   ],
-  "primeros-pasos/08-tema-oscuro.png": [
+  "primeros-pasos/08-menu-de-la-ruta.png": [
+    2560,
+    1600
+  ],
+  "primeros-pasos/09-menu-de-cuenta.png": [
+    2560,
+    1600
+  ],
+  "primeros-pasos/10-tema-oscuro.png": [
     2560,
     1600
   ],
