@@ -6,7 +6,8 @@ extenderlo.
 
 **Última actualización:** 2026-11-21 · Fase 45 cerrada (la página de
 presentación, sin migraciones: sale a producción con su merge); fases 38 a 43 en
-producción, con la migración de la 38 aplicada (§ 13) · 1219 tests y 128 pruebas de base (pgTAP) ·
+producción, con la migración de la 38 aplicada (§ 13) · Fase 46 en curso
+(invitaciones por solicitud) · 1240 tests y 157 pruebas de base (pgTAP) ·
 [topofield-app.vercel.app](https://topofield-app.vercel.app).
 
 Otros documentos:
@@ -100,6 +101,7 @@ Sin librerías de componentes: el sistema de diseño es propio, sobre Tailwind.
 | 43 | Las correcciones del recorrido | cerrada |
 | 44 | Los últimos pendientes | cerrada |
 | 45 | La página de presentación | cerrada |
+| 46 | Invitaciones por solicitud | en curso |
 
 Las fases 7 en adelante no estaban en el § 9 del PRD: nacen del contraste del
 motor contra carteras de campo reales (`docs/carteras/`). Las 35 a 37 llevaron
@@ -129,10 +131,18 @@ Es la misma cuenta que se usa en producción, con una contraseña **solo local**
 la de producción no está en el repositorio. Los recorridos del manual no la
 usan: tienen su propia cuenta, `manual@topofield.local` (§ 12).
 
-**El registro exige un código de invitación.** Defina `SIGNUP_INVITE_CODE` en
-`.env.local` (ver `.env.example`); sin esa variable nadie puede registrarse, ni
-en local. Y como la confirmación de correo está activa, el mensaje se lee en
-Mailpit: `http://127.0.0.1:55324`.
+**El registro exige una invitación aceptada (Fase 46).** En local, la cuenta
+del seed es la administradora: entre con ella a *Invitaciones* (menú de
+cuenta) para aceptar las solicitudes de `/solicitar-invitacion`. Sin
+`RESEND_API_KEY` el aviso de cada solicitud no sale, y el motivo queda en el
+log del servidor. `config.toml` apaga la confirmación de correo, como la
+nube; si el servicio de autenticación local se levantó antes de ese cambio,
+sigue pidiéndola hasta que se reinicie, y el mensaje se lee en Mailpit:
+`http://127.0.0.1:55324`.
+
+**La CLI de Supabase 3.x no lee este `config.toml`** (rechaza la sección
+`[inbucket]`, que pasó a llamarse `local_smtp`). Mientras no se migre, use la
+2.x: `npx supabase@2 …`.
 
 ### Comandos
 
@@ -204,8 +214,9 @@ Solución: dejar **un solo motor**. Con el nativo, que es donde vive el stack:
 ```
 src/
 ├── app/
-│   ├── (auth)/              login y registro
+│   ├── (auth)/              login, registro con código y solicitar-invitacion/ (Fase 46)
 │   ├── (app)/               pantallas autenticadas
+│   │   ├── admin/invitaciones/  las solicitudes, solo para el administrador (Fase 46)
 │   │   ├── dashboard/
 │   │   ├── manual/          portada y [capitulo]/ del manual, leídos de docs/manual/ (§ 12)
 │   │   ├── projects/new/    alta de proyecto
@@ -242,7 +253,8 @@ src/
 │   ├── import/benchmarks.ts BM del lugar desde una nivelación o un CSV (Fase 37)
 │   ├── reports/             carga de secciones, resumen de precisión, portada viva y datos del informe de nivelación y del lugar
 │   ├── errors/              errores de la base traducidos para el usuario (Fase 22)
-│   ├── auth/                mensajes de error de autenticación
+│   ├── auth/                mensajes de error de autenticación, el código de invitación y `next-path.ts` (Fase 46)
+│   ├── email/               el aviso de una solicitud y su envío por la API de Resend (Fase 46)
 │   ├── theme.ts, theme-server.ts   tema claro y oscuro por cookie (Fase 20)
 │   ├── process-list.ts      filtrado y orden del listado del hub (los tres módulos)
 │   ├── process-status.ts    tonos de estado de procesos y visitas (el lugar no tiene, Fase 37)
@@ -627,9 +639,11 @@ Dos detalles que se rompen fácil:
 
 ## 4. Modelo de datos
 
-Catorce tablas en `public` (la Fase 38 borró `reports`, y la 44, `equipment`):
+Dieciséis tablas en `public` (la Fase 38 borró `reports`, y la 44, `equipment`):
 
 ```
+admins           quién es administrador (Fase 46)
+invitations      solicitudes de invitación y su código (Fase 46)
 profiles         perfil del usuario (1:1 con auth.users)
 projects         proyecto topográfico
 ├── reference_points      puntos de coordenadas conocidas
@@ -1216,23 +1230,56 @@ propio usuario, porque las políticas RLS de inserción ya le permiten crear sus
 propios datos. No hizo falta introducir un cliente con la llave secreta en la
 aplicación, y conviene que siga sin haberlo.
 
-### Registro por invitación
+### Registro por invitación (Fase 46)
 
-`SIGNUP_INVITE_CODE` guarda el código que hay que introducir para crear una
-cuenta. **Sin el prefijo `NEXT_PUBLIC_`**: con él acabaría en el JavaScript que
-se envía al navegador y cualquiera podría leerlo. Se comprueba solo en el Server
-Action (`src/app/(auth)/sign-up/actions.ts`), nunca en el cliente.
+Hasta la Fase 45 había un solo código para todos, `SIGNUP_INVITE_CODE`, y lo
+que de verdad cerraba el registro era la confirmación de correo. Desde la 46
+cada persona **solicita** la invitación, el administrador la **acepta** y el
+sistema genera un código ligado a ese correo, de un solo uso. Sin confirmación
+de correo, la regla tiene que vivir en la base:
 
-**Si la variable no está definida, el registro queda bloqueado**, no abierto. Un
-despliegue al que se le olvidó configurarla debe fallar de forma visible —nadie
-puede registrarse— en lugar de quedar con la puerta abierta sin que nadie lo
-note. Lo cubre `src/lib/validators/sign-up.test.ts`.
+- **`require_invitation`**, disparador `BEFORE INSERT` en `auth.users`: el alta
+  necesita una invitación `approved` de ese correo con el código de
+  `raw_user_meta_data->>'invite_code'`; la pasa a `used` y le pone a la cuenta
+  el nombre de la solicitud. Sin ella, lanza y el alta no ocurre —también por
+  la API de administración, un enlace mágico o un insert directo—. Supabase
+  responde «Database error saving new user», que la aplicación traduce.
+- **`invitations`**: solo el administrador lee y actualiza (`is_admin()`).
+  Nadie inserta por la tabla: la solicitud entra por **`request_invitation`**
+  (`security definer`), que normaliza, deja que los `check` pongan los límites
+  y descarta la repetida (`on conflict do nothing` sobre el índice único
+  parcial de las vivas). El registro comprueba el paso 1 con
+  **`invitation_is_valid`**, que no devuelve nada más que un booleano.
+- **`admins`**: el administrador es una fila, no una columna del perfil (que
+  cada usuario puede editar). Nadie la escribe desde la aplicación; la llenan
+  la migración (`topofieldsarf@gmail.com`) y el seed.
+- **El código**: `src/lib/auth/invite-code.ts`, ocho caracteres de un alfabeto
+  sin 0, O, 1, I ni L, generados con `crypto.getRandomValues` sin sesgo. Se
+  compara sin mayúsculas, guion ni espacios, en TypeScript y en la base
+  (`normalize_invite_code`).
+- **El aviso**: `solicitarInvitacionAction` manda un correo a `ADMIN_EMAIL`
+  por la API HTTP de Resend (`src/lib/email/resend.ts`) solo cuando la
+  solicitud es nueva. Si falla, la solicitud ya está guardada. El enlace del
+  correo usa `VERCEL_PROJECT_PRODUCTION_URL`, nunca las cabeceras de la
+  petición: el formulario es público.
+- **`/sign-in?next=`**: el proxy manda a entrar con la ruta de vuelta, y
+  `safeNextPath` solo acepta rutas de la aplicación (ni `//dominio` ni `/\`).
 
-No se usa comparación en tiempo constante: protegería frente a un atacante capaz
-de medir microsegundos de latencia de red repetidamente, y la complejidad no se
-justifica aquí. Queda escrito para que la omisión sea una decisión.
+La migración borró además las cuentas sin correo confirmado y sin proyectos:
+con «Confirm email» apagado, Supabase confirmaría una de ellas al registrarse
+otra vez con ese correo, y eso es un `update`, no pasa por el disparador.
+
+**Lo que no se verifica es el correo de la solicitud**: cualquiera puede pedir
+con una dirección ajena. El filtro es el administrador, que decide a quién le
+pasa el código; su página lo recuerda.
 
 ### Confirmación de correo y `/auth/callback`
+
+**Apagada desde la Fase 46** («Confirm email» en el panel, `enable_confirmations`
+en `config.toml`): el registro deja la sesión iniciada y crea el proyecto de
+ejemplo en `signUpAction`. Lo que sigue describe el camino que vuelve si se
+enciende, y que se conserva por eso: `signUp` no deja sesión, se manda a
+«Revise su correo» y el enlace pasa por el callback.
 
 `@supabase/ssr` usa PKCE, así que el enlace del correo trae un `code` que hay
 que canjear por una sesión. De eso se encarga la Route Handler
@@ -2781,8 +2828,8 @@ Objetivo declarado: la captura se hace en campo, desde el teléfono.
 
 ## 9. Pruebas
 
-1219 tests en 100 archivos, Vitest, entorno `node` **sin jsdom**. Además, 128
-pruebas de la base con pgTAP en diez archivos (al final de esta sección).
+1240 tests en 104 archivos, Vitest, entorno `node` **sin jsdom**. Además, 157
+pruebas de la base con pgTAP en once archivos (al final de esta sección).
 
 | Archivo | Tests | Cubre |
 |---|---|---|
@@ -2864,6 +2911,10 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `lib/design/ui-sin-notas-de-desarrollo.test.ts` | 3 | **La interfaz no habla del desarrollo**: ningún texto de `components` ni `app` cita el PRD, fases, «la universidad», «hoy no» ni «la migración»; el quitado de comentarios no toca las URL (Fase 22) La página de presentación (Fase 45) queda exenta solo de la regla de «la universidad»: nombrarla es su mención del trabajo de grado |
 | `lib/landing/poligonal-ejemplo.test.ts` | 3 | **La poligonal del hero de la página de presentación** (Fase 45): sale del motor con el cierre de la cartera TT4 (12″, 1:7045, tercer orden), con sus seis lados, y el dibujo de la ajustada cierra en el arranque |
 | `lib/landing/capturas.test.ts` | 4 | Cada captura que enseña la página de presentación está en `docs/manual/capturas.json` (Fase 45) |
+| `lib/auth/invite-code.test.ts` | 7 | **El código de invitación** (Fase 46): ocho caracteres de un alfabeto sin 0, O, 1, I ni L; dos seguidos difieren; los bytes que sesgarían el reparto se descartan; se normaliza como la base y se muestra en dos grupos |
+| `lib/auth/next-path.test.ts` | 4 | `?next=` solo acepta rutas de la aplicación: ni otro dominio (`https:`, `//`, `/\`), ni caracteres de control (Fase 46) |
+| `lib/validators/invitation.test.ts` | 6 | La solicitud de invitación: lo obligatorio, el correo en minúsculas, los límites de la base y el campo trampa (Fase 46) |
+| `lib/email/aviso-invitacion.test.ts` | 6 | El aviso al administrador: asunto, texto con los datos y el enlace, lo del solicitante escapado en el HTML, y el enlace a producción o a local (Fase 46) |
 | `lib/manual/markdown.test.ts` | 11 | **El Markdown del manual** (Fase 42): slugs de GitHub con tildes y repetidos, texto sin escapar, archivos de capítulo, enlaces entre archivos, anclas y externos, rutas de captura y la imagen sola en su párrafo |
 | `lib/manual/png.test.ts` | 3 | El tamaño de un PNG desde su cabecera; lo que no es un PNG se rechaza (Fase 42) |
 | `lib/manual/manual.test.ts` | 10 | **El manual real** (Fase 42): numeración y slugs, el README enlaza cada capítulo en orden, resumen y flujos, vecinos; sin «§», «Fase N», «PRD» ni HTML; todo enlace y ancla resuelve; cada imagen es captura de su capítulo, existe, tiene alt y está en `capturas.json` con su tamaño; no sobra ningún PNG |
@@ -2879,7 +2930,7 @@ pruebas de la base con pgTAP en diez archivos (al final de esta sección).
 | `components/navigation/account-menu.test.ts` | 5 | El menú de cuenta: el botón abre el panel con `popover`; el correo, el tema con botones y «Cerrar sesión» en un formulario; la inicial del correo, también sin correo (Fase 33) |
 | `components/navigation/app-bar-link.test.ts` | 2 | Qué sección de la barra está activa: su ruta y las que cuelgan de ella, no otra que empiece igual (Fase 33) |
 | `lib/design/tokens-retirados.test.ts` | 2 | **Ninguna clase ni `var()` usa un token retirado** ni la paleta de Tailwind en todo `src/`, ni un color literal en `fill` o `stroke` (Fase 20) |
-| `lib/validators/sign-up.test.ts` | 10 | Bloqueo de registro sin código de invitación |
+| `lib/validators/sign-up.test.ts` | 8 | El registro con invitación (Fase 46): el paso 1 normaliza correo y código y rechaza lo que no tiene la forma; el paso 2 exige la contraseña sin recortarla y junta los errores de los dos |
 | `lib/export/leveling-workbook.test.ts` | 10 | **El Excel de la nivelación con fórmulas vivas** (Fase 38, reescrita): toda fórmula da el valor del motor con El Verjón (abierta con vuelta), el tramo 2 (cerrada), El Verjón sin vuelta (sin verificación) y una cerrada con hilos, tres filas por punto; las hojas de El Verjón —ida, vuelta, cotas ajustadas y resumen—; su orden alcanzado es el detectado; cambiar una V− recalcula las cotas que siguen; con hilos, la distancia sale de ellos por fórmula, (superior − inferior) × 100; una libreta vacía se exporta y lo dice, y una a medias no muestra error de cierre (revisión final) |
 | `components/design-system/status-indicator.test.tsx` | 8 | Formas del semáforo de 4 niveles |
 | `lib/design/series-markers.test.ts` | 8 | **Diez formas de marcador**: ninguna se repite antes de la serie 11 |
@@ -2903,6 +2954,7 @@ que se deshace, así que no depende del seed ni lo toca.
 | `asentamientos_sin_cierre.test.sql` | 33 | Los asentamientos sin cierre (Fase 37): `site_benchmarks` con un código por lugar y la visita que midió cada BM (`origin_visit_id`, con su clave foránea), `starts_section` y `precision_order` nulo; ni la visita, ni el lugar, ni sus lecturas, libreta o puntos tienen triggers de cierre, ni el de la C0, ni sus funciones; sin `closed_at`, `closed_by`, el clima ni `capture_mode` en la visita, sin `status`, `closed_at` ni `closed_by` en el lugar, y sin las funciones de inmutabilidad ni `is_reopening` (la segunda migración, paso 3 del despliegue); como el dueño, la visita queda `in_progress`, la C0 se cambia con lecturas, `save_visit` guarda filas sin lectura con su inicio de tramo, un código de BM repetido se rechaza, `closed` ya no se admite y cualquier visita se borra; otro usuario no ve ni agrega BM del lugar (RLS) |
 | `sin_informes_consolidados.test.sql` | 2 | Sin informes consolidados (Fase 38): la tabla `reports` no existe, ni su función de inmutabilidad `reject_update_on_report()`. Reemplaza a `informe_congelado.test.sql` (Fase 23), que probaba el trigger y la portada congelada |
 | `sin_catalogo_equipos.test.sql` | 2 | Sin el catálogo de equipos (Fase 44): la tabla `equipment` no existe, y el equipo de la nivelación sigue en sus columnas. Reemplaza a `catalogo_equipos.test.sql` (Fase 25) |
+| `invitaciones.test.sql` | 29 | **Sin invitación no hay cuenta** (Fase 46): el disparador de `auth.users` rechaza el alta sin código, con uno equivocado, con el de otro correo y con uno usado, y con el bueno la crea, marca la invitación usada y le da al perfil el nombre de la solicitud; una sola solicitud viva por correo; anon y un usuario normal no leen, no insertan ni deciden; `request_invitation` crea la pendiente, descarta la repetida y rechaza lo desmedido; el administrador lee y acepta |
 
 La Fase 6 cerró los huecos que la § 11 registraba: `expectStationCapture`,
 `niceTicks` con rangos degenerados y `computeDifferentials` con un punto sin
@@ -3327,14 +3379,13 @@ van en un portal. Entre 640 y unos 860 px la ruta se trunca por igual y el
 nombre de la página actual es lo que menos se lee; darle prioridad sin que la
 ruta desborde sobre los iconos queda para HC2.
 
-**Solo puede registrarse el dueño de la cuenta de Resend.** El remitente de
-pruebas `onboarding@resend.dev` únicamente entrega a esa dirección; a cualquier
-otra, Resend responde 403 y el correo no sale. Mientras siga así, nadie más
-puede crear una cuenta, y los correos que sí salen caen en spam.
-
-Para abrirlo —jurado, compañeros, cualquier prueba con terceros— hay que
-verificar un dominio propio en Resend y cambiar el remitente a ese dominio. Es
-configuración de paneles, no código. Ver § 13.
+**El remitente de Resend solo entrega al dueño de la cuenta.** Desde la Fase
+46 ya no impide registrarse: el registro no manda correo, y el único que sale
+—el aviso de una solicitud— va precisamente a ese dueño, el administrador
+(`ADMIN_EMAIL`). Lo que sigue pendiente es lo que un dominio verificado daría:
+escribirle al invitado (el código, una aceptación o un rechazo), volver a la
+confirmación de correo o recuperar la contraseña. Es configuración de paneles
+(§ 13).
 
 **`relative_precision` se persiste como texto ya formateado.** La presentación
 ya es una sola: `formatPrecision` (`lib/utils/format.ts`) es el único
@@ -4279,7 +4330,12 @@ con el código: se aplican aparte con la CLI.
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Pública. *Project URL* del panel de Supabase. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Pública por diseño: viaja al navegador. |
-| `SIGNUP_INVITE_CODE` | Secreta. Sin ella el registro queda bloqueado (§ 5). |
+| `RESEND_API_KEY` | Secreta (Fase 46). La API key `re_…` de Resend, la misma del SMTP de Supabase. Sin ella la solicitud de invitación se guarda pero no avisa. |
+| `ADMIN_EMAIL` | A quién va el aviso de una solicitud (Fase 46). Con el remitente de pruebas, la dirección dueña de la cuenta de Resend. |
+
+`SIGNUP_INVITE_CODE` salió en la Fase 46: se puede borrar de Vercel.
+`VERCEL_PROJECT_PRODUCTION_URL` la define Vercel sola; el aviso la usa para el
+enlace a `/admin/invitaciones`.
 
 **`SUPABASE_SECRET_KEY` no está declarada en Vercel**, y no debe estarlo: ningún
 archivo de `src/` la usa.
@@ -4658,7 +4714,9 @@ Los dos importan, y por motivos distintos:
   redirige al Site URL en silencio.
 
 *Authentication → Providers → Email*: «Confirm email» viene activo por defecto
-en la nube, al contrario que en local.
+en la nube. **Desde la Fase 46 va apagado**, y solo después de aplicar su
+migración: sin el disparador `require_invitation`, apagarlo dejaría el
+registro abierto (§ 5).
 
 ### SMTP (Resend)
 
@@ -4706,18 +4764,18 @@ pausado. **Señal de que ya está resuelto:** el error cambia de `fetch failed` 
 uno de negocio («Credenciales inválidas»), que significa que la aplicación ya
 habla con la base y esta le contesta.
 
-### Limitación vigente: solo puede registrarse el dueño de la cuenta de Resend
+### El remitente de pruebas de Resend
 
 `onboarding@resend.dev` es el remitente de pruebas de Resend y **solo entrega al
 correo del titular de la cuenta**. Cualquier otro destinatario recibe un 403
 («Testing domain restriction») y no llega nada.
 
-Consecuencia práctica: hoy nadie más puede crear una cuenta. Para probar el
-registro con otras direcciones sirve el truco de Gmail
-(`titular+loquesea@gmail.com`), que Supabase trata como usuarios distintos.
+Hasta la Fase 45 eso impedía que nadie más creara una cuenta, porque el
+registro mandaba un correo de confirmación. Desde la Fase 46 no: el registro
+va por invitación y sin confirmación, y el único correo que sale es el aviso
+de una solicitud al administrador, que es ese titular.
 
-**Para abrirlo a otras personas —jurado, compañeros— hay que verificar un
-dominio propio en Resend** (*Domains → Add Domain*, más los registros DNS de
-SPF y DKIM) y cambiar el remitente a ese dominio. Eso resuelve además que los
-correos lleguen a spam, cosa que pasa justamente por enviar desde un dominio
-que no es el nuestro. Queda pendiente.
+**Para escribirle a otras personas hay que verificar un dominio propio en
+Resend** (*Domains → Add Domain*, más los registros DNS de SPF y DKIM) y
+cambiar el remitente a ese dominio, en el SMTP de Supabase y en
+`src/lib/email/resend.ts`. Queda pendiente.

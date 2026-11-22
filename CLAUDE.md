@@ -14,14 +14,15 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Capturas del manual: `npm run manual:capturas [capítulo…]` (recorre la app real; requiere la base local y el dev; ver `docs/manual/README.md`)
 - Tests: `npm test` (Vitest, entorno node)
 - Tests de la base: `npx supabase test db` (pgTAP en `supabase/tests/`, sobre la base local)
-- Supabase local: `npx supabase start`
+- Supabase local: `npx supabase start` (la CLI 3.x no lee este `config.toml`: usar `npx supabase@2 …`)
 - Supabase migrar (dev local): `npx supabase db reset` (recrea el volumen y reaplica todas las migraciones)
 - Datos de prueba: `npx supabase db reset && npm run seed` (el seed no es idempotente; el «Proyecto de ejemplo» lo crea la app en el primer inicio de sesión)
 - Supabase migrar (cloud, producción): `npx supabase db push` (aplica solo las migraciones nuevas). Va **antes** del merge a `main` —Vercel despliega al instante— y solo con el visto bueno del usuario. Una migración que **borra** columnas va **después** del merge: el código viejo no funciona sin ellas (doc técnica § 13).
 - Supabase types: `npx supabase gen types typescript --local 2>/dev/null > src/types/database.ts`. Si el formato generado difiere del commiteado, añadir a mano solo lo nuevo.
 
 ## Architecture
-- `src/app/(auth)/` → páginas de login y registro (Supabase Auth); `src/app/auth/callback/` → confirmación de correo
+- `src/app/(auth)/` → login, registro con código en dos pasos y `solicitar-invitacion/` (Supabase Auth); `src/app/auth/callback/` → confirmación de correo, apagada desde la Fase 46
+- `src/app/(app)/admin/invitaciones/` → las solicitudes de invitación, solo para el administrador (Fase 46)
 - `src/app/page.tsx` → la página de presentación, pública, solo sin sesión (Fase 45): la mención del trabajo de grado con el escudo de la universidad y una poligonal de la demo calculada por el motor; sus piezas en `src/components/landing/` y `src/lib/landing/`
 - `src/app/(app)/dashboard/` → dashboard principal con lista de proyectos
 - `src/app/(app)/manual/` → el manual de usuario en la app: la portada (`/manual`) y cada capítulo (`/manual/[capitulo]`), leídos de `docs/manual/` con `src/lib/manual/`
@@ -58,7 +59,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - IMPORTANT: los ángulos se almacenan como 3 campos separados (deg, min, sec) en la DB, NO como decimal. La conversión se hace solo para cálculos internos.
 - IMPORTANT: el proyecto corre sobre Next.js 16 + React 19, con breaking changes frente a versiones previas (p. ej. `middleware` → `proxy`). Ver `AGENTS.md` y consultar `node_modules/next/dist/docs/` antes de escribir código de Next.
 - Toda la autenticación va por Supabase Auth. No usar Clerk ni ningún otro servicio de auth externo.
-- IMPORTANT: el registro exige el código de `SIGNUP_INVITE_CODE` y confirmación de correo. La variable NO lleva prefijo `NEXT_PUBLIC_` y solo se lee en el Server Action; si falta, el registro se bloquea (nunca se abre).
+- IMPORTANT: **el registro es por invitación** (Fase 46): quien quiere cuenta la solicita en `/solicitar-invitacion`, el administrador la acepta en `/admin/invitaciones` y comparte el código, ligado a ese correo y de un solo uso. Sin confirmación de correo. La regla vive en la base —el disparador `require_invitation` de `auth.users` rechaza toda alta sin una invitación aceptada—: no relajarla ni saltarla, y toda cuenta de pruebas o del seed nace de una invitación. El administrador es una fila de `public.admins`, que nadie escribe desde la aplicación.
 - No usar shadcn/ui ni ninguna librería de componentes. El sistema de diseño está en `src/components/design-system/` y se construye sobre Tailwind puro.
 - Las coordenadas van a 3 decimales (0.000), las cotas a 4 decimales (0.0000), los ángulos en DMS.
 - **Ningún proceso se cierra** (Fases 35, 36 y 37): ni la poligonal, ni la nivelación, ni el lugar, ni la visita. No hay estados `closed`/`rejected`, ni `closed_at`/`closed_by`, ni triggers de inmutabilidad ni reabrir: todo se recalcula en vivo y se propaga.
@@ -102,7 +103,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Supabase (PostgreSQL + Auth
 - Modo offline / PWA
 - Importación directa desde estación total
 - Firma digital criptográfica
-- Múltiples roles de usuario (solo hay 1 rol)
+- Múltiples roles de usuario (solo hay 1 rol, más el administrador que decide las invitaciones)
 - Visualización geoespacial en mapa
 - Posición de los puntos de control de asentamientos: ni coordenadas, ni distancias entre puntos, ni distorsión angular (Fase 29)
 - `supabase/` migrations se editan manualmente, no autogenerar
