@@ -4,6 +4,8 @@ Documento de referencia para desarrollar y mantener TopoField. Describe cómo
 está construido el sistema, qué decisiones lo gobiernan y dónde tocar para
 extenderlo.
 
+**Versión:** 1.0.0 (etiqueta `v1.0.0`), la evaluada en la monografía de grado.
+
 **Última actualización:** 2026-11-21 · Fase 45 cerrada (la página de
 presentación, sin migraciones: sale a producción con su merge); fases 38 a 43 en
 producción, con la migración de la 38 aplicada (§ 13) · 1219 tests y 128 pruebas de base (pgTAP) ·
